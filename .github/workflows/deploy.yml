@@ -2,7 +2,7 @@ name: Deploy to GreenGeeks
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]  # Runs on pushes to the main branch
 
 jobs:
   deploy:
@@ -11,13 +11,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy to GreenGeeks
-        uses: peaceiris/actions-ftp@v2
+      - name: Deploy files via FTP
+        uses: peaceiris/actions-ftp@v3  # Updated to v3
         with:
-          host: ${{ secrets.FTP_SERVER }}
-          user: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          localDir: "./"
-          remoteDir: ${{ secrets.REMOTE_DIR }}
-          # passive: true  # Uncomment if needed
+          host: ${{ secrets.FTP_SERVER }}       # e.g., ftp.resolutionsbydesign.us
+          user: ${{ secrets.FTP_USERNAME }}     # mpsm
+          password: ${{ secrets.FTP_PASSWORD }} # Your GreenGeeks FTP password
+          port: 21                             # Default FTP port
+          localDir: "./"                       # Upload all files from the repo root
+          remoteDir: ${{ secrets.REMOTE_DIR }} # public_html/mpsm.resolutionsbydesign.us/mpsm
+          passive: true                        # GreenGeeks often requires passive mode
+          # timeout: 60s                      # Uncomment if you get timeout errors
