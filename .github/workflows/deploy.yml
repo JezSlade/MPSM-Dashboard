@@ -1,5 +1,5 @@
 name: Deploy to GreenGeeks
-
+## Trigger on push to main branch or manual run
 on:
   push:
     branches: [ "main" ]
