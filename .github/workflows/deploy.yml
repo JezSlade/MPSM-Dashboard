@@ -15,7 +15,7 @@ jobs:
       uses: sebastianpopp/ftp-action@releases/v2
       with:
         host: ${{ secrets.FTP_SERVER }}
-        user: "mpsm"
+        user: "mpsm@mpsm.resolutionsbydesign.us"
         password: "Sladaprm75"
         localDir: "./"
         remoteDir: ${{ secrets.REMOTE_DIR }}
