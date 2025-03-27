@@ -18,6 +18,5 @@ jobs:
         user: "mpsm@mpsm.resolutionsbydesign.us"
         password: "Sladaprm75"
         localDir: "./"
-        remoteDir: ${{ secrets.REMOTE_DIR }}
-        secure: false
-        passive: true
+        remoteDir: "./"
+        
