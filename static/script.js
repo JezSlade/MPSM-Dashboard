@@ -5,9 +5,7 @@ function logDebug(message, data = null) {
   const timestamp = new Date().toISOString().split("T")[1].slice(0, 8);
   const fullMessage = `[${timestamp}] ${message}`;
   output.textContent += fullMessage + "\n";
-  if (data) {
-    output.textContent += JSON.stringify(data, null, 2) + "\n\n";
-  }
+  if (data) output.textContent += JSON.stringify(data, null, 2) + "\n\n";
   console.log(fullMessage);
   if (data) console.log(data);
 }
@@ -16,35 +14,28 @@ function toggleDebug() {
   DEBUG_MODE = !DEBUG_MODE;
   document.getElementById("debug-toggle").textContent = "Debug: " + (DEBUG_MODE ? "ON" : "OFF");
   document.getElementById("debug-panel").style.display = DEBUG_MODE ? "block" : "none";
-  if (!DEBUG_MODE) {
-    document.getElementById("debug-output").textContent = "";
-  }
+  if (!DEBUG_MODE) document.getElementById("debug-output").textContent = "";
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("debug-toggle").addEventListener("click", toggleDebug);
   document.getElementById("debug-panel").style.display = "block";
-  document.getElementById("debug-toggle").textContent = "Debug: ON";
   logDebug("🔧 Debug console active");
 
-  fetch("static/devices.json")
-    .then(res => {
-      logDebug("📡 Fetching devices.json... Status: " + res.status);
-      return res.json();
-    })
-    .then(json => {
-      logDebug("✅ devices.json loaded", json);
+  fetch("trigger_api.php")
+    .then(res => res.json())
+    .then(data => {
+      logDebug("✅ API response received", data);
       const tbody = document.getElementById("device-tbody");
-      const timestamp = document.getElementById("timestamp");
-
-      // Set the timestamp
-      timestamp.textContent = json.timestamp || "unknown";
-
-      // Render devices
-      const devices = json.devices;
       tbody.innerHTML = "";
 
-      if (!Array.isArray(devices) || devices.length === 0) {
+      if (data.status !== "success") {
+        tbody.innerHTML = `<tr><td colspan="4">❌ ${data.message}</td></tr>`;
+        return;
+      }
+
+      const devices = data.data;
+      if (!devices.length) {
         tbody.innerHTML = `<tr><td colspan="4">No devices found.</td></tr>`;
         return;
       }
@@ -61,8 +52,8 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     })
     .catch(err => {
-      logDebug("❌ Failed to load devices.json", err);
-      const tbody = document.getElementById("device-tbody");
-      tbody.innerHTML = `<tr><td colspan="4">Error loading device data.</td></tr>`;
+      logDebug("❌ Fetch error", err);
+      document.getElementById("device-tbody").innerHTML =
+        `<tr><td colspan="4">Error loading devices</td></tr>`;
     });
 });

@@ -7,40 +7,27 @@ body {
 
 h1 {
   font-size: 2rem;
-  color: #1a1a1a;
 }
 
-#timestamp-section {
+#debug-panel {
+  background: #111;
+  color: #0f0;
+  font-family: monospace;
+  padding: 10px;
+  border: 1px solid #0f0;
   margin-bottom: 15px;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
-table {
+#device-table {
   width: 100%;
   border-collapse: collapse;
-  background-color: #fff;
-  margin-top: 10px;
+  background: #fff;
 }
 
 th, td {
   padding: 10px;
   border: 1px solid #ccc;
-  text-align: left;
-}
-
-#debug-panel {
-  margin-top: 20px;
-  padding: 10px;
-  background: #222;
-  color: #0f0;
-  border: 1px solid #0f0;
-  font-family: monospace;
-  max-height: 400px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
-
-#debug-toggle {
-  margin-bottom: 10px;
-  padding: 6px 12px;
-  font-weight: bold;
 }
