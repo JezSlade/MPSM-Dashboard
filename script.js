@@ -1,4 +1,4 @@
-let DEBUG_MODE = false;
+let DEBUG_MODE = true;
 
 // Toggle debug panel visibility
 function toggleDebug() {
