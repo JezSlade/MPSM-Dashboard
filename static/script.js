@@ -1,59 +1,69 @@
-let DEBUG_MODE = true;
+const ENDPOINTS_JSON = "static/endpoints.json";
+const API_TRIGGER = "trigger_api.php";
 
-function logDebug(message, data = null) {
-  const output = document.getElementById("debug-output");
-  const timestamp = new Date().toISOString().split("T")[1].slice(0, 8);
-  const fullMessage = `[${timestamp}] ${message}`;
-  output.textContent += fullMessage + "\n";
-  if (data) output.textContent += JSON.stringify(data, null, 2) + "\n\n";
-  console.log(fullMessage);
-  if (data) console.log(data);
+let selectedEndpoints = JSON.parse(localStorage.getItem("mpsm_selected_endpoints") || "[]");
+
+function saveSelections() {
+  localStorage.setItem("mpsm_selected_endpoints", JSON.stringify(selectedEndpoints));
 }
 
-function toggleDebug() {
-  DEBUG_MODE = !DEBUG_MODE;
-  document.getElementById("debug-toggle").textContent = "Debug: " + (DEBUG_MODE ? "ON" : "OFF");
-  document.getElementById("debug-panel").style.display = DEBUG_MODE ? "block" : "none";
-  if (!DEBUG_MODE) document.getElementById("debug-output").textContent = "";
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("debug-toggle").addEventListener("click", toggleDebug);
-  document.getElementById("debug-panel").style.display = "block";
-  logDebug("🔧 Debug console active");
-
-  fetch("trigger_api.php")
-    .then(res => res.json())
-    .then(data => {
-      logDebug("✅ API response received", data);
-      const tbody = document.getElementById("device-tbody");
-      tbody.innerHTML = "";
-
-      if (data.status !== "success") {
-        tbody.innerHTML = `<tr><td colspan="4">❌ ${data.message}</td></tr>`;
-        return;
-      }
-
-      const devices = data.data;
-      if (!devices.length) {
-        tbody.innerHTML = `<tr><td colspan="4">No devices found.</td></tr>`;
-        return;
-      }
-
-      devices.forEach(device => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${device.model || "N/A"}</td>
-          <td>${device.ipAddress || "N/A"}</td>
-          <td>${device.serialNumber || "N/A"}</td>
-          <td>${device.assetNumber || "N/A"}</td>
-        `;
-        tbody.appendChild(row);
-      });
-    })
-    .catch(err => {
-      logDebug("❌ Fetch error", err);
-      document.getElementById("device-tbody").innerHTML =
-        `<tr><td colspan="4">Error loading devices</td></tr>`;
+function renderEndpointsList(endpoints) {
+  const list = document.getElementById("endpoint-list");
+  list.innerHTML = "";
+  endpoints.forEach(({ path, description }) => {
+    const label = document.createElement("label");
+    label.className = "endpoint-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = path;
+    input.checked = selectedEndpoints.includes(path);
+    input.addEventListener("change", () => {
+      if (input.checked) selectedEndpoints.push(path);
+      else selectedEndpoints = selectedEndpoints.filter(p => p !== path);
+      saveSelections();
     });
-});
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(` ${path} – ${description}`));
+    list.appendChild(label);
+  });
+}
+
+function loadResults() {
+  const results = document.getElementById("results");
+  results.innerHTML = "";
+  if (!selectedEndpoints.length) {
+    results.innerHTML = "<p>No endpoints selected.</p>";
+    return;
+  }
+  selectedEndpoints.forEach(endpoint => {
+    const container = document.createElement("div");
+    container.className = "result-block";
+    container.innerHTML = `<h4>${endpoint}</h4><pre>Loading...</pre>`;
+    results.appendChild(container);
+
+    fetch(`${API_TRIGGER}?endpoint=${encodeURIComponent(endpoint)}`)
+      .then(res => res.json())
+      .then(json => {
+        container.querySelector("pre").textContent = JSON.stringify(json, null, 2);
+      })
+      .catch(err => {
+        container.querySelector("pre").textContent = `Error: ${err}`;
+      });
+  });
+}
+
+function setupUI() {
+  document.getElementById("toggle-settings").addEventListener("click", () => {
+    document.getElementById("settings-content").classList.toggle("hidden");
+  });
+
+  document.getElementById("load-selected").addEventListener("click", () => {
+    loadResults();
+  });
+
+  fetch(ENDPOINTS_JSON)
+    .then(res => res.json())
+    .then(renderEndpointsList);
+}
+
+document.addEventListener("DOMContentLoaded", setupUI);

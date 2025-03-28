@@ -1,33 +1,38 @@
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f6f8;
-  color: #333;
-  padding: 20px;
+  font-family: sans-serif;
+  margin: 20px;
+  background: #f4f4f4;
 }
 
-h1 {
-  font-size: 2rem;
+#settings-panel {
+  margin-bottom: 20px;
 }
 
-#debug-panel {
-  background: #111;
-  color: #0f0;
-  font-family: monospace;
-  padding: 10px;
-  border: 1px solid #0f0;
-  margin-bottom: 15px;
-  white-space: pre-wrap;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-#device-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-}
-
-th, td {
-  padding: 10px;
+#settings-content {
   border: 1px solid #ccc;
+  padding: 15px;
+  background: #fff;
+  margin-top: 10px;
+}
+
+#settings-content.hidden {
+  display: none;
+}
+
+.endpoint-option {
+  display: block;
+  margin: 5px 0;
+}
+
+#results .result-block {
+  background: #fff;
+  border: 1px solid #ddd;
+  margin: 10px 0;
+  padding: 10px;
+}
+
+pre {
+  background: #eee;
+  padding: 10px;
+  overflow-x: auto;
 }
