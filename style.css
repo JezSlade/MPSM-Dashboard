@@ -22,3 +22,19 @@ pre {
     overflow-x: auto;
     max-height: 400px;
 }
+#debug-panel {
+    margin-top: 20px;
+    padding: 10px;
+    background: #222;
+    color: #0f0;
+    border: 1px solid #0f0;
+    font-family: monospace;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#debug-toggle {
+    margin-bottom: 10px;
+    padding: 6px 12px;
+    font-weight: bold;
+}
