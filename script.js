@@ -1,6 +1,5 @@
-// Function to fetch and display auth data
 function loadAuthData() {
-    fetch('/api/auth')
+    fetch('api/auth')  // no leading slash
         .then(response => response.json())
         .then(data => {
             const pre = document.getElementById("auth-data");
@@ -15,9 +14,8 @@ function loadAuthData() {
         });
 }
 
-// Function to fetch and display MPSM data
 function loadMpsmData() {
-    fetch('/api/data')
+    fetch('api/data')  // no leading slash
         .then(response => response.json())
         .then(data => {
             const pre = document.getElementById("mpsm-data");
@@ -31,8 +29,3 @@ function loadMpsmData() {
             document.getElementById("mpsm-data").textContent = "Network error loading MPSM data.";
         });
 }
-
-window.onload = function() {
-    loadAuthData();
-    loadMpsmData();
-};
