@@ -1,43 +1,12 @@
 [
-    {
-      "path": "Account/GetProfile",
-      "description": "Gets profile of current authenticated user"
-    },
-    {
-      "path": "Account/GetAccounts",
-      "description": "Gets the accounts"
-    },
-    {
-      "path": "AlertLimit2/GetAllLimits",
-      "description": "Gets all alert limits"
-    },
-    {
-      "path": "Analytics/GetReportResult",
-      "description": "Get result from a saved report"
-    },
-    {
-      "path": "ApiClient/List",
-      "description": "Get API clients for the dealer"
-    },
-    {
-      "path": "Billing/GetDealerInvoicesList",
-      "description": "Gets the dealer invoices"
-    },
-    {
-      "path": "Consumable/List",
-      "description": "List all device consumables"
-    },
-    {
-      "path": "Counter/List",
-      "description": "Returns counters"
-    },
-    {
-      "path": "Customer/GetCustomers",
-      "description": "Gets the customers"
-    },
-    {
-      "path": "Device/List",
-      "description": "Gets list of devices (paged and filtered)"
-    }
-  ]
-  
+  { "path": "Account/GetProfile", "description": "Gets profile of current authenticated user" },
+  { "path": "Account/GetAccounts", "description": "Gets the accounts" },
+  { "path": "AlertLimit2/GetAllLimits", "description": "Gets all alert limits" },
+  { "path": "Analytics/GetReportResult", "description": "Get result from a saved report" },
+  { "path": "ApiClient/List", "description": "Get API clients for the dealer" },
+  { "path": "Billing/GetDealerInvoicesList", "description": "Gets the dealer invoices" },
+  { "path": "Consumable/List", "description": "List all device consumables" },
+  { "path": "Counter/List", "description": "Returns counters" },
+  { "path": "Customer/GetCustomers", "description": "Gets the customers" },
+  { "path": "Device/List", "description": "Gets list of devices (paged and filtered)" }
+]

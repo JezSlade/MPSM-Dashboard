@@ -10,7 +10,7 @@
 
   <div id="settings-panel">
     <button id="toggle-settings">⚙️ Settings</button>
-    <div id="settings-content">
+    <div id="settings-content" class="hidden">
       <h3>API Modules</h3>
       <div id="endpoint-list">Loading...</div>
       <button id="load-selected">📡 Load Selected Data</button>
@@ -22,6 +22,7 @@
     <div id="results"></div>
   </div>
 
+  <!-- ✅ Script placed last for guaranteed DOM availability -->
   <script src="static/script.js"></script>
 </body>
 </html>
