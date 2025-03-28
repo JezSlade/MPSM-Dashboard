@@ -1,109 +1,85 @@
-# === Dependency Check and Auto-Installer ===
-try:
-    import flask
-    import requests
-except ImportError:
-    import subprocess
-    import sys
-    print("🔧 Missing dependencies detected. Attempting to install...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "Flask", "requests"])
+# === app.py ===
+# Full Flask app for MPSM Dashboard, Phusion Passenger-compatible
+# Loads config from environment variables set in hosting panel
 
-# === Standard Imports ===
-from flask import Flask, jsonify, request
+from flask import Flask, render_template, jsonify
+import os
 import requests
 import json
-import os
-import logging
 import time
+import logging
 
-# === Flask Setup ===
-app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG)
+# === Load config from hosting environment variables ===
+FLASK_ENV = os.getenv("FLASK_ENV", "production")
+BASE_URL = os.getenv("BASE_URL", "/mpsm")
+APP_PATH = os.getenv("APP_PATH", os.getcwd())
+API_USERNAME = os.getenv("API_USERNAME")
+API_PASSWORD = os.getenv("API_PASSWORD")
+API_URL = "https://api.abassetmanagement.com/api3/"
+TOKEN_CACHE_FILE = os.path.join(APP_PATH, "token_cache.json")
+
+# === Flask app setup ===
+app = Flask(__name__, static_folder="static", template_folder="templates")
+logging.basicConfig(level=logging.DEBUG if FLASK_ENV == "development" else logging.INFO)
 logger = logging.getLogger(__name__)
 
-# === API Endpoint and Credentials ===
-API_URL = "https://api.abassetmanagement.com/api3/"
-AUTH_FILE = "working_auth.txt"
-TOKEN_CACHE_FILE = "token_cache.json"
-
-# === Load Auth Credentials ===
-def load_credentials():
+# === Helper: Request new access token ===
+def request_access_token():
     try:
-        with open(AUTH_FILE, 'r') as f:
-            lines = f.read().splitlines()
-            credentials = {}
-            for line in lines:
-                if '=' in line:
-                    key, val = line.split('=', 1)
-                    credentials[key.strip()] = val.strip()
-            return credentials
-    except Exception as e:
-        logger.exception("Error reading working_auth.txt")
-        raise RuntimeError("Failed to load authentication config.")
-
-# === Request Access Token ===
-def request_access_token(credentials):
-    try:
+        logger.info("Requesting new access token...")
         response = requests.post(
             API_URL + "token",
             headers={"Content-Type": "application/json"},
-            data=json.dumps({
-                "username": credentials["username"],
-                "password": credentials["password"]
-            })
+            data=json.dumps({"username": API_USERNAME, "password": API_PASSWORD})
         )
         response.raise_for_status()
         token_data = response.json()
         token_data['timestamp'] = time.time()
         with open(TOKEN_CACHE_FILE, 'w') as f:
             json.dump(token_data, f)
-        return token_data["access_token"]
+        return token_data['access_token']
     except Exception as e:
-        logger.exception("Token request failed.")
-        raise RuntimeError("Unable to retrieve token from API.")
+        logger.exception("Failed to request token")
+        raise RuntimeError("Unable to retrieve token")
 
-# === Get Valid Token (from cache or refresh) ===
+# === Helper: Load valid token or refresh ===
 def get_token():
-    credentials = load_credentials()
     try:
         if os.path.exists(TOKEN_CACHE_FILE):
             with open(TOKEN_CACHE_FILE, 'r') as f:
                 data = json.load(f)
-            if "access_token" in data and time.time() - data["timestamp"] < data.get("expires_in", 900):
-                return data["access_token"]
-        return request_access_token(credentials)
+                if time.time() - data.get('timestamp', 0) < data.get('expires_in', 900):
+                    logger.debug("Using cached token")
+                    return data['access_token']
+        return request_access_token()
     except Exception as e:
-        raise RuntimeError("Token retrieval failed.")
+        logger.exception("Token handling error")
+        raise RuntimeError("Token retrieval failed")
 
-# === API Proxy Route ===
-@app.route('/mpsm/api/devices', methods=["GET"])
+# === Route: Serve dashboard ===
+@app.route(BASE_URL + "/")
+def index():
+    return render_template("index.html")
+
+# === Route: Proxy device data from MPS Monitor API ===
+@app.route(BASE_URL + "/api/devices")
 def get_devices():
-    logger.info("Request received: /mpsm/api/devices")
     try:
         token = get_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
         response = requests.get(API_URL + "devices", headers=headers)
         response.raise_for_status()
         return jsonify({"status": "success", "data": response.json()})
     except Exception as e:
-        logger.exception("Failed to fetch devices from MPS Monitor")
+        logger.exception("Device fetch failed")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# === 404 Handler ===
+# === Error handlers ===
 @app.errorhandler(404)
-def route_not_found(e):
+def not_found(e):
     return jsonify({"status": "error", "message": "Route not found"}), 404
 
-# === Global Error Handler ===
 @app.errorhandler(Exception)
 def handle_error(e):
     logger.exception("Unhandled exception")
     return jsonify({"status": "error", "message": str(e)}), 500
-
-# === Run Server ===
-if __name__ == "__main__":
-    logger.info("Starting Flask app for MPSM Dashboard")
-    app.run(debug=True)

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MPSM Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>MPSM Dashboard</h1>
+
+  <button id="debug-toggle" onclick="toggleDebug()">Debug: OFF</button>
+  <div id="debug-panel" style="display: none;">
+    <h3>Debug Output</h3>
+    <pre id="debug-output"></pre>
+  </div>
+
+  <div id="devices-section">
+    <h2>Device Inventory</h2>
+    <table id="device-table">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>IP Address</th>
+          <th>Serial Number</th>
+          <th>Asset Number</th>
+        </tr>
+      </thead>
+      <tbody id="device-tbody">
+        <tr><td colspan="4">Loading devices...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

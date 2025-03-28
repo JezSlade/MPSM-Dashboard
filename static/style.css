@@ -3,32 +3,32 @@ body {
     background-color: #f4f6f8;
     color: #333;
     padding: 20px;
-}
-
-h1 {
+  }
+  
+  h1 {
     font-size: 2rem;
     color: #1a1a1a;
-}
-
-h2 {
+  }
+  
+  h2 {
     margin-top: 30px;
     color: #2a2a2a;
-}
-
-table {
+  }
+  
+  table {
     width: 100%;
     border-collapse: collapse;
     background-color: #fff;
     margin-top: 10px;
-}
-
-th, td {
+  }
+  
+  th, td {
     padding: 10px;
     border: 1px solid #ccc;
     text-align: left;
-}
-
-#debug-panel {
+  }
+  
+  #debug-panel {
     margin-top: 20px;
     padding: 10px;
     background: #222;
@@ -37,10 +37,11 @@ th, td {
     font-family: monospace;
     max-height: 400px;
     overflow-y: auto;
-}
-
-#debug-toggle {
+  }
+  
+  #debug-toggle {
     margin-bottom: 10px;
     padding: 6px 12px;
     font-weight: bold;
-}
+  }
+  
