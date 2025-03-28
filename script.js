@@ -1,6 +1,6 @@
 let DEBUG_MODE = false;
 
-// Toggle debug panel
+// Toggle debug panel visibility
 function toggleDebug() {
     DEBUG_MODE = !DEBUG_MODE;
     document.getElementById("debug-toggle").textContent = "Debug: " + (DEBUG_MODE ? "ON" : "OFF");
@@ -10,6 +10,7 @@ function toggleDebug() {
     }
 }
 
+// Append debug messages to the panel
 function logDebug(message, data = null) {
     if (!DEBUG_MODE) return;
     const output = document.getElementById("debug-output");
@@ -19,6 +20,7 @@ function logDebug(message, data = null) {
     }
 }
 
+// Fetch device data from Flask proxy API
 function loadDevices() {
     logDebug("🔍 Fetching: /mpsm/api/devices");
 
@@ -30,7 +32,7 @@ function loadDevices() {
         .then(data => {
             logDebug("📦 /devices response JSON:", data);
             const tbody = document.getElementById("device-tbody");
-            tbody.innerHTML = ""; // Clear loading row
+            tbody.innerHTML = ""; // Clear previous or loading content
 
             if (data.status !== "success") {
                 tbody.innerHTML = `<tr><td colspan="4">⚠️ Error: ${data.message}</td></tr>`;
@@ -61,6 +63,7 @@ function loadDevices() {
         });
 }
 
+// Initialize on page load
 window.onload = function () {
     loadDevices();
 };
