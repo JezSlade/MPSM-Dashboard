@@ -2,7 +2,7 @@
 # Full Flask app for MPSM Dashboard, Phusion Passenger-compatible
 # Loads config from environment variables set in hosting panel
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import os
 import requests
 import json
@@ -37,6 +37,7 @@ def request_access_token():
         token_data['timestamp'] = time.time()
         with open(TOKEN_CACHE_FILE, 'w') as f:
             json.dump(token_data, f)
+        logger.info("Access token acquired successfully.")
         return token_data['access_token']
     except Exception as e:
         logger.exception("Failed to request token")
@@ -65,18 +66,29 @@ def index():
 @app.route(BASE_URL + "/api/devices")
 def get_devices():
     try:
+        logger.info("/api/devices requested from %s", request.remote_addr)
         token = get_token()
+        logger.debug("Using token: %s", token[:10] + "...")
         headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
         response = requests.get(API_URL + "devices", headers=headers)
         response.raise_for_status()
-        return jsonify({"status": "success", "data": response.json()})
+        data = response.json()
+        logger.info("Device data fetched successfully.")
+        return jsonify({"status": "success", "data": data})
     except Exception as e:
         logger.exception("Device fetch failed")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# === Debug route: Ping check ===
+@app.route(BASE_URL + "/ping")
+def ping():
+    logger.debug("/ping called by %s", request.remote_addr)
+    return "Flask is alive"
+
 # === Error handlers ===
 @app.errorhandler(404)
 def not_found(e):
+    logger.warning("404 Not Found: %s", request.path)
     return jsonify({"status": "error", "message": "Route not found"}), 404
 
 @app.errorhandler(Exception)
