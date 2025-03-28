@@ -57,7 +57,7 @@ def get_token():
 
 def fetch_data(token):
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"bearer {token}",
         "Accept": "application/json"
     }
     try:
