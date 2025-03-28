@@ -3,19 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="static/style.css" />
 </head>
 <body>
   <h1>MPSM Dashboard</h1>
 
-  <!-- Debug toggle button and console -->
-  <button id="debug-toggle" onclick="toggleDebug()">Debug: ON</button>
+  <button id="debug-toggle">Debug: ON</button>
   <div id="debug-panel">
     <h3>Debug Console</h3>
     <pre id="debug-output">[Boot] Debug console initialized.\n</pre>
   </div>
 
-  <!-- Device table -->
+  <div id="timestamp-section">
+    <strong>Last Updated:</strong> <span id="timestamp">loading...</span>
+  </div>
+
   <div id="devices-section">
     <h2>Device Inventory</h2>
     <table id="device-table">
@@ -33,6 +35,6 @@
     </table>
   </div>
 
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="static/script.js"></script>
 </body>
 </html>
