@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPSM Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -16,19 +15,24 @@
         <pre id="debug-output"></pre>
     </div>
 
-    <!-- Authentication section -->
-    <div id="auth-section">
-        <h2>Authentication Data</h2>
-        <pre id="auth-data">Loading...</pre>
+    <!-- Devices section -->
+    <div id="devices-section">
+        <h2>Device Inventory</h2>
+        <table id="device-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>IP Address</th>
+                    <th>Serial Number</th>
+                    <th>Asset Number</th>
+                </tr>
+            </thead>
+            <tbody id="device-tbody">
+                <tr><td colspan="4">Loading devices...</td></tr>
+            </tbody>
+        </table>
     </div>
 
-    <!-- MPSM Data section -->
-    <div id="data-section">
-        <h2>MPSM Data</h2>
-        <pre id="mpsm-data">Loading...</pre>
-    </div>
-
-    <!-- JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>
