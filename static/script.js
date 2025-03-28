@@ -20,6 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // === Renders the list of checkboxes from endpoint definitions ===
   function renderEndpointsList(endpoints) {
+    if (!Array.isArray(endpoints)) {
+      endpointContainer.innerHTML = "<p class='error'>Invalid endpoints list.</p>";
+      return;
+    }
+
     endpointContainer.innerHTML = "";
     endpoints.forEach(({ path, description }) => {
       const label = document.createElement("label");
