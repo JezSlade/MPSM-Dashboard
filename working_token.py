@@ -13,19 +13,32 @@ USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 SCOPE = os.getenv("SCOPE")
 
-# === Helper to build API URLs ===
-def build_url(endpoint):
-    return BASE_URL.rstrip("/") + "/" + endpoint.lstrip("/")
-
-TOKEN_URL = build_url("token")
-DATA_URL = build_url("GetPrinters")
+# === Constants ===
+DEALER_ID = "SZ13qRwU5GtFLj0i_CbEgQ2"  # Static, as approved by Jez
+TOKEN_URL = BASE_URL.rstrip("/") + "/token"
+DEVICE_LIST_URL = BASE_URL.rstrip("/") + "/Device/List"
 
 HEADERS_FORM = {
     "Content-Type": "application/x-www-form-urlencoded",
     "Cache-Control": "no-cache"
 }
 
-# === Function to get token ===
+# === Request Body for Device/List ===
+DEVICE_LIST_PAYLOAD = {
+    "FilterDealerId": DEALER_ID,
+    "FilterCustomerCodes": None,
+    "ProductBrand": None,
+    "ProductModel": None,
+    "OfficeId": None,
+    "Status": 1,
+    "FilterText": None,
+    "PageNumber": 1,
+    "PageRows": 50,
+    "SortColumn": "Id",
+    "SortOrder": 0
+}
+
+# === Function to get access token ===
 def get_token():
     payload = {
         "client_id": CLIENT_ID,
@@ -42,26 +55,26 @@ def get_token():
     except Exception as e:
         return None, str(e)
 
-# === Function to call the API with token ===
-def fetch_data(token):
+# === Function to POST Device/List ===
+def fetch_devices(token):
     headers = {
         "Authorization": f"bearer {token}",
         "Content-Type": "application/json"
     }
     try:
-        response = requests.get(DATA_URL, headers=headers)
+        response = requests.post(DEVICE_LIST_URL, headers=headers, json=DEVICE_LIST_PAYLOAD)
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        return {"status": "error", "message": f"API call failed: {str(e)}"}
+        return {"status": "error", "message": f"Device call failed: {str(e)}", "raw": response.text if 'response' in locals() else None}
 
-# === MAIN OUTPUT: JSON only ===
+# === Main Execution Block ===
 if __name__ == "__main__":
     token = get_token()
     if isinstance(token, tuple):
         print(json.dumps({"status": "error", "message": f"Token error: {token[1]}"}))
     elif token:
-        data = fetch_data(token)
+        data = fetch_devices(token)
         print(json.dumps(data, indent=2))
     else:
         print(json.dumps({"status": "error", "message": "Token acquisition failed"}))
