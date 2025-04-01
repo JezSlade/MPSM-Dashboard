@@ -10,7 +10,7 @@ load_dotenv()  # This will read the .env file and set environment variables
 BASE_URL = os.getenv("BASE_URL")
 if not BASE_URL:
     raise Exception("BASE_URL is not set in the environment. Please define BASE_URL in the .env file.")
-
+ 
 # OAuth2 client credentials and user credentials (should be defined in .env for security)
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")

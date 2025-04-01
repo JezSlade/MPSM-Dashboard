@@ -19,3 +19,4 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         localDir: "./"
         remoteDir: ${{ secrets.REMOTE_DIR }}
+        
