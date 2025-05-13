@@ -112,7 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const customers = json.Result;
         customers.sort((a, b) => a.Description.localeCompare(b.Description));
-
         let foundDefault = false;
 
         customers.forEach(cust => {
@@ -120,19 +119,19 @@ document.addEventListener("DOMContentLoaded", () => {
           opt.value = cust.Id;
           opt.textContent = cust.Description;
           customerSelect.appendChild(opt);
-
-          if (cust.Id === defaultCustomerId) {
-            foundDefault = true;
-          }
+          if (cust.Id === defaultCustomerId) foundDefault = true;
         });
 
-        if (foundDefault) {
-          customerSelect.value = defaultCustomerId;
-          fetchPrinters();
-          log(`✅ Auto-selected Cape Fear Valley`);
-        } else {
-          log("⚠️ Cape Fear Valley ID not found in customer list.");
-        }
+        // ✅ Set default selection after all options are added
+        setTimeout(() => {
+          if (foundDefault) {
+            customerSelect.value = defaultCustomerId;
+            log(`✅ Auto-selected Cape Fear Valley`);
+            fetchPrinters();
+          } else {
+            log("⚠️ Cape Fear Valley ID not found in customer list.");
+          }
+        }, 0);
       })
       .catch(err => {
         log("❌ Error fetching customers: " + err);
