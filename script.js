@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function log(message) {
     const timestamp = new Date().toLocaleTimeString();
     debug.textContent += `\n[${timestamp}] ${message}`;
+    debug.scrollTop = debug.scrollHeight;
   }
 
   function scoreDevice(device) {
@@ -99,9 +100,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function fetchCustomers() {
     fetch("get_customers.php")
-      .then(res => res.json())
+      .then(res => {
+        log(`📡 get_customers.php responded with status ${res.status}`);
+        return res.json();
+      })
       .then(json => {
-        const customers = json.Result || [];
+        if (!json || !Array.isArray(json.Result)) {
+          log(`❌ Failed to load customers: ${json.message || "Invalid format"}`);
+          return;
+        }
+
+        const customers = json.Result;
         customers.sort((a, b) => a.Description.localeCompare(b.Description));
         customers.forEach(cust => {
           const opt = document.createElement("option");
@@ -109,24 +118,42 @@ document.addEventListener("DOMContentLoaded", () => {
           opt.textContent = cust.Description;
           customerSelect.appendChild(opt);
         });
+        log(`✅ Loaded ${customers.length} customers.`);
+      })
+      .catch(err => {
+        log("❌ Error fetching customers: " + err);
       });
   }
 
   function fetchPrinters() {
-    log("📡 Fetching printers...");
     const customerId = customerSelect.value;
+    if (!customerId) {
+      log("⚠️ No customer selected — skipping printer fetch.");
+      return;
+    }
+
+    log(`📡 Fetching printers for customer ID: ${customerId}`);
+
     fetch("get_devices.php", {
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ CustomerId: customerId })
     })
-      .then(res => res.json())
+      .then(res => {
+        log(`📡 get_devices.php responded with status ${res.status}`);
+        return res.json();
+      })
       .then(json => {
-        const all = json.Result || [];
-        fullDeviceList = all;
+        if (!json || !Array.isArray(json.Result)) {
+          log(`❌ Failed to load printers: ${json.message || "Invalid format"}`);
+          tableContainer.innerHTML = "<p>❌ Failed to load device list</p>";
+          return;
+        }
+
+        fullDeviceList = json.Result;
         currentPage = 1;
         renderTable(fullDeviceList);
-        log("✅ Devices rendered.");
+        log(`✅ Loaded ${fullDeviceList.length} devices.`);
       })
       .catch(err => {
         tableContainer.innerHTML = "<p>❌ Error loading data</p>";
@@ -137,5 +164,4 @@ document.addEventListener("DOMContentLoaded", () => {
   customerSelect.addEventListener("change", fetchPrinters);
 
   fetchCustomers();
-  fetchPrinters();
 });
