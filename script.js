@@ -1,68 +1,76 @@
+// === DOMContentLoaded ===
 document.addEventListener("DOMContentLoaded", () => {
   const tableContainer = document.getElementById("printer-table-container");
   const debug = document.getElementById("debug-log");
+  const customerSelect = document.getElementById("customer-select");
+  const paginationControls = document.getElementById("pagination-controls");
 
-  // Helper function for timestamped debug logging
+  let fullDeviceList = [];
+  let currentPage = 1;
+  const rowsPerPage = 25;
+
   function log(message) {
     const timestamp = new Date().toLocaleTimeString();
     debug.textContent += `\n[${timestamp}] ${message}`;
   }
 
-  // Sort devices by critical conditions first (offline, alert, low toner)
-  function prioritize(devices) {
-    return devices.sort((a, b) => {
-      const aScore = scoreDevice(a);
-      const bScore = scoreDevice(b);
-      return bScore - aScore;
-    });
-  }
-
-  // Assign priority score to a device
   function scoreDevice(device) {
     let score = 0;
     if (device.IsOffline) score += 10;
     if (device.IsAlertGenerator) score += 5;
-
+    if (device.AlertOnDisplay) score += 7;
     const toners = [
       device.BlackToner, device.CyanToner,
       device.MagentaToner, device.YellowToner
     ];
-
     for (const t of toners) {
       if (typeof t === "number" && t <= 10) score += 1;
       if (typeof t === "number" && t === 0) score += 2;
     }
-
     return score;
   }
 
-  // Build table layout from devices
-  function renderTable(devices) {
-    if (!Array.isArray(devices) || devices.length === 0) {
-      tableContainer.innerHTML = "<p>No devices found.</p>";
-      return;
+  function prioritize(devices) {
+    return devices.sort((a, b) => scoreDevice(b) - scoreDevice(a));
+  }
+
+  function renderPagination(totalRows) {
+    paginationControls.innerHTML = "";
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement("button");
+      btn.className = "pagination-btn" + (i === currentPage ? " active" : "");
+      btn.textContent = i;
+      btn.addEventListener("click", () => {
+        currentPage = i;
+        renderTable(fullDeviceList);
+      });
+      paginationControls.appendChild(btn);
     }
+  }
+
+  function generateTableHeader() {
+    return `<tr>
+      <th>Asset #</th><th>Serial #</th><th>Model</th><th>IP Address</th>
+      <th>Customer</th><th>Location</th><th>Status</th>
+      <th>Toner (B/C/M/Y)</th><th>Mono Pages</th><th>Color Pages</th>
+    </tr>`;
+  }
+
+  function renderTable(devices) {
+    const sorted = prioritize(devices);
+    const start = (currentPage - 1) * rowsPerPage;
+    const paged = sorted.slice(start, start + rowsPerPage);
 
     const table = document.createElement("table");
     const thead = document.createElement("thead");
-    const headers = [
-      "Asset #", "Serial #", "Model", "IP Address",
-      "Customer", "Location", "Status",
-      "Toner (B/C/M/Y)", "Mono Pages", "Color Pages"
-    ];
-
-    thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+    thead.innerHTML = generateTableHeader();
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-
-    // Prioritize devices before rendering
-    const sortedDevices = prioritize(devices);
-
-    sortedDevices.forEach(device => {
+    paged.forEach(device => {
       const sds = device.SdsDevice || {};
       const status = device.IsOffline ? "Offline" : "Online";
-
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${device.AssetNumber || "—"}</td>
@@ -85,34 +93,49 @@ document.addEventListener("DOMContentLoaded", () => {
     table.appendChild(tbody);
     tableContainer.innerHTML = "";
     tableContainer.appendChild(table);
+
+    renderPagination(sorted.length);
   }
 
-  // Fetch data from backend and pass to renderer
-  function fetchPrinters() {
-    const url = "working_token.php";
-    log("📡 Fetching data from working_token.php...");
-
-    fetch(url)
-      .then(res => {
-        log(`Status: ${res.status}`);
-        if (!res.ok) throw new Error(`Fetch failed with status ${res.status}`);
-        return res.json();
-      })
+  function fetchCustomers() {
+    fetch("get_customers.php")
+      .then(res => res.json())
       .then(json => {
-        if (json.Result && Array.isArray(json.Result)) {
-          renderTable(json.Result);
-          log("✅ Printer table rendered.");
-        } else {
-          tableContainer.innerHTML = "<p>❌ Unexpected API structure.</p>";
-          log("⚠️ Unexpected JSON structure.");
-        }
-      })
-      .catch(err => {
-        tableContainer.innerHTML = "<p>❌ Error loading data</p>";
-        log(`❌ ${err}`);
+        const customers = json.Result || [];
+        customers.sort((a, b) => a.Description.localeCompare(b.Description));
+        customers.forEach(cust => {
+          const opt = document.createElement("option");
+          opt.value = cust.Id;
+          opt.textContent = cust.Description;
+          customerSelect.appendChild(opt);
+        });
       });
   }
 
-  // Initial data load
+  function fetchPrinters() {
+    log("📡 Fetching printers...");
+    const customerId = customerSelect.value;
+    fetch("get_devices.php", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ CustomerId: customerId })
+    })
+      .then(res => res.json())
+      .then(json => {
+        const all = json.Result || [];
+        fullDeviceList = all;
+        currentPage = 1;
+        renderTable(fullDeviceList);
+        log("✅ Devices rendered.");
+      })
+      .catch(err => {
+        tableContainer.innerHTML = "<p>❌ Error loading data</p>";
+        log("❌ " + err);
+      });
+  }
+
+  customerSelect.addEventListener("change", fetchPrinters);
+
+  fetchCustomers();
   fetchPrinters();
 });
