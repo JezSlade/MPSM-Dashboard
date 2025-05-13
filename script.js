@@ -1,4 +1,3 @@
-// === DOMContentLoaded ===
 document.addEventListener("DOMContentLoaded", () => {
   const tableContainer = document.getElementById("printer-table-container");
   const debug = document.getElementById("debug-log");
@@ -8,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let fullDeviceList = [];
   let currentPage = 1;
   const rowsPerPage = 25;
+  const defaultCustomerId = "W9OPXL0YDK"; // Cape Fear Valley
 
   function log(message) {
     const timestamp = new Date().toLocaleTimeString();
@@ -112,13 +112,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const customers = json.Result;
         customers.sort((a, b) => a.Description.localeCompare(b.Description));
+
+        let foundDefault = false;
+
         customers.forEach(cust => {
           const opt = document.createElement("option");
           opt.value = cust.Id;
           opt.textContent = cust.Description;
           customerSelect.appendChild(opt);
+
+          if (cust.Id === defaultCustomerId) {
+            foundDefault = true;
+          }
         });
-        log(`✅ Loaded ${customers.length} customers.`);
+
+        if (foundDefault) {
+          customerSelect.value = defaultCustomerId;
+          fetchPrinters();
+          log(`✅ Auto-selected Cape Fear Valley`);
+        } else {
+          log("⚠️ Cape Fear Valley ID not found in customer list.");
+        }
       })
       .catch(err => {
         log("❌ Error fetching customers: " + err);
@@ -162,6 +176,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   customerSelect.addEventListener("change", fetchPrinters);
-
   fetchCustomers();
 });
