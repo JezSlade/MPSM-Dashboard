@@ -112,26 +112,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const customers = json.Result;
         customers.sort((a, b) => a.Description.localeCompare(b.Description));
-        let foundDefault = false;
+        let found = false;
 
         customers.forEach(cust => {
           const opt = document.createElement("option");
           opt.value = cust.Id;
           opt.textContent = cust.Description;
           customerSelect.appendChild(opt);
-          if (cust.Id === defaultCustomerId) foundDefault = true;
+          if (cust.Id === defaultCustomerId) found = true;
         });
 
-        // ✅ Set default selection after all options are added
-        setTimeout(() => {
-          if (foundDefault) {
-            customerSelect.value = defaultCustomerId;
-            log(`✅ Auto-selected Cape Fear Valley`);
+        if (found) {
+          customerSelect.value = defaultCustomerId;
+          const selected = customerSelect.value;
+          log(`✅ Defaulted to Cape Fear Valley — Selected: ${selected}`);
+          if (selected === defaultCustomerId) {
             fetchPrinters();
           } else {
-            log("⚠️ Cape Fear Valley ID not found in customer list.");
+            log("❌ Dropdown failed to assign correct CustomerId.");
           }
-        }, 0);
+        } else {
+          log("⚠️ Cape Fear Valley not found in list.");
+        }
       })
       .catch(err => {
         log("❌ Error fetching customers: " + err);
