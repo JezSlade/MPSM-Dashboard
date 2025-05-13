@@ -21,9 +21,9 @@ def is_token_valid():
 def fetch_new_token():
     url = os.getenv("BASE_URL") + "/Login/Authenticate"
     payload = {
-        "Username": os.getenv("API_USER"),
-        "Password": os.getenv("API_PASS"),
-        "DealerCode": os.getenv("DEALER_CODE")
+            "Username": os.getenv("USERNAME"),
+            "Password": os.getenv("PASSWORD"),
+            "DealerCode": os.getenv("DEALER_CODE")
     }
     res = requests.post(url, json=payload)
     res.raise_for_status()
