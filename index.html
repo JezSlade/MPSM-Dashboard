@@ -7,23 +7,35 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="header">
+  <header id="header">
     <h1>MPSM Dashboard</h1>
-    <p class="subtitle">🔍 Static Module: <strong>GetPrinters</strong></p>
-  </div>
- 
-  <div id="output-panel">
-    <h2>📋 Printer List</h2>
-    <div id="printer-table-container">
-      <p class="loading">Loading data...</p>
-    </div>
-  </div>
-  
+    <p class="subtitle">📦 Multi-Customer Printer Monitoring</p>
+  </header>
 
-  <div id="debug-panel">
-    <h2>🛠️ Debug Console</h2>
-    <pre id="debug-log">[Boot] Debug console initialized...</pre>
-  </div>
+  <main id="main-content">
+    <!-- Customer selection dropdown -->
+    <div class="filter-row">
+      <label for="customer-select">Filter by Customer:</label>
+      <select id="customer-select">
+        <option value="">— Select a Customer —</option>
+      </select>
+    </div>
+
+    <!-- Output Table -->
+    <section id="output-panel">
+      <h2>📋 Printer List</h2>
+      <div id="printer-table-container">
+        <p class="loading">Loading data...</p>
+      </div>
+      <div id="pagination-controls"></div>
+    </section>
+
+    <!-- Debug log -->
+    <section id="debug-panel">
+      <h2>🛠️ Debug Console</h2>
+      <pre id="debug-log">[Boot] Debug console initialized...</pre>
+    </section>
+  </main>
 
   <script src="script.js"></script>
 </body>
