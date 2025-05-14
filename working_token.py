@@ -48,11 +48,11 @@ def fetch_customers(token):
 
     # === Required payload for Customer/GetCustomers ===
     payload = {
-        "PageNumber": 1,
-        "PageRows": 50,
-        "SortColumn": "Description",  # Can be changed to any valid column
-        "SortOrder": 0,               # 0 = Ascending, 1 = Descending
-        "DealerCode": "SZ13qRwU5GtFLj0i_CbEgQ2"  # Confirmed dealer code
+    "PageNumber": 1,
+    "PageRows": 50,
+    "SortColumn": "Description",
+    "SortOrder": 0,
+    "DealerId": "SZ13qRwU5GtFLj0i_CbEgQ2"
     }
 
     try:
