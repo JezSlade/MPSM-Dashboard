@@ -1,35 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    #debug-panel { position: fixed; bottom: 0; right: 0; width: 300px; max-height: 40%; background: #111; color: #0f0; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; }
+    #debug-panel #debug-toggle { background: #222; color: white; padding: 5px; cursor: pointer; text-align: center; }
+    #debug-panel #debug-log { padding: 5px; overflow-y: auto; flex: 1; }
+    #debug-panel .log-entry { margin-bottom: 5px; }
+    #debug-panel .error { color: red; }
+    #debug-panel:not(.open) #debug-log { display: none; }
+  </style>
 </head>
 <body>
-  <div id="top-header">
-    <div class="left-group">
-      <h1>MPSM Dashboard</h1>
-      <span class="version">v1.0.0</span>
-    </div>
-    <div class="right-group">
-      <button id="refresh-btn">🔄 Refresh</button>
-      <button id="toggle-debug">🛠️ Toggle Debug</button>
-    </div>
-  </div>
+  <h1>MPSM Dashboard Core</h1>
+  <p>The core is loaded and ready. Check the debug panel for logs.</p>
 
-  <div id="customer-select-panel" style="margin: 15px;"></div>
-
-  <div id="output-panel">
-    <h2>📦 API Response</h2>
-    <pre id="json-output">Loading data...</pre>
-  </div>
-
-  <div id="debug-panel">
-    <h2>🛠️ Debug Console</h2>
-    <pre id="debug-log">[Boot] Debug console initialized...</pre>
-  </div>
-
-  <script src="script.js"></script>
+  <script type="module" src="./core/init.js"></script>
 </body>
 </html>
