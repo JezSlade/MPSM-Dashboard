@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>MPS Monitor Devices</h1>
-  <table id="deviceTable">
-    <thead>
-      <tr>
-        <th>Asset Number</th>
-        <th>IP Address</th>
-        <th>Model</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Devices will be inserted here by JS -->
-    </tbody>
-  </table>
+  <div id="header">
+    <h1>MPSM Dashboard</h1>
+    <p class="subtitle">🔍 Static Module: <strong>GetPrinters</strong></p>
+  </div>
+ 
+  <div id="output-panel">
+    <h2>📦 API Response</h2>
+    <pre id="json-output">Loading data...</pre>
+  </div>
+
+  <div id="debug-panel">
+    <h2>🛠️ Debug Console</h2>
+    <pre id="debug-log">[Boot] Debug console initialized...</pre>
+  </div>
 
   <script src="script.js"></script>
 </body>
