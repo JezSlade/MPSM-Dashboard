@@ -1,3 +1,4 @@
+// Shared application state for all modules
 const MPSM = {
   token: null,
   customers: [],
@@ -6,6 +7,7 @@ const MPSM = {
   version: 'v1.0.0'
 };
 
+// Initialization entry point
 async function initDashboard() {
   logDebug('[Init] Booting MPSM v' + MPSM.version);
   await getToken();
@@ -16,21 +18,24 @@ async function initDashboard() {
   }
 }
 
+// Retrieves token from working_token.php as plain text (not JSON)
 async function getToken() {
   try {
     const res = await fetch('working_token.php');
-    const data = await res.json();
-    if (data.access_token) {
-      MPSM.token = data.access_token;
+    const text = await res.text();
+
+    if (text && text.trim().length > 0) {
+      MPSM.token = text.trim();
       logDebug('[Token] Token acquired');
     } else {
-      throw new Error("No token in response");
+      throw new Error("No token returned from PHP");
     }
   } catch (err) {
     logDebug('[Token] ERROR: ' + err.message);
   }
 }
 
+// Retrieves customer list from get_customers.php
 async function getCustomers() {
   try {
     const res = await fetch('get_customers.php');
@@ -47,6 +52,7 @@ async function getCustomers() {
   }
 }
 
+// Retrieves printers for selected customer from get_printers.php
 async function getPrinters(customerId) {
   try {
     const res = await fetch(`get_printers.php?customerId=${encodeURIComponent(customerId)}`);
@@ -63,6 +69,7 @@ async function getPrinters(customerId) {
   }
 }
 
+// Renders dropdown with customer names and binds onchange event
 function renderCustomerDropdown() {
   const container = document.getElementById("customer-select-panel");
   if (!container) return;
@@ -88,17 +95,20 @@ function renderCustomerDropdown() {
   container.appendChild(select);
 }
 
+// Displays printer results in the #json-output block
 function renderPrinterTable() {
   const output = document.getElementById("json-output");
   output.textContent = JSON.stringify(MPSM.printers, null, 2);
 }
 
+// Appends log messages to the debug console panel
 function logDebug(message) {
   const panel = document.getElementById('debug-log');
   const line = `${new Date().toLocaleTimeString()} ${message}`;
   panel.textContent += `\n${line}`;
 }
 
+// Runs init and binds refresh/debug toggle buttons
 window.onload = () => {
   initDashboard();
   document.getElementById("refresh-btn").addEventListener("click", () => location.reload(true));
