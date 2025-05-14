@@ -4,7 +4,7 @@ const MPSM = {
   customers: [],
   selectedCustomerId: null,
   printers: [],
-  version: 'v1.0.3 [Fixed Like a Woman Would]'
+  version: 'v1.0.4 [Error Handling Nuclear Fix]'
 };
 
 // Dashboard initializer
@@ -47,7 +47,8 @@ async function getCustomers() {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text}`);
+      logDebug(`[Customers] Server responded with HTTP ${res.status}:\n${text}`);
+      return;
     }
 
     const data = await res.json();
@@ -62,7 +63,10 @@ async function getCustomers() {
     renderCustomerDropdown();
 
   } catch (err) {
-    logDebug('[Customers] ERROR: ' + err.message);
+    const message = typeof err === 'object' && err.message
+      ? err.message
+      : JSON.stringify(err, null, 2);
+    logDebug('[Customers] ERROR: ' + message);
   }
 }
 
