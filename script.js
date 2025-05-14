@@ -46,13 +46,20 @@ async function getCustomers() {
       }
     });
 
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
     const data = await res.json();
-    if (Array.isArray(data.Result)) {
+
+    if (data && Array.isArray(data.Result)) {
       MPSM.customers = data.Result;
       logDebug(`[Customers] Loaded ${data.Result.length} customers`);
       renderCustomerDropdown();
     } else {
-      throw new Error("Invalid customer format");
+      logDebug(`[Customers] Unexpected data format:\n${JSON.stringify(data, null, 2)}`);
+      throw new Error("Customer data was returned, but not as an array.");
     }
   } catch (err) {
     logDebug('[Customers] ERROR: ' + err.message);
