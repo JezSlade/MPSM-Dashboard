@@ -4,7 +4,7 @@ const MPSM = {
   customers: [],
   selectedCustomerId: null,
   printers: [],
-  version: 'v1.0.1 [Token+Customer Fix]'
+  version: 'v1.0.2 [Customer Check Fixed]'
 };
 
 // Dashboard initializer
@@ -53,14 +53,15 @@ async function getCustomers() {
 
     const data = await res.json();
 
-    if (data && Array.isArray(data.Result)) {
-      MPSM.customers = data.Result;
-      logDebug(`[Customers] Loaded ${data.Result.length} customers`);
-      renderCustomerDropdown();
-    } else {
+    if (!data || !Array.isArray(data.Result)) {
       logDebug(`[Customers] Unexpected data format:\n${JSON.stringify(data, null, 2)}`);
-      throw new Error("Customer data was returned, but not as an array.");
+      return;
     }
+
+    MPSM.customers = data.Result;
+    logDebug(`[Customers] Loaded ${data.Result.length} customers`);
+    renderCustomerDropdown();
+
   } catch (err) {
     logDebug('[Customers] ERROR: ' + err.message);
   }
