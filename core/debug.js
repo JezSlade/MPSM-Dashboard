@@ -1,14 +1,15 @@
-// v1.0.1 [Fix: Ensure Visible Panel + Log Scroll]
+// v1.0.1 [Fix: Ensure Visible Panel + Escape Issues]
 export class DebugPanel {
   constructor() {
     const container = document.createElement('div');
     container.id = 'debug-panel';
-    container.className = 'open'; // default to visible
+    container.className = 'open'; // default open
 
-    container.innerHTML = `
-      <div id="debug-toggle">⚙️ DEBUG</div>
-      <div id="debug-log"></div>
-    `;
+    // Use proper JS string literal, not backtick literal inside string
+    container.innerHTML = [
+      '<div id="debug-toggle">⚙️ DEBUG</div>',
+      '<div id="debug-log"></div>'
+    ].join('');
 
     document.body.appendChild(container);
 
