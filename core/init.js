@@ -1,10 +1,12 @@
-// v1.0.1 [Fix: Ensure DebugPanel Loaded First]
-import './debug.js'; // 🔥 must load BEFORE anything logs to it
+// v1.0.2 [Add: Customer Dropdown Loader]
+import './debug.js';
 import { eventBus } from './event-bus.js';
 import { store } from './store.js';
 import { loadToken } from '../modules/token.js';
+import { loadCustomers } from '../modules/customers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  eventBus.emit("core:init", { version: "1.0.0", time: new Date().toISOString() });
+  eventBus.emit("core:init", { version: "1.0.2", time: new Date().toISOString() });
   loadToken();
+  loadCustomers();
 });
