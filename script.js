@@ -4,7 +4,7 @@ const MPSM = {
   customers: [],
   selectedCustomerId: null,
   printers: [],
-  version: 'v1.0.2 [Customer Check Fixed]'
+  version: 'v1.0.3 [Fixed Like a Woman Would]'
 };
 
 // Dashboard initializer
@@ -35,14 +35,13 @@ async function getToken() {
   }
 }
 
-// Fetches customer list with Authorization header and verifies format
+// Fetches customer list using GET and Authorization header
 async function getCustomers() {
   try {
     const res = await fetch('get_customers.php', {
-      method: 'POST',
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${MPSM.token}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${MPSM.token}`
       }
     });
 
