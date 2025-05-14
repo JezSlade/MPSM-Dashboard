@@ -1,32 +1,37 @@
-// v1.0.0 [Init: Debug Panel]
+// v1.0.1 [Fix: Ensure Visible Panel + Log Scroll]
 export class DebugPanel {
   constructor() {
-    this.container = document.createElement('div');
-    this.container.id = 'debug-panel';
-    this.container.innerHTML = \`
-      <div id="debug-toggle">⚙️</div>
+    const container = document.createElement('div');
+    container.id = 'debug-panel';
+    container.className = 'open'; // default to visible
+
+    container.innerHTML = `
+      <div id="debug-toggle">⚙️ DEBUG</div>
       <div id="debug-log"></div>
-    \`;
-    document.body.appendChild(this.container);
+    `;
+
+    document.body.appendChild(container);
+
     document.getElementById('debug-toggle').onclick = () => {
-      this.container.classList.toggle('open');
+      container.classList.toggle('open');
     };
   }
 
   logEvent(event, payload) {
-    const log = document.getElementById('debug-log');
-    const div = document.createElement('div');
-    div.className = 'log-entry';
-    div.innerText = \`[event] \${event}: \${JSON.stringify(payload)}\`;
-    log.prepend(div);
+    this._append(`[event] ${event}: ${JSON.stringify(payload)}`);
   }
 
   logError(msg, error) {
+    this._append(`[error] ${msg}: ${error?.message || error}`, true);
+  }
+
+  _append(text, isError = false) {
     const log = document.getElementById('debug-log');
-    const div = document.createElement('div');
-    div.className = 'log-entry error';
-    div.innerText = \`[error] \${msg}: \${error?.message || error}\`;
-    log.prepend(div);
+    const entry = document.createElement('div');
+    entry.className = 'log-entry' + (isError ? ' error' : '');
+    entry.innerText = text;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
   }
 }
 

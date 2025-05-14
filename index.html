@@ -5,17 +5,51 @@
   <title>MPSM Dashboard</title>
   <style>
     body { font-family: sans-serif; margin: 0; padding: 0; }
-    #debug-panel { position: fixed; bottom: 0; right: 0; width: 300px; max-height: 40%; background: #111; color: #0f0; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; }
-    #debug-panel #debug-toggle { background: #222; color: white; padding: 5px; cursor: pointer; text-align: center; }
-    #debug-panel #debug-log { padding: 5px; overflow-y: auto; flex: 1; }
-    #debug-panel .log-entry { margin-bottom: 5px; }
-    #debug-panel .error { color: red; }
-    #debug-panel:not(.open) #debug-log { display: none; }
+    h1 { padding: 1rem; }
+    #debug-panel {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 350px;
+      height: 300px;
+      background: #111;
+      color: #0f0;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      border-top-left-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    #debug-panel #debug-toggle {
+      background: #333;
+      color: white;
+      padding: 5px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      border-top-left-radius: 8px;
+    }
+
+    #debug-panel #debug-log {
+      padding: 5px;
+      overflow-y: auto;
+      flex-grow: 1;
+      background: #000;
+    }
+
+    .log-entry { margin-bottom: 4px; word-break: break-word; }
+    .log-entry.error { color: red; }
+
+    #debug-panel:not(.open) #debug-log {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <h1>MPSM Dashboard Core</h1>
-  <p>The core is loaded and ready. Check the debug panel for logs.</p>
+  <p>The core is loaded and ready.</p>
 
   <script type="module" src="./core/init.js"></script>
 </body>
