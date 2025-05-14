@@ -4,12 +4,12 @@ const MPSM = {
   customers: [],
   selectedCustomerId: null,
   printers: [],
-  version: 'v1.0.0'
+  version: 'v1.0.1 [Token+Customer Fix]'
 };
 
 // Dashboard initializer
 async function initDashboard() {
-  logDebug('[Init] Booting MPSM v' + MPSM.version);
+  logDebug(`[Init] Booting MPSM ${MPSM.version}`);
   await getToken();
   await getCustomers();
   if (MPSM.customers.length > 0) {
@@ -35,7 +35,7 @@ async function getToken() {
   }
 }
 
-// Fetches customer list, using Authorization header
+// Fetches customer list with Authorization header and verifies format
 async function getCustomers() {
   try {
     const res = await fetch('get_customers.php', {
