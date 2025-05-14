@@ -45,12 +45,26 @@ def fetch_customers(token):
         "Authorization": f"bearer {token}",
         "Content-Type": "application/json"
     }
+
+    # === Required payload for Customer/GetCustomers ===
+    payload = {
+        "PageNumber": 1,
+        "PageRows": 50,
+        "SortColumn": "Description",  # Can be changed to any valid column
+        "SortOrder": 0,               # 0 = Ascending, 1 = Descending
+        "DealerCode": "SZ13qRwU5GtFLj0i_CbEgQ2"  # Confirmed dealer code
+    }
+
     try:
-        response = requests.post(CUSTOMER_LIST_URL, headers=headers, json={})
+        response = requests.post(CUSTOMER_LIST_URL, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        return {"status": "error", "message": f"Customer call failed: {str(e)}", "raw": response.text if 'response' in locals() else None}
+        return {
+            "status": "error",
+            "message": f"Customer call failed: {str(e)}",
+            "raw": response.text if 'response' in locals() else None
+        }
 
 # === Main Execution Block ===
 if __name__ == "__main__":
