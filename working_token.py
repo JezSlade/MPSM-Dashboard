@@ -14,28 +14,12 @@ PASSWORD = os.getenv("PASSWORD")
 SCOPE = os.getenv("SCOPE")
 
 # === Constants ===
-DEALER_ID = "SZ13qRwU5GtFLj0i_CbEgQ2"  # Static, as approved by Jez
 TOKEN_URL = BASE_URL.rstrip("/") + "/token"
-DEVICE_LIST_URL = BASE_URL.rstrip("/") + "/Device/List"
+CUSTOMER_LIST_URL = BASE_URL.rstrip("/") + "/Customer/GetCustomers"
 
 HEADERS_FORM = {
     "Content-Type": "application/x-www-form-urlencoded",
     "Cache-Control": "no-cache"
-}
-
-# === Request Body for Device/List ===
-DEVICE_LIST_PAYLOAD = {
-    "FilterDealerId": DEALER_ID,
-    "FilterCustomerCodes": None,
-    "ProductBrand": None,
-    "ProductModel": None,
-    "OfficeId": None,
-    "Status": 1,
-    "FilterText": None,
-    "PageNumber": 1,
-    "PageRows": 50,
-    "SortColumn": "Id",
-    "SortOrder": 0
 }
 
 # === Function to get access token ===
@@ -55,18 +39,18 @@ def get_token():
     except Exception as e:
         return None, str(e)
 
-# === Function to POST Device/List ===
-def fetch_devices(token):
+# === Function to POST Customer/GetCustomers ===
+def fetch_customers(token):
     headers = {
         "Authorization": f"bearer {token}",
         "Content-Type": "application/json"
     }
     try:
-        response = requests.post(DEVICE_LIST_URL, headers=headers, json=DEVICE_LIST_PAYLOAD)
+        response = requests.post(CUSTOMER_LIST_URL, headers=headers, json={})
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        return {"status": "error", "message": f"Device call failed: {str(e)}", "raw": response.text if 'response' in locals() else None}
+        return {"status": "error", "message": f"Customer call failed: {str(e)}", "raw": response.text if 'response' in locals() else None}
 
 # === Main Execution Block ===
 if __name__ == "__main__":
@@ -74,7 +58,7 @@ if __name__ == "__main__":
     if isinstance(token, tuple):
         print(json.dumps({"status": "error", "message": f"Token error: {token[1]}"}))
     elif token:
-        data = fetch_devices(token)
+        data = fetch_customers(token)
         print(json.dumps(data, indent=2))
     else:
         print(json.dumps({"status": "error", "message": "Token acquisition failed"}))
