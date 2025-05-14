@@ -1,40 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header id="header">
-    <h1>MPSM Dashboard</h1>
-    <p class="subtitle">📦 Multi-Customer Printer Monitoring</p>
-  </header>
-
-  <main id="main-content">
-    <!-- Customer selection dropdown -->
-    <div class="filter-row">
-      <label for="customer-select">Filter by Customer:</label>
-      <select id="customer-select">
-        <option value="">— Select a Customer —</option>
-      </select>
-    </div>
-
-    <!-- Output Table -->
-    <section id="output-panel">
-      <h2>📋 Printer List</h2>
-      <div id="printer-table-container">
-        <p class="loading">Loading data...</p>
-      </div>
-      <div id="pagination-controls"></div>
-    </section>
-  </main>
-
-  <!-- Floating debug log window -->
-  <div id="debug-float">
-    <pre id="debug-log">[Boot] Debug console initialized...</pre>
-  </div>
+  <h1>MPS Monitor Devices</h1>
+  <table id="deviceTable">
+    <thead>
+      <tr>
+        <th>Asset Number</th>
+        <th>IP Address</th>
+        <th>Model</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Devices will be inserted here by JS -->
+    </tbody>
+  </table>
 
   <script src="script.js"></script>
 </body>
