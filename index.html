@@ -7,12 +7,17 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="header">
-    <h1>MPSM Dashboard</h1>
-    <p class="subtitle">🔍 Static Module: <strong>GetPrinters</strong></p>
+  <div id="top-header">
+    <div class="left-group">
+      <h1>MPSM Dashboard</h1>
+      <span class="version">v1.0.0</span>
+    </div>
+    <div class="right-group">
+      <button id="refresh-btn">🔄 Refresh</button>
+      <button id="toggle-debug">🛠️ Toggle Debug</button>
+    </div>
   </div>
- 
-  <div id="output-panel">
+    <div id="output-panel">
     <h2>📦 API Response</h2>
     <pre id="json-output">Loading data...</pre>
   </div>

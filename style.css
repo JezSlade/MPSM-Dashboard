@@ -41,4 +41,48 @@ body {
     font-size: 0.9em;
     border-radius: 4px;
   }
+  #top-header {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #444;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  
+  #top-header h1 {
+    margin: 0;
+    font-size: 20px;
+    display: inline;
+  }
+  
+  .version {
+    font-size: 0.9em;
+    margin-left: 12px;
+    color: #aaa;
+  }
+  
+  .left-group,
+  .right-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  #top-header button {
+    background-color: #333;
+    color: #eee;
+    border: 1px solid #555;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  #top-header button:hover {
+    background-color: #444;
+  }
   

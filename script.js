@@ -29,4 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
   
     fetchPrinters();
   });
-   
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    location.reload(true); // Full reload bypassing cache
+  });
+  
+  document.getElementById("toggle-debug").addEventListener("click", () => {
+    const panel = document.getElementById("debug-panel");
+    panel.style.display = (panel.style.display === "none") ? "block" : "none";
+  });
+  
