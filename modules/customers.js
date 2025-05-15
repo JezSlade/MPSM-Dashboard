@@ -88,3 +88,6 @@ function renderCustomDropdown(customers) {
   app.appendChild(wrapper);
 
   // Initial render
+
+  renderOptions();
+}
