@@ -86,4 +86,9 @@ body {
   #debug-panel:not(.open) #debug-log {
     display: none;
   }
+  /* Ensure visible text inside dropdown */
+select#customer-select option {
+    color: #000;
+    background-color: #fff;
+  }
   
