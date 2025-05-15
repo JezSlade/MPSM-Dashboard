@@ -1,8 +1,8 @@
-// v1.0.0 [Init: Device Fetch + Table Display]
+// v1.0.1 [Fix: Render Valid Device Keys]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
-// Triggered when a customer is selected
+// When a customer is selected, fetch their devices
 eventBus.on("customer:selected", async (customerId) => {
   try {
     const res = await fetch('./get_devices.php', {
@@ -23,28 +23,36 @@ eventBus.on("customer:selected", async (customerId) => {
 });
 
 function renderTable(devices) {
-  let app = document.getElementById("devices");
-  if (!app) {
-    app = document.createElement("div");
-    app.id = "devices";
-    document.getElementById("app").appendChild(app);
+  const root = document.getElementById("app");
+  if (!root) return;
+
+  let container = document.getElementById("devices");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "devices";
+    root.appendChild(container);
+  } else {
+    container.innerHTML = "";
   }
 
+  if (!devices.length) {
+    container.innerHTML = "<p>No devices found for this customer.</p>";
+    return;
+  }
+
+  // Auto-detect first 6 useful fields from first device
+  const sample = devices[0];
+  const keys = Object.keys(sample).slice(0, 6); // Adjust as needed
+
+  const headers = keys.map(k => `<th>${k}</th>`).join("");
   const rows = devices.map(d => `
-    <tr>
-      <td>${d.AssetNumber || ''}</td>
-      <td>${d.IPAddress || ''}</td>
-      <td>${d.Model || ''}</td>
-      <td>${d.AlertOnDisplay || ''}</td>
-    </tr>
+    <tr>${keys.map(k => `<td>${d[k] ?? ''}</td>`).join("")}</tr>
   `).join("");
 
-  app.innerHTML = `
+  container.innerHTML = `
     <h3>Devices</h3>
     <table class="device-table">
-      <thead>
-        <tr><th>Asset</th><th>IP</th><th>Model</th><th>Alert</th></tr>
-      </thead>
+      <thead><tr>${headers}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
