@@ -1,5 +1,5 @@
 <?php
-// v1.0.0 [Fetch Devices by Customer from /CustomerDashboard/Devices]
+// v1.0.0 [Init: Get Devices by Customer Code + Dealer ID]
 header('Content-Type: application/json');
 
 function fail($msg, $extra = []) {
@@ -8,7 +8,6 @@ function fail($msg, $extra = []) {
     exit;
 }
 
-// Load environment
 $envPath = __DIR__ . '/.env';
 if (!file_exists($envPath)) fail('.env not found');
 $env = parse_ini_file($envPath);
@@ -18,14 +17,20 @@ $client_secret = $env['CLIENT_SECRET'] ?? fail('CLIENT_SECRET missing');
 $username      = $env['USERNAME']      ?? fail('USERNAME missing');
 $password      = $env['PASSWORD']      ?? fail('PASSWORD missing');
 
-// Read CustomerId from input
-$input = json_decode(file_get_contents('php://input'), true);
-$customerId = $input['CustomerId'] ?? fail("Missing CustomerId");
+// Input payload
+$raw = file_get_contents("php://input");
+$input = json_decode($raw, true);
+$customerCode = $input['customerId'] ?? null;
 
-// Fetch token
+if (!$customerCode) {
+    fail("Missing customerId in POST body");
+}
+
+$dealer_id = 'SZ13qRwU5GtFLj0i_CbEgQ2'; // required static dealer ID
+
 function fetch_token($client_id, $client_secret, $username, $password) {
     $url = 'https://api.abassetmanagement.com/api3/token';
-    $post = http_build_query([
+    $data = http_build_query([
         'client_id'     => $client_id,
         'client_secret' => $client_secret,
         'grant_type'    => 'password',
@@ -33,43 +38,46 @@ function fetch_token($client_id, $client_secret, $username, $password) {
         'password'      => $password,
         'scope'         => 'account'
     ]);
-
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $post,
+        CURLOPT_POSTFIELDS     => $data,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/x-www-form-urlencoded',
             'Cache-Control: no-cache'
         ],
         CURLOPT_TIMEOUT => 10
     ]);
-
-    $res = curl_exec($ch);
+    $response = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    if (curl_errno($ch)) fail("Token curl error", ['error' => curl_error($ch)]);
+    if (curl_errno($ch)) fail('Token curl error', ['error' => curl_error($ch)]);
     curl_close($ch);
-
-    $json = json_decode($res, true);
+    $json = json_decode($response, true);
     if ($code >= 400 || !$json || !isset($json['access_token'])) {
-        fail("Token error", ['http_code' => $code, 'response' => $res]);
+        fail('Token error', ['http_code' => $code, 'response' => $response]);
     }
     return $json['access_token'];
 }
 
 $token = fetch_token($client_id, $client_secret, $username, $password);
 
-// Fetch devices for customer
-$url = 'https://api.abassetmanagement.com/api3/CustomerDashboard/Devices';
+// Build device list request
 $payload = json_encode([
-    'CustomerId' => $customerId,
-    'SortColumn' => 'DeviceId',
-    'SortOrder' => 0,
-    'PageNumber' => 1,
-    'PageRows' => 2147483647
+    "FilterDealerId" => $dealer_id,
+    "FilterCustomerCodes" => [ $customerCode ],
+    "ProductBrand" => null,
+    "ProductModel" => null,
+    "OfficeId" => null,
+    "Status" => 1,
+    "FilterText" => null,
+    "PageNumber" => 1,
+    "PageRows" => 1000,
+    "SortColumn" => "Id",
+    "SortOrder" => 0
 ]);
 
+$url = 'https://api.abassetmanagement.com/api3/Device/List';
 $ch = curl_init($url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
@@ -84,7 +92,7 @@ curl_setopt_array($ch, [
 
 $response = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-if (curl_errno($ch)) fail("Device curl error", ['error' => curl_error($ch)]);
+if (curl_errno($ch)) fail('Device curl error', ['error' => curl_error($ch)]);
 curl_close($ch);
 
 $data = json_decode($response, true);

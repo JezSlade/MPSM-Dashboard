@@ -1,194 +1,81 @@
-/* v1.0.0 [Init: Base Styles + Custom Dropdown UI] */
-
 body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f4f6f9;
-    color: #222;
-  }
-  
-  h1 {
-    padding: 1rem;
-    font-size: 1.8rem;
-    background: #2b2d42;
-    color: #f8f9fa;
-    margin: 0;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-  
-  #app {
-    padding: 2rem;
-  }
-  
-  select#customer-select {
-    padding: 0.6rem 1rem;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: #fff;
-    color: #333;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: all 0.2s ease-in-out;
-  }
-  
-  select#customer-select:hover {
-    border-color: #888;
-  }
-  
-  select#customer-select:focus {
-    outline: none;
-    border-color: #0077cc;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
-  }
-  
-  #debug-panel {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 350px;
-    height: 300px;
-    background: #111;
-    color: #0f0;
-    font-size: 12px;
-    display: flex;
-    flex-direction: column;
-    z-index: 1000;
-    border-top-left-radius: 8px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-  }
-  
-  #debug-panel #debug-toggle {
-    background: #333;
-    color: white;
-    padding: 5px;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-    border-top-left-radius: 8px;
-  }
-  
-  #debug-panel #debug-log {
-    padding: 5px;
-    overflow-y: auto;
-    flex-grow: 1;
-    background: #000;
-  }
-  
-  .log-entry {
-    margin-bottom: 4px;
-    word-break: break-word;
-  }
-  
-  .log-entry.error {
-    color: red;
-  }
-  
-  #debug-panel:not(.open) #debug-log {
-    display: none;
-  }
-  /* Ensure visible text inside dropdown */
-select#customer-select option {
-    color: #000;
-    background-color: #fff;
-  }
-/* Custom dropdown styles */
-.dropdown-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 400px;
-    margin-bottom: 2rem;
-  }
-  
-  .dropdown-selected {
-    background: #fff;
-    padding: 0.6rem 1rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  }
-  
-  .dropdown-options {
-    display: none;
-    position: absolute;
-    width: 100%;
-    top: 100%;
-    left: 0;
-    z-index: 99;
-    background: white;
-    border: 1px solid #ccc;
-    border-top: none;
-    max-height: 250px;
-    overflow-y: auto;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-  
-  .dropdown-options.show {
-    display: block;
-  }
-  
-  .dropdown-option {
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-  }
-  
-  .dropdown-option:hover {
-    background: #f0f0f0;
-  }
-/* Search bar inside dropdown */
-.dropdown-search {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.5rem;
-    border: none;
-    border-bottom: 1px solid #ccc;
-    outline: none;
-    font-size: 0.9rem;
-  }
-/* ========== Device Table ========== */
-.device-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  background: #1c1c1c;
+  color: #e0e0e0;
 }
-.device-table th,
-.device-table td {
-  padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+
+h1, h3 {
+  padding-left: 1rem;
+}
+
+#debug-panel {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 500px;
+  height: 50vh;
+  background: rgba(10, 10, 10, 0.9);
+  color: #0f0;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  border-top-left-radius: 8px;
+  border-left: 1px solid #333;
+  border-top: 1px solid #333;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+}
+
+#debug-panel #debug-toggle {
+  background: #333;
+  color: white;
+  padding: 5px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  border-top-left-radius: 8px;
+  font-weight: bold;
+}
+
+#debug-panel #debug-log {
+  padding: 5px;
+  overflow-y: auto;
+  flex-grow: 1;
+  background: #000;
+}
+
+.log-entry { margin-bottom: 4px; word-break: break-word; }
+.log-entry.error { color: red; }
+#debug-panel:not(.open) #debug-log { display: none; }
+
+select, table {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  margin: 1rem;
+  padding: 0.5rem;
+}
+
+.mpsm-table {
+  width: calc(100% - 2rem);
+  margin: 1rem;
+  border-collapse: collapse;
+  backdrop-filter: blur(4px);
+}
+
+.mpsm-table th, .mpsm-table td {
+  border: 1px solid #444;
+  padding: 0.5rem;
   text-align: left;
 }
-.device-table th {
-  background: #f0f0f0;
+
+.mpsm-table th {
+  background-color: rgba(255,255,255,0.08);
 }
 
-/* ========== Debug Panel Toggle ========== */
-#debug-toggle-float {
-  position: absolute;
-  right: 10px;
-  top: 1.2rem;
-  background: #444;
-  color: white;
-  padding: 4px 10px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  border-radius: 4px;
-  user-select: none;
+.mpsm-table tr:hover {
+  background-color: rgba(255,255,255,0.05);
 }
-/* ========== Debug Panel Hidden Toggle ========== */
-#debug-panel {
-  transition: opacity 0.2s ease;
-  height: 400px; /* make it larger */
-}
-#debug-panel.hidden {
-  display: none;
-}
-/* Wider device tables + readable debug panel */
-.device-table.wide {
-  min-width: 1200px;
-  font-size: 0.9rem;
-}
-#debug-panel {
-  height: 500px;
-  font-size: 13px;
-}
-      
