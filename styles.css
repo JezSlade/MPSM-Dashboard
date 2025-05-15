@@ -182,4 +182,13 @@ select#customer-select option {
 #debug-panel.hidden {
   display: none;
 }
+/* Wider device tables + readable debug panel */
+.device-table.wide {
+  min-width: 1200px;
+  font-size: 0.9rem;
+}
+#debug-panel {
+  height: 500px;
+  font-size: 13px;
+}
       

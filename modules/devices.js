@@ -1,9 +1,10 @@
-// v1.0.1 [Fix: Render Valid Device Keys]
+// v1.0.2 [Add: Full Key Dump + Reset on Customer Change]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
-// When a customer is selected, fetch their devices
+// Triggered on new customer selection
 eventBus.on("customer:selected", async (customerId) => {
+  clearTable(); // wipe previous content
   try {
     const res = await fetch('./get_devices.php', {
       method: 'POST',
@@ -22,38 +23,39 @@ eventBus.on("customer:selected", async (customerId) => {
   }
 });
 
+// Clear previous device UI
+function clearTable() {
+  const el = document.getElementById("devices");
+  if (el) el.remove();
+}
+
+// Render full device table with all fields
 function renderTable(devices) {
   const root = document.getElementById("app");
   if (!root) return;
 
-  let container = document.getElementById("devices");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "devices";
-    root.appendChild(container);
-  } else {
-    container.innerHTML = "";
-  }
+  let container = document.createElement("div");
+  container.id = "devices";
+  root.appendChild(container);
 
   if (!devices.length) {
     container.innerHTML = "<p>No devices found for this customer.</p>";
     return;
   }
 
-  // Auto-detect first 6 useful fields from first device
-  const sample = devices[0];
-  const keys = Object.keys(sample).slice(0, 6); // Adjust as needed
-
+  const keys = Object.keys(devices[0]);
   const headers = keys.map(k => `<th>${k}</th>`).join("");
   const rows = devices.map(d => `
     <tr>${keys.map(k => `<td>${d[k] ?? ''}</td>`).join("")}</tr>
   `).join("");
 
   container.innerHTML = `
-    <h3>Devices</h3>
-    <table class="device-table">
-      <thead><tr>${headers}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <h3>Devices (${devices.length})</h3>
+    <div style="overflow-x:auto;">
+      <table class="device-table wide">
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   `;
 }
