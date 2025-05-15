@@ -1,4 +1,4 @@
-// v1.1.0 [Replace: Native Select with Custom Dropdown]
+// v1.2.0 [Add: Searchable Custom Dropdown for Customers]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -30,29 +30,51 @@ function renderCustomDropdown(customers) {
   app.innerHTML = `
     <div class="dropdown-wrapper">
       <div class="dropdown-selected">-- Select Customer --</div>
-      <div class="dropdown-options"></div>
+      <div class="dropdown-options">
+        <input type="text" placeholder="Search..." class="dropdown-search" />
+        <div class="dropdown-list"></div>
+      </div>
     </div>
   `;
 
   const selected = app.querySelector(".dropdown-selected");
   const options = app.querySelector(".dropdown-options");
+  const list = options.querySelector(".dropdown-list");
+  const search = options.querySelector(".dropdown-search");
 
-  customers.forEach(c => {
-    const opt = document.createElement("div");
-    opt.className = "dropdown-option";
-    opt.dataset.id = c.Id;
-    opt.textContent = c.Description;
-    opt.addEventListener("click", () => {
-      selected.textContent = c.Description;
-      options.classList.remove("show");
-      store.set("customerId", c.Id);
-      eventBus.emit("customer:selected", c.Id);
+  function populate(filtered) {
+    list.innerHTML = "";
+    filtered.forEach(c => {
+      const opt = document.createElement("div");
+      opt.className = "dropdown-option";
+      opt.dataset.id = c.Id;
+      opt.textContent = c.Description;
+      opt.addEventListener("click", () => {
+        selected.textContent = c.Description;
+        options.classList.remove("show");
+        store.set("customerId", c.Id);
+        eventBus.emit("customer:selected", c.Id);
+      });
+      list.appendChild(opt);
     });
-    options.appendChild(opt);
+  }
+
+  populate(customers);
+
+  search.addEventListener("input", () => {
+    const val = search.value.toLowerCase();
+    const filtered = customers.filter(c =>
+      c.Description.toLowerCase().includes(val) ||
+      c.Code.toLowerCase().includes(val)
+    );
+    populate(filtered);
   });
 
   selected.addEventListener("click", () => {
     options.classList.toggle("show");
+    if (options.classList.contains("show")) {
+      search.focus();
+    }
   });
 
   document.addEventListener("click", (e) => {
