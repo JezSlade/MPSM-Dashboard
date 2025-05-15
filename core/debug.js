@@ -1,15 +1,14 @@
-// v1.0.1 [Fix: Ensure Visible Panel + Escape Issues]
+// v1.0.1 [Fix: Properly Render Object Errors in Debug Panel]
 export class DebugPanel {
   constructor() {
     const container = document.createElement('div');
     container.id = 'debug-panel';
-    container.className = 'open'; // default open
+    container.className = 'open';
 
-    // Use proper JS string literal, not backtick literal inside string
-    container.innerHTML = [
-      '<div id="debug-toggle">⚙️ DEBUG</div>',
-      '<div id="debug-log"></div>'
-    ].join('');
+    container.innerHTML = `
+      <div id="debug-toggle">⚙️ DEBUG</div>
+      <div id="debug-log"></div>
+    `;
 
     document.body.appendChild(container);
 
@@ -23,16 +22,25 @@ export class DebugPanel {
   }
 
   logError(msg, error) {
-    this._append(`[error] ${msg}: ${error?.message || error}`, true);
+    const log = document.getElementById('debug-log');
+    const div = document.createElement('div');
+    div.className = 'log-entry error';
+
+    const payload =
+      typeof error === 'object'
+        ? JSON.stringify(error, null, 2)
+        : String(error);
+
+    div.innerText = `[error] ${msg}:\n${payload}`;
+    log.prepend(div);
   }
 
-  _append(text, isError = false) {
+  _append(text) {
     const log = document.getElementById('debug-log');
     const entry = document.createElement('div');
-    entry.className = 'log-entry' + (isError ? ' error' : '');
+    entry.className = 'log-entry';
     entry.innerText = text;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
+    log.prepend(entry);
   }
 }
 
