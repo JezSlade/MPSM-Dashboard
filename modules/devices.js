@@ -1,4 +1,4 @@
-// v1.0.2 [Add: Full Key Dump + Reset on Customer Change]
+// v1.0.3 [Add: Full Response Logging + Result Validation]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -11,9 +11,15 @@ eventBus.on("customer:selected", async (customerId) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ CustomerId: customerId })
     });
+
     const data = await res.json();
 
-    if (!Array.isArray(data?.Result)) throw new Error("Invalid device data");
+    // Log full response for debug visibility
+    console.log("Raw API response from get_devices.php:", data);
+    if (!data?.Result || !Array.isArray(data.Result)) {
+      window.DebugPanel?.logError("Invalid device data", data);
+      throw new Error("Invalid device data");
+    }
 
     eventBus.emit("devices:loaded", data.Result);
     renderTable(data.Result);
