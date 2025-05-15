@@ -1,14 +1,14 @@
-// v1.0.1 [Fix: Properly Render Object Errors in Debug Panel]
+// v1.1.0 [Enhanced Debug Panel: LCARS style, expanded size, fixed toggle]
 export class DebugPanel {
   constructor() {
     const container = document.createElement('div');
     container.id = 'debug-panel';
     container.className = 'open';
 
-    container.innerHTML = `
-      <div id="debug-toggle">⚙️ DEBUG</div>
-      <div id="debug-log"></div>
-    `;
+    container.innerHTML = [
+      '<div id="debug-toggle">⚙️ DEBUG CONSOLE</div>',
+      '<div id="debug-log"></div>'
+    ].join('');
 
     document.body.appendChild(container);
 
@@ -22,25 +22,16 @@ export class DebugPanel {
   }
 
   logError(msg, error) {
-    const log = document.getElementById('debug-log');
-    const div = document.createElement('div');
-    div.className = 'log-entry error';
-
-    const payload =
-      typeof error === 'object'
-        ? JSON.stringify(error, null, 2)
-        : String(error);
-
-    div.innerText = `[error] ${msg}:\n${payload}`;
-    log.prepend(div);
+    this._append(`[error] ${msg}: ${error?.message || error}`, true);
   }
 
-  _append(text) {
+  _append(text, isError = false) {
     const log = document.getElementById('debug-log');
     const entry = document.createElement('div');
-    entry.className = 'log-entry';
+    entry.className = 'log-entry' + (isError ? ' error' : '');
     entry.innerText = text;
-    log.prepend(entry);
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
   }
 }
 
