@@ -1,20 +1,24 @@
-// v1.1.0 [Enhanced Debug Panel: LCARS style, expanded size, fixed toggle]
+// v1.2.0 [LCARS Toggle: Glowing Panel Control + Highlight Accents]
 export class DebugPanel {
   constructor() {
     const container = document.createElement('div');
     container.id = 'debug-panel';
-    container.className = 'open';
+    container.classList.add('open');
 
-    container.innerHTML = [
-      '<div id="debug-toggle">⚙️ DEBUG CONSOLE</div>',
-      '<div id="debug-log"></div>'
-    ].join('');
+    const toggle = document.createElement('div');
+    toggle.id = 'debug-toggle';
+    toggle.innerHTML = '<span class="lcars-glow">☰</span> LCARS DEBUG';
 
-    document.body.appendChild(container);
+    const log = document.createElement('div');
+    log.id = 'debug-log';
 
-    document.getElementById('debug-toggle').onclick = () => {
+    toggle.onclick = () => {
       container.classList.toggle('open');
     };
+
+    container.appendChild(toggle);
+    container.appendChild(log);
+    document.body.appendChild(container);
   }
 
   logEvent(event, payload) {

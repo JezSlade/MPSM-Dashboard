@@ -99,3 +99,27 @@ select, input {
 .mpsm-table tr:hover {
   background-color: rgba(255,255,255,0.05);
 }
+#debug-toggle {
+  background: linear-gradient(90deg, #552288, #3388cc);
+  color: #fff;
+  padding: 10px 14px;
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 0 10px rgba(100,100,255,0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#debug-toggle .lcars-glow {
+  display: inline-block;
+  color: #ff66ff;
+  font-size: 18px;
+  text-shadow: 0 0 5px #ff66ff, 0 0 10px #ff66ff;
+}
