@@ -145,4 +145,33 @@ select#customer-select option {
     outline: none;
     font-size: 0.9rem;
   }
+/* ========== Device Table ========== */
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2rem;
+}
+.device-table th,
+.device-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+.device-table th {
+  background: #f0f0f0;
+}
+
+/* ========== Debug Panel Toggle ========== */
+#debug-toggle-float {
+  position: absolute;
+  right: 10px;
+  top: 1.2rem;
+  background: #444;
+  color: white;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
       
