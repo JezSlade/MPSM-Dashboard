@@ -1,4 +1,4 @@
-// v1.0.0 [Init: Customer Dropdown UI + Event Emit]
+// v1.1.0 [Replace: Native Select with Custom Dropdown]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -12,14 +12,14 @@ export async function loadCustomers() {
     const customers = data.Result;
     store.set("customers", customers);
     eventBus.emit("customers:loaded", customers);
-    renderDropdown(customers);
+    renderCustomDropdown(customers);
   } catch (err) {
     console.error("Customer fetch failed", err);
     window.DebugPanel?.logError("Customer fetch failed", err);
   }
 }
 
-function renderDropdown(customers) {
+function renderCustomDropdown(customers) {
   let app = document.getElementById("app");
   if (!app) {
     app = document.createElement("div");
@@ -27,23 +27,37 @@ function renderDropdown(customers) {
     document.body.appendChild(app);
   }
 
-  const select = document.createElement("select");
-  select.id = "customer-select";
-  select.innerHTML = '<option value="">-- Select Customer --</option>';
+  app.innerHTML = `
+    <div class="dropdown-wrapper">
+      <div class="dropdown-selected">-- Select Customer --</div>
+      <div class="dropdown-options"></div>
+    </div>
+  `;
+
+  const selected = app.querySelector(".dropdown-selected");
+  const options = app.querySelector(".dropdown-options");
 
   customers.forEach(c => {
-    const opt = document.createElement("option");
-    opt.value = c.Id;
-    opt.textContent = c.Name;
-    select.appendChild(opt);
+    const opt = document.createElement("div");
+    opt.className = "dropdown-option";
+    opt.dataset.id = c.Id;
+    opt.textContent = c.Description;
+    opt.addEventListener("click", () => {
+      selected.textContent = c.Description;
+      options.classList.remove("show");
+      store.set("customerId", c.Id);
+      eventBus.emit("customer:selected", c.Id);
+    });
+    options.appendChild(opt);
   });
 
-  select.addEventListener("change", () => {
-    const selectedId = select.value;
-    store.set("customerId", selectedId);
-    eventBus.emit("customer:selected", selectedId);
+  selected.addEventListener("click", () => {
+    options.classList.toggle("show");
   });
 
-  app.innerHTML = "<h3>Select Customer:</h3>";
-  app.appendChild(select);
+  document.addEventListener("click", (e) => {
+    if (!app.contains(e.target)) {
+      options.classList.remove("show");
+    }
+  });
 }

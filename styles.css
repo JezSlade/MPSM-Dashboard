@@ -91,4 +91,48 @@ select#customer-select option {
     color: #000;
     background-color: #fff;
   }
+/* Custom dropdown styles */
+.dropdown-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 2rem;
+  }
   
+  .dropdown-selected {
+    background: #fff;
+    padding: 0.6rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .dropdown-options {
+    display: none;
+    position: absolute;
+    width: 100%;
+    top: 100%;
+    left: 0;
+    z-index: 99;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  
+  .dropdown-options.show {
+    display: block;
+  }
+  
+  .dropdown-option {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+  }
+  
+  .dropdown-option:hover {
+    background: #f0f0f0;
+  }
+    
