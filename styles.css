@@ -174,4 +174,12 @@ select#customer-select option {
   border-radius: 4px;
   user-select: none;
 }
+/* ========== Debug Panel Hidden Toggle ========== */
+#debug-panel {
+  transition: opacity 0.2s ease;
+  height: 400px; /* make it larger */
+}
+#debug-panel.hidden {
+  display: none;
+}
       
