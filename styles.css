@@ -95,3 +95,15 @@ select option {
   background: #222;
   color: #fff;
 }
+#customer-dropdown input,
+#customer-dropdown select {
+  background: rgba(0, 30, 60, 0.85);
+  color: #cceeff;
+  border: 1px solid #446688;
+  border-radius: 4px;
+}
+
+#customer-dropdown option {
+  background: #0a1a2f;
+  color: #cceeff;
+}
