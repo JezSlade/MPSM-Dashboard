@@ -1,0 +1,89 @@
+/* v1.0.0 [Init: Base Styles + Custom Dropdown UI] */
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f6f9;
+    color: #222;
+  }
+  
+  h1 {
+    padding: 1rem;
+    font-size: 1.8rem;
+    background: #2b2d42;
+    color: #f8f9fa;
+    margin: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  #app {
+    padding: 2rem;
+  }
+  
+  select#customer-select {
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s ease-in-out;
+  }
+  
+  select#customer-select:hover {
+    border-color: #888;
+  }
+  
+  select#customer-select:focus {
+    outline: none;
+    border-color: #0077cc;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+  }
+  
+  #debug-panel {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 350px;
+    height: 300px;
+    background: #111;
+    color: #0f0;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    border-top-left-radius: 8px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+  }
+  
+  #debug-panel #debug-toggle {
+    background: #333;
+    color: white;
+    padding: 5px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    border-top-left-radius: 8px;
+  }
+  
+  #debug-panel #debug-log {
+    padding: 5px;
+    overflow-y: auto;
+    flex-grow: 1;
+    background: #000;
+  }
+  
+  .log-entry {
+    margin-bottom: 4px;
+    word-break: break-word;
+  }
+  
+  .log-entry.error {
+    color: red;
+  }
+  
+  #debug-panel:not(.open) #debug-log {
+    display: none;
+  }
+  
