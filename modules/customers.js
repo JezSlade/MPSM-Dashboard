@@ -1,4 +1,4 @@
-// v1.2.0 [Fix: LCARS Style + Live Search Dropdown]
+// v1.3.0 [LCARS Integrated Search Dropdown]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -12,89 +12,79 @@ export async function loadCustomers() {
     const customers = data.Result;
     store.set("customers", customers);
     eventBus.emit("customers:loaded", customers);
-    renderSearchableDropdown(customers);
+    renderCustomDropdown(customers);
   } catch (err) {
     console.error("Customer fetch failed", err);
     window.DebugPanel?.logError("Customer fetch failed", err);
   }
 }
 
-function renderSearchableDropdown(customers) {
-  let app = document.getElementById("app");
-  if (!app) {
-    app = document.createElement("div");
-    app.id = "app";
-    document.body.appendChild(app);
-  }
+function renderCustomDropdown(customers) {
+  const app = document.getElementById("app");
+  app.innerHTML = ""; // Reset
 
-  const container = document.createElement("div");
-  container.id = "customer-dropdown";
-  container.style.margin = "1rem";
-  container.style.maxWidth = "600px";
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "relative";
+  wrapper.style.margin = "1rem";
+  wrapper.style.maxWidth = "600px";
+  wrapper.style.background = "rgba(0,30,60,0.8)";
+  wrapper.style.border = "1px solid #446688";
+  wrapper.style.borderRadius = "10px";
+  wrapper.style.padding = "1rem";
 
   const label = document.createElement("label");
-  label.textContent = "🔎 Search + Select Customer";
-  label.style.display = "block";
+  label.textContent = "Select Customer";
   label.style.color = "#7fcfff";
-  label.style.fontSize = "14px";
+  label.style.display = "block";
   label.style.marginBottom = "0.5rem";
 
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Start typing to filter...";
+  input.placeholder = "Type to search...";
   input.style.width = "100%";
   input.style.padding = "0.5rem";
+  input.style.border = "1px solid #3388cc";
+  input.style.borderRadius = "8px";
   input.style.marginBottom = "0.5rem";
-  input.style.background = "rgba(0, 30, 60, 0.8)";
+  input.style.background = "rgba(0,40,80,0.9)";
   input.style.color = "#cceeff";
-  input.style.border = "1px solid #446688";
-  input.style.borderRadius = "4px";
 
-  const select = document.createElement("select");
-  select.id = "customer-select";
-  select.style.width = "100%";
-  select.style.maxHeight = "250px";
-  select.style.overflowY = "auto";
-  select.style.background = "rgba(0, 30, 60, 0.8)";
-  select.style.color = "#cceeff";
-  select.style.border = "1px solid #446688";
-  select.style.borderRadius = "4px";
-  select.style.padding = "0.5rem";
+  const list = document.createElement("div");
+  list.style.maxHeight = "250px";
+  list.style.overflowY = "auto";
+  list.style.border = "1px solid #3388cc";
+  list.style.borderRadius = "8px";
+  list.style.background = "#0a0f1a";
 
-  const defaultOption = document.createElement("option");
-  defaultOption.value = "";
-  defaultOption.textContent = "-- Select Customer --";
-  select.appendChild(defaultOption);
-
-  function updateOptions(filter = "") {
-    select.innerHTML = "";
-    select.appendChild(defaultOption);
+  const renderOptions = (filter = "") => {
+    list.innerHTML = "";
     customers
       .filter(c => c.Description.toLowerCase().includes(filter.toLowerCase()))
       .forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c.Code; // ✅ This is what Device/List requires
-        opt.textContent = c.Description;
-        select.appendChild(opt);
+        const item = document.createElement("div");
+        item.textContent = c.Description;
+        item.style.padding = "0.5rem";
+        item.style.cursor = "pointer";
+        item.style.borderBottom = "1px solid #223344";
+        item.onmouseover = () => item.style.background = "#112244";
+        item.onmouseout = () => item.style.background = "transparent";
+        item.onclick = () => {
+          store.set("customerId", c.Code);
+          eventBus.emit("customer:selected", c.Code);
+          input.value = c.Description;
+          list.innerHTML = "";
+        };
+        list.appendChild(item);
       });
-  }
-
-  updateOptions();
+  };
 
   input.addEventListener("input", () => {
-    updateOptions(input.value);
+    renderOptions(input.value);
   });
 
-  select.addEventListener("change", () => {
-    const selectedCode = select.value;
-    store.set("customerId", selectedCode);
-    eventBus.emit("customer:selected", selectedCode);
-  });
+  wrapper.appendChild(label);
+  wrapper.appendChild(input);
+  wrapper.appendChild(list);
+  app.appendChild(wrapper);
 
-  container.appendChild(label);
-  container.appendChild(input);
-  container.appendChild(select);
-
-  app.innerHTML = ""; // clear and inject
-  app.appendChild(container);
-}
+  // Initial render
