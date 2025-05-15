@@ -1,4 +1,4 @@
-// v1.2.0 [Add: Searchable Custom Dropdown for Customers]
+// v1.1.0 [Fix: Dropdown Style, Correct Value, Scroll]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -12,14 +12,14 @@ export async function loadCustomers() {
     const customers = data.Result;
     store.set("customers", customers);
     eventBus.emit("customers:loaded", customers);
-    renderCustomDropdown(customers);
+    renderDropdown(customers);
   } catch (err) {
     console.error("Customer fetch failed", err);
     window.DebugPanel?.logError("Customer fetch failed", err);
   }
 }
 
-function renderCustomDropdown(customers) {
+function renderDropdown(customers) {
   let app = document.getElementById("app");
   if (!app) {
     app = document.createElement("div");
@@ -27,59 +27,34 @@ function renderCustomDropdown(customers) {
     document.body.appendChild(app);
   }
 
-  app.innerHTML = `
-    <div class="dropdown-wrapper">
-      <div class="dropdown-selected">-- Select Customer --</div>
-      <div class="dropdown-options">
-        <input type="text" placeholder="Search..." class="dropdown-search" />
-        <div class="dropdown-list"></div>
-      </div>
-    </div>
-  `;
+  const label = document.createElement("label");
+  label.textContent = "Select Customer:";
+  label.style.display = "block";
+  label.style.margin = "1rem";
 
-  const selected = app.querySelector(".dropdown-selected");
-  const options = app.querySelector(".dropdown-options");
-  const list = options.querySelector(".dropdown-list");
-  const search = options.querySelector(".dropdown-search");
+  const select = document.createElement("select");
+  select.id = "customer-select";
+  select.style.maxWidth = "600px";
+  select.style.maxHeight = "300px";
+  select.style.overflowY = "auto";
+  select.style.display = "block";
+  select.style.margin = "1rem";
+  select.innerHTML = '<option value="">-- Select Customer --</option>';
 
-  function populate(filtered) {
-    list.innerHTML = "";
-    filtered.forEach(c => {
-      const opt = document.createElement("div");
-      opt.className = "dropdown-option";
-      opt.dataset.id = c.Id;
-      opt.textContent = c.Description;
-      opt.addEventListener("click", () => {
-        selected.textContent = c.Description;
-        options.classList.remove("show");
-        store.set("customerId", c.Id);
-        eventBus.emit("customer:selected", c.Id);
-      });
-      list.appendChild(opt);
-    });
-  }
-
-  populate(customers);
-
-  search.addEventListener("input", () => {
-    const val = search.value.toLowerCase();
-    const filtered = customers.filter(c =>
-      c.Description.toLowerCase().includes(val) ||
-      c.Code.toLowerCase().includes(val)
-    );
-    populate(filtered);
+  customers.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.Code; // ✅ Use Code not Id
+    opt.textContent = c.Description;
+    select.appendChild(opt);
   });
 
-  selected.addEventListener("click", () => {
-    options.classList.toggle("show");
-    if (options.classList.contains("show")) {
-      search.focus();
-    }
+  select.addEventListener("change", () => {
+    const selectedCode = select.value;
+    store.set("customerId", selectedCode);
+    eventBus.emit("customer:selected", selectedCode);
   });
 
-  document.addEventListener("click", (e) => {
-    if (!app.contains(e.target)) {
-      options.classList.remove("show");
-    }
-  });
+  app.innerHTML = ""; // Clear previous
+  app.appendChild(label);
+  app.appendChild(select);
 }
