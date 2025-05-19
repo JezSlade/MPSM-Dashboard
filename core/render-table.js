@@ -1,7 +1,8 @@
-// v2.0.1 [Fixed Template Literal + SEID + Full Table Engine]
+// v2.1.0 [Simplified Table: SEID Only Fields + LCARS Pagination]
 import { eventBus } from './event-bus.js';
 import { store } from './store.js';
 
+const DISPLAY_COLUMNS = ['SEID', 'Product.Brand', 'Product.Model', 'SerialNumber', 'IpAddress'];
 const SETTINGS_KEY = 'mpsm_table_prefs_v2';
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -9,12 +10,10 @@ function getSEID(row) {
   return row.AssetNumber || row.ExternalIdentifier || '—';
 }
 
-function getPreferences(columns) {
+function getPreferences() {
   const raw = localStorage.getItem(SETTINGS_KEY);
   if (!raw) {
     return {
-      visible: Object.fromEntries(columns.map(k => [k, true])),
-      order: ['SEID', ...columns.filter(c => c !== 'SEID')],
       pageSize: 25,
       sort: { column: 'SEID', direction: 'asc' }
     };
@@ -26,14 +25,17 @@ function savePreferences(prefs) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(prefs));
 }
 
+function getColumnValue(row, key) {
+  if (key === 'SEID') return getSEID(row);
+  const parts = key.split('.');
+  return parts.reduce((acc, part) => acc?.[part], row) ?? '—';
+}
+
 export function renderTable(containerId, rawData) {
   if (!Array.isArray(rawData)) return;
 
+  const prefs = getPreferences();
   const data = rawData.map(row => ({ ...row, SEID: getSEID(row) }));
-  const allKeys = Object.keys(data[0] || {});
-  if (!allKeys.includes('SEID')) allKeys.unshift('SEID');
-
-  const prefs = getPreferences(allKeys);
   const container = document.getElementById(containerId);
   container.innerHTML = "";
 
@@ -42,31 +44,10 @@ export function renderTable(containerId, rawData) {
   controls.className = 'table-controls';
 
   const versionTag = document.createElement('span');
-  versionTag.textContent = 'MPSM v2.0.1';
+  versionTag.textContent = 'MPSM v2.1.0';
   versionTag.style.marginRight = '1rem';
   versionTag.style.color = '#ffaa66';
   versionTag.style.fontWeight = 'bold';
-
-  const fieldToggle = document.createElement('select');
-  fieldToggle.multiple = true;
-  fieldToggle.size = 6;
-  fieldToggle.className = 'field-selector';
-  allKeys.forEach(key => {
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = key;
-    opt.selected = prefs.visible[key] !== false;
-    fieldToggle.appendChild(opt);
-  });
-  fieldToggle.onchange = () => {
-    const visible = {};
-    Array.from(fieldToggle.options).forEach(opt => {
-      visible[opt.value] = opt.selected;
-    });
-    prefs.visible = visible;
-    savePreferences(prefs);
-    renderTable(containerId, rawData);
-  };
 
   const pageSizeSel = document.createElement('select');
   PAGE_SIZE_OPTIONS.forEach(size => {
@@ -83,7 +64,6 @@ export function renderTable(containerId, rawData) {
   };
 
   controls.appendChild(versionTag);
-  controls.appendChild(fieldToggle);
   controls.appendChild(pageSizeSel);
   container.appendChild(controls);
 
@@ -91,8 +71,8 @@ export function renderTable(containerId, rawData) {
   const sorted = [...data].sort((a, b) => {
     const col = prefs.sort.column;
     const dir = prefs.sort.direction === 'desc' ? -1 : 1;
-    const aVal = a[col]?.toString().toLowerCase() || '';
-    const bVal = b[col]?.toString().toLowerCase() || '';
+    const aVal = getColumnValue(a, col).toString().toLowerCase();
+    const bVal = getColumnValue(b, col).toString().toLowerCase();
     return aVal > bVal ? dir : aVal < bVal ? -dir : 0;
   });
 
@@ -101,15 +81,14 @@ export function renderTable(containerId, rawData) {
   const totalPages = Math.ceil(sorted.length / pageSize);
 
   const renderPage = () => {
-    const keys = prefs.order.filter(k => prefs.visible[k] !== false);
     const table = document.createElement('table');
     table.className = 'mpsm-table';
 
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
-    keys.forEach(key => {
+    DISPLAY_COLUMNS.forEach(key => {
       const th = document.createElement('th');
-      th.textContent = key;
+      th.textContent = key.replace('Product.', '');
       th.style.cursor = 'pointer';
       th.onclick = () => {
         if (prefs.sort.column === key) {
@@ -130,9 +109,9 @@ export function renderTable(containerId, rawData) {
     const pageData = sorted.slice(page * pageSize, (page + 1) * pageSize);
     pageData.forEach(row => {
       const tr = document.createElement('tr');
-      keys.forEach(key => {
+      DISPLAY_COLUMNS.forEach(key => {
         const td = document.createElement('td');
-        td.textContent = row[key] ?? '—';
+        td.textContent = getColumnValue(row, key);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -144,13 +123,18 @@ export function renderTable(containerId, rawData) {
     const pager = document.createElement('div');
     pager.className = 'table-pager';
     pager.innerHTML = `
-      <button ${page === 0 ? 'disabled' : ''}>⬅️ Prev</button>
-      <span>Page ${page + 1} / ${totalPages}</span>
-      <button ${page >= totalPages - 1 ? 'disabled' : ''}>Next ➡️</button>
+      <div style="margin-top:1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:0 1rem;">
+        <button ${page === 0 ? 'disabled' : ''}>⬅️ Prev</button>
+        <span style="color:#cceeff;">Page ${page + 1} / ${totalPages}</span>
+        <button ${page >= totalPages - 1 ? 'disabled' : ''}>Next ➡️</button>
+      </div>
     `;
-    const [prevBtn, , nextBtn] = pager.querySelectorAll('button');
-    prevBtn.onclick = () => { page--; renderTable(containerId, rawData); };
-    nextBtn.onclick = () => { page++; renderTable(containerId, rawData); };
+    const buttons = pager.querySelectorAll('button');
+    if (buttons.length === 2) {
+      const [prevBtn, nextBtn] = buttons;
+      prevBtn.onclick = () => { page--; renderTable(containerId, rawData); };
+      nextBtn.onclick = () => { page++; renderTable(containerId, rawData); };
+    }
     container.appendChild(pager);
   };
 
