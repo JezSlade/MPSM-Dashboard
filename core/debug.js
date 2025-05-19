@@ -1,24 +1,25 @@
-// v1.2.1 [LCARS Toggle: Glowing Panel Control + Highlight Accents]
+// v1.3.0 [Production Debug Toggle + Panel Visibility]
 export class DebugPanel {
   constructor() {
-    const container = document.createElement('div');
-    container.id = 'debug-panel';
-    container.classList.add('open');
-
-    const toggle = document.createElement('div');
+    const toggle = document.createElement('button');
     toggle.id = 'debug-toggle';
-    toggle.innerHTML = '<span class="lcars-glow">☰</span> LCARS DEBUG';
+    toggle.innerText = 'DEBUG';
+    toggle.title = 'Toggle debug panel';
+    toggle.onclick = () => {
+      const panel = document.getElementById('debug-panel');
+      panel.classList.toggle('visible');
+    };
+
+    const panel = document.createElement('div');
+    panel.id = 'debug-panel';
+    panel.classList.add('visible'); // Start visible
 
     const log = document.createElement('div');
     log.id = 'debug-log';
 
-    toggle.onclick = () => {
-      container.classList.toggle('open');
-    };
-
-    container.appendChild(toggle);
-    container.appendChild(log);
-    document.body.appendChild(container);
+    panel.appendChild(log);
+    document.body.appendChild(panel);
+    document.body.appendChild(toggle);
   }
 
   logEvent(event, payload) {
@@ -31,6 +32,7 @@ export class DebugPanel {
 
   _append(text, isError = false) {
     const log = document.getElementById('debug-log');
+    if (!log) return;
     const entry = document.createElement('div');
     entry.className = 'log-entry' + (isError ? ' error' : '');
     entry.innerText = text;

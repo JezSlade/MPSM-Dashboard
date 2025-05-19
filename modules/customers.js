@@ -1,4 +1,4 @@
-// v1.3.1 [LCARS Dropdown Fix: Reactivate on Focus]
+// v1.4.0 [Dropdown: Collapsed by Default, Expandable, Auto-Collapse on Select]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -6,22 +6,21 @@ export async function loadCustomers() {
   try {
     const res = await fetch('./get_customers.php');
     const data = await res.json();
-
     if (!Array.isArray(data?.Result)) throw new Error("Invalid customer list");
 
     const customers = data.Result;
     store.set("customers", customers);
     eventBus.emit("customers:loaded", customers);
-    renderCustomDropdown(customers);
+    renderDropdown(customers);
   } catch (err) {
     console.error("Customer fetch failed", err);
     window.DebugPanel?.logError("Customer fetch failed", err);
   }
 }
 
-function renderCustomDropdown(customers) {
+function renderDropdown(customers) {
   const app = document.getElementById("app");
-  app.innerHTML = ""; // Reset
+  app.innerHTML = "";
 
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
@@ -40,7 +39,7 @@ function renderCustomDropdown(customers) {
 
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Type to search...";
+  input.placeholder = "Click to search...";
   input.style.width = "100%";
   input.style.padding = "0.5rem";
   input.style.border = "1px solid #3388cc";
@@ -55,37 +54,38 @@ function renderCustomDropdown(customers) {
   list.style.border = "1px solid #3388cc";
   list.style.borderRadius = "8px";
   list.style.background = "#0a0f1a";
+  list.style.display = "none";
 
   const renderOptions = (filter = "") => {
     list.innerHTML = "";
-    customers
-      .filter(c => c.Description.toLowerCase().includes(filter.toLowerCase()))
-      .forEach(c => {
-        const item = document.createElement("div");
-        item.textContent = c.Description;
-        item.style.padding = "0.5rem";
-        item.style.cursor = "pointer";
-        item.style.borderBottom = "1px solid #223344";
-        item.onmouseover = () => item.style.background = "#112244";
-        item.onmouseout = () => item.style.background = "transparent";
-        item.onclick = () => {
-          store.set("customerId", c.Code);
-          eventBus.emit("customer:selected", c.Code);
-          input.value = c.Description;
-          renderOptions(); // ✅ Fix: keep list re-openable
-        };
-        list.appendChild(item);
-      });
+    const matches = customers.filter(c =>
+      c.Description.toLowerCase().includes(filter.toLowerCase())
+    );
+    matches.forEach(c => {
+      const item = document.createElement("div");
+      item.textContent = c.Description;
+      item.style.padding = "0.5rem";
+      item.style.cursor = "pointer";
+      item.style.borderBottom = "1px solid #223344";
+      item.onmouseover = () => item.style.background = "#112244";
+      item.onmouseout = () => item.style.background = "transparent";
+      item.onclick = () => {
+        input.value = c.Description;
+        list.style.display = "none";
+        store.set("customerId", c.Code);
+        eventBus.emit("customer:selected", c.Code);
+      };
+      list.appendChild(item);
+    });
+    list.style.display = matches.length ? "block" : "none";
   };
 
-  input.addEventListener("input", () => renderOptions(input.value));
   input.addEventListener("focus", () => renderOptions(input.value));
   input.addEventListener("click", () => renderOptions(input.value));
+  input.addEventListener("input", () => renderOptions(input.value));
 
   wrapper.appendChild(label);
   wrapper.appendChild(input);
   wrapper.appendChild(list);
   app.appendChild(wrapper);
-
-  renderOptions();
 }
