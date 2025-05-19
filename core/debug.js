@@ -1,4 +1,4 @@
-// v1.2.0 [LCARS Toggle: Glowing Panel Control + Highlight Accents]
+// v1.2.1 [LCARS Toggle: Glowing Panel Control + Highlight Accents]
 export class DebugPanel {
   constructor() {
     const container = document.createElement('div');

@@ -1,4 +1,4 @@
-// v1.3.0 [LCARS Integrated Search Dropdown]
+// v1.3.1 [LCARS Dropdown Fix: Reactivate on Focus]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -72,22 +72,20 @@ function renderCustomDropdown(customers) {
           store.set("customerId", c.Code);
           eventBus.emit("customer:selected", c.Code);
           input.value = c.Description;
-          list.innerHTML = "";
+          renderOptions(); // ✅ Fix: keep list re-openable
         };
         list.appendChild(item);
       });
   };
 
-  input.addEventListener("input", () => {
-    renderOptions(input.value);
-  });
+  input.addEventListener("input", () => renderOptions(input.value));
+  input.addEventListener("focus", () => renderOptions(input.value));
+  input.addEventListener("click", () => renderOptions(input.value));
 
   wrapper.appendChild(label);
   wrapper.appendChild(input);
   wrapper.appendChild(list);
   app.appendChild(wrapper);
-
-  // Initial render
 
   renderOptions();
 }

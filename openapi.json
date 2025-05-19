@@ -1,0 +1,1449 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mps Monitor API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://api.abassetmanagement.com",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:34287",
+      "description": "Local server"
+    }
+  ],
+  "paths": {
+    "/Account/GetProfile": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Gets profile of current authenticated user.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/RefreshAuthCookie": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Refreshes the authentication cookie.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Logout": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Logs out the current authenticated user.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/UpdateProfile": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Update profile of current authenticated user.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/GetPsk2faData": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Gets 2FA PSK data.",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["MpsMonitor", "Katun", "Olivetti", "HpSds", "CloudConnected", "Ehawk", "MpsMonitorOld"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Psk2faResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/GetPsk2faDataForProfile": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Gets 2FA PSK data for profile.",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["MpsMonitor", "Katun", "Olivetti", "HpSds", "CloudConnected", "Ehawk", "MpsMonitorOld"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Psk2faResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/GetPsk2faDataForAccount": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Gets 2FA PSK data for account.",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["MpsMonitor", "Katun", "Olivetti", "HpSds", "CloudConnected", "Ehawk", "MpsMonitorOld"]
+            }
+          },
+          {
+            "name": "userName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "psk2fa",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Psk2faResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Enable2faForAccount": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Enables 2FA for account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Enable2faForAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Enable2faForProfile": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Enables 2FA for profile.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Enable2faForProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/SendOtpEmailForAccount": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Sends OTP email for account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendOtpEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/SetPreferredDealer": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Sets the preferred dealer for the current authenticated account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPreferredDealerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/GetAccount": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Gets the account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/GetAccounts": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Gets the accounts.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetAccountsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAccountsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Create": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Create an account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components schemas/CreateAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Update": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Update an account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/ChangePassword": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Changes the password of the connected account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/ResetPassword": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Resets the password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/ResetPasswordVerifyToken": {
+      "post": {
+        "tags": ["Account"],
+        "summary": "Verify the reset password auth token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordVerifyTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Delete": {
+      "delete": {
+        "tags": ["Account"],
+        "summary": "This operation deletes an account.",
+        "parameters": [
+          {
+            "name": "dealerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the DealerCode."
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/Delete2fa": {
+      "delete": {
+        "tags": ["Account"],
+        "summary": "This operation deletes the two factor authentication for a user.",
+        "parameters": [
+          {
+            "name": "dealerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the DealerCode."
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+           عنی
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Account/DeleteProfile2fa": {
+      "delete": {
+        "tags": ["Account"],
+        "summary": "This operation deletes the two factor authentication for a user.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/DisableAlertLimits": {
+      "post": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Disables alert limits.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableAlertLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/GetAllLimits": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets all alert limits.",
+        "parameters": [
+          {
+            "name": "dealerId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "alertLimitSource",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["Default", "Dealer", "DealerProduct", "Customer", "CustomerProduct", "InstalledProduct"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllLimitsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/GetDefault": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets default alert limits for a dealer.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the code."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetDealerDefaultLimitsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/CreateDefault": {
+      "post": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Creates default alert limits for a dealer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDealerDefaultLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/UpdateDefault": {
+      "put": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Updates default alert limits for a dealer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDealerDefaultLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/GetProductList": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets the product list for a dealer.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the dealer code."
+          },
+          {
+            "name": "filterText",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the filter text."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetProductListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/GetProduct": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets a specific product for a dealer.",
+        "parameters": [
+          {
+            "name": "filterText",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the filter text."
+          },
+          {
+            "name": "dealerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the DealerCode."
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetDealerProductResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/DeleteProduct": {
+      "delete": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Deletes a product for a dealer.",
+        "parameters": [
+          {
+            "name": "dealerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the DealerCode."
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/CreateProduct": {
+      "post": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Creates a product for a dealer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDealerProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Dealer/UpdateProduct": {
+      "put": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Updates a product for a dealer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDealerProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/GetDefault": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets default alert limits for a customer.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the code."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCustomerDefaultLimitsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/CreateDefault": {
+      "post": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Creates default alert limits for a customer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerDefaultLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/UpdateDefault": {
+      "put": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Updates default alert limits for a customer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerDefaultLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/DeleteDefaultForConsumable": {
+      "delete": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Deletes default alert limits for a consumable for a customer.",
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "supplyType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ManteinanceKit", "PhotoConductor", "Toner"]
+            }
+          },
+          {
+            "name": "colorType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["NotAvailable", "Black", "Cyan", "Magenta", "Yellow", "Black1", "Black2", "Black3"]
+            }
+          },
+          {
+            "name": "maintenanceKitTypeId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "maintenanceKitColorId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/GetProductList": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets the product list for a customer.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the dealer code."
+          },
+          {
+            "name": "filterText",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the filter text."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetProductListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/GetProduct": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets a specific product for a customer.",
+        "parameters": [
+          {
+            "name": "filterText",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the filter text."
+          },
+          {
+            "name": "customerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the CustomerCode."
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCustomerProductResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/DeleteProduct": {
+      "delete": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Deletes a product for a customer.",
+        "parameters": [
+          {
+            "name": "customerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the CustomerCode."
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/CreateProduct": {
+      "post": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Creates a product for a customer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Customer/UpdateProduct": {
+      "put": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Updates a product for a customer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Device/GetDefault": {
+      "get": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Gets default alert limits for a device.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetDeviceDefaultLimitsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Device/CreateDefault": {
+      "post": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Creates default alert limits for a device.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeviceDefaultLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Device/UpdateDefault": {
+      "put": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Updates default alert limits for a device.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeviceDefaultLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit2/Device/DeleteDefaultForConsumable": {
+      "delete": {
+        "tags": ["AlertLimit2Api"],
+        "summary": "Deletes default alert limits for a consumable for a device.",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "supplyType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ManteinanceKit", "PhotoConductor", "Toner"]
+            }
+          },
+          {
+            "name": "colorType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["NotAvailable", "Black", "Cyan", "Magenta", "Yellow", "Black1", "Black2", "Black3"]
+            }
+          },
+          {
+            "name": "maintenanceKitTypeId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "maintenanceKitColorId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit/Dealer/Get": {
+      "get": {
+        "tags": ["AlertLimitApi"],
+        "summary": "Get dealers Alert Limit settings.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Gets or sets the code."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetDealerAlertLimitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AlertLimit/Dealer/Update": {
+      "put": {
+        "tags": ["AlertLimitApi"],
+        "summary": "Set Alert limits for a specified dealer.",
+        "request
