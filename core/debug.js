@@ -1,24 +1,22 @@
-// v1.3.0 [Production Debug Toggle + Panel Visibility]
+// v2.1.0 [LCARS Toggle Refined, Debug Starts Hidden, Logging Restored]
 export class DebugPanel {
   constructor() {
+    const container = document.createElement('div');
+    container.id = 'debug-panel';
+
     const toggle = document.createElement('button');
     toggle.id = 'debug-toggle';
     toggle.innerText = 'DEBUG';
     toggle.title = 'Toggle debug panel';
     toggle.onclick = () => {
-      const panel = document.getElementById('debug-panel');
-      panel.classList.toggle('visible');
+      container.classList.toggle('visible');
     };
-
-    const panel = document.createElement('div');
-    panel.id = 'debug-panel';
-    panel.classList.add('visible'); // Start visible
 
     const log = document.createElement('div');
     log.id = 'debug-log';
 
-    panel.appendChild(log);
-    document.body.appendChild(panel);
+    container.appendChild(log);
+    document.body.appendChild(container);
     document.body.appendChild(toggle);
   }
 

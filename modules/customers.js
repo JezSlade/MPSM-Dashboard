@@ -1,4 +1,4 @@
-// v1.4.0 [Dropdown: Collapsed by Default, Expandable, Auto-Collapse on Select]
+// v2.1.0 [Customer Dropdown: Keyboard Nav + Clear + Collapse]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -23,52 +23,42 @@ function renderDropdown(customers) {
   app.innerHTML = "";
 
   const wrapper = document.createElement("div");
-  wrapper.style.position = "relative";
-  wrapper.style.margin = "1rem";
-  wrapper.style.maxWidth = "600px";
-  wrapper.style.background = "rgba(0,30,60,0.8)";
-  wrapper.style.border = "1px solid #446688";
-  wrapper.style.borderRadius = "10px";
-  wrapper.style.padding = "1rem";
+  wrapper.className = "customer-select-wrapper";
 
   const label = document.createElement("label");
   label.textContent = "Select Customer";
-  label.style.color = "#7fcfff";
-  label.style.display = "block";
-  label.style.marginBottom = "0.5rem";
 
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Click to search...";
-  input.style.width = "100%";
-  input.style.padding = "0.5rem";
-  input.style.border = "1px solid #3388cc";
-  input.style.borderRadius = "8px";
-  input.style.marginBottom = "0.5rem";
-  input.style.background = "rgba(0,40,80,0.9)";
-  input.style.color = "#cceeff";
+  input.placeholder = "Type or click to search...";
+  input.className = "customer-input";
+
+  const clear = document.createElement("span");
+  clear.textContent = "✕";
+  clear.className = "clear-input";
+  clear.onclick = () => {
+    input.value = "";
+    updateList();
+    input.focus();
+  };
 
   const list = document.createElement("div");
-  list.style.maxHeight = "250px";
-  list.style.overflowY = "auto";
-  list.style.border = "1px solid #3388cc";
-  list.style.borderRadius = "8px";
-  list.style.background = "#0a0f1a";
+  list.className = "customer-list";
   list.style.display = "none";
 
-  const renderOptions = (filter = "") => {
-    list.innerHTML = "";
-    const matches = customers.filter(c =>
-      c.Description.toLowerCase().includes(filter.toLowerCase())
+  let filtered = [...customers];
+  let selectedIndex = -1;
+
+  const updateList = () => {
+    filtered = customers.filter(c =>
+      c.Description.toLowerCase().includes(input.value.toLowerCase())
     );
-    matches.forEach(c => {
+    list.innerHTML = "";
+    filtered.forEach((c, i) => {
       const item = document.createElement("div");
       item.textContent = c.Description;
-      item.style.padding = "0.5rem";
-      item.style.cursor = "pointer";
-      item.style.borderBottom = "1px solid #223344";
-      item.onmouseover = () => item.style.background = "#112244";
-      item.onmouseout = () => item.style.background = "transparent";
+      item.className = "customer-item";
+      if (i === selectedIndex) item.classList.add("active");
       item.onclick = () => {
         input.value = c.Description;
         list.style.display = "none";
@@ -77,15 +67,41 @@ function renderDropdown(customers) {
       };
       list.appendChild(item);
     });
-    list.style.display = matches.length ? "block" : "none";
+    list.style.display = filtered.length ? "block" : "none";
   };
 
-  input.addEventListener("focus", () => renderOptions(input.value));
-  input.addEventListener("click", () => renderOptions(input.value));
-  input.addEventListener("input", () => renderOptions(input.value));
+  input.addEventListener("focus", () => {
+    selectedIndex = -1;
+    updateList();
+  });
+  input.addEventListener("input", () => {
+    selectedIndex = -1;
+    updateList();
+  });
+  input.addEventListener("click", () => {
+    selectedIndex = -1;
+    updateList();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (filtered.length === 0) return;
+    if (e.key === "ArrowDown") {
+      selectedIndex = (selectedIndex + 1) % filtered.length;
+      updateList();
+    } else if (e.key === "ArrowUp") {
+      selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
+      updateList();
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      const c = filtered[selectedIndex];
+      input.value = c.Description;
+      list.style.display = "none";
+      store.set("customerId", c.Code);
+      eventBus.emit("customer:selected", c.Code);
+    }
+  });
 
   wrapper.appendChild(label);
   wrapper.appendChild(input);
+  wrapper.appendChild(clear);
   wrapper.appendChild(list);
   app.appendChild(wrapper);
 }
