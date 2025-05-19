@@ -1,4 +1,4 @@
-// v1.0.0 [Init: Device Fetch + Dynamic Table Render]
+// v1.1.0 [Fix: Ensure Target Container Exists for renderTable()]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 import { renderTable } from '../core/render-table.js';
@@ -16,6 +16,15 @@ eventBus.on("customer:selected", async (customerId) => {
 
     store.set("devices", data.Result);
     eventBus.emit("devices:loaded", data.Result);
+
+    let deviceContainer = document.getElementById("device-table");
+    if (!deviceContainer) {
+      deviceContainer = document.createElement("div");
+      deviceContainer.id = "device-table";
+      document.getElementById("app")?.appendChild(deviceContainer) ||
+        document.body.appendChild(deviceContainer);
+    }
+
     renderTable("device-table", data.Result);
   } catch (err) {
     console.error("Device fetch failed", err);
