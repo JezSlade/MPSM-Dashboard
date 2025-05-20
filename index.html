@@ -1,34 +1,37 @@
 <!DOCTYPE html>
-<!-- v1.1.0 [Fix: Debug Module & Load Order] -->
+<!-- v1.2.0 [Fix: auth path + neumorphic UI] -->
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="assets/style.css">
-  <!-- Defer so styles load before JS runs -->
+  <!-- ensure CSS loads first to prevent FOUC -->
+  <link rel="stylesheet" href="assets/style.css" />
+  <!-- defer JS until after CSS and DOM ready -->
   <script type="module" src="core/init.js" defer></script>
 </head>
 <body>
-  <header id="header">
-    <div id="header-content">
-      <h1>MPSM Dashboard</h1>
+  <header id="header" class="card neumorphic-header">
+    <h1 class="title">MPSM Dashboard</h1>
+    <div class="controls">
       <label class="debug-toggle">
-        Debug&nbsp;
-        <input type="checkbox" id="debug-toggle">
+        <input type="checkbox" id="debug-toggle" />
+        <span></span>
       </label>
-      <span id="version">v1.1.0</span>
+      <span id="version" class="version">v1.2.0</span>
     </div>
   </header>
 
-  <main id="app"></main>
+  <main id="app" class="card neumorphic-main">
+    <!-- Your modules render here -->
+  </main>
 
-  <section id="debug-panel" class="minimized">
-    <div id="debug-header">
+  <section id="debug-panel" class="card neumorphic-panel minimized">
+    <div class="panel-header">
       <span>Debug Log</span>
-      <button id="debug-close">×</button>
+      <button id="debug-close" class="close-btn">×</button>
     </div>
-    <div id="debug-logs"></div>
+    <div id="debug-logs" class="panel-body"></div>
   </section>
 </body>
 </html>
