@@ -1,7 +1,10 @@
 // core/debug.js
-// v2.2.0 [Fixed Logging, Timestamped, Clear Button, Color Coded]
+// v2.2.1 [Fix: logging works even when minimized on load]
 export class DebugPanel {
   constructor() {
+    this.queue = [];
+    this.logEl = null;
+
     const container = document.createElement('div');
     container.id = 'debug-panel';
     container.classList.remove('visible'); // start hidden
@@ -18,7 +21,8 @@ export class DebugPanel {
     clearBtn.innerText = 'Clear';
     clearBtn.className = 'clear-debug';
     clearBtn.onclick = () => {
-      log.innerHTML = '';
+      const log = document.getElementById('debug-log');
+      if (log) log.innerHTML = '';
     };
 
     const log = document.createElement('div');
@@ -29,7 +33,12 @@ export class DebugPanel {
     document.body.appendChild(container);
     document.body.appendChild(toggle);
 
-    this.logEl = log;
+    // Defer log element binding until DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      this.logEl = document.getElementById('debug-log');
+      this.queue.forEach(({ text, type }) => this._append(text, type));
+      this.queue = [];
+    });
   }
 
   _timestamp() {
@@ -50,7 +59,11 @@ export class DebugPanel {
   }
 
   _append(text, type = 'info') {
-    if (!this.logEl) return;
+    if (!this.logEl) {
+      this.queue.push({ text, type });
+      return;
+    }
+
     const entry = document.createElement('div');
     entry.className = 'log-entry ' + type;
     entry.innerText = text;
