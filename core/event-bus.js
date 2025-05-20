@@ -1,7 +1,5 @@
-/**
- * core/event-bus.js
- * v1.0.0 [EventBus: Pub/Sub with debug]
- */
+// core/event-bus.js
+// v1.1.1 [Fix: Export named & default eventBus]
 
 import debug from './debug.js';
 
@@ -34,4 +32,7 @@ const eventBus = (() => {
   };
 })();
 
+// Named export for `import { eventBus }`…
+export { eventBus };
+// …and default export to preserve `import eventBus from` usage.
 export default eventBus;

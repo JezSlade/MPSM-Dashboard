@@ -1,19 +1,20 @@
-/**
- * core/store.js
- * v1.0.0 [Store: Reactive key/value store]
- */
+// core/store.js
+// v1.1.1 [Fix: Export named & default store]
 
 import debug from './debug.js';
 
 const store = (() => {
   const data = {};
-  const subs = {};
+  const subs  = {};
 
   return {
     set(key, value) {
       data[key] = value;
       debug.log(`Store: '${key}' updated`);
-      (subs[key] || []).forEach(fn => fn(value));
+      (subs[key] || []).forEach(fn => {
+        try { fn(value); }
+        catch (err) { debug.error(`Store subscriber error for '${key}': ${err}`); }
+      });
     },
 
     get(key) {
@@ -28,4 +29,7 @@ const store = (() => {
   };
 })();
 
+// Named export for `import { store }`…
+export { store };
+// …and default export to preserve `import store from` usage.
 export default store;
