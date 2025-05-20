@@ -1,27 +1,40 @@
 // core/init.js
-// v2.2.2 [Debug Logging Added]
-import './debug.js';
+// v1.0.1 [Initialize Core & Debug Panel]
+// Ensures debug panel is ready, version is displayed, and core:init fires correctly.
+
+import './debug.js';                              // must load first to catch all logs
 import { eventBus } from './event-bus.js';
 import { store } from './store.js';
+import './dom.js';
+import '../modules/token.js';
 import { loadToken } from '../modules/token.js';
-import { loadCustomers } from '../modules/customers.js';
-import '../modules/devices.js';
+// import other modules here, e.g.:
+// import '../modules/customers.js';
+// import '../modules/devices.js';
+
+const APP_VERSION = '1.0.1';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const header = document.createElement('div');
-  header.id = 'dashboard-header';
-  header.innerHTML = `
-    <span class="header-title">MPSM Dashboard</span>
-    <span class="header-version">v2.2.2</span>
-  `;
-  document.body.prepend(header);
+  // Display version in header if the element exists
+  const versionEl = document.getElementById('app-version');
+  if (versionEl) {
+    versionEl.textContent = `v${APP_VERSION}`;
+    window.DebugPanel.log(`App version set to ${APP_VERSION}`);
+  }
 
-  const debugPanel = document.getElementById('debug-panel');
-  debugPanel?.classList.remove('visible');
+  // Emit core:init so all modules can react
+  eventBus.emit('core:init', {
+    version: APP_VERSION,
+    time: new Date().toISOString()
+  });
 
-  eventBus.emit("core:init", { version: "2.2.2", time: new Date().toISOString() });
-  window.DebugPanel?.logEvent("core:init", { version: "2.2.2", boot: true });
-
-  loadToken();
-  loadCustomers();
+  // Trigger token load and log outcome
+  loadToken()
+    .then(token => {
+      window.DebugPanel.log('Token acquired successfully');
+    })
+    .catch(err => {
+      window.DebugPanel.error('Token acquisition failed');
+      window.DebugPanel.logError('loadToken error', err);
+    });
 });
