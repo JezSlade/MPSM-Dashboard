@@ -1,105 +1,122 @@
+// core/debug.js
+// v1.0.0 [Refactor: Fixed syntax, added toggle button, baked in logging]
+
+// Panel and toggle references
+let debugPanel;
+let debugToggleBtn;
+
 /**
- * core/debug.js
-<<<<<<< HEAD
- * v1.0.3  [Fixed: add named export + keep default]
+ * Create the debug toggle button and panel, hidden by default.
  */
-
-export const debug = (() => {
-  // --- create toggle button ---
-=======
- * v1.0.2 [Debug: Auto-inject UI panel & toggle, fix visibility]
- */
-
-const debug = (() => {
-  // Create toggle
->>>>>>> 7df292468c93b90692c839d3806e736c926ee9bf
-  const toggle = document.createElement('button');
-  toggle.id = 'debug-toggle';
-  toggle.textContent = '🛠️ Debug';
-  Object.assign(toggle.style, {
+function createDebugPanel() {
+  // 1) Toggle button
+  debugToggleBtn = document.createElement('button');
+  debugToggleBtn.id = 'debug-toggle';
+  debugToggleBtn.textContent = '🖧 Debug';
+  Object.assign(debugToggleBtn.style, {
     position: 'fixed',
-    top: '10px',
-    right: '10px',
-    zIndex: '9999',
-    padding: '6px 12px',
-    background: '#005f9e',
+    top: '1rem',
+    right: '1rem',
+    zIndex: '10000',
+    padding: '0.5rem 1rem',
+    background: '#003366',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
+    cursor: 'pointer'
   });
+  debugToggleBtn.addEventListener('click', toggleDebug);
+  document.body.appendChild(debugToggleBtn);
 
-<<<<<<< HEAD
-  // --- create log panel ---
-=======
-  // Create panel
->>>>>>> 7df292468c93b90692c839d3806e736c926ee9bf
-  const panel = document.createElement('div');
-  panel.id = 'debug-panel';
-  Object.assign(panel.style, {
-    display: 'none',
+  // 2) Debug panel
+  debugPanel = document.createElement('div');
+  debugPanel.id = 'debug-panel';
+  Object.assign(debugPanel.style, {
     position: 'fixed',
     bottom: '0',
     left: '0',
-    width: '100%',
+    right: '0',
     maxHeight: '200px',
-    background: 'rgba(0,0,0,0.85)',
-    color: '#0ff',
-    overflowY: 'auto',
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    color: '#0f0',
     fontFamily: 'monospace',
     fontSize: '12px',
-    padding: '8px',
-    boxSizing: 'border-box',
-    zIndex: '9998'
+    overflowY: 'auto',
+    padding: '0.5rem',
+    display: 'none',
+    zIndex: '9999'
   });
+  document.body.appendChild(debugPanel);
+}
 
-  const logList = document.createElement('ul');
-  logList.id = 'debug-log';
-  Object.assign(logList.style, {
-    margin: '0',
-    padding: '0',
-    listStyle: 'none'
-  });
-  panel.appendChild(logList);
+/**
+ * Toggle the visibility of the debug panel.
+ */
+function toggleDebug() {
+  if (!debugPanel) return;
+  debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+}
 
-<<<<<<< HEAD
-  // --- toggle behavior ---
-=======
-  // Toggle behavior
->>>>>>> 7df292468c93b90692c839d3806e736c926ee9bf
-  toggle.addEventListener('click', () => {
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-  });
+/**
+ * Format a timestamped message.
+ * @param {string} level  'log' | 'warn' | 'error'
+ * @param {string} msg
+ */
+function formatMessage(level, msg) {
+  const ts = new Date().toISOString();
+  return `[${ts}] [${level.toUpperCase()}] ${msg}`;
+}
 
-<<<<<<< HEAD
-  // --- inject into DOM ---
-  document.body.appendChild(toggle);
-  document.body.appendChild(panel);
+/**
+ * Append a line of text to the debug panel.
+ * @param {string} text  already-formatted message
+ * @param {string} color optional CSS color override
+ */
+function appendLine(text, color) {
+  if (!debugPanel) return;
+  const line = document.createElement('div');
+  line.textContent = text;
+  if (color) line.style.color = color;
+  debugPanel.appendChild(line);
+  debugPanel.scrollTop = debugPanel.scrollHeight;
+}
 
-  // --- logging helper ---
-=======
-  // Inject into DOM immediately
-  document.body.appendChild(toggle);
-  document.body.appendChild(panel);
+/**
+ * Public API
+ */
+function log(msg) {
+  const m = formatMessage('log', msg);
+  console.log(m);
+  appendLine(m);
+}
 
->>>>>>> 7df292468c93b90692c839d3806e736c926ee9bf
-  function append(type, msg) {
-    const li = document.createElement('li');
-    li.textContent = `[${type.toUpperCase()}] ${msg}`;
-    logList.appendChild(li);
-    panel.scrollTop = panel.scrollHeight;
-  }
+function warn(msg) {
+  const m = formatMessage('warn', msg);
+  console.warn(m);
+  appendLine(m, 'yellow');
+}
 
-  return {
-    log(msg)   { console.log(msg);   append('log', msg); },
-    warn(msg)  { console.warn(msg);  append('warn', msg); },
-    error(msg) { console.error(msg); append('err', msg); }
-  };
-})();
+function error(msg) {
+  const m = formatMessage('error', msg);
+  console.error(m);
+  appendLine(m, 'red');
+}
 
-<<<<<<< HEAD
-// keep default export for modules that `import debug from './debug.js'`
-=======
->>>>>>> 7df292468c93b90692c839d3806e736c926ee9bf
-export default debug;
+// Initialize panel & toggle on DOM ready
+document.addEventListener('DOMContentLoaded', createDebugPanel);
+
+// Catch uncaught errors and promise rejections
+window.addEventListener('error', evt => {
+  error(`Uncaught Error: ${evt.message} @ ${evt.filename}:${evt.lineno}`);
+});
+window.addEventListener('unhandledrejection', evt => {
+  error(`Unhandled Promise Rejection: ${evt.reason}`);
+});
+
+// Export default debug interface
+export default {
+  log,
+  warn,
+  error,
+  toggle: toggleDebug
+};
