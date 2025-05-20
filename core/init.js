@@ -1,25 +1,16 @@
-// v1.1.1 [Fix: import auth from core/auth.js instead of modules/auth.js]
+// core/init.js
+// v1.2.0 [Verify: correct getToken import]
+
 import debug from './debug.js';
-import { get } from './dom.js';
-import { getToken } from './auth.js';      // ← correct path
+import { getToken } from './auth.js';       // now matches named export
 import { eventBus } from './event-bus.js';
 
-// Wire up the debug toggle
 document.addEventListener('DOMContentLoaded', async () => {
-  const dbgToggle = get('debug-toggle');
-  if (dbgToggle) {
-    dbgToggle.addEventListener('change', () => debug.toggle());
-  }
-
-  debug.log('DOM loaded, starting bootstrap');
+  debug.log('Bootstrap: DOMContentLoaded');
   try {
     await getToken();
-    debug.log('Token acquired successfully');
-    eventBus.emit('core:init', {
-      version: document.getElementById('version').textContent,
-      time: new Date().toISOString()
-    });
-    // … initialize your modules here …
+    debug.log('Bootstrap: getToken() succeeded');
+    eventBus.emit('core:init', { time: new Date().toISOString() });
   } catch (err) {
     debug.error(`Bootstrap error: ${err.message}`);
   }
