@@ -1,111 +1,90 @@
 // modules/customers.js
-// v2.2.2 [Debug Logging Added: Load + Select]
+// v2.2.3 [Fix: Use debug, store, eventBus, dom; render dropdown on load]
+
+import debug from '../core/debug.js';
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
+import { get } from '../core/dom.js';
 
 export async function loadCustomers() {
+  debug.log('Customers: loading list');
   try {
     const res = await fetch('./get_customers.php');
     const data = await res.json();
-    if (!Array.isArray(data?.Result)) throw new Error("Invalid customer list");
-
+    if (!Array.isArray(data.Result)) {
+      throw new Error('Invalid customer list');
+    }
     const customers = data.Result;
-    store.set("customers", customers);
-    eventBus.emit("customers:loaded", customers);
-    window.DebugPanel?.logEvent("customers:loaded", customers.length);
+    store.set('customers', customers);
+    eventBus.emit('customers:loaded', customers);
+    debug.log(`Customers: loaded ${customers.length}`);
     renderDropdown(customers);
   } catch (err) {
-    console.error("Customer fetch failed", err);
-    window.DebugPanel?.logError("customer fetch failed", err);
+    debug.error(`Customers: load failed: ${err.message}`);
   }
 }
 
 function renderDropdown(customers) {
-  const app = document.getElementById("app");
-  app.innerHTML = "";
+  const app = get('app');
+  app.innerHTML = '';
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "customer-select-wrapper";
+  const wrapper = document.createElement('div');
+  wrapper.className = 'dropdown';
 
-  const label = document.createElement("label");
-  label.textContent = "Select Customer";
+  const input = document.createElement('input');
+  input.placeholder = 'Type to search customers…';
+  wrapper.appendChild(input);
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "Type or click to search...";
-  input.className = "customer-input";
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = '✕';
+  clearBtn.className = 'clear-btn';
+  clearBtn.onclick = () => { input.value = ''; updateList(); input.focus(); };
+  wrapper.appendChild(clearBtn);
 
-  const clear = document.createElement("span");
-  clear.textContent = "✕";
-  clear.className = "clear-input";
-  clear.onclick = () => {
-    input.value = "";
-    updateList();
-    input.focus();
-  };
-
-  const list = document.createElement("div");
-  list.className = "customer-list";
-  list.style.display = "none";
+  const list = document.createElement('ul');
+  wrapper.appendChild(list);
 
   let filtered = [...customers];
   let selectedIndex = -1;
 
-  const updateList = () => {
+  function updateList() {
     filtered = customers.filter(c =>
       c.Description.toLowerCase().includes(input.value.toLowerCase())
     );
-    list.innerHTML = "";
+    list.innerHTML = '';
     filtered.forEach((c, i) => {
-      const item = document.createElement("div");
-      item.textContent = c.Description;
-      item.className = "customer-item";
-      if (i === selectedIndex) item.classList.add("active");
-      item.onclick = () => {
-        input.value = c.Description;
-        list.style.display = "none";
-        store.set("customerId", c.Code);
-        eventBus.emit("customer:selected", c.Code);
-        window.DebugPanel?.logEvent("customer:selected", c.Code);
-      };
-      list.appendChild(item);
+      const li = document.createElement('li');
+      li.textContent = c.Description;
+      li.className = i === selectedIndex ? 'active' : '';
+      li.onclick = () => selectCustomer(c);
+      list.appendChild(li);
     });
-    list.style.display = filtered.length ? "block" : "none";
-  };
+    list.style.display = filtered.length ? 'block' : 'none';
+  }
 
-  input.addEventListener("focus", () => {
-    selectedIndex = -1;
-    updateList();
-  });
-  input.addEventListener("input", () => {
-    selectedIndex = -1;
-    updateList();
-  });
-  input.addEventListener("click", () => {
-    selectedIndex = -1;
-    updateList();
-  });
-  input.addEventListener("keydown", (e) => {
-    if (filtered.length === 0) return;
-    if (e.key === "ArrowDown") {
+  function selectCustomer(cust) {
+    input.value = cust.Description;
+    list.style.display = 'none';
+    store.set('customerId', cust.Code);
+    eventBus.emit('customer:selected', cust.Code);
+    debug.log(`Customer selected: ${cust.Code}`);
+  }
+
+  input.addEventListener('input', () => { selectedIndex = -1; updateList(); });
+  input.addEventListener('keydown', e => {
+    if (!filtered.length) return;
+    if (e.key === 'ArrowDown') {
       selectedIndex = (selectedIndex + 1) % filtered.length;
       updateList();
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
       updateList();
-    } else if (e.key === "Enter" && selectedIndex >= 0) {
-      const c = filtered[selectedIndex];
-      input.value = c.Description;
-      list.style.display = "none";
-      store.set("customerId", c.Code);
-      eventBus.emit("customer:selected", c.Code);
-      window.DebugPanel?.logEvent("customer:selected", c.Code);
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      selectCustomer(filtered[selectedIndex]);
     }
   });
 
-  wrapper.appendChild(label);
-  wrapper.appendChild(input);
-  wrapper.appendChild(clear);
-  wrapper.appendChild(list);
   app.appendChild(wrapper);
+  input.focus();
 }
+
