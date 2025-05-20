@@ -1,5 +1,5 @@
 // core/debug.js
-// v2.2.1 [Fix: logging works even when minimized on load]
+// v2.2.2 [Resilient Debug System with Hard Bind, Fallbacks, Trace Logs]
 export class DebugPanel {
   constructor() {
     this.queue = [];
@@ -15,6 +15,7 @@ export class DebugPanel {
     toggle.title = 'Toggle debug panel';
     toggle.onclick = () => {
       container.classList.toggle('visible');
+      if (!this.logEl) this.logEl = document.getElementById('debug-log');
     };
 
     const clearBtn = document.createElement('button');
@@ -27,18 +28,25 @@ export class DebugPanel {
 
     const log = document.createElement('div');
     log.id = 'debug-log';
+    log.style.minHeight = '40px';
 
     container.appendChild(clearBtn);
     container.appendChild(log);
     document.body.appendChild(container);
     document.body.appendChild(toggle);
 
-    // Defer log element binding until DOM is ready
-    document.addEventListener('DOMContentLoaded', () => {
+    // Retry DOM bind if missed
+    const tryBind = () => {
       this.logEl = document.getElementById('debug-log');
-      this.queue.forEach(({ text, type }) => this._append(text, type));
-      this.queue = [];
-    });
+      if (this.logEl) {
+        this.queue.forEach(({ text, type }) => this._append(text, type));
+        this.queue = [];
+      } else {
+        setTimeout(tryBind, 500);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', tryBind);
   }
 
   _timestamp() {
@@ -61,6 +69,7 @@ export class DebugPanel {
   _append(text, type = 'info') {
     if (!this.logEl) {
       this.queue.push({ text, type });
+      console.log(`[debug queue] ${text}`);
       return;
     }
 

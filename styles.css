@@ -203,3 +203,64 @@ select, input {
   border-radius: 6px;
   z-index: 1;
 }
+#debug-panel {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 600px;
+  height: 80vh;
+  background: rgba(10, 10, 20, 0.95);
+  color: #7fffd4;
+  font-size: 12px;
+  display: none;
+  flex-direction: column;
+  z-index: 1000;
+  border-top-left-radius: 16px;
+  border-left: 2px solid #3388cc;
+  border-top: 2px solid #3388cc;
+  box-shadow: 0 0 12px rgba(0, 50, 255, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+#debug-panel.visible {
+  display: flex;
+}
+
+#debug-log {
+  padding: 10px;
+  overflow-y: auto;
+  flex-grow: 1;
+  background: #000;
+  color: #cceeff;
+}
+
+#debug-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(90deg, #3388cc, #225577);
+  color: #fff;
+  padding: 8px 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  z-index: 2000;
+  font-size: 13px;
+  box-shadow: 0 0 8px rgba(50,200,255,0.5);
+}
+
+.clear-debug {
+  background: #223344;
+  border: 1px solid #446688;
+  color: white;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 8px;
+}
+
+.log-entry.event { color: #77ffcc; }
+.log-entry.info  { color: #aad2ff; }
+.log-entry.error { color: #ff8888; }

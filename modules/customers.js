@@ -1,4 +1,5 @@
-// v2.1.0 [Customer Dropdown: Keyboard Nav + Clear + Collapse]
+// modules/customers.js
+// v2.2.2 [Debug Logging Added: Load + Select]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -11,10 +12,11 @@ export async function loadCustomers() {
     const customers = data.Result;
     store.set("customers", customers);
     eventBus.emit("customers:loaded", customers);
+    window.DebugPanel?.logEvent("customers:loaded", customers.length);
     renderDropdown(customers);
   } catch (err) {
     console.error("Customer fetch failed", err);
-    window.DebugPanel?.logError("Customer fetch failed", err);
+    window.DebugPanel?.logError("customer fetch failed", err);
   }
 }
 
@@ -64,6 +66,7 @@ function renderDropdown(customers) {
         list.style.display = "none";
         store.set("customerId", c.Code);
         eventBus.emit("customer:selected", c.Code);
+        window.DebugPanel?.logEvent("customer:selected", c.Code);
       };
       list.appendChild(item);
     });
@@ -96,6 +99,7 @@ function renderDropdown(customers) {
       list.style.display = "none";
       store.set("customerId", c.Code);
       eventBus.emit("customer:selected", c.Code);
+      window.DebugPanel?.logEvent("customer:selected", c.Code);
     }
   });
 
