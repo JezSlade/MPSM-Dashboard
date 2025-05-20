@@ -2,30 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MPSM Dashboard</title>
-  <!-- main stylesheet -->
+  <!-- Core stylesheet must load before any JS that reads styles or measures layout -->
   <link rel="stylesheet" href="assets/style.css" />
+  <title>MPSM Dashboard</title>
 </head>
 <body>
-  <!-- HEADER: version, customer selector placeholder, total devices -->
-  <header id="app-header">
-    <h1>
-      MPSM Dashboard
-      <span id="version-label">v1.0.0</span>
-    </h1>
-    <div id="customer-select-root"><!-- customer dropdown renders here --></div>
-    <div id="total-devices">
-      Total Devices: <span id="total-devices-count">0</span>
-    </div>
+  <header id="main-header">
+    <h1>MPSM Dashboard</h1>
+    <button id="debug-toggle">Debug: Off</button>
   </header>
 
-  <!-- MAIN: all modules render inside here -->
-  <main id="app-container"></main>
+  <div id="app"><!-- your app renders here --></div>
 
-  <!-- Load debug module first so its DOMContentLoaded handler runs -->
-  <script type="module" src="core/debug.js"></script>
-  <!-- Then bootstrap the app (this will import auth, event-bus, store, dom, modules, etc.) -->
-  <script type="module" src="core/init.js"></script>
+  <!-- debug panel is hidden by default -->
+  <div id="debug-log" class="debug-panel" hidden></div>
+
+  <!-- Defer all module scripts until after CSS is loaded -->
+  <script type="module" src="core/init.js" defer></script>
 </body>
 </html>

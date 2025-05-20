@@ -1,41 +1,24 @@
-/**
- * core/init.js
- * v1.0.1 [Init: Refactor load order & error handling]
- */
+// core/init.js
+// v1.0.4 [Fix: defer loading & attach debug toggle]
+import { debug } from './debug.js';
+import { getToken } from './auth.js';
+import './event-bus.js';
+import './store.js';
+import './dom.js'; // your utility for core.dom.get()
 
-import debug from './debug.js';
-import dom from './dom.js';
-import eventBus from './event-bus.js';
-import store from './store.js';
-import auth from './auth.js';
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire up the debug toggle button
+  const btn = document.getElementById('debug-toggle');
+  btn.addEventListener('click', () => {
+    const turnOn = !btn.classList.toggle('active');
+    debug.toggleDebug(turnOn);
+    btn.textContent = `Debug: ${turnOn ? 'On' : 'Off'}`;
+  });
 
-// IMPORT YOUR MODULE INITS HERE
-// e.g. import { initCustomerModule } from '../modules/customers.js';
-//       import { initDevicesModule } from '../modules/devices.js';
-//       import overlay from '../overlay.js';
+  debug.log('Application initialized – DOMContentLoaded');
 
-async function bootstrap() {
-  debug.log('🚀 Starting application bootstrap');
-  try {
-    // 1. Fetch token
-    const token = await auth.getToken();
-    debug.log('✅ Token acquired');
-
-    // 2. Emit core initialization
-    eventBus.emit('core:init', {
-      version: '1.0.1',
-      time: new Date().toISOString()
-    });
-
-    // 3. Initialize modules in dependency order
-    // initCustomerModule({ auth, store, eventBus, debug, dom });
-    // initDevicesModule({ auth, store, eventBus, debug, dom });
-    // overlay.init({ auth, store, eventBus, debug, dom });
-
-    debug.log('🎉 Bootstrap complete');
-  } catch (err) {
-    debug.error('❌ Bootstrap error: ' + err);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', bootstrap);
+  // Pre-fetch token to fail fast if misconfigured
+  getToken().catch(err => {
+    debug.error(`Bootstrap token error: ${err.message}`);
+  });
+});
