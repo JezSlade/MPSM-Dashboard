@@ -1,147 +1,76 @@
-/* v2.0.0 [Neumorphic / Minimalist Theme] */
+/* v2.0.0+ [Neumorphic Theme baseline] */
 
 :root {
-  --bg:            #e0e0e0;
-  --surface:       #f5f5f5;
-  --text:          #333;
-  --accent:        #3f51b5;
-  --shadow-light:  rgba(255,255,255,0.7);
-  --shadow-dark:   rgba(0,0,0,0.15);
+  --bg:          #e0e0e0;
+  --surface:     #f5f5f5;
+  --text:        #333;
+  --accent:      #3f51b5;
+  --shadow-l:    rgba(255,255,255,0.7);
+  --shadow-d:    rgba(0,0,0,0.15);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
+* { box-sizing: border-box; margin:0; padding:0 }
 body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex; flex-direction:column; min-height:100vh;
 }
 
-/* Card base */
 .card {
-  background: var(--surface);
-  border-radius: 16px;
-  box-shadow:
-    8px 8px 16px var(--shadow-dark),
-    -8px -8px 16px var(--shadow-light);
+  background:var(--surface);
+  border-radius:16px;
+  box-shadow:8px 8px 16px var(--shadow-d), -8px -8px 16px var(--shadow-l);
 }
 
-/* Header */
 .neumorphic-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:1rem; margin:1rem;
 }
 
-.title {
-  font-size: 1.5rem;
-}
+.title { font-size:1.5rem; }
 
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+.controls { display:flex; align-items:center; gap:1rem; }
 
-.version {
-  color: var(--accent);
-  font-size: 0.9rem;
-}
+.version { color:var(--accent); font-size:0.9rem; }
 
-/* Debug toggle (styled switch) */
-.debug-toggle {
-  position: relative;
-  width: 48px;
-  height: 28px;
-}
-.debug-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
+/* Toggle */
+.debug-toggle { position:relative; width:48px; height:28px; }
+.debug-toggle input { opacity:0; width:0; height:0; }
 .debug-toggle span {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--surface);
-  border-radius: 14px;
-  box-shadow:
-    inset 4px 4px 8px var(--shadow-dark),
-    inset -4px -4px 8px var(--shadow-light);
-  transition: background 0.2s;
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  background:var(--surface); border-radius:14px;
+  box-shadow: inset 4px 4px 8px var(--shadow-d), inset -4px -4px 8px var(--shadow-l);
+  transition:background .2s;
 }
 .debug-toggle span::before {
-  content: '';
-  position: absolute;
-  height: 22px; width: 22px;
-  left: 3px; top: 3px;
-  background: var(--bg);
-  border-radius: 50%;
-  box-shadow:
-    4px 4px 8px var(--shadow-dark),
-    -4px -4px 8px var(--shadow-light);
-  transition: transform 0.2s;
+  content:''; position:absolute; width:22px; height:22px;
+  left:3px; top:3px; background:var(--bg); border-radius:50%;
+  box-shadow:4px 4px 8px var(--shadow-d), -4px -4px 8px var(--shadow-l);
+  transition:transform .2s;
 }
-.debug-toggle input:checked + span {
-  background: var(--accent);
-}
-.debug-toggle input:checked + span::before {
-  transform: translateX(20px);
-}
+.debug-toggle input:checked + span { background:var(--accent); }
+.debug-toggle input:checked + span::before { transform:translateX(20px); }
 
-/* Main content area */
-.neumorphic-main {
-  flex: 1;
-  padding: 1.5rem;
-  margin: 1rem;
-}
+.neumorphic-main { flex:1; padding:1.5rem; margin:1rem; }
 
-/* Debug panel */
 .neumorphic-panel {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  width: 320px;
-  max-height: 50vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: transform 0.3s ease;
+  position:fixed; bottom:1rem; right:1rem;
+  width:320px; max-height:50vh; display:flex; flex-direction:column;
+  transition:transform .3s;
 }
-.neumorphic-panel.minimized {
-  transform: translateY(calc(100% - 2.5rem));
-}
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--shadow-light);
-}
-.panel-body {
-  padding: 0.75rem 1rem;
-  overflow-y: auto;
-  background: var(--surface);
-}
-.close-btn {
-  background: transparent;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-}
+.neumorphic-panel.minimized { transform:translateY(calc(100% - 2.5rem)); }
 
-/* Log entries */
-.debug-entry {
-  margin-bottom: 0.5rem;
-  font-size: 0.8rem;
+.panel-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.75rem 1rem; border-bottom:1px solid var(--shadow-l);
 }
-.debug-entry.WARN  { color: #f0ad4e; }
-.debug-entry.ERROR { color: #d9534f; }
+.panel-body { padding:.75rem 1rem; overflow-y:auto; }
+
+.close-btn { background:transparent; border:none; font-size:1rem; cursor:pointer; }
+
+.debug-entry {
+  margin-bottom:.5rem; font-size:.8rem;
+}
+.debug-entry.WARN  { color:#f0ad4e; }
+.debug-entry.ERROR { color:#d9534f; }

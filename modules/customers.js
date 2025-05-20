@@ -1,90 +1,58 @@
-// modules/customers.js
-// v2.2.3 [Fix: Use debug, store, eventBus, dom; render dropdown on load]
-
+/**
+ * v2.2.3 [Export named loadCustomers()]
+ */
 import debug from '../core/debug.js';
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 import { get } from '../core/dom.js';
 
 export async function loadCustomers() {
-  debug.log('Customers: loading list');
+  debug.log('Customers: loading');
   try {
-    const res = await fetch('./get_customers.php');
+    const res = await fetch('get_customers.php');
     const data = await res.json();
-    if (!Array.isArray(data.Result)) {
-      throw new Error('Invalid customer list');
-    }
-    const customers = data.Result;
-    store.set('customers', customers);
-    eventBus.emit('customers:loaded', customers);
-    debug.log(`Customers: loaded ${customers.length}`);
-    renderDropdown(customers);
-  } catch (err) {
-    debug.error(`Customers: load failed: ${err.message}`);
-  }
+    if (!Array.isArray(data.Result)) throw new Error('Bad');
+    store.set('customers', data.Result);
+    eventBus.emit('customers:loaded', data.Result);
+    debug.log(`Customers: ${data.Result.length}`);
+    render(data.Result);
+  } catch (e) { debug.error(`Customers: ${e.message}`); }
 }
 
-function renderDropdown(customers) {
+function render(list) {
   const app = get('app');
   app.innerHTML = '';
+  const dd  = document.createElement('div');
+  dd.className = 'dropdown';
+  const inp = document.createElement('input');
+  inp.placeholder = 'Search customers…';
+  dd.append(inp);
+  const ul = document.createElement('ul'); dd.append(ul);
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'dropdown';
-
-  const input = document.createElement('input');
-  input.placeholder = 'Type to search customers…';
-  wrapper.appendChild(input);
-
-  const clearBtn = document.createElement('button');
-  clearBtn.textContent = '✕';
-  clearBtn.className = 'clear-btn';
-  clearBtn.onclick = () => { input.value = ''; updateList(); input.focus(); };
-  wrapper.appendChild(clearBtn);
-
-  const list = document.createElement('ul');
-  wrapper.appendChild(list);
-
-  let filtered = [...customers];
-  let selectedIndex = -1;
-
-  function updateList() {
-    filtered = customers.filter(c =>
-      c.Description.toLowerCase().includes(input.value.toLowerCase())
-    );
-    list.innerHTML = '';
-    filtered.forEach((c, i) => {
-      const li = document.createElement('li');
-      li.textContent = c.Description;
-      li.className = i === selectedIndex ? 'active' : '';
-      li.onclick = () => selectCustomer(c);
-      list.appendChild(li);
+  let arr=list, idx=-1;
+  function update() {
+    arr = list.filter(c=>c.Description.toLowerCase().includes(inp.value.toLowerCase()));
+    ul.innerHTML=''; arr.forEach((c,i)=> {
+      const li=document.createElement('li');
+      li.textContent=c.Description;
+      li.classList.toggle('active',i===idx);
+      li.onclick=()=>select(c);
+      ul.append(li);
     });
-    list.style.display = filtered.length ? 'block' : 'none';
+    ul.style.display=arr.length?'block':'none';
   }
-
-  function selectCustomer(cust) {
-    input.value = cust.Description;
-    list.style.display = 'none';
-    store.set('customerId', cust.Code);
-    eventBus.emit('customer:selected', cust.Code);
-    debug.log(`Customer selected: ${cust.Code}`);
+  function select(c) {
+    inp.value=c.Description; ul.style.display='none';
+    store.set('customerId',c.Code);
+    eventBus.emit('customer:selected',c.Code);
+    debug.log(`Customer:${c.Code}`);
   }
-
-  input.addEventListener('input', () => { selectedIndex = -1; updateList(); });
-  input.addEventListener('keydown', e => {
-    if (!filtered.length) return;
-    if (e.key === 'ArrowDown') {
-      selectedIndex = (selectedIndex + 1) % filtered.length;
-      updateList();
-    } else if (e.key === 'ArrowUp') {
-      selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
-      updateList();
-    } else if (e.key === 'Enter' && selectedIndex >= 0) {
-      selectCustomer(filtered[selectedIndex]);
-    }
-  });
-
-  app.appendChild(wrapper);
-  input.focus();
+  inp.oninput=()=>{idx=-1;update()};
+  inp.onkeydown=e=>{if(!arr.length)return;
+    if(e.key==='ArrowDown'){idx=(idx+1)%arr.length;update();}
+    if(e.key==='ArrowUp'){idx=(idx-1+arr.length)%arr.length;update();}
+    if(e.key==='Enter'&&idx>=0)select(arr[idx]);
+  };
+  app.append(dd);
+  inp.focus();
 }
-

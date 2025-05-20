@@ -1,38 +1,15 @@
-// core/event-bus.js
-// v1.1.1 [Fix: Export named & default eventBus]
-
+/**
+ * v1.1.1 [Export named + default eventBus()]
+ */
 import debug from './debug.js';
 
 const eventBus = (() => {
-  const handlers = {};
-
+  const h = {};
   return {
-    on(event, fn) {
-      handlers[event] = handlers[event] || [];
-      handlers[event].push(fn);
-      debug.log(`EventBus: listener added for '${event}'`);
-    },
-
-    off(event, fn) {
-      if (!handlers[event]) return;
-      handlers[event] = handlers[event].filter(h => h !== fn);
-      debug.log(`EventBus: listener removed for '${event}'`);
-    },
-
-    emit(event, payload) {
-      debug.log(`EventBus: emitting '${event}'`);
-      (handlers[event] || []).forEach(h => {
-        try {
-          h(payload);
-        } catch (err) {
-          debug.error(`EventBus: error in '${event}' handler: ${err}`);
-        }
-      });
-    }
+    on(evt, fn)   { (h[evt]=h[evt]||[]).push(fn); debug.log(`Bus:on ${evt}`); },
+    off(evt,fn)   { h[evt]= (h[evt]||[]).filter(x=>x!==fn); debug.log(`Bus:off ${evt}`); },
+    emit(evt,p)   { debug.log(`Bus:emit ${evt}`); (h[evt]||[]).forEach(f=>{ try{f(p)}catch(e){debug.error(`${evt}: ${e}`)} }); }
   };
 })();
-
-// Named export for `import { eventBus }`…
 export { eventBus };
-// …and default export to preserve `import eventBus from` usage.
 export default eventBus;
