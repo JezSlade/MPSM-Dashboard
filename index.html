@@ -1,32 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="assets/style.css">
+  <!-- main stylesheet -->
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
+  <!-- HEADER: version, customer selector placeholder, total devices -->
   <header id="app-header">
-    <div id="header-left">
-      <span id="version-display">v1.0.0</span>
-    </div>
-    <div id="header-right">
-      <label class="switch">
-        <input type="checkbox" id="debug-toggle">
-        <span class="slider round"></span>
-      </label>
+    <h1>
+      MPSM Dashboard
+      <span id="version-label">v1.0.0</span>
+    </h1>
+    <div id="customer-select-root"><!-- customer dropdown renders here --></div>
+    <div id="total-devices">
+      Total Devices: <span id="total-devices-count">0</span>
     </div>
   </header>
 
-  <main id="app">
-    <!-- Your modules will render here -->
-  </main>
+  <!-- MAIN: all modules render inside here -->
+  <main id="app-container"></main>
 
-  <aside id="debug-panel" class="hidden">
-    <h2>Debug Log</h2>
-    <div id="debug-log"></div>
-  </aside>
-
+  <!-- Load debug module first so its DOMContentLoaded handler runs -->
+  <script type="module" src="core/debug.js"></script>
+  <!-- Then bootstrap the app (this will import auth, event-bus, store, dom, modules, etc.) -->
   <script type="module" src="core/init.js"></script>
 </body>
 </html>
