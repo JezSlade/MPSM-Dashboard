@@ -1,24 +1,18 @@
 // core/init.js
-// v1.0.4 [Fix: defer loading & attach debug toggle]
+// v1.0.4 [Fix: Ensure debug import matches debug.js export]
+
 import { debug } from './debug.js';
-import { getToken } from './auth.js';
-import './event-bus.js';
-import './store.js';
-import './dom.js'; // your utility for core.dom.get()
+import { eventBus } from './event-bus.js';
+import { store } from './store.js';
+import { loadToken } from '../modules/token.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Wire up the debug toggle button
-  const btn = document.getElementById('debug-toggle');
-  btn.addEventListener('click', () => {
-    const turnOn = !btn.classList.toggle('active');
-    debug.toggleDebug(turnOn);
-    btn.textContent = `Debug: ${turnOn ? 'On' : 'Off'}`;
-  });
-
-  debug.log('Application initialized – DOMContentLoaded');
-
-  // Pre-fetch token to fail fast if misconfigured
-  getToken().catch(err => {
-    debug.error(`Bootstrap token error: ${err.message}`);
-  });
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    debug.log('Bootstrapping application…');
+    eventBus.emit('core:init', { version: '1.0.4', time: new Date().toISOString() });
+    await loadToken();
+    debug.log('Token loaded successfully.');
+  } catch (e) {
+    debug.error(`Bootstrap error: ${e.message}`);
+  }
 });
