@@ -1,5 +1,5 @@
 /**
- * v1.1.1 [Named + default export; toggle & replay buffer]
+ * v1.1.2 [Fix: panel visible by default; remove 'minimized' on load]
  */
 import { get } from './dom.js';
 
@@ -9,17 +9,9 @@ const toggleEl = get('debug-toggle');
 const closeEl  = get('debug-close');
 
 let buffer = [];
-let visible = false;
+let visible = true; // start visible
 
-// build panel once DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  toggleEl?.addEventListener('change', () => debug.toggle());
-  closeEl?.addEventListener('click', () => {
-    toggleEl.checked = false;
-    debug.toggle();
-  });
-});
-
+// Append helper
 function _append({ ts, level, msg }) {
   if (!logsWrap) return;
   const entry = document.createElement('div');
@@ -29,10 +21,11 @@ function _append({ ts, level, msg }) {
   logsWrap.scrollTop = logsWrap.scrollHeight;
 }
 
+// Public API
 export const debug = {
-  log(msg)   { const e={ts:new Date().toISOString(),level:'LOG',msg}; buffer.push(e); if(visible)_append(e); console.log(msg); },
-  warn(msg)  { const e={ts:new Date().toISOString(),level:'WARN',msg}; buffer.push(e); if(visible)_append(e); console.warn(msg); },
-  error(msg) { const e={ts:new Date().toISOString(),level:'ERROR',msg}; buffer.push(e); if(visible)_append(e); console.error(msg); },
+  log(msg)   { const e = { ts:new Date().toISOString(), level:'LOG',   msg }; buffer.push(e); if(visible) _append(e); console.log(msg); },
+  warn(msg)  { const e = { ts:new Date().toISOString(), level:'WARN',  msg }; buffer.push(e); if(visible) _append(e); console.warn(msg); },
+  error(msg) { const e = { ts:new Date().toISOString(), level:'ERROR', msg }; buffer.push(e); if(visible) _append(e); console.error(msg); },
   toggle() {
     visible = !visible;
     if (panel) {
@@ -45,3 +38,21 @@ export const debug = {
   }
 };
 export default debug;
+
+// Set initial panel state on load
+document.addEventListener('DOMContentLoaded', () => {
+  // Ensure panel shows immediately
+  if (panel) panel.classList.remove('minimized');
+  // Ensure toggle matches state
+  if (toggleEl) toggleEl.checked = true;
+
+  // Wire up toggle & close after we've set initial state
+  toggleEl?.addEventListener('change', () => debug.toggle());
+  closeEl?.addEventListener('click', () => {
+    toggleEl.checked = false;
+    debug.toggle();
+  });
+
+  // Flush any pre-DOM logs
+  buffer.forEach(_append);
+});
