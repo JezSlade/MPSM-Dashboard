@@ -1,5 +1,7 @@
 // core/debug.js
-// v1.0.3 [Fix: export debug object]
+// v1.0.4 — now also provides a default export so both
+// `import debug from './debug.js'` and `import { debug }…` work
+
 let debugMode = false;
 const logPanel = () => document.getElementById('debug-log');
 
@@ -8,7 +10,7 @@ function toggleDebug(mode) {
   const panel = logPanel();
   if (panel) {
     panel.hidden = !mode;
-    panel.innerHTML = ''; // clear old logs on toggle
+    panel.innerHTML = '';
   }
 }
 
@@ -42,5 +44,6 @@ function error(msg) {
   panel.appendChild(entry);
 }
 
-// Export exactly one named `debug`, matching auth.js’s import
 export const debug = { toggleDebug, log, warn, error };
+// <— ADD THIS:
+export default debug;
