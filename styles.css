@@ -176,3 +176,30 @@ select, input {
 .log-entry.error {
   color: #ff6666;
 }
+#debug-log {
+  padding: 10px;
+  overflow-y: auto;
+  height: calc(80vh - 40px);
+  background: #000;
+  font-size: 12px;
+  color: #cceeff;
+}
+
+.log-entry { margin-bottom: 6px; }
+.log-entry.event { color: #77ffcc; }
+.log-entry.info { color: #aad2ff; }
+.log-entry.error { color: #ff8888; }
+
+.clear-debug {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #223344;
+  border: 1px solid #446688;
+  color: white;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  border-radius: 6px;
+  z-index: 1;
+}
