@@ -1,66 +1,76 @@
+// core/auth.js
+import { debug } from './debug.js';
+
+// ─── CONFIGURE YOUR CREDENTIALS HERE ─────────────────────────────────────────
+const CLIENT_ID     = '9AT9j4UoU2BgLEqmiYCz';
+const CLIENT_SECRET = '9gTbAKBCZe1ftYQbLbq9';
+const USERNAME      = 'dashboard';
+const PASSWORD      = 'd@$hpa$$2024';
+const SCOPE         = 'account';
+const TOKEN_URL     = 'https://api.abassetmanagement.com/api3/token';
+// ──────────────────────────────────────────────────────────────────────────────
+
+let _token     = null;
+let _expiresAt = 0;
+
 /**
- * core/auth.js
- * v1.0.1  [Fixed: import debug as default]
+ * Actually POSTs to /token and caches the result in memory.
  */
+async function fetchNewToken() {
+  debug.log('🔑 Fetching new OAuth token…');
+  const body = new URLSearchParams({
+    client_id:     CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    grant_type:    'password',
+    username:      USERNAME,
+    password:      PASSWORD,
+    scope:         SCOPE
+  });
 
-import debug from './debug.js';
+  const res = await fetch(TOKEN_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:     body.toString()
+  });
 
-const auth = (() => {
-  let _token = null;
-  let _expiry = 0;
-
-  async function fetchToken() {
-    debug.log('Auth: requesting new token');
-    // replace with your real token URL and payload
-    const resp = await fetch('/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'password',
-        username: USERNAME,
-        password: PASSWORD,
-        scope: SCOPE
-      })
-    });
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      debug.error(`Auth: token fetch failed ${resp.status}: ${txt}`);
-      throw new Error('Auth: token fetch failed');
-    }
-
-    const data = await resp.json();
-    _token  = data.access_token;
-    _expiry = Date.now() + (data.expires_in * 1000) - 60000; // refresh 1min early
-    debug.log(`Auth: token acquired, expires at ${new Date(_expiry).toISOString()}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    debug.error(`❌ Token endpoint returned ${res.status}: ${txt}`);
+    throw new Error(`Token fetch failed: HTTP ${res.status}`);
   }
 
-  return {
-    async getToken() {
-      if (!_token || Date.now() >= _expiry) {
-        await fetchToken();
-      }
-      return _token;
-    },
+  const data = await res.json();
+  if (!data.access_token) {
+    debug.error('❌ No access_token in response', data);
+    throw new Error('Token fetch failed: no access_token in payload');
+  }
 
-    async fetch(url, options = {}) {
-      const t = await this.getToken();
-      options.headers = {
-        ...(options.headers || {}),
-        'Authorization': `Bearer ${t}`
-      };
-      debug.log(`Auth.fetch → ${options.method||'GET'} ${url}`);
-      const res = await fetch(url, options);
-      if (res.status === 401) {
-        debug.warn('Auth.fetch → 401, refreshing token and retrying');
-        _token = null;
-        return this.fetch(url, options);
-      }
-      return res;
-    }
+  // cache it, expire 1 minute before actual expiry
+  _token     = data.access_token;
+  _expiresAt = Date.now() + (data.expires_in * 1000) - 60000;
+
+  debug.log(`✅ Token acquired; expires at ${new Date(_expiresAt).toISOString()}`);
+  return _token;
+}
+
+/**
+ * Returns a valid token, fetching a new one if needed.
+ */
+export async function getToken() {
+  if (_token && Date.now() < _expiresAt) {
+    return _token;
+  }
+  return fetchNewToken();
+}
+
+/**
+ * A drop-in replacement for fetch() that adds the Bearer token header.
+ */
+export async function authFetch(url, options = {}) {
+  const token = await getToken();
+  const headers = {
+    ...(options.headers || {}),
+    Authorization: `Bearer ${token}`
   };
-})();
-
-export default auth;
+  return fetch(url, { ...options, headers });
+}
