@@ -1,25 +1,31 @@
-// v1.0.0 [Init: Shared State Store]
-export class Store {
-  constructor() {
-    this.state = {};
-    this.listeners = {};
-  }
+/**
+ * core/store.js
+ * v1.0.0 [Store: Reactive key/value store]
+ */
 
-  set(key, value) {
-    this.state[key] = value;
-    if (this.listeners[key]) {
-      this.listeners[key].forEach(cb => cb(value));
+import debug from './debug.js';
+
+const store = (() => {
+  const data = {};
+  const subs = {};
+
+  return {
+    set(key, value) {
+      data[key] = value;
+      debug.log(`Store: '${key}' updated`);
+      (subs[key] || []).forEach(fn => fn(value));
+    },
+
+    get(key) {
+      return data[key];
+    },
+
+    subscribe(key, fn) {
+      subs[key] = subs[key] || [];
+      subs[key].push(fn);
+      debug.log(`Store: subscriber added for '${key}'`);
     }
-  }
+  };
+})();
 
-  get(key) {
-    return this.state[key];
-  }
-
-  subscribe(key, callback) {
-    if (!this.listeners[key]) this.listeners[key] = [];
-    this.listeners[key].push(callback);
-  }
-}
-
-export const store = new Store();
+export default store;
