@@ -1,40 +1,54 @@
 // core/init.js
-// v1.0.1 [Initialize Core & Debug Panel]
-// Ensures debug panel is ready, version is displayed, and core:init fires correctly.
-
-import './debug.js';                              // must load first to catch all logs
+import { dom } from './dom.js';
+import { debug } from './debug.js';
+import { auth } from './auth.js';
 import { eventBus } from './event-bus.js';
 import { store } from './store.js';
-import './dom.js';
-import '../modules/token.js';
-import { loadToken } from '../modules/token.js';
-// import other modules here, e.g.:
-// import '../modules/customers.js';
-// import '../modules/devices.js';
-
-const APP_VERSION = '1.0.1';
+import '../app.js'; // or however you bootstrap your modules
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Display version in header if the element exists
-  const versionEl = document.getElementById('app-version');
-  if (versionEl) {
-    versionEl.textContent = `v${APP_VERSION}`;
-    window.DebugPanel.log(`App version set to ${APP_VERSION}`);
+  // Wire up the debug toggle switch
+  const toggle = dom.get('debug-toggle');
+  if (toggle) {
+    toggle.addEventListener('change', e => debug.toggle(e.target.checked));
   }
 
-  // Emit core:init so all modules can react
+  // Emit core:init so modules can know the version/time
+  const version = store.get('version') || 'v1.0.0';
   eventBus.emit('core:init', {
-    version: APP_VERSION,
+    version,
     time: new Date().toISOString()
   });
 
-  // Trigger token load and log outcome
-  loadToken()
-    .then(token => {
-      window.DebugPanel.log('Token acquired successfully');
-    })
-    .catch(err => {
-      window.DebugPanel.error('Token acquisition failed');
-      window.DebugPanel.logError('loadToken error', err);
-    });
+  // Pre-fetch a token to unlock the queue
+  auth.getToken()
+    .then(() => debug.log('Initial token ready'))
+    .catch(err => debug.error('Token initialization failed: ' + err.message));
+});
+// core/init.js
+import { dom } from './dom.js';
+import { debug } from './debug.js';
+import { auth } from './auth.js';
+import { eventBus } from './event-bus.js';
+import { store } from './store.js';
+import '../app.js'; // or however you bootstrap your modules
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire up the debug toggle switch
+  const toggle = dom.get('debug-toggle');
+  if (toggle) {
+    toggle.addEventListener('change', e => debug.toggle(e.target.checked));
+  }
+
+  // Emit core:init so modules can know the version/time
+  const version = store.get('version') || 'v1.0.0';
+  eventBus.emit('core:init', {
+    version,
+    time: new Date().toISOString()
+  });
+
+  // Pre-fetch a token to unlock the queue
+  auth.getToken()
+    .then(() => debug.log('Initial token ready'))
+    .catch(err => debug.error('Token initialization failed: ' + err.message));
 });

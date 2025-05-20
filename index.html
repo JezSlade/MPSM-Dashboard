@@ -3,12 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-<h1>MPSM Dashboard Core <span id="debug-toggle-float">Toggle Debug</span></h1>
-  <div id="app"><!-- modules will render here --></div>
+  <header id="app-header">
+    <div id="header-left">
+      <span id="version-display">v1.0.0</span>
+    </div>
+    <div id="header-right">
+      <label class="switch">
+        <input type="checkbox" id="debug-toggle">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </header>
 
-  <script type="module" src="./core/init.js"></script>
+  <main id="app">
+    <!-- Your modules will render here -->
+  </main>
+
+  <aside id="debug-panel" class="hidden">
+    <h2>Debug Log</h2>
+    <div id="debug-log"></div>
+  </aside>
+
+  <script type="module" src="core/init.js"></script>
 </body>
 </html>
