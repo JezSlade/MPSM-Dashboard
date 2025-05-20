@@ -1,60 +1,89 @@
-/**
- * assets/style.css
- * v1.0.0 [Global: Base dark theme & LCARS accents]
- */
+/* v1.1.0 [Fix: Debug Panel Styling] */
 
-/* Reset & box-sizing */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* Body */
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #121212;
-  color: #e0e0e0;
-  line-height: 1.5;
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #000;
+  color: #fff;
 }
 
-/* Links */
-a {
-  color: #00baff;
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
-
-/* Buttons */
-button {
-  font-family: inherit;
+header#header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #003366;
+  color: #fff;
+  padding: 0.5rem 1rem;
 }
 
-/* Debug toggle overrides */
-#debug-toggle:hover {
-  background: #007acc;
+header#header h1 {
+  margin: 0;
+  font-size: 1.2rem;
 }
 
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
+header#header .debug-toggle {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
 }
-th, td {
+
+#version {
+  margin-left: 1rem;
+  font-size: 0.9rem;
+}
+
+#app {
+  padding: 1rem;
+}
+
+/* Debug panel */
+#debug-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 30vh;
+  background: rgba(0, 0, 0, 0.85);
+  color: #0f0;
+  font-family: monospace;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  transform: translateY(calc(100% - 1.5rem));
+  border-top: 2px solid #0066cc;
+}
+
+#debug-panel:not(.minimized) {
+  transform: translateY(0);
+}
+
+#debug-header {
+  background: #001f3f;
   padding: 0.5rem;
-  text-align: left;
-  border-bottom: 1px solid #333;
-}
-th {
-  background: #1f1f1f;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* LCARS accent bar */
-.lcars-accent {
-  height: 4px;
-  background: linear-gradient(90deg, #00baff, #004f7a);
-  margin-bottom: 1rem;
+#debug-header button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+#debug-logs {
+  overflow-y: auto;
+  padding: 0.5rem;
+  flex: 1;
+}
+
+.debug-entry.warn {
+  color: #ff0;
+}
+
+.debug-entry.error {
+  color: #f00;
 }

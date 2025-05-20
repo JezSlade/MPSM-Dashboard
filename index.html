@@ -1,25 +1,34 @@
 <!DOCTYPE html>
+<!-- v1.1.0 [Fix: Debug Module & Load Order] -->
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Core stylesheet must load before any JS that reads styles or measures layout -->
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>MPSM Dashboard</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <!-- Defer so styles load before JS runs -->
+  <script type="module" src="core/init.js" defer></script>
 </head>
 <body>
-  <header id="main-header">
-    <h1>MPSM Dashboard</h1>
-    <button id="debug-toggle">Debug: Off</button>
+  <header id="header">
+    <div id="header-content">
+      <h1>MPSM Dashboard</h1>
+      <label class="debug-toggle">
+        Debug&nbsp;
+        <input type="checkbox" id="debug-toggle">
+      </label>
+      <span id="version">v1.1.0</span>
+    </div>
   </header>
 
-  <div id="app"><!-- your app renders here --></div>
+  <main id="app"></main>
 
-  <!-- debug panel is hidden by default -->
-  <div id="debug-log" class="debug-panel" hidden></div>
-
-  <!-- Defer all module scripts until after CSS is loaded -->
-  <script type="module" src="core/init.js" defer></script>
+  <section id="debug-panel" class="minimized">
+    <div id="debug-header">
+      <span>Debug Log</span>
+      <button id="debug-close">×</button>
+    </div>
+    <div id="debug-logs"></div>
+  </section>
 </body>
 </html>

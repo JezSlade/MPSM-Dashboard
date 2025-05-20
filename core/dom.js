@@ -1,15 +1,7 @@
 /**
- * core/dom.js
- * v1.0.0 [DOM: Utility for safe element access & creation]
+ * v1.1.0 [Add DOM Utilities]
  */
 
-export default {
-  get(id) {
-    return document.getElementById(id);
-  },
-  create(tag, attrs = {}) {
-    const el = document.createElement(tag);
-    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
-    return el;
-  }
-};
+export function get(id) {
+  return document.getElementById(id);
+}

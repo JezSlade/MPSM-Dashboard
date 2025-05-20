@@ -1,18 +1,17 @@
-// core/init.js
-// v1.0.4 [Fix: Ensure debug import matches debug.js export]
-
-import { debug } from './debug.js';
-import { eventBus } from './event-bus.js';
-import { store } from './store.js';
-import { loadToken } from '../modules/token.js';
+/**
+ * v1.1.0 [Fix: Init & Module Load Order]
+ */
+import debug from './debug.js';
+import { get } from './dom.js';
+import { loadToken } from '../modules/auth.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  debug.log('DOM fully loaded and parsed');
   try {
-    debug.log('Bootstrapping application…');
-    eventBus.emit('core:init', { version: '1.0.4', time: new Date().toISOString() });
     await loadToken();
-    debug.log('Token loaded successfully.');
-  } catch (e) {
-    debug.error(`Bootstrap error: ${e.message}`);
+    debug.log('Token successfully loaded');
+    // You can now emit your core:init event or bootstrap modules here
+  } catch (err) {
+    debug.error(`Init error: ${err.message || err}`);
   }
 });
