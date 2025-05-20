@@ -1,4 +1,5 @@
-// v2.1.0 [LCARS Toggle Refined, Debug Starts Hidden, Logging Restored]
+// core/debug.js
+// v2.1.1 [Debug panel toggle, restored logging]
 export class DebugPanel {
   constructor() {
     const container = document.createElement('div');

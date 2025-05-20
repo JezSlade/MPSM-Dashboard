@@ -1,5 +1,6 @@
 <?php
-// v1.0.0 [Device Detail Overlay]
+// get_device_details.php
+// v1.1.0 [Live device detail lookup using DeviceId]
 header('Content-Type: application/json');
 
 function fail($msg, $extra = []) {

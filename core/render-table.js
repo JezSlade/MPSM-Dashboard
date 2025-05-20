@@ -1,6 +1,6 @@
-// v2.1.0 [Simplified Table: SEID Only Fields + LCARS Pagination]
-import { eventBus } from './event-bus.js';
-import { store } from './store.js';
+// core/render-table.js
+// v2.1.1 [SEID clickable, total count, version moved, debug fixed]
+import { bindSEIDClicks } from '../modules/overlay.js';
 
 const DISPLAY_COLUMNS = ['SEID', 'Product.Brand', 'Product.Model', 'SerialNumber', 'IpAddress'];
 const SETTINGS_KEY = 'mpsm_table_prefs_v2';
@@ -43,13 +43,8 @@ export function renderTable(containerId, rawData) {
   const controls = document.createElement('div');
   controls.className = 'table-controls';
 
-  const versionTag = document.createElement('span');
-  versionTag.textContent = 'MPSM v2.1.0';
-  versionTag.style.marginRight = '1rem';
-  versionTag.style.color = '#ffaa66';
-  versionTag.style.fontWeight = 'bold';
-
   const pageSizeSel = document.createElement('select');
+  pageSizeSel.style.maxWidth = '140px';
   PAGE_SIZE_OPTIONS.forEach(size => {
     const opt = document.createElement('option');
     opt.value = size;
@@ -63,11 +58,17 @@ export function renderTable(containerId, rawData) {
     renderTable(containerId, rawData);
   };
 
-  controls.appendChild(versionTag);
+  const totalLabel = document.createElement('span');
+  totalLabel.textContent = `Total Devices: ${rawData.length}`;
+  totalLabel.style.marginLeft = '1rem';
+  totalLabel.style.color = '#77ddff';
+  totalLabel.style.fontWeight = 'bold';
+
   controls.appendChild(pageSizeSel);
+  controls.appendChild(totalLabel);
   container.appendChild(controls);
 
-  // Sort
+  // Sort + render
   const sorted = [...data].sort((a, b) => {
     const col = prefs.sort.column;
     const dir = prefs.sort.direction === 'desc' ? -1 : 1;
@@ -112,6 +113,7 @@ export function renderTable(containerId, rawData) {
       DISPLAY_COLUMNS.forEach(key => {
         const td = document.createElement('td');
         td.textContent = getColumnValue(row, key);
+        if (key === 'SEID') td.classList.add('clickable-seid');
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -136,6 +138,8 @@ export function renderTable(containerId, rawData) {
       nextBtn.onclick = () => { page++; renderTable(containerId, rawData); };
     }
     container.appendChild(pager);
+
+    bindSEIDClicks(containerId);
   };
 
   renderPage();

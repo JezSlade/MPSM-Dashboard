@@ -1,4 +1,5 @@
-// v1.0.1 [Fix: Unterminated Template Literal in Device Overlay]
+// modules/overlay.js
+// v1.1.0 [SEID Overlay: Real-time detail via /Device/GetDetailedInformations]
 import { eventBus } from '../core/event-bus.js';
 import { store } from '../core/store.js';
 
@@ -18,7 +19,7 @@ export function bindSEIDClicks(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  container.querySelectorAll("td:first-child").forEach(td => {
+  container.querySelectorAll("td.clickable-seid").forEach(td => {
     td.style.cursor = "pointer";
     td.onclick = async () => {
       const row = store.get("devices")?.find(r => r.SEID === td.textContent);
