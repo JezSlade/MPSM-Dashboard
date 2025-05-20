@@ -1,16 +1,15 @@
-// core/dom.js
-// v1.0.0 — Provides a tiny wrapper around document.getElementById for consistency.
+/**
+ * core/dom.js
+ * v1.0.0 [DOM: Utility for safe element access & creation]
+ */
 
-export const dom = {
-  init() {
-    // No global DOM setup needed right now
-  },
-
-  /**
-   * @param {string} id
-   * @returns {HTMLElement|null}
-   */
+export default {
   get(id) {
     return document.getElementById(id);
+  },
+  create(tag, attrs = {}) {
+    const el = document.createElement(tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
   }
 };

@@ -1,64 +1,66 @@
-// core/auth.js
-import { debug } from './debug.js';
+/**
+ * core/auth.js
+ * v1.0.1  [Fixed: import debug as default]
+ */
 
-const BASE_URL = window.MPSM_BASE_URL || ''; // set this globally or adjust
-let _token = null;
-let _expiresAt = 0;
+import debug from './debug.js';
 
-async function getToken() {
-  if (_token && Date.now() < _expiresAt) {
-    debug.log('Using cached token');
-    return _token;
+const auth = (() => {
+  let _token = null;
+  let _expiry = 0;
+
+  async function fetchToken() {
+    debug.log('Auth: requesting new token');
+    // replace with your real token URL and payload
+    const resp = await fetch('/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'password',
+        username: USERNAME,
+        password: PASSWORD,
+        scope: SCOPE
+      })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      debug.error(`Auth: token fetch failed ${resp.status}: ${txt}`);
+      throw new Error('Auth: token fetch failed');
+    }
+
+    const data = await resp.json();
+    _token  = data.access_token;
+    _expiry = Date.now() + (data.expires_in * 1000) - 60000; // refresh 1min early
+    debug.log(`Auth: token acquired, expires at ${new Date(_expiry).toISOString()}`);
   }
 
-  debug.log('Fetching new token');
-  const url = `${BASE_URL}/token`;
-  const params = new URLSearchParams({
-    client_id: window.MPSM_CLIENT_ID,
-    client_secret: window.MPSM_CLIENT_SECRET,
-    grant_type: 'password',
-    username: window.MPSM_USERNAME,
-    password: window.MPSM_PASSWORD,
-    scope: window.MPSM_SCOPE
-  });
+  return {
+    async getToken() {
+      if (!_token || Date.now() >= _expiry) {
+        await fetchToken();
+      }
+      return _token;
+    },
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params
-  });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => res.statusText);
-    debug.error(`Token fetch failed ${res.status}: ${txt}`);
-    throw new Error(`Token fetch failed: ${res.status}`);
-  }
-  const data = await res.json();
-  _token = data.access_token;
-  _expiresAt = Date.now() + (data.expires_in - 30) * 1000;
-  debug.log('New token acquired');
-  return _token;
-}
-
-async function fetchWithAuth(input, init = {}) {
-  const token = await getToken();
-  init.headers = {
-    ...(init.headers || {}),
-    Authorization: `Bearer ${token}`
+    async fetch(url, options = {}) {
+      const t = await this.getToken();
+      options.headers = {
+        ...(options.headers || {}),
+        'Authorization': `Bearer ${t}`
+      };
+      debug.log(`Auth.fetch → ${options.method||'GET'} ${url}`);
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        debug.warn('Auth.fetch → 401, refreshing token and retrying');
+        _token = null;
+        return this.fetch(url, options);
+      }
+      return res;
+    }
   };
-  let res = await fetch(input, init);
-  if (res.status === 401) {
-    debug.warn('Received 401, refreshing token');
-    const fresh = await getToken();
-    init.headers.Authorization = `Bearer ${fresh}`;
-    res = await fetch(input, init);
-  }
-  if (!res.ok) {
-    const errTxt = await res.text().catch(() => res.statusText);
-    debug.error(`Fetch ${input} failed ${res.status}: ${errTxt}`);
-    throw new Error(`Fetch failed: ${res.status}`);
-  }
-  debug.log(`Fetch ${input} succeeded (${res.status})`);
-  return res;
-}
+})();
 
-export const auth = { getToken, fetch: fetchWithAuth };
+export default auth;

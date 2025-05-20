@@ -1,25 +1,37 @@
-// v1.0.0 [Init: Core Event Bus]
-export class EventBus {
-  constructor() {
-    this.listeners = new Map();
-  }
+/**
+ * core/event-bus.js
+ * v1.0.0 [EventBus: Pub/Sub with debug]
+ */
 
-  on(event, callback) {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, []);
-    }
-    this.listeners.get(event).push(callback);
-  }
+import debug from './debug.js';
 
-  emit(event, payload) {
-    console.debug(`[emit] ${event}`, payload);
-    if (window.DebugPanel) {
-      window.DebugPanel.logEvent(event, payload);
-    }
-    if (this.listeners.has(event)) {
-      this.listeners.get(event).forEach(cb => cb(payload));
-    }
-  }
-}
+const eventBus = (() => {
+  const handlers = {};
 
-export const eventBus = new EventBus();
+  return {
+    on(event, fn) {
+      handlers[event] = handlers[event] || [];
+      handlers[event].push(fn);
+      debug.log(`EventBus: listener added for '${event}'`);
+    },
+
+    off(event, fn) {
+      if (!handlers[event]) return;
+      handlers[event] = handlers[event].filter(h => h !== fn);
+      debug.log(`EventBus: listener removed for '${event}'`);
+    },
+
+    emit(event, payload) {
+      debug.log(`EventBus: emitting '${event}'`);
+      (handlers[event] || []).forEach(h => {
+        try {
+          h(payload);
+        } catch (err) {
+          debug.error(`EventBus: error in '${event}' handler: ${err}`);
+        }
+      });
+    }
+  };
+})();
+
+export default eventBus;
