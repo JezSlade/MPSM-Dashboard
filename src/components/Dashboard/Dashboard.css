@@ -1,5 +1,4 @@
-/* Dashboard.css */
-
+/* src/components/Dashboard/Dashboard.css */
 .dashboard-container {
   flex: 1;
   background: var(--surface);

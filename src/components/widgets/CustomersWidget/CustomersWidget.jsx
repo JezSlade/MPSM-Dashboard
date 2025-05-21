@@ -1,23 +1,14 @@
-/**
- * CustomersWidget.jsx
- * v1.0.0
- * Displays snapshot and full customer list.
- * Fetches data from backend API (via get_customers.php).
- * Includes debug logs and error handling.
- */
-
+// src/components/widgets/CustomersWidget/CustomersWidget.jsx
 import React, { useState, useEffect } from 'react';
-import './CustomersWidget.css';
 import { useDebug } from '../../../contexts/DebugContext';
+import './CustomersWidget.css';
 
 export default function CustomersWidget() {
   const debug = useDebug();
-
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch customers on mount
   useEffect(() => {
     async function fetchCustomers() {
       setLoading(true);

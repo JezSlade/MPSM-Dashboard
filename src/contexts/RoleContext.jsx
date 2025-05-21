@@ -1,10 +1,4 @@
-/**
- * RoleContext.jsx
- * v1.0.0
- * Manages roles, permissions, and role assignments.
- * Includes CRUD for roles, default roles seeded.
- */
-
+// src/contexts/RoleContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useDebug } from './DebugContext';
 
@@ -20,6 +14,8 @@ const defaultRoles = [
 const RoleContext = createContext();
 
 export const RoleProvider = ({ children }) => {
+  const debug = useDebug();
+
   const [roles, setRoles] = useState(() => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -37,9 +33,8 @@ export const RoleProvider = ({ children }) => {
     } catch (e) {
       debug.error(`RoleContext: Failed to save roles: ${e.message}`);
     }
-  }, [roles]);
+  }, [roles, debug]);
 
-  // Add a new role
   const addRole = (role) => {
     if (roles.find(r => r.name.toLowerCase() === role.name.toLowerCase())) {
       throw new Error('Role name must be unique');
@@ -48,7 +43,6 @@ export const RoleProvider = ({ children }) => {
     debug.log(`RoleContext: Role added: ${role.name}`);
   };
 
-  // Edit existing role by name
   const editRole = (roleName, updates) => {
     setRoles((prev) =>
       prev.map(r => (r.name === roleName ? { ...r, ...updates } : r))
@@ -56,7 +50,6 @@ export const RoleProvider = ({ children }) => {
     debug.log(`RoleContext: Role edited: ${roleName}`);
   };
 
-  // Remove role by name
   const removeRole = (roleName) => {
     setRoles((prev) => prev.filter(r => r.name !== roleName));
     debug.log(`RoleContext: Role removed: ${roleName}`);
@@ -69,7 +62,6 @@ export const RoleProvider = ({ children }) => {
   );
 };
 
-// Hook for easy access
 export const useRole = () => {
   const context = useContext(RoleContext);
   if (!context) throw new Error('useRole must be used within RoleProvider');

@@ -1,10 +1,4 @@
-/**
- * App.jsx
- * v1.0.0
- * Root component wrapping context providers, handling routing and main layout.
- * Manages current widget selection from Sidebar and renders Dashboard.
- */
-
+// src/App.jsx
 import React, { useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from './contexts/UserContext';

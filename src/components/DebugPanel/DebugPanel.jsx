@@ -1,10 +1,4 @@
-/**
- * DebugPanel.jsx
- * v1.0.0
- * Collapsible debug log panel showing logs from DebugContext.
- * Toggleable visibility and auto-scrolls to newest entries.
- */
-
+// src/components/DebugPanel/DebugPanel.jsx
 import React, { useEffect, useRef } from 'react';
 import { useDebug } from '../../contexts/DebugContext';
 import './DebugPanel.css';
@@ -13,7 +7,6 @@ export default function DebugPanel() {
   const { logs, enabled, toggle, clear } = useDebug();
   const panelRef = useRef(null);
 
-  // Scroll to bottom when logs update
   useEffect(() => {
     if (panelRef.current) {
       panelRef.current.scrollTop = panelRef.current.scrollHeight;

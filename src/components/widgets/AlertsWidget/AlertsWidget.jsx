@@ -1,18 +1,10 @@
-/**
- * AlertsWidget.jsx
- * v1.0.0
- * Displays snapshot count of active alerts and full alert list.
- * Fetches from your backend API (assumed get_alerts.php or similar).
- * Includes robust error handling and debug logging.
- */
-
+// src/components/widgets/AlertsWidget/AlertsWidget.jsx
 import React, { useState, useEffect } from 'react';
-import './AlertsWidget.css';
 import { useDebug } from '../../../contexts/DebugContext';
+import './AlertsWidget.css';
 
 export default function AlertsWidget() {
   const debug = useDebug();
-
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

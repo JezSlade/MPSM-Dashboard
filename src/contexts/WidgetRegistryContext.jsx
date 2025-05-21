@@ -1,21 +1,6 @@
-/**
- * WidgetRegistryContext.jsx
- * v1.0.0
- * Central registry of all available widgets.
- * Manages role-based widget permissions and configs.
- */
-
+// src/contexts/WidgetRegistryContext.jsx
 import React, { createContext, useContext, useState } from 'react';
 import { useDebug } from './DebugContext';
-
-// Example widget metadata structure
-// {
-//   id: 'customers',
-//   name: 'Customers',
-//   description: 'Manage customers',
-//   rolesAllowed: ['Admin', 'Dealer', 'Service', 'Sales'],
-//   component: React.lazy(() => import('../components/widgets/CustomersWidget'))
-// }
 
 const defaultWidgets = [
   {
@@ -59,9 +44,10 @@ const defaultWidgets = [
 const WidgetRegistryContext = createContext();
 
 export const WidgetRegistryProvider = ({ children }) => {
+  const debug = useDebug();
+
   const [widgets] = useState(defaultWidgets);
 
-  // Get widgets allowed for a given role
   const getWidgetsForRole = (role) => {
     const allowed = widgets.filter(w => w.rolesAllowed.includes(role));
     debug.log(`WidgetRegistry: fetched ${allowed.length} widgets for role: ${role}`);
@@ -75,7 +61,6 @@ export const WidgetRegistryProvider = ({ children }) => {
   );
 };
 
-// Hook for easy use
 export const useWidgetRegistry = () => {
   const context = useContext(WidgetRegistryContext);
   if (!context) throw new Error('useWidgetRegistry must be used within WidgetRegistryProvider');

@@ -1,18 +1,10 @@
-/**
- * ConsumablesWidget.jsx
- * v1.0.0
- * Displays snapshot and detailed consumables info.
- * Fetches data from backend (e.g., get_consumables.php).
- * Includes error handling and debug logs.
- */
-
+// src/components/widgets/ConsumablesWidget/ConsumablesWidget.jsx
 import React, { useState, useEffect } from 'react';
-import './ConsumablesWidget.css';
 import { useDebug } from '../../../contexts/DebugContext';
+import './ConsumablesWidget.css';
 
 export default function ConsumablesWidget() {
   const debug = useDebug();
-
   const [consumables, setConsumables] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -38,7 +30,6 @@ export default function ConsumablesWidget() {
     fetchConsumables();
   }, [debug]);
 
-  // Compute snapshot example: count low stock consumables
   const lowStockCount = consumables.filter(c => c.Level < c.LowThreshold).length;
 
   return (

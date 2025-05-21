@@ -1,3 +1,4 @@
+// src/components/Sidebar/Sidebar.jsx
 import React, { useState, useEffect } from 'react';
 import { useWidgetRegistry } from '../../contexts/WidgetRegistryContext';
 import { useAuth } from '../../contexts/AuthContext';

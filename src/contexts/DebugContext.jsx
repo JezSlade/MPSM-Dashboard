@@ -1,3 +1,4 @@
+// src/contexts/DebugContext.jsx
 import React, { createContext, useContext, useState } from 'react';
 
 const DebugContext = createContext();

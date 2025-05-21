@@ -1,23 +1,14 @@
-/**
- * DevicesWidget.jsx
- * v1.0.0
- * Displays a list of devices with snapshot error counts.
- * Fetches data from get_devices.php backend.
- * Robust debug logging and error handling.
- */
-
+// src/components/widgets/DevicesWidget/DevicesWidget.jsx
 import React, { useState, useEffect } from 'react';
-import './DevicesWidget.css';
 import { useDebug } from '../../../contexts/DebugContext';
+import './DevicesWidget.css';
 
 export default function DevicesWidget() {
   const debug = useDebug();
-
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch devices on mount
   useEffect(() => {
     async function fetchDevices() {
       setLoading(true);
@@ -26,7 +17,7 @@ export default function DevicesWidget() {
         const res = await fetch('get_devices.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customerId: null }) // You can add customer filter later
+          body: JSON.stringify({ customerId: null })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -43,7 +34,6 @@ export default function DevicesWidget() {
     fetchDevices();
   }, [debug]);
 
-  // Compute error count snapshot
   const errorCount = devices.filter(d => d.AlertOnDisplay || d.IsAlertGenerator || d.IsOffline).length;
 
   return (
@@ -73,9 +63,7 @@ export default function DevicesWidget() {
                 <td>{device.Product?.Model || 'N/A'}</td>
                 <td>{device.SerialNumber || 'N/A'}</td>
                 <td>{device.IpAddress || 'N/A'}</td>
-                <td>
-                  {device.AlertOnDisplay ? 'Error' : device.IsOffline ? 'Offline' : 'OK'}
-                </td>
+                <td>{device.AlertOnDisplay ? 'Error' : device.IsOffline ? 'Offline' : 'OK'}</td>
               </tr>
             ))}
           </tbody>
