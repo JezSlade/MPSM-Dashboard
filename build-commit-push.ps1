@@ -6,8 +6,8 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 # Step 1: npm install (optional but recommended)
-Write-Host "Running npm install..."
-npm install
+# Write-Host "Running npm install..."
+# npm install
 
 # Step 2: Build React app
 Write-Host "Running npm run build..."
