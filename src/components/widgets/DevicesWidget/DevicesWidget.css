@@ -1,0 +1,43 @@
+/* DevicesWidget.css */
+
+.devices-widget {
+  padding: 1rem;
+}
+
+.snapshot {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--accent);
+}
+
+.error {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.devices-table {
+  width: 100%;
+  border-collapse: collapse;
+  max-height: 400px;
+  overflow-y: auto;
+  display: block;
+}
+
+.devices-table thead {
+  background-color: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.devices-table th,
+.devices-table td {
+  border: 1px solid var(--shadow-d);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  min-width: 100px;
+}
+
+.devices-table tbody tr:nth-child(odd) {
+  background-color: var(--bg);
+}

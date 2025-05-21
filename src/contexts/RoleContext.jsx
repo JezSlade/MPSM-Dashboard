@@ -1,0 +1,77 @@
+/**
+ * RoleContext.jsx
+ * v1.0.0
+ * Manages roles, permissions, and role assignments.
+ * Includes CRUD for roles, default roles seeded.
+ */
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import debug from './DebugContext';
+
+const LOCAL_STORAGE_KEY = 'MPSM_Roles';
+
+const defaultRoles = [
+  { name: 'Admin', description: 'Full access to all features' },
+  { name: 'Dealer', description: 'Dealer-level access' },
+  { name: 'Service', description: 'Service technicians access' },
+  { name: 'Sales', description: 'Sales and analytics access' }
+];
+
+const RoleContext = createContext();
+
+export const RoleProvider = ({ children }) => {
+  const [roles, setRoles] = useState(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      debug.error(`RoleContext: Failed to load roles from storage: ${e.message}`);
+    }
+    return defaultRoles;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(roles));
+      debug.log('RoleContext: Roles saved to localStorage');
+    } catch (e) {
+      debug.error(`RoleContext: Failed to save roles: ${e.message}`);
+    }
+  }, [roles]);
+
+  // Add a new role
+  const addRole = (role) => {
+    if (roles.find(r => r.name.toLowerCase() === role.name.toLowerCase())) {
+      throw new Error('Role name must be unique');
+    }
+    setRoles((prev) => [...prev, role]);
+    debug.log(`RoleContext: Role added: ${role.name}`);
+  };
+
+  // Edit existing role by name
+  const editRole = (roleName, updates) => {
+    setRoles((prev) =>
+      prev.map(r => (r.name === roleName ? { ...r, ...updates } : r))
+    );
+    debug.log(`RoleContext: Role edited: ${roleName}`);
+  };
+
+  // Remove role by name
+  const removeRole = (roleName) => {
+    setRoles((prev) => prev.filter(r => r.name !== roleName));
+    debug.log(`RoleContext: Role removed: ${roleName}`);
+  };
+
+  return (
+    <RoleContext.Provider value={{ roles, addRole, editRole, removeRole }}>
+      {children}
+    </RoleContext.Provider>
+  );
+};
+
+// Hook for easy access
+export const useRole = () => {
+  const context = useContext(RoleContext);
+  if (!context) throw new Error('useRole must be used within RoleProvider');
+  return context;
+};

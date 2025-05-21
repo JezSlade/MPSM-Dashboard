@@ -1,0 +1,29 @@
+/* AlertsWidget.css */
+
+.alerts-widget {
+  padding: 1rem;
+}
+
+.snapshot {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--accent);
+}
+
+.error {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.alert-list {
+  list-style-type: none;
+  padding-left: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.alert-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--shadow-d);
+}

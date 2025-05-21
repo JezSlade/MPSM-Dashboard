@@ -1,0 +1,72 @@
+/* AdminWidget.css */
+
+.admin-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.form-row input,
+.form-row select {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--shadow-d);
+  font-size: 1rem;
+  flex: 1;
+}
+
+.form-row button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background-color: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.form-row button:hover {
+  background-color: #2c3e9e;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  border: 1px solid var(--shadow-d);
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.admin-table th {
+  background-color: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.admin-table td button {
+  padding: 0.3rem 0.6rem;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.admin-table td button:hover {
+  background-color: #c0392b;
+}
