@@ -1,6 +1,7 @@
 {
   "name": "mpsm-dashboard",
   "version": "1.0.0",
+  "homepage": "/mpsm",
   "private": true,
   "description": "Modular React Dashboard for MPSM with role-based widgets and debug panel",
   "scripts": {
