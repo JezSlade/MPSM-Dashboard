@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from './contexts/UserContext';
@@ -10,7 +9,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import DebugPanel from './components/DebugPanel/DebugPanel';
 import LoginPage from './components/LoginPage/LoginPage';
 import { useAuth } from './contexts/AuthContext';
-import './theme.css';
+import './theme.css';  // <-- ensure this import here only once
 
 function AppContent() {
   const { currentUser } = useAuth();
