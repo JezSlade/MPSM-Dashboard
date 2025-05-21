@@ -1,31 +1,21 @@
-# MPSM Dashboard React Application
+# MPSM Dashboard React App
 
-## Overview
-Modular, scalable React app for MPSM Dashboard featuring:
+## Setup
 
-- Role-based authentication and authorization  
-- Dynamic widget registry and dashboard  
-- Admin panel with user and role management  
-- Debug panel with live logs  
-- Neumorphic dark/light UI theme  
-- Integration with existing PHP backend APIs
+1. `npm install`  
+2. `npm start` to run locally  
+3. `npm run build` to create production build
 
----
+## Deployment
 
-## Requirements
+Upload `build/` contents to your web server root where PHP backend resides.
 
-- Node.js >= 16  
-- npm or yarn package manager
+## Credentials
 
----
+Default admin: admin/admin
 
-## Setup Instructions
+## Structure
 
-1. **Clone or download the repo**
-
-2. **Install dependencies**
-
-```bash
-npm install
-# or
-yarn install
+- `src/contexts` - React Context providers  
+- `src/components` - Modular UI components  
+- `public/` - Static assets and `index.html`  

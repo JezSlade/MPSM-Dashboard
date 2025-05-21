@@ -7,7 +7,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import debug from './DebugContext'; // Assumes DebugContext export
+import { useDebug } from './DebugContext'; // Assumes DebugContext export
 
 // User data example structure:
 // { username: 'admin', password: 'admin', role: 'Admin' }

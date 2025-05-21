@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import debug from './DebugContext';
+import { useDebug } from './DebugContext';
 import { useAuth } from './AuthContext';
 
 const UserContext = createContext();

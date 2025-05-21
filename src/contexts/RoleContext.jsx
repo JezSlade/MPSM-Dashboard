@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import debug from './DebugContext';
+import { useDebug } from './DebugContext';
 
 const LOCAL_STORAGE_KEY = 'MPSM_Roles';
 

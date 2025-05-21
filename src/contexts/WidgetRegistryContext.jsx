@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState } from 'react';
-import debug from './DebugContext';
+import { useDebug } from './DebugContext';
 
 // Example widget metadata structure
 // {
