@@ -1,15 +1,16 @@
+// src/App.jsx
 import React, { useState } from 'react';
+import { DebugProvider, useDebug } from './contexts/DebugContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from './contexts/UserContext';
 import { RoleProvider } from './contexts/RoleContext';
 import { WidgetRegistryProvider } from './contexts/WidgetRegistryContext';
-import { DebugProvider, useDebug } from './contexts/DebugContext';
 import Sidebar from './components/Sidebar/Sidebar';
 import Dashboard from './components/Dashboard/Dashboard';
 import DebugPanel from './components/DebugPanel/DebugPanel';
 import LoginPage from './components/LoginPage/LoginPage';
 import { useAuth } from './contexts/AuthContext';
-import './theme.css';  // <-- ensure this import here only once
+import './theme.css';
 
 function AppContent() {
   const { currentUser } = useAuth();
@@ -36,6 +37,7 @@ function AppContent() {
 }
 
 export default function App() {
+  // DebugProvider MUST be outermost so useDebug works everywhere
   return (
     <DebugProvider>
       <AuthProvider>

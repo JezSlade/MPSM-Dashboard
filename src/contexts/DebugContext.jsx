@@ -24,9 +24,21 @@ export const DebugProvider = ({ children }) => {
     </DebugContext.Provider>
   );
 };
-
 export const useDebug = () => {
-  const context = useContext(DebugContext);
-  if (!context) throw new Error('useDebug must be used within DebugProvider');
+  const context = React.useContext(DebugContext);
+  if (!context) {
+    // Avoid throwing — provide no-op fallback
+    // eslint-disable-next-line no-console
+    console.error('useDebug must be used within DebugProvider');
+    return {
+      log: () => {},
+      warn: () => {},
+      error: () => {},
+      toggle: () => {},
+      clear: () => {},
+      enabled: false,
+      logs: []
+    };
+  }
   return context;
 };
