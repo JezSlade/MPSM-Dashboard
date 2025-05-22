@@ -1,168 +1,130 @@
 <?php
-// diagnostic.php — Comprehensive debug dashboard
-// VERSION 1.0.0 (increment this on each change)
-define('DIAG_VERSION', '1.0.0');
+// diagnostic.php — Enhanced Debug Dashboard v1.1.0
+
+session_start();
+error_reporting(E_ALL);
+ini_set('display_errors','1');
+
+// No cache
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+define('DIAG_VERSION', '1.1.0');
 define('BASE_PATH', __DIR__);
 
-// Collect all messages
+// Bootstrap core functions (get_db, debug_log, fetch_mps_api, etc.)
+require_once BASE_PATH . '/core/bootstrap.php';
+require_once BASE_PATH . '/core/api.php';
+
+// Collect results
 $results = [];
 
-// Helper to add a result
-function add_result($category, $name, $status, $details = '') {
+// Helper
+function add($cat, $name, $status, $msg = '') {
     global $results;
-    $results[] = compact('category','name','status','details');
+    $results[] = ['cat'=>$cat,'name'=>$name,'status'=>$status,'msg'=>$msg];
 }
 
-// 1. PHP environment
-add_result('Environment','PHP Version', version_compare(PHP_VERSION, '7.4.0', '>=') ? 'OK' : 'WARN', PHP_VERSION);
-foreach (['pdo','curl','json','session'] as $ext) {
-    add_result('Environment', "Extension “{$ext}” loaded", extension_loaded($ext) ? 'OK' : 'FAIL');
+// 1. Environment checks
+add('Environment','PHP version ≥ 7.4', version_compare(PHP_VERSION,'7.4.0','>=') ? 'PASS' : 'FAIL', PHP_VERSION);
+foreach (['pdo_mysql','curl','json'] as $ext) {
+    add('Environment',"Extension “{$ext}”", extension_loaded($ext) ? 'PASS' : 'FAIL');
 }
 
-// 2. .env parsing
-$env_file = BASE_PATH.'/.env';
-if (file_exists($env_file)) {
-    $env = parse_ini_file($env_file, false, INI_SCANNER_RAW);
-    if ($env !== false) {
-        add_result('Config', '.env parsed', 'OK', count($env).' variables');
-    } else {
-        add_result('Config', '.env parse error', 'FAIL');
-    }
+// 2. Config (.env)
+$envPath = BASE_PATH . '/.env';
+if (file_exists($envPath) && is_readable($envPath)) {
+    add('Config','.env file readable','PASS');
 } else {
-    add_result('Config', '.env file missing', 'FAIL');
+    add('Config','.env missing or unreadable','FAIL');
 }
 
-// 3. Config class exists?
-add_result('Code','Config class exists', class_exists('\Core\Config') ? 'OK' : 'FAIL');
-
-// 4. Logger class exists
-add_result('Code','Logger class exists', class_exists('\Core\Logger') ? 'OK' : 'FAIL');
-
-// 5. Core files presence & readability
-$core_files = [
-    '/core/bootstrap.php',
-    '/core/config.php',
-    '/core/auth.php',
-    '/core/api.php',
-    '/core/widgets.php',
-    '/core/debug.php',
-];
-foreach ($core_files as $f) {
-    $path = BASE_PATH . $f;
-    $status = is_readable($path) ? 'OK' : 'FAIL';
-    add_result('Code', "{$f} readable", $status, $status==='OK' ? '' : 'Check file exists and permissions');
+// 3. Core files
+$core = ['core/config.php','core/debug.php','core/api.php','core/widgets.php'];
+foreach ($core as $f) {
+    $path = BASE_PATH.'/'.$f;
+    add('Code',"File {$f}", is_readable($path)?'PASS':'FAIL');
 }
 
-// 6. Writable directories
-$wdirs = [
-    '/logs',
-    '/cache',
-    '/config',
-];
-foreach ($wdirs as $d) {
-    $full = BASE_PATH . $d;
-    $status = is_writable($full) ? 'OK' : 'FAIL';
-    add_result('Filesystem', "{$d} writable", $status);
+// 4. Filesystem
+foreach (['logs','cache'] as $d) {
+    $dir = BASE_PATH.'/'.$d;
+    add('FS',"Directory {$d}/ writable", is_writable($dir)?'PASS':'FAIL');
 }
 
-// 7. Database connection
-if (isset($env['DB_HOST'],$env['DB_NAME'],$env['DB_USER'])) {
+// 5. Database
+$env = parse_ini_file($envPath, false, INI_SCANNER_RAW) ?: [];
+if (!empty($env['DB_HOST']) && !empty($env['DB_NAME'])) {
     try {
-        $dsn = "mysql:host={$env['DB_HOST']};dbname={$env['DB_NAME']};charset=utf8mb4";
-        $pdo = new PDO($dsn, $env['DB_USER'], $env['DB_PASS'] ?? '', [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]);
-        add_result('Database','Connect to '.$env['DB_NAME'], 'OK');
-        // list tables
+        $pdo = get_db();
+        add('Database',"Connect to {$env['DB_NAME']}", 'PASS');
         $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-        add_result('Database','Tables found', 'INFO', count($tables).' tables: '.implode(', ', array_slice($tables,0,5)).(count($tables)>5?'…':''));
+        add('Database','Tables count','INFO', count($tables).' tables');
     } catch (Exception $e) {
-        add_result('Database','Connection failed','FAIL',$e->getMessage());
+        add('Database','Connection','FAIL',$e->getMessage());
     }
 } else {
-    add_result('Database','DB credentials in .env','FAIL','DB_HOST/DB_NAME/DB_USER missing');
+    add('Database','DB credentials','FAIL','Missing in .env');
 }
 
-// 8. Session test
-session_start();
-if (session_status() === PHP_SESSION_ACTIVE) {
-    add_result('Runtime','Session start','OK','ID='.session_id());
-} else {
-    add_result('Runtime','Session start','FAIL');
+// 6. API endpoint definitions
+$api = new ApiClient();
+$endpoints = $api->get_all_endpoints();
+add('API','Endpoints defined','INFO', count($endpoints).' endpoints');
+
+// 7. API calls
+foreach ($endpoints as $path => $ops) {
+    foreach (['get','post','put','delete'] as $method) {
+        if (isset($ops[$method])) {
+            $id = $ops[$method]['operationId'] ?? strtoupper($method).' '.$path;
+            try {
+                $resp = $api->call_api($path, $method, []);
+                $stat = is_array($resp) ? 'PASS' : 'FAIL';
+                $msg  = is_array($resp) ? ('Keys: '.implode(',', array_slice(array_keys($resp),0,3))) : 'No array';
+            } catch (Exception $e) {
+                $stat = 'FAIL';
+                $msg  = $e->getMessage();
+            }
+            add('API Test',"$method $path",$stat,$msg);
+        }
+    }
 }
 
-// 9. CURL test
-$ch = curl_init('https://api.abassetmanagement.com');
-curl_setopt($ch, CURLOPT_NOBODY, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-add_result('Network','Outbound HTTPS','OK',$code?'HTTP '.$code:'No response');
-
-// 10. JSON endpoints file
-$ep = BASE_PATH.'/config/endpoints.json';
-if (file_exists($ep)) {
-    $cnt = count(json_decode(file_get_contents($ep), true)['paths'] ?? []);
-    add_result('API','Endpoints JSON loaded','OK',$cnt.' endpoints');
-} else {
-    add_result('API','Endpoints JSON missing','FAIL');
-}
-
-// Render HTML
+// Render
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>🔧 Diagnostic Dashboard</title>
-    <style>
-        body { font-family:sans-serif; margin:1em; }
-        table { border-collapse: collapse; width:100%; }
-        th,td { border:1px solid #ccc; padding:0.5em; text-align:left; }
-        th { background:#eee; }
-        .OK { background:#cfc; }
-        .WARN { background:#ffeb99; }
-        .FAIL { background:#f99; }
-        .INFO { background:#ccf; }
-        .controls { margin-bottom:1em; }
-        .controls a { margin-right:1em; }
-    </style>
+  <meta charset="utf-8"><title>Debug Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:sans-serif;margin:1em}
+    h1{margin-bottom:.5em}
+    table{width:100%;border-collapse:collapse;font-size:.9em}
+    th,td{border:1px solid #ddd;padding:.4em;text-align:left}
+    th{background:#f0f0f0}
+    .PASS{background:#dfd}
+    .FAIL{background:#fdd}
+    .INFO{background:#ddf}
+    .controls a{margin-right:1em}
+  </style>
 </head>
 <body>
-    <h1>🔧 Diagnostic Dashboard</h1>
-    <div class="controls">
-        <strong>Version:</strong> <?php echo DIAG_VERSION;?> |
-        <a href="?clear_cache=1">🧹 Clear Browser Cache</a>
-        <a href="diagnostic.php">↻ Refresh</a>
-    </div>
-    <?php if(isset($_GET['clear_cache'])): ?>
-        <p><em>To fully clear cache, please hard-reload (Ctrl+F5 / ⌘+⇧+R).</em></p>
-    <?php endif; ?>
-
-    <table>
-        <thead>
-            <tr><th>Category</th><th>Check</th><th>Status</th><th>Details</th></tr>
-        </thead>
-        <tbody>
-        <?php foreach($results as $r): ?>
-            <tr class="<?php echo $r['status'];?>"
-                title="<?php echo htmlspecialchars($r['details']);?>">
-                <td><?php echo htmlspecialchars($r['category']);?></td>
-                <td><?php echo htmlspecialchars($r['name']);?></td>
-                <td><?php echo htmlspecialchars($r['status']);?></td>
-                <td><?php echo htmlspecialchars($r['details']);?></td>
-            </tr>
-        <?php endforeach;?>
-        </tbody>
-    </table>
-
-    <h2>Quick “Fix Permissions”</h2>
-    <p>If any <code>Filesystem</code> checks failed, run on your server (adjust user/group):</p>
-    <pre>chown -R www-data:www-data <?php echo htmlspecialchars(BASE_PATH);?>/logs
-chmod -R 775 <?php echo htmlspecialchars(BASE_PATH);?>/logs
-chown -R www-data:www-data <?php echo htmlspecialchars(BASE_PATH);?>/cache
-chmod -R 775 <?php echo htmlspecialchars(BASE_PATH);?>/cache</pre>
-
-    <p><em>This dashboard must remain in your project root for one-click diagnostics. Remove or restrict access in production.</em></p>
+  <h1>🔍 Debug Dashboard v<?= DIAG_VERSION ?></h1>
+  <div class="controls">
+    <a href="diagnostic.php">Refresh</a>
+    <a href="?clear_cache=1" onclick="localStorage.clear();sessionStorage.clear();alert('Cleared');return false;">Clear Browser Cache & Storage</a>
+  </div>
+  <table>
+    <tr><th>Category</th><th>Check</th><th>Status</th><th>Details</th></tr>
+  <?php foreach($results as $r): ?>
+    <tr class="<?= htmlspecialchars($r['status']) ?>">
+      <td><?= htmlspecialchars($r['cat']) ?></td>
+      <td><?= htmlspecialchars($r['name']) ?></td>
+      <td><?= htmlspecialchars($r['status']) ?></td>
+      <td><?= htmlspecialchars($r['msg']) ?></td>
+    </tr>
+  <?php endforeach; ?>
+  </table>
 </body>
 </html>
