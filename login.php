@@ -28,5 +28,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <input type="password" name="password" placeholder="Password" required class="border p-1 w-full">
     <button type="submit" class="w-full p-2 neu">Login</button>
   </form>
-</body>
+</body> 
 </html>
