@@ -22,7 +22,7 @@ $pdo->exec("
   )
 ");
 
-// 2) Rebuild migration_lock table to guarantee correct schema
+// 2) Rebuild migration_lock table
 $pdo->exec("DROP TABLE IF EXISTS migration_lock");
 $pdo->exec("
   CREATE TABLE migration_lock (
@@ -30,68 +30,47 @@ $pdo->exec("
     locked TINYINT(1) NOT NULL DEFAULT 0
   )
 ");
-// Initialize single lock row
-$pdo->exec("INSERT INTO migration_lock (id,locked) VALUES (1,0)");
+$pdo->exec("INSERT IGNORE INTO migration_lock (id,locked) VALUES (1,0)");
 
-// 3) Acquire the lock and run any new migrations
-$locked = (int)$pdo->query("SELECT locked FROM migration_lock WHERE id = 1")
-                   ->fetchColumn();
+// 3) Acquire lock and run migrations
+$locked = (int)$pdo->query("SELECT locked FROM migration_lock WHERE id = 1")->fetchColumn();
 if ($locked === 0) {
-    // Lock it
     $pdo->exec("UPDATE migration_lock SET locked = 1 WHERE id = 1");
-
-    // Execute each SQL file once
     foreach (glob(__DIR__ . '/../migrations/*.sql') as $file) {
         $version = basename($file, '.sql');
-        $seen    = $pdo->prepare("SELECT 1 FROM migrations WHERE version = ?");
+        $seen = $pdo->prepare("SELECT 1 FROM migrations WHERE version = ?");
         $seen->execute([$version]);
         if (!$seen->fetch()) {
-            $sql = file_get_contents($file);
-            $pdo->exec($sql);
-            $ins = $pdo->prepare("INSERT INTO migrations (version) VALUES (?)");
-            $ins->execute([$version]);
+            $pdo->exec(file_get_contents($file));
+            $pdo->prepare("INSERT INTO migrations (version) VALUES (?)")->execute([$version]);
         }
     }
-
-    // Release the lock
     $pdo->exec("UPDATE migration_lock SET locked = 0 WHERE id = 1");
 }
 
-// 4) Ensure the logs directory exists
+// 4) Ensure logs directory
 $logDir = __DIR__ . '/../logs';
-if (!is_dir($logDir)) {
-    mkdir($logDir, 0755, true);
-}
+if (!is_dir($logDir)) mkdir($logDir, 0755, true);
 
-// 5) Auto-seed the default admin user if none exist
+// 5) Auto-seed default admin if no users exist
 try {
-    // Only proceed if users table exists
     $res = $pdo->query("SHOW TABLES LIKE 'users'")->fetch();
     if ($res) {
-        $userCount = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-        if ($userCount === 0) {
-            // Read defaults from .env (or fall back)
-            $adminUser = defined('DEFAULT_ADMIN_USER') ? DEFAULT_ADMIN_USER : 'developer';
-            $adminPass = defined('DEFAULT_ADMIN_PASS') ? DEFAULT_ADMIN_PASS : 'DevPass123';
-            $hash      = password_hash($adminPass, PASSWORD_ARGON2ID);
-
-            // Create the user
-            $pdo->prepare("INSERT INTO users (username,password_hash) VALUES (?,?)")
-                ->execute([$adminUser, $hash]);
-            debug_log("Seeded default admin user: $adminUser", [], 'INFO');
+        $count = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        if ($count === 0) {
+            $adminU = DEFAULT_ADMIN_USER ?? 'developer';
+            $adminP = DEFAULT_ADMIN_PASS ?? 'DevPass123';
+            $hash   = password_hash($adminP, PASSWORD_ARGON2ID);
+            $pdo->prepare("INSERT INTO users (username,password_hash) VALUES (?,?)")->execute([$adminU,$hash]);
+            debug_log("Seeded default admin: $adminU",[], 'INFO');
             $userId = $pdo->lastInsertId();
-
-            // Assign Developer role
-            $roleId = $pdo->prepare("SELECT id FROM roles WHERE name = 'Developer'");
-            $roleId->execute();
-            $roleId = $roleId->fetchColumn();
+            $roleId = $pdo->query("SELECT id FROM roles WHERE name='Developer'")->fetchColumn();
             if ($roleId) {
-                $pdo->prepare("INSERT INTO user_roles (user_id,role_id) VALUES (?,?)")
-                    ->execute([$userId, $roleId]);
-                debug_log("Assigned 'Developer' role to $adminUser", [], 'INFO');
+                $pdo->prepare("INSERT INTO user_roles (user_id,role_id) VALUES (?,?)")->execute([$userId,$roleId]);
+                debug_log("Assigned Developer role to $adminU",[], 'INFO');
             }
         }
     }
 } catch (Exception $e) {
-    debug_log("Error auto-seeding admin user", ['error' => $e->getMessage()], 'ERROR');
+    debug_log("Error auto-seeding admin", ['error'=>$e->getMessage()], 'ERROR');
 }

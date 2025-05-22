@@ -1,5 +1,9 @@
 <?php
-// index.php
+if (file_exists(__DIR__ . '/install.php')) {
+    header('Location: install.php');
+    exit;
+}
+
 require_once __DIR__ . '/core/bootstrap.php';
 require_once __DIR__ . '/core/widgets.php';
 require_login();

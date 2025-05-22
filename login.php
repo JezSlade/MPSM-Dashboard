@@ -1,5 +1,9 @@
 <?php
-// login.php
+if (file_exists(__DIR__ . '/install.php')) {
+    header('Location: install.php');
+    exit;
+}
+
 require_once __DIR__ . '/core/bootstrap.php';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
