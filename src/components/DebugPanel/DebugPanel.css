@@ -1,0 +1,89 @@
+/* src/components/DebugPanel/DebugPanel.css */
+.debug-panel {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 350px;
+  max-height: 40vh;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow:
+    8px 8px 16px var(--shadow-d),
+    -8px -8px 16px var(--shadow-l);
+  display: flex;
+  flex-direction: column;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+  z-index: 1000;
+}
+
+.debug-header {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.debug-controls button {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255,255,255,0.3);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.debug-controls button:hover {
+  background: rgba(255,255,255,0.6);
+}
+
+.debug-log {
+  overflow-y: auto;
+  padding: 0.5rem 1rem;
+  flex-grow: 1;
+  background: var(--bg);
+}
+
+.debug-entry {
+  margin-bottom: 0.25rem;
+}
+
+.debug-entry.log {
+  color: var(--text);
+}
+
+.debug-entry.warn {
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.debug-entry.error {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+.debug-toggle-btn {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow:
+    6px 6px 12px var(--shadow-d),
+    -6px -6px 12px var(--shadow-l);
+  z-index: 1000;
+}
