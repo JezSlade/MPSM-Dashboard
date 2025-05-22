@@ -17,10 +17,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Login</title>
 
-  <!-- Tailwind via CDN -->
+  <!-- Tailwind via CDN (still prints a warning but does not break) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="flex items-center justify-center min-h-screen">
-  <!-- ... rest remains unchanged ... -->
+  <form method="POST" class="neu p-6 space-y-4">
+    <h2 class="text-xl">Log In</h2>
+    <?php if($error): ?>
+      <div class="text-red-600"><?=htmlspecialchars($error)?></div>
+    <?php endif; ?>
+    <input name="username" placeholder="Username" required class="border p-1 w-full">
+    <input type="password" name="password" placeholder="Password" required class="border p-1 w-full">
+    <button type="submit" class="w-full p-2 neu">Login</button>
+  </form>
+</body>
+</html>

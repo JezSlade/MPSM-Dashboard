@@ -1,6 +1,4 @@
 -- 007_create_auth_tables.sql
--- Create all auth‐related tables and seed the five static roles
-
 CREATE TABLE IF NOT EXISTS users (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   username       VARCHAR(50) UNIQUE NOT NULL,
@@ -9,13 +7,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS roles (
-  id     INT AUTO_INCREMENT PRIMARY KEY,
-  name   VARCHAR(50) UNIQUE NOT NULL
+  id   INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS permissions (
-  id     INT AUTO_INCREMENT PRIMARY KEY,
-  name   VARCHAR(50) UNIQUE NOT NULL
+  id   INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS role_permissions (
@@ -42,6 +40,6 @@ CREATE TABLE IF NOT EXISTS user_widget_settings (
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Seed the static role hierarchy
+-- Seed the static roles
 INSERT IGNORE INTO roles (name) VALUES
   ('Developer'),('Admin'),('Dealer'),('Service'),('Sales');

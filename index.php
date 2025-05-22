@@ -20,4 +20,4 @@ $widgets = get_user_widgets();
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="min-h-screen flex">
-  <!-- ... rest remains unchanged ... -->
+  <!-- rest of your dashboard markup unchanged -->

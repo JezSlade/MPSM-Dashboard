@@ -1,6 +1,6 @@
 <?php
 // core/config.php
-// v1.0.0 [Load .env into constants]
+// v1.0.1 [Load .env into constants + dev error display]
 
 function loadEnv(string $path): array {
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -23,5 +23,16 @@ $env = loadEnv($envPath);
 foreach ($env as $key => $value) {
     if (!defined($key)) define($key, $value);
 }
+
+// Defaults
 if (!defined('ENVIRONMENT')) define('ENVIRONMENT', 'production');
 if (!defined('DEBUG'))       define('DEBUG', 'false');
+
+// Show errors in development
+if (DEBUG === 'true') {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+} else {
+    ini_set('display_errors', '0');
+}
