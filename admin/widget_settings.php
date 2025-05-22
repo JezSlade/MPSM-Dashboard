@@ -7,7 +7,7 @@ require_once __DIR__ . '/../core/permissions.php';
 require_once __DIR__ . '/../core/tracking.php';
 
 require_admin();
-session_start();
+// session_start();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }

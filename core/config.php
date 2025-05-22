@@ -1,6 +1,6 @@
 <?php
 // core/config.php
-// v1.0.1 [Load .env into constants + dev error display]
+// v1.0.2 [Load .env → constants; display errors but suppress notices/warnings in DEBUG]
 
 function loadEnv(string $path): array {
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -23,16 +23,15 @@ $env = loadEnv($envPath);
 foreach ($env as $key => $value) {
     if (!defined($key)) define($key, $value);
 }
-
-// Defaults
 if (!defined('ENVIRONMENT')) define('ENVIRONMENT', 'production');
 if (!defined('DEBUG'))       define('DEBUG', 'false');
 
-// Show errors in development
+// In DEBUG, show all except notices/warnings; in production, hide all
 if (DEBUG === 'true') {
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
-    error_reporting(E_ALL);
+    error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 } else {
     ini_set('display_errors', '0');
+    error_reporting(0);
 }
