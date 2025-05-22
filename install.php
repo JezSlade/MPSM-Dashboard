@@ -1,5 +1,5 @@
 <?php
-// install.php — Battle-tested, Debug-First, Atomic Installer
+// install.php — Battle-tested, Debug-First, Atomic Installer with Auto-Populated Form
 
 session_start();
 
@@ -86,7 +86,9 @@ echo <<<'HTML'
   </div>
 HTML;
 
+// ───────────────────────────
 // STEP 1: prerequisites + form
+// ───────────────────────────
 if ($step === '1') {
     $checks = [
       'PHP ≥ 7.4'        => version_compare(PHP_VERSION,'7.4.0','>='),
@@ -106,27 +108,35 @@ if ($step === '1') {
     if (!$allOK) {
       fatal('Fix prerequisites and reload.');
     }
+
+    // Auto-populated configuration form
     echo "<form method='POST' action='?step=1'>";
       echo "<h3>Database</h3>";
-      foreach (['DB_HOST','DB_NAME','DB_USER'] as $k) {
-        echo "<input name='".h($k)."' placeholder='".h($k)."' required>";
-      }
-      echo "<input name='DB_PASS' type='password' placeholder='DB_PASS' required>";
+      echo "<input name='DB_HOST' placeholder='DB_HOST' value='localhost' required>";
+      echo "<input name='DB_NAME' placeholder='DB_NAME' value='resolut7_mpsm' required>";
+      echo "<input name='DB_USER' placeholder='DB_USER' value='resolut7_mpsm' required>";
+      echo "<input name='DB_PASS' type='password' placeholder='DB_PASS' value='MP\$M_Nr0lr' required>";
+
       echo "<h3>MPS API</h3>";
-      foreach (['CLIENT_ID','CLIENT_SECRET','API_USER'] as $k) {
-        echo "<input name='".h($k)."' placeholder='".h($k)."' required>";
-      }
-      echo "<input name='API_PASS' type='password' placeholder='API_PASS' required>";
+      echo "<input name='CLIENT_ID' placeholder='CLIENT_ID' value='your_client_id' required>";
+      echo "<input name='CLIENT_SECRET' placeholder='CLIENT_SECRET' value='your_client_secret' required>";
+      echo "<input name='API_USER' placeholder='API Username' value='your_api_user' required>";
+      echo "<input name='API_PASS' type='password' placeholder='API Password' value='your_api_pass' required>";
+
       echo "<h3>Default Admin</h3>";
       echo "<input name='ADMIN_USER' placeholder='Admin Username' value='admin' required>";
       echo "<input name='ADMIN_PASS' type='password' placeholder='Admin Password' value='changeme' required>";
+
       echo "<button class='btn'>Save & Continue →</button>";
     echo "</form>";
+
     echo "</div></body></html>";
     exit;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // STEP 1 POST: write .env, create DB, bootstrap & seed widgets
+// ─────────────────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '1') {
     echo "<h2 class='text-xl mb-4'>Applying Configuration…</h2><pre>";
     try {
@@ -202,13 +212,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '1') {
     exit;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // STEP 2: redirect to verification
+// ─────────────────────────────────────────────────────────────────────────────
 if ($step === '2') {
     header('Location:?step=3');
     exit;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // STEP 3: verification suite + cleanup
+// ─────────────────────────────────────────────────────────────────────────────
 if ($step === '3') {
     echo "<h2 class='text-xl mb-4'>Verification</h2><pre>";
     $tests = [
