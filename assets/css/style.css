@@ -1,5 +1,5 @@
-/* Tailwind + Neumorphism tokens */
-@import url('https://cdn.jsdelivr.net/npm/tailwindcss@^3/dist/tailwind.min.css');
+/* assets/css/style.css */
+/* Neumorphism + custom overrides */
 
 :root {
   --bg-light: #f0f0f3;
@@ -27,4 +27,7 @@ html.dark {
   --shadow-dark:  rgba(0,0,0,0.7);
 }
 
-.card { padding:1rem; margin-bottom:1rem; }
+.card {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
