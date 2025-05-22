@@ -1,99 +1,66 @@
 <?php
-// diagnostics.php — Server‐side project snapshot & integrity report
-
-// 1) Bootstrap your app so all constants, DB, and functions are loaded
-require __DIR__ . '/core/bootstrap.php';
+// diagnostics.php — Concise, Detailed Server Snapshot
 header('Content-Type: application/json');
+require __DIR__ . '/core/bootstrap.php';
 
-// Helpers
-function file_md5(string $path): string {
-    return md5_file($path) ?: '';
-}
-function scan_dir(string $dir, array &$out, array $skip = ['vendor','node_modules','logs','.git']) {
-    $it = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
-    );
-    foreach ($it as $file) {
-        $parts = explode(DIRECTORY_SEPARATOR, $file->getPath());
-        if (array_intersect($parts, $skip)) continue;
-        if ($file->isFile()) {
-            $rel = substr($file->getPathname(), strlen(__DIR__)+1);
-            $out[$rel] = file_md5($file->getPathname());
-        }
-    }
-}
+function h($p){return md5_file($p)?:'';}
+function scan($d,&$o){foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($d,FilesystemIterator::SKIP_DOTS)) as $f){$r=substr($f->getPathname(),strlen(__DIR__)+1);if($f->isFile()&&!preg_match('#^(vendor|logs)/#',$r))$o[$r]=h($f->getPathname());}}
 
-// 2) Gather data
-$report = [];
+$r = [];
 
-// PHP environment
-$report['php'] = [
-    'version'    => phpversion(),
-    'extensions' => get_loaded_extensions(),
-    'ini'        => [
-        'display_errors'         => ini_get('display_errors'),
-        'display_startup_errors' => ini_get('display_startup_errors'),
-        'error_reporting'        => ini_get('error_reporting'),
-    ],
+// PHP + INI
+$r['php'] = [
+  'version'=>PHP_VERSION,
+  'extensions'=>get_loaded_extensions(),
+  'ini'=>[
+    'display_errors'=>ini_get('display_errors'),
+    'error_reporting'=>ini_get('error_reporting'),
+    'memory_limit'=>ini_get('memory_limit'),
+    'max_execution_time'=>ini_get('max_execution_time')
+  ]
 ];
 
-// ENV vars & config
-$report['env'] = [
-    'ENVIRONMENT' => defined('ENVIRONMENT') ? ENVIRONMENT : null,
-    'DEBUG'       => defined('DEBUG') ? DEBUG : null,
-];
-
-// Database schema
-try {
-    $pdo = get_db();
-    // Get list of tables
-    $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-    $report['database'] = [
-        'name'          => DB_NAME,
-        'table_count'   => count($tables),
-        'tables'        => $tables,
-        'migrations'    => (int)$pdo->query("SELECT COUNT(*) FROM migrations")->fetchColumn(),
-        'widgets_count' => (int)$pdo->query("SELECT COUNT(*) FROM widgets")->fetchColumn(),
-        'users_count'   => (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-    ];
-} catch (Exception $e) {
-    $report['database_error'] = $e->getMessage();
+// ENV (.env masked)
+if(is_readable($e=__DIR__.'/.env')){
+  foreach(parse_ini_file($e,false,INI_SCANNER_RAW) as $k=>$v){
+    $r['env'][$k] = preg_match('/(PASS|SECRET)/',$k)?'*****':$v;
+  }
 }
 
-// Auth & ACL
-try {
-    // Roles
-    $roles = get_db()->query("SELECT name FROM roles")->fetchAll(PDO::FETCH_COLUMN);
-    // Permissions
-    $perms = get_db()->query("SELECT name FROM permissions")->fetchAll(PDO::FETCH_COLUMN);
-    $report['acl'] = [
-        'roles'       => $roles,
-        'permissions' => $perms,
-    ];
-} catch (Exception $e) {
-    $report['acl_error'] = $e->getMessage();
-}
+// Database
+try{
+  $db=get_db();
+  $tbl=$db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+  $r['db']=[
+    'name'=>DB_NAME,
+    'tables'=>$tbl,
+    'counts'=>array_map(fn($t)=>$db->query("SELECT COUNT(*) FROM `$t`")->fetchColumn(),$tbl),
+    'migrations'=>$db->query("SELECT COUNT(*) FROM migrations")->fetchColumn()
+  ];
+}catch(Exception$e){$r['db_error']=$e->getMessage();}
+
+// ACL
+try{
+  $r['acl']=[
+    'roles'=>$db->query("SELECT name FROM roles")->fetchAll(PDO::FETCH_COLUMN),
+    'permissions'=>$db->query("SELECT name FROM permissions")->fetchAll(PDO::FETCH_COLUMN)
+  ];
+}catch(Exception$e){$r['acl_error']=$e->getMessage();}
 
 // Widgets
-try {
-    $all = get_all_widgets();
-    $usr = isset($_SESSION['user_id']) ? get_user_widgets() : [];
-    $report['widgets'] = [
-        'all_count'  => count($all),
-        'user_count' => count($usr),
-        'sample_all' => array_map(fn($w)=>[
-            'name'=>$w['name'],'endpoint'=>$w['endpoint']
-        ], array_slice($all,0,5)),
-        'sample_user'=> array_map(fn($w)=>$w['name'], array_slice($usr,0,5)),
-    ];
-} catch (Exception $e) {
-    $report['widgets_error'] = $e->getMessage();
-}
+try{
+  $all=get_all_widgets();
+  $usr=$_SESSION['user_id']?get_user_widgets():[];
+  $r['widgets']=[
+    'total'=>count($all),
+    'user'=>count($usr),
+    'sample'=>array_slice(array_column($all,'name'),0,5)
+  ];
+}catch(Exception$e){$r['widgets_error']=$e->getMessage();}
 
-// File inventory with MD5
-$files = [];
-scan_dir(__DIR__, $files);
-$report['files'] = $files;
+// File hashes
+scan(__DIR__,$files);
+$r['files_md5']=$files;
 
 // Output
-echo json_encode($report, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+echo json_encode($r, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);

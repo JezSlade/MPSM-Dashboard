@@ -5,9 +5,9 @@
  * Handles authentication and API requests
  */
 
-require_once __DIR__ . '/config.php';    // for Config::getEnv()
-require_once __DIR__ . '/debug.php';     // for debug_log()
-require_once __DIR__ . '/Logger.php';    // ← ensures Logger class exists
+require_once __DIR__ . '/config.php';    // loads Config::getEnv()
+require_once __DIR__ . '/debug.php';     // loads debug_log()
+require_once __DIR__ . '/Logger.php';    // ← ensures Logger class is available
 
 class ApiClient {
     private $client_id;
@@ -27,7 +27,7 @@ class ApiClient {
         global $db;
         $this->db = $db;
         
-        // Load configuration from .env file via Config helper
+        // Load configuration
         $env = Config::getEnv();
         $this->client_id     = $env['API_CLIENT_ID']     ?? '';
         $this->client_secret = $env['API_CLIENT_SECRET'] ?? '';
@@ -37,40 +37,36 @@ class ApiClient {
         $this->token_url     = $env['API_TOKEN_URL']     ?? '';
         $this->base_url      = $env['API_BASE_URL']      ?? '';
         
-        // Load endpoints from JSON file
-        $endpoints_path = __DIR__ . '/../config/endpoints.json';
-        $this->api_endpoints = $this->load_endpoints($endpoints_path);
+        // Load endpoints
+        $path = __DIR__ . '/../config/endpoints.json';
+        $this->api_endpoints = $this->load_endpoints($path);
         
-        // Try to load tokens from database
+        // Load stored tokens
         $this->load_tokens();
     }
     
     private function load_endpoints($json_path) {
         if (!file_exists($json_path)) {
-            Logger::error("Endpoints JSON file not found: $json_path");
+            Logger::error("Endpoints file not found: {$json_path}");
             return [];
         }
-        
-        $json_data = file_get_contents($json_path);
-        $data = json_decode($json_data, true);
-        
+        $raw = file_get_contents($json_path);
+        $data = json_decode($raw, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            Logger::error("Error parsing endpoints JSON: " . json_last_error_msg());
+            Logger::error("JSON parse error in endpoints: " . json_last_error_msg());
             return [];
         }
-        
         return $data['paths'] ?? [];
     }
     
     private function load_tokens() {
         $stmt = $this->db->prepare(
-            "SELECT access_token, refresh_token, token_expiry 
-               FROM api_tokens 
+            "SELECT access_token, refresh_token, token_expiry
+               FROM api_tokens
               WHERE id = 1"
         );
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
         if ($row) {
             $this->access_token  = $row['access_token'];
             $this->refresh_token = $row['refresh_token'];
@@ -80,12 +76,14 @@ class ApiClient {
     
     private function save_tokens() {
         $stmt = $this->db->prepare("
-            INSERT INTO api_tokens (id, access_token, refresh_token, token_expiry) 
-            VALUES (1, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
-              access_token  = VALUES(access_token),
-              refresh_token = VALUES(refresh_token),
-              token_expiry  = VALUES(token_expiry)
+            INSERT INTO api_tokens
+                (id, access_token, refresh_token, token_expiry)
+            VALUES
+                (1, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                access_token  = VALUES(access_token),
+                refresh_token = VALUES(refresh_token),
+                token_expiry  = VALUES(token_expiry)
         ");
         $stmt->execute([
             $this->access_token,
@@ -98,31 +96,27 @@ class ApiClient {
         if (empty($this->refresh_token)) {
             return false;
         }
-        
         $ch = curl_init($this->token_url);
-        $payload = http_build_query([
-            "client_id"     => $this->client_id,
-            "client_secret" => $this->client_secret,
-            "grant_type"    => "refresh_token",
-            "refresh_token" => $this->refresh_token
+        $post = http_build_query([
+            'client_id'     => $this->client_id,
+            'client_secret' => $this->client_secret,
+            'grant_type'    => 'refresh_token',
+            'refresh_token' => $this->refresh_token
         ]);
-        
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_POSTFIELDS     => $post,
             CURLOPT_HTTPHEADER     => [
                 "Content-Type: application/x-www-form-urlencoded",
                 "Cache-Control: no-cache"
-            ]
+            ],
         ]);
-        
-        $response = curl_exec($ch);
-        $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        
-        if ($status === 200) {
-            $data = json_decode($response, true);
+        if ($code === 200) {
+            $data = json_decode($resp, true);
             if (!empty($data['access_token'])) {
                 $this->access_token  = $data['access_token'];
                 $this->refresh_token = $data['refresh_token'] ?? $this->refresh_token;
@@ -131,41 +125,34 @@ class ApiClient {
                 return true;
             }
         }
-        
-        Logger::error(
-            "Token refresh failed",
-            ['status' => $status, 'response' => $response]
-        );
+        Logger::error("Refresh token failed", ['code'=>$code,'resp'=>$resp]);
         return false;
     }
     
     private function obtainToken() {
         $ch = curl_init($this->token_url);
-        $payload = http_build_query([
-            "client_id"     => $this->client_id,
-            "client_secret" => $this->client_secret,
-            "grant_type"    => "password",
-            "username"      => $this->username,
-            "password"      => $this->password,
-            "scope"         => $this->scope
+        $post = http_build_query([
+            'client_id'     => $this->client_id,
+            'client_secret' => $this->client_secret,
+            'grant_type'    => 'password',
+            'username'      => $this->username,
+            'password'      => $this->password,
+            'scope'         => $this->scope
         ]);
-        
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_POSTFIELDS     => $post,
             CURLOPT_HTTPHEADER     => [
                 "Content-Type: application/x-www-form-urlencoded",
                 "Cache-Control: no-cache"
-            ]
+            ],
         ]);
-        
-        $response = curl_exec($ch);
-        $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        
-        if ($status === 200) {
-            $data = json_decode($response, true);
+        if ($code === 200) {
+            $data = json_decode($resp, true);
             if (!empty($data['access_token'])) {
                 $this->access_token  = $data['access_token'];
                 $this->refresh_token = $data['refresh_token'] ?? null;
@@ -174,11 +161,7 @@ class ApiClient {
                 return true;
             }
         }
-        
-        Logger::error(
-            "Token acquisition failed",
-            ['status' => $status, 'response' => $response]
-        );
+        Logger::error("Obtain token failed", ['code'=>$code,'resp'=>$resp]);
         return false;
     }
     
@@ -191,33 +174,28 @@ class ApiClient {
         return $this->access_token;
     }
     
-    public function call_api($endpoint_id, $method = 'get', $params = []) {
+    public function call_api($endpoint_id, $method='get', $params=[]) {
         if (!isset($this->api_endpoints[$endpoint_id])) {
-            Logger::error("Endpoint not found: $endpoint_id");
+            Logger::error("Unknown endpoint: $endpoint_id");
             return null;
         }
-        
         $method = strtolower($method);
         if (!isset($this->api_endpoints[$endpoint_id][$method])) {
-            Logger::error("Method $method not supported for $endpoint_id");
+            Logger::error("Method $method not allowed on $endpoint_id");
             return null;
         }
-        
         $token = $this->getAccessToken();
         if (!$token) {
-            Logger::error("Failed to obtain access token");
+            Logger::error("No access token");
             return null;
         }
-        
-        $url = rtrim($this->base_url, '/') . '/' . ltrim($endpoint_id, '/');
+        $url = rtrim($this->base_url,'/') . '/' . ltrim($endpoint_id,'/');
         $ch  = curl_init();
-        
         if ($method === 'get') {
             if ($params) {
                 $url .= '?' . http_build_query($params);
             }
             curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_HTTPGET, true);
         } else {
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
@@ -227,24 +205,17 @@ class ApiClient {
                 "Authorization: Bearer $token"
             ]);
         }
-        
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => ["Authorization: Bearer $token","Accept: application/json"]
         ]);
-        
-        $response = curl_exec($ch);
-        $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        
-        if ($status >= 200 && $status < 300) {
-            return json_decode($response, true);
+        if ($code >= 200 && $code < 300) {
+            return json_decode($resp, true);
         }
-        
-        Logger::error(
-            "API call failed for $endpoint_id",
-            ['status' => $status, 'response' => $response]
-        );
+        Logger::error("API call error on $endpoint_id", ['code'=>$code,'resp'=>$resp]);
         return null;
     }
     
