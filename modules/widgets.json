@@ -1,0 +1,10 @@
+[
+  {
+    "name": "DashboardOverview",
+    "displayName": "Dashboard",
+    "description": "Snapshot of all enabled widgets",
+    "category": "Core",
+    "method": "dashboard",
+    "permission": "view_dashboard"
+  }
+]
