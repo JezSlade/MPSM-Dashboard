@@ -21,7 +21,7 @@ function fatal($msg){
     exit;
 }
 function atomicWrite(string $path, string $data, int $mode = 0600): bool {
-    $tmp = $path.'.tmp';
+    $tmp = $path . '.tmp';
     if (file_put_contents($tmp, $data) === false) return false;
     chmod($tmp, $mode);
     return rename($tmp, $path);
@@ -29,24 +29,26 @@ function atomicWrite(string $path, string $data, int $mode = 0600): bool {
 
 // Default form values for debugging
 $defaults = [
-  'DB_HOST'      => 'localhost',
-  'DB_NAME'      => 'resolut7_mpsm',
-  'DB_USER'      => 'resolut7_mpsm',
-  'DB_PASS'      => 'MP$M_Nr0lr',
-  'CLIENT_ID'    => 'your_client_id',
-  'CLIENT_SECRET'=> 'your_client_secret',
-  'API_USER'     => 'your_api_username',
-  'API_PASS'     => 'your_api_password',
-  'SCOPE'        => 'account',
-  'TOKEN_URL'    => 'https://api.abassetmanagement.com/api3/token',
-  'BASE_URL'     => 'https://api.abassetmanagement.com/api3/',
-  'ADMIN_USER'   => 'admin',
-  'ADMIN_PASS'   => 'changeme',
+    'DB_HOST'       => 'localhost',
+    'DB_NAME'       => 'resolut7_mpsm',
+    'DB_USER'       => 'resolut7_mpsm',
+    'DB_PASS'       => 'MP$M_Nr0lr',
+    'CLIENT_ID'     => 'your_client_id',
+    'CLIENT_SECRET' => 'your_client_secret',
+    'API_USER'      => 'your_api_username',
+    'API_PASS'      => 'your_api_password',
+    'SCOPE'         => 'account',
+    'TOKEN_URL'     => 'https://api.abassetmanagement.com/api3/token',
+    'BASE_URL'      => 'https://api.abassetmanagement.com/api3/',
+    'ADMIN_USER'    => 'admin',
+    'ADMIN_PASS'    => 'changeme',
 ];
 
-// Determine step (1,2,3)
+// Determine installer step (1,2,3)
 $step = $_GET['step'] ?? '1';
-if (!in_array($step, ['1','2','3'], true)) $step = '1';
+if (!in_array($step, ['1','2','3'], true)) {
+    $step = '1';
+}
 
 // Render head + debug console
 ?><!DOCTYPE html>
@@ -57,10 +59,11 @@ if (!in_array($step, ['1','2','3'], true)) $step = '1';
   <link href="https://fonts.googleapis.com/css2?family=Consales&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Silence Tailwind CDN warning
     (function(){
       const w = console.warn;
-      console.warn = (...a)=>{ if(!a[0].includes('cdn.tailwindcss.com should')) w(...a); };
+      console.warn = (...a) => {
+        if (!a[0].includes('cdn.tailwindcss.com should')) w(...a);
+      };
     })();
   </script>
   <style>
@@ -117,47 +120,86 @@ if (!in_array($step, ['1','2','3'], true)) $step = '1';
         if (!$ok) $allOK = false;
     }
     echo "</ul>";
-    if (!$allOK) { fatal('Fix prerequisites and reload.'); }
+    if (!$allOK) {
+        fatal('Fix prerequisites and reload.');
+    }
 ?>
   <form method="POST" action="?step=1">
-    <h3>Database</h3>
-    <input name="DB_HOST" value="<?=h($defaults['DB_HOST'])?>" placeholder="DB_HOST" required>
-    <input name="DB_NAME" value="<?=h($defaults['DB_NAME'])?>" placeholder="DB_NAME" required>
-    <input name="DB_USER" value="<?=h($defaults['DB_USER'])?>" placeholder="DB_USER" required>
-    <input name="DB_PASS" type="password" value="<?=h($defaults['DB_PASS'])?>" placeholder="DB_PASS" required>
+    <h3>Database Configuration</h3>
+    <div class="form-group">
+      <label for="DB_HOST">Database Host *</label>
+      <input type="text" id="DB_HOST" name="DB_HOST" value="<?=h($defaults['DB_HOST'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="DB_NAME">Database Name *</label>
+      <input type="text" id="DB_NAME" name="DB_NAME" value="<?=h($defaults['DB_NAME'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="DB_USER">Database User *</label>
+      <input type="text" id="DB_USER" name="DB_USER" value="<?=h($defaults['DB_USER'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="DB_PASS">Database Password</label>
+      <input type="password" id="DB_PASS" name="DB_PASS" value="<?=h($defaults['DB_PASS'])?>">
+    </div>
 
-    <h3>MPS API</h3>
-    <input name="CLIENT_ID"     value="<?=h($defaults['CLIENT_ID'])?>"     placeholder="API Client ID"     required>
-    <input name="CLIENT_SECRET" value="<?=h($defaults['CLIENT_SECRET'])?>" placeholder="API Client Secret" required>
-    <input name="API_USER"      value="<?=h($defaults['API_USER'])?>"      placeholder="API Username"      required>
-    <input name="API_PASS" type="password" value="<?=h($defaults['API_PASS'])?>" placeholder="API Password" required>
-    <input name="SCOPE"         value="<?=h($defaults['SCOPE'])?>"         placeholder="API Scope"        required>
-    <input name="TOKEN_URL"     value="<?=h($defaults['TOKEN_URL'])?>"     placeholder="API Token URL"    required>
-    <input name="BASE_URL"      value="<?=h($defaults['BASE_URL'])?>"      placeholder="API Base URL"     required>
+    <h3>API Configuration</h3>
+    <div class="form-group">
+      <label for="CLIENT_ID">API Client ID *</label>
+      <input type="text" id="CLIENT_ID" name="CLIENT_ID" value="<?=h($defaults['CLIENT_ID'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="CLIENT_SECRET">API Client Secret *</label>
+      <input type="password" id="CLIENT_SECRET" name="CLIENT_SECRET" value="<?=h($defaults['CLIENT_SECRET'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="API_USER">API Username</label>
+      <input type="text" id="API_USER" name="API_USER" value="<?=h($defaults['API_USER'])?>">
+    </div>
+    <div class="form-group">
+      <label for="API_PASS">API Password</label>
+      <input type="password" id="API_PASS" name="API_PASS" value="<?=h($defaults['API_PASS'])?>">
+    </div>
+    <div class="form-group">
+      <label for="SCOPE">API Scope *</label>
+      <input type="text" id="SCOPE" name="SCOPE" value="<?=h($defaults['SCOPE'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="TOKEN_URL">API Token URL *</label>
+      <input type="text" id="TOKEN_URL" name="TOKEN_URL" value="<?=h($defaults['TOKEN_URL'])?>" required>
+    </div>
+    <div class="form-group">
+      <label for="BASE_URL">API Base URL *</label>
+      <input type="text" id="BASE_URL" name="BASE_URL" value="<?=h($defaults['BASE_URL'])?>" required>
+    </div>
 
-    <h3>Default Admin</h3>
-    <input name="ADMIN_USER" value="<?=h($defaults['ADMIN_USER'])?>" placeholder="Admin Username" required>
-    <input name="ADMIN_PASS" type="password" value="<?=h($defaults['ADMIN_PASS'])?>" placeholder="Admin Password" required>
+    <h3>Admin Account</h3>
+    <div class="form-group">
+      <label for="ADMIN_USER">Admin Username</label>
+      <input type="text" id="ADMIN_USER" name="ADMIN_USER" value="<?=h($defaults['ADMIN_USER'])?>">
+    </div>
+    <div class="form-group">
+      <label for="ADMIN_PASS">Admin Password</label>
+      <input type="password" id="ADMIN_PASS" name="ADMIN_PASS" value="<?=h($defaults['ADMIN_PASS'])?>">
+    </div>
 
-    <button class="btn">Save →</button>
+    <button class="btn">Save & Continue →</button>
   </form>
 <?php
-  exit;
+    exit;
 endif;
 
-// ─────────────────────────────────────────────
+// ────────────────────────────────────────────────
 // STEP 1 POST: write .env, create DB, run bootstrap & seed
-// ─────────────────────────────────────────────
+// ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD']==='POST' && $step==='1') {
     echo "<h2 class='text-xl mb-4'>Applying Configuration…</h2><pre>";
     try {
-        // Build and write .env
-        $keys = ['DB_HOST','DB_NAME','DB_USER','DB_PASS',
-                 'CLIENT_ID','CLIENT_SECRET','API_USER','API_PASS',
-                 'SCOPE','TOKEN_URL','BASE_URL'];
+        // Build and write .env atomically
+        $keys = ['DB_HOST','DB_NAME','DB_USER','DB_PASS','CLIENT_ID','CLIENT_SECRET','API_USER','API_PASS','SCOPE','TOKEN_URL','BASE_URL'];
         $lines = [];
         foreach ($keys as $k) {
-            if (empty($_POST[$k])) throw new Exception("$k required");
+            if (empty($_POST[$k])) throw new Exception("$k is required");
             $v = str_replace(["\r","\n"],'',$_POST[$k]);
             $lines[] = "$k={$v}";
         }
@@ -167,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $step==='1') {
           "DEFAULT_ADMIN_PASS=".str_replace(["\r","\n"],'',$defaults['ADMIN_PASS'])
         );
         if (!atomicWrite(__DIR__.'/.env',implode("\n",$lines)."\n")) {
-            throw new Exception("Cannot write .env");
+            throw new Exception("Failed to write .env");
         }
         echo "✅ .env written\n";
 
@@ -177,89 +219,87 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $step==='1') {
         $pdoRoot->exec("CREATE DATABASE IF NOT EXISTS `{$d}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         echo "✅ Database `{$d}` ready\n";
 
-        // Bootstrap migrations & seed
+        // Bootstrap migrations & seed admin
         require __DIR__.'/core/bootstrap.php';
         echo "✅ Migrations & admin seeded\n";
 
         // Seed widgets
         $spec=@json_decode(@file_get_contents(__DIR__.'/fullApi.json'),true);
         if(!is_array($spec['paths']??null)){
-            echo "⚠️ fullApi.json missing—skipping widgets\n";
+            echo "⚠️ fullApi.json invalid—skipping widgets\n";
         } else {
-            $pdo=get_db(); $pdo->beginTransaction(); $cnt=0;
-            foreach($spec['paths'] as $p=>$ops){
+            $pdo=get_db(); $pdo->beginTransaction(); $count=0;
+            foreach($spec['paths'] as $path=>$ops){
                 foreach($ops as $m=>$info){
-                    $name    = $info['operationId'] ?? strtoupper($m).str_replace(['/','{','}'],'_',$p);
-                    $disp    = $info['summary']     ?? $name;
-                    $desc    = $info['description'] ?? '';
-                    $cat     = strtok(trim($p,'/'),'/') ?: 'core';
-                    $ep      = 'mps_proxy.php?endpoint='.urlencode($p);
-                    $params  = [];
-                    foreach($info['parameters']??[] as $par){
-                        $params[$par['name']]="{{{$par['name']}}}";
+                    $name     = $info['operationId'] ?? strtoupper($m).str_replace(['/','{','}'],'_',$path);
+                    $disp     = $info['summary'] ?? $name;
+                    $desc     = $info['description'] ?? '';
+                    $cat      = strtok(trim($path,'/'),'/') ?: 'core';
+                    $endpoint = 'mps_proxy.php?endpoint='.urlencode($path);
+                    $pr       = [];
+                    foreach($info['parameters']??[] as $param){
+                        $pr[$param['name']]="{{{$param['name']}}}";
                     }
-                    $stmt=$pdo->prepare("
+                    $stmt = $pdo->prepare("
                         INSERT IGNORE INTO widgets
                           (name,display_name,description,category,endpoint,params,method,permission)
                         VALUES (?,?,?,?,?,?,?,'view_widgets')
                     ");
-                    $stmt->execute([
-                        $name,$disp,$desc,$cat,$ep,json_encode($params),strtolower($m)
-                    ]);
-                    $cnt++;
+                    $stmt->execute([$name,$disp,$desc,$cat,$endpoint,json_encode($pr),strtolower($m)]);
+                    $count++;
                 }
             }
             $pdo->commit();
-            echo "✅ Seeded {$cnt} widgets\n";
+            echo "✅ Seeded {$count} widgets\n";
         }
 
     } catch(Exception $e){
-        if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();
-        fatal($e->getMessage());
+        if(isset($pdo)&&$pdo->inTransaction()) $pdo->rollBack();
+        fatal("Setup error: ".$e->getMessage());
     }
     echo "</pre><script>setTimeout(()=>location='?step=2',1200);</script>";
     echo "</div></body></html>";
     exit;
 }
 
-// STEP 2 → redirect to 3
-if($step==='2'){
+// STEP 2: redirect to step 3
+if ($step==='2') {
     header('Location:?step=3');
     exit;
 }
 
-// STEP 3: Verification + cleanup
-if($step==='3'){
+// STEP 3: verification + self-delete
+if ($step==='3') {
     echo "<h2 class='text-xl mb-4'>Verification</h2><pre>";
-    $tests=[
+    $tests = [
       'get_db()'          => fn()=>get_db() instanceof PDO,
-      'debug_log()'       => fn()=>debug_log('Installer OK',[], 'INFO')===null,
+      'debug_log()'       => fn()=>debug_log('Installer test',[], 'INFO')===null,
       'login_user()'      => function(){
                                 $u=getenv('DEFAULT_ADMIN_USER');
                                 $p=getenv('DEFAULT_ADMIN_PASS');
-                                if(!login_user($u,$p))throw new Exception('auth failed');
-                                logout_user();return true;
+                                if(!login_user($u,$p)) throw new Exception('auth failed');
+                                logout_user(); return true;
                              },
       'get_user_widgets()'=> fn()=>is_array(get_user_widgets()),
       'fetch_mps_api()'   => function(){
                                 $row=get_db()->query("SELECT endpoint FROM widgets LIMIT 1")->fetch();
-                                if(!$row)throw new Exception('no widgets');
+                                if(!$row) throw new Exception('no widgets');
                                 parse_str(parse_url($row['endpoint'],PHP_URL_QUERY),$q);
                                 $d=fetch_mps_api($q['endpoint'],$q);
-                                if(!is_array($d))throw new Exception('bad response');
+                                if(!is_array($d)) throw new Exception('bad response');
                                 return true;
                              },
     ];
-    foreach($tests as $l=>$fn){
-        echo h($l).': ';
-        try {echo $fn()===true?'✅ PASS':'❌ FAIL';}
-        catch(Exception$e){echo "❌ ".$e->getMessage();}
-        echo "\n";
+    foreach($tests as $lbl=>$fn){
+        echo h($lbl).': ';
+        try { echo $fn()===true ? "✅ PASS\n" : "❌ FAIL\n"; }
+        catch(Exception $e){ echo "❌ ERROR: ".$e->getMessage()."\n"; }
     }
     echo "</pre><pre>Cleaning up…</pre>";
-    @unlink(__FILE__)?print("✅ Removed\n"):print("⚠️ Not deleted\n");
+    @unlink(__FILE__)?print("✅ Installer removed\n"):print("⚠️ Could not delete installer\n");
     echo "</div><script>setTimeout(()=>location='login.php',2000);</script>";
     exit;
 }
 
-fatal('Unknown step.');
+// Should never get here
+fatal('Unknown installer step.');
