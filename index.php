@@ -1,5 +1,4 @@
 <?php
-<<<<<<< HEAD
 if (file_exists(__DIR__ . '/install.php')) {
     header('Location: install.php');
     exit;
@@ -8,11 +7,6 @@ if (file_exists(__DIR__ . '/install.php')) {
 require_once __DIR__ . '/core/bootstrap.php';
 require_once __DIR__ . '/core/widgets.php';
 require_login();
-=======
-require_once 'core/config.php';
-require_once 'core/auth.php';
-require_once 'core/widget_registry.php';
->>>>>>> 4b9007029866c446bde310faaf45fc114177158a
 
 // Require login
 Auth::requireLogin();

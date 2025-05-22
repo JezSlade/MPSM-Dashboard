@@ -1,22 +1,10 @@
 <?php
-<<<<<<< HEAD
 if (file_exists(__DIR__ . '/install.php')) {
     header('Location: install.php');
     exit;
 }
 
 require_once __DIR__ . '/core/bootstrap.php';
-=======
-require_once 'core/config.php';
-require_once 'core/auth.php';
-
-// Check if already logged in
-if (Auth::isLoggedIn()) {
-    header('Location: index.php');
-    exit;
-}
-
->>>>>>> 4b9007029866c446bde310faaf45fc114177158a
 $error = '';
 
 // Handle login form submission
