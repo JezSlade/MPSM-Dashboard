@@ -1,36 +1,68 @@
 <?php
-// login.php
-require_once __DIR__ . '/core/bootstrap.php';
+require_once 'core/config.php';
+require_once 'core/auth.php';
+
+// Check if already logged in
+if (Auth::isLoggedIn()) {
+    header('Location: index.php');
+    exit;
+}
+
 $error = '';
+
+// Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (login_user($_POST['username'] ?? '', $_POST['password'] ?? '')) {
-        header('Location: index.php');
-        exit;
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+    
+    if (empty($username) || empty($password)) {
+        $error = 'Username and password are required.';
+    } else {
+        // Authenticate user
+        if (Auth::authenticate($username, $password)) {
+            // Redirect to dashboard
+            header('Location: index.php');
+            exit;
+        } else {
+            $error = 'Invalid username or password.';
+        }
     }
-    $error = 'Invalid username or password';
 }
 ?>
+
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Login</title>
-
-  <!-- Tailwind via CDN (still prints a warning but does not break) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <link rel="stylesheet" href="assets/css/style.css">
+    <title>Login - MPSM Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
-<body class="flex items-center justify-center min-h-screen">
-  <form method="POST" class="neu p-6 space-y-4">
-    <h2 class="text-xl">Log In</h2>
-    <?php if($error): ?>
-      <div class="text-red-600"><?=htmlspecialchars($error)?></div>
-    <?php endif; ?>
-    <input name="username" placeholder="Username" required class="border p-1 w-full">
-    <input type="password" name="password" placeholder="Password" required class="border p-1 w-full">
-    <button type="submit" class="w-full p-2 neu">Login</button>
-  </form>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>MPSM Dashboard</h2>
+                <p>Please log in to continue</p>
+            </div>
+            
+            <?php if (!empty($error)): ?>
+                <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
+            <?php endif; ?>
+            
+            <form class="login-form" method="post">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Log In</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

@@ -1,49 +1,125 @@
 <?php
-// core/auth.php
-// v1.0.0 [Session-based authentication]
-
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/debug.php';
-
-session_start([
-    'cookie_httponly' => true,
-    'cookie_samesite' => 'Lax',
-]);
-
-function is_logged_in(): bool {
-    return !empty($_SESSION['user_id']);
-}
-
-function require_login(): void {
-    if (!is_logged_in()) {
-        header('Location: login.php');
-        exit;
+/**
+ * Authentication functions for MPSM Dashboard
+ */
+class Auth {
+    /**
+     * Check if user is logged in
+     * @return bool
+     */
+    public static function isLoggedIn() {
+        return isset($_SESSION['user_id']);
     }
-}
-
-function login_user(string $user, string $pass): bool {
-    $pdo = get_db();
-    $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE username = ?');
-    $stmt->execute([$user]);
-    $row = $stmt->fetch();
-    if ($row && password_verify($pass, $row['password_hash'])) {
-        session_regenerate_id(true);
-        $_SESSION['user_id'] = $row['id'];
-        debug_log('User logged in', ['user_id' => $row['id']], 'INFO');
-        return true;
+    
+    /**
+     * Require login to access a page
+     * Redirects to login page if not logged in
+     */
+    public static function requireLogin() {
+        if (!self::isLoggedIn()) {
+            header('Location: login.php');
+            exit;
+        }
     }
-    return false;
-}
-
-function logout_user(): void {
-    session_unset();
-    session_destroy();
-}
-
-function current_user(): ?array {
-    if (!is_logged_in()) return null;
-    $pdo = get_db();
-    $stmt = $pdo->prepare('SELECT id, username FROM users WHERE id = ?');
-    $stmt->execute([$_SESSION['user_id']]);
-    return $stmt->fetch() ?: null;
+    
+    /**
+     * Get current user ID
+     * @return int|null
+     */
+    public static function getCurrentUserId() {
+        return $_SESSION['user_id'] ?? null;
+    }
+    
+    /**
+     * Get current username
+     * @return string|null
+     */
+    public static function getCurrentUser() {
+        return $_SESSION['username'] ?? null;
+    }
+    
+    /**
+     * Get current user role
+     * @return string|null
+     */
+    public static function getCurrentUserRole() {
+        return $_SESSION['user_role'] ?? null;
+    }
+    
+    /**
+     * Check if current user is an admin
+     * @return bool
+     */
+    public static function isAdmin() {
+        return self::getCurrentUserRole() === 'admin';
+    }
+    
+    /**
+     * Check if current user is a developer
+     * @return bool
+     */
+    public static function isDeveloper() {
+        return self::getCurrentUserRole() === 'developer' || self::getCurrentUserRole() === 'admin';
+    }
+    
+    /**
+     * Check if user has a specific permission
+     * @param string $permission
+     * @return bool
+     */
+    public static function hasPermission($permission) {
+        global $db;
+        
+        if (!self::isLoggedIn()) {
+            return false;
+        }
+        
+        // Admins have all permissions
+        if (self::isAdmin()) {
+            return true;
+        }
+        
+        // Check user permissions
+        $user_id = self::getCurrentUserId();
+        $stmt = $db->prepare("SELECT 1 FROM user_permissions WHERE user_id = ? AND permission = ?");
+        $stmt->execute([$user_id, $permission]);
+        
+        return $stmt->fetchColumn() !== false;
+    }
+    
+    /**
+     * Authenticate user
+     * @param string $username
+     * @param string $password
+     * @return bool
+     */
+    public static function authenticate($username, $password) {
+        global $db;
+        
+        $stmt = $db->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+        
+        if ($user && password_verify($password, $user['password'])) {
+            // Login successful
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['user_role'] = $user['role'];
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Logout user
+     */
+    public static function logout() {
+        // Clear all session variables
+        $_SESSION = [];
+        
+        // Destroy the session
+        session_destroy();
+    }
 }
