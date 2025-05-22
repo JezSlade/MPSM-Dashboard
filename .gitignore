@@ -1,0 +1,17 @@
+# Environment
+# .env
+
+# Logs and runtime files
+logs/
+*.log
+
+# Vendor and dependencies
+vendor/
+node_modules/
+
+# IDE / OS files
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
