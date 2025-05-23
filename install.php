@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // install.php — Installer with Reset, Fix Permissions, Clear Browser Data
 
 session_start();
@@ -41,11 +41,20 @@ if (isset($_GET['fixperm'])) {
 }
 
 // Helpers
+/**
+ * @reusable
+ */
 function h($s){ return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+/**
+ * @reusable
+ */
 function fatal($msg){
     echo "<div style='color:red;padding:1rem;background:#fee;border:1px solid #f00;'>Fatal: ".h($msg)."</div>";
     exit;
 }
+/**
+ * @reusable
+ */
 function atomicWrite($path,$data){
     $tmp = $path . '.tmp';
     if (file_put_contents($tmp, $data) === false) return false;
@@ -82,6 +91,9 @@ if (!in_array($step, ['1','2','3'], true)) {
     .topnav a { margin-left: 1rem; }
   </style>
   <script>
+    /**
+     * @reusable
+     */
     function clearBrowserData(){
       try {
         localStorage.clear();

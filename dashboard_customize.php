@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'core/config.php';
 require_once 'core/auth.php';
 require_once 'core/widget_registry.php';

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Authentication functions for MPSM Dashboard
  */

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // core/debug.php
 // v1.0.0 — Logging and error/exception handling
 

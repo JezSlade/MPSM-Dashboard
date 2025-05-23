@@ -1,11 +1,17 @@
-<?php
+﻿<?php
 /**
  * Account Balance Widget for MPSM Dashboard
  * Displays account balance information from the API
  */
 require_once 'widgets/types/api_widget.php';
 
+/**
+ * @reusable
+ */
 class AccountBalanceWidget extends ApiWidget {
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         parent::__construct($config);
         $this->endpoint_id = $config['endpoint_id'] ?? '/Account/GetBalance';

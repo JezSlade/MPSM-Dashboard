@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Widget Registry for MPSM Dashboard
  * Manages widget registration and retrieval
@@ -8,6 +8,9 @@ class WidgetRegistry {
     private $widgets = [];
     private $db;
     
+    /**
+     * @reusable
+     */
     private function __construct() {
         global $db;
         $this->db = $db;

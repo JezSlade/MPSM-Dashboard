@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * core/api.php
  * API Client for MPSM Dashboard
@@ -9,6 +9,9 @@ require_once __DIR__ . '/config.php';    // loads Config::getEnv()
 require_once __DIR__ . '/debug.php';     // loads debug_log()
 require_once __DIR__ . '/Logger.php';    // ← ensures Logger class is available
 
+/**
+ * @reusable
+ */
 class ApiClient {
     private $client_id;
     private $client_secret;
@@ -23,6 +26,9 @@ class ApiClient {
     private $api_endpoints;
     private $db;
     
+    /**
+     * @reusable
+     */
     public function __construct() {
         global $db;
         $this->db = $db;
@@ -45,6 +51,9 @@ class ApiClient {
         $this->load_tokens();
     }
     
+    /**
+     * @reusable
+     */
     private function load_endpoints($json_path) {
         if (!file_exists($json_path)) {
             Logger::error("Endpoints file not found: {$json_path}");
@@ -59,6 +68,9 @@ class ApiClient {
         return $data['paths'] ?? [];
     }
     
+    /**
+     * @reusable
+     */
     private function load_tokens() {
         $stmt = $this->db->prepare(
             "SELECT access_token, refresh_token, token_expiry
@@ -74,6 +86,9 @@ class ApiClient {
         }
     }
     
+    /**
+     * @reusable
+     */
     private function save_tokens() {
         $stmt = $this->db->prepare("
             INSERT INTO api_tokens
@@ -92,6 +107,9 @@ class ApiClient {
         ]);
     }
     
+    /**
+     * @reusable
+     */
     private function refreshToken() {
         if (empty($this->refresh_token)) {
             return false;
@@ -129,6 +147,9 @@ class ApiClient {
         return false;
     }
     
+    /**
+     * @reusable
+     */
     private function obtainToken() {
         $ch = curl_init($this->token_url);
         $post = http_build_query([
@@ -165,6 +186,9 @@ class ApiClient {
         return false;
     }
     
+    /**
+     * @reusable
+     */
     public function getAccessToken() {
         if (empty($this->access_token) || time() >= $this->token_expiry) {
             if (!$this->refreshToken() && !$this->obtainToken()) {
@@ -174,6 +198,9 @@ class ApiClient {
         return $this->access_token;
     }
     
+    /**
+     * @reusable
+     */
     public function call_api($endpoint_id, $method='get', $params=[]) {
         if (!isset($this->api_endpoints[$endpoint_id])) {
             Logger::error("Unknown endpoint: $endpoint_id");
@@ -219,10 +246,16 @@ class ApiClient {
         return null;
     }
     
+    /**
+     * @reusable
+     */
     public function get_endpoint_info($endpoint_id) {
         return $this->api_endpoints[$endpoint_id] ?? null;
     }
     
+    /**
+     * @reusable
+     */
     public function get_all_endpoints() {
         return $this->api_endpoints;
     }

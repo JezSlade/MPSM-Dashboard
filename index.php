@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (file_exists(__DIR__ . '/install.php')) {
     header('Location: install.php');
     exit;

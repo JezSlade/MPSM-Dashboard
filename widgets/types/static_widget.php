@@ -1,13 +1,19 @@
-<?php
+﻿<?php
 /**
  * Static Widget Type for MPSM Dashboard
  * Displays static or simple dynamic content
  */
 require_once 'core/widget.php';
 
+/**
+ * @reusable
+ */
 class StaticWidget extends Widget {
     protected $content;
     
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         parent::__construct($config);
         $this->content = $config['content'] ?? '';

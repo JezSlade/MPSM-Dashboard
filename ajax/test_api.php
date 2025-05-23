@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * AJAX handler for testing API connection
  */

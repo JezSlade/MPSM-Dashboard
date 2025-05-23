@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // core/bootstrap.php
 // v1.2.3 [Fixed migration_lock schema; auto-run migrations with safe drop/create; auto-seed admin]
 

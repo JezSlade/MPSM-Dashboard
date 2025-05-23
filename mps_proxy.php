@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header('Content-Type: application/json');
 require __DIR__ . '/core/bootstrap.php';
 require_login();

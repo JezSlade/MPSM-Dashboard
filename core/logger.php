@@ -1,9 +1,12 @@
-<?php
+﻿<?php
 // core/Logger.php
 // v1.0.0 — PSR-3–style shim forwarding to debug_log()
 
 require_once __DIR__ . '/debug.php';
 
+/**
+ * @reusable
+ */
 class Logger
 {
     /**

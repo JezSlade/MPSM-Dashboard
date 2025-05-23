@@ -1,11 +1,17 @@
-<?php
+﻿<?php
 /**
  * Recent Transactions Widget for MPSM Dashboard
  * Displays recent transactions from the API
  */
 require_once 'widgets/types/api_widget.php';
 
+/**
+ * @reusable
+ */
 class RecentTransactionsWidget extends ApiWidget {
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         parent::__construct($config);
         $this->endpoint_id = $config['endpoint_id'] ?? '/Transactions/GetRecent';

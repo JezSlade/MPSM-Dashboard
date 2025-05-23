@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Event Bus for MPSM Dashboard
  * Enables communication between widgets
@@ -7,6 +7,9 @@ class EventBus {
     private static $instance = null;
     private $subscribers = [];
     
+    /**
+     * @reusable
+     */
     private function __construct() {
         // Private constructor to enforce singleton pattern
     }

@@ -1,16 +1,22 @@
-<?php
+﻿<?php
 /**
  * Custom Code Widget Type for MPSM Dashboard
  * Allows custom PHP, HTML, JavaScript, and CSS code
  */
 require_once 'core/widget.php';
 
+/**
+ * @reusable
+ */
 class CustomCodeWidget extends Widget {
     protected $php_code;
     protected $html_template;
     protected $js_code;
     protected $css_code;
     
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         parent::__construct($config);
         $this->php_code = $config['php_code'] ?? '';

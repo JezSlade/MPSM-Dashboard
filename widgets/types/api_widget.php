@@ -1,10 +1,13 @@
-<?php
+﻿<?php
 /**
  * API Widget Type for MPSM Dashboard
  * Fetches data from API endpoints
  */
 require_once 'core/widget.php';
 
+/**
+ * @reusable
+ */
 class ApiWidget extends Widget {
     protected $endpoint_id;
     protected $method;
@@ -13,6 +16,9 @@ class ApiWidget extends Widget {
     protected $last_fetch = 0;
     protected $cached_data = null;
     
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         parent::__construct($config);
         $this->endpoint_id = $config['endpoint_id'] ?? '';

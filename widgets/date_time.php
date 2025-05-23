@@ -1,13 +1,19 @@
-<?php
+﻿<?php
 /**
  * Date & Time Widget for MPSM Dashboard
  * Displays the current date and time
  */
 require_once 'widgets/types/static_widget.php';
 
+/**
+ * @reusable
+ */
 class DateTimeWidget extends StaticWidget {
     protected $format;
     
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         parent::__construct($config);
         $this->format = $config['format'] ?? 'F j, Y g:i A';
@@ -31,6 +37,9 @@ class DateTimeWidget extends StaticWidget {
             </div>
         </div>
         <script>
+            /**
+             * @reusable
+             */
             function refreshDateTime(widgetId, format) {
                 const now = new Date();
                 fetch("ajax/widget_data.php?action=get_time&format=" + encodeURIComponent(format))

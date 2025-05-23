@@ -1,15 +1,21 @@
-<?php
+﻿<?php
 /**
  * Base Widget class for MPSM Dashboard
  */
 require_once 'core/event_bus.php';
 
+/**
+ * @reusable
+ */
 abstract class Widget {
     protected $id;
     protected $config;
     protected $data = [];
     protected $event_bus;
     
+    /**
+     * @reusable
+     */
     public function __construct($config = []) {
         $this->config = $config;
         $this->id = $config['widget_id'] ?? uniqid('widget_');

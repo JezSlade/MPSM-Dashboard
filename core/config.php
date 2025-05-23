@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // core/config.php
 // v2.0.0 — Safe .env parser & DB/API config
 
@@ -6,6 +6,9 @@
 define('ENV_FILE', __DIR__ . '/../.env');
 
 // Load and parse .env into an associative array
+/**
+ * @reusable
+ */
 function loadEnv(): array
 {
     $env = [];
@@ -36,6 +39,9 @@ function loadEnv(): array
 }
 
 // Retrieve an env var or fallback
+/**
+ * @reusable
+ */
 function env(string $key, $default = null)
 {
     static $loaded;
@@ -61,6 +67,9 @@ define('DEFAULT_ADMIN_USER', env('ADMIN_USER', 'admin'));
 define('DEFAULT_ADMIN_PASS', env('ADMIN_PASS', 'changeme'));
 
 // PDO instance
+/**
+ * @reusable
+ */
 function get_db(): PDO
 {
     static $pdo;
@@ -94,6 +103,9 @@ function get_db(): PDO
 }
 
 // Make env() accessible from Config::getEnv()
+/**
+ * @reusable
+ */
 class Config
 {
     /**

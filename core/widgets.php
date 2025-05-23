@@ -1,10 +1,13 @@
-<?php
+﻿<?php
 // core/widgets.php
 // v1.0.1 [Removed redundant session_start; use auth.php’s session]
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/permissions.php';
 
+/**
+ * @reusable
+ */
 function get_all_widgets(): array {
     $pdo = get_db();
     $stmt = $pdo->query("
@@ -27,6 +30,9 @@ function get_all_widgets(): array {
     ], $stmt->fetchAll());
 }
 
+/**
+ * @reusable
+ */
 function get_user_widgets(): array {
     $pdo    = get_db();
     $userId = $_SESSION['user_id'] ?? null;

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // core/db.php
 // v1.0.0 — Database helper functions
 
