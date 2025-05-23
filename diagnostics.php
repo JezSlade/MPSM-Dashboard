@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP Shell Diagnostics Tool v2.3.0
+ * PHP Shell Diagnostics Tool v2.2.0
  * 
  * A bulletproof, self-contained PHP diagnostics tool.
  * Just drop this file into your project root and access it via browser.
@@ -11,22 +11,21 @@
  * - Performance monitoring
  * - Database testing
  * - Network diagnostics
- * - Advanced terminal with 50+ commands
- * - Integrated file explorer with code analyzer
+ * - Built-in terminal
  * - Export functionality
  * 
  * Security: Password protected (default: admin/admin)
  * 
  * @author PHP Diagnostics Team
- * @version 2.3.0
+ * @version 2.2.0
  */
 
 // Configuration
-define('DIAG_VERSION', '2.3.0');
+define('DIAG_VERSION', '2.2.0');
 define('DIAG_PASSWORD', 'admin'); // Change this!
 define('DIAG_USERNAME', 'admin'); // Change this!
-define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB max file size for analysis
-define('SCAN_DEPTH', 15); // Maximum directory depth to scan
+define('MAX_FILE_SIZE', 1024 * 1024); // 1MB max file size for analysis
+define('SCAN_DEPTH', 10); // Maximum directory depth to scan
 
 // Start session for authentication
 session_start();
@@ -91,15 +90,6 @@ if ($authenticated && isset($_GET['action'])) {
                 $credentials = isset($_POST['credentials']) ? json_decode($_POST['credentials'], true) : null;
                 echo json_encode(saveCredentials($credentials));
                 break;
-            case 'get_git_status':
-                echo json_encode(getGitStatus());
-                break;
-            case 'get_processes':
-                echo json_encode(getProcessList());
-                break;
-            case 'get_network_info':
-                echo json_encode(getNetworkInfo());
-                break;
             default:
                 echo json_encode(['error' => 'Invalid action']);
         }
@@ -156,8 +146,8 @@ function scanFileSystem($dir = null, $depth = 0) {
                     $result['stats']['total_size'] += $subdir['stats']['total_size'];
                 }
             } else {
-                $size = @filesize($path) ?: 0;
-                $modified = @filemtime($path) ?: 0;
+                $size = filesize($path);
+                $modified = filemtime($path);
                 $extension = pathinfo($file, PATHINFO_EXTENSION);
                 
                 $result['children'][] = [
@@ -169,8 +159,7 @@ function scanFileSystem($dir = null, $depth = 0) {
                     'modified' => $modified,
                     'readable' => is_readable($path),
                     'writable' => is_writable($path),
-                    'health' => calculateFileHealth($path),
-                    'mime_type' => getMimeType($path)
+                    'health' => calculateFileHealth($path)
                 ];
                 
                 $result['stats']['files']++;
@@ -189,63 +178,16 @@ function scanFileSystem($dir = null, $depth = 0) {
 }
 
 /**
- * Get MIME type of file
- */
-function getMimeType($file) {
-    if (function_exists('mime_content_type')) {
-        return @mime_content_type($file) ?: 'application/octet-stream';
-    }
-    
-    $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-    $mimeTypes = [
-        'txt' => 'text/plain',
-        'php' => 'text/x-php',
-        'html' => 'text/html',
-        'css' => 'text/css',
-        'js' => 'application/javascript',
-        'json' => 'application/json',
-        'xml' => 'application/xml',
-        'log' => 'text/plain',
-        'env' => 'text/plain',
-        'md' => 'text/markdown',
-        'sql' => 'text/x-sql',
-        'yml' => 'text/yaml',
-        'yaml' => 'text/yaml',
-        'ini' => 'text/plain',
-        'conf' => 'text/plain',
-        'htaccess' => 'text/plain'
-    ];
-    
-    return $mimeTypes[$extension] ?? 'application/octet-stream';
-}
-
-/**
  * Calculate file health score
  */
 function calculateFileHealth($file) {
-    if (!is_readable($file) || !file_exists($file)) {
+    if (!is_readable($file) || filesize($file) > MAX_FILE_SIZE) {
         return 0;
     }
     
-    $size = @filesize($file) ?: 0;
-    if ($size > MAX_FILE_SIZE) {
-        return 50; // Large files get medium score
-    }
-    
-    $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-    
-    // Non-PHP files get default scores based on type
+    $extension = pathinfo($file, PATHINFO_EXTENSION);
     if ($extension !== 'php') {
-        $safeExtensions = ['txt', 'md', 'json', 'yml', 'yaml', 'css', 'js', 'html'];
-        $configExtensions = ['env', 'ini', 'conf', 'htaccess'];
-        
-        if (in_array($extension, $safeExtensions)) {
-            return 100;
-        } elseif (in_array($extension, $configExtensions)) {
-            return 85; // Config files need attention
-        } else {
-            return 75; // Unknown files
-        }
+        return 100;
     }
     
     try {
@@ -288,12 +230,14 @@ function analyzeFile($file) {
         return ['error' => 'File not readable. Check permissions.'];
     }
     
-    $size = @filesize($file) ?: 0;
-    if ($size > MAX_FILE_SIZE) {
-        return ['error' => 'File too large for analysis (' . formatBytes($size) . ')'];
+    if (filesize($file) > MAX_FILE_SIZE) {
+        return ['error' => 'File too large for analysis'];
     }
     
-    $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    $extension = pathinfo($file, PATHINFO_EXTENSION);
+    if ($extension !== 'php') {
+        return ['error' => 'Only PHP files can be analyzed'];
+    }
     
     try {
         $content = @file_get_contents($file);
@@ -305,10 +249,8 @@ function analyzeFile($file) {
         
         $analysis = [
             'file' => $file,
-            'size' => $size,
+            'size' => filesize($file),
             'lines' => count($lines),
-            'extension' => $extension,
-            'mime_type' => getMimeType($file),
             'health' => calculateFileHealth($file),
             'issues' => [],
             'functions' => [],
@@ -316,128 +258,113 @@ function analyzeFile($file) {
             'includes' => [],
             'security' => [],
             'performance' => [],
-            'quality' => [],
-            'encoding' => mb_detect_encoding($content) ?: 'Unknown'
+            'quality' => []
         ];
         
-        // Only do detailed analysis for certain file types
-        if (in_array($extension, ['php', 'js', 'html', 'css', 'sql'])) {
+        // Security analysis
+        foreach ($lines as $lineNum => $line) {
+            $lineNum++; // 1-based line numbers
             
-            // Security analysis for PHP files
-            if ($extension === 'php') {
-                foreach ($lines as $lineNum => $line) {
-                    $lineNum++; // 1-based line numbers
-                    
-                    // SQL Injection risks
-                    if (preg_match('/\$\w+\s*=\s*["\'].*\$_(?:GET|POST|REQUEST).*["\']/', $line)) {
-                        $analysis['security'][] = [
-                            'type' => 'SQL Injection Risk',
-                            'line' => $lineNum,
-                            'code' => trim($line),
-                            'severity' => 'high',
-                            'description' => 'Direct use of user input in SQL query'
-                        ];
-                    }
-                    
-                    // XSS risks
-                    if (preg_match('/echo\s+\$_(?:GET|POST|REQUEST)/', $line)) {
-                        $analysis['security'][] = [
-                            'type' => 'XSS Risk',
-                            'line' => $lineNum,
-                            'code' => trim($line),
-                            'severity' => 'medium',
-                            'description' => 'Unescaped user input in output'
-                        ];
-                    }
-                    
-                    // Dangerous functions
-                    if (preg_match('/\b(eval|exec|system|shell_exec|passthru)\s*\(/', $line)) {
-                        $analysis['security'][] = [
-                            'type' => 'Dangerous Function',
-                            'line' => $lineNum,
-                            'code' => trim($line),
-                            'severity' => 'critical',
-                            'description' => 'Use of potentially dangerous function'
-                        ];
-                    }
-                    
-                    // Deprecated MySQL functions
-                    if (preg_match('/mysql_\w+\s*\(/', $line)) {
-                        $analysis['security'][] = [
-                            'type' => 'Deprecated Function',
-                            'line' => $lineNum,
-                            'code' => trim($line),
-                            'severity' => 'medium',
-                            'description' => 'Use of deprecated MySQL function'
-                        ];
-                    }
-                    
-                    // Performance issues
-                    if (preg_match('/SELECT\s+\*\s+FROM/i', $line)) {
-                        $analysis['performance'][] = [
-                            'type' => 'Inefficient Query',
-                            'line' => $lineNum,
-                            'code' => trim($line),
-                            'severity' => 'low',
-                            'description' => 'SELECT * can be inefficient'
-                        ];
-                    }
-                    
-                    // Extract functions
-                    if (preg_match('/function\s+(\w+)\s*$$([^)]*)$$/', $line, $matches)) {
-                        $analysis['functions'][] = [
-                            'name' => $matches[1],
-                            'line' => $lineNum,
-                            'params' => $matches[2]
-                        ];
-                    }
-                    
-                    // Extract classes
-                    if (preg_match('/class\s+(\w+)/', $line, $matches)) {
-                        $analysis['classes'][] = [
-                            'name' => $matches[1],
-                            'line' => $lineNum
-                        ];
-                    }
-                    
-                    // Extract includes
-                    if (preg_match('/(include|require)(?:_once)?\s*\(?["\']([^"\']+)["\']/', $line, $matches)) {
-                        $analysis['includes'][] = [
-                            'type' => $matches[1],
-                            'file' => $matches[2],
-                            'line' => $lineNum
-                        ];
-                    }
-                }
+            // SQL Injection risks
+            if (preg_match('/\$\w+\s*=\s*["\'].*\$_(?:GET|POST|REQUEST).*["\']/', $line)) {
+                $analysis['security'][] = [
+                    'type' => 'SQL Injection Risk',
+                    'line' => $lineNum,
+                    'code' => trim($line),
+                    'severity' => 'high',
+                    'description' => 'Direct use of user input in SQL query'
+                ];
             }
             
-            // Code quality checks
-            $analysis['quality'][] = [
-                'metric' => 'Lines of Code',
-                'value' => count($lines),
-                'status' => count($lines) > 500 ? 'warning' : 'good'
-            ];
-            
-            $analysis['quality'][] = [
-                'metric' => 'File Size',
-                'value' => formatBytes($size),
-                'status' => $size > 1024 * 1024 ? 'warning' : 'good'
-            ];
-            
-            if ($extension === 'php') {
-                $analysis['quality'][] = [
-                    'metric' => 'Functions',
-                    'value' => count($analysis['functions']),
-                    'status' => 'info'
+            // XSS risks
+            if (preg_match('/echo\s+\$_(?:GET|POST|REQUEST)/', $line)) {
+                $analysis['security'][] = [
+                    'type' => 'XSS Risk',
+                    'line' => $lineNum,
+                    'code' => trim($line),
+                    'severity' => 'medium',
+                    'description' => 'Unescaped user input in output'
                 ];
-                
-                $analysis['quality'][] = [
-                    'metric' => 'Classes',
-                    'value' => count($analysis['classes']),
-                    'status' => 'info'
+            }
+            
+            // Dangerous functions
+            if (preg_match('/\b(eval|exec|system|shell_exec|passthru)\s*\(/', $line)) {
+                $analysis['security'][] = [
+                    'type' => 'Dangerous Function',
+                    'line' => $lineNum,
+                    'code' => trim($line),
+                    'severity' => 'critical',
+                    'description' => 'Use of potentially dangerous function'
+                ];
+            }
+            
+            // Deprecated MySQL functions
+            if (preg_match('/mysql_\w+\s*\(/', $line)) {
+                $analysis['security'][] = [
+                    'type' => 'Deprecated Function',
+                    'line' => $lineNum,
+                    'code' => trim($line),
+                    'severity' => 'medium',
+                    'description' => 'Use of deprecated MySQL function'
+                ];
+            }
+            
+            // Performance issues
+            if (preg_match('/SELECT\s+\*\s+FROM/i', $line)) {
+                $analysis['performance'][] = [
+                    'type' => 'Inefficient Query',
+                    'line' => $lineNum,
+                    'code' => trim($line),
+                    'severity' => 'low',
+                    'description' => 'SELECT * can be inefficient'
+                ];
+            }
+            
+            // Extract functions
+            if (preg_match('/function\s+(\w+)\s*$$([^)]*)$$/', $line, $matches)) {
+                $analysis['functions'][] = [
+                    'name' => $matches[1],
+                    'line' => $lineNum,
+                    'params' => $matches[2]
+                ];
+            }
+            
+            // Extract classes
+            if (preg_match('/class\s+(\w+)/', $line, $matches)) {
+                $analysis['classes'][] = [
+                    'name' => $matches[1],
+                    'line' => $lineNum
+                ];
+            }
+            
+            // Extract includes
+            if (preg_match('/(include|require)(?:_once)?\s*\(?["\']([^"\']+)["\']/', $line, $matches)) {
+                $analysis['includes'][] = [
+                    'type' => $matches[1],
+                    'file' => $matches[2],
+                    'line' => $lineNum
                 ];
             }
         }
+        
+        // Code quality checks
+        $analysis['quality'][] = [
+            'metric' => 'Lines of Code',
+            'value' => count($lines),
+            'status' => count($lines) > 500 ? 'warning' : 'good'
+        ];
+        
+        $analysis['quality'][] = [
+            'metric' => 'Functions',
+            'value' => count($analysis['functions']),
+            'status' => 'info'
+        ];
+        
+        $analysis['quality'][] = [
+            'metric' => 'Classes',
+            'value' => count($analysis['classes']),
+            'status' => 'info'
+        ];
         
         return $analysis;
     } catch (Exception $e) {
@@ -457,9 +384,8 @@ function getFileContent($file) {
         return ['error' => 'File not readable. Check permissions.'];
     }
     
-    $size = @filesize($file) ?: 0;
-    if ($size > MAX_FILE_SIZE) {
-        return ['error' => 'File too large to display (' . formatBytes($size) . ')'];
+    if (filesize($file) > MAX_FILE_SIZE) {
+        return ['error' => 'File too large to display'];
     }
     
     try {
@@ -468,32 +394,11 @@ function getFileContent($file) {
             return ['error' => 'Failed to read file content. Check permissions.'];
         }
         
-        // Check if file is binary
-        $isBinary = false;
-        if (function_exists('mb_check_encoding')) {
-            $isBinary = !mb_check_encoding($content, 'UTF-8') && !mb_check_encoding($content, 'ASCII');
-        } else {
-            $isBinary = strpos($content, "\0") !== false;
-        }
-        
-        if ($isBinary) {
-            return [
-                'content' => '[Binary file - cannot display content]',
-                'size' => $size,
-                'modified' => filemtime($file),
-                'lines' => 0,
-                'is_binary' => true,
-                'encoding' => 'Binary'
-            ];
-        }
-        
         return [
             'content' => $content,
-            'size' => $size,
+            'size' => filesize($file),
             'modified' => filemtime($file),
-            'lines' => substr_count($content, "\n") + 1,
-            'is_binary' => false,
-            'encoding' => mb_detect_encoding($content) ?: 'Unknown'
+            'lines' => substr_count($content, "\n") + 1
         ];
     } catch (Exception $e) {
         return ['error' => 'Failed to read file: ' . $e->getMessage()];
@@ -516,19 +421,18 @@ function runCompleteDiagnostics() {
             'warnings' => 0,
             'health_score' => 0
         ],
-        'problem_files' => []
+        'problem_files' => [] // New summary of problem files
     ];
     
-    // Scan all files for issues
+    // Scan all PHP files for issues
     $fileSystem = scanFileSystem();
-    $allFiles = findAllFiles($fileSystem);
+    $phpFiles = findPhpFiles($fileSystem);
     
     $totalHealth = 0;
     $fileCount = 0;
     
-    foreach ($allFiles as $file) {
-        $size = @filesize($file) ?: 0;
-        if ($size <= MAX_FILE_SIZE) {
+    foreach ($phpFiles as $file) {
+        if (filesize($file) <= MAX_FILE_SIZE) {
             $analysis = analyzeFile($file);
             if (!isset($analysis['error'])) {
                 $fileIssues = count($analysis['security']) + count($analysis['performance']);
@@ -540,8 +444,7 @@ function runCompleteDiagnostics() {
                     'file' => $file,
                     'health' => $analysis['health'],
                     'issues' => $fileIssues,
-                    'critical' => $criticalIssues,
-                    'extension' => $analysis['extension']
+                    'critical' => $criticalIssues
                 ];
                 
                 $totalHealth += $analysis['health'];
@@ -586,15 +489,15 @@ function runCompleteDiagnostics() {
 }
 
 /**
- * Find all files recursively
+ * Find all PHP files recursively
  */
-function findAllFiles($fileSystem, &$files = []) {
+function findPhpFiles($fileSystem, &$files = []) {
     if (isset($fileSystem['children'])) {
         foreach ($fileSystem['children'] as $child) {
-            if ($child['type'] === 'file') {
+            if ($child['type'] === 'file' && isset($child['extension']) && $child['extension'] === 'php') {
                 $files[] = $child['path'];
             } elseif ($child['type'] === 'directory') {
-                findAllFiles($child, $files);
+                findPhpFiles($child, $files);
             }
         }
     }
@@ -646,13 +549,12 @@ function testDatabaseConnection($credentials = null) {
     }
     
     // Try to find database configuration
-    $configFiles = ['config.php', 'database.php', '.env', 'wp-config.php', 'app/config/database.php'];
+    $configFiles = ['config.php', 'database.php', '.env', 'wp-config.php'];
     $dbConfig = null;
     
     foreach ($configFiles as $configFile) {
         if (file_exists($configFile)) {
-            $content = @file_get_contents($configFile);
-            if ($content === false) continue;
+            $content = file_get_contents($configFile);
             
             // Try to extract database credentials
             if (preg_match('/DB_HOST["\']?\s*[=:]\s*["\']([^"\']+)/', $content, $matches)) {
@@ -718,189 +620,31 @@ function testDatabaseConnection($credentials = null) {
 }
 
 /**
- * Get comprehensive system information
+ * Get system information
  */
 function getSystemInfo() {
-    $info = [
+    return [
         'php_version' => PHP_VERSION,
-        'php_sapi' => PHP_SAPI,
         'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
         'operating_system' => PHP_OS,
-        'architecture' => php_uname('m'),
-        'hostname' => php_uname('n'),
-        'kernel' => php_uname('r'),
         'memory_limit' => ini_get('memory_limit'),
-        'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
-        'memory_peak' => round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB',
         'max_execution_time' => ini_get('max_execution_time'),
         'post_max_size' => ini_get('post_max_size'),
         'upload_max_filesize' => ini_get('upload_max_filesize'),
-        'max_file_uploads' => ini_get('max_file_uploads'),
         'error_reporting' => error_reporting(),
         'display_errors' => ini_get('display_errors'),
         'log_errors' => ini_get('log_errors'),
-        'error_log' => ini_get('error_log'),
         'extensions' => get_loaded_extensions(),
         'disk_free_space' => disk_free_space('.'),
         'disk_total_space' => disk_total_space('.'),
         'current_user' => get_current_user(),
         'server_time' => date('Y-m-d H:i:s'),
-        'timezone' => date_default_timezone_get(),
-        'document_root' => $_SERVER['DOCUMENT_ROOT'] ?? 'Unknown',
-        'server_name' => $_SERVER['SERVER_NAME'] ?? 'Unknown',
-        'server_port' => $_SERVER['SERVER_PORT'] ?? 'Unknown',
-        'https' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
-        'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
-        'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'Unknown',
-        'request_uri' => $_SERVER['REQUEST_URI'] ?? 'Unknown',
-        'script_name' => $_SERVER['SCRIPT_NAME'] ?? 'Unknown',
-        'query_string' => $_SERVER['QUERY_STRING'] ?? '',
-        'session_save_path' => session_save_path(),
-        'session_name' => session_name(),
-        'session_id' => session_id(),
-        'temp_dir' => sys_get_temp_dir(),
-        'include_path' => get_include_path(),
-        'open_basedir' => ini_get('open_basedir'),
-        'disable_functions' => ini_get('disable_functions'),
-        'disable_classes' => ini_get('disable_classes'),
-        'auto_prepend_file' => ini_get('auto_prepend_file'),
-        'auto_append_file' => ini_get('auto_append_file'),
-        'default_charset' => ini_get('default_charset'),
-        'mbstring_enabled' => extension_loaded('mbstring'),
-        'curl_enabled' => extension_loaded('curl'),
-        'gd_enabled' => extension_loaded('gd'),
-        'pdo_enabled' => extension_loaded('pdo'),
-        'openssl_enabled' => extension_loaded('openssl'),
-        'zip_enabled' => extension_loaded('zip'),
-        'json_enabled' => extension_loaded('json'),
-        'xml_enabled' => extension_loaded('xml'),
-        'fileinfo_enabled' => extension_loaded('fileinfo'),
-        'opcache_enabled' => extension_loaded('opcache'),
-        'xdebug_enabled' => extension_loaded('xdebug'),
-        'environment_variables' => $_ENV,
-        'server_variables' => $_SERVER,
-        'loaded_ini_files' => php_ini_loaded_file(),
-        'additional_ini_files' => php_ini_scanned_files()
+        'timezone' => date_default_timezone_get()
     ];
-    
-    // Add OPcache info if available
-    if (function_exists('opcache_get_status')) {
-        $info['opcache_status'] = opcache_get_status();
-    }
-    
-    // Add Xdebug info if available
-    if (function_exists('xdebug_info')) {
-        $info['xdebug_info'] = xdebug_info();
-    }
-    
-    // Add cURL info if available
-    if (function_exists('curl_version')) {
-        $info['curl_version'] = curl_version();
-    }
-    
-    // Add GD info if available
-    if (function_exists('gd_info')) {
-        $info['gd_info'] = gd_info();
-    }
-    
-    return $info;
 }
 
 /**
- * Get Git status
- */
-function getGitStatus() {
-    if (!is_dir('.git')) {
-        return ['error' => 'Not a Git repository'];
-    }
-    
-    $status = [];
-    
-    // Get current branch
-    $branch = @shell_exec('git branch --show-current 2>/dev/null');
-    if ($branch) {
-        $status['branch'] = trim($branch);
-    }
-    
-    // Get status
-    $gitStatus = @shell_exec('git status --porcelain 2>/dev/null');
-    if ($gitStatus) {
-        $status['changes'] = array_filter(explode("\n", trim($gitStatus)));
-    }
-    
-    // Get last commit
-    $lastCommit = @shell_exec('git log -1 --pretty=format:"%h - %an, %ar : %s" 2>/dev/null');
-    if ($lastCommit) {
-        $status['last_commit'] = trim($lastCommit);
-    }
-    
-    // Get remote info
-    $remote = @shell_exec('git remote -v 2>/dev/null');
-    if ($remote) {
-        $status['remotes'] = array_filter(explode("\n", trim($remote)));
-    }
-    
-    return $status;
-}
-
-/**
- * Get process list (limited)
- */
-function getProcessList() {
-    $processes = [];
-    
-    if (function_exists('shell_exec')) {
-        // Try to get PHP processes
-        $output = @shell_exec('ps aux | grep php 2>/dev/null');
-        if ($output) {
-            $lines = array_filter(explode("\n", trim($output)));
-            foreach ($lines as $line) {
-                if (strpos($line, 'grep') === false) {
-                    $processes[] = $line;
-                }
-            }
-        }
-    }
-    
-    return $processes;
-}
-
-/**
- * Get network information
- */
-function getNetworkInfo() {
-    $info = [];
-    
-    // Get network interfaces (Linux/Unix)
-    if (function_exists('shell_exec')) {
-        $ifconfig = @shell_exec('ifconfig 2>/dev/null || ip addr 2>/dev/null');
-        if ($ifconfig) {
-            $info['interfaces'] = $ifconfig;
-        }
-        
-        // Get listening ports
-        $netstat = @shell_exec('netstat -tuln 2>/dev/null || ss -tuln 2>/dev/null');
-        if ($netstat) {
-            $info['listening_ports'] = $netstat;
-        }
-    }
-    
-    // Get DNS info
-    $info['dns_servers'] = [];
-    if (file_exists('/etc/resolv.conf')) {
-        $resolv = @file_get_contents('/etc/resolv.conf');
-        if ($resolv) {
-            preg_match_all('/nameserver\s+([^\s]+)/', $resolv, $matches);
-            $info['dns_servers'] = $matches[1];
-        }
-    }
-    
-    return $info;
-}
-
-/**
- * Execute command (MASSIVELY EXPANDED!)
+ * Execute command (limited for security)
  */
 function executeCommand($command) {
     $command = trim($command);
@@ -910,97 +654,39 @@ function executeCommand($command) {
     }
     
     $output = [];
-    $parts = explode(' ', $command);
-    $cmd = strtolower($parts[0]);
     
     // Safe commands only
-    switch ($cmd) {
+    switch (strtolower(explode(' ', $command)[0])) {
         case 'help':
             $output = [
-                '🚀 PHP Diagnostics Terminal v' . DIAG_VERSION,
-                '=' . str_repeat('=', 50),
-                '',
-                '📁 FILE OPERATIONS:',
-                '  ls [path]          - List directory contents',
-                '  cat [file]         - Display file contents',
-                '  head [file] [n]    - Show first n lines (default 10)',
-                '  tail [file] [n]    - Show last n lines (default 10)',
-                '  find [pattern]     - Find files matching pattern',
-                '  grep [pattern] [file] - Search for pattern in file',
-                '  wc [file]          - Count lines, words, characters',
-                '  file [file]        - Show file type information',
-                '  stat [file]        - Show detailed file statistics',
-                '  tree [path]        - Show directory tree',
-                '',
-                '🔍 ANALYSIS & SECURITY:',
-                '  scan [path]        - Quick security scan',
-                '  check [file]       - Detailed security check',
-                '  analyze [file]     - Full code analysis',
-                '  vulns              - Check for known vulnerabilities',
-                '  perms [path]       - Check file permissions',
-                '  hash [file]        - Calculate file hashes',
-                '  diff [file1] [file2] - Compare two files',
-                '',
-                '🐘 PHP SPECIFIC:',
-                '  phpinfo            - Show PHP configuration',
-                '  phpversion         - Show PHP version details',
-                '  extensions         - List PHP extensions',
-                '  ini [setting]      - Show PHP ini setting',
-                '  opcache            - Show OPcache status',
-                '  composer           - Composer information',
-                '  artisan            - Laravel Artisan commands',
-                '',
-                '🗄️ DATABASE:',
-                '  dbtest             - Test database connection',
-                '  dbinfo             - Show database information',
-                '  tables             - List database tables',
-                '  query [sql]        - Execute SQL query (SELECT only)',
-                '',
-                '🌐 NETWORK & SYSTEM:',
-                '  ping [host]        - Ping a host',
-                '  nslookup [host]    - DNS lookup',
-                '  curl [url]         - Make HTTP request',
-                '  ports              - Show listening ports',
-                '  processes          - Show running processes',
-                '  netinfo            - Network interface information',
-                '',
-                '📊 MONITORING:',
-                '  top                - Show system resources',
-                '  memory             - Memory usage details',
-                '  disk               - Disk usage information',
-                '  load               - System load average',
-                '  uptime             - System uptime',
-                '  logs [file]        - Show log files',
-                '',
-                '🔧 GIT OPERATIONS:',
-                '  git status         - Git repository status',
-                '  git log [n]        - Show git log (last n commits)',
-                '  git branch         - List branches',
-                '  git diff           - Show git diff',
-                '  git remote         - Show remotes',
-                '',
-                '🛠️ UTILITIES:',
-                '  pwd                - Current directory',
-                '  whoami             - Current user',
-                '  date               - Current date/time',
-                '  env                - Environment variables',
-                '  history            - Command history',
-                '  clear              - Clear terminal',
-                '  version            - Tool version',
-                '  benchmark [n]      - Run performance benchmark',
-                '  base64 [encode|decode] [text] - Base64 operations',
-                '  json [validate|format] [text] - JSON operations',
-                '  url [encode|decode] [text] - URL operations',
-                '',
-                '💡 TIPS:',
-                '  - Use arrow keys for command history',
-                '  - Commands are case-insensitive',
-                '  - Use quotes for arguments with spaces',
-                '  - Type "help [command]" for detailed help'
+                'Available commands:',
+                '  help - Show this help',
+                '  phpinfo - Show PHP information',
+                '  ls [path] - List files in directory',
+                '  cat [file] - Show file contents',
+                '  pwd - Show current directory',
+                '  date - Show current date and time',
+                '  whoami - Show current user',
+                '  version - Show PHP version',
+                '  extensions - List loaded PHP extensions',
+                '  memory - Show memory usage',
+                '  disk - Show disk usage',
+                '  scan - Quick scan of current directory',
+                '  find [pattern] - Find files matching pattern',
+                '  check [file] - Quick security check of a file',
+                '  clear - Clear terminal screen'
             ];
             break;
             
+        case 'phpinfo':
+            ob_start();
+            phpinfo(INFO_GENERAL | INFO_CONFIGURATION);
+            $phpinfo = ob_get_clean();
+            $output = [strip_tags($phpinfo)];
+            break;
+            
         case 'ls':
+            $parts = explode(' ', $command, 2);
             $path = isset($parts[1]) ? $parts[1] : '.';
             
             if (!is_dir($path)) {
@@ -1008,35 +694,25 @@ function executeCommand($command) {
                 break;
             }
             
-            $files = @scandir($path);
-            if ($files === false) {
-                $output = ["Cannot read directory: $path"];
-                break;
-            }
-            
+            $files = scandir($path);
             $output[] = "Directory listing of $path:";
-            $output[] = str_repeat('-', 60);
-            $output[] = sprintf("%-30s %-10s %-10s %s", "Name", "Type", "Size", "Modified");
-            $output[] = str_repeat('-', 60);
-            
             foreach ($files as $file) {
                 if ($file === '.' || $file === '..') continue;
                 $fullPath = $path . DIRECTORY_SEPARATOR . $file;
                 $isDir = is_dir($fullPath);
-                $size = $isDir ? '<DIR>' : formatBytes(@filesize($fullPath) ?: 0);
-                $type = $isDir ? 'DIR' : strtoupper(pathinfo($file, PATHINFO_EXTENSION));
-                $modified = date('Y-m-d H:i', @filemtime($fullPath) ?: 0);
-                
+                $size = $isDir ? '-' : formatBytes(filesize($fullPath));
+                $perms = substr(sprintf('%o', fileperms($fullPath)), -4);
                 $output[] = sprintf("%-30s %-10s %-10s %s", 
-                    substr($file, 0, 29), 
-                    $type,
+                    $file . ($isDir ? '/' : ''), 
+                    $perms,
                     $size,
-                    $modified
+                    date('Y-m-d H:i', filemtime($fullPath))
                 );
             }
             break;
             
         case 'cat':
+            $parts = explode(' ', $command, 2);
             if (!isset($parts[1])) {
                 $output = ["Error: No file specified"];
                 break;
@@ -1053,195 +729,69 @@ function executeCommand($command) {
                 break;
             }
             
-            $size = @filesize($file) ?: 0;
-            if ($size > MAX_FILE_SIZE) {
-                $output = ["File too large to display: $file (" . formatBytes($size) . ")"];
+            if (filesize($file) > MAX_FILE_SIZE) {
+                $output = ["File too large to display: $file"];
                 break;
             }
             
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                $output = ["Failed to read file: $file"];
-                break;
-            }
-            
-            // Check if binary
-            if (strpos($content, "\0") !== false) {
-                $output = ["Binary file - cannot display: $file"];
-                break;
-            }
-            
-            $lines = explode("\n", $content);
-            $output = array_merge(["Contents of $file:"], $lines);
+            $content = file_get_contents($file);
+            $output = explode("\n", $content);
             break;
             
-        case 'head':
-            if (!isset($parts[1])) {
-                $output = ["Error: No file specified"];
-                break;
-            }
-            
-            $file = $parts[1];
-            $lines = isset($parts[2]) ? (int)$parts[2] : 10;
-            
-            if (!file_exists($file)) {
-                $output = ["File not found: $file"];
-                break;
-            }
-            
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                $output = ["Failed to read file: $file"];
-                break;
-            }
-            
-            $fileLines = explode("\n", $content);
-            $output = array_merge(["First $lines lines of $file:"], array_slice($fileLines, 0, $lines));
+        case 'pwd':
+            $output = [getcwd()];
             break;
             
-        case 'tail':
-            if (!isset($parts[1])) {
-                $output = ["Error: No file specified"];
-                break;
-            }
-            
-            $file = $parts[1];
-            $lines = isset($parts[2]) ? (int)$parts[2] : 10;
-            
-            if (!file_exists($file)) {
-                $output = ["File not found: $file"];
-                break;
-            }
-            
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                $output = ["Failed to read file: $file"];
-                break;
-            }
-            
-            $fileLines = explode("\n", $content);
-            $output = array_merge(["Last $lines lines of $file:"], array_slice($fileLines, -$lines));
+        case 'date':
+            $output = [date('Y-m-d H:i:s T')];
             break;
             
-        case 'grep':
-            if (!isset($parts[1]) || !isset($parts[2])) {
-                $output = ["Error: Usage: grep [pattern] [file]"];
-                break;
-            }
-            
-            $pattern = $parts[1];
-            $file = $parts[2];
-            
-            if (!file_exists($file)) {
-                $output = ["File not found: $file"];
-                break;
-            }
-            
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                $output = ["Failed to read file: $file"];
-                break;
-            }
-            
-            $lines = explode("\n", $content);
-            $matches = [];
-            
-            foreach ($lines as $lineNum => $line) {
-                if (stripos($line, $pattern) !== false) {
-                    $matches[] = ($lineNum + 1) . ": " . $line;
-                }
-            }
-            
-            if (empty($matches)) {
-                $output = ["No matches found for '$pattern' in $file"];
-            } else {
-                $output = array_merge(["Matches for '$pattern' in $file:"], $matches);
-            }
+        case 'whoami':
+            $output = [get_current_user()];
             break;
             
-        case 'wc':
-            if (!isset($parts[1])) {
-                $output = ["Error: No file specified"];
-                break;
-            }
+        case 'version':
+            $output = ['PHP ' . PHP_VERSION];
+            break;
             
-            $file = $parts[1];
-            if (!file_exists($file)) {
-                $output = ["File not found: $file"];
-                break;
-            }
+        case 'extensions':
+            $output = get_loaded_extensions();
+            break;
             
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                $output = ["Failed to read file: $file"];
-                break;
-            }
-            
-            $lines = substr_count($content, "\n") + 1;
-            $words = str_word_count($content);
-            $chars = strlen($content);
-            
+        case 'memory':
             $output = [
-                "Word count for $file:",
-                "Lines: $lines",
-                "Words: $words", 
-                "Characters: $chars"
+                'Memory Limit: ' . ini_get('memory_limit'),
+                'Memory Usage: ' . round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
+                'Peak Memory: ' . round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB'
             ];
             break;
             
-        case 'file':
-            if (!isset($parts[1])) {
-                $output = ["Error: No file specified"];
-                break;
-            }
-            
-            $file = $parts[1];
-            if (!file_exists($file)) {
-                $output = ["File not found: $file"];
-                break;
-            }
-            
-            $mime = getMimeType($file);
-            $size = @filesize($file) ?: 0;
-            $perms = substr(sprintf('%o', @fileperms($file) ?: 0), -4);
-            
+        case 'disk':
+            $free = disk_free_space('.');
+            $total = disk_total_space('.');
+            $used = $total - $free;
             $output = [
-                "File information for $file:",
-                "Type: " . (is_dir($file) ? 'Directory' : 'File'),
-                "MIME Type: $mime",
-                "Size: " . formatBytes($size),
-                "Permissions: $perms",
-                "Readable: " . (is_readable($file) ? 'Yes' : 'No'),
-                "Writable: " . (is_writable($file) ? 'Yes' : 'No'),
-                "Executable: " . (is_executable($file) ? 'Yes' : 'No')
+                'Total: ' . formatBytes($total),
+                'Used: ' . formatBytes($used),
+                'Free: ' . formatBytes($free),
+                'Usage: ' . round(($used / $total) * 100, 1) . '%'
             ];
-            break;
-            
-        case 'tree':
-            $path = isset($parts[1]) ? $parts[1] : '.';
-            $output = ["Directory tree for $path:"];
-            $output = array_merge($output, generateTree($path));
             break;
             
         case 'scan':
-            $path = isset($parts[1]) ? $parts[1] : '.';
-            $output = ["Quick security scan of $path:"];
-            $files = glob($path . '/*.php');
+            $output = ['Quick security scan of current directory:'];
+            $files = glob('*.php');
             $issueCount = 0;
             
             foreach ($files as $file) {
-                $size = @filesize($file) ?: 0;
-                if ($size <= MAX_FILE_SIZE) {
-                    $content = @file_get_contents($file);
-                    if ($content === false) continue;
-                    
+                if (filesize($file) <= MAX_FILE_SIZE) {
+                    $content = file_get_contents($file);
                     $issues = [];
                     
                     if (strpos($content, 'eval(') !== false) $issues[] = 'eval()';
                     if (strpos($content, 'exec(') !== false) $issues[] = 'exec()';
                     if (strpos($content, 'system(') !== false) $issues[] = 'system()';
                     if (strpos($content, 'mysql_') !== false) $issues[] = 'mysql_*()';
-                    if (preg_match('/\$_(?:GET|POST|REQUEST).*echo/', $content)) $issues[] = 'XSS risk';
                     
                     if (!empty($issues)) {
                         $output[] = "⚠️ $file: " . implode(', ', $issues);
@@ -1257,7 +807,36 @@ function executeCommand($command) {
             }
             break;
             
+        case 'find':
+            $parts = explode(' ', $command, 2);
+            if (!isset($parts[1])) {
+                $output = ["Error: No pattern specified"];
+                break;
+            }
+            
+            $pattern = $parts[1];
+            $output = ["Finding files matching '$pattern':"];
+            
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator('.', RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            
+            $matches = [];
+            foreach ($iterator as $file) {
+                if (stripos($file->getFilename(), $pattern) !== false) {
+                    $matches[] = $file->getPathname();
+                }
+            }
+            
+            if (empty($matches)) {
+                $output[] = "No files found matching '$pattern'";
+            } else {
+                $output = array_merge($output, $matches);
+            }
+            break;
+            
         case 'check':
+            $parts = explode(' ', $command, 2);
             if (!isset($parts[1])) {
                 $output = ["Error: No file specified"];
                 break;
@@ -1278,9 +857,6 @@ function executeCommand($command) {
             }
             
             $output[] = "Health Score: " . $analysis['health'] . "%";
-            $output[] = "File Size: " . formatBytes($analysis['size']);
-            $output[] = "Lines: " . $analysis['lines'];
-            $output[] = "MIME Type: " . $analysis['mime_type'];
             
             if (empty($analysis['security'])) {
                 $output[] = "✅ No security issues found";
@@ -1290,725 +866,16 @@ function executeCommand($command) {
                     $output[] = "  - " . $issue['type'] . " (Line " . $issue['line'] . "): " . $issue['description'];
                 }
             }
-            
-            if (!empty($analysis['performance'])) {
-                $output[] = "⚡ Performance issues:";
-                foreach ($analysis['performance'] as $issue) {
-                    $output[] = "  - " . $issue['type'] . " (Line " . $issue['line'] . ")";
-                }
-            }
-            break;
-            
-        case 'phpinfo':
-            ob_start();
-            phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_MODULES);
-            $phpinfo = ob_get_clean();
-            $output = [strip_tags($phpinfo)];
-            break;
-            
-        case 'phpversion':
-            $output = [
-                'PHP Version: ' . PHP_VERSION,
-                'PHP SAPI: ' . PHP_SAPI,
-                'Zend Version: ' . zend_version(),
-                'Build Date: ' . (defined('PHP_BUILD_DATE') ? PHP_BUILD_DATE : 'Unknown'),
-                'Architecture: ' . (PHP_INT_SIZE * 8) . '-bit'
-            ];
-            break;
-            
-        case 'extensions':
-            $extensions = get_loaded_extensions();
-            sort($extensions);
-            $output = array_merge(['Loaded PHP Extensions:'], $extensions);
-            break;
-            
-        case 'ini':
-            if (!isset($parts[1])) {
-                $output = ["Error: No setting specified"];
-                break;
-            }
-            
-            $setting = $parts[1];
-            $value = ini_get($setting);
-            
-            if ($value === false) {
-                $output = ["Setting '$setting' not found or not accessible"];
-            } else {
-                $output = ["$setting = " . ($value === '' ? '(empty)' : $value)];
-            }
-            break;
-            
-        case 'opcache':
-            if (!extension_loaded('opcache')) {
-                $output = ["OPcache extension not loaded"];
-                break;
-            }
-            
-            if (function_exists('opcache_get_status')) {
-                $status = opcache_get_status();
-                if ($status === false) {
-                    $output = ["OPcache is disabled"];
-                } else {
-                    $output = [
-                        'OPcache Status:',
-                        'Enabled: ' . ($status['opcache_enabled'] ? 'Yes' : 'No'),
-                        'Cache Full: ' . ($status['cache_full'] ? 'Yes' : 'No'),
-                        'Restart Pending: ' . ($status['restart_pending'] ? 'Yes' : 'No'),
-                        'Restart In Progress: ' . ($status['restart_in_progress'] ? 'Yes' : 'No'),
-                        'Memory Usage: ' . formatBytes($status['memory_usage']['used_memory']),
-                        'Free Memory: ' . formatBytes($status['memory_usage']['free_memory']),
-                        'Cached Scripts: ' . $status['opcache_statistics']['num_cached_scripts'],
-                        'Cache Hits: ' . $status['opcache_statistics']['hits'],
-                        'Cache Misses: ' . $status['opcache_statistics']['misses']
-                    ];
-                }
-            } else {
-                $output = ["OPcache status function not available"];
-            }
-            break;
-            
-        case 'composer':
-            if (file_exists('composer.json')) {
-                $composer = json_decode(@file_get_contents('composer.json'), true);
-                if ($composer) {
-                    $output = [
-                        'Composer Project Information:',
-                        'Name: ' . ($composer['name'] ?? 'Not specified'),
-                        'Description: ' . ($composer['description'] ?? 'Not specified'),
-                        'Version: ' . ($composer['version'] ?? 'Not specified'),
-                        'Type: ' . ($composer['type'] ?? 'Not specified')
-                    ];
-                    
-                    if (isset($composer['require'])) {
-                        $output[] = 'Dependencies:';
-                        foreach ($composer['require'] as $package => $version) {
-                            $output[] = "  $package: $version";
-                        }
-                    }
-                } else {
-                    $output = ["Invalid composer.json file"];
-                }
-            } else {
-                $output = ["No composer.json file found"];
-            }
-            break;
-            
-        case 'git':
-            if (!isset($parts[1])) {
-                $output = ["Error: No git command specified"];
-                break;
-            }
-            
-            $gitCmd = $parts[1];
-            
-            if (!is_dir('.git')) {
-                $output = ["Not a Git repository"];
-                break;
-            }
-            
-            switch ($gitCmd) {
-                case 'status':
-                    $status = getGitStatus();
-                    if (isset($status['error'])) {
-                        $output = [$status['error']];
-                    } else {
-                        $output = ['Git Status:'];
-                        if (isset($status['branch'])) {
-                            $output[] = 'Branch: ' . $status['branch'];
-                        }
-                        if (isset($status['changes'])) {
-                            $output[] = 'Changes:';
-                            $output = array_merge($output, $status['changes']);
-                        } else {
-                            $output[] = 'Working directory clean';
-                        }
-                    }
-                    break;
-                    
-                case 'log':
-                    $count = isset($parts[2]) ? (int)$parts[2] : 5;
-                    $log = @shell_exec("git log --oneline -$count 2>/dev/null");
-                    if ($log) {
-                        $output = array_merge(['Recent commits:'], explode("\n", trim($log)));
-                    } else {
-                        $output = ["Unable to get git log"];
-                    }
-                    break;
-                    
-                case 'branch':
-                    $branches = @shell_exec('git branch 2>/dev/null');
-                    if ($branches) {
-                        $output = array_merge(['Branches:'], explode("\n", trim($branches)));
-                    } else {
-                        $output = ["Unable to get branches"];
-                    }
-                    break;
-                    
-                default:
-                    $output = ["Unknown git command: $gitCmd"];
-            }
-            break;
-            
-        case 'ping':
-            if (!isset($parts[1])) {
-                $output = ["Error: No host specified"];
-                break;
-            }
-            
-            $host = $parts[1];
-            $result = @shell_exec("ping -c 4 $host 2>/dev/null");
-            if ($result) {
-                $output = explode("\n", trim($result));
-            } else {
-                $output = ["Ping failed or not available"];
-            }
-            break;
-            
-        case 'nslookup':
-            if (!isset($parts[1])) {
-                $output = ["Error: No host specified"];
-                break;
-            }
-            
-            $host = $parts[1];
-            $ip = gethostbyname($host);
-            
-            if ($ip === $host) {
-                $output = ["DNS lookup failed for $host"];
-            } else {
-                $output = ["$host resolves to $ip"];
-                
-                // Try reverse lookup
-                $reverse = gethostbyaddr($ip);
-                if ($reverse !== $ip) {
-                    $output[] = "Reverse lookup: $reverse";
-                }
-            }
-            break;
-            
-        case 'curl':
-            if (!isset($parts[1])) {
-                $output = ["Error: No URL specified"];
-                break;
-            }
-            
-            $url = $parts[1];
-            
-            if (!function_exists('curl_init')) {
-                $output = ["cURL extension not available"];
-                break;
-            }
-            
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_HEADER, true);
-            curl_setopt($ch, CURLOPT_NOBODY, true);
-            
-            $result = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-            
-            if ($error) {
-                $output = ["cURL error: $error"];
-            } else {
-                $output = [
-                    "HTTP request to $url:",
-                    "Status Code: $httpCode",
-                    "Headers:",
-                    $result
-                ];
-            }
-            break;
-            
-        case 'top':
-            $output = [
-                'System Resources:',
-                'Memory Limit: ' . ini_get('memory_limit'),
-                'Memory Usage: ' . round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
-                'Peak Memory: ' . round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB',
-                'Load Average: ' . (function_exists('sys_getloadavg') ? implode(', ', sys_getloadavg()) : 'Not available'),
-                'Disk Free: ' . formatBytes(disk_free_space('.')),
-                'Disk Total: ' . formatBytes(disk_total_space('.'))
-            ];
-            break;
-            
-        case 'memory':
-            $output = [
-                'Memory Information:',
-                'Memory Limit: ' . ini_get('memory_limit'),
-                'Current Usage: ' . round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
-                'Peak Usage: ' . round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB',
-                'Real Usage: ' . round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',
-                'Real Peak: ' . round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' MB'
-            ];
-            break;
-            
-        case 'disk':
-            $free = disk_free_space('.');
-            $total = disk_total_space('.');
-            $used = $total - $free;
-            $percent = round(($used / $total) * 100, 1);
-            
-            $output = [
-                'Disk Usage:',
-                'Total: ' . formatBytes($total),
-                'Used: ' . formatBytes($used),
-                'Free: ' . formatBytes($free),
-                'Usage: ' . $percent . '%'
-            ];
-            break;
-            
-        case 'uptime':
-            if (function_exists('shell_exec')) {
-                $uptime = @shell_exec('uptime 2>/dev/null');
-                if ($uptime) {
-                    $output = [trim($uptime)];
-                } else {
-                    $output = ['Uptime information not available'];
-                }
-            } else {
-                $output = ['Shell execution not available'];
-            }
-            break;
-            
-        case 'processes':
-            $processes = getProcessList();
-            if (empty($processes)) {
-                $output = ['No process information available'];
-            } else {
-                $output = array_merge(['PHP Processes:'], $processes);
-            }
-            break;
-            
-        case 'ports':
-            $netinfo = getNetworkInfo();
-            if (isset($netinfo['listening_ports'])) {
-                $output = array_merge(['Listening Ports:'], explode("\n", $netinfo['listening_ports']));
-            } else {
-                $output = ['Port information not available'];
-            }
-            break;
-            
-        case 'netinfo':
-            $netinfo = getNetworkInfo();
-            if (isset($netinfo['interfaces'])) {
-                $output = array_merge(['Network Interfaces:'], explode("\n", trim($netinfo['interfaces'])));
-            } else {
-                $output = ['Network interface information not available'];
-            }
-            
-            if (isset($netinfo['dns_servers']) && !empty($netinfo['dns_servers'])) {
-                $output[] = '';
-                $output[] = 'DNS Servers:';
-                $output = array_merge($output, $netinfo['dns_servers']);
-            }
-            break;
-            
-        case 'logs':
-            $logFile = isset($parts[1]) ? $parts[1] : 'error.log';
-            
-            // Common log file locations
-            $logPaths = [
-                $logFile,
-                '/var/log/' . $logFile,
-                '/var/log/apache2/' . $logFile,
-                '/var/log/nginx/' . $logFile,
-                './logs/' . $logFile,
-                './storage/logs/' . $logFile
-            ];
-            
-            $found = false;
-            foreach ($logPaths as $path) {
-                if (file_exists($path) && is_readable($path)) {
-                    $content = @file_get_contents($path);
-                    if ($content !== false) {
-                        $lines = explode("\n", $content);
-                        $output = array_merge(["Last 20 lines of $path:"], array_slice($lines, -20));
-                        $found = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (!$found) {
-                $output = ["Log file not found: $logFile"];
-            }
-            break;
-            
-        case 'env':
-            $output = ['Environment Variables:'];
-            foreach ($_ENV as $key => $value) {
-                $output[] = "$key=" . (strlen($value) > 100 ? substr($value, 0, 100) . '...' : $value);
-            }
-            
-            if (empty($_ENV)) {
-                $output[] = 'No environment variables found in $_ENV';
-                $output[] = 'Server variables available in $_SERVER';
-            }
-            break;
-            
-        case 'benchmark':
-            $iterations = isset($parts[1]) ? (int)$parts[1] : 1000;
-            
-            $output = ["Running benchmark with $iterations iterations..."];
-            
-            // CPU benchmark
-            $start = microtime(true);
-            for ($i = 0; $i < $iterations; $i++) {
-                $result = sqrt($i) * sin($i) * cos($i);
-            }
-            $cpuTime = (microtime(true) - $start) * 1000;
-            
-            // Memory benchmark
-            $start = microtime(true);
-            $array = [];
-            for ($i = 0; $i < $iterations; $i++) {
-                $array[] = str_repeat('x', 100);
-            }
-            $memTime = (microtime(true) - $start) * 1000;
-            unset($array);
-            
-            // File I/O benchmark
-            $start = microtime(true);
-            $tempFile = tempnam(sys_get_temp_dir(), 'benchmark');
-            for ($i = 0; $i < min($iterations, 100); $i++) {
-                file_put_contents($tempFile, str_repeat('test', 100), FILE_APPEND);
-            }
-            $content = file_get_contents($tempFile);
-            unlink($tempFile);
-            $ioTime = (microtime(true) - $start) * 1000;
-            
-            $output[] = "Results:";
-            $output[] = "CPU Test: " . round($cpuTime, 2) . "ms";
-            $output[] = "Memory Test: " . round($memTime, 2) . "ms";
-            $output[] = "I/O Test: " . round($ioTime, 2) . "ms";
-            $output[] = "Total: " . round($cpuTime + $memTime + $ioTime, 2) . "ms";
-            break;
-            
-        case 'base64':
-            if (!isset($parts[1]) || !isset($parts[2])) {
-                $output = ["Error: Usage: base64 [encode|decode] [text]"];
-                break;
-            }
-            
-            $operation = $parts[1];
-            $text = implode(' ', array_slice($parts, 2));
-            
-            if ($operation === 'encode') {
-                $output = ["Base64 Encoded: " . base64_encode($text)];
-            } elseif ($operation === 'decode') {
-                $decoded = base64_decode($text);
-                if ($decoded === false) {
-                    $output = ["Error: Invalid base64 input"];
-                } else {
-                    $output = ["Base64 Decoded: " . $decoded];
-                }
-            } else {
-                $output = ["Error: Operation must be 'encode' or 'decode'"];
-            }
-            break;
-            
-        case 'json':
-            if (!isset($parts[1]) || !isset($parts[2])) {
-                $output = ["Error: Usage: json [validate|format] [json_text]"];
-                break;
-            }
-            
-            $operation = $parts[1];
-            $jsonText = implode(' ', array_slice($parts, 2));
-            
-            if ($operation === 'validate') {
-                $decoded = json_decode($jsonText);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $output = ["✅ Valid JSON"];
-                } else {
-                    $output = ["❌ Invalid JSON: " . json_last_error_msg()];
-                }
-            } elseif ($operation === 'format') {
-                $decoded = json_decode($jsonText);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $output = ["Formatted JSON:", json_encode($decoded, JSON_PRETTY_PRINT)];
-                } else {
-                    $output = ["❌ Invalid JSON: " . json_last_error_msg()];
-                }
-            } else {
-                $output = ["Error: Operation must be 'validate' or 'format'"];
-            }
-            break;
-            
-        case 'url':
-            if (!isset($parts[1]) || !isset($parts[2])) {
-                $output = ["Error: Usage: url [encode|decode] [text]"];
-                break;
-            }
-            
-            $operation = $parts[1];
-            $text = implode(' ', array_slice($parts, 2));
-            
-            if ($operation === 'encode') {
-                $output = ["URL Encoded: " . urlencode($text)];
-            } elseif ($operation === 'decode') {
-                $output = ["URL Decoded: " . urldecode($text)];
-            } else {
-                $output = ["Error: Operation must be 'encode' or 'decode'"];
-            }
-            break;
-            
-        case 'hash':
-            if (!isset($parts[1])) {
-                $output = ["Error: No file specified"];
-                break;
-            }
-            
-            $file = $parts[1];
-            if (!file_exists($file)) {
-                $output = ["File not found: $file"];
-                break;
-            }
-            
-            $output = [
-                "File hashes for $file:",
-                "MD5: " . md5_file($file),
-                "SHA1: " . sha1_file($file),
-                "SHA256: " . hash_file('sha256', $file)
-            ];
-            break;
-            
-        case 'diff':
-            if (!isset($parts[1]) || !isset($parts[2])) {
-                $output = ["Error: Usage: diff [file1] [file2]"];
-                break;
-            }
-            
-            $file1 = $parts[1];
-            $file2 = $parts[2];
-            
-            if (!file_exists($file1)) {
-                $output = ["File not found: $file1"];
-                break;
-            }
-            
-            if (!file_exists($file2)) {
-                $output = ["File not found: $file2"];
-                break;
-            }
-            
-            $content1 = @file_get_contents($file1);
-            $content2 = @file_get_contents($file2);
-            
-            if ($content1 === false || $content2 === false) {
-                $output = ["Error reading files"];
-                break;
-            }
-            
-            if ($content1 === $content2) {
-                $output = ["Files are identical"];
-            } else {
-                $lines1 = explode("\n", $content1);
-                $lines2 = explode("\n", $content2);
-                
-                $output = ["Differences between $file1 and $file2:"];
-                $maxLines = max(count($lines1), count($lines2));
-                
-                for ($i = 0; $i < min($maxLines, 50); $i++) {
-                    $line1 = isset($lines1[$i]) ? $lines1[$i] : '';
-                    $line2 = isset($lines2[$i]) ? $lines2[$i] : '';
-                    
-                    if ($line1 !== $line2) {
-                        $output[] = "Line " . ($i + 1) . ":";
-                        $output[] = "< $line1";
-                        $output[] = "> $line2";
-                        $output[] = "";
-                    }
-                }
-                
-                if ($maxLines > 50) {
-                    $output[] = "... (showing first 50 differences)";
-                }
-            }
-            break;
-            
-        case 'vulns':
-            $output = ["Vulnerability Check:"];
-            
-            // Check PHP version
-            $phpVersion = PHP_VERSION;
-            $output[] = "PHP Version: $phpVersion";
-            
-            // Check for known vulnerable functions
-            $dangerousFunctions = ['eval', 'exec', 'system', 'shell_exec', 'passthru', 'file_get_contents'];
-            $disabledFunctions = explode(',', ini_get('disable_functions'));
-            
-            $output[] = "Dangerous Functions Status:";
-            foreach ($dangerousFunctions as $func) {
-                $status = in_array($func, $disabledFunctions) ? '✅ Disabled' : '⚠️ Enabled';
-                $output[] = "  $func: $status";
-            }
-            
-            // Check file permissions
-            $criticalFiles = ['.env', 'config.php', 'wp-config.php', 'database.php'];
-            $output[] = "Critical File Permissions:";
-            
-            foreach ($criticalFiles as $file) {
-                if (file_exists($file)) {
-                    $perms = substr(sprintf('%o', fileperms($file)), -3);
-                    $status = ($perms === '644' || $perms === '600') ? '✅ Secure' : '⚠️ Check permissions';
-                    $output[] = "  $file ($perms): $status";
-                }
-            }
-            break;
-            
-        case 'perms':
-            $path = isset($parts[1]) ? $parts[1] : '.';
-            
-            if (!file_exists($path)) {
-                $output = ["Path not found: $path"];
-                break;
-            }
-            
-            $output = ["Permissions for $path:"];
-            
-            if (is_dir($path)) {
-                $files = scandir($path);
-                foreach ($files as $file) {
-                    if ($file === '.' || $file === '..') continue;
-                    
-                    $fullPath = $path . DIRECTORY_SEPARATOR . $file;
-                    $perms = substr(sprintf('%o', fileperms($fullPath)), -4);
-                    $type = is_dir($fullPath) ? 'DIR' : 'FILE';
-                    
-                    $output[] = sprintf("%-30s %s %s", $file, $perms, $type);
-                }
-            } else {
-                $perms = substr(sprintf('%o', fileperms($path)), -4);
-                $output[] = "Permissions: $perms";
-                $output[] = "Readable: " . (is_readable($path) ? 'Yes' : 'No');
-                $output[] = "Writable: " . (is_writable($path) ? 'Yes' : 'No');
-                $output[] = "Executable: " . (is_executable($path) ? 'Yes' : 'No');
-            }
-            break;
-            
-        case 'pwd':
-            $output = [getcwd()];
-            break;
-            
-        case 'date':
-            $output = [
-                'Current Date/Time: ' . date('Y-m-d H:i:s T'),
-                'Timezone: ' . date_default_timezone_get(),
-                'Unix Timestamp: ' . time()
-            ];
-            break;
-            
-        case 'whoami':
-            $output = [
-                'Current User: ' . get_current_user(),
-                'Process Owner: ' . (function_exists('posix_getpwuid') && function_exists('posix_geteuid') ? 
-                    posix_getpwuid(posix_geteuid())['name'] : 'Unknown')
-            ];
-            break;
-            
-        case 'version':
-            $output = [
-                'PHP Diagnostics Tool v' . DIAG_VERSION,
-                'PHP Version: ' . PHP_VERSION,
-                'Server: ' . ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown'),
-                'OS: ' . PHP_OS
-            ];
-            break;
-            
-        case 'history':
-            // This would need to be implemented with session storage
-            $output = ['Command history not implemented yet'];
             break;
             
         case 'clear':
             return ['clear' => true];
-            
-        case 'find':
-            if (!isset($parts[1])) {
-                $output = ["Error: No pattern specified"];
-                break;
-            }
-            
-            $pattern = $parts[1];
-            $path = isset($parts[2]) ? $parts[2] : '.';
-            
-            $output = ["Finding files matching '$pattern' in $path:"];
-            
-            try {
-                $iterator = new RecursiveIteratorIterator(
-                    new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS)
-                );
-                
-                $matches = [];
-                foreach ($iterator as $file) {
-                    if (stripos($file->getFilename(), $pattern) !== false) {
-                        $matches[] = $file->getPathname();
-                    }
-                }
-                
-                if (empty($matches)) {
-                    $output[] = "No files found matching '$pattern'";
-                } else {
-                    $output = array_merge($output, array_slice($matches, 0, 50));
-                    if (count($matches) > 50) {
-                        $output[] = "... (" . count($matches) . " total matches, showing first 50)";
-                    }
-                }
-            } catch (Exception $e) {
-                $output = ["Error searching: " . $e->getMessage()];
-            }
-            break;
             
         default:
             $output = ["Command not recognized: $command", "Type 'help' for available commands"];
     }
     
     return ['output' => $output];
-}
-
-/**
- * Generate directory tree
- */
-function generateTree($dir, $prefix = '', $isLast = true) {
-    $tree = [];
-    
-    if (!is_dir($dir) || !is_readable($dir)) {
-        return ["Cannot read directory: $dir"];
-    }
-    
-    $files = @scandir($dir);
-    if ($files === false) {
-        return ["Cannot scan directory: $dir"];
-    }
-    
-    $files = array_filter($files, function($file) {
-        return $file !== '.' && $file !== '..';
-    });
-    
-    $count = count($files);
-    $i = 0;
-    
-    foreach ($files as $file) {
-        $i++;
-        $isLastFile = ($i === $count);
-        $fullPath = $dir . DIRECTORY_SEPARATOR . $file;
-        
-        $connector = $isLastFile ? '└── ' : '├── ';
-        $tree[] = $prefix . $connector . $file;
-        
-        if (is_dir($fullPath) && $i <= 10) { // Limit depth for performance
-            $newPrefix = $prefix . ($isLastFile ? '    ' : '│   ');
-            $subtree = generateTree($fullPath, $newPrefix, $isLastFile);
-            $tree = array_merge($tree, $subtree);
-        }
-    }
-    
-    return $tree;
 }
 
 /**
@@ -2047,6 +914,7 @@ function exportResults($format, $data) {
             
         case 'csv':
             $output = '';
+            $csvData = [];
             
             // Handle different data types
             if (isset($data['security'])) {
@@ -2606,15 +1474,8 @@ exit;
             border: 1px solid #bee5eb;
         }
         
-        .file-explorer {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            height: 600px;
-        }
-        
         .file-tree {
-            max-height: 100%;
+            max-height: 400px;
             overflow-y: auto;
             border: 1px solid #ddd;
             border-radius: var(--radius-sm);
@@ -2623,7 +1484,7 @@ exit;
         }
         
         .file-item {
-            padding: 0.5rem;
+            padding: 0.25rem 0.5rem;
             cursor: pointer;
             border-radius: var(--radius-sm);
             margin: 0.1rem 0;
@@ -2640,14 +1501,6 @@ exit;
         .file-item.selected {
             background: var(--primary);
             color: white;
-        }
-        
-        .file-analyzer {
-            border: 1px solid #ddd;
-            border-radius: var(--radius-sm);
-            padding: 1rem;
-            background: white;
-            overflow-y: auto;
         }
         
         .file-icon {
@@ -2682,7 +1535,7 @@ exit;
             border-radius: var(--radius-sm);
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
-            max-height: 400px;
+            max-height: 500px;
             overflow: auto;
             white-space: pre-wrap;
             line-height: 1.4;
@@ -2712,24 +1565,17 @@ exit;
         .terminal-input-container {
             display: flex;
             align-items: center;
-            background: #1a1a1a;
-            padding: 0.75rem 1rem;
+            background: #000;
+            padding: 0.5rem 1rem;
             border-radius: var(--radius-sm);
             margin-top: 0.5rem;
-            border: 2px solid #333;
-            transition: border-color 0.3s;
-        }
-        
-        .terminal-input-container:focus-within {
-            border-color: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            border: 1px solid #333;
         }
         
         .terminal-prompt {
             color: #00ff00;
             margin-right: 0.5rem;
             font-family: 'Courier New', monospace;
-            font-weight: bold;
         }
         
         .terminal-input {
@@ -2752,19 +1598,16 @@ exit;
         .terminal-suggestion {
             background: #333;
             color: #00ff00;
-            border: 1px solid #555;
+            border: none;
             padding: 0.25rem 0.5rem;
             border-radius: 3px;
             font-family: 'Courier New', monospace;
             font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.2s;
         }
         
         .terminal-suggestion:hover {
             background: #444;
-            border-color: #00ff00;
-            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
         }
         
         .loading {
@@ -2949,11 +1792,6 @@ exit;
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-            
-            .file-explorer {
-                grid-template-columns: 1fr;
-                height: auto;
-            }
         }
     </style>
 </head>
@@ -2975,6 +1813,7 @@ exit;
             <h3>🎛️ Control Panel</h3>
             <button class="nav-item active" onclick="showTab('dashboard')">📊 Dashboard</button>
             <button class="nav-item" onclick="showTab('files')">📁 File Explorer</button>
+            <button class="nav-item" onclick="showTab('analyzer')">🔍 Code Analyzer</button>
             <button class="nav-item" onclick="showTab('security')">🛡️ Security Scan</button>
             <button class="nav-item" onclick="showTab('performance')">⚡ Performance</button>
             <button class="nav-item" onclick="showTab('database')">🗄️ Database</button>
@@ -3000,9 +1839,9 @@ exit;
                         <div class="label">Overall Score</div>
                     </div>
                     <div class="stat-card">
-                        <h4>Files Analyzed</h4>
-                        <div class="value" id="total-files">--</div>
-                        <div class="label">Total Files</div>
+                        <h4>PHP Files</h4>
+                        <div class="value" id="php-files">--</div>
+                        <div class="label">Analyzed</div>
                     </div>
                     <div class="stat-card">
                         <h4>Issues Found</h4>
@@ -3032,23 +1871,18 @@ exit;
 
             <!-- File Explorer Tab -->
             <div id="files" class="tab-content">
-                <h2>📁 File Explorer & Code Analyzer</h2>
+                <h2>📁 File Explorer</h2>
                 <button class="btn" onclick="loadFileSystem()">🔄 Refresh Files</button>
-                
-                <div class="file-explorer">
-                    <div>
-                        <h3>File Tree</h3>
-                        <div id="file-tree" class="file-tree">
-                            <div class="alert alert-info">Click "Refresh Files" to load the file system.</div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <h3>File Analysis</h3>
-                        <div id="file-analyzer" class="file-analyzer">
-                            <div class="alert alert-info">Select a file from the tree to analyze it.</div>
-                        </div>
-                    </div>
+                <div id="file-tree" class="file-tree">
+                    <div class="alert alert-info">Click "Refresh Files" to load the file system.</div>
+                </div>
+            </div>
+
+            <!-- Code Analyzer Tab -->
+            <div id="analyzer" class="tab-content">
+                <h2>🔍 Code Analyzer</h2>
+                <div id="analyzer-content">
+                    <div class="alert alert-info">Select a PHP file from the File Explorer to analyze its code quality, security, and performance.</div>
                 </div>
             </div>
 
@@ -3113,73 +1947,44 @@ exit;
 
             <!-- Terminal Tab -->
             <div id="terminal" class="tab-content">
-                <h2>💻 Advanced Terminal</h2>
+                <h2>💻 Terminal</h2>
                 <div class="terminal-container">
                     <div class="terminal" id="terminal-output">
                         <div style="color: #ff5e62; font-weight: bold; margin-bottom: 10px;">
-                            ╔══════════════════════════════════════════════════════════════╗<br>
-                            ║  🎯 PHP Diagnostics Terminal v<?= DIAG_VERSION ?> - Advanced Edition  ║<br>
-                            ║  Type 'help' for 50+ available commands                     ║<br>
-                            ╚══════════════════════════════════════════════════════════════╝<br>
+                            PHP Diagnostics Terminal v<?= DIAG_VERSION ?><br>
+                            ----------------------------------------<br>
                         </div>
+                        Type 'help' for available commands.<br>
                         <br>
                         $ <span id="terminal-cursor">_</span>
                     </div>
                     <div class="terminal-input-container">
                         <span class="terminal-prompt">$</span>
-                        <input type="text" id="terminal-input" class="terminal-input" placeholder="Enter command (try 'help' for full list)..." onkeypress="handleTerminalInput(event)">
+                        <input type="text" id="terminal-input" class="terminal-input" placeholder="Enter command..." onkeypress="handleTerminalInput(event)">
                     </div>
                     <div class="terminal-suggestions">
                         <button class="terminal-suggestion" onclick="insertCommand('help')">help</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('scan')">scan</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('ls')">ls</button>
                         <button class="terminal-suggestion" onclick="insertCommand('phpinfo')">phpinfo</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('git status')">git status</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('top')">top</button>
+                        <button class="terminal-suggestion" onclick="insertCommand('ls')">ls</button>
+                        <button class="terminal-suggestion" onclick="insertCommand('scan')">scan</button>
                         <button class="terminal-suggestion" onclick="insertCommand('find')">find</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('vulns')">vulns</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('benchmark')">benchmark</button>
-                        <button class="terminal-suggestion" onclick="insertCommand('clear')">clear</button>
+                        <button class="terminal-suggestion" onclick="insertCommand('check')">check</button>
                     </div>
                 </div>
             </div>
 
             <!-- System Info Tab -->
             <div id="system" class="tab-content">
-                <h2>⚙️ Comprehensive System Information</h2>
+                <h2>⚙️ System Information</h2>
                 <button class="btn" onclick="loadSystemInfo()">🔄 Refresh System Info</button>
                 <div id="system-content">
-                    <div class="alert alert-info">Click "Refresh System Info" to load comprehensive system information.</div>
+                    <div class="alert alert-info">Click "Refresh System Info" to load current system information.</div>
                 </div>
             </div>
             
             <!-- Credentials Tab -->
             <div id="credentials" class="tab-content">
-                <h2>🔑 Credentials Management</h2>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">Database Credentials</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Database Host</label>
-                        <input type="text" id="cred-db-host" class="form-control" placeholder="localhost">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Database Name</label>
-                        <input type="text" id="cred-db-name" class="form-control" placeholder="database_name">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Database Username</label>
-                        <input type="text" id="cred-db-user" class="form-control" placeholder="username">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Database Password</label>
-                        <input type="password" id="cred-db-pass" class="form-control" placeholder="password">
-                    </div>
-                    <button class="btn" onclick="saveDbCredentials()">💾 Save Database Credentials</button>
-                </div>
-                
+                <h2>🔑 Credentials & API Keys</h2>
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">API Credentials</div>
@@ -3201,15 +2006,11 @@ exit;
                 
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">SMTP Credentials</div>
+                        <div class="card-title">Other Credentials</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">SMTP Server</label>
                         <input type="text" id="smtp-server" class="form-control" placeholder="smtp.example.com">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">SMTP Port</label>
-                        <input type="number" id="smtp-port" class="form-control" placeholder="587">
                     </div>
                     <div class="form-group">
                         <label class="form-label">SMTP Username</label>
@@ -3232,4 +2033,982 @@ exit;
                 <h3>Export Results</h3>
                 <button class="modal-close" onclick="closeExportModal()">&times;</button>
             </div>
-            <div
+            <div id="export-content" style="max-height: 400px; overflow: auto;"></div>
+            <div style="margin-top: 1rem; text-align: right;">
+                <button class="btn" onclick="downloadExport()">Download</button>
+                <button class="btn" onclick="closeExportModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        let scanResults = null;
+        let exportData = null;
+        
+        // Update time every second
+        setInterval(() => {
+            document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+        
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked nav item
+            event.target.classList.add('active');
+        }
+        
+        // API call helper
+        async function apiCall(action, data = {}) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('action', action);
+            
+            if (data.file) {
+                url.searchParams.set('file', data.file);
+            }
+            
+            if (data.format) {
+                url.searchParams.set('format', data.format);
+            }
+            
+            if (data.type) {
+                url.searchParams.set('type', data.type);
+            }
+            
+            const options = {
+                method: data.method || 'GET',
+                headers: {}
+            };
+            
+            if (data.method === 'POST') {
+                if (data.formData) {
+                    options.body = data.formData;
+                } else if (data.body) {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(data.body);
+                } else if (data.command) {
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    options.body = `command=${encodeURIComponent(data.command)}`;
+                } else if (data.credentials) {
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    options.body = `credentials=${encodeURIComponent(JSON.stringify(data.credentials))}`;
+                } else if (data.data) {
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    options.body = `data=${encodeURIComponent(data.data)}`;
+                }
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // Run full system scan
+        async function runFullScan() {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.innerHTML = '<span class="loading"></span> Scanning...';
+            button.disabled = true;
+            
+            try {
+                const results = await apiCall('run_diagnostics');
+                
+                if (results.error) {
+                    throw new Error(results.error);
+                }
+                
+                scanResults = results;
+                updateDashboard(results);
+                updateSecurityTab(results);
+                updatePerformanceTab(results);
+                
+                // Show export buttons
+                document.getElementById('dashboard-export').style.display = 'flex';
+                document.getElementById('security-export').style.display = 'flex';
+                document.getElementById('performance-export').style.display = 'flex';
+                
+                showAlert('success', 'Full system scan completed successfully!');
+            } catch (error) {
+                showAlert('danger', 'Scan failed: ' + error.message);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+        
+        // Update dashboard with scan results
+        function updateDashboard(results) {
+            document.getElementById('health-score').textContent = results.summary.health_score + '%';
+            document.getElementById('php-files').textContent = results.files.length;
+            document.getElementById('total-issues').textContent = results.summary.total_issues;
+            document.getElementById('critical-issues').textContent = results.summary.critical_issues;
+            
+            const content = document.getElementById('dashboard-content');
+            let html = '';
+            
+            if (results.summary.critical_issues > 0) {
+                html += `<div class="alert alert-danger">
+                    <strong>⚠️ Critical Issues Detected!</strong><br>
+                    Found ${results.summary.critical_issues} critical security issues that need immediate attention.
+                </div>`;
+            } else if (results.summary.total_issues > 0) {
+                html += `<div class="alert alert-warning">
+                    <strong>⚠️ Issues Found</strong><br>
+                    Found ${results.summary.total_issues} issues that should be reviewed.
+                </div>`;
+            } else {
+                html += `<div class="alert alert-success">
+                    <strong>✅ All Clear!</strong><br>
+                    No critical issues detected. Your application looks healthy!
+                </div>`;
+            }
+            
+            // Add file health overview
+            html += '<h3>📁 File Health Overview</h3>';
+            html += '<div style="max-height: 300px; overflow-y: auto;">';
+            
+            results.files.forEach(file => {
+                const healthClass = file.health >= 80 ? 'health-excellent' : 
+                                  file.health >= 60 ? 'health-good' : 
+                                  file.health >= 40 ? 'health-warning' : 'health-poor';
+                
+                html += `
+                    <div class="issue-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${file.file}</strong><br>
+                                <small>Issues: ${file.issues} | Critical: ${file.critical}</small>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; color: ${file.health >= 80 ? '#4CAF50' : file.health >= 60 ? '#8BC34A' : file.health >= 40 ? '#FF9800' : '#F44336'}">
+                                    ${file.health}%
+                                </div>
+                                <div class="health-bar" style="width: 100px;">
+                                    <div class="health-fill ${healthClass}" style="width: ${file.health}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+        
+        // Update security tab
+        function updateSecurityTab(results) {
+            const content = document.getElementById('security-content');
+            let html = '';
+            
+            if (results.security.length === 0) {
+                html = '<div class="alert alert-success"><strong>✅ No Security Issues Found!</strong><br>Your code appears to be secure.</div>';
+            } else {
+                html = `<div class="alert alert-warning"><strong>⚠️ ${results.security.length} Security Issues Found</strong></div>`;
+                
+                // Add problem files summary
+                if (results.problem_files && results.problem_files.length > 0) {
+                    html += '<h3>🚨 Problem Files Summary</h3>';
+                    html += '<div class="card" style="margin-bottom: 2rem;">';
+                    html += '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr style="background: #f5f5f5;"><th style="padding: 0.5rem; text-align: left;">File</th><th style="padding: 0.5rem; text-align: center;">Health</th><th style="padding: 0.5rem; text-align: center;">Issues</th><th style="padding: 0.5rem; text-align: center;">Critical</th></tr>';
+                    
+                    results.problem_files.forEach(file => {
+                        const healthColor = file.health >= 80 ? '#4CAF50' : file.health >= 60 ? '#8BC34A' : file.health >= 40 ? '#FF9800' : '#F44336';
+                        html += `<tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 0.5rem;">${file.file}</td>
+                            <td style="padding: 0.5rem; text-align: center; color: ${healthColor}; font-weight: bold;">${file.health}%</td>
+                            <td style="padding: 0.5rem; text-align: center;">${file.issues}</td>
+                            <td style="padding: 0.5rem; text-align: center; ${file.critical > 0 ? 'color: #dc3545; font-weight: bold;' : ''}">${file.critical}</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</table>';
+                    html += '</div>';
+                }
+                
+                // Group issues by severity
+                const criticalIssues = results.security.filter(issue => issue.severity === 'critical');
+                const highIssues = results.security.filter(issue => issue.severity === 'high');
+                const mediumIssues = results.security.filter(issue => issue.severity === 'medium');
+                const lowIssues = results.security.filter(issue => issue.severity === 'low');
+                
+                if (criticalIssues.length > 0) {
+                    html += `<h3>🔴 Critical Issues (${criticalIssues.length})</h3>`;
+                    criticalIssues.forEach(issue => {
+                        const severityClass = `issue-${issue.severity}`;
+                        const badgeClass = `badge-${issue.severity}`;
+                        
+                        html += `
+                            <div class="issue-item ${severityClass}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <strong>${issue.type}</strong>
+                                            <span class="badge ${badgeClass}">${issue.severity}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                        <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                            ${issue.file}:${issue.line}<br>
+                                            <code>${issue.code}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (highIssues.length > 0) {
+                    html += `<h3>🟠 High Severity Issues (${highIssues.length})</h3>`;
+                    highIssues.forEach(issue => {
+                        const severityClass = `issue-${issue.severity}`;
+                        const badgeClass = `badge-${issue.severity}`;
+                        
+                        html += `
+                            <div class="issue-item ${severityClass}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <strong>${issue.type}</strong>
+                                            <span class="badge ${badgeClass}">${issue.severity}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                        <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                            ${issue.file}:${issue.line}<br>
+                                            <code>${issue.code}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (mediumIssues.length > 0) {
+                    html += `<h3>🟡 Medium Severity Issues (${mediumIssues.length})</h3>`;
+                    mediumIssues.forEach(issue => {
+                        const severityClass = `issue-${issue.severity}`;
+                        const badgeClass = `badge-${issue.severity}`;
+                        
+                        html += `
+                            <div class="issue-item ${severityClass}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <strong>${issue.type}</strong>
+                                            <span class="badge ${badgeClass}">${issue.severity}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                        <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                            ${issue.file}:${issue.line}<br>
+                                            <code>${issue.code}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (lowIssues.length > 0) {
+                    html += `<h3>🔵 Low Severity Issues (${lowIssues.length})</h3>`;
+                    lowIssues.forEach(issue => {
+                        const severityClass = `issue-${issue.severity}`;
+                        const badgeClass = `badge-${issue.severity}`;
+                        
+                        html += `
+                            <div class="issue-item ${severityClass}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <strong>${issue.type}</strong>
+                                            <span class="badge ${badgeClass}">${issue.severity}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                        <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                            ${issue.file}:${issue.line}<br>
+                                            <code>${issue.code}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        // Update performance tab
+        function updatePerformanceTab(results) {
+            const content = document.getElementById('performance-content');
+            let html = '';
+            
+            if (results.performance.length === 0) {
+                html = '<div class="alert alert-success"><strong>✅ No Performance Issues Found!</strong><br>Your code appears to be optimized.</div>';
+            } else {
+                html = `<div class="alert alert-warning"><strong>⚠️ ${results.performance.length} Performance Issues Found</strong></div>`;
+                
+                // Add summary
+                html += `
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <h3>Performance Summary</h3>
+                        <p>Found ${results.performance.length} performance issues that could impact your application's speed and efficiency.</p>
+                        <div class="progress-bar" style="margin-top: 1rem;">
+                            <div class="progress-fill" style="width: ${results.summary.health_score}%;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                            <span>Poor</span>
+                            <span>Excellent</span>
+                        </div>
+                    </div>
+                `;
+                
+                // List issues
+                results.performance.forEach(issue => {
+                    html += `
+                        <div class="issue-item">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <strong>${issue.type}</strong>
+                                        <span class="badge badge-${issue.severity}">${issue.severity}</span>
+                                    </div>
+                                    <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                    <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                        ${issue.file}:${issue.line}<br>
+                                        <code>${issue.code}</code>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        // Load file system
+        async function loadFileSystem() {
+            const container = document.getElementById('file-tree');
+            container.innerHTML = '<div class="loading"></div> Loading file system...';
+            
+            try {
+                const result = await apiCall('scan_files');
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                container.innerHTML = renderFileTree(result);
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-danger">Failed to load file system: ${error.message}</div>`;
+            }
+        }
+        
+        // Render file tree
+        function renderFileTree(node, level = 0) {
+            let html = '';
+            const indent = '  '.repeat(level);
+            
+            if (node.type === 'directory') {
+                html += `<div class="file-item" style="padding-left: ${level * 20}px;">
+                    📁 <strong>${node.name}</strong>
+                    <small style="color: #666; margin-left: 0.5rem;">
+                        (${node.stats.files} files, ${node.stats.php_files} PHP)
+                    </small>
+                </div>`;
+                
+                if (node.children) {
+                    node.children.forEach(child => {
+                        html += renderFileTree(child, level + 1);
+                    });
+                }
+            } else {
+                const icon = node.extension === 'php' ? '🐘' : '📄';
+                const healthColor = node.health >= 80 ? '#4CAF50' : 
+                                  node.health >= 60 ? '#8BC34A' : 
+                                  node.health >= 40 ? '#FF9800' : '#F44336';
+                
+                html += `<div class="file-item" style="padding-left: ${level * 20}px;" onclick="selectFile('${node.path}')">
+                    ${icon} ${node.name}
+                    ${node.extension === 'php' ? `<span style="color: ${healthColor}; font-weight: bold; margin-left: 0.5rem;">${node.health}%</span>` : ''}
+                    <small style="color: #666; margin-left: 0.5rem;">
+                        (${formatFileSize(node.size)})
+                    </small>
+                </div>`;
+            }
+            
+            return html;
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        // Select file for analysis
+        async function selectFile(filePath) {
+            // Update UI
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.target.closest('.file-item').classList.add('selected');
+            
+            currentFile = filePath;
+            
+            // Load file content and analysis
+            showTab('analyzer');
+            document.querySelector('.nav-item[onclick="showTab(\'analyzer\')"]').classList.add('active');
+            
+            const content = document.getElementById('analyzer-content');
+            content.innerHTML = '<div class="loading"></div> Analyzing file...';
+            
+            try {
+                const [fileContent, analysis] = await Promise.all([
+                    apiCall('get_file_content', { file: filePath }),
+                    apiCall('analyze_file', { file: filePath })
+                ]);
+                
+                if (fileContent.error || analysis.error) {
+                    throw new Error(fileContent.error || analysis.error);
+                }
+                
+                let html = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h3>📄 File Information</h3>
+                            <div class="issue-item">
+                                <strong>File:</strong> ${filePath}<br>
+                                <strong>Size:</strong> ${formatFileSize(fileContent.size)}<br>
+                                <strong>Lines:</strong> ${fileContent.lines}<br>
+                                <strong>Modified:</strong> ${new Date(fileContent.modified * 1000).toLocaleString()}<br>
+                                <strong>Health Score:</strong> <span style="color: ${analysis.health >= 80 ? '#4CAF50' : analysis.health >= 60 ? '#8BC34A' : analysis.health >= 40 ? '#FF9800' : '#F44336'}; font-weight: bold;">${analysis.health}%</span>
+                            </div>
+                            
+                            <h3>🔍 Analysis Summary</h3>
+                            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+                                <div class="stat-card" style="background: white; box-shadow: var(--shadow);">
+                                    <h4>Security Issues</h4>
+                                    <div class="value">${analysis.security.length}</div>
+                                </div>
+                                <div class="stat-card" style="background: white; box-shadow: var(--shadow);">
+                                    <h4>Performance Issues</h4>
+                                    <div class="value">${analysis.performance.length}</div>
+                                </div>
+                                <div class="stat-card" style="background: white; box-shadow: var(--shadow);">
+                                    <h4>Functions</h4>
+                                    <div class="value">${analysis.functions.length}</div>
+                                </div>
+                                <div class="stat-card" style="background: white; box-shadow: var(--shadow);">
+                                    <h4>Classes</h4>
+                                    <div class="value">${analysis.classes.length}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>💻 Code Preview</h3>
+                            <div class="code-viewer" style="max-height: 300px;">
+${fileContent.content}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Security Issues
+                if (analysis.security.length > 0) {
+                    html += '<h3>🛡️ Security Issues</h3>';
+                    analysis.security.forEach(issue => {
+                        const badgeClass = `badge-${issue.severity}`;
+                        html += `
+                            <div class="issue-item issue-${issue.severity}">
+                                <div style="display: flex; justify-content: between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <strong>${issue.type}</strong>
+                                            <span class="badge ${badgeClass}">${issue.severity}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                        <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                            Line ${issue.line}: <code>${issue.code}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                // Performance Issues
+                if (analysis.performance.length > 0) {
+                    html += '<h3>⚡ Performance Issues</h3>';
+                    analysis.performance.forEach(issue => {
+                        html += `
+                            <div class="issue-item">
+                                <div style="display: flex; justify-content: between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <strong>${issue.type}</strong>
+                                            <span class="badge badge-${issue.severity}">${issue.severity}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">${issue.description}</div>
+                                        <div style="font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 3px; font-size: 0.9rem;">
+                                            Line ${issue.line}: <code>${issue.code}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                // Functions and Classes
+                if (analysis.functions.length > 0 || analysis.classes.length > 0) {
+                    html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">';
+                    
+                    if (analysis.functions.length > 0) {
+                        html += '<div><h3>🔧 Functions</h3>';
+                        analysis.functions.forEach(func => {
+                            html += `
+                                <div class="issue-item">
+                                    <strong>${func.name}()</strong><br>
+                                    <small>Line ${func.line}</small><br>
+                                    <code style="font-size: 0.8rem;">${func.params}</code>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (analysis.classes.length > 0) {
+                        html += '<div><h3>🏗️ Classes</h3>';
+                        analysis.classes.forEach(cls => {
+                            html += `
+                                <div class="issue-item">
+                                    <strong>${cls.name}</strong><br>
+                                    <small>Line ${cls.line}</small>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                }
+                
+                content.innerHTML = html;
+                
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">Failed to analyze file: ${error.message}</div>`;
+            }
+        }
+        
+        // Test database connection with credentials
+        async function testDatabaseWithCredentials() {
+            const host = document.getElementById('db-host').value;
+            const name = document.getElementById('db-name').value;
+            const user = document.getElementById('db-user').value;
+            const pass = document.getElementById('db-pass').value;
+            
+            const content = document.getElementById('database-content');
+            content.innerHTML = '<div class="loading"></div> Testing database connection...';
+            
+            try {
+                const credentials = { host, name, user, pass };
+                const result = await apiCall('test_database', { 
+                    method: 'POST',
+                    credentials: credentials
+                });
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                let html = '<h3>🗄️ Database Test Results</h3>';
+                
+                result.forEach(test => {
+                    const alertClass = test.status === 'success' ? 'alert-success' : 
+                                     test.status === 'warning' ? 'alert-warning' : 'alert-danger';
+                    const icon = test.status === 'success' ? '✅' : 
+                               test.status === 'warning' ? '⚠️' : '❌';
+                    
+                    html += `
+                        <div class="alert ${alertClass}">
+                            <strong>${icon} ${test.type}</strong><br>
+                            ${test.message}<br>
+                            <small>${test.details}</small>
+                        </div>
+                    `;
+                });
+                
+                // If successful, offer to save credentials
+                if (result.some(test => test.status === 'success')) {
+                    html += `
+                        <div class="card" style="margin-top: 1rem;">
+                            <div class="card-header">
+                                <div class="card-title">Save Credentials</div>
+                            </div>
+                            <p>Would you like to save these credentials for future use?</p>
+                            <button class="btn btn-success" onclick="saveDbCredentials()">Save Credentials</button>
+                        </div>
+                    `;
+                }
+                
+                content.innerHTML = html;
+                
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">Database test failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Save database credentials
+        async function saveDbCredentials() {
+            const host = document.getElementById('db-host').value;
+            const name = document.getElementById('db-name').value;
+            const user = document.getElementById('db-user').value;
+            const pass = document.getElementById('db-pass').value;
+            
+            try {
+                const credentials = { type: 'database', host, name, user, pass };
+                const result = await apiCall('save_credentials', { 
+                    method: 'POST',
+                    credentials: credentials
+                });
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                showAlert('success', 'Database credentials saved successfully!');
+                
+            } catch (error) {
+                showAlert('danger', 'Failed to save credentials: ' + error.message);
+            }
+        }
+        
+        // Save API credentials
+        async function saveApiCredentials() {
+            const endpoint = document.getElementById('api-endpoint').value;
+            const key = document.getElementById('api-key').value;
+            const secret = document.getElementById('api-secret').value;
+            
+            try {
+                const credentials = { type: 'api', endpoint, key, secret };
+                const result = await apiCall('save_credentials', { 
+                    method: 'POST',
+                    credentials: credentials
+                });
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                showAlert('success', 'API credentials saved successfully!');
+                
+            } catch (error) {
+                showAlert('danger', 'Failed to save credentials: ' + error.message);
+            }
+        }
+        
+        // Save SMTP credentials
+        async function saveSmtpCredentials() {
+            const server = document.getElementById('smtp-server').value;
+            const user = document.getElementById('smtp-user').value;
+            const pass = document.getElementById('smtp-pass').value;
+            
+            try {
+                const credentials = { type: 'smtp', server, user, pass };
+                const result = await apiCall('save_credentials', { 
+                    method: 'POST',
+                    credentials: credentials
+                });
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                showAlert('success', 'SMTP credentials saved successfully!');
+                
+            } catch (error) {
+                showAlert('danger', 'Failed to save credentials: ' + error.message);
+            }
+        }
+        
+        // Load system information
+        async function loadSystemInfo() {
+            const content = document.getElementById('system-content');
+            content.innerHTML = '<div class="loading"></div> Loading system information...';
+            
+            try {
+                const result = await apiCall('get_system_info');
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                let html = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                        <div>
+                            <h3>🖥️ System Information</h3>
+                            <div class="issue-item">
+                                <strong>PHP Version:</strong> ${result.php_version}<br>
+                                <strong>Server:</strong> ${result.server_software}<br>
+                                <strong>Operating System:</strong> ${result.operating_system}<br>
+                                <strong>Current User:</strong> ${result.current_user}<br>
+                                <strong>Server Time:</strong> ${result.server_time}<br>
+                                <strong>Timezone:</strong> ${result.timezone}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>⚙️ PHP Configuration</h3>
+                            <div class="issue-item">
+                                <strong>Memory Limit:</strong> ${result.memory_limit}<br>
+                                <strong>Max Execution Time:</strong> ${result.max_execution_time}s<br>
+                                <strong>Post Max Size:</strong> ${result.post_max_size}<br>
+                                <strong>Upload Max Size:</strong> ${result.upload_max_filesize}<br>
+                                <strong>Error Reporting:</strong> ${result.error_reporting}<br>
+                                <strong>Display Errors:</strong> ${result.display_errors ? 'On' : 'Off'}<br>
+                                <strong>Log Errors:</strong> ${result.log_errors ? 'On' : 'Off'}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>💾 Disk Usage</h3>
+                            <div class="issue-item">
+                                <strong>Total Space:</strong> ${formatFileSize(result.disk_total_space)}<br>
+                                <strong>Free Space:</strong> ${formatFileSize(result.disk_free_space)}<br>
+                                <strong>Used Space:</strong> ${formatFileSize(result.disk_total_space - result.disk_free_space)}<br>
+                                <strong>Usage:</strong> ${Math.round(((result.disk_total_space - result.disk_free_space) / result.disk_total_space) * 100)}%
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-fill ${Math.round(((result.disk_total_space - result.disk_free_space) / result.disk_total_space) * 100) > 80 ? 'health-poor' : 'health-good'}" 
+                                     style="width: ${Math.round(((result.disk_total_space - result.disk_free_space) / result.disk_total_space) * 100)}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>🔌 PHP Extensions</h3>
+                            <div class="issue-item" style="max-height: 200px; overflow-y: auto;">
+                                ${result.extensions.map(ext => `<span class="badge badge-success" style="margin: 0.1rem;">${ext}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                content.innerHTML = html;
+                
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">Failed to load system information: ${error.message}</div>`;
+            }
+        }
+        
+        // Terminal functionality
+        let terminalHistory = [];
+        let historyIndex = -1;
+        
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = event.target;
+                const command = input.value.trim();
+                
+                if (command) {
+                    executeTerminalCommand(command);
+                    terminalHistory.unshift(command);
+                    historyIndex = -1;
+                }
+                
+                input.value = '';
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (historyIndex < terminalHistory.length - 1) {
+                    historyIndex++;
+                    event.target.value = terminalHistory[historyIndex];
+                }
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    event.target.value = terminalHistory[historyIndex];
+                } else if (historyIndex === 0) {
+                    historyIndex = -1;
+                    event.target.value = '';
+                }
+            }
+        }
+        
+        function insertCommand(command) {
+            document.getElementById('terminal-input').value = command;
+            document.getElementById('terminal-input').focus();
+        }
+        
+        async function executeTerminalCommand(command) {
+            const output = document.getElementById('terminal-output');
+            
+            // Add command to terminal
+            output.innerHTML += `<br><span style="color: #ff5e62; font-weight: bold;">$</span> ${command}<br>`;
+            
+            try {
+                const result = await fetch('?action=execute_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `command=${encodeURIComponent(command)}`
+                });
+                
+                const data = await result.json();
+                
+                if (data.error) {
+                    output.innerHTML += `<span style="color: #ff6b6b;">Error: ${data.error}</span><br>`;
+                } else if (data.clear) {
+                    output.innerHTML = `<div style="color: #ff5e62; font-weight: bold; margin-bottom: 10px;">
+                        PHP Diagnostics Terminal v<?= DIAG_VERSION ?><br>
+                        ----------------------------------------<br>
+                    </div>
+                    Type 'help' for available commands.<br><br>`;
+                } else if (data.output) {
+                    data.output.forEach(line => {
+                        output.innerHTML += `${line}<br>`;
+                    });
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<span style="color: #ff6b6b;">Error: ${error.message}</span><br>`;
+            }
+            
+            // Scroll to bottom
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        // Export results
+        async function exportResults(format, section = 'all') {
+            let data;
+            
+            if (section === 'security') {
+                data = { security: scanResults.security };
+            } else if (section === 'performance') {
+                data = { performance: scanResults.performance };
+            } else {
+                data = scanResults;
+            }
+            
+            try {
+                const result = await apiCall('export_results', {
+                    format: format,
+                    method: 'POST',
+                    data: JSON.stringify(data)
+                });
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                // Show export modal
+                exportData = result;
+                document.getElementById('export-content').innerHTML = `<pre style="max-height: 300px; overflow: auto; background: #f5f5f5; padding: 1rem; border-radius: 5px;">${result.content}</pre>`;
+                document.getElementById('export-modal').style.display = 'flex';
+                
+            } catch (error) {
+                showAlert('danger', 'Export failed: ' + error.message);
+            }
+        }
+        
+        // Download export
+        function downloadExport() {
+            if (!exportData) return;
+            
+            const blob = new Blob([exportData.content], { type: exportData.mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = exportData.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Close export modal
+        function closeExportModal() {
+            document.getElementById('export-modal').style.display = 'none';
+        }
+        
+        // Show alert function
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = message;
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.style.maxWidth = '400px';
+            alertDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            alertDiv.style.animation = 'slideIn 0.3s ease-out forwards';
+            
+            // Add animation
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.animation = 'slideOut 0.3s ease-in forwards';
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 300);
+            }, 5000);
+        }
+        
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-load file system
+            loadFileSystem();
+            
+            // Auto-load system info
+            loadSystemInfo();
+            
+            // Show welcome message
+            showAlert('info', 'Welcome to PHP Diagnostics! Click "Run Full Scan" to analyze your application.');
+        });
+    </script>
+</body>
+</html>
+<?php
+// End of file
+?>
