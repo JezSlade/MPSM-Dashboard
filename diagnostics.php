@@ -1,113 +1,29 @@
 <?php
-// diagnostic.php — Resilient Debug Dashboard
+// diagnostic.php — Self-contained Debug Dashboard
 
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors','1');
 
-// Prevent caching
-header('Cache-Control: no-store, no-cache, must-revalidate');
-header('Pragma: no-cache');
-header('Expires: 0');
-
-define('BASE', __DIR__);
-define('CORE', BASE . '/core');
-define('LOG_FILE', BASE . '/logs/debug.log');
-
-$results = [];
-function add($cat,$check,$status,$details=''){
-    global $results;
-    $results[] = compact('cat','check','status','details');
-}
-
-// 1) Live Debug Log
-$rawLog = is_readable(LOG_FILE)
-    ? file_get_contents(LOG_FILE)
-    : "— no debug entries yet —";
-
-// 2) Environment
-add('Environment','PHP ≥ 7.4', version_compare(PHP_VERSION,'7.4.0','>=')?'PASS':'FAIL',PHP_VERSION);
-foreach(['pdo_mysql','curl','json'] as $ext){
-    add('Environment',"Extension “{$ext}”", extension_loaded($ext)?'PASS':'FAIL');
-}
-
-// 3) .env presence
-add('Config','.env file', is_readable(BASE.'/.env')?'PASS':'FAIL');
-
-// 4) Conditional includes
-$loaded = [];
-$coreFiles = ['config.php','debug.php','api.php'];
-foreach($coreFiles as $file){
-    $path = CORE.'/'.$file;
-    if(is_file($path)){
-        require_once $path;
-        $loaded[$file] = true;
-        add('Code',"Loaded core/{$file}",'PASS');
-    } else {
-        $loaded[$file] = false;
-        add('Code',"core/{$file} missing",'FAIL');
-    }
-}
-
-// 5) File-structure from JSON (optional)
-$jsonList = CORE.'/files.json';
-if(is_readable($jsonList)){
-    $spec = json_decode(file_get_contents($jsonList),true);
-    $expected = $spec['core']??[];
-    foreach($expected as $f){
-        add('Filesystem',"core/{$f}", is_file(CORE.'/'.$f)?'PASS':'FAIL');
-    }
-}
-
-// 6) Database test (only if config loaded)
-if(!empty($loaded['config.php'])){
-    try {
-        $pdo = get_db();
-        add('Database','Connect to DB','PASS');
-    } catch(Exception $e){
-        add('Database','Connect to DB','FAIL',$e->getMessage());
-    }
-} else {
-    add('Database','Skipped DB test','INFO','config.php not loaded');
-}
-
-// 7) API smoke-tests (only if api loaded)
-if(!empty($loaded['api.php']) && class_exists('ApiClient')){
-    $api = new ApiClient();
-    $eps = method_exists($api,'get_all_endpoints') ? $api->get_all_endpoints() : [];
-    add('API','Endpoints defined','INFO',count($eps).' total');
-    foreach(array_slice(array_keys($eps),0,3) as $ep){
-        try {
-            $res = $api->call_api($ep,'get',[]);
-            $st  = is_array($res)?'PASS':'FAIL';
-            $dt  = is_array($res)?'Keys:'.implode(',',array_slice(array_keys($res),0,3)):'Bad response';
-        } catch(Exception $e){
-            $st='FAIL'; $dt=$e->getMessage();
-        }
-        add('API',"GET {$ep}",$st,$dt);
-    }
-} else {
-    add('API','Skipped API tests','INFO','api.php not loaded or ApiClient missing');
-}
-
-// Render dashboard
+// Always output HTML head immediately
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Debug Dashboard</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Debug Dashboard</title>
   <style>
-    body{font-family:sans-serif;margin:1em;}
-    h1{margin-bottom:.5em;}
+    body{font-family:sans-serif;margin:1em}
+    h1{margin-bottom:.5em}
     pre.log{background:#222;color:#0f0;padding:1em;overflow:auto;max-height:200px;}
-    table{width:100%;border-collapse:collapse;margin-top:1em;}
-    th,td{border:1px solid #ccc;padding:.5em;text-align:left;}
-    th{background:#eee;}
-    .PASS{background:#dfd;}
-    .FAIL{background:#fdd;}
-    .INFO{background:#ddf;}
-    .controls a{margin-right:1em;text-decoration:none;color:#06c;}
+    table{width:100%;border-collapse:collapse;margin-top:1em;font-size:.9em}
+    th,td{border:1px solid #ccc;padding:.5em;text-align:left}
+    th{background:#eee}
+    .PASS{background:#dfd}
+    .FAIL{background:#fdd}
+    .INFO{background:#ddf}
+    .controls a{margin-right:1em;color:#06c;text-decoration:none}
   </style>
 </head>
 <body>
@@ -117,20 +33,94 @@ if(!empty($loaded['api.php']) && class_exists('ApiClient')){
     <a href="javascript:location.reload(true)">🚿 Hard Reload</a>
   </div>
 
-  <h2>Live Debug Log</h2>
-  <pre class="log"><?= htmlspecialchars($rawLog) ?></pre>
+<?php
+// Collect results
+$results = [];
+function add($cat,$check,$status,$details='') {
+    global $results;
+    $results[] = ['cat'=>$cat,'check'=>$check,'status'=>$status,'details'=>$details];
+}
 
-  <h2>Health Checks</h2>
-  <table>
-    <tr><th>Category</th><th>Check</th><th>Status</th><th>Details</th></tr>
-    <?php foreach($results as $r): ?>
-    <tr class="<?= htmlspecialchars($r['status']) ?>">
-      <td><?= htmlspecialchars($r['cat']) ?></td>
-      <td><?= htmlspecialchars($r['check']) ?></td>
-      <td><?= htmlspecialchars($r['status']) ?></td>
-      <td><?= htmlspecialchars($r['details']) ?></td>
-    </tr>
-    <?php endforeach; ?>
-  </table>
+// 1) Live Debug Log
+$logFile = __DIR__ . '/logs/debug.log';
+$rawLog = is_readable($logFile)
+    ? file_get_contents($logFile)
+    : "— no debug entries yet —";
+echo "<h2>Live Debug Log</h2><pre class=\"log\">".htmlspecialchars($rawLog)."</pre>";
+
+// 2) Environment
+add('Environment','PHP ≥ 7.4', version_compare(PHP_VERSION,'7.4.0','>=')?'PASS':'FAIL', PHP_VERSION);
+foreach (['pdo_mysql','curl','json'] as $ext) {
+    add('Environment',"Extension “{$ext}”", extension_loaded($ext)?'PASS':'FAIL');
+}
+
+// 3) .env presence
+add('Config','.env file', is_readable(__DIR__.'/.env')?'PASS':'FAIL');
+
+// 4) Core directory files
+$coreDir = __DIR__ . '/core';
+$expected = ['config.php','db.php','debug.php','api.php','widgets.php','files.json'];
+foreach ($expected as $f) {
+    $path = $coreDir . '/' . $f;
+    add('Filesystem',"core/{$f}", is_file($path)?'PASS':'FAIL');
+}
+
+// 5) Database connectivity
+// Only if we can parse .env
+$env = [];
+if (is_readable(__DIR__.'/.env')) {
+    foreach (file(__DIR__.'/.env', FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
+        $line=trim($line);
+        if (!$line||$line[0]==='#') continue;
+        [$k,$v]=explode('=', $line, 2);
+        $env[trim($k)] = trim($v);
+    }
+}
+if (!empty($env['DB_HOST']) && !empty($env['DB_NAME'])) {
+    try {
+        $dsn = "mysql:host={$env['DB_HOST']};dbname={$env['DB_NAME']};charset=utf8mb4";
+        $pdo = new PDO($dsn, $env['DB_USER'] ?? '', $env['DB_PASS'] ?? '', [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_TIMEOUT => 5,
+        ]);
+        add('Database','DB connect','PASS');
+    } catch (Throwable $e) {
+        add('Database','DB connect','FAIL',$e->getMessage());
+    }
+} else {
+    add('Database','DB credentials','FAIL','Missing DB_HOST/DB_NAME in .env');
+}
+
+// 6) API smoke-test (simple cURL to token URL)
+if (!empty($env['TOKEN_URL'])) {
+    $ch = curl_init($env['TOKEN_URL']);
+    curl_setopt_array($ch, [
+        CURLOPT_NOBODY    => true,
+        CURLOPT_TIMEOUT   => 5,
+        CURLOPT_FAILONERROR => true,
+    ]);
+    $ok = curl_exec($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+    if ($ok) add('API','Reach TOKEN_URL','PASS');
+    else    add('API','Reach TOKEN_URL','FAIL',$err);
+} else {
+    add('API','TOKEN_URL','INFO','Not set in .env');
+}
+
+// Render health-check table
+echo "<h2>Health Checks</h2><table>";
+echo "<tr><th>Category</th><th>Check</th><th>Status</th><th>Details</th></tr>";
+foreach ($results as $r) {
+    echo "<tr class=\"{$r['status']}\">"
+       ."<td>".htmlspecialchars($r['cat'])."</td>"
+       ."<td>".htmlspecialchars($r['check'])."</td>"
+       ."<td>".htmlspecialchars($r['status'])."</td>"
+       ."<td>".htmlspecialchars($r['details'])."</td>"
+       ."</tr>";
+}
+echo "</table>";
+?>
+
 </body>
 </html>
