@@ -3,7 +3,7 @@ require_once 'core/config.php';
 require_once 'core/auth.php';
 require_once 'core/widget_registry.php';
 require_once 'core/api.php';
-
+// 
 // Check if user has developer permissions
 if (!Auth::isDeveloper()) {
     header('Location: index.php');
