@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "username": "sysop",
+      "role": "sysop",
+      "permissions": ["canViewDevices", "canViewSummary"]
+    },
+    {
+      "username": "demo",
+      "role": "dealer",
+      "permissions": ["canViewDevices"]
+    }
+  ]
+}

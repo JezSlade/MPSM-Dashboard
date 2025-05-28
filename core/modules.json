@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Device Monitor",
+    "id": "devices",
+    "permission": "canViewDevices",
+    "script": "/modules/devices/render.js"
+  },
+  {
+    "name": "Summary Panel",
+    "id": "summary",
+    "permission": "canViewSummary",
+    "script": "/modules/summary/render.js"
+  }
+]
