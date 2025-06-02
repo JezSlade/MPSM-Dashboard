@@ -106,8 +106,15 @@ echo <<<HTML
 HTML;
 
 // Step 1: Load Customers
-$customerPayload = ['DealerId' => $dealerId, 'PageIndex' => 0, 'PageSize' => 50];
-$customers = apiPOST('/Customer/GetCustomers', $token, $customerPayload);
+$customers = apiPOST('/Customer/GetCustomers', $token, [
+    'DealerId' => $dealerId,
+    'CustomerId' => null,
+    'SiteId' => null,
+    'Filters' => [],
+    'PageIndex' => 0,
+    'PageSize' => 50
+]);
+
 
 // Debug customer API output
 echo "<pre class='warn'>DEBUG: /Customer/GetCustomers\n" . htmlspecialchars(json_encode($customers, JSON_PRETTY_PRINT)) . "</pre>";
