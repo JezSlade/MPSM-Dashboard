@@ -1,7 +1,4 @@
 <?php
-// ─────────────────────────────────────────────────────────────────────
-// MPSM Endpoint Explorer (Standalone, Debug Version)
-// ─────────────────────────────────────────────────────────────────────
 function loadEnv() {
     $envPath = __DIR__ . '/.env';
     if (!file_exists($envPath)) die(".env file missing");
@@ -31,11 +28,10 @@ function getAccessToken() {
         CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
     ]);
     $response = curl_exec($ch);
-    $err = curl_error($ch);
     curl_close($ch);
     $data = json_decode($response, true);
     if (!isset($data['access_token'])) {
-        die("<pre><strong>Auth failed:</strong>\nError: $err\nResponse: $response</pre>");
+        die("<pre><strong>Auth failed</strong>\n$response</pre>");
     }
     return $data['access_token'];
 }
@@ -72,31 +68,28 @@ function apiPOST($path, $token, $payload) {
 // ────── INIT ──────
 loadEnv();
 $token = getAccessToken();
-$baseUrl = rtrim($_ENV['BASE_URL'], '/');
 $dealerId = $_ENV['MPSM_DEALER_ID'] ?? 'SZ13qRwU5GtFLj0i_CbEgQ2';
 $allEndpoints = json_decode(file_get_contents(__DIR__ . '/AllEndpoints.json'), true);
 $selectedCustomerId = $_GET['CustomerId'] ?? '';
 $selectedDeviceId = $_GET['DeviceId'] ?? '';
 $selectedAsset = $_GET['AssetNumber'] ?? '';
 
-// ────── UI HEADER ──────
+// ────── PAGE HEADER ──────
 echo <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MPSM Explorer (Standalone)</title>
+  <title>MPSM Endpoint Explorer (Dynamic)</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding: 2em; }
-    h1, h2 { color: cyan; }
     label { display: inline-block; width: 130px; }
     select, input[type="text"] { padding: 6px; background: #222; color: #eee; border: 1px solid #555; border-radius: 6px; margin-bottom: 10px; width: 320px; }
     pre { background: #222; color: #0f0; padding: 1em; overflow-x: auto; font-size: 0.9em; }
     .box { background: #1a1a1a; padding: 1em 2em; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 0 10px #000 inset; }
     .section { margin-top: 40px; border-top: 1px solid #444; padding-top: 20px; }
-    .error { color: red; }
+    h1, h2, h3 { color: cyan; }
     .form-group { margin-bottom: 15px; }
-    .warn { color: orange; font-size: 0.9em; }
   </style>
 </head>
 <body>
@@ -115,22 +108,13 @@ $customers = apiPOST('/Customer/GetCustomers', $token, [
     'PageSize' => 50
 ]);
 
-
-// Debug customer API output
-echo "<pre class='warn'>DEBUG: /Customer/GetCustomers\n" . htmlspecialchars(json_encode($customers, JSON_PRETTY_PRINT)) . "</pre>";
-
 echo "<div class='form-group'><label>CustomerId:</label><select name='CustomerId' onchange='this.form.submit()'><option value=''>-- Choose --</option>";
-if (!empty($customers['Items'])) {
-    foreach ($customers['Items'] as $c) {
-        $selected = $c['Id'] === $selectedCustomerId ? 'selected' : '';
-        echo "<option value='{$c['Id']}' $selected>{$c['Name']}</option>";
-    }
-} else {
-    echo "<option value=''>[No customers found]</option>";
+foreach ($customers['Items'] ?? [] as $c) {
+    $selected = $c['Id'] === $selectedCustomerId ? 'selected' : '';
+    echo "<option value='{$c['Id']}' $selected>{$c['Name']}</option>";
 }
 echo "</select></div>";
 
-// Step 2: Devices and Assets
 if ($selectedCustomerId) {
     $devices = apiPOST('/CustomerDashboard/Devices', $token, [
         'DealerId' => $dealerId,
@@ -138,8 +122,6 @@ if ($selectedCustomerId) {
         'PageIndex' => 0,
         'PageSize' => 50
     ]);
-
-    echo "<pre class='warn'>DEBUG: /CustomerDashboard/Devices\n" . htmlspecialchars(json_encode($devices, JSON_PRETTY_PRINT)) . "</pre>";
 
     echo "<div class='form-group'><label>DeviceId:</label><select name='DeviceId'>";
     foreach ($devices['Items'] ?? [] as $d) {
@@ -158,28 +140,47 @@ if ($selectedCustomerId) {
 
 echo "<input type='submit' value='Explore Endpoints'></form></div>";
 
-// Step 3: Main API Explorer
+// ────── EXPLORE ENDPOINTS ──────
 if ($selectedCustomerId && $selectedDeviceId && $selectedAsset) {
-    echo "<h2>Live API Results</h2>";
+    echo "<h2>Live API Results (Dynamic Payloads)</h2>";
     foreach ($allEndpoints as $group => $entries) {
         echo "<div class='section'><h3>$group</h3>";
         foreach ($entries as $ep) {
             $method = strtoupper($ep['method'] ?? 'GET');
             $path = ltrim($ep['path'] ?? '', '/');
             $desc = htmlspecialchars($ep['summary'] ?? '');
+            $reqBody = $ep['requestBody'] ?? [];
+
             echo "<div><strong>$method /$path</strong><br><small>$desc</small>";
 
-            $required = [];
-            if (str_contains($path, 'Customer')) $required['CustomerId'] = $selectedCustomerId;
-            if (str_contains($path, 'Device'))   $required['DeviceId'] = $selectedDeviceId;
-            if (str_contains($path, 'Asset'))    $required['AssetNumber'] = $selectedAsset;
+            if ($method === 'GET') {
+                $result = apiGET($path, $token);
+                echo "<pre>" . htmlspecialchars(json_encode($result, JSON_PRETTY_PRINT)) . "</pre></div>";
+                continue;
+            }
 
-            $payload = array_merge(['DealerId' => $dealerId, 'PageIndex' => 0, 'PageSize' => 5], $required);
-            $result = ($method === 'POST')
-                ? apiPOST($path, $token, $payload)
-                : apiGET($path, $token);
+            // Build POST body from canonical schema
+            $payload = [];
+            foreach ($reqBody as $key => $type) {
+                if ($key === 'DealerId') $payload[$key] = $dealerId;
+                elseif ($key === 'CustomerId') $payload[$key] = $selectedCustomerId;
+                elseif ($key === 'DeviceId') $payload[$key] = $selectedDeviceId;
+                elseif ($key === 'AssetNumber') $payload[$key] = $selectedAsset;
+                elseif ($key === 'PageIndex') $payload[$key] = 0;
+                elseif ($key === 'PageSize') $payload[$key] = 5;
+                else $payload[$key] = match ($type) {
+                    'string' => '',
+                    'boolean' => false,
+                    'integer' => 0,
+                    'array' => [],
+                    default => null
+                };
+            }
 
-            echo "<pre>" . htmlspecialchars(json_encode($result, JSON_PRETTY_PRINT)) . "</pre></div>";
+            $response = apiPOST($path, $token, $payload);
+
+            echo "<details><summary>Payload</summary><pre>" . htmlspecialchars(json_encode($payload, JSON_PRETTY_PRINT)) . "</pre></details>";
+            echo "<pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT)) . "</pre></div>";
         }
         echo "</div>";
     }
