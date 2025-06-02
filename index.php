@@ -4,7 +4,7 @@ require_once __DIR__ . '/core/bootstrap.php';
 require_once __DIR__ . '/core/widgets.php';
 require_login();
 
-$user    = current_user();
+// $user    = current_user();
 $widgets = get_user_widgets();
 ?>
 <!DOCTYPE html>
