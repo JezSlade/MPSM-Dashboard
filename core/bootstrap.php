@@ -14,6 +14,13 @@ require_once __DIR__ . '/widgets.php';
 
 $pdo = get_db();
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start([
+        'cookie_httponly' => true,
+        'cookie_samesite' => 'Lax',
+    ]);
+}
+
 // 1) Ensure migrations table exists
 $pdo->exec("
   CREATE TABLE IF NOT EXISTS migrations (
