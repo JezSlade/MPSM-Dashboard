@@ -2,6 +2,14 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+@ini_set('display_errors', 1);
+@ini_set('display_startup_errors', 1);
+@error_reporting(E_ALL);
+set_exception_handler(function($e) {
+    http_response_code(500);
+    echo "<pre>Fatal: " . htmlspecialchars($e->getMessage()) . "\n" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+    exit;
+});
 
 // explore_all_endpoints.php
 // v2.0 — fully integrated MPSM explorer using core/bootstrap.php

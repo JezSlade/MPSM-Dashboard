@@ -50,3 +50,6 @@ Header set X-Content-Type-Options "nosniff"
     ExpiresByType image/gif "access plus 30 days"
     ExpiresByType image/svg+xml "access plus 30 days"
 </IfModule>
+# .htaccess
+php_flag display_errors on
+php_value error_reporting 32767
