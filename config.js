@@ -1,0 +1,10 @@
+// Note: In production, move sensitive credentials to a secure backend or environment variables
+const CONFIG = {
+  CLIENT_ID: '9AT9j4UoU2BgLEqmiYCz',
+  CLIENT_SECRET: '9gTbAKBCZe1ftYQbLbq9',
+  USERNAME: 'dashboard',
+  PASSWORD: 'd@$hpa$$2024',
+  SCOPE: 'account',
+  TOKEN_URL: 'https://api.abassetmanagement.com/api3/token',
+  BASE_URL: 'https://api.abassetmanagement.com/api3/',
+};
