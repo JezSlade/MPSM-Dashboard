@@ -1,0 +1,33 @@
+/* assets/css/style.css */
+/* Neumorphism + custom overrides */
+
+:root {
+  --bg-light: #f0f0f3;
+  --bg-dark:  #1e1e1e;
+  --shadow-light: rgba(255,255,255,0.7);
+  --shadow-dark:  rgba(0,0,0,0.2);
+  --radius: 0.5rem;
+}
+
+.neu {
+  background: var(--bg-light);
+  box-shadow:
+    4px 4px 8px var(--shadow-dark),
+   -4px -4px 8px var(--shadow-light);
+  border-radius: var(--radius);
+}
+
+html.dark {
+  background: #121212;
+  color: #eee;
+}
+.dark .neu {
+  --bg-light: #1e1e1e;
+  --shadow-light: rgba(255,255,255,0.1);
+  --shadow-dark:  rgba(0,0,0,0.7);
+}
+
+.card {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}

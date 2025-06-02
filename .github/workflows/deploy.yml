@@ -11,20 +11,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: FTP Upload
-        id: ftp_upload
+      - name: FTP Upload (clean mirror)
         uses: sebastianpopp/ftp-action@releases/v2
         with:
-          host: ${{ secrets.FTP_SERVER }}
-          user: ${{ secrets.FTP_USERNAME }}
+          host:     ${{ secrets.FTP_SERVER }}
+          user:     ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           localDir: "./"
           remoteDir: ${{ secrets.REMOTE_DIR }}
-
-      - name: Show FTP Status
-        run: |
-          echo "FTP Upload step finished with status: ${{ steps.ftp_upload.outcome }}"
-          if [ "${{ steps.ftp_upload.outcome }}" != "success" ]; then
-            echo "::error::FTP upload failed!"
-            exit 1
-          fi
+          options: "--delete"
