@@ -1,6 +1,6 @@
 <?php
 // ─────────────────────────────────────────────────────────────────────
-// MPSM Endpoint Explorer (Standalone – No External CSS)
+// MPSM Endpoint Explorer (Standalone, Debug Version)
 // ─────────────────────────────────────────────────────────────────────
 function loadEnv() {
     $envPath = __DIR__ . '/.env';
@@ -79,7 +79,7 @@ $selectedCustomerId = $_GET['CustomerId'] ?? '';
 $selectedDeviceId = $_GET['DeviceId'] ?? '';
 $selectedAsset = $_GET['AssetNumber'] ?? '';
 
-// ────── UI OUTPUT ──────
+// ────── UI HEADER ──────
 echo <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +96,7 @@ echo <<<HTML
     .section { margin-top: 40px; border-top: 1px solid #444; padding-top: 20px; }
     .error { color: red; }
     .form-group { margin-bottom: 15px; }
+    .warn { color: orange; font-size: 0.9em; }
   </style>
 </head>
 <body>
@@ -104,16 +105,25 @@ echo <<<HTML
 <form method="GET">
 HTML;
 
-// Step 1: Customer select
-$customers = apiPOST('/Customer/GetCustomers', $token, ['DealerId' => $dealerId, 'PageIndex' => 0, 'PageSize' => 50]);
+// Step 1: Load Customers
+$customerPayload = ['DealerId' => $dealerId, 'PageIndex' => 0, 'PageSize' => 50];
+$customers = apiPOST('/Customer/GetCustomers', $token, $customerPayload);
+
+// Debug customer API output
+echo "<pre class='warn'>DEBUG: /Customer/GetCustomers\n" . htmlspecialchars(json_encode($customers, JSON_PRETTY_PRINT)) . "</pre>";
+
 echo "<div class='form-group'><label>CustomerId:</label><select name='CustomerId' onchange='this.form.submit()'><option value=''>-- Choose --</option>";
-foreach ($customers['Items'] ?? [] as $c) {
-    $selected = $c['Id'] === $selectedCustomerId ? 'selected' : '';
-    echo "<option value='{$c['Id']}' $selected>{$c['Name']}</option>";
+if (!empty($customers['Items'])) {
+    foreach ($customers['Items'] as $c) {
+        $selected = $c['Id'] === $selectedCustomerId ? 'selected' : '';
+        echo "<option value='{$c['Id']}' $selected>{$c['Name']}</option>";
+    }
+} else {
+    echo "<option value=''>[No customers found]</option>";
 }
 echo "</select></div>";
 
-// Step 2: Device & Asset selects
+// Step 2: Devices and Assets
 if ($selectedCustomerId) {
     $devices = apiPOST('/CustomerDashboard/Devices', $token, [
         'DealerId' => $dealerId,
@@ -122,10 +132,12 @@ if ($selectedCustomerId) {
         'PageSize' => 50
     ]);
 
+    echo "<pre class='warn'>DEBUG: /CustomerDashboard/Devices\n" . htmlspecialchars(json_encode($devices, JSON_PRETTY_PRINT)) . "</pre>";
+
     echo "<div class='form-group'><label>DeviceId:</label><select name='DeviceId'>";
     foreach ($devices['Items'] ?? [] as $d) {
         $sel = $d['Id'] === $selectedDeviceId ? 'selected' : '';
-        echo "<option value='{$d['Id']}' $sel>{$d['Product']['Model']}</option>";
+        echo "<option value='{$d['Id']}' $sel>{$d['Product']['Model']} ({$d['SerialNumber']})</option>";
     }
     echo "</select></div>";
 
@@ -139,7 +151,7 @@ if ($selectedCustomerId) {
 
 echo "<input type='submit' value='Explore Endpoints'></form></div>";
 
-// Step 3: Endpoint explorer
+// Step 3: Main API Explorer
 if ($selectedCustomerId && $selectedDeviceId && $selectedAsset) {
     echo "<h2>Live API Results</h2>";
     foreach ($allEndpoints as $group => $entries) {
