@@ -80,7 +80,7 @@ echo <<<HTML
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MPSM Endpoint Explorer (Dynamic)</title>
+  <title>MPSM Endpoint Explorer</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding: 2em; }
     label { display: inline-block; width: 130px; }
@@ -142,7 +142,7 @@ echo "<input type='submit' value='Explore Endpoints'></form></div>";
 
 // ────── EXPLORE ENDPOINTS ──────
 if ($selectedCustomerId && $selectedDeviceId && $selectedAsset) {
-    echo "<h2>Live API Results (Dynamic Payloads)</h2>";
+    echo "<h2>Live API Results (Dynamic)</h2>";
     foreach ($allEndpoints as $group => $entries) {
         echo "<div class='section'><h3>$group</h3>";
         foreach ($entries as $ep) {
@@ -159,7 +159,6 @@ if ($selectedCustomerId && $selectedDeviceId && $selectedAsset) {
                 continue;
             }
 
-            // Build POST body from canonical schema
             $payload = [];
             foreach ($reqBody as $key => $type) {
                 if ($key === 'DealerId') $payload[$key] = $dealerId;
@@ -178,7 +177,6 @@ if ($selectedCustomerId && $selectedDeviceId && $selectedAsset) {
             }
 
             $response = apiPOST($path, $token, $payload);
-
             echo "<details><summary>Payload</summary><pre>" . htmlspecialchars(json_encode($payload, JSON_PRETTY_PRINT)) . "</pre></details>";
             echo "<pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT)) . "</pre></div>";
         }
