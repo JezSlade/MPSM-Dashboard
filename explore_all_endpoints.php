@@ -1,46 +1,75 @@
 <?php
 /**
- * MPSM Endpoint Explorer (No Composer)
- * Fully standalone script. No dependencies. Parses .env manually.
+ * MPSM Endpoint Explorer (No Composer, Matches Your .env)
+ * 
+ * - Uses your .env variable names
+ * - Parses .env manually
+ * - Explores all endpoints
+ * - Displays debug output if token fails
  */
 
-// Load .env manually
+// ─────────────────────────────────────────────────────────────
+// Load .env file manually (no Composer)
+// ─────────────────────────────────────────────────────────────
 function loadEnv() {
     $envPath = __DIR__ . '/.env';
     if (!file_exists($envPath)) die(".env file missing");
     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (strpos($line, '=') === false) continue;
+        if (strpos($line, '=') === false || str_starts_with(trim($line), '#')) continue;
         list($key, $value) = explode('=', $line, 2);
         $_ENV[trim($key)] = trim($value);
     }
 }
 
-// Get token
+// ─────────────────────────────────────────────────────────────
+// Get Access Token (uses .env variables)
+// ─────────────────────────────────────────────────────────────
 function getAccessToken() {
-    $url = $_ENV['MPSM_API_BASE'] . '/token';
+    $url = $_ENV['TOKEN_URL'];
     $post = http_build_query([
-        'client_id' => $_ENV['MPSM_CLIENT_ID'],
-        'client_secret' => $_ENV['MPSM_CLIENT_SECRET'],
+        'client_id' => $_ENV['CLIENT_ID'],
+        'client_secret' => $_ENV['CLIENT_SECRET'],
         'grant_type' => 'password',
-        'username' => $_ENV['MPSM_USERNAME'],
-        'password' => $_ENV['MPSM_PASSWORD'],
-        'scope' => 'account'
+        'username' => $_ENV['USERNAME'],
+        'password' => $_ENV['PASSWORD'],
+        'scope' => $_ENV['SCOPE']
     ]);
+
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $post,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded']
+        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+        CURLOPT_VERBOSE => true
     ]);
-    $result = curl_exec($ch);
+
+    ob_start();
+    $response = curl_exec($ch);
+    $curlLog = ob_get_clean();
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
     curl_close($ch);
-    $response = json_decode($result, true);
-    return $response['access_token'] ?? die("Auth Failed: $result");
+
+    if ($_ENV['DEBUG'] === 'true') {
+        echo "<pre><strong>DEBUG: Token Request</strong>\n";
+        echo "HTTP Code: $httpCode\n";
+        echo "CURL Error: $error\n";
+        echo "Raw Response: $response\n</pre>";
+    }
+
+    $data = json_decode($response, true);
+    if (!isset($data['access_token'])) {
+        die("<strong>Auth failed</strong>. Check credentials and endpoint.<br><pre>" . htmlspecialchars($response) . "</pre>");
+    }
+
+    return $data['access_token'];
 }
 
-// Call endpoint
+// ─────────────────────────────────────────────────────────────
+// Call API Endpoint
+// ─────────────────────────────────────────────────────────────
 function callEndpoint($method, $url, $token, $payload = null) {
     $ch = curl_init($url);
     $headers = [
@@ -49,9 +78,9 @@ function callEndpoint($method, $url, $token, $payload = null) {
     ];
     $opts = [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => $headers
+        CURLOPT_HTTPHEADER => $headers,
     ];
-    if ($method === 'POST') {
+    if (strtoupper($method) === 'POST') {
         $opts[CURLOPT_POST] = true;
         $opts[CURLOPT_POSTFIELDS] = json_encode($payload ?? []);
     }
@@ -61,6 +90,9 @@ function callEndpoint($method, $url, $token, $payload = null) {
     return json_decode($result, true);
 }
 
+// ─────────────────────────────────────────────────────────────
+// UI Rendering Helpers
+// ─────────────────────────────────────────────────────────────
 function printPrettyJson($data) {
     echo "<pre>" . htmlspecialchars(json_encode($data, JSON_PRETTY_PRINT)) . "</pre>";
 }
@@ -68,8 +100,7 @@ function printPrettyJson($data) {
 function htmlHeader() {
     echo <<<HTML
 <!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8">
-<title>MPSM Endpoint Explorer</title>
+<meta charset="UTF-8"><title>MPSM Endpoint Explorer</title>
 <style>
 body { background: #111; color: #eee; font-family: monospace; padding: 2em; }
 h1, h2 { color: #6cf; }
@@ -87,6 +118,9 @@ function htmlFooter() {
     echo "</body></html>";
 }
 
+// ─────────────────────────────────────────────────────────────
+// Dynamic Payload Builder
+// ─────────────────────────────────────────────────────────────
 function detectRequiredFields($path) {
     $fields = [];
     if (str_contains($path, 'Customer')) $fields[] = 'CustomerId';
@@ -97,7 +131,7 @@ function detectRequiredFields($path) {
 
 function buildPayload($path, $required = []) {
     $payload = [
-        'DealerId' => $_ENV['MPSM_DEALER_ID'],
+        'DealerId' => $_ENV['MPSM_DEALER_ID'] ?? 'SZ13qRwU5GtFLj0i_CbEgQ2',
         'PageIndex' => 0,
         'PageSize' => 5
     ];
@@ -107,10 +141,13 @@ function buildPayload($path, $required = []) {
     return $payload;
 }
 
-// MAIN EXECUTION
+// ─────────────────────────────────────────────────────────────
+// Main Execution
+// ─────────────────────────────────────────────────────────────
 loadEnv();
 htmlHeader();
 $token = getAccessToken();
+$baseUrl = rtrim($_ENV['BASE_URL'], '/');
 $endpoints = json_decode(file_get_contents(__DIR__ . '/AllEndpoints.json'), true);
 
 // Render Input Form
@@ -126,7 +163,7 @@ foreach ($endpoints as $group => $list) {
         $method = strtoupper($entry['method'] ?? 'GET');
         $path = ltrim($entry['path'] ?? '', '/');
         $desc = htmlspecialchars($entry['summary'] ?? '');
-        $url = rtrim($_ENV['MPSM_API_BASE'], '/') . '/' . $path;
+        $url = "$baseUrl/$path";
 
         $required = detectRequiredFields($path);
         $missing = array_filter($required, fn($f) => empty($_GET[$f]));
