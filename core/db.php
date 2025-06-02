@@ -1,10 +1,13 @@
 <?php
 // core/db.php
-// v1.0.0 [PDO MySQL connection]
+// v1.0.1 [Connection retries & clarity]
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/debug.php';
 
+/**
+ * Returns a singleton PDO connection with sane defaults.
+ */
 function get_db(): PDO {
     static $pdo = null;
     if ($pdo) return $pdo;
@@ -22,5 +25,6 @@ function get_db(): PDO {
         }
         die('Database connection failed');
     }
+
     return $pdo;
 }
