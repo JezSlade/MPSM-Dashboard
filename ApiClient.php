@@ -32,10 +32,20 @@ class ApiClient {
             'scope' => $this->config['SCOPE'],
         ]));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+        curl_setopt($ch, CURLOPT_VERBOSE, true); // Debug cURL
+        $verbose = fopen('php://temp', 'w+');
+        curl_setopt($ch, CURLOPT_STDERR, $verbose);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // Log cURL debug info
+        rewind($verbose);
+        $verboseLog = stream_get_contents($verbose);
+        $this->logError("Token request: HTTP $httpCode\n$verboseLog");
+
         curl_close($ch);
+        fclose($verbose);
 
         if ($httpCode !== 200 || !$response) {
             if ($retries > 0) {
@@ -48,7 +58,7 @@ class ApiClient {
 
         $data = json_decode($response, true);
         if (!isset($data['access_token'])) {
-            $this->logError("Invalid token response");
+            $this->logError("Invalid token response: " . print_r($data, true));
             throw new Exception("Invalid token response");
         }
 
@@ -73,6 +83,11 @@ class ApiClient {
                 'Content-Type: application/json',
                 'Cache-Control: no-cache',
             ]);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_VERBOSE, true); // Debug cURL
+            $verbose = fopen('php://temp', 'w+');
+            curl_setopt($ch, CURLOPT_STDERR, $verbose);
 
             if ($method !== 'GET' && $params) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
@@ -80,7 +95,13 @@ class ApiClient {
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            // Log cURL debug info
+            rewind($verbose);
+            $verboseLog = stream_get_contents($verbose);
+            $this->logError("Fetch $endpoint: HTTP $httpCode\n$verboseLog");
             curl_close($ch);
+            fclose($verbose);
 
             if ($httpCode !== 200) {
                 if ($httpCode === 401 && $retries > 0) {
@@ -88,13 +109,13 @@ class ApiClient {
                     sleep(1);
                     return $this->fetch($endpoint, $method, $params, $retries - 1);
                 }
-                $this->logError("Fetch failed for $endpoint: HTTP $httpCode");
+                $this->logError("Fetch failed for $endpoint: HTTP $httpCode}");
                 throw new Exception("HTTP $httpCode: " . ($response ?: 'No response'));
             }
 
             $data = json_decode($response, true);
-            if ($data === null) {
-                $this->logError("Invalid JSON response for $endpoint");
+            if ($data) {
+                $this->logError("Invalid JSON response for $endpoint: " . $response);
                 throw new Exception("Invalid JSON response");
             }
 

@@ -18,11 +18,19 @@ document.addEventListener('DOMContentLoaded', () => {
     debugLogs.appendChild(logEntry);
   }
 
-  // Fetch customers
+  // Fetch customers via PHP endpoint
   async function loadCustomers() {
     try {
-      const response = await fetch('customers.php');
+      console.log('Fetching customers from customers.php');
+      const response = await fetch('customers.php', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
+      console.log('Customers response:', data);
       if (data.success && data.customers) {
         customerSelect.innerHTML = '<option value="">Select a customer</option>';
         data.customers.forEach(customer => {
@@ -41,11 +49,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Fetch device status
+  // Fetch device status via PHP endpoint
   async function loadDeviceStatus(customerId) {
     try {
-      const response = await fetch(`device.php?customerId=${customerId}`);
+      console.log(`Fetching device status from device.php?customerId=${customerId}`);
+      const response = await fetch(`device.php?customerId=${customerId}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
+      console.log('Device response:', data);
       if (data.success && data.devices) {
         deviceStatus.innerHTML = '';
         data.devices.forEach(device => {
