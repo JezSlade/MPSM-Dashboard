@@ -1,9 +1,7 @@
 <?php
-/**
- * MPSM Endpoint Explorer v2 – Styled + Staged
- * Uses style.css, auto-selects CustomerId/DeviceId/AssetNumber, then shows all endpoints
- */
-
+// ─────────────────────────────────────────────────────────────────────
+// MPSM Endpoint Explorer (Standalone – No External CSS)
+// ─────────────────────────────────────────────────────────────────────
 function loadEnv() {
     $envPath = __DIR__ . '/.env';
     if (!file_exists($envPath)) die(".env file missing");
@@ -25,7 +23,6 @@ function getAccessToken() {
         'password' => $_ENV['PASSWORD'],
         'scope' => $_ENV['SCOPE']
     ]);
-
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -82,39 +79,41 @@ $selectedCustomerId = $_GET['CustomerId'] ?? '';
 $selectedDeviceId = $_GET['DeviceId'] ?? '';
 $selectedAsset = $_GET['AssetNumber'] ?? '';
 
-// ────── PAGE BEGIN ──────
+// ────── UI OUTPUT ──────
 echo <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>MPSM Endpoint Explorer</title>
-    <link rel="stylesheet" href="/styles/style.css">
+  <meta charset="UTF-8">
+  <title>MPSM Explorer (Standalone)</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding: 2em; }
+    h1, h2 { color: cyan; }
+    label { display: inline-block; width: 130px; }
+    select, input[type="text"] { padding: 6px; background: #222; color: #eee; border: 1px solid #555; border-radius: 6px; margin-bottom: 10px; width: 320px; }
+    pre { background: #222; color: #0f0; padding: 1em; overflow-x: auto; font-size: 0.9em; }
+    .box { background: #1a1a1a; padding: 1em 2em; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 0 10px #000 inset; }
+    .section { margin-top: 40px; border-top: 1px solid #444; padding-top: 20px; }
+    .error { color: red; }
+    .form-group { margin-bottom: 15px; }
+  </style>
 </head>
 <body>
-<div class="dashboard-container">
-    <div class="sidebar">
-        <ul>
-            <li><strong>Step 1:</strong> Select Customer</li>
-            <li><strong>Step 2:</strong> Select Device</li>
-            <li><strong>Step 3:</strong> Explore Endpoints</li>
-        </ul>
-    </div>
-    <div class="main">
-        <div class="topbar">
-            <form method="GET">
+<h1>MPSM Endpoint Explorer</h1>
+<div class="box">
+<form method="GET">
 HTML;
 
-// ────── CUSTOMER SELECT ──────
+// Step 1: Customer select
 $customers = apiPOST('/Customer/GetCustomers', $token, ['DealerId' => $dealerId, 'PageIndex' => 0, 'PageSize' => 50]);
-echo "<label>CustomerId:</label><select name='CustomerId' onchange='this.form.submit()'><option value=''>-- Choose --</option>";
+echo "<div class='form-group'><label>CustomerId:</label><select name='CustomerId' onchange='this.form.submit()'><option value=''>-- Choose --</option>";
 foreach ($customers['Items'] ?? [] as $c) {
     $selected = $c['Id'] === $selectedCustomerId ? 'selected' : '';
     echo "<option value='{$c['Id']}' $selected>{$c['Name']}</option>";
 }
-echo "</select><br><br>";
+echo "</select></div>";
 
-// ────── DEVICE SELECT ──────
+// Step 2: Device & Asset selects
 if ($selectedCustomerId) {
     $devices = apiPOST('/CustomerDashboard/Devices', $token, [
         'DealerId' => $dealerId,
@@ -123,48 +122,47 @@ if ($selectedCustomerId) {
         'PageSize' => 50
     ]);
 
-    echo "<label>DeviceId:</label><select name='DeviceId'><option value=''>-- Choose --</option>";
+    echo "<div class='form-group'><label>DeviceId:</label><select name='DeviceId'>";
     foreach ($devices['Items'] ?? [] as $d) {
         $sel = $d['Id'] === $selectedDeviceId ? 'selected' : '';
         echo "<option value='{$d['Id']}' $sel>{$d['Product']['Model']}</option>";
     }
-    echo "</select><br><br>";
+    echo "</select></div>";
 
-    echo "<label>AssetNumber:</label><select name='AssetNumber'><option value=''>-- Choose --</option>";
+    echo "<div class='form-group'><label>AssetNumber:</label><select name='AssetNumber'>";
     foreach ($devices['Items'] ?? [] as $d) {
         $sel = $d['AssetNumber'] === $selectedAsset ? 'selected' : '';
         echo "<option value='{$d['AssetNumber']}' $sel>{$d['AssetNumber']}</option>";
     }
-    echo "</select><br><br>";
+    echo "</select></div>";
 }
-echo "<input type='submit' value='Explore'></form></div>";
 
-// ────── API BROWSER ──────
+echo "<input type='submit' value='Explore Endpoints'></form></div>";
+
+// Step 3: Endpoint explorer
 if ($selectedCustomerId && $selectedDeviceId && $selectedAsset) {
-    echo "<h2>Endpoint Results</h2>";
+    echo "<h2>Live API Results</h2>";
     foreach ($allEndpoints as $group => $entries) {
-        echo "<h3>$group</h3>";
+        echo "<div class='section'><h3>$group</h3>";
         foreach ($entries as $ep) {
             $method = strtoupper($ep['method'] ?? 'GET');
             $path = ltrim($ep['path'] ?? '', '/');
             $desc = htmlspecialchars($ep['summary'] ?? '');
-            echo "<div style='margin-bottom: 15px;'>";
-            echo "<strong>$method /$path</strong><br><small>$desc</small>";
+            echo "<div><strong>$method /$path</strong><br><small>$desc</small>";
 
             $required = [];
             if (str_contains($path, 'Customer')) $required['CustomerId'] = $selectedCustomerId;
-            if (str_contains($path, 'Device')) $required['DeviceId'] = $selectedDeviceId;
-            if (str_contains($path, 'Asset')) $required['AssetNumber'] = $selectedAsset;
+            if (str_contains($path, 'Device'))   $required['DeviceId'] = $selectedDeviceId;
+            if (str_contains($path, 'Asset'))    $required['AssetNumber'] = $selectedAsset;
 
             $payload = array_merge(['DealerId' => $dealerId, 'PageIndex' => 0, 'PageSize' => 5], $required);
-
             $result = ($method === 'POST')
                 ? apiPOST($path, $token, $payload)
                 : apiGET($path, $token);
 
             echo "<pre>" . htmlspecialchars(json_encode($result, JSON_PRETTY_PRINT)) . "</pre></div>";
         }
+        echo "</div>";
     }
 }
-
-echo "</div></div></body></html>";
+echo "</body></html>";
