@@ -121,14 +121,13 @@ function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     ]);
 }
 
-function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $serialNumber, $fromDate, $toDate) {
-    return postJson("$baseUrl/Counter/List", $token, [
-        "DealerCode"   => $dealerCode,
-        "CustomerCode" => $customerCode,
-        "SerialNumber" => $serialNumber,
-        "AssetNumber"  => null,
-        "FromDate"     => $fromDate,
-        "ToDate"       => $toDate
+function callGetDeviceCountersDetailed($baseUrl, $token, $dealerCode, $customerCode, $serialNumber) {
+    return postJson("$baseUrl/Counter/ListDetailed", $token, [
+        "DealerCode"        => $dealerCode,
+        "CustomerCode"      => $customerCode,
+        "SerialNumber"      => $serialNumber,
+        "AssetNumber"       => null,
+        "CounterDetaildTags"=> null
     ]);
 }
 
@@ -276,8 +275,8 @@ $configuration = $drillId
     ? callGetConfiguration($baseUrl, $token, $drillId)
     : null;
 
-// Device-specific meters last 7 days
-$deviceSerial = null;
+// Device-specific counters (detailed)
+$deviceSerial   = null;
 if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
     $deviceSerial = $deviceDetails['Result']['SdsDevice']['SerialNumber'] 
                   ?? $deviceDetails['Result']['SerialNumber'] 
@@ -285,9 +284,9 @@ if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
 }
 $deviceCounters = null;
 if ($drillId && $deviceSerial && $selectedCustomer) {
-    $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
-    $fromDate = gmdate('Y-m-d\\TH:i:s\\Z', strtotime('-7 days'));
-    $deviceCounters = callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial, $fromDate, $toDate);
+    $deviceCounters = callGetDeviceCountersDetailed(
+        $baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial
+    );
 }
 ?>
 <!DOCTYPE html>
@@ -715,7 +714,7 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
 
                         <?php if ($deviceCounters && !empty($deviceCounters['Result'])): ?>
                         <div class="section">
-                            <h4>Device Meters (Last 7 Days)</h4>
+                            <h4>Device Counters (Detailed)</h4>
                             <table class="subtable">
                                 <thead>
                                     <tr>
@@ -758,4 +757,3 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
     <?php endif; ?>
 </body>
 </html>
-?>
