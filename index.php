@@ -1,5 +1,4 @@
 <?php
-// === Load .env manually ===
 function loadEnv($path) {
     if (!file_exists($path)) return;
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -11,7 +10,6 @@ function loadEnv($path) {
 }
 loadEnv(__DIR__ . '/.env');
 
-// === ENV config ===
 $clientId = $_ENV['CLIENT_ID'] ?? '';
 $clientSecret = $_ENV['CLIENT_SECRET'] ?? '';
 $username = $_ENV['USERNAME'] ?? '';
@@ -23,7 +21,6 @@ $dealerCode = $_ENV['DEALER_CODE'] ?? '';
 $dealerId = $_ENV['DEALER_ID'] ?? '';
 $debug = ($_ENV['DEBUG'] ?? 'false') === 'true';
 
-// === Get Access Token ===
 function getAccessToken($url, $clientId, $clientSecret, $username, $password, $scope, $debug = false) {
     $data = http_build_query([
         'grant_type' => 'password',
@@ -37,9 +34,7 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     $opts = [
         'http' => [
             'method' => 'POST',
-            'header' =>
-                "Content-Type: application/x-www-form-urlencoded\r\n" .
-                "Content-Length: " . strlen($data) . "\r\n",
+            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
             'content' => $data,
             'ignore_errors' => true
         ]
@@ -49,14 +44,10 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     $result = file_get_contents($url, false, $context);
     $json = json_decode($result, true);
 
-    if ($debug) {
-        echo "<pre><strong>Token Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
-    }
-
+    // if ($debug) echo "<pre><strong>Token Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     return $json['access_token'] ?? null;
 }
 
-// === Fetch Customers
 function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
     $payload = [
         "DealerCode" => $dealerCode,
@@ -72,10 +63,7 @@ function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
     $opts = [
         'http' => [
             'method' => 'POST',
-            'header' =>
-                "Authorization: Bearer $token\r\n" .
-                "Accept: application/json\r\n" .
-                "Content-Type: application/json\r\n",
+            'header' => "Authorization: Bearer $token\r\nAccept: application/json\r\nContent-Type: application/json\r\n",
             'content' => json_encode($payload),
             'ignore_errors' => true
         ]
@@ -85,14 +73,10 @@ function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
     $result = file_get_contents($baseUrl . '/Customer/GetCustomers', false, $context);
     $json = json_decode($result, true);
 
-    if ($debug) {
-        echo "<pre><strong>Customer Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
-    }
-
+    // if ($debug) echo "<pre><strong>Customer Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     return $json['Result'] ?? [];
 }
 
-// === Fetch Devices by Customer Code
 function callGetDevices($baseUrl, $token, $dealerId, $customerCode, $debug = false) {
     $payload = [
         "FilterDealerId" => $dealerId,
@@ -111,10 +95,7 @@ function callGetDevices($baseUrl, $token, $dealerId, $customerCode, $debug = fal
     $opts = [
         'http' => [
             'method' => 'POST',
-            'header' =>
-                "Authorization: Bearer $token\r\n" .
-                "Accept: application/json\r\n" .
-                "Content-Type: application/json\r\n",
+            'header' => "Authorization: Bearer $token\r\nAccept: application/json\r\nContent-Type: application/json\r\n",
             'content' => json_encode($payload),
             'ignore_errors' => true
         ]
@@ -124,26 +105,70 @@ function callGetDevices($baseUrl, $token, $dealerId, $customerCode, $debug = fal
     $result = file_get_contents($baseUrl . '/Device/List', false, $context);
     $json = json_decode($result, true);
 
-    if ($debug) {
-        echo "<pre><strong>Device Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
-    }
-
+    // if ($debug) echo "<pre><strong>Device Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     return $json['Result'] ?? [];
 }
 
-// === Run ===
+function callGetAlerts($baseUrl, $token, $dealerCode, $customerCode, $debug = false) {
+    $payload = [
+        "DealerCode" => $dealerCode,
+        "CustomerCode" => $customerCode,
+        "DeviceId" => null,
+        "SerialNumber" => null,
+        "AssetNumber" => null,
+        "InitialFrom" => null,
+        "InitialTo" => null,
+        "ExhaustedFrom" => null,
+        "ExhaustedTo" => null,
+        "Brand" => null,
+        "Model" => null,
+        "OfficeDescription" => null,
+        "SupplySetDescription" => null,
+        "FilterCustomerText" => null,
+        "ManageOption" => null,
+        "InstallationOption" => null,
+        "CancelOption" => null,
+        "HiddenOption" => null,
+        "SupplyType" => null,
+        "ColorType" => null,
+        "ExcludeForStockShippedSupplies" => false,
+        "FilterText" => null,
+        "PageNumber" => 1,
+        "PageRows" => 50,
+        "SortColumn" => "InitialDate",
+        "SortOrder" => 0
+    ];
+
+    $opts = [
+        'http' => [
+            'method' => 'POST',
+            'header' => "Authorization: Bearer $token\r\nAccept: application/json\r\nContent-Type: application/json\r\n",
+            'content' => json_encode($payload),
+            'ignore_errors' => true
+        ]
+    ];
+
+    $context = stream_context_create($opts);
+    $result = file_get_contents($baseUrl . '/SupplyAlert/List', false, $context);
+    $json = json_decode($result, true);
+
+    // if ($debug) echo "<pre><strong>Alert Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
+    return $json['Result'] ?? [];
+}
+
 $token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope, $debug);
 if (!$token) die("<strong style='color:red;'>❌ Failed to get access token.</strong>");
 
 $customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
 $selectedCustomer = $_POST['customer'] ?? null;
 $devices = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $selectedCustomer, $debug) : [];
+$alerts = $selectedCustomer ? callGetAlerts($baseUrl, $token, $dealerCode, $selectedCustomer, $debug) : [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MPSM MVPPOS - Customer Devices</title>
+    <title>MPSM MVPPOS - Customers, Devices, Alerts</title>
     <style>
         body {
             background: #111;
@@ -151,20 +176,21 @@ $devices = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $sele
             font-family: monospace;
             padding: 2rem;
         }
-        h1 {
+        h1, h2 {
             color: #00ffcc;
+        }
+        select, button {
+            padding: 5px;
+            font-size: 1rem;
         }
         form {
             margin-bottom: 2rem;
-        }
-        select {
-            padding: 5px;
-            font-size: 1rem;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             background: #1f1f1f;
+            margin-top: 2rem;
         }
         th, td {
             padding: 10px;
@@ -179,7 +205,7 @@ $devices = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $sele
     </style>
 </head>
 <body>
-    <h1>MPSM: Customer Device Lookup</h1>
+    <h1>MPSM: Device + Alert Viewer</h1>
 
     <form method="POST">
         <label for="customer">Select Customer:</label>
@@ -195,13 +221,11 @@ $devices = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $sele
                 </option>
             <?php endforeach; ?>
         </select>
-        <button type="submit">Load Devices</button>
+        <button type="submit">Load</button>
     </form>
 
-    <?php if ($selectedCustomer && empty($devices)): ?>
-        <p>No devices returned.</p>
-    <?php elseif (!empty($devices)): ?>
-        <h2>Devices for Customer <?= htmlspecialchars($selectedCustomer) ?></h2>
+    <?php if (!empty($devices)): ?>
+        <h2>Devices for <?= htmlspecialchars($selectedCustomer) ?></h2>
         <table>
             <thead>
                 <tr>
@@ -220,6 +244,32 @@ $devices = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $sele
                     <td><?= htmlspecialchars($d['Product']['Brand'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($d['IpAddress'] ?? '-') ?></td>
                     <td><?= ($d['IsOffline'] ?? false) ? 'Offline' : 'Online' ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
+    <?php if (!empty($alerts)): ?>
+        <h2>Alerts for <?= htmlspecialchars($selectedCustomer) ?></h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Serial</th>
+                    <th>Model</th>
+                    <th>Warning</th>
+                    <th>IP</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($alerts as $a): ?>
+                <tr>
+                    <td><?= htmlspecialchars($a['SerialNumber'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($a['ProductModel'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($a['Warning'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($a['IpAddress'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars(substr($a['ActualDate'] ?? '', 0, 10)) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
