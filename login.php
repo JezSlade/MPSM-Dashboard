@@ -18,14 +18,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password_hash'])) {
-        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_id']  = $user['id'];
         $_SESSION['is_admin'] = (bool)$user['is_admin'];
-        header('Location: /index.php');
+
+        // ✅ Fix: redirect using correct base path
+        $base = dirname($_SERVER['SCRIPT_NAME']);
+        header("Location: {$base}/index.php");
         exit;
     } else {
         $error = "Invalid credentials.";
     }
 }
+
+$base = dirname($_SERVER['SCRIPT_NAME']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login – MPSM Dashboard</title>
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="<?= $base ?>/assets/css/style.css">
 </head>
 <body>
   <div style="padding:2rem; max-width:400px; margin:auto; background: var(--surface); box-shadow: var(--glass-shadow); border-radius:6px;">
