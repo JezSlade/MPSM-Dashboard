@@ -8,6 +8,8 @@ Installer::run();
 require_once __DIR__ . '/src/EnvLoader.php';
 require_once __DIR__ . '/src/DebugLogger.php';
 require_once __DIR__ . '/src/Auth.php';
+require_once __DIR__ . '/src/Installer.php';
+Installer::run();
 
 // Load environment, sessions, and check login
 EnvLoader::load(__DIR__ . '/.env');
