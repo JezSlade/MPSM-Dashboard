@@ -92,42 +92,43 @@ function callGetDeviceDetails($baseUrl, $token, $deviceId) {
 
 function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     return postJson("$baseUrl/SupplyAlert/List", $token, [
-        "DealerCode"       => $dealerCode,
-        "DeviceId"         => $deviceId,
-        "SerialNumber"     => null,
-        "AssetNumber"      => null,
-        "InitialFrom"      => null,
-        "InitialTo"        => null,
-        "ExhaustedFrom"    => null,
-        "ExhaustedTo"      => null,
-        "Brand"            => null,
-        "Model"            => null,
-        "OfficeDescription"=> null,
-        "SupplySetDescription"=> null,
-        "CustomerCode"     => null,
-        "FilterCustomerText"=> null,
-        "ManageOption"     => null,
-        "InstallationOption"=> null,
-        "CancelOption"     => null,
-        "HiddenOption"     => null,
-        "SupplyType"       => null,
-        "ColorType"        => null,
-        "ExcludeForStockShippedSupplies"=> false,
-        "FilterText"       => null,
-        "PageNumber"       => 1,
-        "PageRows"         => 50,
-        "SortColumn"       => "InitialDate",
-        "SortOrder"        => 0
+        "DealerCode"            => $dealerCode,
+        "DeviceId"              => $deviceId,
+        "SerialNumber"          => null,
+        "AssetNumber"           => null,
+        "InitialFrom"           => null,
+        "InitialTo"             => null,
+        "ExhaustedFrom"         => null,
+        "ExhaustedTo"           => null,
+        "Brand"                 => null,
+        "Model"                 => null,
+        "OfficeDescription"     => null,
+        "SupplySetDescription"  => null,
+        "CustomerCode"          => null,
+        "FilterCustomerText"    => null,
+        "ManageOption"          => null,
+        "InstallationOption"    => null,
+        "CancelOption"          => null,
+        "HiddenOption"          => null,
+        "SupplyType"            => null,
+        "ColorType"             => null,
+        "ExcludeForStockShippedSupplies" => false,
+        "FilterText"            => null,
+        "PageNumber"            => 1,
+        "PageRows"              => 50,
+        "SortColumn"            => "InitialDate",
+        "SortOrder"             => 0
     ]);
 }
 
-function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $serialNumber) {
-    return postJson("$baseUrl/Counter/ListDetailed", $token, [
-        "DealerCode"         => $dealerCode,
-        "CustomerCode"       => $customerCode,
-        "SerialNumber"       => $serialNumber,
-        "AssetNumber"        => null,
-        "CounterDetaildTags" => null
+function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $serialNumber, $fromDate, $toDate) {
+    return postJson("$baseUrl/Counter/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "CustomerCode" => $customerCode,
+        "SerialNumber" => $serialNumber,
+        "AssetNumber"  => null,
+        "FromDate"     => $fromDate,
+        "ToDate"       => $toDate
     ]);
 }
 
@@ -167,9 +168,14 @@ if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
                   ?? $deviceDetails['Result']['SerialNumber'] 
                   ?? null;
 }
-$deviceCounters = ($drillId && $deviceSerial)
-    ? callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial)
-    : null;
+
+$deviceCounters = null;
+if ($drillId && $deviceSerial && $selectedCustomer) {
+    // Use last 7 days for example
+    $toDate   = gmdate('Y-m-d\TH:i:s\Z');
+    $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-7 days'));
+    $deviceCounters = callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial, $fromDate, $toDate);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -385,21 +391,27 @@ $deviceCounters = ($drillId && $deviceSerial)
 
                         <?php if ($deviceCounters && !empty($deviceCounters['Result'])): ?>
                         <div class="section">
-                            <h4>Device Counters (Detailed)</h4>
+                            <h4>Device Meters (Last 7 Days)</h4>
                             <table class="subtable">
                                 <thead>
                                     <tr>
-                                        <?php foreach (array_keys($deviceCounters['Result'][0]) as $col): ?>
-                                            <th><?= htmlspecialchars($col) ?></th>
-                                        <?php endforeach; ?>
+                                        <th>Date</th>
+                                        <th>Mono</th>
+                                        <th>Color</th>
+                                        <th>Mono A3</th>
+                                        <th>Color A3</th>
+                                        <th>Fax</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                 <?php foreach ($deviceCounters['Result'] as $counter): ?>
                                     <tr>
-                                        <?php foreach ($counter as $val): ?>
-                                            <td><?= htmlspecialchars((string)$val) ?></td>
-                                        <?php endforeach; ?>
+                                        <td><?= htmlspecialchars(substr($counter['Date'] ?? '', 0, 10)) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['Mono'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['Color'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['MonoA3'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['ColorA3'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['Fax'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
