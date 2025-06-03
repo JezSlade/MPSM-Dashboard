@@ -54,15 +54,16 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     return $json['access_token'] ?? null;
 }
 
-// === Call API with Bearer Token ===
+// === Correct POST call to /Customer/GetCustomers ===
 function callApi($url, $token, $debug = false) {
     $opts = [
         'http' => [
-            'method' => 'GET',
+            'method' => 'POST',
             'header' =>
                 "Authorization: Bearer $token\r\n" .
                 "Accept: application/json\r\n" .
                 "Content-Type: application/json\r\n",
+            'content' => '{}',
             'ignore_errors' => true
         ]
     ];
