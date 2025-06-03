@@ -20,6 +20,7 @@ $scope = $_ENV['SCOPE'] ?? '';
 $tokenUrl = $_ENV['TOKEN_URL'] ?? '';
 $baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
 $dealerCode = $_ENV['DEALER_CODE'] ?? '';
+$dealerId = $_ENV['DEALER_ID'] ?? '';
 $debug = ($_ENV['DEBUG'] ?? 'false') === 'true';
 
 // === Get Access Token ===
@@ -55,7 +56,7 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     return $json['access_token'] ?? null;
 }
 
-// === Canonical SDK-driven POST to /Customer/GetCustomers ===
+// === Fetch Customers
 function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
     $payload = [
         "DealerCode" => $dealerCode,
@@ -85,25 +86,64 @@ function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
     $json = json_decode($result, true);
 
     if ($debug) {
-        echo "<pre><strong>API Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
+        echo "<pre><strong>Customer Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
+    }
+
+    return $json['Result'] ?? [];
+}
+
+// === Fetch Devices by Customer Code
+function callGetDevices($baseUrl, $token, $dealerId, $customerCode, $debug = false) {
+    $payload = [
+        "FilterDealerId" => $dealerId,
+        "FilterCustomerCodes" => [$customerCode],
+        "ProductBrand" => null,
+        "ProductModel" => null,
+        "OfficeId" => null,
+        "Status" => 1,
+        "FilterText" => null,
+        "PageNumber" => 1,
+        "PageRows" => 50,
+        "SortColumn" => "Id",
+        "SortOrder" => 0
+    ];
+
+    $opts = [
+        'http' => [
+            'method' => 'POST',
+            'header' =>
+                "Authorization: Bearer $token\r\n" .
+                "Accept: application/json\r\n" .
+                "Content-Type: application/json\r\n",
+            'content' => json_encode($payload),
+            'ignore_errors' => true
+        ]
+    ];
+
+    $context = stream_context_create($opts);
+    $result = file_get_contents($baseUrl . '/Device/List', false, $context);
+    $json = json_decode($result, true);
+
+    if ($debug) {
+        echo "<pre><strong>Device Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     }
 
     return $json['Result'] ?? [];
 }
 
 // === Run ===
-if (!$dealerCode) die("❌ Missing required DEALER_CODE in .env");
-
 $token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope, $debug);
 if (!$token) die("<strong style='color:red;'>❌ Failed to get access token.</strong>");
 
 $customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
+$selectedCustomer = $_POST['customer'] ?? null;
+$devices = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $selectedCustomer, $debug) : [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MPSM MVPPOS - Customers</title>
+    <title>MPSM MVPPOS - Customer Devices</title>
     <style>
         body {
             background: #111;
@@ -113,6 +153,13 @@ $customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
         }
         h1 {
             color: #00ffcc;
+        }
+        form {
+            margin-bottom: 2rem;
+        }
+        select {
+            padding: 5px;
+            font-size: 1rem;
         }
         table {
             width: 100%;
@@ -132,30 +179,51 @@ $customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
     </style>
 </head>
 <body>
-    <h1>MPSM Customers (MVPPOS)</h1>
-    <?php if (empty($customers)): ?>
-        <p>No customers returned.</p>
-    <?php else: ?>
-    <table>
-        <thead>
-            <tr>
-                <th>Customer Code</th>
-                <th>Description</th>
-                <th>Country</th>
-                <th>Dealer Description</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($customers as $c): ?>
-            <tr>
-                <td><?= htmlspecialchars($c['Code'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($c['Description'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($c['CountryName'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($c['DealerDescription'] ?? '-') ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
+    <h1>MPSM: Customer Device Lookup</h1>
+
+    <form method="POST">
+        <label for="customer">Select Customer:</label>
+        <select name="customer" id="customer">
+            <option value="">-- Choose One --</option>
+            <?php foreach ($customers as $c): 
+                $code = $c['Code'] ?? '';
+                $desc = $c['Description'] ?? '';
+                $selected = ($code === $selectedCustomer) ? 'selected' : '';
+            ?>
+                <option value="<?= htmlspecialchars($code) ?>" <?= $selected ?>>
+                    <?= htmlspecialchars($desc) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <button type="submit">Load Devices</button>
+    </form>
+
+    <?php if ($selectedCustomer && empty($devices)): ?>
+        <p>No devices returned.</p>
+    <?php elseif (!empty($devices)): ?>
+        <h2>Devices for Customer <?= htmlspecialchars($selectedCustomer) ?></h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Serial</th>
+                    <th>Model</th>
+                    <th>Brand</th>
+                    <th>IP</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($devices as $d): ?>
+                <tr>
+                    <td><?= htmlspecialchars($d['SerialNumber'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($d['Product']['Model'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($d['Product']['Brand'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($d['IpAddress'] ?? '-') ?></td>
+                    <td><?= ($d['IsOffline'] ?? false) ? 'Offline' : 'Online' ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
     <?php endif; ?>
 </body>
 </html>
