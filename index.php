@@ -92,32 +92,32 @@ function callGetDeviceDetails($baseUrl, $token, $deviceId) {
 
 function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     return postJson("$baseUrl/SupplyAlert/List", $token, [
-        "DealerCode"       => $dealerCode,
-        "DeviceId"         => $deviceId,
-        "SerialNumber"     => null,
-        "AssetNumber"      => null,
-        "InitialFrom"      => null,
-        "InitialTo"        => null,
-        "ExhaustedFrom"    => null,
-        "ExhaustedTo"      => null,
-        "Brand"            => null,
-        "Model"            => null,
-        "OfficeDescription"=> null,
-        "SupplySetDescription"=> null,
-        "CustomerCode"     => null,
-        "FilterCustomerText"=> null,
-        "ManageOption"     => null,
-        "InstallationOption"=> null,
-        "CancelOption"     => null,
-        "HiddenOption"     => null,
-        "SupplyType"       => null,
-        "ColorType"        => null,
-        "ExcludeForStockShippedSupplies"=> false,
-        "FilterText"       => null,
-        "PageNumber"       => 1,
-        "PageRows"         => 50,
-        "SortColumn"       => "InitialDate",
-        "SortOrder"        => 0
+        "DealerCode"            => $dealerCode,
+        "DeviceId"              => $deviceId,
+        "SerialNumber"          => null,
+        "AssetNumber"           => null,
+        "InitialFrom"           => null,
+        "InitialTo"             => null,
+        "ExhaustedFrom"         => null,
+        "ExhaustedTo"           => null,
+        "Brand"                 => null,
+        "Model"                 => null,
+        "OfficeDescription"     => null,
+        "SupplySetDescription"  => null,
+        "CustomerCode"          => null,
+        "FilterCustomerText"    => null,
+        "ManageOption"          => null,
+        "InstallationOption"    => null,
+        "CancelOption"          => null,
+        "HiddenOption"          => null,
+        "SupplyType"            => null,
+        "ColorType"             => null,
+        "ExcludeForStockShippedSupplies" => false,
+        "FilterText"            => null,
+        "PageNumber"            => 1,
+        "PageRows"              => 50,
+        "SortColumn"            => "InitialDate",
+        "SortOrder"             => 0
     ]);
 }
 
@@ -258,16 +258,16 @@ $logs = $drillId
 // Supply history last 30 days
 $supplyHistory = null;
 if ($drillId) {
-    $toDate   = gmdate('Y-m-d\TH:i:s\Z');
-    $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-30 days'));
+    $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
+    $fromDate = gmdate('Y-m-d\\TH:i:s\\Z', strtotime('-30 days'));
     $supplyHistory = callGetSupplyHistory($baseUrl, $token, $dealerCode, $drillId, $fromDate, $toDate);
 }
 
 // Job history last 30 days
 $jobHistory = null;
 if ($drillId) {
-    $toDate   = gmdate('Y-m-d\TH:i:s\Z');
-    $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-30 days'));
+    $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
+    $fromDate = gmdate('Y-m-d\\TH:i:s\\Z', strtotime('-30 days'));
     $jobHistory = callGetJobHistory($baseUrl, $token, $dealerCode, $drillId, $fromDate, $toDate);
 }
 
@@ -285,8 +285,8 @@ if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
 }
 $deviceCounters = null;
 if ($drillId && $deviceSerial && $selectedCustomer) {
-    $toDate   = gmdate('Y-m-d\TH:i:s\Z');
-    $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-7 days'));
+    $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
+    $fromDate = gmdate('Y-m-d\\TH:i:s\\Z', strtotime('-7 days'));
     $deviceCounters = callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial, $fromDate, $toDate);
 }
 ?>
@@ -456,21 +456,68 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                         <?php if (!empty($deviceDetails['Result']['SuppliesInfo'])): ?>
                         <div class="section">
                             <h4>Supplies Info</h4>
-                            <pre><?= htmlspecialchars(print_r($deviceDetails['Result']['SuppliesInfo'], true)) ?></pre>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>Key</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($deviceDetails['Result']['SuppliesInfo'] as $key => $val): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($key) ?></td>
+                                        <td><?= htmlspecialchars((string)$val) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
                         <?php endif; ?>
 
                         <?php if (!empty($deviceDetails['Result']['MaintenanceKitLevels'])): ?>
                         <div class="section">
                             <h4>Maintenance Kit Levels</h4>
-                            <pre><?= htmlspecialchars(print_r($deviceDetails['Result']['MaintenanceKitLevels'], true)) ?></pre>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <?php foreach (array_keys($deviceDetails['Result']['MaintenanceKitLevels'][0]) as $col): ?>
+                                            <th><?= htmlspecialchars($col) ?></th>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($deviceDetails['Result']['MaintenanceKitLevels'] as $kit): ?>
+                                    <tr>
+                                        <?php foreach ($kit as $val): ?>
+                                            <td><?= htmlspecialchars((string)$val) ?></td>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
                         <?php endif; ?>
 
                         <?php if (!empty($deviceDetails['Result']['TechnicalInformation'])): ?>
                         <div class="section">
                             <h4>Technical Information</h4>
-                            <pre><?= htmlspecialchars($deviceDetails['Result']['TechnicalInformation']) ?></pre>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>Key</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($deviceDetails['Result']['TechnicalInformation'] as $key => $val): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($key) ?></td>
+                                        <td><?= htmlspecialchars((string)$val) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
                         <?php endif; ?>
 
@@ -488,7 +535,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($deviceAlerts['Result'] as $a): ?>
+                                <?php 
+                                  $alerts = $deviceAlerts['Result'];
+                                  foreach ($alerts as $a): ?>
                                     <tr>
                                         <td><?= htmlspecialchars($a['SerialNumber']   ?? '-') ?></td>
                                         <td><?= htmlspecialchars($a['ProductModel']    ?? '-') ?></td>
@@ -515,7 +564,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($panelMessages['Result'] as $pm): ?>
+                                <?php 
+                                  $msgs = $panelMessages['Result'];
+                                  foreach ($msgs as $pm): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($pm['DateTime'] ?? '', 0, 19)) ?></td>
                                         <td><?= htmlspecialchars($pm['MessageText']   ?? '-') ?></td>
@@ -540,7 +591,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($notifications['Result'] as $n): ?>
+                                <?php 
+                                  $notes = $notifications['Result'];
+                                  foreach ($notes as $n): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($n['Timestamp'] ?? '', 0, 19)) ?></td>
                                         <td><?= htmlspecialchars($n['EventType']    ?? '-') ?></td>
@@ -564,7 +617,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($logs['Result'] as $l): ?>
+                                <?php 
+                                  $ls = $logs['Result'];
+                                  foreach ($ls as $l): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($l['DateTime'] ?? '', 0, 19)) ?></td>
                                         <td><?= htmlspecialchars($l['LogType']       ?? '-') ?></td>
@@ -589,7 +644,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($supplyHistory['Result'] as $sh): ?>
+                                <?php 
+                                  $shs = $supplyHistory['Result'];
+                                  foreach ($shs as $sh): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($sh['Date'] ?? '', 0, 10)) ?></td>
                                         <td><?= htmlspecialchars($sh['SupplyType'] ?? '-') ?></td>
@@ -616,7 +673,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($jobHistory['Result'] as $jh): ?>
+                                <?php 
+                                  $jhs = $jobHistory['Result'];
+                                  foreach ($jhs as $jh): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($jh['JobDate'] ?? '', 0, 19)) ?></td>
                                         <td><?= htmlspecialchars($jh['UserName']   ?? '-') ?></td>
@@ -641,7 +700,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($configuration['Result'] as $key => $val): ?>
+                                <?php 
+                                  $cfg = $configuration['Result'];
+                                  foreach ($cfg as $key => $val): ?>
                                     <tr>
                                         <td><?= htmlspecialchars($key) ?></td>
                                         <td><?= htmlspecialchars((string)$val) ?></td>
@@ -667,7 +728,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($deviceCounters['Result'] as $counter): ?>
+                                <?php 
+                                  $dcs = $deviceCounters['Result'];
+                                  foreach ($dcs as $counter): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($counter['Date'] ?? '', 0, 10)) ?></td>
                                         <td><?= htmlspecialchars((string)($counter['Mono']    ?? '')) ?></td>
