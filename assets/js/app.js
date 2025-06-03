@@ -11,7 +11,7 @@ const app = createApp({
   methods: {
     onCustomerSelected(code) {
       this.selectedCustomer = code;
-      this.selectedDevice = null; // reset drilldown when customer changes
+      this.selectedDevice = null; // reset drilldown
     },
     onDeviceSelected(deviceId) {
       this.selectedDevice = deviceId;
@@ -19,7 +19,7 @@ const app = createApp({
   }
 });
 
-// Blank module (test placeholder)
+// Blank module
 app.component('blank-module', {
   template: `
     <div style="padding:1rem; margin:1rem; background: var(--surface); box-shadow: var(--glass-shadow);">
@@ -29,7 +29,7 @@ app.component('blank-module', {
   `
 });
 
-// Customer select dropdown
+// Customer dropdown
 app.component('customer-select', {
   template: `
     <div>
@@ -49,7 +49,7 @@ app.component('customer-select', {
     };
   },
   mounted() {
-    fetch('./modules/CustomerSelect/CustomerSelect.php')
+    fetch(`./modules/CustomerSelect/CustomerSelect.php`)
       .then(r => r.json())
       .then(data => {
         this.customers = data.customers || [];
@@ -63,13 +63,12 @@ app.component('customer-select', {
   }
 });
 
-// Device list with pagination and drilldown trigger
+// Device list with sort and pagination
 app.component('device-list', {
   props: ['customer'],
   template: `
     <div>
       <h2>Devices for {{ customer }}</h2>
-
       <table class="mpsm-table">
         <thead>
           <tr>
@@ -89,7 +88,6 @@ app.component('device-list', {
           </tr>
         </tbody>
       </table>
-
       <div class="pagination">
         <button @click="changePage(page - 1)" :disabled="page <= 1">Prev</button>
         <span>Page {{ page }} / {{ totalPages }}</span>
@@ -143,7 +141,7 @@ app.component('device-list', {
         .then(r => r.json())
         .then(data => {
           this.devices = data.devices || [];
-          this.total   = data.total   || 0;
+          this.total = data.total || 0;
         })
         .catch(err => console.error('DeviceListFetch:', err));
     },
@@ -174,7 +172,7 @@ app.component('device-list', {
   }
 });
 
-// Device drilldown (simple raw JSON output for now)
+// Device drilldown panel
 app.component('device-drill', {
   props: ['deviceId'],
   template: `
@@ -206,7 +204,7 @@ app.component('device-drill', {
   }
 });
 
-// Optional: debug panel
+// Debug panel
 app.component('debug-panel', {
   template: `
     <div id="debug-panel">
@@ -221,7 +219,7 @@ app.component('debug-panel', {
   },
   methods: {
     fetchLogs() {
-      fetch('./modules/DebugPanel/DebugPanel.php')
+      fetch(`./modules/DebugPanel/DebugPanel.php`)
         .then(r => r.text())
         .then(txt => {
           this.logText = txt;
