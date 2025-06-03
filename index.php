@@ -276,13 +276,18 @@ $configuration = $drillId
     ? callGetConfiguration($baseUrl, $token, $drillId)
     : null;
 
-// Device-specific meters last 7 days (Counter/List)
-$deviceSerial   = null;
-if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
-    $deviceSerial = $deviceDetails['Result']['SdsDevice']['SerialNumber'] 
-                  ?? $deviceDetails['Result']['SerialNumber'] 
-                  ?? null;
+// Determine device serial from the devices array (rather than deviceDetails)
+$deviceSerial = null;
+if ($drillId && $selectedCustomer) {
+    foreach ($devices as $d) {
+        if (($d['Id'] ?? '') === $drillId) {
+            $deviceSerial = $d['SerialNumber'] ?? '';
+            break;
+        }
+    }
 }
+
+// Device-specific counters last 7 days
 $deviceCounters = null;
 if ($drillId && $deviceSerial && $selectedCustomer) {
     $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
@@ -298,69 +303,69 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
     <meta charset="UTF-8">
     <title>MVPPOS - Device Drill-down</title>
     <style>
-        body { 
-            background: #111; 
-            color: #eee; 
-            font-family: monospace; 
-            padding: 2rem; 
+        body {
+            background: #111;
+            color: #eee;
+            font-family: monospace;
+            padding: 2rem;
         }
-        h1, h2, h3 { 
-            color: #00ffcc; 
-            margin-bottom: 0.5rem; 
+        h1, h2, h3 {
+            color: #00ffcc;
+            margin-bottom: 0.5rem;
         }
-        h4 { 
-            color: #0ff; 
-            margin: 0.5rem 0; 
+        h4 {
+            color: #0ff;
+            margin: 0.5rem 0;
         }
-        form { 
-            margin-bottom: 1rem; 
+        form {
+            margin-bottom: 1rem;
         }
-        select, button { 
-            padding: 5px; 
-            font-size: 1rem; 
+        select, button {
+            padding: 5px;
+            font-size: 1rem;
         }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            background: #1f1f1f; 
-            margin-top: 1rem; 
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1f1f1f;
+            margin-top: 1rem;
         }
-        th, td { 
-            padding: 10px; 
-            border: 1px solid #333; 
-            text-align: left; 
+        th, td {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: left;
         }
-        th { 
-            background: #333; 
+        th {
+            background: #333;
         }
-        tr:hover { 
-            background: #2a2a2a; 
-            cursor: pointer; 
+        tr:hover {
+            background: #2a2a2a;
+            cursor: pointer;
         }
-        .drilldown { 
-            background: #2b2b2b; 
-            border-top: 2px solid #555; 
-            font-size: 0.9rem; 
+        .drilldown {
+            background: #2b2b2b;
+            border-top: 2px solid #555;
+            font-size: 0.9rem;
         }
-        .section { 
-            margin-top: 1rem; 
-            padding: 0.5rem; 
-            background: #222; 
+        .section {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: #222;
         }
-        .subtable { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 0.5rem; 
+        .subtable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
         }
-        .subtable th, .subtable td { 
-            padding: 8px; 
-            border: 1px solid #444; 
+        .subtable th, .subtable td {
+            padding: 8px;
+            border: 1px solid #444;
         }
-        .subtable th { 
-            background: #444; 
+        .subtable th {
+            background: #444;
         }
-        .pagination { 
-            margin-top: 1rem; 
+        .pagination {
+            margin-top: 1rem;
         }
     </style>
 </head>
@@ -371,7 +376,7 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
         <label for="customer">Customer:</label>
         <select name="customer" id="customer" onchange="this.form.submit()">
             <option value="">-- Choose One --</option>
-            <?php foreach ($customers as $c): 
+            <?php foreach ($customers as $c):
                 $code = $c['Code'] ?? '';
                 $desc = $c['Description'] ?? '';
                 $selected = ($code === $selectedCustomer) ? 'selected' : '';
