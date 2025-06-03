@@ -92,32 +92,42 @@ function callGetDeviceDetails($baseUrl, $token, $deviceId) {
 
 function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     return postJson("$baseUrl/SupplyAlert/List", $token, [
-        "DealerCode" => $dealerCode,
-        "DeviceId"   => $deviceId,
-        "SerialNumber"          => null,
-        "AssetNumber"           => null,
-        "InitialFrom"           => null,
-        "InitialTo"             => null,
-        "ExhaustedFrom"         => null,
-        "ExhaustedTo"           => null,
-        "Brand"                 => null,
-        "Model"                 => null,
-        "OfficeDescription"     => null,
-        "SupplySetDescription"  => null,
-        "CustomerCode"          => null,
-        "FilterCustomerText"    => null,
-        "ManageOption"          => null,
-        "InstallationOption"    => null,
-        "CancelOption"          => null,
-        "HiddenOption"          => null,
-        "SupplyType"            => null,
-        "ColorType"             => null,
-        "ExcludeForStockShippedSupplies" => false,
-        "FilterText"            => null,
-        "PageNumber"            => 1,
-        "PageRows"              => 50,
-        "SortColumn"            => "InitialDate",
-        "SortOrder"             => 0
+        "DealerCode"       => $dealerCode,
+        "DeviceId"         => $deviceId,
+        "SerialNumber"     => null,
+        "AssetNumber"      => null,
+        "InitialFrom"      => null,
+        "InitialTo"        => null,
+        "ExhaustedFrom"    => null,
+        "ExhaustedTo"      => null,
+        "Brand"            => null,
+        "Model"            => null,
+        "OfficeDescription"=> null,
+        "SupplySetDescription"=> null,
+        "CustomerCode"     => null,
+        "FilterCustomerText"=> null,
+        "ManageOption"     => null,
+        "InstallationOption"=> null,
+        "CancelOption"     => null,
+        "HiddenOption"     => null,
+        "SupplyType"       => null,
+        "ColorType"        => null,
+        "ExcludeForStockShippedSupplies"=> false,
+        "FilterText"       => null,
+        "PageNumber"       => 1,
+        "PageRows"         => 50,
+        "SortColumn"       => "InitialDate",
+        "SortOrder"        => 0
+    ]);
+}
+
+function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $serialNumber) {
+    return postJson("$baseUrl/Counter/ListDetailed", $token, [
+        "DealerCode"         => $dealerCode,
+        "CustomerCode"       => $customerCode,
+        "SerialNumber"       => $serialNumber,
+        "AssetNumber"        => null,
+        "CounterDetaildTags" => null
     ]);
 }
 
@@ -132,11 +142,11 @@ $selectedCustomer = $_POST['customer']    ?? null;
 $page             = max(1, intval($_POST['page'] ?? 1));
 $drillId          = $_POST['drill']       ?? null;
 
-$devicesData   = $selectedCustomer
+$devicesData = $selectedCustomer
     ? callGetDevices($baseUrl, $token, $dealerId, $selectedCustomer, $page, $devicePageSize)
     : [];
-$devices       = $devicesData['Result']   ?? [];
-$totalDevices  = $devicesData['TotalRows'] ?? 0;
+$devices      = $devicesData['Result']   ?? [];
+$totalDevices = $devicesData['TotalRows'] ?? 0;
 
 // Sort devices so those generating alerts come first
 usort($devices, function($a, $b) {
@@ -147,8 +157,18 @@ $deviceDetails = $drillId
     ? callGetDeviceDetails($baseUrl, $token, $drillId)
     : null;
 
-$deviceAlerts  = $drillId
+$deviceAlerts = $drillId
     ? callGetDeviceAlerts($baseUrl, $token, $dealerCode, $drillId)
+    : null;
+
+$deviceSerial = null;
+if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
+    $deviceSerial = $deviceDetails['Result']['SdsDevice']['SerialNumber'] 
+                  ?? $deviceDetails['Result']['SerialNumber'] 
+                  ?? null;
+}
+$deviceCounters = ($drillId && $deviceSerial)
+    ? callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial)
     : null;
 ?>
 <!DOCTYPE html>
@@ -277,6 +297,7 @@ $deviceAlerts  = $drillId
                     <td><?= ($d['IsOffline'] ?? false) ? 'Offline' : 'Online' ?></td>
                     <td><?= ($d['IsAlertGenerator'] ?? false) ? 'Yes' : 'No' ?></td>
                 </tr>
+
                 <?php if ($drillId === $d['Id'] && $deviceDetails && ($deviceDetails['IsValid'] ?? false)): ?>
                 <tr class="drilldown">
                     <td colspan="6">
@@ -313,6 +334,27 @@ $deviceAlerts  = $drillId
                         </div>
                         <?php endif; ?>
 
+                        <?php if (!empty($deviceDetails['Result']['SuppliesInfo'])): ?>
+                        <div class="section">
+                            <h4>Supplies Info</h4>
+                            <pre><?= htmlspecialchars(print_r($deviceDetails['Result']['SuppliesInfo'], true)) ?></pre>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($deviceDetails['Result']['MaintenanceKitLevels'])): ?>
+                        <div class="section">
+                            <h4>Maintenance Kit Levels</h4>
+                            <pre><?= htmlspecialchars(print_r($deviceDetails['Result']['MaintenanceKitLevels'], true)) ?></pre>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($deviceDetails['Result']['TechnicalInformation'])): ?>
+                        <div class="section">
+                            <h4>Technical Information</h4>
+                            <pre><?= htmlspecialchars($deviceDetails['Result']['TechnicalInformation']) ?></pre>
+                        </div>
+                        <?php endif; ?>
+
                         <?php if (!empty($deviceAlerts['Result'])): ?>
                         <div class="section">
                             <h4>Device Alerts</h4>
@@ -333,7 +375,31 @@ $deviceAlerts  = $drillId
                                         <td><?= htmlspecialchars($a['ProductModel']    ?? '-') ?></td>
                                         <td><?= htmlspecialchars($a['Warning']         ?? '-') ?></td>
                                         <td><?= htmlspecialchars(substr($a['InitialDate'] ?? '', 0, 10)) ?></td>
-                                        <td><?= htmlspecialchars(substr($a['ActualDate'] ?? '', 0, 10)) ?></td>
+                                        <td><?= htmlspecialchars(substr($a['ActualDate']  ?? '', 0, 10)) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($deviceCounters && !empty($deviceCounters['Result'])): ?>
+                        <div class="section">
+                            <h4>Device Counters (Detailed)</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <?php foreach (array_keys($deviceCounters['Result'][0]) as $col): ?>
+                                            <th><?= htmlspecialchars($col) ?></th>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($deviceCounters['Result'] as $counter): ?>
+                                    <tr>
+                                        <?php foreach ($counter as $val): ?>
+                                            <td><?= htmlspecialchars((string)$val) ?></td>
+                                        <?php endforeach; ?>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
@@ -344,6 +410,7 @@ $deviceAlerts  = $drillId
                     </td>
                 </tr>
                 <?php endif; ?>
+
                 <form id="drill<?= $d['Id'] ?>" method="POST">
                     <input type="hidden" name="customer" value="<?= htmlspecialchars($selectedCustomer) ?>">
                     <input type="hidden" name="page"     value="<?= $page ?>">
