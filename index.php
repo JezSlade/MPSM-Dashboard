@@ -19,6 +19,7 @@ $password = $_ENV['PASSWORD'] ?? '';
 $scope = $_ENV['SCOPE'] ?? '';
 $tokenUrl = $_ENV['TOKEN_URL'] ?? '';
 $baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
+$dealerCode = $_ENV['DEALER_CODE'] ?? '';  // <-- NEW
 $debug = ($_ENV['DEBUG'] ?? 'false') === 'true';
 
 // === Get Access Token ===
@@ -54,8 +55,15 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     return $json['access_token'] ?? null;
 }
 
-// === Correct POST call to /Customer/GetCustomers ===
-function callApi($url, $token, $debug = false) {
+// === Canonical POST to /Customer/GetCustomers ===
+function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
+    $payload = [
+        "PageNumber" => 1,
+        "PageRows" => 100,
+        "SortColumn" => "CompanyName",
+        "DealerCode" => $dealerCode
+    ];
+
     $opts = [
         'http' => [
             'method' => 'POST',
@@ -63,27 +71,29 @@ function callApi($url, $token, $debug = false) {
                 "Authorization: Bearer $token\r\n" .
                 "Accept: application/json\r\n" .
                 "Content-Type: application/json\r\n",
-            'content' => '{}',
+            'content' => json_encode($payload),
             'ignore_errors' => true
         ]
     ];
 
     $context = stream_context_create($opts);
-    $result = file_get_contents($url, false, $context);
+    $result = file_get_contents($baseUrl . '/Customer/GetCustomers', false, $context);
     $json = json_decode($result, true);
 
     if ($debug) {
         echo "<pre><strong>API Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     }
 
-    return $json['value'] ?? [];
+    return $json['Result'] ?? [];
 }
 
 // === Run ===
+if (!$dealerCode) die("❌ Missing required DEALER_CODE in .env");
+
 $token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope, $debug);
 if (!$token) die("<strong style='color:red;'>❌ Failed to get access token.</strong>");
 
-$customers = callApi("$baseUrl/Customer/GetCustomers", $token, $debug);
+$customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
 ?>
 <!DOCTYPE html>
 <html lang="en">
