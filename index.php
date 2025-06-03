@@ -121,13 +121,14 @@ function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     ]);
 }
 
-function callGetDeviceCountersDetailed($baseUrl, $token, $dealerCode, $customerCode, $serialNumber) {
-    return postJson("$baseUrl/Counter/ListDetailed", $token, [
-        "DealerCode"        => $dealerCode,
-        "CustomerCode"      => $customerCode,
-        "SerialNumber"      => $serialNumber,
-        "AssetNumber"       => null,
-        "CounterDetaildTags"=> null
+function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $serialNumber, $fromDate, $toDate) {
+    return postJson("$baseUrl/Counter/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "CustomerCode" => $customerCode,
+        "SerialNumber" => $serialNumber,
+        "AssetNumber"  => null,
+        "FromDate"     => $fromDate,
+        "ToDate"       => $toDate
     ]);
 }
 
@@ -275,7 +276,7 @@ $configuration = $drillId
     ? callGetConfiguration($baseUrl, $token, $drillId)
     : null;
 
-// Device-specific counters (detailed)
+// Device-specific meters last 7 days (Counter/List)
 $deviceSerial   = null;
 if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
     $deviceSerial = $deviceDetails['Result']['SdsDevice']['SerialNumber'] 
@@ -284,8 +285,10 @@ if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
 }
 $deviceCounters = null;
 if ($drillId && $deviceSerial && $selectedCustomer) {
-    $deviceCounters = callGetDeviceCountersDetailed(
-        $baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial
+    $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
+    $fromDate = gmdate('Y-m-d\\TH:i:s\\Z', strtotime('-7 days'));
+    $deviceCounters = callGetDeviceCounters(
+        $baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial, $fromDate, $toDate
     );
 }
 ?>
@@ -368,7 +371,7 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
         <label for="customer">Customer:</label>
         <select name="customer" id="customer" onchange="this.form.submit()">
             <option value="">-- Choose One --</option>
-            <?php foreach ($customers as $c):
+            <?php foreach ($customers as $c): 
                 $code = $c['Code'] ?? '';
                 $desc = $c['Description'] ?? '';
                 $selected = ($code === $selectedCustomer) ? 'selected' : '';
@@ -714,7 +717,7 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
 
                         <?php if ($deviceCounters && !empty($deviceCounters['Result'])): ?>
                         <div class="section">
-                            <h4>Device Counters (Detailed)</h4>
+                            <h4>Device Meters (Last 7 Days)</h4>
                             <table class="subtable">
                                 <thead>
                                     <tr>
