@@ -276,7 +276,7 @@ $configuration = $drillId
     ? callGetConfiguration($baseUrl, $token, $drillId)
     : null;
 
-// Determine device serial from the devices array (rather than deviceDetails)
+// Determine device serial from the devices array
 $deviceSerial = null;
 if ($drillId && $selectedCustomer) {
     foreach ($devices as $d) {
@@ -366,6 +366,18 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
         }
         .pagination {
             margin-top: 1rem;
+        }
+        .nested-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+        .nested-table th, .nested-table td {
+            padding: 6px;
+            border: 1px solid #555;
+        }
+        .nested-table th {
+            background: #555;
         }
     </style>
 </head>
@@ -726,11 +738,12 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                             <table class="subtable">
                                 <thead>
                                     <tr>
-                                        <?php 
-                                          $firstCounter = $deviceCounters['Result'][0];
-                                          foreach (array_keys($firstCounter) as $col): ?>
-                                            <th><?= htmlspecialchars($col) ?></th>
-                                        <?php endforeach; ?>
+                                        <th>CustomerCode</th>
+                                        <th>SerialNumber</th>
+                                        <th>DeviceId</th>
+                                        <th>AssetNumber</th>
+                                        <th>LastUpdate</th>
+                                        <th>Counters</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -738,9 +751,37 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                   $dcs = $deviceCounters['Result'];
                                   foreach ($dcs as $counter): ?>
                                     <tr>
-                                        <?php foreach ($counter as $val): ?>
-                                            <td><?= htmlspecialchars((string)$val) ?></td>
-                                        <?php endforeach; ?>
+                                        <td><?= htmlspecialchars($counter['CustomerCode']   ?? '') ?></td>
+                                        <td><?= htmlspecialchars($counter['SerialNumber']   ?? '') ?></td>
+                                        <td><?= htmlspecialchars($counter['DeviceId']       ?? '') ?></td>
+                                        <td><?= htmlspecialchars($counter['AssetNumber']    ?? '') ?></td>
+                                        <td><?= htmlspecialchars(substr($counter['LastUpdate'] ?? '', 0, 19)) ?></td>
+                                        <td>
+                                            <?php if (!empty($counter['Counters']) && is_array($counter['Counters'])): ?>
+                                                <table class="nested-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <?php
+                                                              $firstInner = $counter['Counters'][0];
+                                                              foreach (array_keys($firstInner) as $innerCol): ?>
+                                                                  <th><?= htmlspecialchars($innerCol) ?></th>
+                                                            <?php endforeach; ?>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($counter['Counters'] as $innerRow): ?>
+                                                            <tr>
+                                                                <?php foreach ($innerRow as $val): ?>
+                                                                    <td><?= htmlspecialchars((string)$val) ?></td>
+                                                                <?php endforeach; ?>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
+                                            <?php else: ?>
+                                                -
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
