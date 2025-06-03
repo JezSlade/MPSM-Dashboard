@@ -1,1 +1,1 @@
-// DeviceList.js - Registered inline in app.js
+// DeviceList frontend placeholder

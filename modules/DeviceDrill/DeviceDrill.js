@@ -1,1 +1,1 @@
-// DeviceDrill.js - Registered inline in app.js
+// DeviceDrill frontend placeholder

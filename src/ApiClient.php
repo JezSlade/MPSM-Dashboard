@@ -1,5 +1,6 @@
 <?php
 // src/ApiClient.php
+
 require_once __DIR__ . '/EnvLoader.php';
 require_once __DIR__ . '/DebugLogger.php';
 
@@ -25,7 +26,7 @@ class ApiClient {
     private function postJson(string $endpoint, array $payload): array {
         $url = "{$this->baseUrl}/$endpoint";
         $headers = ["Content-Type: application/json"];
-        if ($this->token) {
+        if (!empty($this->token)) {
             $headers[] = "Authorization: Bearer {$this->token}";
         }
         $opts = [
@@ -47,7 +48,9 @@ class ApiClient {
     }
 
     private function authenticate(): string {
-        if ($this->token) return $this->token;
+        if (!empty($this->token)) {
+            return $this->token;
+        }
         $resp = $this->postJson('Auth/Login', [
             "Username"      => $this->username,
             "Password"      => $this->password,
@@ -55,7 +58,7 @@ class ApiClient {
             "ExternalToken" => null
         ]);
         $token = $resp['Result']['AccessToken'] ?? '';
-        if (!$token) {
+        if (empty($token)) {
             DebugLogger::log("ApiClient::authenticate ERROR: " . json_encode($resp));
         }
         $this->token = $token;

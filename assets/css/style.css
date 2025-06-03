@@ -1,27 +1,20 @@
 /* assets/css/style.css */
+
 :root {
-  /* Dark Neumorphic Palette */
   --bg-black:       #111111;
   --bg-grey:        #222222;
   --surface:        #1a1a1a;
   --text-light:     #e0e0e0;
   --text-dark:      #aaaaaa;
-
-  /* Neon Underglow Colors (CMYK style) */
   --neon-cyan:      rgba(0, 255, 255, 0.2);
   --neon-magenta:   rgba(255, 0, 255, 0.2);
   --neon-yellow:    rgba(255, 255, 0,   0.2);
-
-  /* Embossed Glass */
   --glass-bg:       rgba(255,255,255, 0.05);
   --glass-shadow:   inset 0 1px 3px rgba(0,0,0,0.8),
                     0 1px 0 rgba(255,255,255,0.1);
-
-  /* Typography */
   --font-mono: "Consolas", "Courier New", monospace;
 }
 
-/* Global Reset */
 * {
   margin: 0;
   padding: 0;
@@ -48,7 +41,6 @@ header.header h1 {
   font-size: 1.5rem;
 }
 
-/* Standard Table */
 .mpsm-table {
   width: 100%;
   border-collapse: collapse;
@@ -83,7 +75,6 @@ header.header h1 {
   background: rgba(255,255,255,0.1);
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: flex-end;
@@ -105,7 +96,6 @@ header.header h1 {
   cursor: not-allowed;
 }
 
-/* Column Toggle Panel */
 .column-toggle {
   margin: 0.5rem 0;
   background: var(--surface);
@@ -119,7 +109,6 @@ header.header h1 {
   font-size: 0.9rem;
 }
 
-/* Glass Panel */
 .glass-panel {
   background: var(--glass-bg);
   box-shadow: var(--glass-shadow);
@@ -130,7 +119,6 @@ header.header h1 {
   overflow-y: auto;
 }
 
-/* Debug Panel */
 #debug-panel {
   position: fixed;
   bottom: 0;

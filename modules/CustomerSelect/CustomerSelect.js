@@ -1,1 +1,1 @@
-// CustomerSelect.js - Registered inline in app.js
+// CustomerSelect frontend placeholder

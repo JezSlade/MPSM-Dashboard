@@ -1,4 +1,6 @@
 <?php
+// login.php
+
 require_once __DIR__ . '/src/EnvLoader.php';
 require_once __DIR__ . '/src/Db.php';
 
@@ -16,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password_hash'])) {
-        $_SESSION['user_id']  = $user['id'];
+        $_SESSION['user_id'] = $user['id'];
         $_SESSION['is_admin'] = (bool)$user['is_admin'];
         header('Location: /index.php');
         exit;

@@ -1,6 +1,8 @@
 <?php
+// modules/DebugPanel/DebugPanel.php
 require_once __DIR__ . '/../../src/DebugLogger.php';
 require_once __DIR__ . '/../../src/Auth.php';
+
 Auth::checkLogin();
 $logfile = __DIR__ . '/../../storage/debug.log';
 if (file_exists($logfile)) {

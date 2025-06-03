@@ -13,7 +13,7 @@ const app = createApp({
   methods: {
     onCustomerSelected(code) {
       this.selectedCustomer = code;
-      this.selectedDevice = null;
+      this.selectedDevice = null; // Reset drilldown when customer changes
     },
     onDeviceSelected(deviceId) {
       this.selectedDevice = deviceId;
@@ -33,7 +33,7 @@ app.component('blank-module', {
 
 // CustomerSelect Module
 app.component('customer-select', {
-  template: `
+  template: \`
     <div>
       <label>Select Customer:</label>
       <select v-model="current" @change="emitSelection" style="margin-left:0.5rem; padding:0.25rem;">
@@ -43,7 +43,7 @@ app.component('customer-select', {
         </option>
       </select>
     </div>
-  `,
+  \`,
   data() {
     return {
       current: '',
@@ -68,7 +68,7 @@ app.component('customer-select', {
 // DeviceList Module
 app.component('device-list', {
   props: ['customer'],
-  template: `
+  template: \`
     <div>
       <h2>Devices for {{ customer }}</h2>
       <column-toggle v-if="columnsToggled">
@@ -103,7 +103,7 @@ app.component('device-list', {
         <button @click="changePage(page + 1)" :disabled="page >= totalPages">Next</button>
       </div>
     </div>
-  "",
+  \`,
   data() {
     return {
       devices: [],
@@ -147,7 +147,7 @@ app.component('device-list', {
         sortCol: this.sortKey,
         sortDir: this.sortDir
       });
-      fetch(`/modules/DeviceList/DeviceList.php?${params.toString()}`)
+      fetch(\`/modules/DeviceList/DeviceList.php?\${params.toString()}\`)
         .then(r => r.json())
         .then(data => {
           this.devices = data.devices || [];
@@ -159,7 +159,7 @@ app.component('device-list', {
       if (key === 'SEID') {
         return device.AssetNumber || device.ExternalIdentifier || '';
       }
-      return device[key] || '';
+      return device[key] ?? '';
     },
     sortBy(key) {
       if (this.sortKey === key) {
@@ -185,12 +185,12 @@ app.component('device-list', {
 // DeviceDrill Module
 app.component('device-drill', {
   props: ['deviceId'],
-  template: `
+  template: \`
     <div class="glass-panel" v-if="details">
       <h3>Device Details: {{ deviceId }}</h3>
       <pre>{{ JSON.stringify(details, null, 2) }}</pre>
     </div>
-  "",
+  \`,
   data() {
     return {
       details: null
@@ -201,7 +201,7 @@ app.component('device-drill', {
   },
   methods: {
     fetchDetails() {
-      fetch(`/modules/DeviceDrill/DeviceDrill.php?deviceId=${this.deviceId}`)
+      fetch(\`/modules/DeviceDrill/DeviceDrill.php?deviceId=\${this.deviceId}\`)
         .then(r => r.json())
         .then(data => {
           this.details = data.details || {};
@@ -216,17 +216,17 @@ app.component('device-drill', {
 
 // ColumnToggle Helper
 app.component('column-toggle', {
-  template: `<div class="column-toggle"><slot /></div>`
+  template: \`<div class="column-toggle"><slot /></div>\`
 });
 
 // Debug Panel
 app.component('debug-panel', {
-  template: `
+  template: \`
     <div id="debug-panel">
       <h4>Debug Log</h4>
       <pre>{{ logText }}</pre>
     </div>
-  "",
+  \`,
   data() {
     return {
       logText: ''
@@ -248,5 +248,4 @@ app.component('debug-panel', {
   }
 });
 
-// Mount Vue app
 app.mount('#app');

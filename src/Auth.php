@@ -1,5 +1,6 @@
 <?php
 // src/Auth.php
+
 class Auth {
     public static function init() {
         if (session_status() === PHP_SESSION_NONE) {

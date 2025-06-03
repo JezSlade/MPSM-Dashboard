@@ -1,1 +1,1 @@
-// DebugPanel.js - Registered inline in app.js
+// DebugPanel frontend placeholder

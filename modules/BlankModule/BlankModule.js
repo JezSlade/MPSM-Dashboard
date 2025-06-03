@@ -1,1 +1,1 @@
-// BlankModule.js - No frontend logic (registered inline in app.js)
+// BlankModule frontend placeholder

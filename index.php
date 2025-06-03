@@ -1,8 +1,15 @@
 <?php
+// index.php
+
+require_once __DIR__ . '/src/Installer.php';
+// Run installer on every request (idempotent)
+Installer::run();
+
 require_once __DIR__ . '/src/EnvLoader.php';
 require_once __DIR__ . '/src/DebugLogger.php';
 require_once __DIR__ . '/src/Auth.php';
 
+// Load environment, sessions, and check login
 EnvLoader::load(__DIR__ . '/.env');
 Auth::init();
 Auth::checkLogin();
@@ -14,7 +21,6 @@ Auth::checkLogin();
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="/assets/css/style.css">
-  <!-- Vue 3 CDN (Production Build) -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>

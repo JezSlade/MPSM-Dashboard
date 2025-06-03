@@ -1,5 +1,6 @@
 <?php
 // src/DebugLogger.php
+
 class DebugLogger {
     const LOGFILE = __DIR__ . '/../storage/debug.log';
     public static function log(string $message) {
