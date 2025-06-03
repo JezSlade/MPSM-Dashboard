@@ -92,32 +92,32 @@ function callGetDeviceDetails($baseUrl, $token, $deviceId) {
 
 function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     return postJson("$baseUrl/SupplyAlert/List", $token, [
-        "DealerCode"            => $dealerCode,
-        "DeviceId"              => $deviceId,
-        "SerialNumber"          => null,
-        "AssetNumber"           => null,
-        "InitialFrom"           => null,
-        "InitialTo"             => null,
-        "ExhaustedFrom"         => null,
-        "ExhaustedTo"           => null,
-        "Brand"                 => null,
-        "Model"                 => null,
-        "OfficeDescription"     => null,
-        "SupplySetDescription"  => null,
-        "CustomerCode"          => null,
-        "FilterCustomerText"    => null,
-        "ManageOption"          => null,
-        "InstallationOption"    => null,
-        "CancelOption"          => null,
-        "HiddenOption"          => null,
-        "SupplyType"            => null,
-        "ColorType"             => null,
-        "ExcludeForStockShippedSupplies" => false,
-        "FilterText"            => null,
-        "PageNumber"            => 1,
-        "PageRows"              => 50,
-        "SortColumn"            => "InitialDate",
-        "SortOrder"             => 0
+        "DealerCode"       => $dealerCode,
+        "DeviceId"         => $deviceId,
+        "SerialNumber"     => null,
+        "AssetNumber"      => null,
+        "InitialFrom"      => null,
+        "InitialTo"        => null,
+        "ExhaustedFrom"    => null,
+        "ExhaustedTo"      => null,
+        "Brand"            => null,
+        "Model"            => null,
+        "OfficeDescription"=> null,
+        "SupplySetDescription"=> null,
+        "CustomerCode"     => null,
+        "FilterCustomerText"=> null,
+        "ManageOption"     => null,
+        "InstallationOption"=> null,
+        "CancelOption"     => null,
+        "HiddenOption"     => null,
+        "SupplyType"       => null,
+        "ColorType"        => null,
+        "ExcludeForStockShippedSupplies"=> false,
+        "FilterText"       => null,
+        "PageNumber"       => 1,
+        "PageRows"         => 50,
+        "SortColumn"       => "InitialDate",
+        "SortOrder"        => 0
     ]);
 }
 
@@ -129,6 +129,84 @@ function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $se
         "AssetNumber"  => null,
         "FromDate"     => $fromDate,
         "ToDate"       => $toDate
+    ]);
+}
+
+function callGetDevicePanelMessages($baseUrl, $token, $dealerCode, $deviceId) {
+    return postJson("$baseUrl/Device/PanelMessage/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "DeviceId"     => $deviceId,
+        "SerialNumber" => null,
+        "AssetNumber"  => null,
+        "FromDate"     => null,
+        "ToDate"       => null,
+        "PageNumber"   => 1,
+        "PageRows"     => 50,
+        "SortColumn"   => "DateTime",
+        "SortOrder"    => 0
+    ]);
+}
+
+function callGetDeviceNotifications($baseUrl, $token, $dealerCode, $deviceId) {
+    return postJson("$baseUrl/Device/Notification/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "DeviceId"     => $deviceId,
+        "SerialNumber" => null,
+        "AssetNumber"  => null,
+        "FromDate"     => null,
+        "ToDate"       => null,
+        "PageNumber"   => 1,
+        "PageRows"     => 50,
+        "SortColumn"   => "Timestamp",
+        "SortOrder"    => 0
+    ]);
+}
+
+function callGetDeviceLogs($baseUrl, $token, $dealerCode, $deviceId) {
+    return postJson("$baseUrl/Device/Log/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "DeviceId"     => $deviceId,
+        "LogType"      => null,
+        "FromDate"     => null,
+        "ToDate"       => null,
+        "PageNumber"   => 1,
+        "PageRows"     => 50,
+        "SortColumn"   => "DateTime",
+        "SortOrder"    => 1
+    ]);
+}
+
+function callGetSupplyHistory($baseUrl, $token, $dealerCode, $deviceId, $fromDate, $toDate) {
+    return postJson("$baseUrl/Device/SupplyHistory/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "DeviceId"     => $deviceId,
+        "FromDate"     => $fromDate,
+        "ToDate"       => $toDate,
+        "PageNumber"   => 1,
+        "PageRows"     => 50,
+        "SortColumn"   => "Date",
+        "SortOrder"    => 0
+    ]);
+}
+
+function callGetJobHistory($baseUrl, $token, $dealerCode, $deviceId, $fromDate, $toDate) {
+    return postJson("$baseUrl/Device/JobHistory/List", $token, [
+        "DealerCode"   => $dealerCode,
+        "DeviceId"     => $deviceId,
+        "SerialNumber" => null,
+        "AssetNumber"  => null,
+        "FromDate"     => $fromDate,
+        "ToDate"       => $toDate,
+        "PageNumber"   => 1,
+        "PageRows"     => 50,
+        "SortColumn"   => "JobDate",
+        "SortOrder"    => 0
+    ]);
+}
+
+function callGetConfiguration($baseUrl, $token, $deviceId) {
+    return postJson("$baseUrl/Device/Configuration/Get", $token, [
+        "DeviceId" => $deviceId
     ]);
 }
 
@@ -162,16 +240,51 @@ $deviceAlerts = $drillId
     ? callGetDeviceAlerts($baseUrl, $token, $dealerCode, $drillId)
     : null;
 
+// Panel messages
+$panelMessages = $drillId
+    ? callGetDevicePanelMessages($baseUrl, $token, $dealerCode, $drillId)
+    : null;
+
+// Notifications
+$notifications = $drillId
+    ? callGetDeviceNotifications($baseUrl, $token, $dealerCode, $drillId)
+    : null;
+
+// Logs
+$logs = $drillId
+    ? callGetDeviceLogs($baseUrl, $token, $dealerCode, $drillId)
+    : null;
+
+// Supply history last 30 days
+$supplyHistory = null;
+if ($drillId) {
+    $toDate   = gmdate('Y-m-d\TH:i:s\Z');
+    $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-30 days'));
+    $supplyHistory = callGetSupplyHistory($baseUrl, $token, $dealerCode, $drillId, $fromDate, $toDate);
+}
+
+// Job history last 30 days
+$jobHistory = null;
+if ($drillId) {
+    $toDate   = gmdate('Y-m-d\TH:i:s\Z');
+    $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-30 days'));
+    $jobHistory = callGetJobHistory($baseUrl, $token, $dealerCode, $drillId, $fromDate, $toDate);
+}
+
+// Configuration
+$configuration = $drillId
+    ? callGetConfiguration($baseUrl, $token, $drillId)
+    : null;
+
+// Counters last 7 days
 $deviceSerial = null;
 if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
     $deviceSerial = $deviceDetails['Result']['SdsDevice']['SerialNumber'] 
                   ?? $deviceDetails['Result']['SerialNumber'] 
                   ?? null;
 }
-
 $deviceCounters = null;
 if ($drillId && $deviceSerial && $selectedCustomer) {
-    // Use last 7 days for example
     $toDate   = gmdate('Y-m-d\TH:i:s\Z');
     $fromDate = gmdate('Y-m-d\TH:i:s\Z', strtotime('-7 days'));
     $deviceCounters = callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial, $fromDate, $toDate);
@@ -329,10 +442,10 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                 <tbody>
                                 <?php foreach ($deviceDetails['Result']['DetailsBySupply'] as $supply): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($supply['SupplyType'])  ?></td>
-                                        <td><?= htmlspecialchars($supply['ColorType'])   ?></td>
+                                        <td><?= htmlspecialchars($supply['SupplyType']) ?></td>
+                                        <td><?= htmlspecialchars($supply['ColorType']) ?></td>
                                         <td><?= htmlspecialchars($supply['ResidualDurationPercentage'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($supply['ExpectedExhaustion'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($supply['ExpectedExhaustion']   ?? '-') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
@@ -389,6 +502,156 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                         </div>
                         <?php endif; ?>
 
+                        <?php if ($panelMessages && !empty($panelMessages['Result'])): ?>
+                        <div class="section">
+                            <h4>Panel Messages</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>DateTime</th>
+                                        <th>Message</th>
+                                        <th>Severity</th>
+                                        <th>Cleared?</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($panelMessages['Result'] as $pm): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(substr($pm['DateTime'] ?? '', 0, 19)) ?></td>
+                                        <td><?= htmlspecialchars($pm['MessageText']   ?? '-') ?></td>
+                                        <td><?= htmlspecialchars((string)($pm['Severity'] ?? '')) ?></td>
+                                        <td><?= ($pm['IsCleared'] ?? false) ? 'Yes' : 'No' ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($notifications && !empty($notifications['Result'])): ?>
+                        <div class="section">
+                            <h4>Recent Notifications</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Event Type</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($notifications['Result'] as $n): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(substr($n['Timestamp'] ?? '', 0, 19)) ?></td>
+                                        <td><?= htmlspecialchars($n['EventType']    ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($n['Description']  ?? '-') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($logs && !empty($logs['Result'])): ?>
+                        <div class="section">
+                            <h4>Device Logs</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>DateTime</th>
+                                        <th>Log Type</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($logs['Result'] as $l): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(substr($l['DateTime'] ?? '', 0, 19)) ?></td>
+                                        <td><?= htmlspecialchars($l['LogType']       ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($l['Message']       ?? '-') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($supplyHistory && !empty($supplyHistory['Result'])): ?>
+                        <div class="section">
+                            <h4>Supply History (Last 30 Days)</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>SupplyType</th>
+                                        <th>ColorType</th>
+                                        <th>Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($supplyHistory['Result'] as $sh): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(substr($sh['Date'] ?? '', 0, 10)) ?></td>
+                                        <td><?= htmlspecialchars($sh['SupplyType'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($sh['ColorType']  ?? '-') ?></td>
+                                        <td><?= htmlspecialchars((string)($sh['Quantity'] ?? '')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($jobHistory && !empty($jobHistory['Result'])): ?>
+                        <div class="section">
+                            <h4>Print Job History (Last 30 Days)</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>JobDate</th>
+                                        <th>UserName</th>
+                                        <th>Pages</th>
+                                        <th>ColorPages</th>
+                                        <th>TotalPages</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($jobHistory['Result'] as $jh): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(substr($jh['JobDate'] ?? '', 0, 19)) ?></td>
+                                        <td><?= htmlspecialchars($jh['UserName']   ?? '-') ?></td>
+                                        <td><?= htmlspecialchars((string)($jh['Pages']    ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($jh['ColorPages'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($jh['TotalPages'] ?? '')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($configuration && !empty($configuration['Result'])): ?>
+                        <div class="section">
+                            <h4>Current Configuration</h4>
+                            <table class="subtable">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($configuration['Result'] as $key => $val): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($key) ?></td>
+                                        <td><?= htmlspecialchars((string)$val) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
                         <?php if ($deviceCounters && !empty($deviceCounters['Result'])): ?>
                         <div class="section">
                             <h4>Device Meters (Last 7 Days)</h4>
@@ -407,11 +670,11 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                 <?php foreach ($deviceCounters['Result'] as $counter): ?>
                                     <tr>
                                         <td><?= htmlspecialchars(substr($counter['Date'] ?? '', 0, 10)) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['Mono'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['Color'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['MonoA3'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['Mono']    ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['Color']   ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['MonoA3']  ?? '')) ?></td>
                                         <td><?= htmlspecialchars((string)($counter['ColorA3'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['Fax'] ?? '')) ?></td>
+                                        <td><?= htmlspecialchars((string)($counter['Fax']     ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
