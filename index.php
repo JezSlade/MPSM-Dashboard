@@ -38,8 +38,7 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
         'ignore_errors' => true
     ]];
     $result = file_get_contents($url, false, stream_context_create($opts));
-    $json = json_decode($result, true);
-    return $json['access_token'] ?? null;
+    return json_decode($result, true)['access_token'] ?? null;
 }
 
 function postJson($url, $token, $payload) {
@@ -86,9 +85,10 @@ function callGetDevices($baseUrl, $token, $dealerId, $customerCode, $pageNumber,
 }
 
 function callGetDeviceDetails($baseUrl, $token, $deviceId) {
-    return postJson("$baseUrl/Device/GetDetailedInformations", $token, ["Id" => $deviceId]) ?? [];
+    return postJson("$baseUrl/Device/GetDetailedInformations", $token, [ "Id" => $deviceId ]);
 }
 
+// State
 $token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope);
 if (!$token) die("❌ Failed to get access token.");
 
@@ -96,6 +96,7 @@ $customers = callGetCustomers($baseUrl, $token, $dealerCode);
 $selectedCustomer = $_POST['customer'] ?? null;
 $page = max(1, intval($_POST['page'] ?? 1));
 $drillId = $_POST['drill'] ?? null;
+
 $devicesData = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $selectedCustomer, $page, $devicePageSize) : [];
 $devices = $devicesData['Result'] ?? [];
 $totalDevices = $devicesData['TotalRows'] ?? 0;
@@ -105,7 +106,7 @@ $deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : n
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MVPPOS - Device Drill & Pagination</title>
+    <title>MVPPOS - Device Drill-down</title>
     <style>
         body { background: #111; color: #eee; font-family: monospace; padding: 2rem; }
         h1, h2 { color: #00ffcc; }
@@ -120,7 +121,8 @@ $deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : n
     </style>
 </head>
 <body>
-    <h1>MVPPOS: Devices with Drill-down</h1>
+    <h1>MVPPOS: Devices + Drill-down</h1>
+
     <form method="POST">
         <label for="customer">Customer:</label>
         <select name="customer" id="customer" onchange="this.form.submit()">
@@ -186,7 +188,7 @@ $deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : n
             </tbody>
         </table>
     <?php elseif ($selectedCustomer): ?>
-        <p>No devices found for selected customer.</p>
+        <p>No devices found.</p>
     <?php endif; ?>
 </body>
 </html>
