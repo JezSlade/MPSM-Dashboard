@@ -1,7 +1,5 @@
-// assets/js/app.js
-import { createApp } from 'vue';
+const { createApp } = Vue;
 
-// Create Vue application
 const app = createApp({
   data() {
     return {
@@ -13,7 +11,7 @@ const app = createApp({
   methods: {
     onCustomerSelected(code) {
       this.selectedCustomer = code;
-      this.selectedDevice = null; // Reset drilldown when customer changes
+      this.selectedDevice = null; // reset drilldown when customer changes
     },
     onDeviceSelected(deviceId) {
       this.selectedDevice = deviceId;
@@ -21,7 +19,7 @@ const app = createApp({
   }
 });
 
-// Blank Module
+// Blank module (test placeholder)
 app.component('blank-module', {
   template: `
     <div style="padding:1rem; margin:1rem; background: var(--surface); box-shadow: var(--glass-shadow);">
@@ -31,9 +29,9 @@ app.component('blank-module', {
   `
 });
 
-// CustomerSelect Module
+// Customer select dropdown
 app.component('customer-select', {
-  template: \`
+  template: `
     <div>
       <label>Select Customer:</label>
       <select v-model="current" @change="emitSelection" style="margin-left:0.5rem; padding:0.25rem;">
@@ -43,7 +41,7 @@ app.component('customer-select', {
         </option>
       </select>
     </div>
-  \`,
+  `,
   data() {
     return {
       current: '',
@@ -51,7 +49,7 @@ app.component('customer-select', {
     };
   },
   mounted() {
-    fetch('/modules/CustomerSelect/CustomerSelect.php')
+    fetch('./modules/CustomerSelect/CustomerSelect.php')
       .then(r => r.json())
       .then(data => {
         this.customers = data.customers || [];
@@ -65,17 +63,12 @@ app.component('customer-select', {
   }
 });
 
-// DeviceList Module
+// Device list with pagination and drilldown trigger
 app.component('device-list', {
   props: ['customer'],
-  template: \`
+  template: `
     <div>
       <h2>Devices for {{ customer }}</h2>
-      <column-toggle v-if="columnsToggled">
-        <label v-for="col in allColumns" :key="col.key">
-          <input type="checkbox" v-model="visibleColumns" :value="col.key" /> {{ col.label }}
-        </label>
-      </column-toggle>
 
       <table class="mpsm-table">
         <thead>
@@ -90,7 +83,7 @@ app.component('device-list', {
         </thead>
         <tbody>
           <tr v-for="device in devices" :key="device.Id">
-            <td v-for="col in displayedColumns" @click="col.key==='SEID' && selectDevice(device.Id)">
+            <td v-for="col in displayedColumns" @click="col.key === 'SEID' && selectDevice(device.Id)">
               {{ displayCell(device, col.key) }}
             </td>
           </tr>
@@ -103,7 +96,7 @@ app.component('device-list', {
         <button @click="changePage(page + 1)" :disabled="page >= totalPages">Next</button>
       </div>
     </div>
-  \`,
+  `,
   data() {
     return {
       devices: [],
@@ -112,7 +105,6 @@ app.component('device-list', {
       total: 0,
       sortKey: '',
       sortDir: 'asc',
-      columnsToggled: true,
       allColumns: [
         { key: 'SEID', label: 'SEID' },
         { key: 'Brand', label: 'Brand' },
@@ -147,7 +139,7 @@ app.component('device-list', {
         sortCol: this.sortKey,
         sortDir: this.sortDir
       });
-      fetch(\`/modules/DeviceList/DeviceList.php?\${params.toString()}\`)
+      fetch(`./modules/DeviceList/DeviceList.php?${params.toString()}`)
         .then(r => r.json())
         .then(data => {
           this.devices = data.devices || [];
@@ -182,15 +174,15 @@ app.component('device-list', {
   }
 });
 
-// DeviceDrill Module
+// Device drilldown (simple raw JSON output for now)
 app.component('device-drill', {
   props: ['deviceId'],
-  template: \`
+  template: `
     <div class="glass-panel" v-if="details">
       <h3>Device Details: {{ deviceId }}</h3>
       <pre>{{ JSON.stringify(details, null, 2) }}</pre>
     </div>
-  \`,
+  `,
   data() {
     return {
       details: null
@@ -201,7 +193,7 @@ app.component('device-drill', {
   },
   methods: {
     fetchDetails() {
-      fetch(\`/modules/DeviceDrill/DeviceDrill.php?deviceId=\${this.deviceId}\`)
+      fetch(`./modules/DeviceDrill/DeviceDrill.php?deviceId=${this.deviceId}`)
         .then(r => r.json())
         .then(data => {
           this.details = data.details || {};
@@ -214,19 +206,14 @@ app.component('device-drill', {
   }
 });
 
-// ColumnToggle Helper
-app.component('column-toggle', {
-  template: \`<div class="column-toggle"><slot /></div>\`
-});
-
-// Debug Panel
+// Optional: debug panel
 app.component('debug-panel', {
-  template: \`
+  template: `
     <div id="debug-panel">
       <h4>Debug Log</h4>
       <pre>{{ logText }}</pre>
     </div>
-  \`,
+  `,
   data() {
     return {
       logText: ''
@@ -234,7 +221,7 @@ app.component('debug-panel', {
   },
   methods: {
     fetchLogs() {
-      fetch('/modules/DebugPanel/DebugPanel.php')
+      fetch('./modules/DebugPanel/DebugPanel.php')
         .then(r => r.text())
         .then(txt => {
           this.logText = txt;

@@ -12,16 +12,16 @@ Installer::run();
 Auth::init();
 Auth::checkLogin();
 
-// Compute base path for relative URLs
+// Compute base path for all asset references
 $base = dirname($_SERVER['SCRIPT_NAME']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="<?= $base ?>/assets/css/style.css">
+  <link rel="stylesheet" href="<?= $base ?>/assets/css/style.css" />
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
@@ -34,8 +34,18 @@ $base = dirname($_SERVER['SCRIPT_NAME']);
   </header>
 
   <main id="app">
-    <device-list v-if="selectedCustomer" :customer="selectedCustomer" @view‐device="onDeviceSelected"></device-list>
-    <device-drill v-if="selectedDevice" :device-id="selectedDevice"></device-drill>
+    <!-- ✅ Corrected event binding -->
+    <device-list 
+      v-if="selectedCustomer" 
+      :customer="selectedCustomer" 
+      @view-device="onDeviceSelected">
+    </device-list>
+
+    <device-drill 
+      v-if="selectedDevice" 
+      :device-id="selectedDevice">
+    </device-drill>
+
     <blank-module></blank-module>
   </main>
 
