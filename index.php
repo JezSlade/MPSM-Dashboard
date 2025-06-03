@@ -125,7 +125,7 @@ function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $se
     return postJson("$baseUrl/Counter/List", $token, [
         "DealerCode"   => $dealerCode,
         "CustomerCode" => $customerCode,
-        "SerialNumber" => $serialNumber,
+        "SerialNumber" => $serialNumber === null ? "" : $serialNumber,
         "AssetNumber"  => null,
         "FromDate"     => $fromDate,
         "ToDate"       => $toDate
@@ -434,8 +434,8 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                 <thead>
                                     <tr>
                                         <?php 
-                                          $first = $deviceDetails['Result']['DetailsBySupply'][0];
-                                          foreach (array_keys($first) as $col): ?>
+                                          $firstSupply = $deviceDetails['Result']['DetailsBySupply'][0];
+                                          foreach (array_keys($firstSupply) as $col): ?>
                                             <th><?= htmlspecialchars($col) ?></th>
                                         <?php endforeach; ?>
                                     </tr>
@@ -719,12 +719,11 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                             <table class="subtable">
                                 <thead>
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Mono</th>
-                                        <th>Color</th>
-                                        <th>Mono A3</th>
-                                        <th>Color A3</th>
-                                        <th>Fax</th>
+                                        <?php 
+                                          $firstCounter = $deviceCounters['Result'][0];
+                                          foreach (array_keys($firstCounter) as $col): ?>
+                                            <th><?= htmlspecialchars($col) ?></th>
+                                        <?php endforeach; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -732,12 +731,9 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                                   $dcs = $deviceCounters['Result'];
                                   foreach ($dcs as $counter): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars(substr($counter['Date'] ?? '', 0, 10)) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['Mono']    ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['Color']   ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['MonoA3']  ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['ColorA3'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($counter['Fax']     ?? '')) ?></td>
+                                        <?php foreach ($counter as $val): ?>
+                                            <td><?= htmlspecialchars((string)$val) ?></td>
+                                        <?php endforeach; ?>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
