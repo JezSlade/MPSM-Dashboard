@@ -19,7 +19,7 @@ $password = $_ENV['PASSWORD'] ?? '';
 $scope = $_ENV['SCOPE'] ?? '';
 $tokenUrl = $_ENV['TOKEN_URL'] ?? '';
 $baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
-$dealerCode = $_ENV['DEALER_CODE'] ?? '';  // <-- NEW
+$dealerCode = $_ENV['DEALER_CODE'] ?? '';
 $debug = ($_ENV['DEBUG'] ?? 'false') === 'true';
 
 // === Get Access Token ===
@@ -55,13 +55,17 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     return $json['access_token'] ?? null;
 }
 
-// === Canonical POST to /Customer/GetCustomers ===
+// === Canonical SDK-driven POST to /Customer/GetCustomers ===
 function callGetCustomers($baseUrl, $token, $dealerCode, $debug = false) {
     $payload = [
+        "DealerCode" => $dealerCode,
+        "Code" => null,
+        "HasHpSds" => null,
+        "FilterText" => null,
         "PageNumber" => 1,
-        "PageRows" => 100,
-        "SortColumn" => "CompanyName",
-        "DealerCode" => $dealerCode
+        "PageRows" => 2147483647,
+        "SortColumn" => "Id",
+        "SortOrder" => 0
     ];
 
     $opts = [
@@ -99,7 +103,7 @@ $customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MPSM MVP - Customers</title>
+    <title>MPSM MVPPOS - Customers</title>
     <style>
         body {
             background: #111;
@@ -128,24 +132,26 @@ $customers = callGetCustomers($baseUrl, $token, $dealerCode, $debug);
     </style>
 </head>
 <body>
-    <h1>MPSM Customers</h1>
+    <h1>MPSM Customers (MVPPOS)</h1>
     <?php if (empty($customers)): ?>
         <p>No customers returned.</p>
     <?php else: ?>
     <table>
         <thead>
             <tr>
-                <th>CustomerId</th>
-                <th>CompanyName</th>
+                <th>Customer Code</th>
+                <th>Description</th>
                 <th>Country</th>
+                <th>Dealer Description</th>
             </tr>
         </thead>
         <tbody>
         <?php foreach ($customers as $c): ?>
             <tr>
-                <td><?= htmlspecialchars($c['CustomerId'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($c['CompanyName'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($c['Country'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($c['Code'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($c['Description'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($c['CountryName'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($c['DealerDescription'] ?? '-') ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
