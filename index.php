@@ -1,16 +1,63 @@
-
 <?php
-require_once 'env.php';
-require_once 'functions.php';
+function loadEnv($path) {
+    if (!file_exists($path)) return;
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (str_starts_with(trim($line), '#') || !str_contains($line, '=')) continue;
+        [$name, $value] = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
+loadEnv(__DIR__ . '/.env');
 
-$token = getAccessToken();
+$clientId = $_ENV['CLIENT_ID'] ?? '';
+$clientSecret = $_ENV['CLIENT_SECRET'] ?? '';
+$username = $_ENV['USERNAME'] ?? '';
+$password = $_ENV['PASSWORD'] ?? '';
+$scope = $_ENV['SCOPE'] ?? '';
+$tokenUrl = $_ENV['TOKEN_URL'] ?? '';
+$baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
+$dealerCode = $_ENV['DEALER_CODE'] ?? '';
+$dealerId = $_ENV['DEALER_ID'] ?? '';
+$debug = ($_ENV['DEBUG'] ?? 'false') === 'true';
+$devicePageSize = intval($_ENV['DEVICE_PAGE_SIZE'] ?? 50);
 
-// Fetch customer list
-$customers = callApiEndpoint(
-    "{$baseUrl}Customer/GetCustomers",
-    $token,
-    [
-        "DealerCode" => getenv("DEALER_CODE"),
+function getAccessToken($url, $clientId, $clientSecret, $username, $password, $scope) {
+    $data = http_build_query([
+        'grant_type' => 'password',
+        'client_id' => $clientId,
+        'client_secret' => $clientSecret,
+        'username' => $username,
+        'password' => $password,
+        'scope' => $scope
+    ]);
+    $opts = ['http' => [
+        'method' => 'POST',
+        'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+        'content' => $data,
+        'ignore_errors' => true
+    ]];
+    $result = file_get_contents($url, false, stream_context_create($opts));
+    return json_decode($result, true)['access_token'] ?? null;
+}
+
+function postJson($url, $token, $payload) {
+    $opts = ['http' => [
+        'method' => 'POST',
+        'header' =>
+            "Authorization: Bearer $token\r\n" .
+            "Accept: application/json\r\n" .
+            "Content-Type: application/json\r\n",
+        'content' => json_encode($payload),
+        'ignore_errors' => true
+    ]];
+    $result = file_get_contents($url, false, stream_context_create($opts));
+    return json_decode($result, true);
+}
+
+function callGetCustomers($baseUrl, $token, $dealerCode) {
+    return postJson("$baseUrl/Customer/GetCustomers", $token, [
+        "DealerCode" => $dealerCode,
         "Code" => null,
         "HasHpSds" => null,
         "FilterText" => null,
@@ -18,124 +65,133 @@ $customers = callApiEndpoint(
         "PageRows" => 2147483647,
         "SortColumn" => "Id",
         "SortOrder" => 0
-    ]
-);
-
-$selectedCustomerCode = $_GET['customer'] ?? null;
-$selectedDeviceId = $_GET['deviceId'] ?? null;
-
-$devices = [];
-$alerts = [];
-$deviceDetails = null;
-
-if ($selectedCustomerCode) {
-    $devices = callApiEndpoint(
-        "{$baseUrl}Device/List",
-        $token,
-        [
-            "FilterDealerId" => getenv("DEALER_ID"),
-            "FilterCustomerCodes" => [$selectedCustomerCode],
-            "PageNumber" => 1,
-            "PageRows" => 50,
-            "SortColumn" => "Id",
-            "SortOrder" => 0
-        ]
-    );
-
-    $alerts = callApiEndpoint(
-        "{$baseUrl}SupplyAlert/List",
-        $token,
-        [
-            "DealerCode" => getenv("DEALER_CODE"),
-            "CustomerCode" => $selectedCustomerCode,
-            "ManageOption" => 3,
-            "HiddenOption" => 3,
-            "PageNumber" => 1,
-            "PageRows" => 50,
-            "SortColumn" => "InitialDate",
-            "SortOrder" => 1
-        ]
-    );
+    ])['Result'] ?? [];
 }
 
-if ($selectedDeviceId) {
-    $deviceDetails = callApiEndpoint(
-        "{$baseUrl}Device/GetDetailedInformations",
-        $token,
-        [
-            "DeviceId" => $selectedDeviceId
-        ]
-    );
+function callGetDevices($baseUrl, $token, $dealerId, $customerCode, $pageNumber, $pageRows) {
+    return postJson("$baseUrl/Device/List", $token, [
+        "FilterDealerId" => $dealerId,
+        "FilterCustomerCodes" => [$customerCode],
+        "ProductBrand" => null,
+        "ProductModel" => null,
+        "OfficeId" => null,
+        "Status" => 1,
+        "FilterText" => null,
+        "PageNumber" => $pageNumber,
+        "PageRows" => $pageRows,
+        "SortColumn" => "Id",
+        "SortOrder" => 0
+    ]);
 }
 
+function callGetDeviceDetails($baseUrl, $token, $deviceId) {
+    return postJson("$baseUrl/Device/GetDetailedInformations", $token, [
+        "DeviceId" => $deviceId
+    ]);
+}
+
+
+// State
+$token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope);
+if (!$token) die("❌ Failed to get access token.");
+
+$customers = callGetCustomers($baseUrl, $token, $dealerCode);
+$selectedCustomer = $_POST['customer'] ?? null;
+$page = max(1, intval($_POST['page'] ?? 1));
+$drillId = $_POST['drill'] ?? null;
+
+$devicesData = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $selectedCustomer, $page, $devicePageSize) : [];
+$devices = $devicesData['Result'] ?? [];
+$totalDevices = $devicesData['TotalRows'] ?? 0;
+$deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : null;
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>MVPPOS</title>
+    <meta charset="UTF-8">
+    <title>MVPPOS - Device Drill-down</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #111; color: #eee; }
-        select, table { margin-top: 10px; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-        th, td { padding: 10px; border: 1px solid #555; text-align: left; }
-        th { background-color: #222; }
-        tr:hover { background-color: #333; }
-        .details { background-color: #222; padding: 10px; margin-top: 20px; border: 1px solid #444; }
+        body { background: #111; color: #eee; font-family: monospace; padding: 2rem; }
+        h1, h2 { color: #00ffcc; }
+        form { margin-bottom: 2rem; }
+        select, button { padding: 5px; font-size: 1rem; }
+        table { width: 100%; border-collapse: collapse; background: #1f1f1f; margin-top: 2rem; }
+        th, td { padding: 10px; border: 1px solid #333; }
+        th { background: #333; }
+        tr:hover { background: #2a2a2a; cursor: pointer; }
+        .drilldown { background: #2b2b2b; border-top: 2px solid #555; font-size: 0.9rem; }
+        .pagination { margin-top: 1rem; }
     </style>
 </head>
 <body>
     <h1>MVPPOS: Devices + Drill-down</h1>
 
-    <form method="get">
+    <form method="POST">
         <label for="customer">Customer:</label>
         <select name="customer" id="customer" onchange="this.form.submit()">
-            <option value="">Select a customer</option>
-            <?php foreach ($customers['Result'] ?? [] as $cust): ?>
-                <option value="<?= $cust['Code'] ?>" <?= $cust['Code'] === $selectedCustomerCode ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($cust['Description']) ?>
+            <option value="">-- Choose One --</option>
+            <?php foreach ($customers as $c): 
+                $code = $c['Code'] ?? '';
+                $desc = $c['Description'] ?? '';
+                $selected = ($code === $selectedCustomer) ? 'selected' : '';
+            ?>
+                <option value="<?= htmlspecialchars($code) ?>" <?= $selected ?>>
+                    <?= htmlspecialchars($desc) ?>
                 </option>
             <?php endforeach; ?>
         </select>
+        <input type="hidden" name="page" value="<?= $page ?>">
     </form>
 
-    <?php if ($devices['Result'] ?? false): ?>
-        <h2>Devices (<?= count($devices['Result']) ?>)</h2>
-        <table>
-            <tr><th>Serial</th><th>Model</th><th>Brand</th><th>IP</th><th>Status</th></tr>
-            <?php foreach ($devices['Result'] as $d): ?>
-                <tr onclick="window.location.href='?customer=<?= $selectedCustomerCode ?>&deviceId=<?= $d['Id'] ?>'">
-                    <td><?= $d['SerialNumber'] ?></td>
-                    <td><?= $d['Product']['Model'] ?? '' ?></td>
-                    <td><?= $d['Product']['Brand'] ?? '' ?></td>
-                    <td><?= $d['IpAddress'] ?? '' ?></td>
-                    <td><?= $d['IsOffline'] ? 'Offline' : 'Online' ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
+    <?php if ($selectedCustomer && $devices): ?>
+        <h2>Devices (<?= count($devices) ?> of <?= $totalDevices ?>)</h2>
+        <form method="POST">
+            <input type="hidden" name="customer" value="<?= htmlspecialchars($selectedCustomer) ?>">
+            <input type="hidden" name="page" value="<?= $page - 1 ?>">
+            <button type="submit" <?= $page <= 1 ? 'disabled' : '' ?>>Prev</button>
+        </form>
+        <form method="POST" class="pagination">
+            <input type="hidden" name="customer" value="<?= htmlspecialchars($selectedCustomer) ?>">
+            <input type="hidden" name="page" value="<?= $page + 1 ?>">
+            <button type="submit" <?= ($page * $devicePageSize >= $totalDevices) ? 'disabled' : '' ?>>Next</button>
+        </form>
 
-    <?php if ($alerts['Result'] ?? false): ?>
-        <h2>Alerts (<?= count($alerts['Result']) ?>)</h2>
         <table>
-            <tr><th>Serial</th><th>Model</th><th>Warning</th><th>Initial Date</th><th>Actual Date</th></tr>
-            <?php foreach ($alerts['Result'] as $a): ?>
+            <thead>
                 <tr>
-                    <td><?= $a['SerialNumber'] ?></td>
-                    <td><?= $a['ProductModel'] ?></td>
-                    <td><?= $a['Warning'] ?></td>
-                    <td><?= $a['InitialDate'] ?></td>
-                    <td><?= $a['ActualDate'] ?></td>
+                    <th>Serial</th>
+                    <th>Model</th>
+                    <th>Brand</th>
+                    <th>IP</th>
+                    <th>Status</th>
                 </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($devices as $d): ?>
+                <tr onclick="document.getElementById('drill<?= $d['Id'] ?>').submit();">
+                    <td><?= htmlspecialchars($d['SerialNumber'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($d['Product']['Model'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($d['Product']['Brand'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($d['IpAddress'] ?? '-') ?></td>
+                    <td><?= ($d['IsOffline'] ?? false) ? 'Offline' : 'Online' ?></td>
+                </tr>
+                <?php if ($drillId === $d['Id'] && $deviceDetails): ?>
+                <tr class="drilldown">
+                    <td colspan="5">
+                        <pre><?= htmlspecialchars(print_r($deviceDetails, true)) ?></pre>
+                    </td>
+                </tr>
+                <?php endif; ?>
+                <form id="drill<?= $d['Id'] ?>" method="POST">
+                    <input type="hidden" name="customer" value="<?= htmlspecialchars($selectedCustomer) ?>">
+                    <input type="hidden" name="page" value="<?= $page ?>">
+                    <input type="hidden" name="drill" value="<?= $d['Id'] ?>">
+                </form>
             <?php endforeach; ?>
+            </tbody>
         </table>
-    <?php endif; ?>
-
-    <?php if ($deviceDetails['Result'] ?? false): ?>
-        <div class="details">
-            <h3>Device Details</h3>
-            <pre><?php print_r($deviceDetails['Result']); ?></pre>
-        </div>
+    <?php elseif ($selectedCustomer): ?>
+        <p>No devices found.</p>
     <?php endif; ?>
 </body>
 </html>
