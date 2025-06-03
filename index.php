@@ -1,26 +1,24 @@
 <?php
-// === CONFIG: Load .env manually ===
+// === Load .env manually ===
 function loadEnv($path) {
     if (!file_exists($path)) return;
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (str_starts_with(trim($line), '#')) continue;
+        if (str_starts_with(trim($line), '#') || !str_contains($line, '=')) continue;
         [$name, $value] = explode('=', $line, 2);
-        $name = trim($name);
-        $value = trim($value);
-        $_ENV[$name] = $value;
+        $_ENV[trim($name)] = trim($value);
     }
 }
 loadEnv(__DIR__ . '/.env');
 
-// === Required ENV values ===
+// === ENV config ===
 $clientId = $_ENV['CLIENT_ID'] ?? '';
 $clientSecret = $_ENV['CLIENT_SECRET'] ?? '';
 $username = $_ENV['USERNAME'] ?? '';
 $password = $_ENV['PASSWORD'] ?? '';
 $scope = $_ENV['SCOPE'] ?? '';
 $tokenUrl = $_ENV['TOKEN_URL'] ?? '';
-$baseUrl = $_ENV['BASE_URL'] ?? '';
+$baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
 $debug = ($_ENV['DEBUG'] ?? 'false') === 'true';
 
 // === Get Access Token ===
@@ -40,7 +38,8 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
             'header' =>
                 "Content-Type: application/x-www-form-urlencoded\r\n" .
                 "Content-Length: " . strlen($data) . "\r\n",
-            'content' => $data
+            'content' => $data,
+            'ignore_errors' => true
         ]
     ];
 
@@ -49,19 +48,22 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     $json = json_decode($result, true);
 
     if ($debug) {
-        echo "<pre><strong>Token Response:</strong>\n" . print_r($json, true) . "</pre>";
+        echo "<pre><strong>Token Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     }
 
     return $json['access_token'] ?? null;
 }
 
-// === API Call ===
+// === Call API with Bearer Token ===
 function callApi($url, $token, $debug = false) {
     $opts = [
         'http' => [
             'method' => 'GET',
-            'header' => "Authorization: Bearer $token\r\n" .
-                        "Accept: application/json\r\n"
+            'header' =>
+                "Authorization: Bearer $token\r\n" .
+                "Accept: application/json\r\n" .
+                "Content-Type: application/json\r\n",
+            'ignore_errors' => true
         ]
     ];
 
@@ -70,23 +72,23 @@ function callApi($url, $token, $debug = false) {
     $json = json_decode($result, true);
 
     if ($debug) {
-        echo "<pre><strong>API Response:</strong>\n" . print_r($json, true) . "</pre>";
+        echo "<pre><strong>API Response:</strong>\n" . htmlspecialchars(print_r($json, true)) . "</pre>";
     }
 
     return $json['value'] ?? [];
 }
 
-// === Bootstrap ===
+// === Run ===
 $token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope, $debug);
-if (!$token) die("❌ Failed to get token.");
+if (!$token) die("<strong style='color:red;'>❌ Failed to get access token.</strong>");
 
-$customers = callApi($baseUrl . 'Customer/GetCustomers', $token, $debug);
+$customers = callApi("$baseUrl/Customer/GetCustomers", $token, $debug);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MPSM Customer List</title>
+    <title>MPSM MVP - Customers</title>
     <style>
         body {
             background: #111;
@@ -94,7 +96,9 @@ $customers = callApi($baseUrl . 'Customer/GetCustomers', $token, $debug);
             font-family: monospace;
             padding: 2rem;
         }
-        h1 { color: #00ffcc; }
+        h1 {
+            color: #00ffcc;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -114,6 +118,9 @@ $customers = callApi($baseUrl . 'Customer/GetCustomers', $token, $debug);
 </head>
 <body>
     <h1>MPSM Customers</h1>
+    <?php if (empty($customers)): ?>
+        <p>No customers returned.</p>
+    <?php else: ?>
     <table>
         <thead>
             <tr>
@@ -132,5 +139,6 @@ $customers = callApi($baseUrl . 'Customer/GetCustomers', $token, $debug);
         <?php endforeach; ?>
         </tbody>
     </table>
+    <?php endif; ?>
 </body>
 </html>
