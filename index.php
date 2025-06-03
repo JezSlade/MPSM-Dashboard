@@ -1,3 +1,4 @@
+
 <?php
 function loadEnv($path) {
     if (!file_exists($path)) return;
@@ -33,7 +34,8 @@ function getAccessToken($url, $clientId, $clientSecret, $username, $password, $s
     ]);
     $opts = ['http' => [
         'method' => 'POST',
-        'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+        'header' => "Content-Type: application/x-www-form-urlencoded
+",
         'content' => $data,
         'ignore_errors' => true
     ]];
@@ -45,9 +47,12 @@ function postJson($url, $token, $payload) {
     $opts = ['http' => [
         'method' => 'POST',
         'header' =>
-            "Authorization: Bearer $token\r\n" .
-            "Accept: application/json\r\n" .
-            "Content-Type: application/json\r\n",
+            "Authorization: Bearer $token
+" .
+            "Accept: application/json
+" .
+            "Content-Type: application/json
+",
         'content' => json_encode($payload),
         'ignore_errors' => true
     ]];
@@ -90,7 +95,6 @@ function callGetDeviceDetails($baseUrl, $token, $deviceId) {
     ]);
 }
 
-
 // State
 $token = getAccessToken($tokenUrl, $clientId, $clientSecret, $username, $password, $scope);
 if (!$token) die("❌ Failed to get access token.");
@@ -103,6 +107,11 @@ $drillId = $_POST['drill'] ?? null;
 $devicesData = $selectedCustomer ? callGetDevices($baseUrl, $token, $dealerId, $selectedCustomer, $page, $devicePageSize) : [];
 $devices = $devicesData['Result'] ?? [];
 $totalDevices = $devicesData['TotalRows'] ?? 0;
+
+usort($devices, function($a, $b) {
+    return ($b['IsAlertGenerator'] ?? false) <=> ($a['IsAlertGenerator'] ?? false);
+});
+
 $deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : null;
 ?>
 <!DOCTYPE html>
@@ -120,7 +129,8 @@ $deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : n
         th { background: #333; }
         tr:hover { background: #2a2a2a; cursor: pointer; }
         .drilldown { background: #2b2b2b; border-top: 2px solid #555; font-size: 0.9rem; }
-        .pagination { margin-top: 1rem; }
+        .section { margin: 1rem 0; }
+        .section h4 { margin-bottom: 0.5rem; color: #0ff; }
     </style>
 </head>
 <body>
@@ -175,10 +185,38 @@ $deviceDetails = $drillId ? callGetDeviceDetails($baseUrl, $token, $drillId) : n
                     <td><?= htmlspecialchars($d['IpAddress'] ?? '-') ?></td>
                     <td><?= ($d['IsOffline'] ?? false) ? 'Offline' : 'Online' ?></td>
                 </tr>
-                <?php if ($drillId === $d['Id'] && $deviceDetails): ?>
+                <?php if ($drillId === $d['Id'] && $deviceDetails && $deviceDetails['IsValid']): ?>
                 <tr class="drilldown">
                     <td colspan="5">
-                        <pre><?= htmlspecialchars(print_r($deviceDetails, true)) ?></pre>
+                        <div class="section">
+                            <h4>Device ID</h4>
+                            <?= htmlspecialchars($deviceDetails['Result']['DeviceId']) ?>
+                        </div>
+                        <?php if (!empty($deviceDetails['Result']['DetailsBySupply'])): ?>
+                            <div class="section">
+                                <h4>Details by Supply</h4>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Color</th>
+                                            <th>Residual %</th>
+                                            <th>Expected Exhaustion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php foreach ($deviceDetails['Result']['DetailsBySupply'] as $supply): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($supply['SupplyType']) ?></td>
+                                            <td><?= htmlspecialchars($supply['ColorType']) ?></td>
+                                            <td><?= htmlspecialchars($supply['ResidualDurationPercentage'] ?? '-') ?></td>
+                                            <td><?= htmlspecialchars($supply['ExpectedExhaustion'] ?? '-') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endif; ?>
