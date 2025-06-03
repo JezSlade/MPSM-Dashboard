@@ -433,19 +433,19 @@ if ($drillId && $deviceSerial && $selectedCustomer) {
                             <table class="subtable">
                                 <thead>
                                     <tr>
-                                        <th>Type</th>
-                                        <th>Color</th>
-                                        <th>Residual %</th>
-                                        <th>Expected Exhaustion</th>
+                                        <?php 
+                                          $first = $deviceDetails['Result']['DetailsBySupply'][0];
+                                          foreach (array_keys($first) as $col): ?>
+                                            <th><?= htmlspecialchars($col) ?></th>
+                                        <?php endforeach; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
                                 <?php foreach ($deviceDetails['Result']['DetailsBySupply'] as $supply): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($supply['SupplyType']) ?></td>
-                                        <td><?= htmlspecialchars($supply['ColorType']) ?></td>
-                                        <td><?= htmlspecialchars($supply['ResidualDurationPercentage'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($supply['ExpectedExhaustion']   ?? '-') ?></td>
+                                        <?php foreach ($supply as $val): ?>
+                                            <td><?= htmlspecialchars((string)$val) ?></td>
+                                        <?php endforeach; ?>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
