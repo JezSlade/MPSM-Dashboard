@@ -121,11 +121,11 @@ function callGetDeviceAlerts($baseUrl, $token, $dealerCode, $deviceId) {
     ]);
 }
 
-function callGetCustomerMeters($baseUrl, $token, $dealerCode, $customerCode, $fromDate, $toDate) {
+function callGetDeviceCounters($baseUrl, $token, $dealerCode, $customerCode, $serialNumber, $fromDate, $toDate) {
     return postJson("$baseUrl/Counter/List", $token, [
         "DealerCode"   => $dealerCode,
         "CustomerCode" => $customerCode,
-        "SerialNumber" => "",
+        "SerialNumber" => $serialNumber,
         "AssetNumber"  => null,
         "FromDate"     => $fromDate,
         "ToDate"       => $toDate
@@ -276,12 +276,18 @@ $configuration = $drillId
     ? callGetConfiguration($baseUrl, $token, $drillId)
     : null;
 
-// Customer meters last 7 days
-$customerMeters = null;
-if ($drillId && $selectedCustomer) {
+// Device-specific meters last 7 days
+$deviceSerial = null;
+if ($drillId && $deviceDetails && ($deviceDetails['IsValid'] ?? false)) {
+    $deviceSerial = $deviceDetails['Result']['SdsDevice']['SerialNumber'] 
+                  ?? $deviceDetails['Result']['SerialNumber'] 
+                  ?? null;
+}
+$deviceCounters = null;
+if ($drillId && $deviceSerial && $selectedCustomer) {
     $toDate   = gmdate('Y-m-d\\TH:i:s\\Z');
     $fromDate = gmdate('Y-m-d\\TH:i:s\\Z', strtotime('-7 days'));
-    $customerMeters = callGetCustomerMeters($baseUrl, $token, $dealerCode, $selectedCustomer, $fromDate, $toDate);
+    $deviceCounters = callGetDeviceCounters($baseUrl, $token, $dealerCode, $selectedCustomer, $deviceSerial, $fromDate, $toDate);
 }
 ?>
 <!DOCTYPE html>
@@ -707,25 +713,25 @@ if ($drillId && $selectedCustomer) {
                         </div>
                         <?php endif; ?>
 
-                        <?php if ($customerMeters && !empty($customerMeters['Result'])): ?>
+                        <?php if ($deviceCounters && !empty($deviceCounters['Result'])): ?>
                         <div class="section">
-                            <h4>Customer Meters (Last 7 Days)</h4>
+                            <h4>Device Meters (Last 7 Days)</h4>
                             <table class="subtable">
                                 <thead>
                                     <tr>
                                         <?php 
-                                          $firstMeter = $customerMeters['Result'][0];
-                                          foreach (array_keys($firstMeter) as $col): ?>
+                                          $firstCounter = $deviceCounters['Result'][0];
+                                          foreach (array_keys($firstCounter) as $col): ?>
                                             <th><?= htmlspecialchars($col) ?></th>
                                         <?php endforeach; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
                                 <?php 
-                                  $cms = $customerMeters['Result'];
-                                  foreach ($cms as $meter): ?>
+                                  $dcs = $deviceCounters['Result'];
+                                  foreach ($dcs as $counter): ?>
                                     <tr>
-                                        <?php foreach ($meter as $val): ?>
+                                        <?php foreach ($counter as $val): ?>
                                             <td><?= htmlspecialchars((string)$val) ?></td>
                                         <?php endforeach; ?>
                                     </tr>
@@ -752,3 +758,4 @@ if ($drillId && $selectedCustomer) {
     <?php endif; ?>
 </body>
 </html>
+?>
