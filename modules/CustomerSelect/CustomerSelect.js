@@ -1,0 +1,1 @@
+// CustomerSelect.js - Registered inline in app.js

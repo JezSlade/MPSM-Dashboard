@@ -1,0 +1,146 @@
+/* assets/css/style.css */
+:root {
+  /* Dark Neumorphic Palette */
+  --bg-black:       #111111;
+  --bg-grey:        #222222;
+  --surface:        #1a1a1a;
+  --text-light:     #e0e0e0;
+  --text-dark:      #aaaaaa;
+
+  /* Neon Underglow Colors (CMYK style) */
+  --neon-cyan:      rgba(0, 255, 255, 0.2);
+  --neon-magenta:   rgba(255, 0, 255, 0.2);
+  --neon-yellow:    rgba(255, 255, 0,   0.2);
+
+  /* Embossed Glass */
+  --glass-bg:       rgba(255,255,255, 0.05);
+  --glass-shadow:   inset 0 1px 3px rgba(0,0,0,0.8),
+                    0 1px 0 rgba(255,255,255,0.1);
+
+  /* Typography */
+  --font-mono: "Consolas", "Courier New", monospace;
+}
+
+/* Global Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-black);
+  color: var(--text-light);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+
+header.header {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  padding: 1rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.7);
+  gap: 1rem;
+}
+
+header.header h1 {
+  font-size: 1.5rem;
+}
+
+/* Standard Table */
+.mpsm-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  margin: 1rem 0;
+}
+
+.mpsm-table th,
+.mpsm-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-light);
+}
+
+.mpsm-table th {
+  cursor: pointer;
+  position: relative;
+}
+
+.mpsm-table th.sortable:hover {
+  color: var(--neon-cyan);
+}
+
+.mpsm-table th .sort-indicator {
+  position: absolute;
+  right: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.mpsm-table tr:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.pagination button {
+  background: var(--surface);
+  border: none;
+  color: var(--text-light);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Column Toggle Panel */
+.column-toggle {
+  margin: 0.5rem 0;
+  background: var(--surface);
+  padding: 0.5rem;
+  border-radius: 4px;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
+}
+
+.column-toggle label {
+  margin-right: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Glass Panel */
+.glass-panel {
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Debug Panel */
+#debug-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(50, 50, 50, 0.9);
+  color: #ffffff;
+  font-size: 0.8rem;
+  max-height: 200px;
+  overflow-y: scroll;
+  z-index: 999;
+  padding: 0.5rem;
+}

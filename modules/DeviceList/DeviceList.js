@@ -1,0 +1,1 @@
+// DeviceList.js - Registered inline in app.js
