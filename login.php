@@ -27,12 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $stmt->get_result();
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
-                // Temporary plain text password comparison
                 if ($password === $user['password']) {
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
-                    $_SESSION['role_id'] = $user['role_id'];
-                    $_SESSION['permissions'] = get_permissions_for_role($user['role_id']);
+                    $_SESSION['role_id'] = $user['role_id']; // Keep for backward compatibility, though multiple roles override this
+                    $_SESSION['permissions'] = get_user_permissions($user['id']);
                     header('Location: index.php');
                     exit;
                 } else {

@@ -14,7 +14,27 @@ function get_permissions_for_role($role_id) {
     return $permissions;
 }
 
+function get_user_permissions($user_id) {
+    global $db;
+    $permissions = [];
+
+    // Get permissions from all roles the user belongs to
+    $result = $db->query("SELECT r.id FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = $user_id");
+    if ($result !== false) {
+        while ($role = $result->fetch_assoc()) {
+            $permissions = array_merge($permissions, get_permissions_for_role($role['id']));
+        }
+    }
+
+    // Get custom permissions assigned directly to the user (placeholder for future expansion)
+    // For now, assume no custom permissions unless implemented in the UI
+    return array_unique($permissions); // Remove duplicates if a user has overlapping roles
+}
+
 function has_permission($permission) {
-    return isset($_SESSION['permissions']) && in_array($permission, $_SESSION['permissions']);
+    if (!isset($_SESSION['user_id'])) return false;
+    $user_permissions = $_SESSION['permissions'] ?? get_user_permissions($_SESSION['user_id']);
+    $_SESSION['permissions'] = $user_permissions; // Cache permissions in session
+    return in_array($permission, $user_permissions);
 }
 ?>
