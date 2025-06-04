@@ -1,0 +1,29 @@
+{
+    "files": [
+        "index.php",
+        "config/permissions.php",
+        "views/partials/header.php",
+        "views/partials/sidebar.php",
+        "modules/Customers/customers.php",
+        "assets/scss/styles.scss",
+        "assets/css/styles.css",
+        "assets/js/main.js"
+    ],
+    "directories": [
+        "config",
+        "views/partials",
+        "modules/Customers",
+        "assets/scss",
+        "assets/css",
+        "assets/js"
+    ],
+    "functions": [
+        "getAccessToken",
+        "callGetCustomers"
+    ],
+    "php_extensions": [
+        "curl",
+        "json"
+    ],
+    "php_version_min": "7.4"
+}
