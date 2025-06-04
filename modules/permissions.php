@@ -310,10 +310,8 @@ while ($row = $result->fetch_assoc()) {
                         </select>
                         <button type="submit" name="assign_user_roles">Save</button>
                     </form>
-                    <?php
-                }
-            }
-        }
-    }
-?>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php endif; ?>
 <?php endif; ?>
