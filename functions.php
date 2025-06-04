@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once BASE_PATH . 'db.php';
 
 function get_permissions_for_role($role_id) {
     global $db;

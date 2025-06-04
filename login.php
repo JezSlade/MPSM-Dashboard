@@ -4,8 +4,8 @@ if (isset($_SESSION['user_id'])) {
     header('Location: index.php');
     exit;
 }
-require_once 'db.php';
-require_once 'functions.php';
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

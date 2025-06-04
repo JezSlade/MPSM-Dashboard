@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once BASE_PATH . 'db.php';
 
 // Function to execute SQL with error checking
 function execute_query($db, $sql) {

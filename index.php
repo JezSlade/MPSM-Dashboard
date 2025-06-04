@@ -1,15 +1,17 @@
 <?php
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
-require_once 'config.php';
-require_once 'db.php';
-require_once 'functions.php';
+require_once BASE_PATH . 'config.php';
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
 
 $modules = [
     'dashboard' => 'view_dashboard',
@@ -50,7 +52,7 @@ $module = $_GET['module'] ?? 'dashboard';
             <?php
             if (array_key_exists($module, $modules)) {
                 if (has_permission($modules[$module])) {
-                    include "modules/$module.php";
+                    include BASE_PATH . "modules/$module.php";
                 } else {
                     echo "<p class='error'>Access denied.</p>";
                 }
