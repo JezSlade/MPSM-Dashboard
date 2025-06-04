@@ -4,6 +4,9 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Define BASE_PATH in the entry point
+define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');

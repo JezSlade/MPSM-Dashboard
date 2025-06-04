@@ -1,7 +1,4 @@
 <?php
-// Define the base path of the project
-define('BASE_PATH', dirname(__DIR__) . DIRECTORY_SEPARATOR);
-
 // Load environment variables
 function load_env($file) {
     $env_file = BASE_PATH . $file;

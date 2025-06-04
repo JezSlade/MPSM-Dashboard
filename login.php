@@ -1,4 +1,7 @@
 <?php
+// Define BASE_PATH in the entry point
+define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+
 session_start();
 if (isset($_SESSION['user_id'])) {
     header('Location: index.php');

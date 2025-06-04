@@ -1,4 +1,7 @@
 <?php
+// Define BASE_PATH in the entry point
+define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+
 require_once BASE_PATH . 'db.php';
 
 // Function to execute SQL with error checking
