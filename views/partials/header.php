@@ -2,52 +2,69 @@
 /**
  * views/partials/header.php
  *
- * This header sits at the top of every page. It shows:
- *  - The application name (“MPSM Dashboard”)
- *  - The current version number (from config/permissions.php)
- *  - A dropdown to switch “role” (for testing permissions)
- *  - A logout link
- *
- * Assumes that SESSION holds a 'role' key (set to one of the roles from config/permissions.php).
+ * Renders the top bar with:
+ *  - App Name (“MPSM Dashboard”)
+ *  - Version (APP_VERSION)
+ *  - A “User” dropdown to impersonate existing users (from users table)
+ *  - A “Logout” link that clears the session’s user_id
  */
 
-// If no role is set, default to the first one in the permissions list
-if (! isset($_SESSION['role'])) {
-    // Grab the keys from $permissions array to determine valid roles
-    $allRoles = array_keys($permissions);
-    $_SESSION['role'] = reset($allRoles);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-// Handle role‐switch form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_role'])) {
-    $newRole = trim($_POST['switch_role']);
-    if (array_key_exists($newRole, $permissions)) {
-        $_SESSION['role'] = $newRole;
+// Include permissions so we have APP_VERSION and current_user()
+require_once __DIR__ . '/../../config/permissions.php';
+$pdo = require __DIR__ . '/../../config/db.php';
+
+$current = current_user(); // array or null
+
+// Handle user-switch form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_user'])) {
+    $newUserId = (int) $_POST['switch_user'];
+    // Verify the user ID exists
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+    $stmt->execute([$newUserId]);
+    if ($stmt->fetchColumn()) {
+        $_SESSION['user_id'] = $newUserId;
+    } else {
+        // If invalid, revert to guest
+        $_SESSION['user_id'] = null;
     }
-    // Redirect to avoid form resubmission
     header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
     exit;
 }
 
-// Grab the current version from a constant (defined in permissions.php)
-$version = defined('APP_VERSION') ? APP_VERSION : 'v0.0.0';
-$currentRole = $_SESSION['role'] ?? '';
+// Handle logout
+if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+    unset($_SESSION['user_id']);
+    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
+    exit;
+}
+
+// Fetch all users to populate the dropdown
+$stmt = $pdo->query("SELECT id, username FROM users ORDER BY username ASC");
+$allUsers = $stmt->fetchAll();
+
+// Determine display name
+$displayName = $current ? $current['username'] : 'guest';
 ?>
 <!DOCTYPE html>
-<!-- Note: this file is included inside <body> by index.php -->
+<!-- This is included by index.php; no <html> or <head> tags here -->
 <header class="top-bar">
   <div class="left">
     <h1>MPSM Dashboard</h1>
-    <span class="version">Version <?= htmlspecialchars($version) ?></span>
+    <span class="version">Version <?= htmlspecialchars(APP_VERSION) ?></span>
   </div>
   <div class="right">
-    <form method="POST" class="role-switcher">
-      <label for="switch_role">Role:</label>
-      <select name="switch_role" id="switch_role" onchange="this.form.submit()">
-        <?php foreach ($permissions as $roleName => $_): ?>
-          <option value="<?= htmlspecialchars($roleName) ?>"
-            <?= $roleName === $currentRole ? 'selected' : '' ?>>
-            <?= htmlspecialchars($roleName) ?>
+    <form method="POST" class="user-switcher">
+      <label for="switch_user">User:</label>
+      <select name="switch_user" id="switch_user" onchange="this.form.submit()">
+        <?php foreach ($allUsers as $u): ?>
+          <option value="<?= (int)$u['id'] ?>"
+            <?= ($current && $current['id'] === (int)$u['id']) || (!$current && $u['username']==='guest')
+                ? 'selected' : '' ?>>
+            <?= htmlspecialchars($u['username']) ?>
           </option>
         <?php endforeach; ?>
       </select>
@@ -55,12 +72,14 @@ $currentRole = $_SESSION['role'] ?? '';
         <button type="submit">Switch</button>
       </noscript>
     </form>
-    <a href="?action=logout" class="logout">Logout</a>
+    <?php if ($current): ?>
+      <a href="?action=logout" class="logout">Logout</a>
+    <?php endif; ?>
   </div>
 </header>
 
 <style>
-  /* Minimal inline CSS to structure the header—feel free to move to styles.css */
+  body, html { margin: 0; padding: 0; }
   .top-bar {
     background: #111;
     color: #fff;
@@ -84,14 +103,14 @@ $currentRole = $_SESSION['role'] ?? '';
     display: flex;
     align-items: center;
   }
-  .role-switcher {
+  .user-switcher {
     margin-right: 1rem;
     font-size: 0.9rem;
   }
-  .role-switcher label {
+  .user-switcher label {
     margin-right: 0.25rem;
   }
-  .role-switcher select {
+  .user-switcher select {
     font-family: Consolas, monospace;
   }
   .logout {

@@ -2,26 +2,91 @@
 /**
  * config/permissions.php
  *
- * Defines which roles exist, and which modules each role can access.
- * Also sets the application version (used by header.php).
+ * Dynamically enforces permissions via DB tables:
+ *  - roles
+ *  - modules
+ *  - role_module
+ *  - users
+ *
+ * Also defines APP_VERSION and helper functions:
+ *  - current_user()
+ *  - user_has_permission($moduleName)
  */
 
-// Application version
+// Always start session (if not already started)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Application version (displayed in header)
 define('APP_VERSION', 'v0.1');
 
-// Example permission matrix: role => [allowed modules]
-$permissions = [
-    'Admin'    => ['Dashboard', 'Customers', 'DevTools'],
-    'Sales'    => ['Dashboard', 'Customers'],
-    'Developer'=> ['Dashboard', 'DevTools'],
-    // Add more roles as needed
-];
+// Retrieve the currently-logged-in user record (or null if none)
+function current_user(): ?array {
+    if (! isset($_SESSION['user_id'])) {
+        return null;
+    }
+    // Lazy-load the user from DB
+    static $cachedUser = null;
+    if ($cachedUser !== null) {
+        return $cachedUser;
+    }
+
+    $pdo = require __DIR__ . '/db.php';
+    $stmt = $pdo->prepare(
+        "SELECT u.id, u.username, u.role_id, r.name AS role_name
+         FROM users u
+         JOIN roles r ON u.role_id = r.id
+         WHERE u.id = ?"
+    );
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch();
+    return $cachedUser = $user ?: null;
+}
 
 /**
- * Check if the current user (based on $_SESSION['role']) has access to $moduleName.
+ * Check if the currently logged‐in user has permission for $moduleName.
+ * Returns false if no user is logged in, or if no matching permission is found.
  */
 function user_has_permission(string $moduleName): bool {
-    global $permissions;
-    $role = $_SESSION['role'] ?? '';
-    return isset($permissions[$role]) && in_array($moduleName, $permissions[$role], true);
+    $user = current_user();
+    if (! $user) {
+        return false;
+    }
+    $pdo = require __DIR__ . '/db.php';
+    // Check: does role_module join exist where r.name = role_name AND m.name = moduleName?
+    $sql = "
+      SELECT COUNT(*) 
+      FROM role_module rm
+      JOIN roles r ON rm.role_id = r.id
+      JOIN modules m ON rm.module_id = m.id
+      WHERE r.id = :role_id
+        AND m.name = :moduleName
+    ";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+      ':role_id'    => $user['role_id'],
+      ':moduleName' => $moduleName
+    ]);
+    return ((int)$stmt->fetchColumn()) > 0;
+}
+
+/**
+ * Retrieve a list of all modules (name) currently in the database.
+ * Returns an array of [ 'Dashboard', 'Customers', 'DevTools', 'Admin', … ].
+ */
+function get_all_module_names(): array {
+    $pdo = require __DIR__ . '/db.php';
+    $stmt = $pdo->query("SELECT name FROM modules ORDER BY name ASC");
+    return array_column($stmt->fetchAll(), 'name');
+}
+
+/**
+ * Retrieve a list of all roles (name) in the database.
+ * Returns e.g. [ 'Admin', 'Sales', 'Developer', … ].
+ */
+function get_all_roles(): array {
+    $pdo = require __DIR__ . '/db.php';
+    $stmt = $pdo->query("SELECT name FROM roles ORDER BY name ASC");
+    return array_column($stmt->fetchAll(), 'name');
 }
