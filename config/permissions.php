@@ -32,7 +32,7 @@ function current_user(): ?array {
         return $cachedUser;
     }
 
-    $pdo = require __DIR__ . '/db.php';
+    $pdo = require_once __DIR__ . '/db.php';
     $stmt = $pdo->prepare(
         "SELECT u.id, u.username, u.role_id, r.name AS role_name
          FROM users u
