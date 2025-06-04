@@ -30,7 +30,6 @@ $menuItems = [
     ],
 ];
 
-// Determine current module (from query string)
 $currentModule = isset($_GET['module']) ? $_GET['module'] : 'dashboard';
 ?>
 

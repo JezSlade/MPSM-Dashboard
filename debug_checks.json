@@ -28,11 +28,6 @@
     },
     {
       "type":  "file_exists",
-      "path":  "assets/scss/styles.scss",
-      "label": "SCSS source (assets/scss/styles.scss)"
-    },
-    {
-      "type":  "file_exists",
       "path":  "assets/css/styles.css",
       "label": "Compiled CSS (assets/css/styles.css)"
     },

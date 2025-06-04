@@ -3,7 +3,7 @@
 
 session_start();
 
-// 1. Define all possible roles and their allowed modules (plain English)
+// 1. Define all possible roles and their allowed modules
 $ROLE_PERMISSIONS = [
     'sysop'   => [
         'modules'      => ['dashboard', 'customers', 'developer'], 
@@ -33,13 +33,12 @@ function getCurrentRole() {
     return $_SESSION['user_role'];
 }
 
-// 4. Helper: switch role (for testing). Should be invoked via ?action=switch&role=...
+// 4. Helper: switch role (for testing)
 if (isset($_GET['action']) && $_GET['action'] === 'switch' && isset($_GET['role'])) {
     $new = $_GET['role'];
     if (array_key_exists($new, $GLOBALS['ROLE_PERMISSIONS'])) {
         $_SESSION['user_role'] = $new;
     }
-    // Redirect to remove query string
     header("Location: index.php");
     exit;
 }
