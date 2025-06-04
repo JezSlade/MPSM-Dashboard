@@ -196,8 +196,8 @@ function current_user(): ?array {
 function user_has_permission(string $moduleKey): bool {
     $user = current_user();
 
-    // If we didn’t get an array back, bail out immediately
-    if (!is_array($user)) {
+    // If we didn’t get an array back, or it doesn’t have 'role_id', bail out:
+    if (!is_array($user) || !array_key_exists('role_id', $user)) {
         return false;
     }
 
