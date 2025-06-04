@@ -36,9 +36,9 @@ foreach ($roles as $role) {
     execute_query($db, "INSERT IGNORE INTO roles (name) VALUES ('$role')");
 }
 
-// Seed admin user
-$hashed_password = password_hash('admin123', PASSWORD_DEFAULT);
-execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('admin', '$hashed_password', 1)");
+// Seed admin user with plain text password
+$plain_password = 'admin123'; // Temporary plain text password
+execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('admin', '$plain_password', 1)");
 
 // Seed permissions
 $permissions = ['view_dashboard', 'view_customers', 'view_devices', 'manage_permissions'];
@@ -59,5 +59,5 @@ execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id)
 execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (5, 2)"); // Sales
 execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (6, 1)"); // Guest
 
-echo "Database setup complete.";
+echo "Database setup complete with plain text password.";
 ?>

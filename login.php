@@ -7,25 +7,39 @@ if (isset($_SESSION['user_id'])) {
 require_once 'db.php';
 require_once 'functions.php';
 
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
-    $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->bind_param('s', $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows === 1) {
-        $user = $result->fetch_assoc();
-        if (password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role_id'] = $user['role_id'];
-            $_SESSION['permissions'] = get_permissions_for_role($user['role_id']);
-            header('Location: index.php');
-            exit;
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+
+    if (empty($username) || empty($password)) {
+        $error = "Username and password are required.";
+    } else {
+        $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
+        if ($stmt === false) {
+            $error = "Database error: Unable to prepare statement.";
+        } else {
+            $stmt->bind_param('s', $username);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result->num_rows === 1) {
+                $user = $result->fetch_assoc();
+                // Temporary plain text password comparison
+                if ($password === $user['password']) {
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role_id'] = $user['role_id'];
+                    $_SESSION['permissions'] = get_permissions_for_role($user['role_id']);
+                    header('Location: index.php');
+                    exit;
+                } else {
+                    $error = "Invalid password.";
+                }
+            } else {
+                $error = "Invalid username.";
+            }
         }
     }
-    $error = "Invalid username or password.";
 }
 ?>
 
@@ -40,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="login-container">
         <h1>Login</h1>
-        <?php if (isset($error)): ?>
-            <p class="error"><?php echo $error; ?></p>
+        <?php if (!empty($error)): ?>
+            <p class="error"><?php echo htmlspecialchars($error); ?></p>
         <?php endif; ?>
         <form method="POST">
             <input type="text" name="username" placeholder="Username" required>
@@ -51,4 +65,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </body>
 </html>
-
