@@ -74,6 +74,15 @@ execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id)
 
 // Seed custom permission for test user
 execute_query($db, "INSERT INTO user_permissions (user_id, permission_id) VALUES (2, 5)"); // Test user gets custom_access
+// Seed permissions
+$permissions = ['view_dashboard', 'view_customers', 'view_devices', 'manage_permissions', 'custom_access', 'view_devtools'];
+foreach ($permissions as $perm) {
+    execute_query($db, "INSERT IGNORE INTO permissions (name) VALUES ('$perm')");
+}
+
+// Assign permissions to roles
+execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6)"); // Developer: all + view_devtools
+execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (2, 1), (2, 2), (2, 3)"); // Admin
 
 echo "Database setup complete with plain text password.";
 ?>
