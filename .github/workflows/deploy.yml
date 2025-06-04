@@ -4,53 +4,53 @@ on:
   push:
     branches: [ "main" ]
 
-permissions:
-  contents: write
-
 jobs:
   deploy:
-    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Bump version
+      - name: Bump version in version.txt
+        id: bump_version
         run: |
-          VERSION_FILE=version.txt
-          if [ -f "$VERSION_FILE" ]; then
-            VERSION=$(cat "$VERSION_FILE")
-          else
-            # initialize to 0.0.0.0 if missing
-            VERSION="0.0.0.0"
+          # If version.txt doesn't exist, initialize it to 0.0.0.0
+          if [ ! -f version.txt ]; then
+            echo "0.0.0.0" > version.txt
           fi
 
-          # split into four segments
-          IFS='.' read -r MAJOR MINOR PATCH BUILD <<< "$VERSION"
+          # Read the four segments
+          IFS='.' read -r MAJOR MINOR PATCH BUILD < version.txt
 
-          # ensure each is numeric
-          MAJOR=${MAJOR:-0}
-          MINOR=${MINOR:-0}
-          PATCH=${PATCH:-0}
-          BUILD=${BUILD:-0}
-
-          # increment the build (fourth) segment
+          # Increment only the BUILD segment
           BUILD=$((BUILD + 1))
 
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH.$BUILD"
-          echo "$NEW_VERSION" > "$VERSION_FILE"
-          echo "Bumped version to $NEW_VERSION"
+          # Recompose the version string
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}.${BUILD}"
 
-      - name: Commit version bump
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add version.txt
-          git commit -m "Bump version to $(cat version.txt)" || echo "No changes to commit"
-          git push
+          # Write it back
+          echo "$NEW_VERSION" > version.txt
+
+          # Expose as an output if needed
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      # (Optional) If you want to commit the bumped version back to the repo,
+      # uncomment the next two steps. Make sure to include “[skip ci]” in your commit message
+      # so that this push does NOT retrigger this same workflow.
+
+      # - name: Commit bumped version.txt
+      #   if: always()
+      #   run: |
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add version.txt
+      #     git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]" || echo "No changes to commit."
+
+      # - name: Push version bump
+      #   if: always()
+      #   run: |
+      #     git push
 
       - name: FTP Upload (clean mirror)
         uses: sebastianpopp/ftp-action@releases/v2
@@ -60,4 +60,4 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           localDir: "./"
           remoteDir: ${{ secrets.REMOTE_DIR }}
-          options: "--delete"
+          options:  "--delete"
