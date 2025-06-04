@@ -2,257 +2,240 @@
 /**
  * index.php
  *
- * Main router for MPSM. Ensures DB schema is up‐to‐date (adding missing columns if needed),
- * seeds default roles/users/modules, grants every role access to Dashboard,
- * grants Admin access to all modules (including Admin itself),
- * and only loads modules the current user is permitted to see.
+ * Main router for MPSM.  
+ * - Ensures DB schema is up-to-date (adds missing columns if needed).  
+ * - Seeds default roles/users/modules.  
+ * - Grants every role access to Dashboard.  
+ * - Grants Admin role access to all modules (including Admin itself).  
+ * - Renders only those modules the current user is permitted to see.
+ *
+ * Version displayed is pulled from config/permissions.php.
  */
 
-// 1) Show errors during development (remove or comment out in production)
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
 
-// 2) Grab a PDO connection early so we can use it to set session['user_id']
+// ────────────────────────────────────────────────────────────────────────────
+// [A] Establish PDO and ensure guest login before loading permissions
+
 $pdo = require __DIR__ . '/config/db.php';
 
-// 3) Immediately ensure $_SESSION['user_id'] is set to ‘guest’ if it’s not already
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-$stmt->execute(['guest']);
-$guestId = (int)$stmt->fetchColumn();
-if (!$guestId) {
-    // If the ‘guest’ user doesn’t even exist yet, we’ll let the seeding logic below create it.
-    // For now, leave $_SESSION['user_id'] unset and let seeding initialize.
-} else {
-    if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-        $_SESSION['user_id'] = $guestId;
+// Ensure guest user exists and set $_SESSION['user_id'] = guest if it’s not already set
+function ensureGuestSession(PDO $pdo): void {
+    // Create guest role if needed
+    $pdo->exec("INSERT IGNORE INTO roles (name) VALUES ('Guest')");
+    // Create guest user (with random pw) if needed
+    $stmt = $pdo->prepare("
+      SELECT u.id 
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE u.username = 'guest'
+    ");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        // Fetch Guest role id
+        $stmt2 = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
+        $stmt2->execute(['Guest']);
+        $gid = (int)$stmt2->fetchColumn();
+        $pw = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
+        $pdo->prepare("
+          INSERT INTO users (username, password_hash, role_id)
+          VALUES (?, ?, ?)
+        ")->execute(['guest', $pw, $gid]);
+    }
+    // Now set session to that guest ID if not already set
+    if (!isset($_SESSION['user_id'])) {
+        $stmt3 = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt3->execute(['guest']);
+        $_SESSION['user_id'] = (int)$stmt3->fetchColumn();
+    } else {
+        // If session user_id is invalid, reset to guest
+        $stmt4 = $pdo->prepare("SELECT COUNT(*) FROM users WHERE id = ?");
+        $stmt4->execute([$_SESSION['user_id']]);
+        if ((int)$stmt4->fetchColumn() === 0) {
+            $stmt5 = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt5->execute(['guest']);
+            $_SESSION['user_id'] = (int)$stmt5->fetchColumn();
+        }
     }
 }
 
-// 4) Load permissions functions (defines user_has_permission() and current_user())
+ensureGuestSession($pdo);
+
+// Now load permission helpers
 require __DIR__ . '/config/permissions.php';
 
 // ────────────────────────────────────────────────────────────────────────────
-// 5) Ensure all required tables exist (roles, modules, role_module, users)
+// [B] Ensure tables exist and migrate schema
 
-$pdo->exec("
-  CREATE TABLE IF NOT EXISTS roles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE
-  );
-");
+function ensureTablesAndSchema(PDO $pdo): void {
+    // Create tables if not exist
+    $pdo->exec("
+      CREATE TABLE IF NOT EXISTS roles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(50) NOT NULL UNIQUE
+      );
+    ");
+    $pdo->exec("
+      CREATE TABLE IF NOT EXISTS modules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(50) NOT NULL UNIQUE
+      );
+    ");
+    $pdo->exec("
+      CREATE TABLE IF NOT EXISTS role_module (
+        role_id INT NOT NULL,
+        module_id INT NOT NULL,
+        PRIMARY KEY (role_id, module_id),
+        FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+        FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+      );
+    ");
+    $pdo->exec("
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL
+        -- role_id may be added below
+      );
+    ");
 
-$pdo->exec("
-  CREATE TABLE IF NOT EXISTS modules (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE
-  );
-");
-
-$pdo->exec("
-  CREATE TABLE IF NOT EXISTS role_module (
-    role_id INT NOT NULL,
-    module_id INT NOT NULL,
-    PRIMARY KEY (role_id, module_id),
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-    FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
-  );
-");
-
-$pdo->exec("
-  CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL
-    -- role_id will be added if missing
-  );
-");
-
-// ────────────────────────────────────────────────────────────────────────────
-// 6) Schema migration: ensure users.role_id exists; if not, add it (default to Guest)
-
-try {
-    $col = $pdo
-      ->query("SHOW COLUMNS FROM users LIKE 'role_id'")
-      ->fetch();
-
+    // If users.role_id is missing, add it (default existing to Guest)
+    $col = $pdo->query("SHOW COLUMNS FROM users LIKE 'role_id'")->fetch();
     if (!$col) {
-        // Ensure “Guest” role exists so we have its ID
+        // Ensure Guest role exists
+        $pdo->exec("INSERT IGNORE INTO roles (name) VALUES ('Guest')");
         $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
         $stmt->execute(['Guest']);
-        $guestRoleId = (int)$stmt->fetchColumn();
-        if (!$guestRoleId) {
-            $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute(['Guest']);
-            $guestRoleId = (int)$pdo->lastInsertId();
-        }
+        $guestId = (int)$stmt->fetchColumn();
 
-        // Add 'role_id' column to users, defaulting existing rows to Guest
         $pdo->exec("
           ALTER TABLE users
-          ADD COLUMN role_id INT NOT NULL DEFAULT {$guestRoleId}
+          ADD COLUMN role_id INT NOT NULL DEFAULT {$guestId}
         ");
-
-        // Add foreign key constraint
         $pdo->exec("
           ALTER TABLE users
           ADD CONSTRAINT fk_users_role
           FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
         ");
     }
-} catch (PDOException $e) {
-    error_log("Schema migration error (users.role_id): " . $e->getMessage());
 }
+
+ensureTablesAndSchema($pdo);
+
 // ────────────────────────────────────────────────────────────────────────────
-// 7) Seed default roles and users
+// [C] Seed default roles and users (Guest and Admin)
 
-// 7A) Ensure 'Guest' role exists
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE name = ?");
-$stmt->execute(['Guest']);
-if ((int)$stmt->fetchColumn() === 0) {
-    $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute(['Guest']);
-}
+function seedRolesAndUsers(PDO $pdo): void {
+    // Guest role & user done in ensureGuestSession()
+    // Now ensure Admin role and user
+    $pdo->exec("INSERT IGNORE INTO roles (name) VALUES ('Admin')");
 
-// 7B) Ensure 'Admin' role exists
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE name = ?");
-$stmt->execute(['Admin']);
-if ((int)$stmt->fetchColumn() === 0) {
-    $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute(['Admin']);
-}
-
-// 7C) Ensure 'guest' user exists (assign to Guest role)
-$stmt = $pdo->prepare("
-  SELECT u.id
-  FROM users u
-  JOIN roles r ON u.role_id = r.id
-  WHERE u.username = ?
-");
-$stmt->execute(['guest']);
-if (!$stmt->fetch()) {
-    // Fetch Guest role_id
-    $stmt2 = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
-    $stmt2->execute(['Guest']);
-    $guestRoleId = (int)$stmt2->fetchColumn();
-
-    $pwHash = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-    $pdo->prepare("
-      INSERT INTO users (username, password_hash, role_id)
-      VALUES (?, ?, ?)
-    ")->execute(['guest', $pwHash, $guestRoleId]);
-}
-
-// 7D) Ensure 'admin' user exists (assign to Admin role, password = 'admin123')
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
-$stmt->execute(['admin']);
-if ((int)$stmt->fetchColumn() === 0) {
-    // Fetch Admin role_id
-    $stmt2 = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
-    $stmt2->execute(['Admin']);
-    $adminRoleId = (int)$stmt2->fetchColumn();
-
-    $hash = password_hash('admin123', PASSWORD_DEFAULT);
-    $pdo->prepare("
-      INSERT INTO users (username, password_hash, role_id)
-      VALUES (?, ?, ?)
-    ")->execute(['admin', $hash, $adminRoleId]);
-}
-
-// Ensure session['user_id'] now points to a valid ID
-if (!isset($_SESSION['user_id'])) {
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-    $stmt->execute(['guest']);
-    $_SESSION['user_id'] = (int)$stmt->fetchColumn();
-} else {
-    // Verify the stored ID still exists; if not, reset to guest
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+    // Ensure 'admin' user exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+    $stmt->execute(['admin']);
     if ((int)$stmt->fetchColumn() === 0) {
-        $stmt2 = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-        $stmt2->execute(['guest']);
-        $_SESSION['user_id'] = (int)$stmt2->fetchColumn();
+        // Fetch Admin role id
+        $stmt2 = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
+        $stmt2->execute(['Admin']);
+        $adminRoleId = (int)$stmt2->fetchColumn();
+
+        $hash = password_hash('admin123', PASSWORD_DEFAULT);
+        $pdo->prepare("
+          INSERT INTO users (username, password_hash, role_id)
+          VALUES (?, ?, ?)
+        ")->execute(['admin', $hash, $adminRoleId]);
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 8) Seed default modules
+seedRolesAndUsers($pdo);
 
-$defaultModules = ['Dashboard', 'Customers', 'DevTools', 'Admin'];
-foreach ($defaultModules as $modName) {
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM modules WHERE name = ?");
-    $stmt->execute([$modName]);
-    if ((int)$stmt->fetchColumn() === 0) {
-        $pdo->prepare("INSERT INTO modules (name) VALUES (?)")->execute([$modName]);
+// ────────────────────────────────────────────────────────────────────────────
+// [D] Seed default modules
+
+function seedModules(PDO $pdo): void {
+    $defaults = ['Dashboard', 'Customers', 'DevTools', 'Admin'];
+    $insert = $pdo->prepare("INSERT IGNORE INTO modules (name) VALUES (?)");
+    foreach ($defaults as $m) {
+        $insert->execute([$m]);
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 9) Grant EVERY role access to Dashboard
+seedModules($pdo);
 
-try {
-    // Find Dashboard module_id
+// ────────────────────────────────────────────────────────────────────────────
+// [E] Grant EVERY role access to Dashboard
+
+function grantDashboardAllRoles(PDO $pdo): void {
+    // Fetch Dashboard module_id
     $stmt = $pdo->prepare("SELECT id FROM modules WHERE name = ?");
     $stmt->execute(['Dashboard']);
     $dashboardId = (int)$stmt->fetchColumn();
 
     $stmtRoles = $pdo->query("SELECT id FROM roles");
-    $insertStmt = $pdo->prepare("
+    $insert = $pdo->prepare("
       INSERT IGNORE INTO role_module (role_id, module_id)
       VALUES (?, ?)
     ");
     while ($r = $stmtRoles->fetch(PDO::FETCH_ASSOC)) {
-        $insertStmt->execute([(int)$r['id'], $dashboardId]);
+        $insert->execute([(int)$r['id'], $dashboardId]);
     }
-} catch (PDOException $e) {
-    error_log("Error granting Dashboard access: " . $e->getMessage());
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 10) Grant Admin role access to ALL modules (including “Admin”)
+grantDashboardAllRoles($pdo);
 
-try {
+// ────────────────────────────────────────────────────────────────────────────
+// [F] Grant Admin role access to ALL modules (including “Admin”)
+
+function grantAdminAllModules(PDO $pdo): void {
     // Fetch Admin role_id
     $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
     $stmt->execute(['Admin']);
     $adminRoleId = (int)$stmt->fetchColumn();
-
-    if ($adminRoleId) {
-        $stmt2 = $pdo->query("SELECT id FROM modules");
-        $insertAll = $pdo->prepare("
-          INSERT IGNORE INTO role_module (role_id, module_id)
-          VALUES (?, ?)
-        ");
-        while ($m = $stmt2->fetch(PDO::FETCH_ASSOC)) {
-            $insertAll->execute([$adminRoleId, (int)$m['id']]);
-        }
+    if (!$adminRoleId) {
+        return;
     }
-} catch (PDOException $e) {
-    error_log("Error granting Admin access to all modules: " . $e->getMessage());
+
+    $stmtMods = $pdo->query("SELECT id FROM modules");
+    $insert = $pdo->prepare("
+      INSERT IGNORE INTO role_module (role_id, module_id)
+      VALUES (?, ?)
+    ");
+    while ($m = $stmtMods->fetch(PDO::FETCH_ASSOC)) {
+        $insert->execute([$adminRoleId, (int)$m['id']]);
+    }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 11) Build the $modules array from database, mapping names → file paths
+grantAdminAllModules($pdo);
 
-$moduleRows = $pdo->query("SELECT name FROM modules ORDER BY name ASC")
-                  ->fetchAll(PDO::FETCH_COLUMN);
+// ────────────────────────────────────────────────────────────────────────────
+// [G] Build the list of available modules (name → path)
+
+$stmtMods = $pdo->query("SELECT name FROM modules ORDER BY name ASC");
+$moduleRows = $stmtMods->fetchAll(PDO::FETCH_COLUMN);
 
 $modules = [];
-foreach ($moduleRows as $modName) {
-    if ($modName === 'DevTools') {
-        $modules[$modName] = "modules/DevTools/debug.php";
-    } elseif ($modName === 'Admin') {
-        $modules[$modName] = "modules/Admin/admin.php";
-    } else {
-        $lower = strtolower($modName);
-        $modules[$modName] = "modules/{$modName}/{$lower}.php";
+foreach ($moduleRows as $m) {
+    switch ($m) {
+        case 'DevTools':
+            $modules[$m] = "modules/DevTools/debug.php";
+            break;
+        case 'Admin':
+            $modules[$m] = "modules/Admin/admin.php";
+            break;
+        default:
+            $lower = strtolower($m);
+            $modules[$m] = "modules/{$m}/{$lower}.php";
+            break;
     }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 12) Determine which module to load; default to “Dashboard”
+// [H] Determine current module (default to Dashboard) and check permissions
 
-$module = isset($_GET['module']) ? $_GET['module'] : 'Dashboard';
-
-// 13) Permission check: module must exist and user must have access
+$module = $_GET['module'] ?? 'Dashboard';
 
 if (!array_key_exists($module, $modules) || !user_has_permission($module)) {
     header('HTTP/1.1 403 Forbidden');
@@ -264,7 +247,7 @@ if (!array_key_exists($module, $modules) || !user_has_permission($module)) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 14) Render the page
+// [I] Render HTML (Header, Sidebar, Selected Module)
 
 ?>
 <!DOCTYPE html>

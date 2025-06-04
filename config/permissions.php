@@ -13,13 +13,12 @@
  *  - user_has_permission($moduleName)
  */
 
-// Always start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Application version (displayed in header)
-define('APP_VERSION', 'v0.1');
+// Application version, bumped to v0.1.5
+define('APP_VERSION', 'v0.1.5');
 
 /**
  * Retrieve the currently‐logged‐in user record (or null if none).
@@ -28,13 +27,11 @@ function current_user(): ?array {
     if (! isset($_SESSION['user_id'])) {
         return null;
     }
-
     static $cachedUser = null;
     if ($cachedUser !== null) {
         return $cachedUser;
     }
-
-    // Use require (NOT require_once) so that the PDO from db.php is returned
+    // Always use require so $pdo is returned
     $pdo = require __DIR__ . '/db.php';
 
     $stmt = $pdo->prepare(
@@ -49,18 +46,14 @@ function current_user(): ?array {
 }
 
 /**
- * Check if the currently logged‐in user has permission for $moduleName.
- * Returns false if no user is logged in or no matching permission is found.
+ * Check if the currently logged-in user has permission for $moduleName.
  */
 function user_has_permission(string $moduleName): bool {
     $user = current_user();
     if (! $user) {
         return false;
     }
-
-    // Again, use require to get the PDO instance
     $pdo = require __DIR__ . '/db.php';
-
     $sql = "
       SELECT COUNT(*)
       FROM role_module rm
@@ -78,7 +71,7 @@ function user_has_permission(string $moduleName): bool {
 }
 
 /**
- * Retrieve a list of all module names in the database.
+ * Return a list of all module names, ordered alphabetically.
  */
 function get_all_module_names(): array {
     $pdo = require __DIR__ . '/db.php';
@@ -87,7 +80,7 @@ function get_all_module_names(): array {
 }
 
 /**
- * Retrieve a list of all role names in the database.
+ * Return a list of all role names, ordered alphabetically.
  */
 function get_all_roles(): array {
     $pdo = require __DIR__ . '/db.php';
