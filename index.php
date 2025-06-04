@@ -14,7 +14,7 @@ error_reporting(E_ALL);
 
 session_start();
 require __DIR__ . '/config/permissions.php';  // sets up user_has_permission(), current_user()
-$pdo = require_once __DIR__ . '/db.php';
+$pdo = require_once __DIR__ . '/config/db.php';
 
 // ────────────────────────────────────────────────────────────────────────────
 // 1) Create necessary tables if they don’t already exist
