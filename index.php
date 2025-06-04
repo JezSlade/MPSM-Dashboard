@@ -2,22 +2,25 @@
 /**
  * index.php
  *
- * Main router for MPSM. Dynamically picks a module from the database,
- * ensures required tables and columns exist (with automatic migrations),
- * seeds default roles/users/modules, and only loads modules the current
- * user is permitted to see.
+ * Main router for MPSM. Ensures DB schema is up‐to‐date (adds missing columns if needed),
+ * seeds default roles/users/modules, grants every role access to Dashboard by default,
+ * and only loads modules the current user is permitted to see.
  */
 
-// Show all errors during development; comment out or remove in production
+// 1) Show errors during development (remove or comment out in production)
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
-require __DIR__ . '/config/permissions.php';  // sets up user_has_permission(), current_user()
-$pdo = require_once __DIR__ . '/config/db.php';
+
+// 2) Load permissions functions (defines user_has_permission() and current_user())
+require __DIR__ . '/config/permissions.php';
+
+// 3) Create or retrieve a PDO connection
+$pdo = require __DIR__ . '/config/db.php';
 
 // ────────────────────────────────────────────────────────────────────────────
-// 1) Create necessary tables if they don’t already exist
+// 4) Ensure all required tables exist (roles, modules, role_module, users)
 
 $pdo->exec("
   CREATE TABLE IF NOT EXISTS roles (
@@ -53,7 +56,7 @@ $pdo->exec("
 ");
 
 // ────────────────────────────────────────────────────────────────────────────
-// 2) Schema migration: ensure users.role_id exists; if not, add it (default to Guest)
+// 5) Schema migration: ensure users.role_id exists; if not, add it (default to Guest)
 
 try {
     // Check whether 'role_id' column exists in 'users'
@@ -91,10 +94,9 @@ try {
     error_log("Schema migration error (users.role_id): " . $e->getMessage());
 }
 // ────────────────────────────────────────────────────────────────────────────
+// 6) Seed default roles and users
 
-// 3) Seed default roles and users
-
-// 3A) Ensure 'Guest' role exists
+// 6A) Ensure 'Guest' role exists
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE name = ?");
 $stmt->execute(['Guest']);
 if ((int)$stmt->fetchColumn() === 0) {
@@ -102,7 +104,7 @@ if ((int)$stmt->fetchColumn() === 0) {
         ->execute(['Guest']);
 }
 
-// 3B) Ensure 'guest' user exists (with role 'Guest')
+// 6B) Ensure 'guest' user exists (with role 'Guest')
 $stmt = $pdo->prepare("
   SELECT u.id
   FROM users u
@@ -124,7 +126,7 @@ if (! $stmt->fetch()) {
     ")->execute(['guest', $pwHash, $guestRoleId]);
 }
 
-// 3C) Ensure 'Admin' role exists
+// 6C) Ensure 'Admin' role exists
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE name = ?");
 $stmt->execute(['Admin']);
 if ((int)$stmt->fetchColumn() === 0) {
@@ -132,7 +134,7 @@ if ((int)$stmt->fetchColumn() === 0) {
         ->execute(['Admin']);
 }
 
-// 3D) Ensure 'admin' user exists (role 'Admin', password 'admin123')
+// 6D) Ensure 'admin' user exists (role 'Admin', password 'admin123')
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
 $stmt->execute(['admin']);
 if ((int)$stmt->fetchColumn() === 0) {
@@ -150,7 +152,7 @@ if ((int)$stmt->fetchColumn() === 0) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 4) Seed default modules
+// 7) Seed default modules
 
 $defaultModules = ['Dashboard', 'Customers', 'DevTools', 'Admin'];
 foreach ($defaultModules as $modName) {
@@ -163,7 +165,35 @@ foreach ($defaultModules as $modName) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 5) Ensure a user is logged in (default to 'guest' if none)
+// 8) Grant EVERY role access to Dashboard (on first run)
+
+try {
+    // Fetch Dashboard module_id
+    $stmt = $pdo->prepare("SELECT id FROM modules WHERE name = ?");
+    $stmt->execute(['Dashboard']);
+    $dashboardId = (int)$stmt->fetchColumn();
+
+    // For each role, insert role_module link for Dashboard if missing
+    $stmtRoles = $pdo->query("SELECT id FROM roles");
+    while ($r = $stmtRoles->fetch(PDO::FETCH_ASSOC)) {
+        $roleId = (int)$r['id'];
+        $check = $pdo->prepare("
+          SELECT COUNT(*) FROM role_module
+          WHERE role_id = ? AND module_id = ?
+        ");
+        $check->execute([$roleId, $dashboardId]);
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->prepare("
+              INSERT INTO role_module (role_id, module_id)
+              VALUES (?, ?)
+            ")->execute([$roleId, $dashboardId]);
+        }
+    }
+} catch (PDOException $e) {
+    error_log("Error granting Dashboard access: " . $e->getMessage());
+}
+// ────────────────────────────────────────────────────────────────────────────
+// 9) Ensure a user is logged in (default to 'guest' if none)
 
 if (! isset($_SESSION['user_id'])) {
     $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
@@ -175,7 +205,7 @@ if (! isset($_SESSION['user_id'])) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 6) Build the $modules array from database, mapping names → file paths
+// 10) Build the $modules array from database, mapping names → file paths
 
 $moduleRows = $pdo->query("SELECT name FROM modules ORDER BY name ASC")
                   ->fetchAll(PDO::FETCH_COLUMN);
@@ -193,11 +223,11 @@ foreach ($moduleRows as $modName) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 7) Determine which module to load; default to "Dashboard"
+// 11) Determine which module to load; default to "Dashboard"
 
 $module = isset($_GET['module']) ? $_GET['module'] : 'Dashboard';
 
-// 8) Permission check: module must exist and user must have access
+// 12) Permission check: module must exist and user must have access
 
 if (! array_key_exists($module, $modules) || ! user_has_permission($module)) {
     header('HTTP/1.1 403 Forbidden');
@@ -209,7 +239,7 @@ if (! array_key_exists($module, $modules) || ! user_has_permission($module)) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 9) Render the page
+// 13) Render the page
 
 ?>
 <!DOCTYPE html>
