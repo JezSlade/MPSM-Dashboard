@@ -1,4 +1,3 @@
-```php
 <?php
 /**
  * views/partials/header.php
@@ -100,4 +99,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_user'])) {
     font-family: Consolas, monospace;
   }
 </style>
-```
