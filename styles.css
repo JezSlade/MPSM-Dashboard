@@ -1,0 +1,168 @@
+body {
+    background: #121212;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background: #1a1a1a;
+    padding: 10px 20px;
+    border-bottom: 2px solid #00ff00;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.header a {
+    color: #00ff00;
+    text-decoration: none;
+    margin-left: 20px;
+}
+
+.main {
+    display: flex;
+    margin-top: 60px;
+}
+
+.sidebar {
+    width: 200px;
+    background: #1a1a1a;
+    border-right: 2px solid #00ff00;
+    padding: 10px;
+    position: fixed;
+    top: 60px;
+    height: calc(100% - 60px);
+    overflow-y: auto;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    margin: 10px 0;
+}
+
+.sidebar a {
+    display: block;
+    padding: 10px;
+    color: #ffffff;
+    text-decoration: none;
+    border: 1px solid #00ff00;
+    border-radius: 5px;
+    transition: box-shadow 0.3s;
+}
+
+.sidebar a:hover, .sidebar a.active {
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.content {
+    flex: 1;
+    padding: 20px;
+    margin-left: 200px;
+}
+
+.error {
+    color: #ff4444;
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+    background: #1a1a1a;
+    border: 2px solid #00ff00;
+    border-radius: 5px;
+}
+
+.login-container h1 {
+    text-align: center;
+}
+
+.login-container input {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    background: #333;
+    border: 1px solid #00ff00;
+    color: #fff;
+    border-radius: 5px;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 10px;
+    background: #00ff00;
+    border: none;
+    color: #121212;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.login-container button:hover {
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.permissions-form {
+    margin-top: 20px;
+}
+
+.permissions-form label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+.permissions-form input[type="text"],
+.permissions-form select {
+    width: 100%;
+    padding: 10px;
+    background: #333;
+    border: 1px solid #00ff00;
+    color: #fff;
+    border-radius: 5px;
+}
+
+.permissions-form button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background: #00ff00;
+    border: none;
+    color: #121212;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.permissions-form button:hover {
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.permissions-table th, .permissions-table td {
+    padding: 10px;
+    border: 1px solid #00ff00;
+    text-align: left;
+}
+
+.permissions-table th {
+    background: #333;
+}

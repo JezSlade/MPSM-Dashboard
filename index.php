@@ -1,80 +1,61 @@
 <?php
-declare(strict_types=1);
-
-// ────────────────────────────────────────────────────────────────────────────
-// Autoloader: maps namespaces to folders (simple PSR-4 style)
-spl_autoload_register(function($class) {
-    // If the class uses the "Modules\" prefix
-    $prefixes = [
-        'Modules\\' => __DIR__ . '/modules/',
-        'Core\\'    => __DIR__ . '/core/',
-        'Models\\'  => __DIR__ . '/models/',
-    ];
-
-    foreach ($prefixes as $prefix => $baseDir) {
-        if (strpos($class, $prefix) === 0) {
-            // Remove the prefix to get the relative path inside its folder
-            $relative = substr($class, strlen($prefix));
-            // Convert namespace separators to directory separators, append .php
-            $file = $baseDir . str_replace('\\', '/', $relative) . '.php';
-
-            if (file_exists($file)) {
-                require $file;
-            }
-            return;
-        }
-    }
-    // (If no matching prefix, do nothing—class might be in a different location)
-});
-// ────────────────────────────────────────────────────────────────────────────
-
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 session_start();
-
-// ────────────────────────────────────────────────────────────────────────────
-// Step A: Load environment and DB
-
-require_once __DIR__ . '/config/env.php';
-Env::load(__DIR__ . '/.env');
-
-$pdo = require __DIR__ . '/config/db.php';
-
-// ────────────────────────────────────────────────────────────────────────────
-// Step B: Permissions + “guest” auto-login
-
-require_once __DIR__ . '/config/permissions.php';
-ensureGuestSession($pdo);
-
-// ────────────────────────────────────────────────────────────────────────────
-// Step C: Routing
-
-//  1) Load the router map (moduleKey → Controller class)
-$routes = require __DIR__ . '/config/router.php';
-
-//  2) Decide which module was requested (default = "Dashboard")
-$moduleKey = $_GET['module'] ?? 'Dashboard';
-
-//  3) If not in the $routes map, redirect to default:
-if (! isset($routes[$moduleKey]) ) {
-    header('Location: index.php?module=Dashboard');
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
     exit;
 }
+require_once 'config.php';
+require_once 'db.php';
+require_once 'functions.php';
 
-//  4) Instantiate the controller
-$controllerClass = $routes[$moduleKey];
-$controller = new $controllerClass($pdo);
+$modules = [
+    'dashboard' => 'view_dashboard',
+    'customers' => 'view_customers',
+    'devices' => 'view_devices',
+    'permissions' => 'manage_permissions',
+];
+$module = $_GET['module'] ?? 'dashboard';
+?>
 
-//  5) Authorization + Handle
-try {
-    $controller->authorize();
-    $controller->handle();
-} catch (Core\Exceptions\NotAuthorizedException $e) {
-    http_response_code(403);
-    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>403 Forbidden</title></head><body>';
-    echo '<h1>403 Forbidden</h1>';
-    echo '<p>You do not have access to the <strong>' 
-         . htmlspecialchars($moduleKey) 
-         . '</strong> module.</p>';
-    echo '</body></html>';
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPSM Modular App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>MPSM Modular App</h1>
+        <div>
+            <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+            <a href="logout.php">Logout</a>
+        </div>
+    </div>
+    <div class="main">
+        <div class="sidebar">
+            <ul>
+                <?php foreach ($modules as $mod => $perm): ?>
+                    <?php if (has_permission($perm)): ?>
+                        <li><a href="index.php?module=<?php echo $mod; ?>" <?php echo $module === $mod ? 'class="active"' : ''; ?>><?php echo ucfirst($mod); ?></a></li>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <div class="content">
+            <?php
+            if (array_key_exists($module, $modules)) {
+                if (has_permission($modules[$module])) {
+                    include "modules/$module.php";
+                } else {
+                    echo "<p class='error'>Access denied.</p>";
+                }
+            } else {
+                echo "<p class='error'>Module not found.</p>";
+            }
+            ?>
+        </div>
+    </div>
+</body>
+</html>

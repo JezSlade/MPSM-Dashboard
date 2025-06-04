@@ -1,2 +1,0 @@
-<h2>Customers</h2>
-<p><?= htmlspecialchars($info) ?></p>
