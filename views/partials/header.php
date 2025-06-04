@@ -17,7 +17,16 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../config/permissions.php';
 $pdo = require __DIR__ . '/../../config/db.php';
 
-$current = current_user(); // array or null
+// Ensure there is always a valid user in session.
+// If none, default to “guest”:
+if (! isset($_SESSION['user_id'])) {
+    $stmtG = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+    $stmtG->execute(['guest']);
+    $guestId = (int)$stmtG->fetchColumn();
+    if ($guestId) {
+        $_SESSION['user_id'] = $guestId;
+    }
+}
 
 // Handle user-switch form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_user'])) {
@@ -29,7 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_user'])) {
         $_SESSION['user_id'] = $newUserId;
     } else {
         // If invalid, revert to guest
-        $_SESSION['user_id'] = null;
+        $stmtG = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $stmtG->execute(['guest']);
+        $_SESSION['user_id'] = (int)$stmtG->fetchColumn();
     }
     header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
     exit;
@@ -37,20 +48,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_user'])) {
 
 // Handle logout
 if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+    // Clear session so it defaults to guest on next load
     unset($_SESSION['user_id']);
     header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
     exit;
 }
 
-// Fetch all users to populate the dropdown
-$stmt = $pdo->query("SELECT id, username FROM users ORDER BY username ASC");
-$allUsers = $stmt->fetchAll();
+$current = current_user(); // may be null if guest
+$currentUserId = $current ? (int)$current['id'] : 0;
 
-// Determine display name
-$displayName = $current ? $current['username'] : 'guest';
+// Fetch all users to populate the dropdown
+$stmtAll = $pdo->query("SELECT id, username FROM users ORDER BY username ASC");
+$allUsers = $stmtAll->fetchAll();
+
 ?>
 <!DOCTYPE html>
-<!-- This is included by index.php; no <html> or <head> tags here -->
+<!-- This file is included inside <body> by index.php -->
 <header class="top-bar">
   <div class="left">
     <h1>MPSM Dashboard</h1>
@@ -62,8 +75,7 @@ $displayName = $current ? $current['username'] : 'guest';
       <select name="switch_user" id="switch_user" onchange="this.form.submit()">
         <?php foreach ($allUsers as $u): ?>
           <option value="<?= (int)$u['id'] ?>"
-            <?= ($current && $current['id'] === (int)$u['id']) || (!$current && $u['username']==='guest')
-                ? 'selected' : '' ?>>
+            <?= ((int)$u['id'] === $currentUserId) ? 'selected' : '' ?>>
             <?= htmlspecialchars($u['username']) ?>
           </option>
         <?php endforeach; ?>
