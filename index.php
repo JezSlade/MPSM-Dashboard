@@ -1,65 +1,63 @@
 <?php
-require_once __DIR__ . '/config/env.php';
-require_once __DIR__ . '/data/endpoints.php';
-require_once __DIR__ . '/views/table.php';
-require_once __DIR__ . '/api/call.php';
+// /public/mpsm/index.php
 
-    // Fetch customer list from API
-    $custResp = callApi('Customer/GetCustomers', [
-        'DealerCode' => env('DEALER_CODE'),
-        'Code'       => null,
-        'HasHpSds'   => null,
-        'FilterText' => null,
-        'PageNumber' => 1,
-        'PageRows'   => 2147483647,
-        'SortColumn' => 'Id',
-        'SortOrder'  => 0
-    ]);
-    $customers = $custResp['Result'] ?? [];
-    $selectedCustomer = $_GET['customer'] ?? null;
+// 1. PHP error reporting (for development)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-$endpoints = getAllEndpoints();
-$selected = $_GET['endpoint'] ?? null;
-$results  = null;
+// 2. Include permissions and helper functions
+require_once __DIR__ . '/config/permissions.php';
 
-if ($selected && isset($endpoints[$selected])) {
-    $info = $endpoints[$selected];
-    $payload = [];
+// 3. Determine which module to load (default = dashboard)
+$module = isset($_GET['module']) ? $_GET['module'] : 'dashboard';
 
-    // Prepare placeholder payload based on expected parameter types (simplified)
-    if (isset($info['parameters']) && is_array($info['parameters'])) {
-        foreach ($info['parameters'] as $param) {
-            $name = $param['name'];
-            $type = $param['type'] ?? 'string';
-            if ($type === 'integer' || $type === 'int') {
-                $payload[$name] = 1;
-            } else {
-                $payload[$name] = env('DEALER_CODE');
-            }
-        }
-    }
+// 4. Whitelist valid modules to avoid arbitrary includes
+$validModules = ['dashboard', 'customers', 'developer'];
 
-    $response = callApi($selected, $payload, strtolower($info['method'] ?? 'post'));
-    $results = $response['body']['value'] ?? $response['body'];
+// 5. If the requested module isn’t valid or isn’t permitted, fall back to dashboard
+if (!in_array($module, $validModules) || !canViewModule($module)) {
+    $module = 'dashboard';
 }
 
-ob_start();
-?>
-<form method="get">
-    <label for="endpoint">Select Endpoint:</label>
-    <select id="endpoint" name="endpoint" onchange="this.form.submit()">
-        <option value="">-- Choose --</option>
-        <?php foreach ($endpoints as $key => $e): ?>
-            <option value="<?= $key ?>" <?= $key === $selected ? 'selected' : '' ?>>
-                <?= htmlspecialchars($e['operationId'] ?? $e['path']) ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-</form>
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MPSM Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Link to compiled CSS -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
 
-<?php
-if ($results) {
-    echo renderTable(is_array($results) && isset($results[0]) ? $results : array($results));
-}
-$content = ob_get_clean();
-include __DIR__ . '/views/layout.php';
+  <!-- 6. Header -->
+  <?php include __DIR__ . '/views/partials/header.php'; ?>
+
+  <!-- 7. Sidebar -->
+  <?php include __DIR__ . '/views/partials/sidebar.php'; ?>
+
+  <!-- 8. Main Content Wrapper -->
+  <main class="app-content">
+    <?php
+      switch ($module) {
+        case 'customers':
+          include __DIR__ . '/modules/Customers/customers.php';
+          break;
+
+        case 'developer':
+          echo "<div class='module-placeholder'><h2>Developer Tools (Coming Soon)</h2></div>";
+          break;
+
+        default:
+          echo "<div class='module-placeholder'><h2>Welcome to the Dashboard</h2>
+                <p>Select a module from the sidebar.</p></div>";
+          break;
+      }
+    ?>
+  </main>
+
+  <!-- 9. JS -->
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
