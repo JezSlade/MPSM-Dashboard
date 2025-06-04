@@ -16,7 +16,7 @@ body {
     top: 0;
     width: 100%;
     box-sizing: border-box;
-    /* Neumorphic effect with softer shadow instead of harsh border */
+    /* Neumorphic effect with softer shadow */
     box-shadow: 5px 5px 15px #1a2021, -5px -5px 15px #40484b, 0 5px 10px rgba(0, 206, 201, 0.3);
 }
 
@@ -50,7 +50,7 @@ body {
 }
 
 .sidebar {
-    width: 250px; /* Increased width for better balance */
+    width: 300px; /* Increased width to give more space and prevent overlap */
     background: #2d3436; /* Matches header */
     padding: 20px; /* Increased padding */
     position: fixed;
@@ -85,14 +85,15 @@ body {
 .sidebar a:hover, .sidebar a.active {
     /* Inset shadow for "pressed" effect */
     box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b;
-    /* Teal neon glow */
+    /* Teal neon glow for text, magenta underglow */
     text-shadow: 0 0 5px #00cec9, 0 0 10px #00cec9;
+    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b, 0 10px 15px rgba(255, 0, 255, 0.5);
 }
 
 .content {
     flex: 1;
-    padding: 30px; /* Increased padding */
-    margin-left: 250px; /* Matches sidebar width */
+    padding: 40px; /* Increased padding for better spacing */
+    margin-left: 300px; /* Matches new sidebar width */
     background: #1e272e;
     /* Neumorphic effect for content area */
     box-shadow: inset 5px 5px 15px #1a2021, inset -5px -5px 15px #40484b;
@@ -203,6 +204,28 @@ body {
     /* Teal neon glow for text, magenta underglow */
     text-shadow: 0 0 5px #00cec9, 0 0 10px #00cec9;
     box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b, 0 10px 15px rgba(255, 0, 255, 0.5);
+}
+
+/* Style hyperlinks in Permissions module */
+.permissions-table a,
+nav a {
+    color: #00cec9; /* Teal to match theme */
+    text-decoration: none;
+    padding: 2px 5px;
+    border-radius: 5px;
+    transition: color 0.3s, text-shadow 0.3s;
+}
+
+.permissions-table a:hover,
+nav a:hover {
+    color: #1abc9c; /* Slightly lighter teal on hover */
+    text-shadow: 0 0 5px #00cec9; /* Soft neon glow */
+}
+
+.permissions-table a:visited,
+nav a:visited {
+    color: #6d8299; /* Muted grayish-teal for visited links, readable against dark background */
+    text-shadow: none;
 }
 
 .permissions-table {
