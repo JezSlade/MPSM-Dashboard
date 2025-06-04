@@ -1,20 +1,7 @@
 <?php
-// File: diagnose.php
-// ------------------
-// Purpose: Display environment diagnostics, check file structure & permissions,
-// verify required PHP extensions, list available MPS Monitor API endpoints,
-// and test API authentication. Uses shared header/footer and the neon‐on‐black stylesheet.
-
-// 1. Set a custom page title
 $pageTitle = 'MPSM Dashboard ‐ Diagnose';
-
-// 2. Include the shared header (loads CSS, navigation, opens <body><main>)
 require_once __DIR__ . '/header.php';
 ?>
-
-  <!-- ============================ -->
-  <!-- 1. Environment Information   -->
-  <!-- ============================ -->
   <div class="card">
     <h2 class="sub-title">Environment Info</h2>
     <ul style="margin-top: 1rem; line-height: 1.6;">
@@ -25,14 +12,9 @@ require_once __DIR__ . '/header.php';
       <li><strong>Working Directory:</strong> <?= htmlspecialchars(getcwd()) ?></li>
     </ul>
   </div>
-
-  <!-- ============================================== -->
-  <!-- 2. File Structure & Permissions Check          -->
-  <!-- ============================================== -->
   <div class="card" style="margin-top: 1.5rem;">
     <h2 class="sub-title">File Structure & Permissions</h2>
     <?php
-    // List of critical files/folders to check
     $checks = [
       'Header Include'         => ['path' => __DIR__ . '/header.php',      'writable' => false],
       'Footer Include'         => ['path' => __DIR__ . '/footer.php',      'writable' => false],
@@ -43,51 +25,44 @@ require_once __DIR__ . '/header.php';
       'Assets/CSS Directory'   => ['path' => __DIR__ . '/assets/css',       'writable' => true],
       'Assets/JS Directory'    => ['path' => __DIR__ . '/assets/js',        'writable' => true],
     ];
-
     echo '<ul style="margin-top: 1rem; line-height: 1.6;">';
     foreach ($checks as $label => $info) {
-        $path = $info['path'];
-        $exists = file_exists($path);
-        $readable = $exists && is_readable($path);
-        $writable = $exists && is_writable($path);
-        echo '<li>';
-        if (!$exists) {
-            echo '<span class="icon-warning">⚠️</span> ';
-            echo "<strong>{$label}:</strong> <span style=\"color: #ff9000;\">Missing (“{$path}”).</span>";
-        } else {
-            // If it’s supposed to be writable, check writability; otherwise just check readability.
-            if ($info['writable']) {
-                if ($writable) {
-                    echo '<span style="color: #00ffcc;">✔️</span> ';
-                    echo "<strong>{$label}:</strong> Exists and writable.";
-                } else {
-                    echo '<span class="icon-warning">⚠️</span> ';
-                    echo "<strong>{$label}:</strong> Exists but <span style=\"color: #ff9000;\">not writable</span> (“{$path}”).";
-                }
-            } else {
-                if ($readable) {
-                    echo '<span style="color: #00ffcc;">✔️</span> ';
-                    echo "<strong>{$label}:</strong> Exists and readable.";
-                } else {
-                    echo '<span class="icon-warning">⚠️</span> ';
-                    echo "<strong>{$label}:</strong> Exists but <span style=\"color: #ff9000;\">not readable</span> (“{$path}”).";
-                }
-            }
-        }
-        echo '</li>';
+      $path = $info['path'];
+      $exists = file_exists($path);
+      $readable = $exists && is_readable($path);
+      $writable = $exists && is_writable($path);
+      echo '<li>';
+      if (!$exists) {
+          echo '<span class="icon-warning">⚠️</span> ';
+          echo "<strong>{$label}:</strong> <span style=\"color: #ff9000;\">Missing (\"{$path}\").</span>";
+      } else {
+          if ($info['writable']) {
+              if ($writable) {
+                  echo '<span style="color: #00ffcc;">✔️</span> ';
+                  echo "<strong>{$label}:</strong> Exists and writable.";
+              } else {
+                  echo '<span class="icon-warning">⚠️</span> ';
+                  echo "<strong>{$label}:</strong> Exists but <span style=\"color: #ff9000;\">not writable</span> (\"{$path}\").";
+              }
+          } else {
+              if ($readable) {
+                  echo '<span style="color: #00ffcc;">✔️</span> ';
+                  echo "<strong>{$label}:</strong> Exists and readable.";
+              } else {
+                  echo '<span class="icon-warning">⚠️</span> ';
+                  echo "<strong>{$label}:</strong> Exists but <span style=\"color: #ff9000;\">not readable</span> (\"{$path}\").";
+              }
+          }
+      }
+      echo '</li>';
     }
     echo '</ul>';
     ?>
   </div>
-
-  <!-- ============================================== -->
-  <!-- 3. Dependencies & PHP Extensions Check        -->
-  <!-- ============================================== -->
   <div class="card" style="margin-top: 1.5rem;">
     <h2 class="sub-title">Dependencies & PHP Extensions</h2>
     <div style="margin-top: 1rem;">
       <?php
-      // Define extensions that are required for MPSM Dashboard functionality
       $required_exts = ['curl', 'json', 'openssl'];
       echo '<ul style="margin-top: 0.5rem; line-height: 1.6;">';
       foreach ($required_exts as $ext) {
@@ -102,8 +77,6 @@ require_once __DIR__ . '/header.php';
           }
       }
       echo '</ul>';
-
-      // Also list all loaded extensions (scrollable if many):
       echo '<h4 style="margin-top: 1rem;">All Loaded PHP Extensions</h4>';
       echo '<div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">';
       echo '<ul style="list-style: none; padding: 0; line-height: 1.6;">';
@@ -114,37 +87,22 @@ require_once __DIR__ . '/header.php';
       ?>
     </div>
   </div>
-
-  <!-- ============================================== -->
-  <!-- 4. Available MPS Monitor API Endpoints          -->
-  <!-- ============================================== -->
   <div class="card" style="margin-top: 1.5rem;">
     <h2 class="sub-title">Available API Endpoints</h2>
     <?php
     $endpointsPath = __DIR__ . '/AllEndpoints.json';
-    $endpoints    = [];
-    $endpointsRaw = @file_get_contents($endpointsPath);
-    if ($endpointsRaw !== false) {
-        $endpoints = json_decode($endpointsRaw, true);
-    }
+    $endpoints    = json_decode(@file_get_contents($endpointsPath), true) ?: [];
     ?>
-    <?php if (!empty($endpoints) && is_array($endpoints)): ?>
+    <?php if (!empty($endpoints['paths'])): ?>
       <table class="table" style="margin-top: 1rem;">
         <thead>
-          <tr>
-            <th>Key</th>
-            <th>HTTP Method</th>
-            <th>URL</th>
-            <th>Description</th>
-          </tr>
+          <tr><th>Path</th><th>Summary</th></tr>
         </thead>
         <tbody>
-          <?php foreach ($endpoints as $key => $ep): ?>
+          <?php foreach ($endpoints['paths'] as $path => $info): ?>
             <tr>
-              <td><?= htmlspecialchars($key) ?></td>
-              <td><?= htmlspecialchars($ep['method'] ?? '') ?></td>
-              <td style="word-break: break-all;"><?= htmlspecialchars($ep['url'] ?? '') ?></td>
-              <td><?= htmlspecialchars($ep['description'] ?? '') ?></td>
+              <td><?= htmlspecialchars($path) ?></td>
+              <td><?= htmlspecialchars($info[array_key_first($info)]['summary'] ?? '') ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>
@@ -155,15 +113,10 @@ require_once __DIR__ . '/header.php';
       </p>
     <?php endif; ?>
   </div>
-
-  <!-- ============================================== -->
-  <!-- 5. API Authentication Test                       -->
-  <!-- ============================================== -->
   <div class="card" style="margin-top: 1.5rem;">
     <h2 class="sub-title">API Authentication Test</h2>
     <div style="margin-top: 1rem;">
       <?php
-      // Attempt to retrieve an access token using the existing working_token logic.
       $token = null;
       if (file_exists(__DIR__ . '/working_token.php')) {
           require_once __DIR__ . '/working_token.php';
@@ -188,10 +141,6 @@ require_once __DIR__ . '/header.php';
       ?>
     </div>
   </div>
-
-  <!-- ============================================== -->
-  <!-- 6. Sample API Call: Customer/GetCustomers       -->
-  <!-- ============================================== -->
   <div class="card" style="margin-top: 1.5rem;">
     <h2 class="sub-title">Sample API Call: Customer/GetCustomers</h2>
     <div style="margin-top: 1rem;">
@@ -263,10 +212,6 @@ require_once __DIR__ . '/header.php';
       ?>
     </div>
   </div>
-
-  <!-- ============================================== -->
-  <!-- 7. PHP Configuration & Extensions              -->
-  <!-- ============================================== -->
   <div class="card" style="margin-top: 1.5rem; margin-bottom: 2rem;">
     <h2 class="sub-title">PHP Configuration & Extensions</h2>
     <div style="margin-top: 1rem;">
@@ -279,21 +224,14 @@ require_once __DIR__ . '/header.php';
           'post_max_size'       => ini_get('post_max_size'),
           'upload_max_filesize' => ini_get('upload_max_filesize')
       ];
-
-      echo '<table class="table">';
-      echo '<thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody>';
+      echo '<table class="table"><thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody>';
       foreach ($phpSettings as $setting => $value) {
-          echo '<tr>';
-          echo '<td>' . htmlspecialchars($setting) . '</td>';
-          echo '<td>' . htmlspecialchars($value) . '</td>';
-          echo '</tr>';
+          echo '<tr><td>' . htmlspecialchars($setting) . '</td><td>' . htmlspecialchars($value) . '</td></tr>';
       }
       echo '</tbody></table>';
       ?>
     </div>
   </div>
-
 <?php
-// 8. Include the shared footer (closes </main>, adds footer, closes </body></html>)
 require_once __DIR__ . '/footer.php';
 ?>
