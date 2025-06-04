@@ -4,6 +4,20 @@ require_once __DIR__ . '/data/endpoints.php';
 require_once __DIR__ . '/views/table.php';
 require_once __DIR__ . '/api/call.php';
 
+    // Fetch customer list from API
+    $custResp = callApi('Customer/GetCustomers', [
+        'DealerCode' => env('DEALER_CODE'),
+        'Code'       => null,
+        'HasHpSds'   => null,
+        'FilterText' => null,
+        'PageNumber' => 1,
+        'PageRows'   => 2147483647,
+        'SortColumn' => 'Id',
+        'SortOrder'  => 0
+    ]);
+    $customers = $custResp['Result'] ?? [];
+    $selectedCustomer = $_GET['customer'] ?? null;
+
 $endpoints = getAllEndpoints();
 $selected = $_GET['endpoint'] ?? null;
 $results  = null;
