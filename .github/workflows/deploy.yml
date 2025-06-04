@@ -1,4 +1,3 @@
-```yaml
 name: Simple FTP Deploy
 
 on:
@@ -62,4 +61,3 @@ jobs:
           localDir: "./"
           remoteDir: ${{ secrets.REMOTE_DIR }}
           options: "--delete"
-```
