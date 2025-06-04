@@ -2,31 +2,38 @@
 /**
  * debug.php
  *
- * Expanded “crazy robust” diagnostic for the MPSM Dashboard skeleton (no SCSS).
- * Now includes:
- *   - Checks for AllEndpoints.json
- *   - .env parsing for API and DB tests
- *   - getAccessToken() + callGetCustomers() tests (Working.php logic)
- *   - DB connection test if DB_* vars defined in .env
- *   - All previous file/permission, CSS link, PHP, include/require checks
- *   - Machine-readable JSON + Copy-to-Clipboard in HTML
+ * Auto‐discovering, cached diagnostic for the MPSM Dashboard skeleton (no SCSS).
+ *
+ * Features:
+ *   - Recursively scans every file under /public/mpsm/, skipping node_modules/vendor/.git
+ *   - Applies existence/readability checks to all files
+ *   - For .php: scans includes/requires and tests each target
+ *   - For assets/css/styles.css: ensures non‐zero size
+ *   - Validates AllEndpoints.json and debug_checks.json as JSON
+ *   - Parses .env, tests getAccessToken()/callGetCustomers() via Working.php, and optional DB connect
+ *   - Caches each file’s check results in debug_cache.json so unchanged files skip re‐analysis
+ *   - Outputs both an HTML table (with clear styling) and machine‐readable JSON + “Copy to Clipboard” button
  *
  * Usage:
- *   1. Place this file & debug_checks.json in /public/mpsm/
- *   2. Ensure both are world-readable (chmod 644).
+ *   1. Place this file, debug_checks.json, AllEndpoints.json, and .env in /public/mpsm/
+ *   2. Ensure debug.php and debug_cache.json (if pre‐created) are writable by PHP:
+ *        chmod 666 debug.php debug_cache.json
  *   3. Populate .env with:
- *        CLIENT_ID=...
- *        CLIENT_SECRET=...
- *        USERNAME=...
- *        PASSWORD=...
- *        SCOPE=...
- *        TOKEN_URL=...
+ *        CLIENT_ID=…
+ *        CLIENT_SECRET=…
+ *        USERNAME=…
+ *        PASSWORD=…
+ *        SCOPE=…
+ *        TOKEN_URL=…
  *        BASE_URL=https://api.abassetmanagement.com/api3
- *        DEALER_CODE=SZ13qRwU5GtFLj0i_CbEgQ2
- *        (Optional DB_HOST, DB_USER, DB_PASS, DB_NAME)
- *   4. Browse to http://<your-domain>/mpsm/debug.php
- *      Append ?format=json for JSON-only.
+ *        DEALER_CODE=…
+ *        (Optional) DB_HOST, DB_USER, DB_PASS, DB_NAME
+ *   4. Visit http://<your‐domain>/mpsm/debug.php
+ *      (Append ?format=json for pure JSON.)
  */
+
+define('ROOT_DIR', __DIR__);
+define('CACHE_FILE', ROOT_DIR . '/debug_cache.json');
 
 header(
   'Content-Type: ' .
@@ -37,436 +44,402 @@ header(
 
 $results = [
   'checks'   => [],
-  'summary'  => ['total' => 0, 'passed' => 0, 'warnings' => 0, 'failures' => 0],
+  'summary'  => ['total'=>0, 'passed'=>0, 'warnings'=>0, 'failures'=>0],
   'timestamp'=> date('c')
 ];
 
-// Helper to record a check
+// Helper to record a single check result
 function addCheck(&$results, $section, $label, $status, $message = '', $fix = '') {
-  $entry = [
-    'section' => $section,
-    'label'   => $label,
-    'status'  => $status,    // PASS, WARN, FAIL
-    'message' => $message,
-    'fix'     => $fix
-  ];
-  $results['checks'][] = $entry;
+  $results['checks'][] = compact('section','label','status','message','fix');
   $results['summary']['total']++;
-  if ($status === 'PASS') {
-    $results['summary']['passed']++;
-  } elseif ($status === 'WARN') {
-    $results['summary']['warnings']++;
-  } else {
-    $results['summary']['failures']++;
-  }
+  if      ($status === 'PASS')  $results['summary']['passed']++;
+  elseif  ($status === 'WARN')  $results['summary']['warnings']++;
+  else                           $results['summary']['failures']++;
 }
 
-/********************** SECTION A: FILE & FOLDER EXISTENCE / PERMISSIONS **********************/
+// 1) Load or initialize cache
+$cacheData = [];
+if (file_exists(CACHE_FILE) && is_readable(CACHE_FILE)) {
+  $raw = file_get_contents(CACHE_FILE);
+  $cacheData = json_decode($raw, true) ?: [];
+}
 
-$section = 'A. Files & Permissions';
-$jsonCfgPath = __DIR__ . '/debug_checks.json';
-
-if (!is_readable($jsonCfgPath)) {
-  addCheck($results, $section, 'debug_checks.json', 'FAIL',
-    'Cannot read debug_checks.json at root. Did you upload it?',
-    'Place a valid debug_checks.json in /public/mpsm/.'
-  );
-} else {
-  $cfgRaw = file_get_contents($jsonCfgPath);
-  $cfg = json_decode($cfgRaw, true);
-  if (json_last_error() !== JSON_ERROR_NONE) {
-    addCheck($results, $section, 'debug_checks.json', 'FAIL',
-      'JSON parse error: ' . json_last_error_msg(),
-      'Fix syntax in debug_checks.json.'
-    );
-  } else {
-    foreach ($cfg['checks'] as $check) {
-      $type = $check['type'];    // “file_exists”
-      $path = $check['path'];    // relative
-      $label= $check['label'];   // human label
-      $full = __DIR__ . '/' . $path;
-
-      if ($type === 'file_exists') {
-        if (file_exists($full)) {
-          if (is_readable($full)) {
-            addCheck($results, $section, $label, 'PASS',
-              "Found and readable at \"$path\"."
-            );
-          } else {
-            addCheck($results, $section, $label, 'FAIL',
-              "\"$path\" exists but is not readable by PHP.",
-              "chmod 644 \"$path\" so the webserver can read it."
-            );
+// 2) Recursively scan all files, applying checks or using cached results
+$skipDirs = ['node_modules','vendor','.git'];
+$iterator = new RecursiveIteratorIterator(
+  new RecursiveCallbackFilterIterator(
+    new RecursiveDirectoryIterator(ROOT_DIR),
+    function ($fileInfo, $key, $iterator) use ($skipDirs) {
+      if ($fileInfo->isDir()) {
+        foreach ($skipDirs as $d) {
+          if (strpos($fileInfo->getPathname(), "/{$d}") !== false) {
+            return false;
           }
-        } else {
-          addCheck($results, $section, $label, 'FAIL',
-            "\"$path\" is missing.",
-            "Ensure \"$path\" is uploaded to /public/mpsm/."
-          );
         }
-      } else {
-        addCheck($results, $section, $label, 'WARN',
-          "Unknown check type \"$type\"—cannot validate.",
-          "Remove or fix this entry in debug_checks.json."
-        );
       }
+      return true;
     }
-  }
-}
-
-/********************** SECTION B: CSS <link> PARSE & EXISTENCE CHECK **********************/
-
-$section = 'B. CSS <link> References';
-$indexPath = __DIR__ . '/index.php';
-
-if (!file_exists($indexPath) || !is_readable($indexPath)) {
-  addCheck($results, $section, 'index.php', 'FAIL',
-    "Cannot open index.php for parsing CSS references.",
-    "Verify index.php exists and is readable."
-  );
-} else {
-  $indexHtml = file_get_contents($indexPath);
-  preg_match_all(
-    '/<link\b[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>/i',
-    $indexHtml,
-    $matches
-  );
-
-  if (empty($matches[1])) {
-    addCheck($results, $section, 'CSS Links', 'WARN',
-      'No <link rel="stylesheet" href="…"> tags found in index.php.',
-      'Ensure index.php references at least one CSS file (assets/css/styles.css).'
-    );
-  } else {
-    foreach ($matches[1] as $href) {
-      $hrefClean = explode('?', $href, 2)[0];
-      if (preg_match('/^(https?:|\/\/)/i', $hrefClean)) {
-        addCheck($results, $section, $hrefClean, 'PASS',
-          "External CSS reference—assuming it will load from remote."
-        );
-        continue;
-      }
-      $cssPath = realpath(__DIR__ . '/' . ltrim($hrefClean, '/'));
-      if ($cssPath && file_exists($cssPath)) {
-        if (is_readable($cssPath)) {
-          $size = filesize($cssPath);
-          if ($size > 0) {
-            addCheck($results, $section, $hrefClean, 'PASS',
-              "\"$hrefClean\" exists, readable, size={$size} bytes."
-            );
-          } else {
-            addCheck($results, $section, $hrefClean, 'FAIL',
-              "\"$hrefClean\" is zero bytes.",
-              'Verify that your CSS file was built correctly and not empty.'
-            );
-          }
-        } else {
-          addCheck($results, $section, $hrefClean, 'FAIL',
-            "\"$hrefClean\" exists but is not readable.",
-            "chmod 644 \"$hrefClean\" so the webserver can serve it."
-          );
-        }
-      } else {
-        addCheck($results, $section, $hrefClean, 'FAIL',
-          "\"$hrefClean\" not found in filesystem.",
-          "Check the <link> path in index.php or upload the CSS file."
-        );
-      }
-    }
-  }
-}
-
-/******************** SECTION C: PHP VERSION, EXTENSIONS, & INI SETTINGS ********************/
-
-$section = 'C. PHP Configuration';
-$phpVer   = phpversion();
-$isPhpOk  = version_compare($phpVer, '7.4.0', '>=');
-addCheck($results, $section, 'PHP Version', $isPhpOk ? 'PASS' : 'FAIL',
-  "Detected PHP version {$phpVer}.",
-  $isPhpOk ? '' : 'Upgrade PHP to ≥ 7.4.'
+  )
 );
 
-$required_exts = ['curl', 'json', 'mbstring'];
-foreach ($required_exts as $ext) {
-  $loaded = extension_loaded($ext);
-  addCheck($results, $section, "Extension: {$ext}", $loaded ? 'PASS' : 'FAIL',
-    $loaded ? "Extension `{$ext}` is loaded." : "Extension `{$ext}` is missing.",
-    $loaded ? '' : "Install and enable the PHP `{$ext}` extension."
-  );
-}
-
-$dispErr = ini_get('display_errors');
-$dispErrStatus = ($dispErr == '1' || strtolower($dispErr) == 'on') ? 'WARN' : 'PASS';
-addCheck($results, $section, 'PHP ini: display_errors', $dispErrStatus,
-  "display_errors = {$dispErr}",
-  $dispErrStatus === 'WARN'
-    ? 'Turn off display_errors in production (set display_errors = Off in php.ini).'
-    : ''
-);
-
-$memLimit = ini_get('memory_limit');
-addCheck($results, $section, 'PHP ini: memory_limit', 'PASS',
-  "memory_limit = {$memLimit} (verify ≥ 128M if needed)."
-);
-
-$serverSoft = $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
-addCheck($results, $section, 'Server Software', 'PASS',
-  "Running on `{$serverSoft}`."
-);
-
-/******************** SECTION D: RECURSIVE SCAN FOR MISSING include/require ********************/
-
-$section = 'D. Missing include/require Checks';
-$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__));
 foreach ($iterator as $fileInfo) {
-  if (!$fileInfo->isFile()) continue;
-  if (strtolower($fileInfo->getExtension()) !== 'php') continue;
+  if (!$fileInfo->isFile()) {
+    continue;
+  }
 
-  $fullPath = $fileInfo->getRealPath();
-  $content  = file_get_contents($fullPath);
-  preg_match_all(
-    '/\b(include|require)(_once)?\s*[\(\'"]([^\'"]+\.php)[\'"]\)?\s*;?/i',
-    $content,
-    $matches,
-    PREG_SET_ORDER
-  );
-  foreach ($matches as $m) {
-    $includedRel = $m[3];
-    $baseDir = dirname($fullPath);
-    $target  = realpath($baseDir . '/' . $includedRel);
-    $projSource = substr($fullPath, strlen(__DIR__) + 1);
+  $relPath = substr($fileInfo->getPathname(), strlen(ROOT_DIR) + 1);
+  $mtime   = $fileInfo->getMTime();
+  $size    = $fileInfo->getSize();
+  $ext     = strtolower($fileInfo->getExtension());
 
-    if (!$target || !file_exists($target)) {
-      addCheck($results, $section, "{$projSource} → include \"{$includedRel}\"", 'FAIL',
-        "\"{$includedRel}\" not found (referenced in {$projSource}).",
-        "Ensure `{$includedRel}` exists relative to `{$projSource}`, or fix the path."
-      );
-    } else {
-      addCheck($results, $section, "{$projSource} → include \"{$includedRel}\"", 'PASS',
-        "\"{$includedRel}\" found for {$projSource}."
+  // If cached and unchanged, reuse previous status entries
+  if (isset($cacheData[$relPath]) && $cacheData[$relPath]['mtime'] === $mtime) {
+    foreach ($cacheData[$relPath]['status'] as $cachedEntry) {
+      addCheck($results,
+        $cachedEntry['section'],
+        $cachedEntry['label'],
+        $cachedEntry['status'],
+        $cachedEntry['message'],
+        $cachedEntry['fix']
       );
     }
+    continue;
   }
-}
 
-/********************** SECTION E: AllEndpoints.json VALIDATION **********************/
+  // Otherwise, perform fresh checks on this file
+  $fileChecks = [];
 
-$section = 'E. AllEndpoints.json Validation';
-$endpointsPath = __DIR__ . '/AllEndpoints.json';
-if (!file_exists($endpointsPath)) {
-  addCheck($results, $section, 'AllEndpoints.json', 'FAIL',
-    '"AllEndpoints.json" is missing.',
-    'Place AllEndpoints.json (the canonical endpoint definitions) in /public/mpsm/.'
-  );
-} elseif (!is_readable($endpointsPath)) {
-  addCheck($results, $section, 'AllEndpoints.json', 'FAIL',
-    '"AllEndpoints.json" exists but is not readable.',
-    'chmod 644 "AllEndpoints.json" so the webserver can read it.'
-  );
-} else {
-  $raw = file_get_contents($endpointsPath);
-  $json = json_decode($raw, true);
-  if (json_last_error() !== JSON_ERROR_NONE) {
-    addCheck($results, $section, 'AllEndpoints.json', 'FAIL',
-      'JSON parse error: ' . json_last_error_msg(),
-      'Correct syntax errors in AllEndpoints.json.'
-    );
-  } elseif (empty($json)) {
-    addCheck($results, $section, 'AllEndpoints.json', 'WARN',
-      'AllEndpoints.json parsed as an empty structure.',
-      'Verify that AllEndpoints.json actually contains endpoint definitions.'
-    );
+  // A) Basic existence/readability
+  if (is_readable($fileInfo->getPathname())) {
+    $fileChecks[] = [
+      'section' => 'A. File Existence & Permissions',
+      'label'   => $relPath,
+      'status'  => 'PASS',
+      'message' => "Found and readable.",
+      'fix'     => ''
+    ];
   } else {
-    $count = count($json);
-    addCheck($results, $section, 'AllEndpoints.json', 'PASS',
-      "\"AllEndpoints.json\" parsed successfully with {$count} top-level entries."
-    );
+    $fileChecks[] = [
+      'section' => 'A. File Existence & Permissions',
+      'label'   => $relPath,
+      'status'  => 'FAIL',
+      'message' => "\"{$relPath}\" exists but is not readable by PHP.",
+      'fix'     => "chmod 644 \"{$relPath}\""
+    ];
   }
-}
 
-/********************** SECTION F: .env PARSING & API TESTS **********************/
-
-$section = 'F. .env & API / DB Tests';
-$envPath = __DIR__ . '/.env';
-$env = [];
-
-if (!file_exists($envPath)) {
-  addCheck($results, $section, '.env', 'FAIL',
-    '" .env" not found in project root.',
-    'Create a .env with the required MPSM and optional DB credentials.'
-  );
-} elseif (!is_readable($envPath)) {
-  addCheck($results, $section, '.env', 'FAIL',
-    '" .env" exists but is not readable.',
-    'chmod 644 ".env" so PHP can read it.'
-  );
-} else {
-  // Parse .env manually into $env
-  $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-  foreach ($lines as $line) {
-    if (strpos(trim($line), '#') === 0) continue; // skip comments
-    if (!strpos($line, '=')) continue;
-    list($key, $val) = explode('=', $line, 2);
-    $env[trim($key)] = trim($val);
-  }
-  addCheck($results, $section, '.env', 'PASS',
-    '" .env" loaded and parsed.'
-  );
-
-  // 1) Check required MPSM API vars
-  $requiredEnv = ['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','SCOPE','TOKEN_URL','BASE_URL','DEALER_CODE'];
-  foreach ($requiredEnv as $key) {
-    if (isset($env[$key]) && $env[$key] !== '') {
-      addCheck($results, $section, $key, 'PASS',
-        "\"{$key}\" = \"{$env[$key]}\"."
+  // B) Type‐specific checks
+  switch ($ext) {
+    case 'php':
+      // D) Scan for include/require targets
+      $content = file_get_contents($fileInfo->getPathname());
+      preg_match_all(
+        '/\b(include|require)(_once)?\s*[\(\'"]([^\'"]+\.php)[\'"]\)?\s*;?/i',
+        $content,
+        $matches,
+        PREG_SET_ORDER
       );
-    } else {
-      addCheck($results, $section, $key, 'FAIL',
-        "\"{$key}\" is missing or empty in .env.",
-        "Add `{$key}=value` to .env."
-      );
-    }
-  }
+      foreach ($matches as $m) {
+        $includedRel = $m[3];
+        $baseDir = dirname($fileInfo->getRealPath());
+        $target  = realpath($baseDir . '/' . $includedRel);
+        $label   = "{$relPath} → include \"{$includedRel}\"";
 
-  // 2) Attempt to include Working.php and test API calls
-  $workingPath = __DIR__ . '/Working.php';
-  if (file_exists($workingPath) && is_readable($workingPath)) {
-    addCheck($results, $section, 'Working.php', 'PASS',
-      '"Working.php" found (reference only). Include to test functions.'
-    );
-    try {
-      include_once $workingPath;
-      $funcs = ['getAccessToken','callGetCustomers'];
-      foreach ($funcs as $fn) {
-        if (function_exists($fn)) {
-          addCheck($results, $section, "{$fn}()", 'PASS',
-            "Function {$fn}() exists."
-          );
+        if (!$target || !file_exists($target)) {
+          $fileChecks[] = [
+            'section' => 'D. Missing include/require Checks',
+            'label'   => $label,
+            'status'  => 'FAIL',
+            'message' => "\"{$includedRel}\" not found (referenced in {$relPath}).",
+            'fix'     => "Ensure `{$includedRel}` exists relative to `{$relPath}`."
+          ];
         } else {
-          addCheck($results, $section, "{$fn}()", 'FAIL',
-            "Function {$fn}() missing.",
-            "Verify Working.php is unaltered and contains {$fn}()."
-          );
+          $fileChecks[] = [
+            'section' => 'D. Missing include/require Checks',
+            'label'   => $label,
+            'status'  => 'PASS',
+            'message' => "\"{$includedRel}\" found for {$relPath}.",
+            'fix'     => ''
+          ];
         }
       }
+      break;
 
-      // If getAccessToken() exists, attempt to call it
-      if (function_exists('getAccessToken')) {
-        try {
-          $token = getAccessToken();
-          if (is_string($token) && strlen($token) > 10) {
-            addCheck($results, $section, 'getAccessToken()', 'PASS',
-              "Received token of length " . strlen($token) . "."
-            );
-            // Next, test callGetCustomers() if function exists
-            if (function_exists('callGetCustomers')) {
-              try {
-                $customers = callGetCustomers($token);
-                if (is_array($customers)) {
-                  $count = count($customers);
-                  addCheck($results, $section, 'callGetCustomers()', 'PASS',
-                    "Retrieved {$count} customers from API."
-                  );
-                } else {
-                  addCheck($results, $section, 'callGetCustomers()', 'WARN',
-                    "callGetCustomers() returned non-array: " . json_encode($customers),
-                    "Verify API credentials and DealerCode."
-                  );
-                }
-              } catch (Throwable $e) {
-                addCheck($results, $section, 'callGetCustomers()', 'FAIL',
-                  "Exception: " . $e->getMessage(),
-                  "Check API endpoint or credentials in .env."
-                );
+    case 'css':
+      if ($relPath === 'assets/css/styles.css') {
+        if ($size > 0) {
+          $fileChecks[] = [
+            'section' => 'B. CSS <link> References',
+            'label'   => $relPath,
+            'status'  => 'PASS',
+            'message' => "Size={$size} bytes.",
+            'fix'     => ''
+          ];
+        } else {
+          $fileChecks[] = [
+            'section' => 'B. CSS <link> References',
+            'label'   => $relPath,
+            'status'  => 'FAIL',
+            'message' => "\"{$relPath}\" is zero bytes.",
+            'fix'     => 'Verify your CSS file was built correctly.'
+          ];
+        }
+      }
+      break;
+
+    case 'json':
+      if (in_array($relPath, ['AllEndpoints.json','debug_checks.json'])) {
+        // E) Validate JSON syntax & non‐emptiness
+        $raw = file_get_contents($fileInfo->getPathname());
+        $j   = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+          $fileChecks[] = [
+            'section' => 'E. AllEndpoints.json Validation',
+            'label'   => $relPath,
+            'status'  => 'FAIL',
+            'message' => 'JSON parse error: ' . json_last_error_msg(),
+            'fix'     => "Fix syntax errors in {$relPath}."
+          ];
+        } elseif (empty($j)) {
+          $fileChecks[] = [
+            'section' => 'E. AllEndpoints.json Validation',
+            'label'   => $relPath,
+            'status'  => 'WARN',
+            'message' => "{$relPath} parsed as an empty structure.",
+            'fix'     => "Verify {$relPath} contains expected entries."
+          ];
+        } else {
+          $cnt = count($j);
+          $fileChecks[] = [
+            'section' => 'E. AllEndpoints.json Validation',
+            'label'   => $relPath,
+            'status'  => 'PASS',
+            'message' => "{$relPath} parsed successfully with {$cnt} entries.",
+            'fix'     => ''
+          ];
+        }
+      }
+      break;
+
+    case 'env':
+      if ($relPath === '.env') {
+        // F) Parse .env and test API & optional DB
+        $lines = file($fileInfo->getPathname(), FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES);
+        $env   = [];
+        foreach ($lines as $line) {
+          if (strpos(trim($line), '#') === 0) continue;
+          if (!strpos($line, '=')) continue;
+          list($k,$v) = explode('=', $line, 2);
+          $env[trim($k)] = trim($v);
+        }
+        $fileChecks[] = [
+          'section' => 'F. .env & API / DB Tests',
+          'label'   => '.env',
+          'status'  => 'PASS',
+          'message' => '".env" loaded and parsed.',
+          'fix'     => ''
+        ];
+
+        // F.1) Required MPSM vars
+        $requiredEnv = [
+          'CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD',
+          'SCOPE','TOKEN_URL','BASE_URL','DEALER_CODE'
+        ];
+        foreach ($requiredEnv as $k) {
+          if (!isset($env[$k]) || $env[$k] === '') {
+            $fileChecks[] = [
+              'section' => 'F. .env & API / DB Tests',
+              'label'   => $k,
+              'status'  => 'FAIL',
+              'message' => "\"{$k}\" missing or empty in .env.",
+              'fix'     => "Add `{$k}=…` to .env."
+            ];
+          } else {
+            $fileChecks[] = [
+              'section' => 'F. .env & API / DB Tests',
+              'label'   => $k,
+              'status'  => 'PASS',
+              'message' => "{$k} = \"{$env[$k]}\".",
+              'fix'     => ''
+            ];
+          }
+        }
+
+        // F.2) If Working.php is present, test API functions
+        $workingPath = ROOT_DIR . '/Working.php';
+        if (file_exists($workingPath) && is_readable($workingPath)) {
+          $fileChecks[] = [
+            'section' => 'F. .env & API / DB Tests',
+            'label'   => 'Working.php',
+            'status'  => 'PASS',
+            'message' => '"Working.php" found—for API tests.',
+            'fix'     => ''
+          ];
+          try {
+            include_once $workingPath;
+            foreach (['getAccessToken','callGetCustomers'] as $fn) {
+              if (function_exists($fn)) {
+                $fileChecks[] = [
+                  'section' => 'F. .env & API / DB Tests',
+                  'label'   => "{$fn}()",
+                  'status'  => 'PASS',
+                  'message' => "{$fn}() exists.",
+                  'fix'     => ''
+                ];
+              } else {
+                $fileChecks[] = [
+                  'section' => 'F. .env & API / DB Tests',
+                  'label'   => "{$fn}()",
+                  'status'  => 'FAIL',
+                  'message' => "{$fn}() missing.",
+                  'fix'     => "Verify Working.php contains {$fn}()."
+                ];
               }
             }
-          } else {
-            addCheck($results, $section, 'getAccessToken()', 'FAIL',
-              "getAccessToken() returned unexpected value: " . htmlspecialchars(json_encode($token)),
-              "Verify API URL and credentials in .env."
-            );
+
+            if (function_exists('getAccessToken')) {
+              try {
+                $token = getAccessToken();
+                if (is_string($token) && strlen($token) > 10) {
+                  $fileChecks[] = [
+                    'section' => 'F. .env & API / DB Tests',
+                    'label'   => 'getAccessToken()',
+                    'status'  => 'PASS',
+                    'message' => "Received token length " . strlen($token) . ".",
+                    'fix'     => ''
+                  ];
+                  if (function_exists('callGetCustomers')) {
+                    try {
+                      $cust = callGetCustomers($token);
+                      if (is_array($cust)) {
+                        $n = count($cust);
+                        $fileChecks[] = [
+                          'section' => 'F. .env & API / DB Tests',
+                          'label'   => 'callGetCustomers()',
+                          'status'  => 'PASS',
+                          'message' => "Retrieved {$n} customers.",
+                          'fix'     => ''
+                        ];
+                      } else {
+                        $fileChecks[] = [
+                          'section' => 'F. .env & API / DB Tests',
+                          'label'   => 'callGetCustomers()',
+                          'status'  => 'WARN',
+                          'message' => "Returned non-array: " . json_encode($cust),
+                          'fix'     => "Verify DealerCode & API credentials."
+                        ];
+                      }
+                    } catch (Throwable $e) {
+                      $fileChecks[] = [
+                        'section' => 'F. .env & API / DB Tests',
+                        'label'   => 'callGetCustomers()',
+                        'status'  => 'FAIL',
+                        'message' => "Exception: " . $e->getMessage(),
+                        'fix'     => "Check API endpoint or credentials."
+                      ];
+                    }
+                  }
+                } else {
+                  $fileChecks[] = [
+                    'section' => 'F. .env & API / DB Tests',
+                    'label'   => 'getAccessToken()',
+                    'status'  => 'FAIL',
+                    'message' => "Unexpected return: " . htmlspecialchars(json_encode($token)),
+                    'fix'     => "Verify TOKEN_URL, CLIENT_ID, etc. in .env."
+                  ];
+                }
+              } catch (Throwable $e) {
+                $fileChecks[] = [
+                  'section' => 'F. .env & API / DB Tests',
+                  'label'   => 'getAccessToken()',
+                  'status'  => 'FAIL',
+                  'message' => "Exception: " . $e->getMessage(),
+                  'fix'     => "Check `.env` values (TOKEN_URL, CLIENT_ID…)."
+                ];
+              }
+            }
+          } catch (Throwable $e) {
+            $fileChecks[] = [
+              'section' => 'F. .env & API / DB Tests',
+              'label'   => 'Working.php include',
+              'status'  => 'FAIL',
+              'message' => "Error including Working.php: " . htmlspecialchars($e->getMessage()),
+              'fix'     => "Ensure Working.php is valid PHP and readable."
+            ];
           }
-        } catch (Throwable $e) {
-          addCheck($results, $section, 'getAccessToken()', 'FAIL',
-            "Exception: " . $e->getMessage(),
-            "Check TOKEN_URL, CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD, SCOPE in .env."
+        } else {
+          $fileChecks[] = [
+            'section' => 'F. .env & API / DB Tests',
+            'label'   => 'Working.php',
+            'status'  => 'WARN',
+            'message' => '"Working.php" not found or not readable; skipping API tests.',
+            'fix'     => "Place Working.php in /public/mpsm/ if you want these tests."
+          ];
+        }
+
+        // F.3) Database connection if DB_* vars present
+        if (isset($env['DB_HOST'],$env['DB_USER'],$env['DB_PASS'],$env['DB_NAME'])) {
+          $fileChecks[] = [
+            'section' => 'F. .env & API / DB Tests',
+            'label'   => 'DB_* vars',
+            'status'  => 'PASS',
+            'message' => "Found DB_HOST, DB_USER, DB_NAME.",
+            'fix'     => ''
+          ];
+          $mysqli = @new mysqli(
+            $env['DB_HOST'],$env['DB_USER'],$env['DB_PASS'],$env['DB_NAME']
           );
+          if ($mysqli->connect_errno) {
+            $fileChecks[] = [
+              'section' => 'F. .env & API / DB Tests',
+              'label'   => 'MySQL Connection',
+              'status'  => 'FAIL',
+              'message' => "Connection failed: " . htmlspecialchars($mysqli->connect_error),
+              'fix'     => "Verify DB_HOST, DB_USER, DB_NAME in .env."
+            ];
+          } else {
+            $fileChecks[] = [
+              'section' => 'F. .env & API / DB Tests',
+              'label'   => 'MySQL Connection',
+              'status'  => 'PASS',
+              'message' => "Connected to MySQL (host: {$env['DB_HOST']}).",
+              'fix'     => ''
+            ];
+            $mysqli->close();
+          }
+        } else {
+          $fileChecks[] = [
+            'section' => 'F. .env & API / DB Tests',
+            'label'   => 'DB_* vars',
+            'status'  => 'WARN',
+            'message' => 'DB_HOST, DB_USER, DB_NAME not all set; skipping DB test.',
+            'fix'     => 'Add those vars to .env if you need DB connectivity.'
+          ];
         }
       }
-    } catch (Throwable $e) {
-      addCheck($results, $section, 'Working.php include', 'FAIL',
-        "Error including Working.php: " . htmlspecialchars($e->getMessage()),
-        "Ensure Working.php is valid PHP and readable."
-      );
-    }
-  } else {
-    addCheck($results, $section, 'Working.php', 'WARN',
-      '"Working.php" not found or not readable. Skipping API function tests.',
-      "Place Working.php reference in /public/mpsm/ if you want these tests."
-    );
+      break;
+
+    default:
+      // No additional checks for other extensions
+      break;
   }
 
-  // 3) Database Connection Test (if DB_* vars exist)
-  if (isset($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME'])) {
-    addCheck($results, $section, 'Database creds in .env', 'PASS',
-      "Found DB_HOST, DB_USER, DB_NAME in .env."
-    );
-    $mysqli = @new mysqli($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME']);
-    if ($mysqli->connect_errno) {
-      addCheck($results, $section, 'MySQL Connection', 'FAIL',
-        "Connection failed: " . htmlspecialchars($mysqli->connect_error),
-        "Verify DB_HOST, DB_USER, DB_PASS, DB_NAME in .env."
-      );
-    } else {
-      addCheck($results, $section, 'MySQL Connection', 'PASS',
-        "Connected successfully to MySQL (host: {$env['DB_HOST']})."
-      );
-      $mysqli->close();
-    }
-  } else {
-    addCheck($results, $section, 'DB_* vars', 'WARN',
-      "DB_HOST, DB_USER, DB_PASS, or DB_NAME missing in .env. Skipping DB test.",
-      "If you need a DB, add those variables to .env."
-    );
+  // Store these fileChecks into cache
+  $cacheData[$relPath] = [
+    'mtime'  => $mtime,
+    'status' => $fileChecks
+  ];
+
+  // Add each check entry to the global $results
+  foreach ($fileChecks as $c) {
+    addCheck($results, $c['section'], $c['label'], $c['status'], $c['message'], $c['fix']);
   }
 }
 
-/******************** SECTION G: RECURSIVE SCAN FOR MISSING include/require ********************/
+// 3) Save updated cache for next run
+file_put_contents(CACHE_FILE, json_encode($cacheData, JSON_PRETTY_PRINT));
 
-$section = 'G. Missing include/require Checks';
-$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__));
-foreach ($iterator as $fileInfo) {
-  if (!$fileInfo->isFile()) continue;
-  if (strtolower($fileInfo->getExtension()) !== 'php') continue;
-
-  $fullPath = $fileInfo->getRealPath();
-  $content  = file_get_contents($fullPath);
-  preg_match_all(
-    '/\b(include|require)(_once)?\s*[\(\'"]([^\'"]+\.php)[\'"]\)?\s*;?/i',
-    $content,
-    $matches,
-    PREG_SET_ORDER
-  );
-  foreach ($matches as $m) {
-    $includedRel = $m[3];
-    $baseDir = dirname($fullPath);
-    $target  = realpath($baseDir . '/' . $includedRel);
-    $projSource = substr($fullPath, strlen(__DIR__) + 1);
-
-    if (!$target || !file_exists($target)) {
-      addCheck($results, $section, "{$projSource} → include \"{$includedRel}\"", 'FAIL',
-        "\"{$includedRel}\" not found (referenced in {$projSource}).",
-        "Ensure `{$includedRel}` exists relative to `{$projSource}`, or fix the path."
-      );
-    } else {
-      addCheck($results, $section, "{$projSource} → include \"{$includedRel}\"", 'PASS',
-        "\"{$includedRel}\" found for {$projSource}."
-      );
-    }
-  }
-}
-
-/******************** SECTION H: OUTPUT (HTML + JSON + COPY BUTTON) ********************/
+/*************** SECTION H: OUTPUT (HTML + JSON + COPY BUTTON) ***************/
 
 if (isset($_GET['format']) && $_GET['format'] === 'json') {
   echo json_encode($results, JSON_PRETTY_PRINT);
@@ -480,12 +453,21 @@ echo <<<CSS
   h1 { color: #E024FA; margin-bottom: 10px; }
   h2 { color: #00E5FF; margin-top: 30px; }
   table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-  th, td { padding: 8px 12px; border: 1px solid #333; }
-  th { background: #262626; text-align: left; }
+  th, td {
+    padding: 8px 12px;
+    border: 1px solid #555;
+    vertical-align: top;
+  }
+  th {
+    background: #333;
+    color: #fff;
+    text-align: left;
+  }
+  tr:nth-child(even) { background: #2a2a2a; }
   .PASS { color: #00E5FF; font-weight: bold; }
   .FAIL { color: #FF4444; font-weight: bold; }
   .WARN { color: #FFAA00; font-weight: bold; }
-  .fix { color: #00E5FF; padding-left: 20px; font-style: italic; }
+  .fix { color: #00E5FF; padding-left: 12px; font-style: italic; }
   .section { margin-bottom: 40px; }
   code { background: #262626; padding: 2px 4px; border-radius: 4px; }
   #jsonOutput { background: #111; color: #0F0; padding: 20px; border-radius: 8px; overflow: auto; max-height: 300px; }
@@ -494,6 +476,7 @@ echo <<<CSS
 </style>
 CSS;
 echo "</head><body>";
+
 echo "<h1>MPSM Dashboard Debug Report</h1>";
 echo "<p>Timestamp: " . htmlspecialchars($results['timestamp']) . "</p>";
 echo "<p>Total Checks: {$results['summary']['total']}, "
@@ -506,7 +489,7 @@ foreach ($results['checks'] as $entry) {
   if ($entry['section'] !== $currentSection) {
     $currentSection = $entry['section'];
     echo "<div class='section'><h2>" . htmlspecialchars($currentSection) . "</h2>";
-    echo "<table><thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Fix Suggestion</th></tr></thead><tbody>";
+    echo "<table><thead><tr><th style='width:30%'>Check</th><th style='width:10%'>Status</th><th style='width:40%'>Message</th><th style='width:20%'>Fix Suggestion</th></tr></thead><tbody>";
   }
   $label   = htmlspecialchars($entry['label']);
   $status  = $entry['status'];
@@ -526,7 +509,7 @@ foreach ($results['checks'] as $entry) {
   if ($nextEntry !== false) prev($results['checks']);
 }
 
-// Section H: Machine-Readable JSON + “Copy to Clipboard”
+// “Copy JSON to Clipboard” button
 echo "<div class='section'><h2>Machine-Readable JSON Output</h2>";
 echo "<button id='copyButton'>Copy JSON to Clipboard</button>";
 echo "<div id='jsonOutput'><pre>" . json_encode($results, JSON_PRETTY_PRINT) . "</pre></div>";
