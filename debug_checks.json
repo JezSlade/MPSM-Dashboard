@@ -1,65 +1,55 @@
 {
-  "description": "List of files and folders to verify for MPSM Dashboard",
+  "description": "Files and folders required for the MPSM Dashboard skeleton (CSS, JS, PHP, modules, etc.)",
   "checks": [
     {
-      "type":   "file_exists",
-      "path":   "index.php",
-      "label":  "Root index.php"
+      "type":  "file_exists",
+      "path":  "index.php",
+      "label": "Root index.php"
     },
     {
-      "type":   "file_exists",
-      "path":   "config/permissions.php",
-      "label":  "Permissions config (config/permissions.php)"
+      "type":  "file_exists",
+      "path":  "config/permissions.php",
+      "label": "Permissions config (config/permissions.php)"
     },
     {
-      "type":   "file_exists",
-      "path":   "views/partials/header.php",
-      "label":  "Header partial (views/partials/header.php)"
+      "type":  "file_exists",
+      "path":  "views/partials/header.php",
+      "label": "Header partial (views/partials/header.php)"
     },
     {
-      "type":   "file_exists",
-      "path":   "views/partials/sidebar.php",
-      "label":  "Sidebar partial (views/partials/sidebar.php)"
+      "type":  "file_exists",
+      "path":  "views/partials/sidebar.php",
+      "label": "Sidebar partial (views/partials/sidebar.php)"
     },
     {
-      "type":   "file_exists",
-      "path":   "modules/Customers/customers.php",
-      "label":  "Customers module (modules/Customers/customers.php)"
+      "type":  "file_exists",
+      "path":  "modules/Customers/customers.php",
+      "label": "Customers module (modules/Customers/customers.php)"
     },
     {
-      "type":   "file_exists",
-      "path":   "assets/scss/styles.scss",
-      "label":  "SCSS source (assets/scss/styles.scss)"
+      "type":  "file_exists",
+      "path":  "assets/scss/styles.scss",
+      "label": "SCSS source (assets/scss/styles.scss)"
     },
     {
-      "type":   "file_exists",
-      "path":   "assets/css/styles.css",
-      "label":  "Compiled CSS (assets/css/styles.css)"
+      "type":  "file_exists",
+      "path":  "assets/css/styles.css",
+      "label": "Compiled CSS (assets/css/styles.css)"
     },
     {
-      "type":   "file_exists",
-      "path":   "assets/js/main.js",
-      "label":  "Main JS (assets/js/main.js)"
+      "type":  "file_exists",
+      "path":  "assets/js/main.js",
+      "label": "Main JS (assets/js/main.js)"
     },
     {
-      "type":   "file_exists",
-      "path":   "debug.php",
-      "label":  "Debug script itself (debug.php)"
+      "type":  "file_exists",
+      "path":  "debug.php",
+      "label": "This debug script (debug.php)"
     },
     {
-      "type":   "file_exists",
-      "path":   "debug_checks.json",
-      "label":  "Debug checks JSON (debug_checks.json)"
-    },
-    {
-      "type":   "file_exists",
-      "path":   ".env",
-      "label":  ".env (environment variables)"
-    },
-    {
-      "type":   "file_exists",
-      "path":   "Working.php",
-      "label":  "API helper (Working.php)"
+      "type":  "file_exists",
+      "path":  "debug_checks.json",
+      "label": "This debug config (debug_checks.json)"
     }
   ]
 }

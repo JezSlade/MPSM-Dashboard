@@ -2,23 +2,280 @@
 /**
  * debug.php
  *
- * A robust diagnostic script for the MPSM Dashboard.
- * Drop this into the root folder (same level as index.php) and access via browser.
- * It checks:
- *   1. Required files/folders (per debug_checks.json)
- *   2. PHP version & required extensions
- *   3. File/folder permissions (readable/writable)
- *   4. Working.php functions (getAccessToken, API calls, etc.)
- *   5. Basic .env loading (if present)
- *   6. Database connection (if config/database.php exists)
- *   7. Any custom checks you add to debug_checks.json
+ * A “crazy robust” diagnostic script for the MPSM Dashboard skeleton.
  *
  * Usage:
- *   1. Ensure debug.php and debug_checks.json are in /public/mpsm/
- *   2. Make debug.php and debug_checks.json world-readable (chmod 644).
- *   3. Visit http://<your-domain>/mpsm/debug.php in a browser.
+ *   1. Place this file and debug_checks.json (shown above) in /public/mpsm/
+ *   2. Ensure both are world‐readable (e.g., chmod 644).
+ *   3. Browse to http://<your-domain>/mpsm/debug.php
+ *   4. To get the same output as machine‐readable JSON, append ?format=json
+ *
+ * What it does:
+ *   - Section A: Loads debug_checks.json → verifies each listed path exists, is readable, and (where applicable) writable.
+ *   - Section B: Parses index.php to find <link rel="stylesheet" href="…"> tags and checks each referenced CSS file.
+ *   - Section C: Checks PHP version, required extensions, and key ini settings.
+ *   - Section D: Recursively scans for missing include/require targets in all PHP files.
+ *   - Section E: Generates a JSON “break/fix” report, so that ChatGPT (or any tool) can parse exactly which checks failed and how to fix them.
+ *
+ * Customize:
+ *   - Extend debug_checks.json to add/remove file/folder checks.
+ *   - Modify the “required_exts” array (Section C) if you need other PHP extensions.
+ *   - If you add new <link> or <script> references in index.php, this script will auto-detect them.
+ *
+ * Important:
+ *   - This script does NOT assume Working.php or .env are part of your project. It will not treat them as “required.” 
+ *   - Treat Working.php purely as a reference “Bible” and do not upload/alter it in this project.
  */
 
+header('Content-Type: ' . (isset($_GET['format']) && $_GET['format'] === 'json' ? 'application/json' : 'text/html; charset=UTF-8'));
+
+$results = [
+    'checks'   => [],
+    'summary'  => [
+        'total'       => 0,
+        'passed'      => 0,
+        'warnings'    => 0,
+        'failures'    => 0
+    ],
+    'timestamp' => date('c')
+];
+
+// Utility functions for adding results
+function addCheck(&$results, $section, $label, $status, $message = '', $fix = '') {
+    // $status: 'PASS', 'WARN', or 'FAIL'
+    $entry = [
+        'section' => $section,
+        'label'   => $label,
+        'status'  => $status,
+        'message' => $message,
+        'fix'     => $fix
+    ];
+    $results['checks'][] = $entry;
+    $results['summary']['total']++;
+    if ($status === 'PASS') {
+        $results['summary']['passed']++;
+    } elseif ($status === 'WARN') {
+        $results['summary']['warnings']++;
+    } else {
+        $results['summary']['failures']++;
+    }
+}
+
+/********************** SECTION A: FILE & FOLDER EXISTENCE / PERMISSIONS **********************/
+
+$section = 'A. Files & Permissions';
+$jsonCfgPath = __DIR__ . '/debug_checks.json';
+
+if (!is_readable($jsonCfgPath)) {
+    addCheck($results, $section, 'debug_checks.json', 'FAIL',
+        'Cannot read debug_checks.json at root. Did you upload it?',
+        'Place a valid debug_checks.json in /public/mpsm/.'
+    );
+} else {
+    $cfgRaw = file_get_contents($jsonCfgPath);
+    $cfg = json_decode($cfgRaw, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        addCheck($results, $section, 'debug_checks.json', 'FAIL',
+            'JSON parse error: ' . json_last_error_msg(),
+            'Fix syntax in debug_checks.json.'
+        );
+    } else {
+        foreach ($cfg['checks'] as $check) {
+            $type  = $check['type'];    // currently only “file_exists”
+            $path  = $check['path'];    // relative to /public/mpsm/
+            $label = $check['label'];   // human-friendly label
+
+            $full = __DIR__ . '/' . $path;
+            if ($type === 'file_exists') {
+                if (file_exists($full)) {
+                    // Check readability
+                    if (is_readable($full)) {
+                        addCheck($results, $section, $label, 'PASS',
+                            "Found and readable at \"$path\"."
+                        );
+                    } else {
+                        addCheck($results, $section, $label, 'FAIL',
+                            "\"$path\" exists but is not readable by PHP.",
+                            "chmod 644 \"$path\" (so the webserver can read it)."
+                        );
+                    }
+                } else {
+                    addCheck($results, $section, $label, 'FAIL',
+                        "\"$path\" is missing.",
+                        "Ensure \"$path\" is uploaded to /public/mpsm/."
+                    );
+                }
+            } else {
+                addCheck($results, $section, $label, 'WARN',
+                    "Unknown check type \"$type\"—cannot validate.",
+                    "Remove or fix this entry in debug_checks.json."
+                );
+            }
+        }
+    }
+}
+
+/******************** SECTION B: CSS LINK PARSE & EXISTENCE CHECK ********************/
+
+$section = 'B. CSS <link> References';
+$indexPath = __DIR__ . '/index.php';
+if (!file_exists($indexPath) || !is_readable($indexPath)) {
+    addCheck($results, $section, 'index.php', 'FAIL',
+        "Cannot open index.php for parsing CSS references.",
+        "Verify index.php exists and is readable."
+    );
+} else {
+    $indexHtml = file_get_contents($indexPath);
+    // Use a regex to find <link rel="stylesheet" href="…">
+    // Support single or double quotes, and optional attributes in any order.
+    preg_match_all(
+        '/<link\b[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>/i',
+        $indexHtml,
+        $matches
+    );
+
+    if (empty($matches[1])) {
+        addCheck($results, $section, 'CSS Links', 'WARN',
+            'No <link rel="stylesheet" href="…"> tags found in index.php.',
+            'Ensure your index.php is referencing stylesheets correctly.'
+        );
+    } else {
+        foreach ($matches[1] as $href) {
+            // Normalize the href (ignore query strings)
+            $hrefClean = explode('?', $href, 2)[0];
+            // If the href starts with “/” or “http”, skip filesystem check (external CSS)
+            if (preg_match('/^(https?:|\/\/)/i', $hrefClean)) {
+                addCheck($results, $section, $hrefClean, 'PASS',
+                    "External CSS reference—assuming it will load from remote."
+                );
+                continue;
+            }
+            // Build filesystem path: if href is "assets/css/styles.css", then full path is __DIR__ . '/assets/css/styles.css'
+            $cssPath = realpath(__DIR__ . '/' . ltrim($hrefClean, '/'));
+            if ($cssPath && file_exists($cssPath)) {
+                if (is_readable($cssPath)) {
+                    $size = filesize($cssPath);
+                    if ($size > 0) {
+                        addCheck($results, $section, $hrefClean, 'PASS',
+                            "\"$hrefClean\" exists, readable, size={$size} bytes."
+                        );
+                    } else {
+                        addCheck($results, $section, $hrefClean, 'FAIL',
+                            "\"$hrefClean\" is zero bytes.",
+                            'Recompile your SCSS (e.g., `sass assets/scss/styles.scss assets/css/styles.css`).'
+                        );
+                    }
+                } else {
+                    addCheck($results, $section, $hrefClean, 'FAIL',
+                        "\"$hrefClean\" exists but is not readable.",
+                        "chmod 644 \"$hrefClean\" so the webserver can serve it."
+                    );
+                }
+            } else {
+                addCheck($results, $section, $hrefClean, 'FAIL',
+                    "\"$hrefClean\" not found in filesystem.",
+                    "Check the <link> path in index.php or place the CSS file there."
+                );
+            }
+        }
+    }
+}
+
+/******************** SECTION C: PHP VERSION, EXTENSIONS, & INI SETTINGS ********************/
+
+$section = 'C. PHP Configuration';
+$phpVer    = phpversion();
+$isPhpOk   = version_compare($phpVer, '7.4.0', '>=');
+addCheck($results, $section, 'PHP Version', $isPhpOk ? 'PASS' : 'FAIL',
+    "Detected PHP version {$phpVer}.",
+    $isPhpOk ? '' : 'Upgrade PHP to ≥ 7.4.'
+);
+
+// Required extensions
+$required_exts = ['curl', 'json', 'mbstring'];
+foreach ($required_exts as $ext) {
+    $loaded = extension_loaded($ext);
+    addCheck($results, $section, "Extension: {$ext}", $loaded ? 'PASS' : 'FAIL',
+        $loaded ? "Extension `{$ext}` is loaded." : "Extension `{$ext}` is missing.",
+        $loaded ? '' : "Install and enable the PHP `{$ext}` extension."
+    );
+}
+
+// display_errors
+$dispErr = ini_get('display_errors');
+$dispErrStatus = ($dispErr == '1' || strtolower($dispErr) == 'on') ? 'WARN' : 'PASS';
+addCheck($results, $section, 'PHP ini: display_errors', $dispErrStatus,
+    "display_errors = {$dispErr}",
+    $dispErrStatus === 'WARN'
+        ? 'Turn off display_errors in production (set display_errors = Off in php.ini).'
+        : ''
+);
+
+// memory_limit
+$memLimit = ini_get('memory_limit');
+addCheck($results, $section, 'PHP ini: memory_limit', 'PASS',
+    "memory_limit = {$memLimit} (verify ≥ 128M if needed)."
+);
+
+// server software
+$serverSoft = $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
+addCheck($results, $section, 'Server Software', 'PASS',
+    "Running on `{$serverSoft}`."
+);
+
+/******************** SECTION D: RECURSIVE SCAN FOR MISSING include/require STATEMENTS ********************/
+
+$section = 'D. Missing include/require Checks';
+/**
+ * Search all .php files under /public/mpsm/ for lines like:
+ *    include 'some/path.php';
+ *    require_once "another.php";
+ * and verify that each target file actually exists. 
+ */
+$errors = [];
+$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__));
+foreach ($iterator as $fileInfo) {
+    if (!$fileInfo->isFile()) continue;
+    if (strtolower($fileInfo->getExtension()) !== 'php') continue;
+
+    $fullPath = $fileInfo->getRealPath();
+    $content  = file_get_contents($fullPath);
+    // Match include/require, with optional _once, with single or double quotes, any whitespace
+    preg_match_all(
+        '/\b(include|require)(_once)?\s*[\(\'"]([^\'"]+\.php)[\'"]\)?\s*;?/i',
+        $content,
+        $matches,
+        PREG_SET_ORDER
+    );
+    foreach ($matches as $m) {
+        $includedRel = $m[3]; 
+        // Resolve relative to the directory of the file containing the include
+        $baseDir = dirname($fullPath);
+        $target  = realpath($baseDir . '/' . $includedRel);
+        if (!$target || !file_exists($target)) {
+            // Compute a project-relative path
+            $projSource = substr($fullPath, strlen(__DIR__) + 1);
+            addCheck($results, $section, "{$projSource} → include \"{$includedRel}\"", 'FAIL',
+                "\"{$includedRel}\" not found (referenced in {$projSource}).",
+                "Ensure `{$includedRel}` exists relative to `{$projSource}`, or fix the path."
+            );
+        } else {
+            addCheck($results, $section, "{$projSource} → include \"{$includedRel}\"", 'PASS',
+                "\"{$includedRel}\" found for {$projSource}."
+            );
+        }
+    }
+}
+
+/******************** SECTION E: GENERATE OUTPUT ********************/
+
+if (isset($_GET['format']) && $_GET['format'] === 'json') {
+    // Output pure JSON
+    echo json_encode($results, JSON_PRETTY_PRINT);
+    exit;
+}
+
+// Otherwise, output as HTML
 echo "<!DOCTYPE html>\n<html lang='en'><head><meta charset='UTF-8'><title>MPSM Debug Report</title>";
 echo <<<CSS
 <style>
@@ -28,247 +285,51 @@ echo <<<CSS
   table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
   th, td { padding: 8px 12px; border: 1px solid #333; }
   th { background: #262626; text-align: left; }
-  .pass { color: #00E5FF; font-weight: bold; }
-  .fail { color: #FF4444; font-weight: bold; }
-  .warn { color: #FFAA00; font-weight: bold; }
+  .PASS { color: #00E5FF; font-weight: bold; }
+  .FAIL { color: #FF4444; font-weight: bold; }
+  .WARN { color: #FFAA00; font-weight: bold; }
+  .fix { color: #00E5FF; padding-left: 20px; }
   .section { margin-bottom: 40px; }
   code { background: #262626; padding: 2px 4px; border-radius: 4px; }
+  #jsonOutput { background: #111; color: #0F0; padding: 20px; border-radius: 8px; overflow: auto; max-height: 300px; }
 </style>
 CSS;
 echo "</head><body>";
-
 echo "<h1>MPSM Dashboard Debug Report</h1>";
+echo "<p>Timestamp: " . htmlspecialchars($results['timestamp']) . "</p>";
+echo "<p>Total Checks: {$results['summary']['total']}, <span class='PASS'>Passed: {$results['summary']['passed']}</span>, <span class='WARN'>Warnings: {$results['summary']['warnings']}</span>, <span class='FAIL'>Failures: {$results['summary']['failures']}</span></p>";
 
-// ========== SECTION 1: Load debug_checks.json and do file/folder existence checks ==========
-
-echo "<div class='section'>";
-echo "<h2>1. File & Folder Existence Checks</h2>";
-
-$json_path = __DIR__ . '/debug_checks.json';
-if (!is_readable($json_path)) {
-    echo "<p class='fail'>Cannot read <code>debug_checks.json</code> in root. Did you upload it?</p>";
-} else {
-    $raw = file_get_contents($json_path);
-    $cfg = json_decode($raw, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        echo "<p class='fail'>JSON parse error in <code>debug_checks.json</code>: " . json_last_error_msg() . "</p>";
-    } else {
-        echo "<table><thead><tr><th>Label</th><th>Path</th><th>Status</th></tr></thead><tbody>";
-        foreach ($cfg['checks'] as $check) {
-            $type = $check['type'];    // currently only "file_exists"
-            $path = $check['path'];    // relative path
-            $label= $check['label'];   // human label
-
-            $full = __DIR__ . '/' . $path;
-            if ($type === 'file_exists') {
-                if (file_exists($full)) {
-                    // test readability
-                    $perm = is_readable($full) ? "<span class='pass'>OK (readable)</span>" : "<span class='warn'>Found but not readable</span>";
-                    echo "<tr><td>{$label}</td><td><code>{$path}</code></td><td>{$perm}</td></tr>";
-                } else {
-                    echo "<tr><td>{$label}</td><td><code>{$path}</code></td><td><span class='fail'>MISSING</span></td></tr>";
-                }
-            } else {
-                echo "<tr><td colspan='3'><span class='warn'>Unknown check type: {$type}</span></td></tr>";
-            }
-        }
-        echo "</tbody></table>";
+$currentSection = '';
+foreach ($results['checks'] as $entry) {
+    if ($entry['section'] !== $currentSection) {
+        $currentSection = $entry['section'];
+        echo "<div class='section'><h2>" . htmlspecialchars($currentSection) . "</h2>";
+        echo "<table><thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Fix Suggestion</th></tr></thead><tbody>";
     }
-}
-echo "</div>\n"; // end section
+    $label   = htmlspecialchars($entry['label']);
+    $status  = $entry['status'];
+    $message = htmlspecialchars($entry['message']);
+    $fix     = htmlspecialchars($entry['fix']);
+    echo "<tr>";
+    echo "<td><code>{$label}</code></td>";
+    echo "<td class='{$status}'>{$status}</td>";
+    echo "<td>{$message}</td>";
+    echo "<td class='fix'>{$fix}</td>";
+    echo "</tr>";
 
-// ========== SECTION 2: PHP Configuration ==========
-echo "<div class='section'>";
-echo "<h2>2. PHP Configuration & Extensions</h2>";
-echo "<table><thead><tr><th>Check</th><th>Value</th><th>Status</th></tr></thead><tbody>";
-
-// 2a. PHP Version
-$phpVersion = phpversion();
-$okVersion  = version_compare($phpVersion, '7.4.0', '>=');
-$stat = $okVersion ? "<span class='pass'>{$phpVersion}</span>" : "<span class='fail'>{$phpVersion} (Requires ≥ 7.4)</span>";
-echo "<tr><td>PHP Version</td><td>{$phpVersion}</td><td>{$stat}</td></tr>";
-
-// 2b. Required Extensions
-$required_exts = ['curl', 'json', 'mbstring'];
-foreach ($required_exts as $ext) {
-    $loaded = extension_loaded($ext);
-    $stat   = $loaded ? "<span class='pass'>Loaded</span>" : "<span class='fail'>Missing</span>";
-    echo "<tr><td>Extension: {$ext}</td><td>" . ($loaded ? 'Yes' : 'No') . "</td><td>{$stat}</td></tr>";
-}
-
-// 2c. Display Errors Setting
-$displayErr = ini_get('display_errors');
-$stat = ($displayErr == '1' || strtolower($displayErr) == 'on') ? "<span class='warn'>On (not recommended for production)</span>" : "<span class='pass'>Off</span>";
-echo "<tr><td>PHP ini: display_errors</td><td>{$displayErr}</td><td>{$stat}</td></tr>";
-
-// 2d. Server Software
-$server_software = $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
-echo "<tr><td>Server Software</td><td>{$server_software}</td><td><span class='pass'>Info</span></td></tr>";
-
-echo "</tbody></table>";
-echo "</div>\n";
-
-// ========== SECTION 3: File/Folder Permissions ==========
-
-echo "<div class='section'>";
-echo "<h2>3. Key File & Folder Permissions</h2>";
-// Define a few critical items to check writability if needed
-$writables = [
-    'assets/css/styles.css',
-    'assets/js/main.js',
-    'modules/Customers/customers.php',
-    'config/permissions.php'
-];
-
-echo "<table><thead><tr><th>Path</th><th>Readable?</th><th>Writable?</th></tr></thead><tbody>";
-foreach ($writables as $rel) {
-    $full = __DIR__ . '/' . $rel;
-    if (file_exists($full)) {
-        $r = is_readable($full) ? "<span class='pass'>Yes</span>" : "<span class='fail'>No</span>";
-        $w = is_writable($full) ? "<span class='pass'>Yes</span>" : "<span class='warn'>No</span>";
-    } else {
-        $r = "<span class='fail'>Missing</span>";
-        $w = "<span class='fail'>Missing</span>";
+    // If this is the last check in the section, close tags
+    $nextCheck = next($results['checks']);
+    if ($nextCheck === false || $nextCheck['section'] !== $currentSection) {
+        echo "</tbody></table></div>";
     }
-    echo "<tr><td><code>{$rel}</code></td><td>{$r}</td><td>{$w}</td></tr>";
-}
-echo "</tbody></table>";
-echo "</div>\n";
-
-// ========== SECTION 4: .env Loading & Basic Token Logic ==========
-echo "<div class='section'>";
-echo "<h2>4. .env & API Helper Checks</h2>";
-
-// 4a. Attempt to load .env (if Dotenv is present)
-$env_path = __DIR__ . '/.env';
-if (file_exists($env_path)) {
-    echo "<p><span class='pass'>.env file found.</span> Checking readability… ";
-    echo is_readable($env_path) ? "<span class='pass'>OK</span></p>" : "<span class='fail'>Not readable.</span></p>";
-
-    // Attempt to parse a couple of env vars (without needing Dotenv installed)
-    $env_contents = file_get_contents($env_path);
-    $must_have = ['CLIENT_ID', 'CLIENT_SECRET'];
-    echo "<table><thead><tr><th>Env Var</th><th>Present?</th></tr></thead><tbody>";
-    foreach ($must_have as $key) {
-        $pattern = "/^{$key}=/m";
-        $found   = preg_match($pattern, $env_contents);
-        $stat    = $found ? "<span class='pass'>Yes</span>" : "<span class='fail'>No</span>";
-        echo "<tr><td>{$key}</td><td>{$stat}</td></tr>";
-    }
-    echo "</tbody></table>";
-} else {
-    echo "<p><span class='warn'>.env file not found. Skipping .env checks.</span></p>";
+    // Rewind pointer to maintain foreach correctness
+    if ($nextCheck !== false) prev($results['checks']);
 }
 
-// 4b. Check Working.php exists and some key functions
-$working_path = __DIR__ . '/Working.php';
-if (file_exists($working_path)) {
-    echo "<p><span class='pass'>Working.php found.</span> Attempting to include...</p>";
-    try {
-        include_once $working_path;
-        // List of functions we expect from Working.php
-        $expected_fx = ['getAccessToken', 'callGetCustomers'];
-        echo "<table><thead><tr><th>Function</th><th>Exists?</th></tr></thead><tbody>";
-        foreach ($expected_fx as $fn) {
-            $exists = function_exists($fn);
-            $stat   = $exists ? "<span class='pass'>Yes</span>" : "<span class='fail'>No</span>";
-            echo "<tr><td>{$fn}()</td><td>{$stat}</td></tr>";
-        }
-        echo "</tbody></table>";
-    } catch (\Throwable $e) {
-        echo "<p><span class='fail'>Error including Working.php:</span> " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
-} else {
-    echo "<p><span class='warn'>Working.php not found. Skipping API helper checks.</span></p>";
-}
-
-echo "</div>\n";
-
-// ========== SECTION 5: Database Connection Test (if config/database.php exists) ==========
-echo "<div class='section'>";
-echo "<h2>5. Database Connection (Optional)</h2>";
-
-// If there’s a config/database.php, try to load it and connect
-$db_cfg = __DIR__ . '/config/database.php';
-if (file_exists($db_cfg)) {
-    echo "<p><span class='pass'>config/database.php found.</span> Loading credentials…</p>";
-    try {
-        $db = include $db_cfg;
-        if (!is_array($db) || !isset($db['host'], $db['username'], $db['password'], $db['dbname'])) {
-            echo "<p><span class='fail'>config/database.php did not return expected array (host, username, password, dbname).</span></p>";
-        } else {
-            echo "<p>Attempting MySQL connection to <code>{$db['host']}</code>…</p>";
-            $mysqli = @new mysqli($db['host'], $db['username'], $db['password'], $db['dbname']);
-            if ($mysqli->connect_errno) {
-                echo "<p><span class='fail'>Connection failed:</span> " . htmlspecialchars($mysqli->connect_error) . "</p>";
-            } else {
-                echo "<p><span class='pass'>Connected successfully to MySQL (host: {$db['host']}).</span></p>";
-                $mysqli->close();
-            }
-        }
-    } catch (\Throwable $e) {
-        echo "<p><span class='fail'>Error requiring config/database.php:</span> " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
-} else {
-    echo "<p><span class='warn'>config/database.php not found. Skipping DB tests.</span></p>";
-}
-
-echo "</div>\n";
-
-// ========== SECTION 6: Additional PHP Settings ==========
-
-echo "<div class='section'>";
-echo "<h2>6. Additional PHP Settings & Limits</h2>";
-echo "<table><thead><tr><th>Setting</th><th>Value</th><th>Recommendation</th></tr></thead><tbody>";
-
-// memory_limit
-$mem = ini_get('memory_limit');
-echo "<tr><td>memory_limit</td><td>{$mem}</td><td>Typically ≥ 128M</td></tr>";
-
-// max_execution_time
-$max_exec = ini_get('max_execution_time');
-echo "<tr><td>max_execution_time</td><td>{$max_exec}s</td><td>≥ 30</td></tr>";
-
-// upload_max_filesize
-$up_max = ini_get('upload_max_filesize');
-echo "<tr><td>upload_max_filesize</td><td>{$up_max}</td><td>Depends on your needs</td></tr>";
-
-echo "</tbody></table>";
-echo "</div>\n";
-
-// ========== SECTION 7: Sample API Token Test (if getAccessToken exists) ==========
-echo "<div class='section'>";
-echo "<h2>7. Sample API Token Request (Dry Run)</h2>";
-
-// Only attempt this if getAccessToken() exists
-if (function_exists('getAccessToken')) {
-    try {
-        echo "<p>Attempting to retrieve a token from the API…</p>";
-        $token = getAccessToken(); // May throw on error
-        if (is_string($token) && strlen($token) > 10) {
-            echo "<p><span class='pass'>Success:</span> Received token string of length " . strlen($token) . ".</p>";
-        } else {
-            echo "<p><span class='warn'>Warning:</span> getAccessToken() returned something unexpected: " . htmlspecialchars(json_encode($token)) . "</p>";
-        }
-    } catch (\Throwable $e) {
-        echo "<p><span class='fail'>Error during getAccessToken():</span> " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
-} else {
-    echo "<p><span class='warn'>getAccessToken() not available. Skipping token test.</span></p>";
-}
-echo "</div>\n";
-
-// ========== SECTION 8: Summary & Next Steps ==========
-echo "<div class='section'>";
-echo "<h2>8. Summary & Next Steps</h2>";
-echo "<ul>
-        <li>If any <span class='fail'>FAIL</span> items appeared above, fix those first (missing files / PHP errors).</li>
-        <li>If you saw <span class='warn'>WARNING</span> items (e.g., SCSS not compiled), address them that step.</li>
-        <li>Re-run at each major code change to catch newly missing files or broken functions automatically.</li>
-        <li>Feel free to add new checks in <code>debug_checks.json</code> as you create new folders/modules.</li>
-        <li>Remember to compile SCSS: <code>sass assets/scss/styles.scss assets/css/styles.css</code> after edits.</li>
-        <li>Ensure Working.php is updated with correct API credentials and endpoints, then re-run the token test above.</li>
-      </ul>";
-echo "</div>\n";
+echo "<div class='section'><h2>Machine-Readable JSON Output</h2>";
+echo "<div id='jsonOutput'><pre>" . json_encode($results, JSON_PRETTY_PRINT) . "</pre></div>";
+echo "</div>";
 
 echo "</body></html>";
+exit;
+?>
