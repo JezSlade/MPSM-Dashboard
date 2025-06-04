@@ -1,1 +1,2 @@
-// Main JavaScript placeholder
+// assets/js/main.js
+console.log('Main JS loaded.');

@@ -2,23 +2,14 @@
 /**
  * modules/DevTools/debug.php
  *
- * Auto‐discovering, cached diagnostic for the MPSM Dashboard,
- * now living inside the DevTools module.
- *
- * Usage:
- *   • Accessible via “?module=DevTools” in index.php.
- *   • Requires that `user_has_permission('DevTools')` was already validated.
- *   • debug_cache.json will be created under /public/mpsm/.
+ * Auto-discovering, cached diagnostic for MPSM, now as a module.
  */
 
-// Prevent direct URL access outside the module check
 if (!defined('ROOT_DIR')) {
-    // index.php defines ROOT_DIR; if it’s missing, block access.
     header('HTTP/1.1 403 Forbidden');
     exit('Access Denied');
 }
 
-// The same helper logic as before. We rely on ROOT_DIR being defined in index.php.
 define('CACHE_FILE', ROOT_DIR . '/debug_cache.json');
 
 $results = [
@@ -35,14 +26,14 @@ function addCheck(&$results, $section, $label, $status, $message = '', $fix = ''
   else                           $results['summary']['failures']++;
 }
 
-// 1) Load or initialize cache
+// Load or initialize cache
 $cacheData = [];
 if (file_exists(CACHE_FILE) && is_readable(CACHE_FILE)) {
   $raw = file_get_contents(CACHE_FILE);
   $cacheData = json_decode($raw, true) ?: [];
 }
 
-// 2) Recursively scan files under ROOT_DIR (skip vendor/, node_modules/, .git/)
+// Recursively scan files under ROOT_DIR (skip node_modules, vendor, .git)
 $skipDirs = ['node_modules','vendor','.git'];
 $iterator = new RecursiveIteratorIterator(
   new RecursiveCallbackFilterIterator(
@@ -68,7 +59,7 @@ foreach ($iterator as $fileInfo) {
   $size    = $fileInfo->getSize();
   $ext     = strtolower($fileInfo->getExtension());
 
-  // 2A) If cached and unchanged, reuse
+  // If cached and unchanged, reuse
   if (isset($cacheData[$relPath]) && $cacheData[$relPath]['mtime'] === $mtime) {
     foreach ($cacheData[$relPath]['status'] as $cached) {
       addCheck(
@@ -83,10 +74,9 @@ foreach ($iterator as $fileInfo) {
     continue;
   }
 
-  // Otherwise, build fresh checks
   $fileChecks = [];
 
-  // 2B) Existence / readability
+  // Existence / readability
   if (is_readable($fileInfo->getPathname())) {
     $fileChecks[] = [
       'section'=>'A. File Existence & Permissions',
@@ -100,18 +90,17 @@ foreach ($iterator as $fileInfo) {
       'section'=>'A. File Existence & Permissions',
       'label'  =>$relPath,
       'status' =>'FAIL',
-      'message'=> ""{$relPath}" exists but is not readable by PHP.",
-      'fix'    => "chmod 644 "{$relPath}""
+      'message'=> "\"{$relPath}\" exists but is not readable by PHP.",
+      'fix'    => "chmod 644 \"{$relPath}\""
     ];
   }
 
-  // 2C) Extension‐specific logic
+  // Extension-specific checks
   switch ($ext) {
     case 'php':
-      // Scan includes/requires
       $content = file_get_contents($fileInfo->getPathname());
       preg_match_all(
-        '/(include|require)(_once)?\s*[\('"]([^\'"]+\.php)[\'"]\)?\s*;?/i',
+        '/\b(include|require)(_once)?\s*[\(\'"]([^\'"]+\.php)[\'"]\)?\s*;?/i',
         $content,
         $matches,
         PREG_SET_ORDER
@@ -120,14 +109,14 @@ foreach ($iterator as $fileInfo) {
         $includedRel = $m[3];
         $baseDir     = dirname($fileInfo->getRealPath());
         $target      = realpath($baseDir . '/' . $includedRel);
-        $label       = "{$relPath} → include "{$includedRel}"";
+        $label       = "{$relPath} → include \"{$includedRel}\"";
 
         if (!$target || !file_exists($target)) {
           $fileChecks[] = [
             'section'=>'D. Missing include/require Checks',
             'label'  =>$label,
             'status' =>'FAIL',
-            'message'=> ""{$includedRel}" not found (referenced in {$relPath}).",
+            'message'=> "\"{$includedRel}\" not found (referenced in {$relPath}).",
             'fix'    => "Ensure `{$includedRel}` exists relative to `{$relPath}`."
           ];
         } else {
@@ -135,30 +124,27 @@ foreach ($iterator as $fileInfo) {
             'section'=>'D. Missing include/require Checks',
             'label'  =>$label,
             'status' =>'PASS',
-            'message'=> ""{$includedRel}" found for {$relPath}.",
-            'fix'    =>''
+            'message'=> "\"{$includedRel}\" found for {$relPath}."
           ];
         }
       }
       break;
 
     case 'css':
-      // Only validate our main CSS
       if ($relPath === 'assets/css/styles.css') {
         if ($size > 0) {
           $fileChecks[] = [
             'section'=>'B. CSS <link> References',
             'label'  =>$relPath,
             'status' =>'PASS',
-            'message'=> "Size={$size} bytes.",
-            'fix'    =>''
+            'message'=> "Size={$size} bytes."
           ];
         } else {
           $fileChecks[] = [
             'section'=>'B. CSS <link> References',
             'label'  =>$relPath,
             'status' =>'FAIL',
-            'message'=> ""{$relPath}" is zero bytes.",
+            'message'=> "\"{$relPath}\" is zero bytes.",
             'fix'    =>'Verify your CSS file was built correctly.'
           ];
         }
@@ -175,15 +161,14 @@ foreach ($iterator as $fileInfo) {
             'label'  =>$relPath,
             'status' =>'FAIL',
             'message'=> 'JSON parse error: ' . json_last_error_msg(),
-            'fix'    => "Fix syntax errors in {$relPath}."
+            'fix'    => "Fix syntax in {$relPath}."
           ];
         } elseif (empty($j)) {
           $fileChecks[] = [
             'section'=>'E. AllEndpoints.json Validation',
             'label'  =>$relPath,
             'status' =>'WARN',
-            'message'=> "{$relPath} parsed as empty.",
-            'fix'    => "Verify {$relPath} contains expected entries."
+            'message'=> "{$relPath} parsed as empty."
           ];
         } else {
           $cnt = count($j);
@@ -191,8 +176,7 @@ foreach ($iterator as $fileInfo) {
             'section'=>'E. AllEndpoints.json Validation',
             'label'  =>$relPath,
             'status' =>'PASS',
-            'message'=> "{$relPath} parsed with {$cnt} entries.",
-            'fix'    =>''
+            'message'=> "{$relPath} parsed with {$cnt} entries."
           ];
         }
       }
@@ -200,7 +184,6 @@ foreach ($iterator as $fileInfo) {
 
     case 'env':
       if ($relPath === '.env') {
-        // Parse .env
         $lines = file($fileInfo->getPathname(), FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES);
         $env   = [];
         foreach ($lines as $line) {
@@ -213,11 +196,9 @@ foreach ($iterator as $fileInfo) {
           'section'=>'F. .env & API / DB Tests',
           'label'  =>'.env',
           'status' =>'PASS',
-          'message'=> '".env" loaded and parsed.',
-          'fix'    =>''
+          'message'=> '".env" loaded and parsed.'
         ];
 
-        // Required MPSM keys
         $requiredEnv = [
           'CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD',
           'SCOPE','TOKEN_URL','BASE_URL','DEALER_CODE'
@@ -228,7 +209,7 @@ foreach ($iterator as $fileInfo) {
               'section'=>'F. .env & API / DB Tests',
               'label'  =>$k,
               'status' =>'FAIL',
-              'message'=> ""{$k}" missing or empty in .env.",
+              'message'=> "\"{$k}\" missing in .env.",
               'fix'    => "Add `{$k}=…` to .env."
             ];
           } else {
@@ -236,21 +217,18 @@ foreach ($iterator as $fileInfo) {
               'section'=>'F. .env & API / DB Tests',
               'label'  =>$k,
               'status' =>'PASS',
-              'message'=> "{$k} = "{$env[$k]}".",
-              'fix'    =>''
+              'message'=> "{$k} = \"{$env[$k]}\"."
             ];
           }
         }
 
-        // Working.php API tests
         $workingPath = ROOT_DIR . '/Working.php';
         if (file_exists($workingPath) && is_readable($workingPath)) {
           $fileChecks[] = [
             'section'=>'F. .env & API / DB Tests',
             'label'  =>'Working.php',
             'status' =>'PASS',
-            'message'=> '"Working.php" found—for API tests.',
-            'fix'    =>''
+            'message'=> '"Working.php" found—for API tests.'
           ];
           try {
             include_once $workingPath;
@@ -260,8 +238,7 @@ foreach ($iterator as $fileInfo) {
                   'section'=>'F. .env & API / DB Tests',
                   'label'  => "{$fn}()",
                   'status' =>'PASS',
-                  'message'=> "{$fn}() exists.",
-                  'fix'    =>''
+                  'message'=> "{$fn}() exists."
                 ];
               } else {
                 $fileChecks[] = [
@@ -282,8 +259,7 @@ foreach ($iterator as $fileInfo) {
                     'section'=>'F. .env & API / DB Tests',
                     'label'  => 'getAccessToken()',
                     'status' =>'PASS',
-                    'message'=> "Received token length " . strlen($token) . ".",
-                    'fix'    =>''
+                    'message'=> "Received token length " . strlen($token) . "."
                   ];
                   if (function_exists('callGetCustomers')) {
                     try {
@@ -294,16 +270,14 @@ foreach ($iterator as $fileInfo) {
                           'section'=>'F. .env & API / DB Tests',
                           'label'  => 'callGetCustomers()',
                           'status' =>'PASS',
-                          'message'=> "Retrieved {$n} customers.",
-                          'fix'    =>''
+                          'message'=> "Retrieved {$n} customers."
                         ];
                       } else {
                         $fileChecks[] = [
                           'section'=>'F. .env & API / DB Tests',
                           'label'  => 'callGetCustomers()',
                           'status' =>'WARN',
-                          'message'=> "Returned non-array: " . json_encode($cust),
-                          'fix'    => "Verify DealerCode & API credentials."
+                          'message'=> "Returned non-array."
                         ];
                       }
                     } catch (Throwable $e) {
@@ -331,7 +305,7 @@ foreach ($iterator as $fileInfo) {
                   'label'  => 'getAccessToken()',
                   'status' =>'FAIL',
                   'message'=> "Exception: " . $e->getMessage(),
-                  'fix'    => "Check `.env` values (TOKEN_URL, CLIENT_ID…)."
+                  'fix'    => "Check `.env` values."
                 ];
               }
             }
@@ -349,29 +323,24 @@ foreach ($iterator as $fileInfo) {
             'section'=>'F. .env & API / DB Tests',
             'label'  => 'Working.php',
             'status' =>'WARN',
-            'message'=> '"Working.php" not found or not readable; skipping API tests.',
-            'fix'    => "Place Working.php in /public/mpsm/ if you want these tests."
+            'message'=> '"Working.php" not found; skipping API tests.'
           ];
         }
 
-        // Database test if credentials exist
         if (isset($env['DB_HOST'],$env['DB_USER'],$env['DB_PASS'],$env['DB_NAME'])) {
           $fileChecks[] = [
             'section'=>'F. .env & API / DB Tests',
             'label'  => 'DB_* vars',
             'status' =>'PASS',
-            'message'=> "Found DB_HOST, DB_USER, DB_NAME.",
-            'fix'    =>''
+            'message'=> "Found DB_HOST, DB_USER, DB_NAME."
           ];
-          $mysqli = @new mysqli(
-            $env['DB_HOST'],$env['DB_USER'],$env['DB_PASS'],$env['DB_NAME']
-          );
+          $mysqli = @new mysqli($env['DB_HOST'],$env['DB_USER'],$env['DB_PASS'],$env['DB_NAME']);
           if ($mysqli->connect_errno) {
             $fileChecks[] = [
               'section'=>'F. .env & API / DB Tests',
               'label'  => 'MySQL Connection',
               'status' =>'FAIL',
-              'message'=> "Connection failed: " . htmlspecialchars($mysqli->connect_error),
+              'message'=> "Conn failed: " . htmlspecialchars($mysqli->connect_error),
               'fix'    => "Verify DB_HOST, DB_USER, DB_NAME."
             ];
           } else {
@@ -379,8 +348,7 @@ foreach ($iterator as $fileInfo) {
               'section'=>'F. .env & API / DB Tests',
               'label'  => 'MySQL Connection',
               'status' =>'PASS',
-              'message'=> "Connected to MySQL (host: {$env['DB_HOST']}).",
-              'fix'    =>''
+              'message'=> "Connected to MySQL (host: {$env['DB_HOST']})."
             ];
             $mysqli->close();
           }
@@ -389,44 +357,37 @@ foreach ($iterator as $fileInfo) {
             'section'=>'F. .env & API / DB Tests',
             'label'  => 'DB_* vars',
             'status' =>'WARN',
-            'message'=> 'DB_HOST, DB_USER, DB_NAME not all set; skipping DB test.',
-            'fix'    => 'Add those vars to .env if you need DB.'
+            'message'=> 'DB_HOST, DB_USER, DB_NAME missing; skipping DB test.'
           ];
         }
       }
       break;
 
     default:
-      // No additional checks for other extensions
       break;
   }
 
-  // 2D) Cache this file’s results
+  // Cache results
   $cacheData[$relPath] = [
     'mtime'  => $mtime,
     'status' => $fileChecks
   ];
 
-  // 2E) Add to global results
+  // Add to overall
   foreach ($fileChecks as $c) {
-    addCheck($results, $c['section'], $c['label'], $c['status'], $c['message'], $c['fix']);
+    addCheck($results, $c['section'], $c['label'], $c['status'], $c['message'], $c['fix'] ?? '');
   }
 }
 
-// 3) Write updated cache to disk
+// Save cache
 file_put_contents(CACHE_FILE, json_encode($cacheData, JSON_PRETTY_PRINT));
 
-/************** SECTION 4: OUTPUT **************/
-
-// If ?format=json is present, just dump JSON
+// Output
 if (isset($_GET['format']) && $_GET['format'] === 'json') {
   echo json_encode($results, JSON_PRETTY_PRINT);
   exit;
 }
 
-// Otherwise, render the grouped HTML tables
-
-// Group by section name so each gets one table
 $grouped = [];
 foreach ($results['checks'] as $entry) {
   $section = $entry['section'];
@@ -436,25 +397,15 @@ foreach ($results['checks'] as $entry) {
   $grouped[$section][] = $entry;
 }
 
-// Render HTML
-echo "<!DOCTYPE html>
-<html lang='en'><head><meta charset='UTF-8'><title>Dev Tools: Debug Report</title>";
+echo "<!DOCTYPE html>\n<html lang='en'><head><meta charset='UTF-8'><title>Dev Tools: Debug Report</title>";
 echo <<<CSS
 <style>
   body { font-family: Consolas, monospace; background: #1E1E1E; color: #E0E0E0; padding: 20px; }
   h1 { color: #E024FA; margin-bottom: 10px; }
   h2 { color: #00E5FF; margin-top: 30px; }
   table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-  th, td {
-    padding: 8px 12px;
-    border: 1px solid #555;
-    vertical-align: top;
-  }
-  th {
-    background: #333;
-    color: #fff;
-    text-align: left;
-  }
+  th, td { padding: 8px 12px; border: 1px solid #555; vertical-align: top; }
+  th { background: #333; color: #fff; text-align: left; }
   tr:nth-child(even) { background: #2a2a2a; }
   .PASS { color: #00E5FF; font-weight: bold; }
   .FAIL { color: #FF4444; font-weight: bold; }
@@ -476,7 +427,6 @@ echo "<p>Total Checks: {$results['summary']['total']}, "
    . "<span class='WARN'>Warnings: {$results['summary']['warnings']}</span>, "
    . "<span class='FAIL'>Failures: {$results['summary']['failures']}</span></p>";
 
-// One table per section
 foreach ($grouped as $section => $entries) {
   echo "<div class='section'><h2>" . htmlspecialchars($section) . "</h2>";
   echo "<table>";
@@ -485,7 +435,7 @@ foreach ($grouped as $section => $entries) {
     $label   = htmlspecialchars($e['label']);
     $status  = $e['status'];
     $message = htmlspecialchars($e['message']);
-    $fix     = htmlspecialchars($e['fix']);
+    $fix     = htmlspecialchars($e['fix'] ?? '');
     echo "<tr>";
     echo "<td><code>{$label}</code></td>";
     echo "<td class='{$status}'>{$status}</td>";
@@ -496,13 +446,11 @@ foreach ($grouped as $section => $entries) {
   echo "</tbody></table></div>";
 }
 
-// Copyable JSON at the bottom
 echo "<div class='section'><h2>Machine-Readable JSON Output</h2>";
 echo "<button id='copyButton'>Copy JSON to Clipboard</button>";
 echo "<div id='jsonOutput'><pre>" . json_encode($results, JSON_PRETTY_PRINT) . "</pre></div>";
 echo "</div>";
 
-// Copy‐to‐clipboard script
 echo <<<JS
 <script>
   document.getElementById('copyButton').addEventListener('click', function() {
@@ -518,4 +466,3 @@ JS;
 
 echo "</body></html>";
 exit;
-?>

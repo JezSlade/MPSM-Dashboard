@@ -1,3 +1,9 @@
-<header class="site-header">
-  <h1>MPSM Dashboard</h1>
+<?php
+/**
+ * views/partials/header.php
+ * Site header.
+ */
+?>
+<header>
+  MPSM Dashboard
 </header>

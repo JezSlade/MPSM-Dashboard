@@ -1,12 +1,10 @@
 <?php
 /**
- * permissions.php
- *
- * Simple placeholder function for user permissions.
- * In a real app, this should check the logged-in user's roles.
+ * config/permissions.php
+ * Defines user roles and module permissions.
  */
 
 function user_has_permission($module) {
-    // For simplicity, allow all modules to every user.
+    // For demo purposes, allow all modules. Replace with real logic.
     return true;
 }

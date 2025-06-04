@@ -1,24 +1,22 @@
 <?php
 /**
  * views/partials/sidebar.php
- *
- * Renders the left‐hand navigation inside MPSM. Only display modules
- * the logged‐in user is allowed to see (per config/permissions.php).
+ * Dynamically generates sidebar links from $modules.
  */
+if (! isset($modules) || ! is_array($modules)) {
+    return;
+}
 ?>
 <nav class="sidebar">
   <ul>
-    <?php if (user_has_permission('Dashboard')): ?>
-      <li><a href="?module=Dashboard">Dashboard</a></li>
-    <?php endif; ?>
-
-    <?php if (user_has_permission('Customers')): ?>
-      <li><a href="?module=Customers">Customers</a></li>
-    <?php endif; ?>
-
-    <?php if (user_has_permission('DevTools')): ?>
-      <!-- Changed “developer” → “DevTools” so it matches the module key in index.php -->
-      <li><a href="?module=DevTools">Dev Tools</a></li>
-    <?php endif; ?>
+    <?php foreach ($modules as $modName => $modPath): ?>
+      <?php if (user_has_permission($modName)): ?>
+        <li<?php if ($modName === $module) echo ' class="active"'; ?>>
+          <a href="?module=<?= urlencode($modName) ?>">
+            <?= htmlspecialchars($modName) ?>
+          </a>
+        </li>
+      <?php endif; ?>
+    <?php endforeach; ?>
   </ul>
 </nav>
