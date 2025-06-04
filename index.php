@@ -2,9 +2,9 @@
 /**
  * index.php
  *
- * Main router for MPSM. Ensures DB schema is up‐to‐date (adds missing columns if needed),
- * seeds default roles/users/modules, grants every role access to Dashboard by default,
- * and only loads modules the current user is permitted to see.
+ * Main router for MPSM. Ensures DB schema is up‐to‐date (adding missing columns if needed),
+ * seeds default roles/users/modules, grants every role access to Dashboard,
+ * grants Admin access to all modules, and only loads modules the current user is permitted to see.
  */
 
 // 1) Show errors during development (remove or comment out in production)
@@ -13,14 +13,23 @@ error_reporting(E_ALL);
 
 session_start();
 
-// 2) Load permissions functions (defines user_has_permission() and current_user())
+// 2) Immediately ensure $_SESSION['user_id'] is set to 'guest' if it’s not already
+$pdo = require __DIR__ . '/config/db.php';
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+$stmt->execute(['guest']);
+$guestId = (int)$stmt->fetchColumn();
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    $_SESSION['user_id'] = $guestId;
+}
+
+// 3) Load permissions functions (defines user_has_permission() and current_user())
 require __DIR__ . '/config/permissions.php';
 
-// 3) Create or retrieve a PDO connection
+// 4) Create or retrieve a PDO connection (again, for schema operations)
 $pdo = require __DIR__ . '/config/db.php';
 
 // ────────────────────────────────────────────────────────────────────────────
-// 4) Ensure all required tables exist (roles, modules, role_module, users)
+// 5) Ensure all required tables exist (roles, modules, role_module, users)
 
 $pdo->exec("
   CREATE TABLE IF NOT EXISTS roles (
@@ -56,34 +65,30 @@ $pdo->exec("
 ");
 
 // ────────────────────────────────────────────────────────────────────────────
-// 5) Schema migration: ensure users.role_id exists; if not, add it (default to Guest)
+// 6) Schema migration: ensure users.role_id exists; if not, add it (default to Guest)
 
 try {
-    // Check whether 'role_id' column exists in 'users'
     $col = $pdo
       ->query("SHOW COLUMNS FROM users LIKE 'role_id'")
       ->fetch();
 
-    if (! $col) {
+    if (!$col) {
         // Fetch or create the Guest role to determine its id
         $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
         $stmt->execute(['Guest']);
-        $guestId = (int)$stmt->fetchColumn();
-
-        if (! $guestId) {
-            // If Guest role does not exist yet, create it and get its id
-            $pdo->prepare("INSERT INTO roles (name) VALUES (?)")
-                ->execute(['Guest']);
-            $guestId = (int)$pdo->lastInsertId();
+        $guestRoleId = (int)$stmt->fetchColumn();
+        if (!$guestRoleId) {
+            $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute(['Guest']);
+            $guestRoleId = (int)$pdo->lastInsertId();
         }
 
-        // Add the 'role_id' column to users, defaulting existing rows to Guest
+        // Add 'role_id' column to users, defaulting existing rows to Guest
         $pdo->exec("
           ALTER TABLE users
-          ADD COLUMN role_id INT NOT NULL DEFAULT {$guestId}
+          ADD COLUMN role_id INT NOT NULL DEFAULT {$guestRoleId}
         ");
 
-        // Add the foreign key constraint linking users.role_id → roles.id
+        // Add foreign key constraint
         $pdo->exec("
           ALTER TABLE users
           ADD CONSTRAINT fk_users_role
@@ -94,17 +99,16 @@ try {
     error_log("Schema migration error (users.role_id): " . $e->getMessage());
 }
 // ────────────────────────────────────────────────────────────────────────────
-// 6) Seed default roles and users
+// 7) Seed default roles and users
 
-// 6A) Ensure 'Guest' role exists
+// 7A) Ensure 'Guest' role exists
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE name = ?");
 $stmt->execute(['Guest']);
 if ((int)$stmt->fetchColumn() === 0) {
-    $pdo->prepare("INSERT INTO roles (name) VALUES (?)")
-        ->execute(['Guest']);
+    $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute(['Guest']);
 }
 
-// 6B) Ensure 'guest' user exists (with role 'Guest')
+// 7B) Ensure 'guest' user exists (with role 'Guest')
 $stmt = $pdo->prepare("
   SELECT u.id
   FROM users u
@@ -112,13 +116,10 @@ $stmt = $pdo->prepare("
   WHERE u.username = ?
 ");
 $stmt->execute(['guest']);
-if (! $stmt->fetch()) {
-    // Fetch Guest role_id
+if (!$stmt->fetch()) {
     $stmt2 = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
     $stmt2->execute(['Guest']);
     $guestRoleId = (int)$stmt2->fetchColumn();
-
-    // Create 'guest' user with a random password
     $pwHash = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
     $pdo->prepare("
       INSERT INTO users (username, password_hash, role_id)
@@ -126,24 +127,20 @@ if (! $stmt->fetch()) {
     ")->execute(['guest', $pwHash, $guestRoleId]);
 }
 
-// 6C) Ensure 'Admin' role exists
+// 7C) Ensure 'Admin' role exists
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE name = ?");
 $stmt->execute(['Admin']);
 if ((int)$stmt->fetchColumn() === 0) {
-    $pdo->prepare("INSERT INTO roles (name) VALUES (?)")
-        ->execute(['Admin']);
+    $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute(['Admin']);
 }
 
-// 6D) Ensure 'admin' user exists (role 'Admin', password 'admin123')
+// 7D) Ensure 'admin' user exists (role 'Admin', password 'admin123')
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
 $stmt->execute(['admin']);
 if ((int)$stmt->fetchColumn() === 0) {
-    // Fetch Admin role_id
     $stmt2 = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
     $stmt2->execute(['Admin']);
     $adminRoleId = (int)$stmt2->fetchColumn();
-
-    // Create 'admin' user
     $hash = password_hash('admin123', PASSWORD_DEFAULT);
     $pdo->prepare("
       INSERT INTO users (username, password_hash, role_id)
@@ -152,60 +149,71 @@ if ((int)$stmt->fetchColumn() === 0) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 7) Seed default modules
+// 8) Seed default modules
 
 $defaultModules = ['Dashboard', 'Customers', 'DevTools', 'Admin'];
 foreach ($defaultModules as $modName) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM modules WHERE name = ?");
     $stmt->execute([$modName]);
     if ((int)$stmt->fetchColumn() === 0) {
-        $pdo->prepare("INSERT INTO modules (name) VALUES (?)")
-            ->execute([$modName]);
+        $pdo->prepare("INSERT INTO modules (name) VALUES (?)")->execute([$modName]);
     }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 8) Grant EVERY role access to Dashboard (on first run)
+// 9) Grant EVERY role access to Dashboard
 
 try {
-    // Fetch Dashboard module_id
     $stmt = $pdo->prepare("SELECT id FROM modules WHERE name = ?");
     $stmt->execute(['Dashboard']);
     $dashboardId = (int)$stmt->fetchColumn();
 
-    // For each role, insert role_module link for Dashboard if missing
     $stmtRoles = $pdo->query("SELECT id FROM roles");
+    $insertStmt = $pdo->prepare("
+      INSERT IGNORE INTO role_module (role_id, module_id)
+      VALUES (?, ?)
+    ");
     while ($r = $stmtRoles->fetch(PDO::FETCH_ASSOC)) {
         $roleId = (int)$r['id'];
-        $check = $pdo->prepare("
-          SELECT COUNT(*) FROM role_module
-          WHERE role_id = ? AND module_id = ?
-        ");
-        $check->execute([$roleId, $dashboardId]);
-        if ((int)$check->fetchColumn() === 0) {
-            $pdo->prepare("
-              INSERT INTO role_module (role_id, module_id)
-              VALUES (?, ?)
-            ")->execute([$roleId, $dashboardId]);
-        }
+        $insertStmt->execute([$roleId, $dashboardId]);
     }
 } catch (PDOException $e) {
     error_log("Error granting Dashboard access: " . $e->getMessage());
 }
-// ────────────────────────────────────────────────────────────────────────────
-// 9) Ensure a user is logged in (default to 'guest' if none)
 
-if (! isset($_SESSION['user_id'])) {
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-    $stmt->execute(['guest']);
-    $guestId = (int)$stmt->fetchColumn();
-    if ($guestId) {
-        $_SESSION['user_id'] = $guestId;
+// ────────────────────────────────────────────────────────────────────────────
+// 10) Grant Admin role access to ALL modules
+
+try {
+    $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
+    $stmt->execute(['Admin']);
+    $adminRoleId = (int)$stmt->fetchColumn();
+
+    if ($adminRoleId) {
+        $stmt2 = $pdo->query("SELECT id FROM modules");
+        $insertAll = $pdo->prepare("
+          INSERT IGNORE INTO role_module (role_id, module_id)
+          VALUES (?, ?)
+        ");
+        while ($m = $stmt2->fetch(PDO::FETCH_ASSOC)) {
+            $insertAll->execute([$adminRoleId, (int)$m['id']]);
+        }
     }
+} catch (PDOException $e) {
+    error_log("Error granting Admin access to all modules: " . $e->getMessage());
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 10) Build the $modules array from database, mapping names → file paths
+// 11) Ensure a user is logged in (default to 'guest' if none)
+
+if (!isset($_SESSION['user_id'])) {
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt->execute(['guest']);
+    $_SESSION['user_id'] = (int)$stmt->fetchColumn();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 12) Build the $modules array from database, mapping names → file paths
 
 $moduleRows = $pdo->query("SELECT name FROM modules ORDER BY name ASC")
                   ->fetchAll(PDO::FETCH_COLUMN);
@@ -223,13 +231,13 @@ foreach ($moduleRows as $modName) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 11) Determine which module to load; default to "Dashboard"
+// 13) Determine which module to load; default to "Dashboard"
 
 $module = isset($_GET['module']) ? $_GET['module'] : 'Dashboard';
 
-// 12) Permission check: module must exist and user must have access
+// 14) Permission check: module must exist and user must have access
 
-if (! array_key_exists($module, $modules) || ! user_has_permission($module)) {
+if (!array_key_exists($module, $modules) || !user_has_permission($module)) {
     header('HTTP/1.1 403 Forbidden');
     echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>403 Forbidden</title></head><body>";
     echo "<h1>403 Forbidden</h1>";
@@ -239,7 +247,7 @@ if (! array_key_exists($module, $modules) || ! user_has_permission($module)) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 13) Render the page
+// 15) Render the page
 
 ?>
 <!DOCTYPE html>
