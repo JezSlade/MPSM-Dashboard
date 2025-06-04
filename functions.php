@@ -26,9 +26,15 @@ function get_user_permissions($user_id) {
         }
     }
 
-    // Get custom permissions assigned directly to the user (placeholder for future expansion)
-    // For now, assume no custom permissions unless implemented in the UI
-    return array_unique($permissions); // Remove duplicates if a user has overlapping roles
+    // Get custom permissions assigned directly to the user
+    $result = $db->query("SELECT p.name FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = $user_id");
+    if ($result !== false) {
+        while ($row = $result->fetch_assoc()) {
+            $permissions[] = $row['name'];
+        }
+    }
+
+    return array_unique($permissions); // Remove duplicates
 }
 
 function has_permission($permission) {

@@ -8,7 +8,7 @@ body {
 
 .header {
     background: #2d3436; /* Slightly lighter slate */
-    padding: 15px 30px; /* Increased padding */
+    padding: 15px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -16,49 +16,46 @@ body {
     top: 0;
     width: 100%;
     box-sizing: border-box;
-    /* Neumorphic effect with softer shadow */
-    box-shadow: 5px 5px 15px #1a2021, -5px -5px 15px #40484b, 0 5px 10px rgba(0, 206, 201, 0.3);
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 0 10px 15px rgba(0, 206, 201, 0.4); /* Deeper shadow */
 }
 
 .header h1 {
     margin: 0;
     font-size: 24px;
-    color: #00cec9; /* Teal for header text */
+    color: #00cec9;
+    text-shadow: 0 2px 4px rgba(0, 206, 201, 0.3); /* Subtle depth */
 }
 
 .header a {
-    color: #00cec9; /* Teal for links */
+    color: #00cec9;
     text-decoration: none;
     margin-left: 20px;
-    padding: 5px 10px;
+    padding: 8px 12px;
     border-radius: 15px;
-    /* Neumorphic effect for links */
     background: #2d3436;
-    box-shadow: 3px 3px 6px #1a2021, -3px -3px 6px #40484b;
+    box-shadow: 4px 4px 8px #1a2021, -4px -4px 8px #40484b;
     transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
 .header a:hover {
-    box-shadow: inset 3px 3px 6px #1a2021, inset -3px -3px 6px #40484b;
-    /* Teal neon glow for text */
-    text-shadow: 0 0 5px #00cec9;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+    text-shadow: 0 0 6px #00cec9;
 }
 
 .main {
     display: flex;
-    margin-top: 70px; /* Adjusted for increased header padding */
+    margin-top: 70px;
 }
 
 .sidebar {
-    width: 300px; /* Increased width to give more space and prevent overlap */
-    background: #2d3436; /* Matches header */
-    padding: 20px; /* Increased padding */
+    width: 220px; /* Narrower sidebar */
+    background: #2d3436;
+    padding: 20px;
     position: fixed;
-    top: 70px; /* Adjusted for header height */
+    top: 70px;
     height: calc(100% - 70px);
     overflow-y: auto;
-    /* Softer shadow instead of harsh border */
-    box-shadow: 5px 5px 15px #1a2021, -5px -5px 15px #40484b, 5px 0 10px rgba(0, 206, 201, 0.3);
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 6px 0 15px rgba(0, 206, 201, 0.4);
 }
 
 .sidebar ul {
@@ -67,62 +64,55 @@ body {
 }
 
 .sidebar li {
-    margin: 15px 0; /* Increased margin for spacing */
+    margin: 15px 0;
 }
 
 .sidebar a {
     display: block;
     padding: 12px;
-    color: #d1d8e0; /* Light gray for links */
+    color: #d1d8e0;
     text-decoration: none;
     border-radius: 15px;
-    /* Neumorphic effect */
     background: #2d3436;
-    box-shadow: 5px 5px 10px #1a2021, -5px -5px 10px #40484b;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b; /* Deeper shadow */
     transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
 .sidebar a:hover, .sidebar a.active {
-    /* Inset shadow for "pressed" effect */
-    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b;
-    /* Teal neon glow for text, magenta underglow */
-    text-shadow: 0 0 5px #00cec9, 0 0 10px #00cec9;
-    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b, 0 10px 15px rgba(255, 0, 255, 0.5);
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
 
 .content {
     flex: 1;
-    padding: 40px; /* Increased padding for better spacing */
-    margin-left: 300px; /* Matches new sidebar width */
+    padding: 40px;
+    margin-left: 220px; /* Matches narrower sidebar */
     background: #1e272e;
-    /* Neumorphic effect for content area */
-    box-shadow: inset 5px 5px 15px #1a2021, inset -5px -5px 15px #40484b;
+    box-shadow: inset 8px 8px 20px #1a2021, inset -8px -8px 20px #40484b;
     border-radius: 15px;
-    min-height: calc(100vh - 70px); /* Ensure content area takes full height */
+    min-height: calc(100vh - 70px);
 }
 
 .error {
-    color: #e74c3c; /* Soft red for errors */
-    padding: 10px;
+    color: #e74c3c;
+    padding: 12px;
     border-radius: 10px;
-    /* Neumorphic effect */
     background: #1e272e;
-    box-shadow: inset 3px 3px 6px #1a2021, inset -3px -3px 6px #40484b;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
 }
 
 .login-container {
     max-width: 400px;
     margin: 100px auto;
-    padding: 30px; /* Increased padding */
-    background: #2d3436; /* Matches sidebar/header */
+    padding: 30px;
+    background: #2d3436;
     border-radius: 15px;
-    /* Neumorphic effect */
-    box-shadow: 5px 5px 15px #1a2021, -5px -5px 15px #40484b;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b;
 }
 
 .login-container h1 {
     text-align: center;
-    color: #00cec9; /* Teal for login header */
+    color: #00cec9;
 }
 
 .login-container input {
@@ -132,10 +122,9 @@ body {
     margin: 10px 0;
     background: #2d3436;
     border: none;
-    color: #d1d8e0; /* Light gray text */
+    color: #d1d8e0;
     border-radius: 10px;
-    /* Neumorphic effect */
-    box-shadow: inset 3px 3px 6px #1a2021, inset -3px -3px 6px #40484b;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
 }
 
 .login-container button {
@@ -143,35 +132,30 @@ body {
     padding: 12px;
     background: #2d3436;
     border: none;
-    color: #00cec9; /* Teal text on button */
+    color: #00cec9;
     font-weight: bold;
     border-radius: 10px;
-    /* Neumorphic effect */
-    box-shadow: 5px 5px 10px #1a2021, -5px -5px 10px #40484b;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
     transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
 .login-container button:hover {
-    /* Pressed effect */
-    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b;
-    /* Teal neon glow for text, magenta underglow */
-    text-shadow: 0 0 5px #00cec9, 0 0 10px #00cec9;
-    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b, 0 10px 15px rgba(255, 0, 255, 0.5);
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
 
 .permissions-form {
     margin-top: 20px;
-    padding: 20px; /* Increased padding */
+    padding: 20px;
     background: #2d3436;
     border-radius: 15px;
-    /* Neumorphic effect */
-    box-shadow: 5px 5px 15px #1a2021, -5px -5px 15px #40484b;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b;
 }
 
 .permissions-form label {
     display: block;
     margin: 10px 0 5px;
-    color: #d1d8e0; /* Light gray for labels */
+    color: #d1d8e0;
 }
 
 .permissions-form input[type="text"],
@@ -180,10 +164,9 @@ body {
     padding: 12px;
     background: #2d3436;
     border: none;
-    color: #d1d8e0; /* Light gray text */
+    color: #d1d8e0;
     border-radius: 10px;
-    /* Neumorphic effect */
-    box-shadow: inset 3px 3px 6px #1a2021, inset -3px -3px 6px #40484b;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
 }
 
 .permissions-form button {
@@ -191,41 +174,15 @@ body {
     padding: 12px 20px;
     background: #2d3436;
     border: none;
-    color: #00cec9; /* Teal text on button */
+    color: #00cec9;
     border-radius: 10px;
-    /* Neumorphic effect */
-    box-shadow: 5px 5px 10px #1a2021, -5px -5px 10px #40484b;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
     transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
 .permissions-form button:hover {
-    /* Pressed effect */
-    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b;
-    /* Teal neon glow for text, magenta underglow */
-    text-shadow: 0 0 5px #00cec9, 0 0 10px #00cec9;
-    box-shadow: inset 5px 5px 10px #1a2021, inset -5px -5px 10px #40484b, 0 10px 15px rgba(255, 0, 255, 0.5);
-}
-
-/* Style hyperlinks in Permissions module */
-.permissions-table a,
-nav a {
-    color: #00cec9; /* Teal to match theme */
-    text-decoration: none;
-    padding: 2px 5px;
-    border-radius: 5px;
-    transition: color 0.3s, text-shadow 0.3s;
-}
-
-.permissions-table a:hover,
-nav a:hover {
-    color: #1abc9c; /* Slightly lighter teal on hover */
-    text-shadow: 0 0 5px #00cec9; /* Soft neon glow */
-}
-
-.permissions-table a:visited,
-nav a:visited {
-    color: #6d8299; /* Muted grayish-teal for visited links, readable against dark background */
-    text-shadow: none;
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
 
 .permissions-table {
@@ -236,15 +193,34 @@ nav a:visited {
 
 .permissions-table th, .permissions-table td {
     padding: 12px;
-    border: 1px solid #00cec9; /* Teal border */
+    border: 1px solid #00cec9;
     text-align: left;
     background: #2d3436;
-    /* Neumorphic effect */
-    box-shadow: inset 2px 2px 5px #1a2021, inset -2px -2px 5px #40484b;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
 }
 
 .permissions-table th {
     background: #2d3436;
-    /* Slightly stronger shadow for headers */
-    box-shadow: 3px 3px 6px #1a2021, -3px -3px 6px #40484b;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
+}
+
+.permissions-table a,
+nav a {
+    color: #00cec9;
+    text-decoration: none;
+    padding: 2px 5px;
+    border-radius: 5px;
+    transition: color 0.3s, text-shadow 0.3s;
+}
+
+.permissions-table a:hover,
+nav a:hover {
+    color: #1abc9c;
+    text-shadow: 0 0 6px #00cec9;
+}
+
+.permissions-table a:visited,
+nav a:visited {
+    color: #6d8299;
+    text-shadow: none;
 }
