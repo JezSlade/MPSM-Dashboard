@@ -1,22 +1,13 @@
 <?php
-/**
- * views/partials/sidebar.php
- * Dynamically generates sidebar links from $modules.
- */
-if (! isset($modules) || ! is_array($modules)) {
-    return;
+$modules = require __DIR__ . '/../../config/modules.php';
+echo '<nav class="sidebar"><ul>';
+foreach ($modules as $m) {
+    if (user_has_permission($m['key'])) {
+        $active = ($_GET['module'] ?? 'Dashboard') === $m['key'] ? 'class="active"' : '';
+        echo "<li $active><a href="index.php?module={$m['key']}">";
+        echo "<i class="fas {$m['icon-class']}"></i> {$m['label']}";
+        echo "</a></li>";
+    }
 }
+echo '</ul></nav>';
 ?>
-<nav class="sidebar">
-  <ul>
-    <?php foreach ($modules as $modName => $modPath): ?>
-      <?php if (user_has_permission($modName)): ?>
-        <li<?php if ($modName === $module) echo ' class="active"'; ?>>
-          <a href="?module=<?= urlencode($modName) ?>">
-            <?= htmlspecialchars($modName) ?>
-          </a>
-        </li>
-      <?php endif; ?>
-    <?php endforeach; ?>
-  </ul>
-</nav>

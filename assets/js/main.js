@@ -1,2 +1,1 @@
-// assets/js/main.js
-console.log('Main JS loaded.');
+console.log('MPSM Dashboard loaded');

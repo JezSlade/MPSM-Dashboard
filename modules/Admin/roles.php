@@ -1,2 +1,2 @@
-<h2>Customers</h2>
+<h2>Admin</h2>
 <p><?= htmlspecialchars($info) ?></p>

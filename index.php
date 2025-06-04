@@ -1,39 +1,38 @@
 <?php
+declare(strict_types=1);
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 session_start();
-require __DIR__ . '/config/permissions.php';
 
-$modules = [
-    'Dashboard' => 'modules/Dashboard/dashboard.php',
-    'Customers' => 'modules/Customers/customers.php',
-    'DevTools'  => 'modules/DevTools/debug.php'
-];
+// Bootstrap environment
+require_once __DIR__ . '/config/env.php';
+Env::load(__DIR__ . '/.env');
 
-$module = isset($_GET['module']) ? $_GET['module'] : 'Dashboard';
+// Ensure DB connection
+$pdo = require __DIR__ . '/config/db.php';
 
-if (! array_key_exists($module, $modules) || ! user_has_permission($module)) {
-    header('HTTP/1.1 403 Forbidden');
-    echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>403 Forbidden</title></head><body>";
-    echo "<h1>403 Forbidden</h1>";
-    echo "<p>You do not have access to the <strong>" . htmlspecialchars($module) . "</strong> module.</p>";
-    echo "</body></html>";
+// Ensure guest login before loading permissions
+require_once __DIR__ . '/config/permissions.php';
+ensureGuestSession($pdo);
+
+// Load router and modules registry
+$routes = require __DIR__ . '/config/router.php';
+$moduleDefs = require __DIR__ . '/config/modules.php';
+
+// Determine requested module
+$moduleKey = $_GET['module'] ?? 'Dashboard';
+if (!isset($routes[$moduleKey])) {
+    header('Location: index.php?module=Dashboard');
     exit;
 }
+$controllerClass = $routes[$moduleKey];
+$controller = new $controllerClass($pdo);
+
+try {
+    $controller->authorize();
+    $controller->handle();
+} catch (Core\Exceptions\NotAuthorizedException $e) {
+    http_response_code(403);
+    echo '<h1>403 Forbidden</h1><p>You do not have access to that module.</p>';
+}
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>MPSM Dashboard – <?= htmlspecialchars($module) ?></title>
-  <link rel="stylesheet" href="assets/css/styles.css">
-  <script src="assets/js/main.js" defer></script>
-</head>
-<body>
-  <?php include __DIR__ . '/views/partials/header.php'; ?>
-  <div class="main-wrapper">
-    <?php include __DIR__ . '/views/partials/sidebar.php'; ?>
-    <main class="content">
-      <?php include __DIR__ . '/' . $modules[$module]; ?>
-    </main>
-  </div>
-</body>
-</html>
