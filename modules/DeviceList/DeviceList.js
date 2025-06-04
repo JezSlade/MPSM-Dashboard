@@ -1,1 +1,0 @@
-// DeviceList frontend placeholder

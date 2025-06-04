@@ -1,1 +1,0 @@
-// CustomerSelect frontend placeholder

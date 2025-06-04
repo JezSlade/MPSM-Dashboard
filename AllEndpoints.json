@@ -1,21 +1,15 @@
 {
   "paths": {
-    "/Customer/GetCustomers": {
-      "post": {
-        "summary": "Get customers",
-        "operationId": "Customer/GetCustomers"
-      }
-    },
-    "/Device/List": {
-      "post": {
-        "summary": "Get device list",
-        "operationId": "Device/List"
-      }
-    },
-    "/Device/GetDetailedInformations": {
-      "post": {
-        "summary": "Get device details",
-        "operationId": "Device/GetDetailedInformations"
+    "/example/endpoint": {
+      "get": {
+        "operationId": "Example/Endpoint",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": { "type": "string" }
+          }
+        }
       }
     }
   }

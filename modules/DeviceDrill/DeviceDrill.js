@@ -1,1 +1,0 @@
-// DeviceDrill frontend placeholder

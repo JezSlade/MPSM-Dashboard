@@ -1,0 +1,384 @@
+/* ================================
+   GENERAL RESET + BASE LAYOUT
+   ================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  background-color: #0a0a0a;    /* Very dark base */
+  color: #e0e0e0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Container “card” with neon glow + depth */
+.container {
+  background: #121212; /* Slightly lighter than page bg */
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 900px;
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.7),
+    inset 0 0 2px rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Title */
+h1 {
+  font-size: 1.75rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.05em;
+  color: #ff2da8;
+  text-shadow: 0 0 8px rgba(255, 45, 168, 0.8);
+}
+
+/* ================================
+   FORM ELEMENTS (SELECT, INPUTS)
+   ================================ */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Label + select row */
+label {
+  font-size: 0.95rem;
+  color: #ccc;
+  margin-bottom: 0.25rem;
+}
+
+/* Neon‐style select */
+select {
+  background: #1b1b1b;
+  color: #e0e0e0;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid rgba(255, 45, 168, 0.6);
+  border-radius: 0.5rem;
+  box-shadow:
+    inset 0 0 4px rgba(255, 45, 168, 0.2),
+    0 0 8px rgba(255, 45, 168, 0.4);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+select:hover,
+select:focus {
+  border-color: rgba(0, 255, 255, 0.8);
+  box-shadow:
+    inset 0 0 6px rgba(0, 255, 255, 0.4),
+    0 0 12px rgba(0, 255, 255, 0.6);
+}
+
+/* Submit‐style button (if ever added) */
+button,
+input[type="submit"] {
+  background: #1f1f1f;
+  color: #ff2da8;
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+  border: 2px solid #ff2da8;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 4px rgba(255,45,168,0.3),
+    0 0 12px rgba(255,45,168,0.5);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+button:hover,
+input[type="submit"]:hover {
+  background: #ff2da8;
+  color: #0a0a0a;
+  box-shadow:
+    inset 0 0 6px rgba(255,45,168,0.5),
+    0 0 16px rgba(255,45,168,0.7);
+}
+
+/* ================================
+   TABLE STYLING WITH DEPTH/NEON
+   ================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #1a1a1a;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.6),
+    inset 0 0 2px rgba(255, 255, 255, 0.05);
+}
+
+thead {
+  background: radial-gradient(circle at top left,
+    rgba(255, 45, 168, 0.8),
+    rgba(255, 45, 168, 0.2));
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  color: #f0f0f0;
+  position: relative;
+  border-bottom: 1px solid #333;
+}
+
+th {
+  font-size: 0.95rem;
+  text-align: left;
+  text-shadow: 0 0 4px rgba(255, 45, 168, 0.6);
+}
+
+tbody tr {
+  transition: background 0.2s, transform 0.1s;
+}
+
+tbody tr:nth-child(even) {
+  background: #181818;
+}
+
+tbody tr:hover {
+  background: #242424;
+  transform: translateY(-1px);
+}
+
+tbody td {
+  font-size: 0.9rem;
+}
+
+/* ================================
+   SLIDERS + PROGRESS BARS
+   ================================ */
+input[type="range"],
+.progress-container {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* Custom neon range slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 0.5rem;
+  background: #2a2a2a;
+  border-radius: 0.25rem;
+  box-shadow:
+    inset 0 0 4px rgba(255, 45, 168, 0.2),
+    0 0 6px rgba(255, 45, 168, 0.3);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: radial-gradient(circle,
+    rgba(0, 255, 255, 0.8),
+    rgba(0, 255, 255, 0.4));
+  border-radius: 50%;
+  box-shadow:
+    0 0 8px rgba(0, 255, 255, 0.6);
+  cursor: pointer;
+  margin-top: -0.375rem;
+  transition: box-shadow 0.2s;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  background: radial-gradient(circle,
+    rgba(0, 255, 255, 0.8),
+    rgba(0, 255, 255, 0.4));
+  border: none;
+  border-radius: 50%;
+  box-shadow:
+    0 0 8px rgba(0, 255, 255, 0.6);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]::-moz-range-thumb:hover {
+  box-shadow:
+    0 0 12px rgba(0, 255, 255, 0.8);
+}
+
+/* Neon progress bar container */
+.progress-container {
+  background: #212121;
+  border-radius: 0.5rem;
+  height: 0.75rem;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 4px rgba(255,255,255,0.05),
+    0 0 6px rgba(0,0,0,0.5);
+}
+
+/* Gradient fill inside the progress bar */
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg,
+    #ff2da8 0%,
+    #ffd900 50%,
+    #00ffff 100%);
+  box-shadow:
+    0 0 8px rgba(255,45,168,0.6),
+    inset 0 0 4px rgba(255,255,255,0.1);
+  transition: width 0.4s ease;
+}
+
+/* ================================
+   TOGGLE SWITCHES
+   ================================ */
+.toggle-switch {
+  display: inline-block;
+  position: relative;
+  width: 3rem;
+  height: 1.5rem;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-switch label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #2a2a2a;
+  border-radius: 0.75rem;
+  box-shadow:
+    inset 0 0 6px rgba(255,255,255,0.05),
+    0 0 4px rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch label::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  background: radial-gradient(circle at top left,
+    rgba(255, 217, 0, 0.9),
+    rgba(255, 217, 0, 0.5));
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 217, 0, 0.6);
+  transition: left 0.2s;
+}
+
+.toggle-switch input:checked + label {
+  background: #08181f;
+}
+
+.toggle-switch input:checked + label::after {
+  left: calc(100% - 1.35rem);
+  background: radial-gradient(circle at top left,
+    rgba(0, 255, 255, 0.9),
+    rgba(0, 255, 255, 0.5));
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+}
+
+/* ================================
+   NEON ICON BUTTONS (ARROW, PLAY, X)
+   ================================ */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  background: #1f1f1f;
+  border-radius: 0.75rem;
+  margin: 0.5rem;
+  box-shadow:
+    inset 0 0 4px rgba(255,255,255,0.05),
+    0 4px 12px rgba(0,0,0,0.6);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.icon-btn svg {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn.arrow-up svg {
+  stroke: #ff2da8;
+}
+
+.icon-btn.play svg {
+  stroke: #ffd900;
+}
+
+.icon-btn.cross svg {
+  stroke: #00ffff;
+}
+
+.icon-btn:hover {
+  box-shadow:
+    inset 0 0 6px rgba(255,255,255,0.1),
+    0 6px 16px rgba(0,0,0,0.7);
+}
+
+/* ================================
+   CARD-LIKE INPUT BOX (e.g. “CARD”)
+   ================================ */
+.card-input {
+  background: #1a1a1a;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 2px solid rgba(0, 255, 255, 0.6);
+  box-shadow:
+    inset 0 0 8px rgba(0, 255, 255, 0.2),
+    0 0 12px rgba(0, 255, 255, 0.4);
+  color: #cfcfcf;
+  font-size: 1rem;
+  text-shadow: 0 0 4px rgba(0,255,255,0.3);
+  margin-bottom: 1rem;
+}
+
+/* ================================
+   NEON BUTTON (“BUTTON”) 
+   ================================ */
+.neon-btn {
+  background: #1b1b1b;
+  color: #ff2da8;
+  font-size: 1rem;
+  padding: 0.6rem 1.4rem;
+  border: 2px solid #ff2da8;
+  border-radius: 2rem;
+  box-shadow:
+    inset 0 0 8px rgba(255, 45, 168, 0.3),
+    0 0 16px rgba(255, 45, 168, 0.5);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+
+.neon-btn:active {
+  transform: translateY(1px);
+}
+

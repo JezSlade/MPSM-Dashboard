@@ -1,1 +1,0 @@
-// DebugPanel frontend placeholder
