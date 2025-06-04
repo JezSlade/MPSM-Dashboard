@@ -239,21 +239,25 @@ while ($row = $result->fetch_assoc()) {
 <?php elseif ($action === 'edit' && isset($_GET['role_id'])): ?>
     <?php
     $role_id = filter_input(INPUT_GET, 'role_id', FILTER_VALIDATE_INT);
-    if ($role_id === false || $role_id <= 0) {
-        echo "<p class='error'>Invalid role ID.</p>";
-    } else {
+    if ($role_id === false || $role_id <= 0): ?>
+        <p class='error'>Invalid role ID.</p>
+    <?php else: ?>
+        <?php
         $result = $db->query("SELECT * FROM roles WHERE id = $role_id");
-        if ($result === false) {
-            echo "<p class='error'>Error fetching role: " . htmlspecialchars($db->error) . "</p>";
-        } else {
+        if ($result === false): ?>
+            <p class='error'>Error fetching role: <?php echo htmlspecialchars($db->error); ?></p>
+        <?php else: ?>
+            <?php
             $role = $result->fetch_assoc();
-            if (!$role) {
-                echo "<p class='error'>Role not found.</p>";
-            } else {
+            if (!$role): ?>
+                <p class='error'>Role not found.</p>
+            <?php else: ?>
+                <?php
                 $result = $db->query("SELECT permission_id FROM role_permissions WHERE role_id = $role_id");
-                if ($result === false) {
-                    echo "<p class='error'>Error fetching role permissions: " . htmlspecialchars($db->error) . "</p>";
-                } else {
+                if ($result === false): ?>
+                    <p class='error'>Error fetching role permissions: <?php echo htmlspecialchars($db->error); ?></p>
+                <?php else: ?>
+                    <?php
                     $role_perms = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
                     ?>
                     <h2>Edit Permissions for <?php echo htmlspecialchars($role['name']); ?></h2>
@@ -272,29 +276,32 @@ while ($row = $result->fetch_assoc()) {
                             <button type="submit" name="assign_permissions">Save</button>
                         <?php endif; ?>
                     </form>
-                    <?php
-                }
-            }
-        }
-    }
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php endif; ?>
 <?php elseif ($action === 'edit_user' && isset($_GET['user_id'])): ?>
     <?php
     $user_id = filter_input(INPUT_GET, 'user_id', FILTER_VALIDATE_INT);
-    if ($user_id === false || $user_id <= 0) {
-        echo "<p class='error'>Invalid user ID.</p>";
-    } else {
+    if ($user_id === false || $user_id <= 0): ?>
+        <p class='error'>Invalid user ID.</p>
+    <?php else: ?>
+        <?php
         $result = $db->query("SELECT * FROM users WHERE id = $user_id");
-        if ($result === false) {
-            echo "<p class='error'>Error fetching user: " . htmlspecialchars($db->error) . "</p>";
-        } else {
+        if ($result === false): ?>
+            <p class='error'>Error fetching user: <?php echo htmlspecialchars($db->error); ?></p>
+        <?php else: ?>
+            <?php
             $user = $result->fetch_assoc();
-            if (!$user) {
-                echo "<p class='error'>User not found.</p>";
-            } else {
+            if (!$user): ?>
+                <p class='error'>User not found.</p>
+            <?php else: ?>
+                <?php
                 $result = $db->query("SELECT role_id FROM user_roles WHERE user_id = $user_id");
-                if ($result === false) {
-                    echo "<p class='error'>Error fetching user roles: " . htmlspecialchars($db->error) . "</p>";
-                } else {
+                if ($result === false): ?>
+                    <p class='error'>Error fetching user roles: <?php echo htmlspecialchars($db->error); ?></p>
+                <?php else: ?>
+                    <?php
                     $user_role_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'role_id');
                     ?>
                     <h2>Edit Roles for <?php echo htmlspecialchars($user['username']); ?></h2>
