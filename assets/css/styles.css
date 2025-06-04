@@ -1,239 +1,35 @@
-:root {
-  --neon-pink:   #E024FA;
-  --neon-blue:   #00E5FF;
-  --neon-yellow: #F6FF00;
-  --bg-dark:     #1E1E1E;
-  --bg-panel:    #262626;
-  --text-light:  #E0E0E0;
-}
-
-* {
+/* Placeholder CSS */
+body {
   margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  background: var(--bg-dark);
   font-family: Consolas, monospace;
-  color: var(--text-light);
-  height: 100%;
-  width: 100%;
+  background: #1E1E1E;
+  color: #E0E0E0;
 }
-
-a {
-  text-decoration: none;
-  color: inherit;
+.site-header {
+  background: #282828;
+  padding: 10px;
+  color: #fff;
 }
-
-/* 1. Header */
-.app-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 60px;
-  width: 100%;
-  background: var(--bg-panel);
+.main-wrapper {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 24px;
-  box-shadow: -2px -2px 8px rgba(255,255,255,0.15), 2px 2px 8px rgba(0,0,0,0.3);
 }
-
-.app-header .app-title {
-  font-size: 1.4rem;
-  color: var(--neon-pink);
-  text-shadow: 0 0 4px var(--neon-pink), 0 0 8px rgba(224,36,250,0.7);
+.sidebar {
+  width: 200px;
+  background: #333;
+  padding: 15px;
 }
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.header-right .version-tag {
-  font-size: 0.8rem;
-  margin-right: 16px;
-  color: var(--text-light);
-}
-
-.role-switcher label {
-  margin-right: 8px;
-  font-size: 0.9rem;
-}
-
-.role-switcher select {
-  background: var(--bg-dark);
-  color: var(--text-light);
-  border: 1px solid #171717;
-  padding: 4px 8px;
-  border-radius: 4px;
-  box-shadow: -1px -1px 4px rgba(255,255,255,0.1), 1px 1px 4px rgba(0,0,0,0.2);
-}
-
-.role-switcher select:focus {
-  outline: none;
-  border-color: var(--neon-blue);
-}
-
-/* 2. Sidebar */
-.app-sidebar {
-  position: fixed;
-  top: 60px;
-  left: 0;
-  bottom: 0;
-  width: 220px;
-  background: var(--bg-panel);
-  padding: 16px 0;
-  box-shadow: -2px -2px 8px rgba(255,255,255,0.15), 2px 2px 8px rgba(0,0,0,0.3);
-}
-
-.app-sidebar nav ul {
+.sidebar ul {
   list-style: none;
+  padding: 0;
 }
-
-.app-sidebar nav li {
-  margin-bottom: 8px;
+.sidebar ul li {
+  margin-bottom: 10px;
 }
-
-.app-sidebar nav li.active a {
-  background: #1f1f1f;
-  color: var(--neon-blue);
+.sidebar ul li a {
+  color: #fff;
+  text-decoration: none;
 }
-
-.app-sidebar nav a {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  border-radius: 6px;
-  color: var(--text-light);
-  transition: background 0.2s;
-}
-
-.app-sidebar nav a:hover {
-  background: #1a1a1a;
-}
-
-.app-sidebar .icon {
-  margin-right: 12px;
-  fill: var(--text-light);
-}
-
-.app-sidebar .label {
-  font-size: 1rem;
-}
-
-/* 3. Main Content */
-.app-content {
-  margin-top: 60px;
-  margin-left: 240px;
-  padding: 24px;
-  min-height: calc(100vh - 60px);
-  background: var(--bg-dark);
-}
-
-/* 4. Module Container / Panels */
-.module-container {
-  background: var(--bg-panel);
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: -4px -4px 12px rgba(255,255,255,0.18), 4px 4px 12px rgba(0,0,0,0.36);
-}
-
-.module-container h2 {
-  margin-bottom: 16px;
-  font-size: 1.5rem;
-  color: var(--neon-pink);
-  text-shadow: 0 0 4px var(--neon-pink), 0 0 8px rgba(224,36,250,0.7);
-}
-
-.module-container label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 1rem;
-}
-
-.module-container select,
-.module-container button {
-  font-family: Consolas, monospace;
-  font-size: 1rem;
-}
-
-.module-container select {
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--bg-dark);
-  border: 1px solid #171717;
-  border-radius: 6px;
-  color: var(--text-light);
-  box-shadow: -1px -1px 4px rgba(255,255,255,0.1), 1px 1px 4px rgba(0,0,0,0.2);
-}
-
-.module-container select:focus {
-  outline: none;
-  border-color: var(--neon-yellow);
-}
-
-.module-container button {
-  margin-top: 12px;
-  padding: 10px 20px;
-  background: var(--bg-dark);
-  color: var(--text-light);
-  border: 1px solid #171717;
-  border-radius: 6px;
-  cursor: pointer;
-  box-shadow: -1px -1px 4px rgba(255,255,255,0.1), 1px 1px 4px rgba(0,0,0,0.2);
-  transition: background 0.2s, color 0.2s;
-}
-
-.module-container button:hover {
-  background: #1a1a1a;
-  color: var(--neon-blue);
-}
-
-/* 5. Placeholder / “Coming Soon” */
-.module-placeholder {
-  background: var(--bg-panel);
-  border-radius: 12px;
-  padding: 40px;
-  text-align: center;
-  box-shadow: -4px -4px 12px rgba(255,255,255,0.18), 4px 4px 12px rgba(0,0,0,0.36);
-}
-
-.module-placeholder h2 {
-  margin-bottom: 16px;
-  font-size: 1.6rem;
-  color: var(--neon-yellow);
-  text-shadow: 0 0 4px var(--neon-yellow), 0 0 8px rgba(246,255,0,0.7);
-}
-
-.module-placeholder p {
-  font-size: 1rem;
-  color: #bbbbbb;
-}
-
-/* 6. Debug JSON & Copy Button */
-#copyButton {
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background-color: #00E5FF;
-  color: #1E1E1E;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-#copyButton:hover {
-  background-color: #00C4CC;
-}
-
-#jsonOutput {
-  background: #111;
-  color: #0F0;
+.content {
+  flex: 1;
   padding: 20px;
-  border-radius: 8px;
-  overflow: auto;
-  max-height: 300px;
 }

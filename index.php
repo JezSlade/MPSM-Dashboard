@@ -1,50 +1,56 @@
 <?php
-// /public/mpsm/index.php
+/**
+ * index.php
+ *
+ * Main router for MPSM. Determines which module to load based on `?module=…`,
+ * and includes the appropriate PHP file under /modules/.
+ */
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+session_start();
 
-require_once __DIR__ . '/config/permissions.php';
+// Load user permissions and any autoloaders
+require __DIR__ . '/config/permissions.php';
 
-$module = isset($_GET['module']) ? $_GET['module'] : 'dashboard';
-$validModules = ['dashboard', 'customers', 'developer'];
+// Determine which module to load (default “Dashboard”)
+$module = isset($_GET['module']) ? $_GET['module'] : 'Dashboard';
 
-if (!in_array($module, $validModules) || !canViewModule($module)) {
-    $module = 'dashboard';
+// Define available modules (key = module name, value = file path)
+$modules = [
+    'Dashboard' => 'modules/Dashboard/dashboard.php',
+    'Customers' => 'modules/Customers/customers.php',
+    'DevTools'  => 'modules/DevTools/debug.php'
+];
+
+// If user lacks permission for the requested module, show “Access Denied”
+if (! array_key_exists($module, $modules) || ! user_has_permission($module)) {
+    header('HTTP/1.1 403 Forbidden');
+    echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>403 Forbidden</title></head><body>";
+    echo "<h1>403 Forbidden</h1>";
+    echo "<p>You do not have access to the <strong>" . htmlspecialchars($module) . "</strong> module.</p>";
+    echo "</body></html>";
+    exit;
 }
-?><!DOCTYPE html>
+
+// Include the site header + sidebar (shared across all modules)
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MPSM Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MPSM Dashboard – <?= htmlspecialchars($module) ?></title>
   <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/main.js" defer></script>
 </head>
 <body>
-
   <?php include __DIR__ . '/views/partials/header.php'; ?>
-  <?php include __DIR__ . '/views/partials/sidebar.php'; ?>
-
-  <main class="app-content">
-    <?php
-      switch ($module) {
-        case 'customers':
-          include __DIR__ . '/modules/Customers/customers.php';
-          break;
-
-        case 'developer':
-          echo "<div class='module-placeholder'><h2>Developer Tools (Coming Soon)</h2></div>";
-          break;
-
-        default:
-          echo "<div class='module-placeholder'><h2>Welcome to the Dashboard</h2>
-                <p>Select a module from the sidebar.</p></div>";
-          break;
-      }
-    ?>
-  </main>
-
-  <script src="assets/js/main.js"></script>
+  <div class="main-wrapper">
+    <?php include __DIR__ . '/views/partials/sidebar.php'; ?>
+    <main class="content">
+      <?php
+        // Finally, include the requested module’s PHP file.
+        include __DIR__ . '/' . $modules[$module];
+      ?>
+    </main>
+  </div>
 </body>
 </html>

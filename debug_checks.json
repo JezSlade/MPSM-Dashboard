@@ -1,0 +1,30 @@
+{
+  "description": "Files and folders required for the DevTools debug harness",
+  "checks": [
+    {
+      "type":  "file_exists",
+      "path":  "modules/DevTools/debug.php",
+      "label": "DevTools debug script"
+    },
+    {
+      "type":  "file_exists",
+      "path":  "modules/DevTools/debug_checks.json",
+      "label": "DevTools debug config"
+    },
+    {
+      "type":  "file_exists",
+      "path":  "config/permissions.php",
+      "label": "Permissions config"
+    },
+    {
+      "type":  "file_exists",
+      "path":  "AllEndpoints.json",
+      "label": "AllEndpoints.json"
+    },
+    {
+      "type":  "file_exists",
+      "path":  ".env",
+      "label": ".env (environment variables)"
+    }
+  ]
+}
