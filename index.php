@@ -10,9 +10,10 @@ define('BASE_PATH', __DIR__ . '/');
 
 // Include dependencies
 require_once BASE_PATH . 'db.php';
-require_once BASE_PATH . 'auth.php';
+include_once BASE_PATH . 'auth.php';
 
-if (!isLoggedIn()) {
+// Fallback if auth.php is missing or isLoggedIn is undefined
+if (!function_exists('isLoggedIn') || !isLoggedIn()) {
     header('Location: login.php');
     exit;
 }

@@ -2,7 +2,8 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-if (!has_permission('view_devtools')) {
+// Fallback if has_permission is not defined
+if (!function_exists('has_permission') || !has_permission('view_devtools')) {
     echo "<p class='text-red-500 p-4'>Access denied.</p>";
     exit;
 }
