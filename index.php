@@ -4,8 +4,13 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/auth.php';
+
+// Define BASE_PATH
+define('BASE_PATH', __DIR__ . '/');
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'auth.php';
 
 if (!isLoggedIn()) {
     header('Location: login.php');
@@ -21,8 +26,8 @@ $modules = [
 $current_module = $_GET['module'] ?? 'dashboard';
 
 // Load module content
-$module_file = __DIR__ . "/{$current_module}.php";
-$content = file_exists($module_file) ? $module_file : __DIR__ . '/dashboard.php';
+$module_file = BASE_PATH . "{$current_module}.php";
+$content = file_exists($module_file) ? $module_file : BASE_PATH . 'dashboard.php';
 ?>
 
 <!DOCTYPE html>
@@ -32,7 +37,7 @@ $content = file_exists($module_file) ? $module_file : __DIR__ . '/dashboard.php'
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPSM Control Panel</title>
     <!-- Tailwind CSS CDN with fallback -->
-    <link rel="stylesheet" href="/msds/styles-fallback.css" type="text/css">
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css" type="text/css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {

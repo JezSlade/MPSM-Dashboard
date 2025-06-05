@@ -7,7 +7,7 @@ if (!has_permission('view_devtools')) {
     exit;
 }
 
-$env_file = __DIR__ . '/.env';
+$env_file = BASE_PATH . '.env';
 $env_vars = [];
 if (file_exists($env_file)) {
     $lines = explode("\n", file_get_contents($env_file));
@@ -20,7 +20,7 @@ if (file_exists($env_file)) {
     }
 }
 
-$css_file = __DIR__ . '/styles.css';
+$css_file = BASE_PATH . 'styles.css';
 $css_content = file_exists($css_file) ? file_get_contents($css_file) : '';
 $primary_color = preg_match('/--primary-color:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00cec9';
 $depth_intensity = preg_match('/--depth-intensity:\s*(\d+px)/', $css_content, $match) ? $match[1] : '8px';
