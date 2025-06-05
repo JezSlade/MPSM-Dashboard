@@ -68,8 +68,28 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
         .glass {
             background: rgba(28, 37, 38, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5),
-                        inset 0 0 10px rgba(0, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6),
+                        inset 0 0 15px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7),
+                        inset 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        .menu-item {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border-radius: 8px;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+        .menu-item:hover {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            transform: translateX(5px);
+        }
+        .menu-item.active {
+            background: linear-gradient(145deg, rgba(255, 255, 0, 0.2), rgba(255, 255, 0, 0.1));
+            transform: translateX(5px);
         }
         @supports not (backdrop-filter: blur(10px)) {
             .glass {
@@ -103,7 +123,7 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
                 <ul class="space-y-2">
                     <?php foreach ($modules as $module => $data): ?>
                         <li>
-                            <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 hover:bg-gray-800/20 rounded <?php echo $current_module === $module ? 'bg-gray-800 text-yellow-neon' : ''; ?>">
+                            <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 rounded menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
                                 <?php
                                 $icons = [
                                     'home' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7m-9-5v12"></path></svg>',
