@@ -1,6 +1,16 @@
 <?php
+<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+
+require_once BASE_PATH . 'db.php';
+
+if (!has_permission('view_devtools')) {
+    echo "<p class='text-red-500 p-4'>Access denied.</p>";
+    exit;
+}
+
+$env_vars = load_env(BASE_PATH);
 
 // Fallback if has_permission is not defined
 if (!function_exists('has_permission') || !has_permission('view_devtools')) {
