@@ -1,46 +1,38 @@
 <?php
-// Define BASE_PATH in the entry point
-define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+// Enable PHP error display
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
 session_start();
-if (isset($_SESSION['user_id'])) {
-    header('Location: index.php');
-    exit;
-}
+
+// Define BASE_PATH
+define('BASE_PATH', __DIR__ . '/');
+
+// Include dependencies
 require_once BASE_PATH . 'db.php';
-require_once BASE_PATH . 'functions.php';
+require_once BASE_PATH . 'auth.php';
 
-$error = '';
+// Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
 
-    if (empty($username) || empty($password)) {
-        $error = "Username and password are required.";
-    } else {
-        $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
-        if ($stmt === false) {
-            $error = "Database error: Unable to prepare statement.";
-        } else {
-            $stmt->bind_param('s', $username);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            if ($result->num_rows === 1) {
-                $user = $result->fetch_assoc();
-                if ($password === $user['password']) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['role_id'] = $user['role_id']; // Keep for backward compatibility, though multiple roles override this
-                    $_SESSION['permissions'] = get_user_permissions($user['id']);
-                    header('Location: index.php');
-                    exit;
-                } else {
-                    $error = "Invalid password.";
-                }
-            } else {
-                $error = "Invalid username.";
-            }
+    try {
+        if (empty($username) || empty($password)) {
+            throw new Exception('Username and password are required.');
         }
+
+        // Mock authentication (replace with your actual logic)
+        if ($username === 'admin' && $password === 'password') {
+            $_SESSION['user_id'] = 1;
+            $_SESSION['role'] = 'Admin';
+            header('Location: index.php');
+            exit;
+        } else {
+            throw new Exception('Invalid credentials.');
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
 }
 ?>
@@ -50,19 +42,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Login - MPSM Control Panel</title>
+    <!-- Tailwind CSS CDN with fallback -->
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css" type="text/css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'teal-custom': '#00cec9',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        /* Fallback for backdrop-filter and offline */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        @supports not (backdrop-filter: blur(10px)) {
+            .glass {
+                background: rgba(52, 73, 94, 0.5);
+            }
+        }
+    </style>
 </head>
-<body>
-    <div class="login-container">
-        <h1>Login</h1>
-        <?php if (!empty($error)): ?>
-            <p class="error"><?php echo htmlspecialchars($error); ?></p>
+<body class="bg-gray-900 text-white min-h-screen font-sans flex items-center justify-center">
+    <div class="glass p-6 rounded-lg border border-gray-800 w-full max-w-md">
+        <h2 class="text-2xl text-teal-custom mb-4 text-center">Login to MPSM 🎛️</h2>
+        <?php if (isset($error)): ?>
+            <p class="text-red-500 mb-4 text-center"><?php echo htmlspecialchars($error); ?></p>
         <?php endif; ?>
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
+        <form method="POST" action="" class="space-y-4">
+            <div>
+                <label class="block text-gray-300">Username:</label>
+                <input type="text" name="username" required class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Password:</label>
+                <input type="password" name="password" required class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded">
+            </div>
+            <button type="submit" class="w-full bg-gray-800 text-teal-custom p-2 rounded border border-gray-700 hover:bg-gray-700">Login 🔐</button>
         </form>
     </div>
 </body>
