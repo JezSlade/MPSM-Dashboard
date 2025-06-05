@@ -2,11 +2,6 @@
 require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 
-if (!has_permission('view_status')) {
-    echo "<p class='text-red-500 p-4'>Access denied.</p>";
-    exit;
-}
-
 $username = $_SESSION['username'] ?? 'Unknown';
 $db_status = $db ? 'Connected' : 'Disconnected';
 
