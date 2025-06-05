@@ -28,7 +28,7 @@ foreach ($roles as $role) {
     execute_query($db, "INSERT IGNORE INTO roles (name) VALUES ('$escaped_role')");
 }
 
-// Seed users with hashed passwords
+// Seed users with hashed passwords from your output
 execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('admin', '$2y$12$USJhMo47DHHIhiYVLD12we8AHT1qYGxzoLlnVqH2iZl6K/OLMv/w2', (SELECT id FROM roles WHERE name = 'Admin'))");
 execute_query($db, "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))");
 execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('testuser', '$2y$12$o2cNILBvip7suDfhNHV81.4KD3vQW7aP8cTvTvELt4OsPBoH/D.N2', (SELECT id FROM roles WHERE name = 'Service'))");
@@ -41,9 +41,9 @@ foreach ($permissions as $perm) {
     execute_query($db, "INSERT IGNORE INTO permissions (name) VALUES ('$escaped_perm')");
 }
 
-// Seed role_permissions (based on your output)
+// Seed role_permissions
 $role_permissions = [
-    [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], // Developer (added view_status)
+    [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], // Developer
     [2, 1], [2, 2], [2, 3], [2, 4], // Admin
     [3, 3], // Service
     [4, 2], // Sales
