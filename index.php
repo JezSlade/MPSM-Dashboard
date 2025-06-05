@@ -18,7 +18,14 @@ if (!function_exists('isLoggedIn') || !isLoggedIn()) {
     exit;
 }
 
-$role = $_SESSION['role'] ?? 'User';
+// Handle role change from dropdown
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
+    $_SESSION['role'] = $_POST['role'];
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+$role = $_SESSION['role'] ?? 'Guest';
 $modules = [
     'dashboard' => ['label' => 'Dashboard 📌', 'icon' => 'home'],
     'customers' => ['label' => 'Customers 👥', 'icon' => 'users'],
@@ -48,39 +55,45 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
                 extend: {
                     colors: {
                         'teal-custom': '#00cec9',
+                        'cyan-neon': '#00FFFF', // CMYK Cyan
+                        'magenta-neon': '#FF00FF', // CMYK Magenta
+                        'yellow-neon': '#FFFF00', // CMYK Yellow
+                        'black-smoke': '#1C2526', // Dark smoked glass base
                     },
                 },
             },
         };
     </script>
     <style>
-        /* Fallback for backdrop-filter and offline */
+        /* Smoked glass with neon underglow and depth */
         .glass {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(28, 37, 38, 0.7); /* Smoked glass base */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), /* Depth */
+                        inset 0 0 10px rgba(0, 255, 255, 0.3); /* Neon underglow */
         }
         @supports not (backdrop-filter: blur(10px)) {
             .glass {
-                background: rgba(52, 73, 94, 0.5);
+                background: rgba(28, 37, 38, 0.9);
             }
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen font-sans">
+<body class="bg-black-smoke text-white min-h-screen font-sans">
     <header class="glass border-b border-gray-800 p-4 fixed w-full top-0 z-10">
         <div class="flex justify-between items-center">
-            <h1 class="text-2xl text-teal-custom">MPSM Control Panel 🎛️</h1>
+            <h1 class="text-2xl text-cyan-neon">MPSM Control Panel 🎛️</h1>
             <div>
                 <form method="POST" action="" class="inline">
-                    <select name="role" onchange="this.form.submit()" class="bg-gray-800 text-white p-2 rounded border border-gray-700">
-                        <?php foreach (['User', 'Developer', 'Admin'] as $r): ?>
+                    <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded border border-gray-700">
+                        <?php foreach (['Developer', 'Admin', 'Dealer', 'Service', 'Sales', 'Guest'] as $r): ?>
                             <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
-                                <?php echo $r; ?> <?php echo $r === 'User' ? '👤' : ($r === 'Developer' ? '🛠️' : '👑'); ?>
+                                <?php echo $r; ?> <?php echo $r === 'Guest' ? '👤' : ($r === 'Developer' ? '🛠️' : ($r === 'Admin' ? '👑' : '🔧')); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </form>
-                <a href="logout.php" class="ml-4 text-teal-custom hover:text-teal-300">Logout 🚪</a>
+                <a href="logout.php" class="ml-4 text-magenta-neon hover:text-magenta-300">Logout 🚪</a>
             </div>
         </div>
     </header>
@@ -91,7 +104,7 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
                 <ul class="space-y-2">
                     <?php foreach ($modules as $module => $data): ?>
                         <li>
-                            <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 hover:bg-gray-800/20 rounded <?php echo $current_module === $module ? 'bg-gray-800 text-teal-custom' : ''; ?>">
+                            <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 hover:bg-gray-800/20 rounded <?php echo $current_module === $module ? 'bg-gray-800 text-yellow-neon' : ''; ?>">
                                 <?php
                                 $icons = [
                                     'home' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7m-9-5v12"></path></svg>',

@@ -1,28 +1,32 @@
-/* /msds/styles-fallback.css */
+/* /mpsm/styles-fallback.css */
 body {
-    background: #1a2526;
+    background: #1C2526; /* Black-smoke base */
     color: #e0f7fa;
     margin: 0;
     font-family: Arial, sans-serif;
 }
 header {
-    background: #34495e;
+    background: rgba(28, 37, 38, 0.7);
     padding: 15px 30px;
-    border-bottom: 1px solid #2c3e50;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 aside {
-    background: #34495e;
+    background: rgba(28, 37, 38, 0.7);
     padding: 20px;
     width: 220px;
-    border-right: 1px solid #2c3e50;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3); /* Neon underglow */
 }
 main {
     padding: 40px;
     margin-left: 220px;
 }
 .glass {
-    background: rgba(52, 73, 94, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(28, 37, 38, 0.7); /* Smoked glass */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), /* Deeper shadow */
+                inset 0 0 15px rgba(255, 0, 255, 0.3); /* Magenta underglow */
     padding: 20px;
-    border-radius: 5px;
+    border-radius: 8px;
 }
