@@ -13,7 +13,7 @@ require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 include_once BASE_PATH . 'auth.php';
 
-// Check if setup is needed
+// Check if setup is needed (moved after auth includes)
 $setup_complete = false;
 if (file_exists(BASE_PATH . 'setup.lock')) {
     $setup_complete = true;
@@ -29,18 +29,31 @@ if (!$setup_complete) {
     die("Setting up database... Please refresh the page after a moment.");
 }
 
+// Set default session data for testing (remove after proper login is implemented)
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['user_id'] = 1; // Assume admin user ID from setup
+    $_SESSION['role'] = 'Admin'; // Default to Admin role
+}
+
 // Handle role change from dropdown
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
     $_SESSION['role'] = $_POST['role'];
     // Refresh permissions for the new role
     if (isset($_SESSION['user_id'])) {
         $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+        error_log("Permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
     }
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
 $role = $_SESSION['role'] ?? 'Guest';
+// Force refresh permissions on page load
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+    error_log("Initial permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+}
+
 $modules = [
     'dashboard' => ['label' => 'Dashboard', 'icon' => 'home', 'permission' => 'view_dashboard'],
     'customers' => ['label' => 'Customers', 'icon' => 'users', 'permission' => 'view_customers'],
@@ -59,7 +72,7 @@ foreach ($modules as $module => $key) {
 
 $current_module = $_GET['module'] ?? 'dashboard';
 if (!isset($accessible_modules[$current_module])) {
-    $current_module = array_key_first($accessible_modules) ?: 'dashboard'; // Fallback to first accessible module
+    $current_module = array_key_first($accessible_modules) ?: 'dashboard'; // Fallback to first accessible or dashboard
 }
 
 // Load module content
