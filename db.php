@@ -16,13 +16,27 @@ function load_env($path) {
     return $env;
 }
 
-// Example database connection (adjust as needed)
+// Initialize database connection
 function connect_db() {
     $env = load_env(__DIR__);
     $host = $env['DB_HOST'] ?? 'localhost';
     $user = $env['DB_USER'] ?? '';
     $pass = $env['DB_PASS'] ?? '';
-    $db = $env['DB_NAME'] ?? '';
-    // Add your mysqli or PDO connection here
-    return new mysqli($host, $user, $pass, $db);
+    $dbname = $env['DB_NAME'] ?? '';
+
+    $mysqli = new mysqli($host, $user, $pass, $dbname);
+    if ($mysqli->connect_error) {
+        error_log("Database connection failed: " . $mysqli->connect_error);
+        return null;
+    }
+    return $mysqli;
 }
+
+// Set global $db on include
+global $db;
+$db = connect_db();
+
+if ($db === null) {
+    error_log("Failed to initialize database connection in db.php.");
+}
+?>

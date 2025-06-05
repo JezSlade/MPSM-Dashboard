@@ -1,5 +1,6 @@
 <?php
 // modules/status.php
+require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 
 $logged_in = isset($_SESSION['user_id']) ? 'Logged In' : 'Not Logged In';
@@ -9,10 +10,9 @@ $user_id = $_SESSION['user_id'] ?? 'N/A';
 $last_login = isset($_SESSION['last_login']) ? date('Y-m-d H:i:s', $_SESSION['last_login']) : 'N/A';
 $last_activity = isset($_SESSION['last_activity']) ? date('Y-m-d H:i:s', $_SESSION['last_activity']) : date('Y-m-d H:i:s', time());
 
-// Fetch permissions from session cache
-$permissions = $_SESSION['permissions'] ?? get_user_permissions($_SESSION['user_id']);
-$_SESSION['permissions'] = $permissions; // Ensure cache is updated
-$permissions_list = !empty($permissions) ? implode(', ', $permissions) : 'None';
+$permissions = $_SESSION['permissions'] ?? get_user_permissions($user_id);
+$_SESSION['permissions'] = $permissions; // Cache permissions
+$permissions_list = !empty($permissions) ? implode(', ', $permissions) : 'None (Database Issue)';
 ?>
 
 <div class="glass p-4 border-t border-gray-800 mt-4">

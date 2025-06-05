@@ -3,6 +3,10 @@ require_once BASE_PATH . 'db.php';
 
 function get_permissions_for_role($role_id) {
     global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_permissions_for_role.");
+        return [];
+    }
     $stmt = $db->prepare("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?");
     $stmt->bind_param('i', $role_id);
     $stmt->execute();
@@ -16,6 +20,10 @@ function get_permissions_for_role($role_id) {
 
 function get_user_permissions($user_id) {
     global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_user_permissions.");
+        return [];
+    }
     $permissions = [];
 
     // Get permissions from all roles the user belongs to
