@@ -125,10 +125,12 @@ foreach ($role_permissions as $rp) {
         $perm_id = $perm_id_stmt->get_result()->fetch_row()[0];
         $perm_id_stmt->close();
         if ($role_id && $perm_id) {
-            $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-            $stmt->bind_param('ii', $role_id, $perm_id);
-            $stmt->execute();
-            $stmt->close();
+            $insert_stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+            $bound_role_id = $role_id; // Fresh variable for binding
+            $bound_perm_id = $perm_id; // Fresh variable for binding
+            $insert_stmt->bind_param('ii', $bound_role_id, $bound_perm_id);
+            $insert_stmt->execute();
+            $insert_stmt->close();
         }
     }
 }
