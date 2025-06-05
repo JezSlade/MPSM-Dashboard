@@ -10,6 +10,7 @@ define('BASE_PATH', __DIR__ . '/');
 
 // Include dependencies
 require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
 include_once BASE_PATH . 'auth.php';
 
 // Fallback if auth.php is missing or isLoggedIn is undefined
@@ -66,45 +67,33 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
     </script>
     <style>
         .glass {
-            background: rgba(28, 37, 38, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6),
+            background: rgba(28, 37, 38, 0.8);
+            border: none;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7),
                         inset 0 0 15px rgba(0, 255, 255, 0.4);
-            transform: translateY(-2px);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .glass:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7),
-                        inset 0 0 20px rgba(0, 255, 255, 0.5);
         }
         .menu-item {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
             border-radius: 8px;
-            transition: background 0.3s ease, transform 0.3s ease;
-        }
-        .menu-item:hover {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
         .menu-item.active {
-            background: linear-gradient(145deg, rgba(255, 255, 0, 0.2), rgba(255, 255, 0, 0.1));
-            transform: translateX(5px);
+            background: linear-gradient(145deg, rgba(255, 255, 0, 0.3), rgba(255, 255, 0, 0.15));
         }
         @supports not (backdrop-filter: blur(10px)) {
             .glass {
-                background: rgba(28, 37, 38, 0.9);
+                background: rgba(28, 37, 38, 1);
             }
         }
     </style>
 </head>
 <body class="bg-black-smoke text-white min-h-screen font-sans">
-    <header class="glass border-b border-gray-800 p-4 fixed w-full top-0 z-10">
+    <header class="glass p-4 fixed w-full top-0 z-10">
         <div class="flex justify-between items-center">
             <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
             <div>
                 <form method="POST" action="" class="inline">
-                    <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded border border-gray-700">
+                    <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded">
                         <?php foreach (['Developer', 'Admin', 'Dealer', 'Service', 'Sales', 'Guest'] as $r): ?>
                             <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
                                 <?php echo $r; ?>
@@ -112,29 +101,29 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
                         <?php endforeach; ?>
                     </select>
                 </form>
-                <a href="logout.php" class="ml-4 text-magenta-neon hover:text-magenta-300">Logout</a>
+                <a href="logout.php" class="ml-4 text-magenta-neon">Logout</a>
             </div>
         </div>
     </header>
 
     <div class="flex mt-16">
-        <aside class="glass border-r border-gray-800 w-64 p-4 fixed h-[calc(100vh-64px)] overflow-y-auto flex flex-col">
+        <aside class="glass w-64 p-4 fixed h-[calc(100vh-80px)] top-16 overflow-y-auto flex flex-col">
             <nav class="flex-1">
                 <ul class="space-y-2">
-                    <?php foreach ($modules as $module => $data): ?>
+                    <?php foreach ($modules as $module => $key): ?>
                         <li>
-                            <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 rounded menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
+                            <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 rounded-lg menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
                                 <?php
                                 $icons = [
-                                    'home' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7m-9-5v12"></path></svg>',
-                                    'users' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>',
-                                    'device-mobile' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
-                                    'lock-closed' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.564.36-3.045 1-4.364m-1 3.364a3 3 0 013-3m0 3.364a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>',
-                                    'wrench' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
+                                    'home' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7m-9-9v12"></path></svg>',
+                                    'users' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5a4 4 0 110 5.4M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.2M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>',
+                                    'device-mobile' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0v1-2V5a2a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2z"></path></svg>',
+                                    'lock-closed' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1 3.5-1 6.8-2.8 9.5m-3.4-2l.1-.1A14 14 0 008 11a4 4 0 118 0c0 1-.1 2-.2 3m-2.1 6.8A22 22 0 0015 17m3.8 1.1c.7-2.2 1-4.7 1-7A8 8 0 008 4M3 15.4c.6-1.3 1-2.8-4.4 1-4.4m-1 3.4a3 3 0 013-3m0 3.4a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>',
+                                    'wrench' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-2.3 3-.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c-.9 1.5-.8 3.4-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4-1-1-2.6 0-2.5c-1.4-1.8 1.9-2.4-2.3.9-.5 2.3 0 2.6-1.1z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
                                 ];
-                                echo $icons[$data['icon']] ?? '';
+                                echo $icons[$key['icon']] ?? '';
                                 ?>
-                                <?php echo $data['label']; ?>
+                                <span><?php echo $key['label']; ?></span>
                             </a>
                         </li>
                     <?php endforeach; ?>
@@ -146,7 +135,7 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
             </div>
         </aside>
 
-        <main class="glass border-l border-gray-800 flex-1 p-6 ml-64 mt-2">
+        <main class="glass flex-1 p-6 ml-64 mt-16">
             <?php include $content; ?>
         </main>
     </div>

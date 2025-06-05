@@ -3,7 +3,7 @@ require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 
 if (!has_permission('manage_permissions')) {
-    echo "<p class='error'>Access denied.</p>";
+    echo "<p class='text-red-500 p-4'>Access denied.</p>";
     exit;
 }
 
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     } catch (Exception $e) {
-        echo "<p class='error'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p class='text-red-500 p-4'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
     }
 }
 
@@ -137,176 +137,232 @@ while ($row = $result->fetch_assoc()) {
 }
 ?>
 
-<h1>Permissions Management 🎛️</h1>
-<nav>
-    <a href="index.php?module=permissions&action=list">📋 List</a> |
-    <a href="index.php?module=permissions&action=add_role">➕ Role</a> |
-    <a href="index.php?module=permissions&action=add_permission">➕ Perm</a> |
-    <a href="index.php?module=permissions&action=add_user">➕ User</a>
-</nav>
+<div class="space-y-6">
+    <h1 class="text-2xl text-cyan-neon">Permissions Management</h1>
+    <nav class="flex space-x-4 text-gray-300">
+        <a href="index.php?module=permissions&action=list" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            List
+        </a>
+        <a href="index.php?module=permissions&action=add_role" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Role
+        </a>
+        <a href="index.php?module=permissions&action=add_permission" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Permission
+        </a>
+        <a href="index.php?module=permissions&action=add_user" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add User
+        </a>
+    </nav>
 
-<?php if ($action === 'list'): ?>
-    <h2>Roles and Permissions 🌐</h2>
-    <?php if (empty($roles)): ?>
-        <p>No roles found. Add a role to get started.</p>
-    <?php else: ?>
-        <table class="permissions-table">
-            <tr>
-                <th>Role</th>
-                <th>Permissions</th>
-                <th>Actions</th>
-            </tr>
-            <?php foreach ($roles as $role): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($role['name']); ?></td>
-                    <td>
-                        <?php
-                        $role_id = (int)$role['id'];
-                        $result = $db->query("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = $role_id");
-                        $role_perms = $result->fetch_all(MYSQLI_ASSOC);
-                        echo htmlspecialchars(implode(', ', array_column($role_perms, 'name')) ?: 'None');
-                        ?>
-                    </td>
-                    <td><a href="index.php?module=permissions&action=edit&role_id=<?php echo $role['id']; ?>">✏️ Edit</a></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
-
-    <h2>Users and Permissions 👤</h2>
-    <?php if (empty($users)): ?>
-        <p>No users found. Add a user to get started.</p>
-    <?php else: ?>
-        <table class="permissions-table">
-            <tr>
-                <th>Username</th>
-                <th>Roles</th>
-                <th>Custom Permissions</th>
-                <th>Actions</th>
-            </tr>
-            <?php foreach ($users as $user): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($user['username']); ?></td>
-                    <td><?php echo htmlspecialchars(implode(', ', $user_roles[$user['id']] ?? ['None'])); ?></td>
-                    <td><?php echo htmlspecialchars(implode(', ', $user_custom_perms[$user['id']] ?? ['None'])); ?></td>
-                    <td><a href="index.php?module=permissions&action=edit_user&user_id=<?php echo $user['id']; ?>">✏️ Edit</a></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
-<?php elseif ($action === 'add_role'): ?>
-    <h2>Add New Role ➕</h2>
-    <form method="POST" class="permissions-form">
-        <label>Role Name:</label>
-        <input type="text" name="role_name" required>
-        <button type="submit" name="add_role">🎯 Add Role</button>
-    </form>
-<?php elseif ($action === 'add_permission'): ?>
-    <h2>Add New Permission ➕</h2>
-    <form method="POST" class="permissions-form">
-        <label>Permission Name:</label>
-        <input type="text" name="permission_name" required>
-        <button type="submit" name="add_permission">🎯 Add Perm</button>
-    </form>
-<?php elseif ($action === 'add_user'): ?>
-    <h2>Add New User ➕</h2>
-    <form method="POST" class="permissions-form">
-        <label>Username:</label>
-        <input type="text" name="username" required>
-        <label>Password:</label>
-        <input type="password" name="password" required>
-        <label>Roles:</label>
-        <select name="roles[]" multiple size="5">
-            <?php foreach ($roles as $role): ?>
-                <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['name']); ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" name="add_user">🎯 Add User</button>
-    </form>
-<?php elseif ($action === 'edit' && isset($_GET['role_id'])): ?>
-    <?php
-    $role_id = filter_input(INPUT_GET, 'role_id', FILTER_VALIDATE_INT);
-    if ($role_id === false || $role_id <= 0): ?>
-        <p class='error'>Invalid role ID.</p>
-    <?php else: ?>
-        <?php
-        $result = $db->query("SELECT * FROM roles WHERE id = $role_id");
-        if ($result === false): ?>
-            <p class='error'>Error fetching role: <?php echo htmlspecialchars($db->error); ?></p>
+    <?php if ($action === 'list'): ?>
+        <h2 class="text-xl text-cyan-neon">Roles and Permissions</h2>
+        <?php if (empty($roles)): ?>
+            <p class="text-gray-300">No roles found. Add a role to get started.</p>
         <?php else: ?>
-            <?php
-            $role = $result->fetch_assoc();
-            if (!$role): ?>
-                <p class='error'>Role not found.</p>
-            <?php else: ?>
-                <?php
-                $result = $db->query("SELECT permission_id FROM role_permissions WHERE role_id = $role_id");
-                $role_perms = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
-                ?>
-                <h2>Edit Permissions for <?php echo htmlspecialchars($role['name']); ?> ✏️</h2>
-                <form method="POST" class="permissions-form">
-                    <input type="hidden" name="role_id" value="<?php echo $role_id; ?>">
-                    <label>Permissions:</label>
-                    <?php if (empty($permissions)): ?>
-                        <p>No permissions available. Add a permission first.</p>
-                    <?php else: ?>
-                        <?php foreach ($permissions as $perm): ?>
-                            <label>
-                                <input type="checkbox" name="permissions[]" value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $role_perms) ? 'checked' : ''; ?>>
-                                <?php echo htmlspecialchars($perm['name']); ?>
-                            </label><br>
-                        <?php endforeach; ?>
-                        <button type="submit" name="assign_permissions">🎯 Save</button>
-                    <?php endif; ?>
-                </form>
-            <?php endif; ?>
-        <?php endif; ?>
-    <?php endif; ?>
-<?php elseif ($action === 'edit_user' && isset($_GET['user_id'])): ?>
-    <?php
-    $user_id = filter_input(INPUT_GET, 'user_id', FILTER_VALIDATE_INT);
-    if ($user_id === false || $user_id <= 0): ?>
-        <p class='error'>Invalid user ID.</p>
-    <?php else: ?>
-        <?php
-        $result = $db->query("SELECT * FROM users WHERE id = $user_id");
-        if ($result === false): ?>
-            <p class='error'>Error fetching user: <?php echo htmlspecialchars($db->error); ?></p>
-        <?php else: ?>
-            <?php
-            $user = $result->fetch_assoc();
-            if (!$user): ?>
-                <p class='error'>User not found.</p>
-            <?php else: ?>
-                <?php
-                $result = $db->query("SELECT role_id FROM user_roles WHERE user_id = $user_id");
-                $user_role_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'role_id');
-                $result = $db->query("SELECT permission_id FROM user_permissions WHERE user_id = $user_id");
-                $user_perm_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
-                ?>
-                <h2>Edit <?php echo htmlspecialchars($user['username']); ?> ✏️</h2>
-                <form method="POST" class="permissions-form">
-                    <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
-                    <label>Roles:</label>
-                    <select name="roles[]" multiple size="5">
+            <div class="glass p-4">
+                <table class="w-full text-gray-300">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-2 px-4 text-left">Role</th>
+                            <th class="py-2 px-4 text-left">Permissions</th>
+                            <th class="py-2 px-4 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         <?php foreach ($roles as $role): ?>
-                            <option value="<?php echo $role['id']; ?>" <?php echo in_array($role['id'], $user_role_ids) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($role['name']); ?>
-                            </option>
+                            <tr class="border-b border-gray-800">
+                                <td class="py-2 px-4"><?php echo htmlspecialchars($role['name']); ?></td>
+                                <td class="py-2 px-4">
+                                    <?php
+                                    $role_id = (int)$role['id'];
+                                    $result = $db->query("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = $role_id");
+                                    $role_perms = $result->fetch_all(MYSQLI_ASSOC);
+                                    echo htmlspecialchars(implode(', ', array_column($role_perms, 'name')) ?: 'None');
+                                    ?>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <a href="index.php?module=permissions&action=edit&role_id=<?php echo $role['id']; ?>" class="text-yellow-neon flex items-center">
+                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
-                    </select>
-                    <label>Custom Permissions:</label>
-                    <select name="custom_permissions[]" multiple size="5">
-                        <?php foreach ($permissions as $perm): ?>
-                            <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($perm['name']); ?>
-                            </option>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+        <h2 class="text-xl text-cyan-neon mt-6">Users and Permissions</h2>
+        <?php if (empty($users)): ?>
+            <p class="text-gray-300">No users found. Add a user to get started.</p>
+        <?php else: ?>
+            <div class="glass p-4">
+                <table class="w-full text-gray-300">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-2 px-4 text-left">Username</th>
+                            <th class="py-2 px-4 text-left">Roles</th>
+                            <th class="py-2 px-4 text-left">Custom Permissions</th>
+                            <th class="py-2 px-4 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($users as $user): ?>
+                            <tr class="border-b border-gray-800">
+                                <td class="py-2 px-4"><?php echo htmlspecialchars($user['username']); ?></td>
+                                <td class="py-2 px-4"><?php echo htmlspecialchars(implode(', ', $user_roles[$user['id']] ?? ['None'])); ?></td>
+                                <td class="py-2 px-4"><?php echo htmlspecialchars(implode(', ', $user_custom_perms[$user['id']] ?? ['None'])); ?></td>
+                                <td class="py-2 px-4">
+                                    <a href="index.php?module=permissions&action=edit_user&user_id=<?php echo $user['id']; ?>" class="text-yellow-neon flex items-center">
+                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
-                    </select>
-                    <button type="submit" name="assign_user_roles">🎯 Save Roles</button>
-                    <button type="submit" name="assign_custom_permissions">🎯 Save Custom Perms</button>
-                </form>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    <?php elseif ($action === 'add_role'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New Role</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Role Name:</label>
+                <input type="text" name="role_name" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <button type="submit" name="add_role" class="bg-teal-custom text-black px-4 py-2 rounded">Add Role</button>
+        </form>
+    <?php elseif ($action === 'add_permission'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New Permission</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Permission Name:</label>
+                <input type="text" name="permission_name" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <button type="submit" name="add_permission" class="bg-teal-custom text-black px-4 py-2 rounded">Add Permission</button>
+        </form>
+    <?php elseif ($action === 'add_user'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New User</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Username:</label>
+                <input type="text" name="username" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <div>
+                <label class="block text-gray-300 mb-1">Password:</label>
+                <input type="password" name="password" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <div>
+                <label class="block text-gray-300 mb-1">Roles:</label>
+                <select name="roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                    <?php foreach ($roles as $role): ?>
+                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" name="add_user" class="bg-teal-custom text-black px-4 py-2 rounded">Add User</button>
+        </form>
+    <?php elseif ($action === 'edit' && isset($_GET['role_id'])): ?>
+        <?php
+        $role_id = filter_input(INPUT_GET, 'role_id', FILTER_VALIDATE_INT);
+        if ($role_id === false || $role_id <= 0): ?>
+            <p class='text-red-500 p-4'>Invalid role ID.</p>
+        <?php else: ?>
+            <?php
+            $result = $db->query("SELECT * FROM roles WHERE id = $role_id");
+            if ($result === false): ?>
+                <p class='text-red-500 p-4'>Error fetching role: <?php echo htmlspecialchars($db->error); ?></p>
+            <?php else: ?>
+                <?php
+                $role = $result->fetch_assoc();
+                if (!$role): ?>
+                    <p class='text-red-500 p-4'>Role not found.</p>
+                <?php else: ?>
+                    <?php
+                    $result = $db->query("SELECT permission_id FROM role_permissions WHERE role_id = $role_id");
+                    $role_perms = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
+                    ?>
+                    <h2 class="text-xl text-cyan-neon">Edit Permissions for <?php echo htmlspecialchars($role['name']); ?></h2>
+                    <form method="POST" class="glass p-4 space-y-4">
+                        <input type="hidden" name="role_id" value="<?php echo $role_id; ?>">
+                        <div>
+                            <label class="block text-gray-300 mb-1">Permissions:</label>
+                            <?php if (empty($permissions)): ?>
+                                <p class="text-gray-300">No permissions available. Add a permission first.</p>
+                            <?php else: ?>
+                                <div class="space-y-2">
+                                    <?php foreach ($permissions as $perm): ?>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="permissions[]" value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $role_perms) ? 'checked' : ''; ?> class="mr-2">
+                                            <span><?php echo htmlspecialchars($perm['name']); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="submit" name="assign_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save</button>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php elseif ($action === 'edit_user' && isset($_GET['user_id'])): ?>
+        <?php
+        $user_id = filter_input(INPUT_GET, 'user_id', FILTER_VALIDATE_INT);
+        if ($user_id === false || $user_id <= 0): ?>
+            <p class='text-red-500 p-4'>Invalid user ID.</p>
+        <?php else: ?>
+            <?php
+            $result = $db->query("SELECT * FROM users WHERE id = $user_id");
+            if ($result === false): ?>
+                <p class='text-red-500 p-4'>Error fetching user: <?php echo htmlspecialchars($db->error); ?></p>
+            <?php else: ?>
+                <?php
+                $user = $result->fetch_assoc();
+                if (!$user): ?>
+                    <p class='text-red-500 p-4'>User not found.</p>
+                <?php else: ?>
+                    <?php
+                    $result = $db->query("SELECT role_id FROM user_roles WHERE user_id = $user_id");
+                    $user_role_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'role_id');
+                    $result = $db->query("SELECT permission_id FROM user_permissions WHERE user_id = $user_id");
+                    $user_perm_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
+                    ?>
+                    <h2 class="text-xl text-cyan-neon">Edit <?php echo htmlspecialchars($user['username']); ?></h2>
+                    <form method="POST" class="glass p-4 space-y-4">
+                        <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
+                        <div>
+                            <label class="block text-gray-300 mb-1">Roles:</label>
+                            <select name="roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                                <?php foreach ($roles as $role): ?>
+                                    <option value="<?php echo $role['id']; ?>" <?php echo in_array($role['id'], $user_role_ids) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($role['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 mb-1">Custom Permissions:</label>
+                            <select name="custom_permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                                <?php foreach ($permissions as $perm): ?>
+                                    <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($perm['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="space-x-2">
+                            <button type="submit" name="assign_user_roles" class="bg-teal-custom text-black px-4 py-2 rounded">Save Roles</button>
+                            <button type="submit" name="assign_custom_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save Custom Permissions</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
             <?php endif; ?>
         <?php endif; ?>
     <?php endif; ?>
-<?php endif; ?>
+</div>

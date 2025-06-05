@@ -1,6 +1,6 @@
 <?php
 // modules/status.php
-require_once BASE_PATH . 'auth.php';
+require_once BASE_PATH . 'functions.php';
 
 $logged_in = isset($_SESSION['user_id']) ? 'Logged In' : 'Not Logged In';
 $username = $_SESSION['username'] ?? 'Unknown';
@@ -9,22 +9,9 @@ $user_id = $_SESSION['user_id'] ?? 'N/A';
 $last_login = isset($_SESSION['last_login']) ? date('Y-m-d H:i:s', $_SESSION['last_login']) : 'N/A';
 $last_activity = isset($_SESSION['last_activity']) ? date('Y-m-d H:i:s', $_SESSION['last_activity']) : date('Y-m-d H:i:s', time());
 
-// Fetch permissions based on role
-$permissions = [];
-if (function_exists('has_permission')) {
-    $all_permissions = [
-        'view_devtools', 'manage_modules', 'run_tests',
-        'manage_users', 'view_reports',
-        'view_customers', 'view_devices',
-        'manage_devices',
-        'view_sales'
-    ];
-    foreach ($all_permissions as $perm) {
-        if (has_permission($perm)) {
-            $permissions[] = $perm;
-        }
-    }
-}
+// Fetch permissions from session cache
+$permissions = $_SESSION['permissions'] ?? get_user_permissions($_SESSION['user_id']);
+$_SESSION['permissions'] = $permissions; // Ensure cache is updated
 $permissions_list = !empty($permissions) ? implode(', ', $permissions) : 'None';
 ?>
 
