@@ -1,18 +1,13 @@
-:root {
-    --primary-color: #00cec9; /* Default teal */
-    --depth-intensity: 8px; /* Default depth */
-}
-
 body {
-    background: #1e272e;
-    color: #d1d8e0;
+    background: #1e272e; /* Dark slate gray */
+    color: #d1d8e0; /* Light gray for text */
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
 }
 
 .header {
-    background: #2d3436;
+    background: #2d3436; /* Slightly lighter slate */
     padding: 15px 30px;
     display: flex;
     justify-content: space-between;
@@ -21,36 +16,18 @@ body {
     top: 0;
     width: 100%;
     box-sizing: border-box;
-    box-shadow: var(--depth-intensity) var(--depth-intensity) 20px #1a2021, calc(-1 * var(--depth-intensity)) calc(-1 * var(--depth-intensity)) 20px #40484b, 0 10px 15px rgba(0, 206, 201, 0.4);
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 0 10px 15px rgba(0, 206, 201, 0.4); /* Deeper shadow */
 }
 
 .header h1 {
     margin: 0;
     font-size: 24px;
-    color: var(--primary-color);
-    text-shadow: 0 2px 4px rgba(0, 206, 201, 0.3);
-}
-
-.header form {
-    margin: 0 20px;
-}
-
-.header select {
-    background: #2d3436;
-    border: none;
-    color: #d1d8e0;
-    padding: 8px;
-    border-radius: 10px;
-    box-shadow: 4px 4px 8px #1a2021, -4px -4px 8px #40484b;
-    transition: box-shadow 0.3s;
-}
-
-.header select:hover {
-    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+    color: #00cec9;
+    text-shadow: 0 2px 4px rgba(0, 206, 201, 0.3); /* Subtle depth */
 }
 
 .header a {
-    color: var(--primary-color);
+    color: #00cec9;
     text-decoration: none;
     margin-left: 20px;
     padding: 8px 12px;
@@ -62,7 +39,7 @@ body {
 
 .header a:hover {
     box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
-    text-shadow: 0 0 6px var(--primary-color);
+    text-shadow: 0 0 6px #00cec9;
 }
 
 .main {
@@ -71,14 +48,14 @@ body {
 }
 
 .sidebar {
-    width: 220px;
+    width: 220px; /* Narrower sidebar */
     background: #2d3436;
     padding: 20px;
     position: fixed;
     top: 70px;
     height: calc(100% - 70px);
     overflow-y: auto;
-    box-shadow: var(--depth-intensity) var(--depth-intensity) 20px #1a2021, calc(-1 * var(--depth-intensity)) calc(-1 * var(--depth-intensity)) 20px #40484b, 6px 0 15px rgba(0, 206, 201, 0.4);
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 6px 0 15px rgba(0, 206, 201, 0.4);
 }
 
 .sidebar ul {
@@ -97,21 +74,21 @@ body {
     text-decoration: none;
     border-radius: 15px;
     background: #2d3436;
-    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b; /* Deeper shadow */
     transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
 .sidebar a:hover, .sidebar a.active {
     box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
-    text-shadow: 0 0 6px var(--primary-color), 0 0 12px var(--primary-color);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
 
 .content {
     flex: 1;
     padding: 40px;
-    margin-left: 220px;
+    margin-left: 220px; /* Matches narrower sidebar */
     background: #1e272e;
-    box-shadow: inset var(--depth-intensity) var(--depth-intensity) 20px #1a2021, inset calc(-1 * var(--depth-intensity)) calc(-1 * var(--depth-intensity)) 20px #40484b;
+    box-shadow: inset 8px 8px 20px #1a2021, inset -8px -8px 20px #40484b;
     border-radius: 15px;
     min-height: calc(100vh - 70px);
 }
@@ -124,26 +101,18 @@ body {
     box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
 }
 
-.success {
-    color: #2ecc71;
-    padding: 12px;
-    border-radius: 10px;
-    background: #1e272e;
-    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
-}
-
 .login-container {
     max-width: 400px;
     margin: 100px auto;
     padding: 30px;
     background: #2d3436;
     border-radius: 15px;
-    box-shadow: var(--depth-intensity) var(--depth-intensity) 20px #1a2021, calc(-1 * var(--depth-intensity)) calc(-1 * var(--depth-intensity)) 20px #40484b;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b;
 }
 
 .login-container h1 {
     text-align: center;
-    color: var(--primary-color);
+    color: #00cec9;
 }
 
 .login-container input {
@@ -163,7 +132,7 @@ body {
     padding: 12px;
     background: #2d3436;
     border: none;
-    color: var(--primary-color);
+    color: #00cec9;
     font-weight: bold;
     border-radius: 10px;
     box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
@@ -172,7 +141,7 @@ body {
 
 .login-container button:hover {
     box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
-    text-shadow: 0 0 6px var(--primary-color), 0 0 12px var(--primary-color);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
 
 .permissions-form {
@@ -180,7 +149,7 @@ body {
     padding: 20px;
     background: #2d3436;
     border-radius: 15px;
-    box-shadow: var(--depth-intensity) var(--depth-intensity) 20px #1a2021, calc(-1 * var(--depth-intensity)) calc(-1 * var(--depth-intensity)) 20px #40484b;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b;
 }
 
 .permissions-form label {
@@ -190,7 +159,6 @@ body {
 }
 
 .permissions-form input[type="text"],
-.permissions-form input[type="color"],
 .permissions-form select {
     width: 100%;
     padding: 12px;
@@ -206,7 +174,7 @@ body {
     padding: 12px 20px;
     background: #2d3436;
     border: none;
-    color: var(--primary-color);
+    color: #00cec9;
     border-radius: 10px;
     box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
     transition: box-shadow 0.3s, text-shadow 0.3s;
@@ -214,7 +182,7 @@ body {
 
 .permissions-form button:hover {
     box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
-    text-shadow: 0 0 6px var(--primary-color), 0 0 12px var(--primary-color);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
 
 .permissions-table {
@@ -225,7 +193,7 @@ body {
 
 .permissions-table th, .permissions-table td {
     padding: 12px;
-    border: 1px solid var(--primary-color);
+    border: 1px solid #00cec9;
     text-align: left;
     background: #2d3436;
     box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
@@ -238,7 +206,7 @@ body {
 
 .permissions-table a,
 nav a {
-    color: var(--primary-color);
+    color: #00cec9;
     text-decoration: none;
     padding: 2px 5px;
     border-radius: 5px;
@@ -248,25 +216,11 @@ nav a {
 .permissions-table a:hover,
 nav a:hover {
     color: #1abc9c;
-    text-shadow: 0 0 6px var(--primary-color);
+    text-shadow: 0 0 6px #00cec9;
 }
 
 .permissions-table a:visited,
 nav a:visited {
     color: #6d8299;
     text-shadow: none;
-}
-
-.devtools-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #2d3436;
-    border-radius: 15px;
-    box-shadow: var(--depth-intensity) var(--depth-intensity) 20px #1a2021, calc(-1 * var(--depth-intensity)) calc(-1 * var(--depth-intensity)) 20px #40484b;
-}
-
-.devtools-section h3 {
-    margin-top: 0;
-    color: var(--primary-color);
-    text-shadow: 0 1px 2px rgba(0, 206, 201, 0.3);
 }
