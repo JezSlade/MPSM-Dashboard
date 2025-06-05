@@ -7,6 +7,21 @@ if (!has_permission('manage_permissions')) {
     exit;
 }
 
+function get_active_modules() {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_active_modules.");
+        return [];
+    }
+    $result = $db->query("SELECT name FROM modules WHERE active = 1");
+    $modules = [];
+    while ($row = $result->fetch_assoc()) {
+        $modules[] = $row['name'];
+    }
+    return $modules;
+}
+
+$active_modules = get_active_modules();
 $action = $_GET['action'] ?? 'list';
 
 // Handle POST requests
@@ -121,6 +136,21 @@ $roles = $result->fetch_all(MYSQLI_ASSOC);
 $result = $db->query("SELECT * FROM permissions");
 $permissions = $result->fetch_all(MYSQLI_ASSOC);
 
+// Map permissions to modules
+$module_permissions = [
+    'view_dashboard' => 'dashboard',
+    'view_customers' => 'customers',
+    'view_devices' => 'devices',
+    'manage_permissions' => 'permissions',
+    'view_devtools' => 'devtools'
+];
+
+// Filter permissions based on active modules
+$available_permissions = array_filter($permissions, function($perm) use ($active_modules, $module_permissions) {
+    $perm_name = $perm['name'];
+    return in_array($module_permissions[$perm_name] ?? $perm_name, $active_modules);
+}, ARRAY_FILTER_USE_BOTH);
+
 $result = $db->query("SELECT * FROM users");
 $users = $result->fetch_all(MYSQLI_ASSOC);
 
@@ -181,7 +211,10 @@ while ($row = $result->fetch_assoc()) {
                                     $role_id = (int)$role['id'];
                                     $result = $db->query("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = $role_id");
                                     $role_perms = $result->fetch_all(MYSQLI_ASSOC);
-                                    echo htmlspecialchars(implode(', ', array_column($role_perms, 'name')) ?: 'None');
+                                    $filtered_perms = array_filter($role_perms, function($p) use ($active_modules, $module_permissions) {
+                                        return in_array($module_permissions[$p['name']] ?? $p['name'], $active_modules);
+                                    });
+                                    echo htmlspecialchars(implode(', ', array_column($filtered_perms, 'name')) ?: 'None');
                                     ?>
                                 </td>
                                 <td class="py-2 px-4">
@@ -293,14 +326,14 @@ while ($row = $result->fetch_assoc()) {
                         <input type="hidden" name="role_id" value="<?php echo $role_id; ?>">
                         <div>
                             <label class="block text-gray-300 mb-1">Permissions:</label>
-                            <?php if (empty($permissions)): ?>
-                                <p class="text-gray-300">No permissions available. Add a permission first.</p>
+                            <?php if (empty($available_permissions)): ?>
+                                <p class="text-gray-300">No permissions available based on active modules. Activate modules in DevTools.</p>
                             <?php else: ?>
                                 <div class="space-y-2">
-                                    <?php foreach ($permissions as $perm): ?>
+                                    <?php foreach ($available_permissions as $perm): ?>
                                         <label class="flex items-center">
                                             <input type="checkbox" name="permissions[]" value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $role_perms) ? 'checked' : ''; ?> class="mr-2">
-                                            <span><?php echo htmlspecialchars($perm['name']); ?></span>
+                                            <span><?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)</span>
                                         </label>
                                     <?php endforeach; ?>
                                 </div>
@@ -349,9 +382,9 @@ while ($row = $result->fetch_assoc()) {
                         <div>
                             <label class="block text-gray-300 mb-1">Custom Permissions:</label>
                             <select name="custom_permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
-                                <?php foreach ($permissions as $perm): ?>
+                                <?php foreach ($available_permissions as $perm): ?>
                                     <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($perm['name']); ?>
+                                        <?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>

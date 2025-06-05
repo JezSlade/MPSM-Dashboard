@@ -3,8 +3,8 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 // Include dependencies
-require_once BASE_PATH . 'db.php'; // For load_env()
-require_once BASE_PATH . 'functions.php'; // For has_permission()
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
 
 // Check permissions
 if (!function_exists('has_permission') || !has_permission('view_devtools')) {
@@ -21,6 +21,18 @@ $primary_color = preg_match('/--primary-color:\s*(#[0-9a-fA-F]{6})/', $css_conte
 $depth_intensity = preg_match('/--depth-intensity:\s*(\d+px)/', $css_content, $match) ? $match[1] : '8px';
 $neon_underglow = preg_match('/--neon-underglow:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00FFFF';
 $smoke_opacity = preg_match('/--smoke-opacity:\s*(\d*\.?\d+)/', $css_content, $match) ? $match[1] : '0.7';
+
+// Handle POST requests for module activation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_module'])) {
+    $module_name = $_POST['module_name'];
+    $active = $_POST['active'] === '1' ? 1 : 0;
+    $stmt = $db->prepare("UPDATE modules SET active = ? WHERE name = ?");
+    $stmt->bind_param('is', $active, $module_name);
+    $stmt->execute();
+    $stmt->close();
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -184,9 +196,22 @@ function test_environment() {
             </svg>
             Module Management
         </h3>
-        <ul class="mt-4 space-y-2">
-            <li><a href="create_module.php" class="text-magenta-neon hover:text-magenta-300">Add Module</a> - Create a new module with JSON config.</li>
-        </ul>
+        <form method="POST" class="mt-4 space-y-4">
+            <?php
+            $modules = $db->query("SELECT * FROM modules");
+            while ($module = $modules->fetch_assoc()): ?>
+                <div>
+                    <label class="block text-gray-300">
+                        <input type="checkbox" name="module_name" value="<?php echo $module['name']; ?>" 
+                               onchange="this.form.querySelector('input[name=active]').value=this.checked ? 1 : 0; this.form.submit()"
+                               <?php echo $module['active'] ? 'checked' : ''; ?> class="mr-2">
+                        <?php echo htmlspecialchars($module['name']); ?>
+                        <input type="hidden" name="active" value="<?php echo $module['active'] ? 1 : 0; ?>">
+                        <input type="hidden" name="toggle_module" value="1">
+                    </label>
+                </div>
+            <?php endwhile; ?>
+        </form>
     </div>
 
     <div class="glass p-4 border border-gray-800 rounded">

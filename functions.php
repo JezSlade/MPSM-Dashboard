@@ -24,29 +24,45 @@ function get_user_permissions($user_id) {
         error_log("Database connection is null in get_user_permissions.");
         return [];
     }
-    $permissions = [];
+    if (!isset($_SESSION['role'])) {
+        error_log("No role set in session for user_id: $user_id");
+        return [];
+    }
 
-    // Get permissions from all roles the user belongs to
-    $result = $db->query("SELECT r.id FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = $user_id");
-    if ($result !== false) {
-        while ($role = $result->fetch_assoc()) {
-            $permissions = array_merge($permissions, get_permissions_for_role($role['id']));
-        }
+    $permissions = [];
+    $role_name = $_SESSION['role'];
+
+    // Get role ID based on role name
+    $stmt = $db->prepare("SELECT id FROM roles WHERE name = ?");
+    $stmt->bind_param('s', $role_name);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $role = $result->fetch_assoc();
+
+    if ($role) {
+        $role_id = $role['id'];
+        // Get permissions from the user's role
+        $permissions = get_permissions_for_role($role_id);
+    } else {
+        error_log("Role not found: $role_name");
     }
 
     // Get custom permissions assigned directly to the user
-    $result = $db->query("SELECT p.name FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = $user_id");
-    if ($result !== false) {
-        while ($row = $result->fetch_assoc()) {
-            $permissions[] = $row['name'];
-        }
+    $stmt = $db->prepare("SELECT p.name FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $permissions[] = $row['name'];
     }
 
     return array_unique($permissions); // Remove duplicates
 }
 
 function has_permission($permission) {
-    if (!isset($_SESSION['user_id'])) return false;
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
     $user_permissions = $_SESSION['permissions'] ?? get_user_permissions($_SESSION['user_id']);
     $_SESSION['permissions'] = $user_permissions; // Cache permissions in session
     return in_array($permission, $user_permissions);
