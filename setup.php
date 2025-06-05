@@ -62,13 +62,18 @@ if (!execute_query($db, "CREATE TABLE IF NOT EXISTS user_permissions (
     FOREIGN KEY (permission_id) REFERENCES permissions(id)
 )")) die("Failed to create user_permissions table.");
 
-// Seed roles
+// Debug: Check database connection state
+if (!$db) {
+    die("Database connection lost before role seeding.");
+}
+
+// Seed roles using direct query
 $roles = ['Developer', 'Admin', 'Service', 'Sales', 'Guest'];
 foreach ($roles as $role) {
-    $stmt = $db->prepare("INSERT IGNORE INTO roles (name) VALUES (?)");
-    $stmt->bind_param('s', $role);
-    $stmt->execute();
-    $stmt->close();
+    $escaped_role = $db->real_escape_string($role);
+    if (!execute_query($db, "INSERT IGNORE INTO roles (name) VALUES ('$escaped_role')")) {
+        error_log("Failed to insert role: $role");
+    }
 }
 
 // Seed admin user with hashed password
