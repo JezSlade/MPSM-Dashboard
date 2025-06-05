@@ -13,16 +13,23 @@ require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 include_once BASE_PATH . 'auth.php';
 
-// Check if setup is needed
-$setup_complete = file_exists(BASE_PATH . 'setup.lock');
-if (!$setup_complete || isset($_GET['reset'])) {
-    require_once BASE_PATH . 'setup.php';
-    if (!file_exists(BASE_PATH . 'setup.lock')) {
-        file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
+// Check if setup is needed - modified to always check tables
+$setup_needed = false;
+$required_tables = ['modules', 'users', 'roles', 'permissions', 'role_permissions', 'user_roles', 'user_permissions'];
+foreach ($required_tables as $table) {
+    $result = $db->query("SHOW TABLES LIKE '$table'");
+    if ($result->num_rows == 0) {
+        $setup_needed = true;
+        break;
     }
+}
+
+if ($setup_needed || isset($_GET['reset'])) {
+    require_once BASE_PATH . 'setup.php';
     header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
     exit;
 }
+
 
 // Set default session data for testing
 if (!isset($_SESSION['user_id'])) {
