@@ -14,19 +14,19 @@ require_once BASE_PATH . 'functions.php';
 include_once BASE_PATH . 'auth.php';
 
 // Check if setup is needed (moved after auth includes)
-$setup_complete = false;
-if (file_exists(BASE_PATH . 'setup.lock')) {
-    $setup_complete = true;
-} else {
-    require_once BASE_PATH . 'setup.php';
-    if (!file_exists(BASE_PATH . 'setup.lock')) {
-        file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
-        $setup_complete = true;
-    }
+$setup_complete = true; // Default to true to prevent auto-run
+if (!file_exists(BASE_PATH . 'setup.lock') || (isset($_GET['reset']) && $_GET['reset'] == 1)) {
+    $setup_complete = false;
 }
 
 if (!$setup_complete) {
-    die("Setting up database... Please refresh the page after a moment.");
+    require_once BASE_PATH . 'setup.php';
+    if (!file_exists(BASE_PATH . 'setup.lock')) {
+        file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
+    }
+    // Redirect to clean URL after setup
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
 }
 
 // Set default session data for testing (remove after proper login is implemented)

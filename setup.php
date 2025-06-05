@@ -82,7 +82,7 @@ $hashed_password = $db->real_escape_string(password_hash($plain_password, PASSWO
 if (!execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('admin', '$hashed_password', (SELECT id FROM roles WHERE name = 'Admin'))")) {
     error_log("Failed to insert admin user");
 }
-if (!execute_query($db, "INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))")) {
+if (!execute_query($db, "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))")) {
     error_log("Failed to assign admin role");
 }
 
@@ -92,7 +92,7 @@ $hashed_password = $db->real_escape_string(password_hash($plain_password, PASSWO
 if (!execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('testuser', '$hashed_password', (SELECT id FROM roles WHERE name = 'Service'))")) {
     error_log("Failed to insert testuser");
 }
-if (!execute_query($db, "INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM roles WHERE name = 'Service'))")) {
+if (!execute_query($db, "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM roles WHERE name = 'Service'))")) {
     error_log("Failed to assign testuser role");
 }
 
