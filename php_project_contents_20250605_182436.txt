@@ -1,0 +1,3118 @@
+PHP PROJECT CONTENT COLLECTION
+Generated: Thu, Jun  5, 2025  6:24:36 PM
+----------------------------------------
+
+==== BINARY FILE: ./.DS_Store ====
+Size: 6148 bytes
+Last Modified: Wed, Jun  4, 2025  7:24:52 AM
+[Binary content not displayed]
+
+
+==== TEXT FILE: ./.env ====
+Size: 329 bytes
+Last Modified: Wed, Jun  4, 2025 10:21:00 AM
+----------------------------------------
+CLIENT_ID=9AT9j4UoU2BgLEqmiYCz
+CLIENT_SECRET=9gTbAKBCZe1ftYQbLbq9
+USERNAME=dashboard
+PASSWORD=d@$hpa$$2024
+SCOPE=account
+TOKEN_URL=https://api.abassetmanagement.com/api3/token
+BASE_URL=https://api.abassetmanagement.com/api3/
+DEALER_CODE=NY06AGDWUQ
+DB_HOST=localhost
+DB_NAME=resolut7_mpsm
+DB_USER=resolut7_mpsm
+DB_PASS=MP$M_Nr0lr
+
+
+
+==== TEXT FILE: ./.github/workflows/deploy.yml ====
+Size: 2014 bytes
+Last Modified: Wed, Jun  4, 2025 12:11:49 PM
+----------------------------------------
+name: Simple FTP Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Bump version in version.txt
+        id: bump_version
+        run: |
+          # If version.txt doesn't exist, initialize it to 0.0.0.0
+          if [ ! -f version.txt ]; then
+            echo "0.0.0.0" > version.txt
+          fi
+
+          # Read the four segments
+          IFS='.' read -r MAJOR MINOR PATCH BUILD < version.txt
+
+          # Increment only the BUILD segment
+          BUILD=$((BUILD + 1))
+
+          # Recompose the version string
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}.${BUILD}"
+
+          # Write it back
+          echo "$NEW_VERSION" > version.txt
+
+          # Expose as an output if needed
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      # (Optional) If you want to commit the bumped version back to the repo,
+      # uncomment the next two steps. Make sure to include “[skip ci]” in your commit message
+      # so that this push does NOT retrigger this same workflow.
+
+      # - name: Commit bumped version.txt
+      #   if: always()
+      #   run: |
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add version.txt
+      #     git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]" || echo "No changes to commit."
+
+      # - name: Push version bump
+      #   if: always()
+      #   run: |
+      #     git push
+
+      - name: FTP Upload (clean mirror)
+        uses: sebastianpopp/ftp-action@releases/v2
+        with:
+          host:     ${{ secrets.FTP_SERVER }}
+          user:     ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          localDir: "./"
+          remoteDir: ${{ secrets.REMOTE_DIR }}
+          options:  "--delete"
+
+
+
+==== TEXT FILE: ./AllEndpoints.json ====
+Size: 83 bytes
+Last Modified: Wed, Jun  4, 2025  9:06:57 AM
+----------------------------------------
+{
+  "GetCustomers": "/Account/GetAccounts",
+  "GetDevices": "/Device/GetDevices"
+}
+
+
+
+==== PHP FILE: ./auth.php ====
+Size: 210 bytes
+Last Modified: Thu, Jun  5, 2025  3:15:07 PM
+----------------------------------------
+<?php
+// auth.php
+function isLoggedIn() {
+    return isset($_SESSION['user_id']);
+}
+
+function logout() {
+    session_unset();
+    session_destroy();
+    header('Location: login.php');
+    exit;
+}
+?>
+
+
+==== TEXT FILE: ./collect_files.sh ====
+Size: 2179 bytes
+Last Modified: Thu, Jun  5, 2025  6:24:29 PM
+----------------------------------------
+#!/bin/bash
+
+# Smart PHP Project File Collector
+OUTPUT_FILE="php_project_contents_$(date +'%Y%m%d_%H%M%S').txt"
+
+# Configure exclusions (add more as needed)
+EXCLUDE_DIRS=("vendor" "node_modules" ".git" ".idea" "build" "dist")
+EXCLUDE_EXT=("png" "jpg" "jpeg" "gif" "svg" "ico" "woff" "woff2" "ttf" "eot" "pdf" "zip" "tar.gz")
+
+# Better text file detection
+is_text_file() {
+    file -b --mime-encoding "$1" | grep -qvi 'binary'
+}
+
+# Start output
+{
+    echo "PHP PROJECT CONTENT COLLECTION"
+    echo "Generated: $(date)"
+    echo "----------------------------------------"
+    echo ""
+    
+    find . -type f | while read -r file; do
+        # Skip excluded directories
+        for dir in "${EXCLUDE_DIRS[@]}"; do
+            if [[ "$file" == *"/$dir/"* ]]; then
+                continue 2
+            fi
+        done
+        
+        # Skip excluded extensions
+        extension="${file##*.}"
+        for ext in "${EXCLUDE_EXT[@]}"; do
+            if [[ "${extension,,}" == "${ext,,}" ]]; then
+                continue 2
+            fi
+        done
+        
+        # Special handling for PHP files - always include
+        if [[ "${file##*.}" == "php" ]]; then
+            echo "==== PHP FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            cat "$file"
+            echo -e "\n\n"
+            continue
+        fi
+        
+        # For other files, check if they're text
+        if is_text_file "$file"; then
+            echo "==== TEXT FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            head -c 100000 "$file"  # Show first 100KB
+            echo -e "\n\n"
+        else
+            echo "==== BINARY FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "[Binary content not displayed]"
+            echo -e "\n"
+        fi
+    done
+} > "$OUTPUT_FILE"
+
+echo "Collection complete! Output saved to $OUTPUT_FILE"
+
+
+==== PHP FILE: ./config.php ====
+Size: 492 bytes
+Last Modified: Wed, Jun  4, 2025  3:39:09 PM
+----------------------------------------
+<?php
+// Load environment variables
+function load_env($file) {
+    $env_file = BASE_PATH . $file;
+    if (!file_exists($env_file)) {
+        die("Environment file not found: $env_file");
+    }
+    $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            putenv("$key=$value");
+        }
+    }
+}
+load_env('.env');
+?>
+
+
+==== PHP FILE: ./create_module.php ====
+Size: 1464 bytes
+Last Modified: Wed, Jun  4, 2025  5:12:29 PM
+----------------------------------------
+<?php
+define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+require_once BASE_PATH . 'db.php';
+
+if ($argc < 2) die("Usage: php create_module.php <json_config_file>\n");
+
+$config = json_decode(file_get_contents($argv[1]), true);
+if (!$config) die("Invalid JSON config\n");
+
+$module_name = $config['name'];
+$permission = $config['permission'];
+$description = $config['description'];
+
+// Create module file
+$module_content = <<<PHP
+<?php
+if (!has_permission('$permission')) {
+    echo "<p class='error'>Access denied.</p>";
+    exit;
+}
+?>
+<h2>$description 📊</h2>
+<p>Module content goes here...</p>
+PHP;
+file_put_contents(BASE_PATH . "modules/$module_name.php", $module_content);
+if (!file_exists(BASE_PATH . "modules/$module_name.php")) die("Failed to create module file\n");
+
+// Update setup.php
+$setup_content = file_get_contents(BASE_PATH . "setup.php");
+$setup_content .= "\nexecute_query(\$db, \"INSERT IGNORE INTO permissions (name) VALUES ('$permission')\");";
+file_put_contents(BASE_PATH . "setup.php", $setup_content);
+
+// Update index.php
+$index_content = file_get_contents(BASE_PATH . "index.php");
+$index_content = preg_replace('/\$modules = \[\s*(.*?)\];/s', "\$modules = [\n        '$module_name' => '$permission',\n        $1];", $index_content);
+file_put_contents(BASE_PATH . "index.php", $index_content);
+
+echo "Module $module_name created successfully. Run setup.php to apply database changes.\n";
+?>
+
+
+==== PHP FILE: ./db.php ====
+Size: 1806 bytes
+Last Modified: Thu, Jun  5, 2025  3:49:36 PM
+----------------------------------------
+<?php
+// db.php
+function load_env($path) {
+    $env = [];
+    $env_file = $path . '/.env';
+    error_log("Attempting to load .env file from: $env_file");
+    if (file_exists($env_file)) {
+        $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line && strpos($line, '=') !== false && !str_starts_with($line, '#')) {
+                [$key, $value] = array_map('trim', explode('=', $line, 2));
+                $env[$key] = $value;
+                error_log("Loaded env variable: $key=" . ($key === 'DB_PASS' ? '****' : $value));
+            }
+        }
+    } else {
+        error_log("No .env file found at $env_file.");
+    }
+    return $env;
+}
+
+// Initialize database connection
+function connect_db() {
+    $dir = __DIR__;
+    error_log("Base directory for .env load: $dir");
+    $env = load_env($dir);
+    $host = $env['DB_HOST'] ?? 'localhost';
+    $user = $env['DB_USER'] ?? '';
+    $pass = $env['DB_PASS'] ?? '';
+    $dbname = $env['DB_NAME'] ?? '';
+
+    error_log("Database connection attempt: host=$host, user=$user, dbname=$dbname");
+    if (empty($user) || empty($pass) || empty($dbname)) {
+        error_log("Missing database credentials: DB_USER=$user, DB_PASS=****, DB_NAME=$dbname");
+        return null;
+    }
+
+    $mysqli = new mysqli($host, $user, $pass, $dbname);
+    if ($mysqli->connect_error) {
+        error_log("Database connection failed: " . $mysqli->connect_error);
+        return null;
+    }
+    error_log("Database connection successful.");
+    return $mysqli;
+}
+
+// Set global $db on include
+global $db;
+$db = connect_db();
+
+if ($db === null) {
+    error_log("Database connection not established in db.php.");
+}
+?>
+
+
+==== PHP FILE: ./functions.php ====
+Size: 2274 bytes
+Last Modified: Thu, Jun  5, 2025  6:00:58 PM
+----------------------------------------
+<?php
+require_once BASE_PATH . 'db.php';
+
+function get_permissions_for_role($role_id) {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_permissions_for_role.");
+        return [];
+    }
+    $stmt = $db->prepare("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?");
+    $stmt->bind_param('i', $role_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $permissions = [];
+    while ($row = $result->fetch_assoc()) {
+        $permissions[] = $row['name'];
+    }
+    return $permissions;
+}
+
+function get_user_permissions($user_id) {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_user_permissions.");
+        return [];
+    }
+    if (!isset($_SESSION['role'])) {
+        error_log("No role set in session for user_id: $user_id");
+        return [];
+    }
+
+    $permissions = [];
+    $role_name = $_SESSION['role'];
+
+    // Get role ID based on role name
+    $stmt = $db->prepare("SELECT id FROM roles WHERE name = ?");
+    $stmt->bind_param('s', $role_name);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $role = $result->fetch_assoc();
+
+    if ($role) {
+        $role_id = $role['id'];
+        // Get permissions from the user's role
+        $permissions = get_permissions_for_role($role_id);
+    } else {
+        error_log("Role not found: $role_name");
+    }
+
+    // Get custom permissions assigned directly to the user
+    $stmt = $db->prepare("SELECT p.name FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $permissions[] = $row['name'];
+    }
+
+    return array_unique($permissions); // Remove duplicates
+}
+
+function has_permission($permission) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    $user_permissions = $_SESSION['permissions'] ?? get_user_permissions($_SESSION['user_id']);
+    $_SESSION['permissions'] = $user_permissions; // Cache permissions in session
+    return in_array($permission, $user_permissions);
+}
+?>
+
+
+==== PHP FILE: ./index.php ====
+Size: 8181 bytes
+Last Modified: Thu, Jun  5, 2025  6:00:09 PM
+----------------------------------------
+<?php
+// Enable PHP error display
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+session_start();
+
+// Define BASE_PATH
+define('BASE_PATH', __DIR__ . '/');
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+include_once BASE_PATH . 'auth.php';
+
+// Check if setup is needed
+$setup_complete = file_exists(BASE_PATH . 'setup.lock');
+if (!$setup_complete || isset($_GET['reset'])) {
+    require_once BASE_PATH . 'setup.php';
+    if (!file_exists(BASE_PATH . 'setup.lock')) {
+        file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
+    }
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
+// Set default session data for testing
+if (!isset($_SESSION['user_id'])) {
+    $result = $db->query("SELECT id FROM users WHERE username = 'admin'");
+    $user = $result->fetch_assoc();
+    $_SESSION['user_id'] = $user ? $user['id'] : 1;
+    $_SESSION['role'] = 'Admin';
+    $_SESSION['username'] = 'admin'; // Match status.php expectation
+}
+
+// Handle role change
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
+    $_SESSION['role'] = $_POST['role'];
+    if (isset($_SESSION['user_id'])) {
+        $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+        error_log("Permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+    }
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+$role = $_SESSION['role'] ?? 'Guest';
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+    error_log("Initial permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+}
+
+$modules = [
+    'customers' => ['label' => 'Customers', 'icon' => 'users', 'permission' => 'view_customers'],
+    'devices' => ['label' => 'Devices', 'icon' => 'device-mobile', 'permission' => 'view_devices'],
+    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed', 'permission' => 'manage_permissions'],
+    'devtools' => ['label' => 'DevTools', 'icon' => 'wrench', 'permission' => 'view_devtools']
+];
+
+$accessible_modules = [];
+foreach ($modules as $module => $key) {
+    if (has_permission($key['permission'])) {
+        $accessible_modules[$module] = $key;
+    }
+}
+
+$current_module = isset($_GET['module']) && isset($accessible_modules[$_GET['module']]) ? $_GET['module'] : null;
+
+$dashboard_file = BASE_PATH . 'modules/dashboard.php';
+$module_file = $current_module ? BASE_PATH . "modules/{$current_module}.php" : null;
+
+if (!$db) {
+    error_log("Database connection is null.");
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPSM Control Panel</title>
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { 'teal-custom': '#00cec9', 'cyan-neon': '#00FFFF', 'magenta-neon': '#FF00FF', 'yellow-neon': '#FFFF00', 'black-smoke': '#1C2526' } } };
+    </script>
+    <style>
+        .glass { background: rgba(28, 37, 38, 0.8); border: none; box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(0,255,255,0.4); }
+        .menu-item { background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .menu-item.active { background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15)); }
+        .floating-module { position: absolute; top: 80px; left: 280px; right: 16px; bottom: 16px; z-index: 20; background: rgba(28,37,38,0.9); border-radius: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2); padding: 1.5rem; overflow-y: auto; }
+        @supports not (backdrop-filter: blur(10px)) { .glass { background: rgba(28,37,38,1); } }
+    </style>
+</head>
+<body class="bg-black-smoke text-white min-h-screen font-sans">
+    <header class="glass p-4 fixed w-full top-0 z-10">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
+            <div>
+                <form method="POST" action="" class="inline">
+                    <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded">
+                        <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
+                            <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>><?php echo $r; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+                <a href="logout.php" class="ml-4 text-magenta-neon">Logout</a>
+                <a href="?reset" class="ml-4 text-yellow-neon">Reset Setup</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex mt-16">
+        <aside class="glass w-64 p-4 fixed h-[calc(100vh-80px)] top-16 overflow-y-auto flex flex-col">
+            <nav class="flex-1">
+                <ul class="space-y-2">
+                    <?php foreach ($accessible_modules as $module => $key): ?>
+                        <li><a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 rounded-lg menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
+                            <?php $icons = ['users' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5a4 4 0 110 5.4M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.2M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>', 'device-mobile' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0v1-2V5a2a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2z"></path></svg>', 'lock-closed' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1 3.5-1 6.8-2.8 9.5m-3.4-2l.1-.1A14 14 0 008 11a4 4 0 118 0c0 1-.1 2-.2 3m-2.1 6.8A22 22 0 0015 17m3.8 1.1c.7-2.2 1-4.7 1-7A8 8 0 008 4M3 15.4c.6-1.3 1-2.8-4.4 1-4.4m-1 3.4a3 3 0 013-3m0 3.4a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>', 'wrench' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-2.3 3-.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c-.9 1.5-.8 3.4-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4-1-1-2.6 0-2.5c-1.4-1.8 1.9-2.4-2.3.9-.5 2.3 0 2.6-1.1z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>']; echo $icons[$key['icon']] ?? ''; ?>
+                            <span><?php echo $key['label']; ?></span>
+                        </a></li>
+                    <?php endforeach; ?>
+                </ul>
+            </nav>
+            <!-- Status Module (always visible) -->
+            <div class="mt-auto">
+                <?php include_once BASE_PATH . 'modules/status.php'; ?>
+            </div>
+        </aside>
+
+        <main class="glass flex-1 p-6 ml-64 mt-16 relative">
+            <?php include $dashboard_file; ?>
+            <?php if ($module_file): ?>
+                <div class="floating-module">
+                    <?php include $module_file; ?>
+                    <a href="<?php echo strtok($_SERVER['REQUEST_URI'], '?'); ?>" class="text-yellow-neon mt-4 inline-block">Close</a>
+                </div>
+            <?php endif; ?>
+        </main>
+    </div>
+</body>
+</html>
+
+
+==== PHP FILE: ./login.php ====
+Size: 3258 bytes
+Last Modified: Wed, Jun  4, 2025  9:46:05 PM
+----------------------------------------
+<?php
+// Enable PHP error display
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+session_start();
+
+// Define BASE_PATH
+define('BASE_PATH', __DIR__ . '/');
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'auth.php';
+
+// Handle login form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
+
+    try {
+        if (empty($username) || empty($password)) {
+            throw new Exception('Username and password are required.');
+        }
+
+        // Mock authentication (replace with your actual logic)
+        if ($username === 'admin' && $password === 'password') {
+            $_SESSION['user_id'] = 1;
+            $_SESSION['role'] = 'Admin';
+            header('Location: index.php');
+            exit;
+        } else {
+            throw new Exception('Invalid credentials.');
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MPSM Control Panel</title>
+    <!-- Tailwind CSS CDN with fallback -->
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css" type="text/css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'teal-custom': '#00cec9',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        /* Fallback for backdrop-filter and offline */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        @supports not (backdrop-filter: blur(10px)) {
+            .glass {
+                background: rgba(52, 73, 94, 0.5);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans flex items-center justify-center">
+    <div class="glass p-6 rounded-lg border border-gray-800 w-full max-w-md">
+        <h2 class="text-2xl text-teal-custom mb-4 text-center">Login to MPSM 🎛️</h2>
+        <?php if (isset($error)): ?>
+            <p class="text-red-500 mb-4 text-center"><?php echo htmlspecialchars($error); ?></p>
+        <?php endif; ?>
+        <form method="POST" action="" class="space-y-4">
+            <div>
+                <label class="block text-gray-300">Username:</label>
+                <input type="text" name="username" required class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Password:</label>
+                <input type="password" name="password" required class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded">
+            </div>
+            <button type="submit" class="w-full bg-gray-800 text-teal-custom p-2 rounded border border-gray-700 hover:bg-gray-700">Login 🔐</button>
+        </form>
+    </div>
+</body>
+</html>
+
+
+==== PHP FILE: ./logout.php ====
+Size: 86 bytes
+Last Modified: Wed, Jun  4, 2025  3:34:27 PM
+----------------------------------------
+<?php
+session_start();
+session_destroy();
+header('Location: login.php');
+exit;
+?>
+
+
+==== PHP FILE: ./modules/customers.php ====
+Size: 88 bytes
+Last Modified: Wed, Jun  4, 2025  2:52:27 PM
+----------------------------------------
+<?php
+?>
+<h1>Customers</h1>
+<p>Customer management module. Placeholder content.</p>
+
+
+
+==== PHP FILE: ./modules/dashboard.php ====
+Size: 128 bytes
+Last Modified: Wed, Jun  4, 2025  2:51:44 PM
+----------------------------------------
+<?php
+?>
+<h1>Dashboard</h1>
+<p>Welcome to the dashboard. This is the default module visible to all authenticated users.</p>
+
+
+
+==== PHP FILE: ./modules/devices.php ====
+Size: 86 bytes
+Last Modified: Wed, Jun  4, 2025  2:53:01 PM
+----------------------------------------
+<?php
+?>
+<h1>Devices</h1>
+<p>Device management module. Placeholder content.</p>
+
+
+
+
+==== PHP FILE: ./modules/devtools.php ====
+Size: 13449 bytes
+Last Modified: Thu, Jun  5, 2025  4:46:20 PM
+----------------------------------------
+<?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+
+// Check permissions
+if (!function_exists('has_permission') || !has_permission('view_devtools')) {
+    echo "<p class='text-red-500 p-4'>Access denied.</p>";
+    exit;
+}
+
+// Load environment variables using the shared load_env() from db.php
+$env_vars = load_env(BASE_PATH);
+
+$css_file = BASE_PATH . 'styles.css';
+$css_content = file_exists($css_file) ? file_get_contents($css_file) : '';
+$primary_color = preg_match('/--primary-color:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00cec9';
+$depth_intensity = preg_match('/--depth-intensity:\s*(\d+px)/', $css_content, $match) ? $match[1] : '8px';
+$neon_underglow = preg_match('/--neon-underglow:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00FFFF';
+$smoke_opacity = preg_match('/--smoke-opacity:\s*(\d*\.?\d+)/', $css_content, $match) ? $match[1] : '0.7';
+
+// Handle POST requests for module activation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_module'])) {
+    $module_name = $_POST['module_name'];
+    $active = $_POST['active'] === '1' ? 1 : 0;
+    $stmt = $db->prepare("UPDATE modules SET active = ? WHERE name = ?");
+    $stmt->bind_param('is', $active, $module_name);
+    $stmt->execute();
+    $stmt->close();
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (isset($_POST['update_env'])) {
+            $db_name = trim($_POST['DB_NAME'] ?? '');
+            $debug_mode = isset($_POST['DEBUG_MODE']) ? 'true' : 'false';
+            if (empty($db_name)) {
+                throw new Exception("Database name cannot be empty.");
+            }
+            $new_env = "DB_HOST=localhost\nDB_USER={$env_vars['DB_USER']}\nDB_PASS={$env_vars['DB_PASS']}\nDB_NAME=$db_name\nDEBUG_MODE=$debug_mode\n";
+            if (!file_put_contents(BASE_PATH . '.env', $new_env)) {
+                throw new Exception("Failed to write to .env.");
+            }
+            echo "<p class='text-green-500 p-2'>.env updated!</p>";
+        } elseif (isset($_POST['update_css'])) {
+            $new_color = trim($_POST['primary_color'] ?? '');
+            $new_depth = trim($_POST['depth_intensity'] ?? '');
+            $new_neon = trim($_POST['neon_underglow'] ?? '');
+            $new_opacity = trim($_POST['smoke_opacity'] ?? '');
+            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $new_color)) {
+                throw new Exception("Invalid primary color format.");
+            }
+            if (!preg_match('/^\d+px$/', $new_depth)) {
+                throw new Exception("Invalid depth format.");
+            }
+            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $new_neon)) {
+                throw new Exception("Invalid neon underglow format.");
+            }
+            if (!preg_match('/^\d*\.?\d+$/', $new_opacity) || $new_opacity > 1 || $new_opacity < 0) {
+                throw new Exception("Invalid opacity (0-1).");
+            }
+            $css_content = preg_replace('/--primary-color:\s*#[0-9a-fA-F]{6}/', "--primary-color: $new_color", $css_content);
+            $css_content = preg_replace('/--depth-intensity:\s*\d+px/', "--depth-intensity: $new_depth", $css_content);
+            $css_content = preg_replace('/--neon-underglow:\s*#[0-9a-fA-F]{6}/', "--neon-underglow: $new_neon", $css_content);
+            $css_content = preg_replace('/--smoke-opacity:\s*\d*\.?\d+/', "--smoke-opacity: $new_opacity", $css_content);
+            if (!file_put_contents($css_file, $css_content)) {
+                throw new Exception("Failed to write to styles.css.");
+            }
+            echo "<p class='text-green-500 p-2'>CSS updated!</p>";
+        } elseif (isset($_POST['run_tests'])) {
+            $api_result = test_api();
+            $db_result = test_database();
+            $php_result = test_php();
+            $env_result = test_environment();
+            echo "<div class='glass p-4 border border-gray-800 rounded mt-4'><h3 class='text-xl text-cyan-neon'>Test Results</h3><ul class='mt-2 space-y-2'>";
+            echo "<li>API Test: " . ($api_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
+            echo "<li>Database Test: " . ($db_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
+            echo "<li>PHP Test: " . ($php_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
+            echo "<li>Environment Test: " . ($env_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li></ul></div>";
+        }
+    } catch (Exception $e) {
+        echo "<p class='text-red-500 p-2'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+}
+
+function test_api() {
+    $env = load_env(BASE_PATH);
+    if (isset($env['API_URL']) && file_exists(BASE_PATH . 'working.php')) {
+        return true; // Mock success; replace with actual API call
+    }
+    return false;
+}
+
+function test_database() {
+    $env = load_env(BASE_PATH);
+    if (isset($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME'])) {
+        $conn = new mysqli($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME']);
+        return $conn->connect_error === null;
+    }
+    return false;
+}
+
+function test_php() {
+    return version_compare(PHP_VERSION, '7.4.0', '>=');
+}
+
+function test_environment() {
+    return file_exists(BASE_PATH . '.env') && is_writable(BASE_PATH . '.env');
+}
+?>
+
+<h2 class="text-2xl text-cyan-neon mb-4 flex items-center">
+    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+    DevTools
+</h2>
+<p class="mb-4">Developer settings and tools for MPSM.</p>
+
+<div class="space-y-6">
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-magenta-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+            </svg>
+            Environment Variables
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <div>
+                <label class="block text-gray-300">Database Name (DB_NAME):</label>
+                <input type="text" name="DB_NAME" value="<?php echo htmlspecialchars($env_vars['DB_NAME'] ?? ''); ?>" required class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Debug Mode (DEBUG_MODE):</label>
+                <input type="checkbox" name="DEBUG_MODE" <?php echo ($env_vars['DEBUG_MODE'] ?? 'false') === 'true' ? 'checked' : ''; ?> class="mr-2">
+            </div>
+            <button type="submit" name="update_env" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Save</button>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-yellow-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+            </svg>
+            Theme Customization
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <div>
+                <label class="block text-gray-300">Primary Color (--primary-color):</label>
+                <input type="color" name="primary_color" value="<?php echo $primary_color; ?>" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Depth Intensity (--depth-intensity):</label>
+                <input type="text" name="depth_intensity" value="<?php echo $depth_intensity; ?>" placeholder="e.g., 8px" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Neon Underglow (--neon-underglow):</label>
+                <input type="color" name="neon_underglow" value="<?php echo $neon_underglow; ?>" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Smoke Opacity (--smoke-opacity):</label>
+                <input type="number" name="smoke_opacity" value="<?php echo $smoke_opacity; ?>" step="0.1" min="0" max="1" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <button type="submit" name="update_css" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Save</button>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-cyan-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Debug Settings
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <div>
+                <label class="block text-gray-300">Enable Debug Mode:</label>
+                <input type="checkbox" name="debug_enabled" <?php echo ($env_vars['DEBUG_MODE'] ?? 'false') === 'true' ? 'checked' : ''; ?> class="mr-2">
+                <button type="submit" name="toggle_debug" class="bg-black-smoke text-magenta-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Toggle</button>
+            </div>
+            <button type="submit" name="clear_cache" class="mt-2 bg-black-smoke text-magenta-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Clear Cache</button>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-yellow-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Module Management
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <?php
+            $modules = $db->query("SELECT * FROM modules");
+            while ($module = $modules->fetch_assoc()): ?>
+                <div>
+                    <label class="block text-gray-300">
+                        <input type="checkbox" name="module_name" value="<?php echo $module['name']; ?>" 
+                               onchange="this.form.querySelector('input[name=active]').value=this.checked ? 1 : 0; this.form.submit()"
+                               <?php echo $module['active'] ? 'checked' : ''; ?> class="mr-2">
+                        <?php echo htmlspecialchars($module['name']); ?>
+                        <input type="hidden" name="active" value="<?php echo $module['active'] ? 1 : 0; ?>">
+                        <input type="hidden" name="toggle_module" value="1">
+                    </label>
+                </div>
+            <?php endwhile; ?>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-cyan-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            Run Tests
+        </h3>
+        <form method="POST" class="mt-4">
+            <button type="submit" name="run_tests" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Run All Tests</button>
+        </form>
+    </div>
+</div>
+
+
+==== PHP FILE: ./modules/permissions.php ====
+Size: 22774 bytes
+Last Modified: Thu, Jun  5, 2025  4:45:51 PM
+----------------------------------------
+<?php
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+
+if (!has_permission('manage_permissions')) {
+    echo "<p class='text-red-500 p-4'>Access denied.</p>";
+    exit;
+}
+
+function get_active_modules() {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_active_modules.");
+        return [];
+    }
+    $result = $db->query("SELECT name FROM modules WHERE active = 1");
+    $modules = [];
+    while ($row = $result->fetch_assoc()) {
+        $modules[] = $row['name'];
+    }
+    return $modules;
+}
+
+$active_modules = get_active_modules();
+$action = $_GET['action'] ?? 'list';
+
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (isset($_POST['add_role'])) {
+            $role_name = trim($_POST['role_name']);
+            if (empty($role_name)) {
+                throw new Exception("Role name is required.");
+            }
+            $stmt = $db->prepare("INSERT INTO roles (name) VALUES (?)");
+            $stmt->bind_param('s', $role_name);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['add_permission'])) {
+            $perm_name = trim($_POST['permission_name']);
+            if (empty($perm_name)) {
+                throw new Exception("Permission name is required.");
+            }
+            $stmt = $db->prepare("INSERT INTO permissions (name) VALUES (?)");
+            $stmt->bind_param('s', $perm_name);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['add_user'])) {
+            $username = trim($_POST['username']);
+            $password = trim($_POST['password']);
+            if (empty($username) || empty($password)) {
+                throw new Exception("Username and password are required.");
+            }
+            $stmt = $db->prepare("INSERT INTO users (username, password, role_id) VALUES (?, ?, 1)");
+            $stmt->bind_param('ss', $username, $password);
+            $stmt->execute();
+            $user_id = $db->insert_id;
+            if (isset($_POST['roles']) && is_array($_POST['roles'])) {
+                foreach ($_POST['roles'] as $role_id) {
+                    $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                    $stmt->bind_param('ii', $user_id, $role_id);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['assign_permissions'])) {
+            $role_id = filter_input(INPUT_POST, 'role_id', FILTER_VALIDATE_INT);
+            if ($role_id === false || $role_id <= 0) {
+                throw new Exception("Invalid role ID.");
+            }
+            $permissions = $_POST['permissions'] ?? [];
+            $permissions = array_filter($permissions, function($id) {
+                return filter_var($id, FILTER_VALIDATE_INT) && $id > 0;
+            });
+            $db->query("DELETE FROM role_permissions WHERE role_id = $role_id");
+            foreach ($permissions as $perm_id) {
+                $stmt = $db->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                $stmt->bind_param('ii', $role_id, $perm_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['assign_user_roles'])) {
+            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+            if ($user_id === false || $user_id <= 0) {
+                throw new Exception("Invalid user ID.");
+            }
+            $roles = $_POST['roles'] ?? [];
+            $roles = array_filter($roles, function($id) {
+                return filter_var($id, FILTER_VALIDATE_INT) && $id > 0;
+            });
+            $db->query("DELETE FROM user_roles WHERE user_id = $user_id");
+            foreach ($roles as $role_id) {
+                $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                $stmt->bind_param('ii', $user_id, $role_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['assign_custom_permissions'])) {
+            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+            if ($user_id === false || $user_id <= 0) {
+                throw new Exception("Invalid user ID.");
+            }
+            $permissions = $_POST['custom_permissions'] ?? [];
+            $permissions = array_filter($permissions, function($id) {
+                return filter_var($id, FILTER_VALIDATE_INT) && $id > 0;
+            });
+            $db->query("DELETE FROM user_permissions WHERE user_id = $user_id");
+            foreach ($permissions as $perm_id) {
+                $stmt = $db->prepare("INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?)");
+                $stmt->bind_param('ii', $user_id, $perm_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        }
+    } catch (Exception $e) {
+        echo "<p class='text-red-500 p-4'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+}
+
+// Fetch data
+$result = $db->query("SELECT * FROM roles");
+$roles = $result->fetch_all(MYSQLI_ASSOC);
+
+$result = $db->query("SELECT * FROM permissions");
+$permissions = $result->fetch_all(MYSQLI_ASSOC);
+
+// Map permissions to modules
+$module_permissions = [
+    'view_dashboard' => 'dashboard',
+    'view_customers' => 'customers',
+    'view_devices' => 'devices',
+    'manage_permissions' => 'permissions',
+    'view_devtools' => 'devtools'
+];
+
+// Filter permissions based on active modules
+$available_permissions = array_filter($permissions, function($perm) use ($active_modules, $module_permissions) {
+    $perm_name = $perm['name'];
+    return in_array($module_permissions[$perm_name] ?? $perm_name, $active_modules);
+}, ARRAY_FILTER_USE_BOTH);
+
+$result = $db->query("SELECT * FROM users");
+$users = $result->fetch_all(MYSQLI_ASSOC);
+
+$result = $db->query("SELECT ur.user_id, r.name AS role_name FROM user_roles ur JOIN roles r ON ur.role_id = r.id");
+$user_roles = [];
+while ($row = $result->fetch_assoc()) {
+    $user_roles[$row['user_id']][] = $row['role_name'];
+}
+
+$result = $db->query("SELECT up.user_id, p.name AS perm_name FROM user_permissions up JOIN permissions p ON up.permission_id = p.id");
+$user_custom_perms = [];
+while ($row = $result->fetch_assoc()) {
+    $user_custom_perms[$row['user_id']][] = $row['perm_name'];
+}
+?>
+
+<div class="space-y-6">
+    <h1 class="text-2xl text-cyan-neon">Permissions Management</h1>
+    <nav class="flex space-x-4 text-gray-300">
+        <a href="index.php?module=permissions&action=list" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            List
+        </a>
+        <a href="index.php?module=permissions&action=add_role" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Role
+        </a>
+        <a href="index.php?module=permissions&action=add_permission" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Permission
+        </a>
+        <a href="index.php?module=permissions&action=add_user" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add User
+        </a>
+    </nav>
+
+    <?php if ($action === 'list'): ?>
+        <h2 class="text-xl text-cyan-neon">Roles and Permissions</h2>
+        <?php if (empty($roles)): ?>
+            <p class="text-gray-300">No roles found. Add a role to get started.</p>
+        <?php else: ?>
+            <div class="glass p-4">
+                <table class="w-full text-gray-300">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-2 px-4 text-left">Role</th>
+                            <th class="py-2 px-4 text-left">Permissions</th>
+                            <th class="py-2 px-4 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($roles as $role): ?>
+                            <tr class="border-b border-gray-800">
+                                <td class="py-2 px-4"><?php echo htmlspecialchars($role['name']); ?></td>
+                                <td class="py-2 px-4">
+                                    <?php
+                                    $role_id = (int)$role['id'];
+                                    $result = $db->query("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = $role_id");
+                                    $role_perms = $result->fetch_all(MYSQLI_ASSOC);
+                                    $filtered_perms = array_filter($role_perms, function($p) use ($active_modules, $module_permissions) {
+                                        return in_array($module_permissions[$p['name']] ?? $p['name'], $active_modules);
+                                    });
+                                    echo htmlspecialchars(implode(', ', array_column($filtered_perms, 'name')) ?: 'None');
+                                    ?>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <a href="index.php?module=permissions&action=edit&role_id=<?php echo $role['id']; ?>" class="text-yellow-neon flex items-center">
+                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+        <h2 class="text-xl text-cyan-neon mt-6">Users and Permissions</h2>
+        <?php if (empty($users)): ?>
+            <p class="text-gray-300">No users found. Add a user to get started.</p>
+        <?php else: ?>
+            <div class="glass p-4">
+                <table class="w-full text-gray-300">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-2 px-4 text-left">Username</th>
+                            <th class="py-2 px-4 text-left">Roles</th>
+                            <th class="py-2 px-4 text-left">Custom Permissions</th>
+                            <th class="py-2 px-4 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($users as $user): ?>
+                            <tr class="border-b border-gray-800">
+                                <td class="py-2 px-4"><?php echo htmlspecialchars($user['username']); ?></td>
+                                <td class="py-2 px-4"><?php echo htmlspecialchars(implode(', ', $user_roles[$user['id']] ?? ['None'])); ?></td>
+                                <td class="py-2 px-4"><?php echo htmlspecialchars(implode(', ', $user_custom_perms[$user['id']] ?? ['None'])); ?></td>
+                                <td class="py-2 px-4">
+                                    <a href="index.php?module=permissions&action=edit_user&user_id=<?php echo $user['id']; ?>" class="text-yellow-neon flex items-center">
+                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    <?php elseif ($action === 'add_role'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New Role</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Role Name:</label>
+                <input type="text" name="role_name" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <button type="submit" name="add_role" class="bg-teal-custom text-black px-4 py-2 rounded">Add Role</button>
+        </form>
+    <?php elseif ($action === 'add_permission'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New Permission</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Permission Name:</label>
+                <input type="text" name="permission_name" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <button type="submit" name="add_permission" class="bg-teal-custom text-black px-4 py-2 rounded">Add Permission</button>
+        </form>
+    <?php elseif ($action === 'add_user'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New User</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Username:</label>
+                <input type="text" name="username" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <div>
+                <label class="block text-gray-300 mb-1">Password:</label>
+                <input type="password" name="password" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <div>
+                <label class="block text-gray-300 mb-1">Roles:</label>
+                <select name="roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                    <?php foreach ($roles as $role): ?>
+                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" name="add_user" class="bg-teal-custom text-black px-4 py-2 rounded">Add User</button>
+        </form>
+    <?php elseif ($action === 'edit' && isset($_GET['role_id'])): ?>
+        <?php
+        $role_id = filter_input(INPUT_GET, 'role_id', FILTER_VALIDATE_INT);
+        if ($role_id === false || $role_id <= 0): ?>
+            <p class='text-red-500 p-4'>Invalid role ID.</p>
+        <?php else: ?>
+            <?php
+            $result = $db->query("SELECT * FROM roles WHERE id = $role_id");
+            if ($result === false): ?>
+                <p class='text-red-500 p-4'>Error fetching role: <?php echo htmlspecialchars($db->error); ?></p>
+            <?php else: ?>
+                <?php
+                $role = $result->fetch_assoc();
+                if (!$role): ?>
+                    <p class='text-red-500 p-4'>Role not found.</p>
+                <?php else: ?>
+                    <?php
+                    $result = $db->query("SELECT permission_id FROM role_permissions WHERE role_id = $role_id");
+                    $role_perms = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
+                    ?>
+                    <h2 class="text-xl text-cyan-neon">Edit Permissions for <?php echo htmlspecialchars($role['name']); ?></h2>
+                    <form method="POST" class="glass p-4 space-y-4">
+                        <input type="hidden" name="role_id" value="<?php echo $role_id; ?>">
+                        <div>
+                            <label class="block text-gray-300 mb-1">Permissions:</label>
+                            <?php if (empty($available_permissions)): ?>
+                                <p class="text-gray-300">No permissions available based on active modules. Activate modules in DevTools.</p>
+                            <?php else: ?>
+                                <div class="space-y-2">
+                                    <?php foreach ($available_permissions as $perm): ?>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="permissions[]" value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $role_perms) ? 'checked' : ''; ?> class="mr-2">
+                                            <span><?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)</span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="submit" name="assign_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save</button>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php elseif ($action === 'edit_user' && isset($_GET['user_id'])): ?>
+        <?php
+        $user_id = filter_input(INPUT_GET, 'user_id', FILTER_VALIDATE_INT);
+        if ($user_id === false || $user_id <= 0): ?>
+            <p class='text-red-500 p-4'>Invalid user ID.</p>
+        <?php else: ?>
+            <?php
+            $result = $db->query("SELECT * FROM users WHERE id = $user_id");
+            if ($result === false): ?>
+                <p class='text-red-500 p-4'>Error fetching user: <?php echo htmlspecialchars($db->error); ?></p>
+            <?php else: ?>
+                <?php
+                $user = $result->fetch_assoc();
+                if (!$user): ?>
+                    <p class='text-red-500 p-4'>User not found.</p>
+                <?php else: ?>
+                    <?php
+                    $result = $db->query("SELECT role_id FROM user_roles WHERE user_id = $user_id");
+                    $user_role_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'role_id');
+                    $result = $db->query("SELECT permission_id FROM user_permissions WHERE user_id = $user_id");
+                    $user_perm_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
+                    ?>
+                    <h2 class="text-xl text-cyan-neon">Edit <?php echo htmlspecialchars($user['username']); ?></h2>
+                    <form method="POST" class="glass p-4 space-y-4">
+                        <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
+                        <div>
+                            <label class="block text-gray-300 mb-1">Roles:</label>
+                            <select name="roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                                <?php foreach ($roles as $role): ?>
+                                    <option value="<?php echo $role['id']; ?>" <?php echo in_array($role['id'], $user_role_ids) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($role['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 mb-1">Custom Permissions:</label>
+                            <select name="custom_permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                                <?php foreach ($available_permissions as $perm): ?>
+                                    <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="space-x-2">
+                            <button type="submit" name="assign_user_roles" class="bg-teal-custom text-black px-4 py-2 rounded">Save Roles</button>
+                            <button type="submit" name="assign_custom_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save Custom Permissions</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
+
+
+==== PHP FILE: ./modules/status.php ====
+Size: 1508 bytes
+Last Modified: Thu, Jun  5, 2025  6:01:27 PM
+----------------------------------------
+<?php
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+
+$username = $_SESSION['username'] ?? 'Unknown';
+$db_status = $db ? 'Connected' : 'Disconnected';
+
+?>
+
+<div class="glass p-4 border border-gray-800 rounded space-y-2">
+    <h3 class="text-xl text-cyan-neon flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Status
+    </h3>
+    <p class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Username: <?php echo htmlspecialchars($username); ?>
+    </p>
+    <p class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke="<?php echo $db ? '#10B981' : '#EF4444'; ?>">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 0v10"></path>
+        </svg>
+        Database: <?php echo $db_status; ?>
+    </p>
+</div>
+
+
+==== TEXT FILE: ./php_project_contents_20250605_182436.txt ====
+Size: 63302 bytes
+Last Modified: Thu, Jun  5, 2025  6:24:42 PM
+----------------------------------------
+PHP PROJECT CONTENT COLLECTION
+Generated: Thu, Jun  5, 2025  6:24:36 PM
+----------------------------------------
+
+==== BINARY FILE: ./.DS_Store ====
+Size: 6148 bytes
+Last Modified: Wed, Jun  4, 2025  7:24:52 AM
+[Binary content not displayed]
+
+
+==== TEXT FILE: ./.env ====
+Size: 329 bytes
+Last Modified: Wed, Jun  4, 2025 10:21:00 AM
+----------------------------------------
+CLIENT_ID=9AT9j4UoU2BgLEqmiYCz
+CLIENT_SECRET=9gTbAKBCZe1ftYQbLbq9
+USERNAME=dashboard
+PASSWORD=d@$hpa$$2024
+SCOPE=account
+TOKEN_URL=https://api.abassetmanagement.com/api3/token
+BASE_URL=https://api.abassetmanagement.com/api3/
+DEALER_CODE=NY06AGDWUQ
+DB_HOST=localhost
+DB_NAME=resolut7_mpsm
+DB_USER=resolut7_mpsm
+DB_PASS=MP$M_Nr0lr
+
+
+
+==== TEXT FILE: ./.github/workflows/deploy.yml ====
+Size: 2014 bytes
+Last Modified: Wed, Jun  4, 2025 12:11:49 PM
+----------------------------------------
+name: Simple FTP Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Bump version in version.txt
+        id: bump_version
+        run: |
+          # If version.txt doesn't exist, initialize it to 0.0.0.0
+          if [ ! -f version.txt ]; then
+            echo "0.0.0.0" > version.txt
+          fi
+
+          # Read the four segments
+          IFS='.' read -r MAJOR MINOR PATCH BUILD < version.txt
+
+          # Increment only the BUILD segment
+          BUILD=$((BUILD + 1))
+
+          # Recompose the version string
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}.${BUILD}"
+
+          # Write it back
+          echo "$NEW_VERSION" > version.txt
+
+          # Expose as an output if needed
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      # (Optional) If you want to commit the bumped version back to the repo,
+      # uncomment the next two steps. Make sure to include “[skip ci]” in your commit message
+      # so that this push does NOT retrigger this same workflow.
+
+      # - name: Commit bumped version.txt
+      #   if: always()
+      #   run: |
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add version.txt
+      #     git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]" || echo "No changes to commit."
+
+      # - name: Push version bump
+      #   if: always()
+      #   run: |
+      #     git push
+
+      - name: FTP Upload (clean mirror)
+        uses: sebastianpopp/ftp-action@releases/v2
+        with:
+          host:     ${{ secrets.FTP_SERVER }}
+          user:     ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          localDir: "./"
+          remoteDir: ${{ secrets.REMOTE_DIR }}
+          options:  "--delete"
+
+
+
+==== TEXT FILE: ./AllEndpoints.json ====
+Size: 83 bytes
+Last Modified: Wed, Jun  4, 2025  9:06:57 AM
+----------------------------------------
+{
+  "GetCustomers": "/Account/GetAccounts",
+  "GetDevices": "/Device/GetDevices"
+}
+
+
+
+==== PHP FILE: ./auth.php ====
+Size: 210 bytes
+Last Modified: Thu, Jun  5, 2025  3:15:07 PM
+----------------------------------------
+<?php
+// auth.php
+function isLoggedIn() {
+    return isset($_SESSION['user_id']);
+}
+
+function logout() {
+    session_unset();
+    session_destroy();
+    header('Location: login.php');
+    exit;
+}
+?>
+
+
+==== TEXT FILE: ./collect_files.sh ====
+Size: 2179 bytes
+Last Modified: Thu, Jun  5, 2025  6:24:29 PM
+----------------------------------------
+#!/bin/bash
+
+# Smart PHP Project File Collector
+OUTPUT_FILE="php_project_contents_$(date +'%Y%m%d_%H%M%S').txt"
+
+# Configure exclusions (add more as needed)
+EXCLUDE_DIRS=("vendor" "node_modules" ".git" ".idea" "build" "dist")
+EXCLUDE_EXT=("png" "jpg" "jpeg" "gif" "svg" "ico" "woff" "woff2" "ttf" "eot" "pdf" "zip" "tar.gz")
+
+# Better text file detection
+is_text_file() {
+    file -b --mime-encoding "$1" | grep -qvi 'binary'
+}
+
+# Start output
+{
+    echo "PHP PROJECT CONTENT COLLECTION"
+    echo "Generated: $(date)"
+    echo "----------------------------------------"
+    echo ""
+    
+    find . -type f | while read -r file; do
+        # Skip excluded directories
+        for dir in "${EXCLUDE_DIRS[@]}"; do
+            if [[ "$file" == *"/$dir/"* ]]; then
+                continue 2
+            fi
+        done
+        
+        # Skip excluded extensions
+        extension="${file##*.}"
+        for ext in "${EXCLUDE_EXT[@]}"; do
+            if [[ "${extension,,}" == "${ext,,}" ]]; then
+                continue 2
+            fi
+        done
+        
+        # Special handling for PHP files - always include
+        if [[ "${file##*.}" == "php" ]]; then
+            echo "==== PHP FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            cat "$file"
+            echo -e "\n\n"
+            continue
+        fi
+        
+        # For other files, check if they're text
+        if is_text_file "$file"; then
+            echo "==== TEXT FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            head -c 100000 "$file"  # Show first 100KB
+            echo -e "\n\n"
+        else
+            echo "==== BINARY FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "[Binary content not displayed]"
+            echo -e "\n"
+        fi
+    done
+} > "$OUTPUT_FILE"
+
+echo "Collection complete! Output saved to $OUTPUT_FILE"
+
+
+==== PHP FILE: ./config.php ====
+Size: 492 bytes
+Last Modified: Wed, Jun  4, 2025  3:39:09 PM
+----------------------------------------
+<?php
+// Load environment variables
+function load_env($file) {
+    $env_file = BASE_PATH . $file;
+    if (!file_exists($env_file)) {
+        die("Environment file not found: $env_file");
+    }
+    $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            putenv("$key=$value");
+        }
+    }
+}
+load_env('.env');
+?>
+
+
+==== PHP FILE: ./create_module.php ====
+Size: 1464 bytes
+Last Modified: Wed, Jun  4, 2025  5:12:29 PM
+----------------------------------------
+<?php
+define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+require_once BASE_PATH . 'db.php';
+
+if ($argc < 2) die("Usage: php create_module.php <json_config_file>\n");
+
+$config = json_decode(file_get_contents($argv[1]), true);
+if (!$config) die("Invalid JSON config\n");
+
+$module_name = $config['name'];
+$permission = $config['permission'];
+$description = $config['description'];
+
+// Create module file
+$module_content = <<<PHP
+<?php
+if (!has_permission('$permission')) {
+    echo "<p class='error'>Access denied.</p>";
+    exit;
+}
+?>
+<h2>$description 📊</h2>
+<p>Module content goes here...</p>
+PHP;
+file_put_contents(BASE_PATH . "modules/$module_name.php", $module_content);
+if (!file_exists(BASE_PATH . "modules/$module_name.php")) die("Failed to create module file\n");
+
+// Update setup.php
+$setup_content = file_get_contents(BASE_PATH . "setup.php");
+$setup_content .= "\nexecute_query(\$db, \"INSERT IGNORE INTO permissions (name) VALUES ('$permission')\");";
+file_put_contents(BASE_PATH . "setup.php", $setup_content);
+
+// Update index.php
+$index_content = file_get_contents(BASE_PATH . "index.php");
+$index_content = preg_replace('/\$modules = \[\s*(.*?)\];/s', "\$modules = [\n        '$module_name' => '$permission',\n        $1];", $index_content);
+file_put_contents(BASE_PATH . "index.php", $index_content);
+
+echo "Module $module_name created successfully. Run setup.php to apply database changes.\n";
+?>
+
+
+==== PHP FILE: ./db.php ====
+Size: 1806 bytes
+Last Modified: Thu, Jun  5, 2025  3:49:36 PM
+----------------------------------------
+<?php
+// db.php
+function load_env($path) {
+    $env = [];
+    $env_file = $path . '/.env';
+    error_log("Attempting to load .env file from: $env_file");
+    if (file_exists($env_file)) {
+        $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line && strpos($line, '=') !== false && !str_starts_with($line, '#')) {
+                [$key, $value] = array_map('trim', explode('=', $line, 2));
+                $env[$key] = $value;
+                error_log("Loaded env variable: $key=" . ($key === 'DB_PASS' ? '****' : $value));
+            }
+        }
+    } else {
+        error_log("No .env file found at $env_file.");
+    }
+    return $env;
+}
+
+// Initialize database connection
+function connect_db() {
+    $dir = __DIR__;
+    error_log("Base directory for .env load: $dir");
+    $env = load_env($dir);
+    $host = $env['DB_HOST'] ?? 'localhost';
+    $user = $env['DB_USER'] ?? '';
+    $pass = $env['DB_PASS'] ?? '';
+    $dbname = $env['DB_NAME'] ?? '';
+
+    error_log("Database connection attempt: host=$host, user=$user, dbname=$dbname");
+    if (empty($user) || empty($pass) || empty($dbname)) {
+        error_log("Missing database credentials: DB_USER=$user, DB_PASS=****, DB_NAME=$dbname");
+        return null;
+    }
+
+    $mysqli = new mysqli($host, $user, $pass, $dbname);
+    if ($mysqli->connect_error) {
+        error_log("Database connection failed: " . $mysqli->connect_error);
+        return null;
+    }
+    error_log("Database connection successful.");
+    return $mysqli;
+}
+
+// Set global $db on include
+global $db;
+$db = connect_db();
+
+if ($db === null) {
+    error_log("Database connection not established in db.php.");
+}
+?>
+
+
+==== PHP FILE: ./functions.php ====
+Size: 2274 bytes
+Last Modified: Thu, Jun  5, 2025  6:00:58 PM
+----------------------------------------
+<?php
+require_once BASE_PATH . 'db.php';
+
+function get_permissions_for_role($role_id) {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_permissions_for_role.");
+        return [];
+    }
+    $stmt = $db->prepare("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?");
+    $stmt->bind_param('i', $role_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $permissions = [];
+    while ($row = $result->fetch_assoc()) {
+        $permissions[] = $row['name'];
+    }
+    return $permissions;
+}
+
+function get_user_permissions($user_id) {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_user_permissions.");
+        return [];
+    }
+    if (!isset($_SESSION['role'])) {
+        error_log("No role set in session for user_id: $user_id");
+        return [];
+    }
+
+    $permissions = [];
+    $role_name = $_SESSION['role'];
+
+    // Get role ID based on role name
+    $stmt = $db->prepare("SELECT id FROM roles WHERE name = ?");
+    $stmt->bind_param('s', $role_name);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $role = $result->fetch_assoc();
+
+    if ($role) {
+        $role_id = $role['id'];
+        // Get permissions from the user's role
+        $permissions = get_permissions_for_role($role_id);
+    } else {
+        error_log("Role not found: $role_name");
+    }
+
+    // Get custom permissions assigned directly to the user
+    $stmt = $db->prepare("SELECT p.name FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $permissions[] = $row['name'];
+    }
+
+    return array_unique($permissions); // Remove duplicates
+}
+
+function has_permission($permission) {
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    $user_permissions = $_SESSION['permissions'] ?? get_user_permissions($_SESSION['user_id']);
+    $_SESSION['permissions'] = $user_permissions; // Cache permissions in session
+    return in_array($permission, $user_permissions);
+}
+?>
+
+
+==== PHP FILE: ./index.php ====
+Size: 8181 bytes
+Last Modified: Thu, Jun  5, 2025  6:00:09 PM
+----------------------------------------
+<?php
+// Enable PHP error display
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+session_start();
+
+// Define BASE_PATH
+define('BASE_PATH', __DIR__ . '/');
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+include_once BASE_PATH . 'auth.php';
+
+// Check if setup is needed
+$setup_complete = file_exists(BASE_PATH . 'setup.lock');
+if (!$setup_complete || isset($_GET['reset'])) {
+    require_once BASE_PATH . 'setup.php';
+    if (!file_exists(BASE_PATH . 'setup.lock')) {
+        file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
+    }
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
+// Set default session data for testing
+if (!isset($_SESSION['user_id'])) {
+    $result = $db->query("SELECT id FROM users WHERE username = 'admin'");
+    $user = $result->fetch_assoc();
+    $_SESSION['user_id'] = $user ? $user['id'] : 1;
+    $_SESSION['role'] = 'Admin';
+    $_SESSION['username'] = 'admin'; // Match status.php expectation
+}
+
+// Handle role change
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
+    $_SESSION['role'] = $_POST['role'];
+    if (isset($_SESSION['user_id'])) {
+        $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+        error_log("Permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+    }
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+$role = $_SESSION['role'] ?? 'Guest';
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+    error_log("Initial permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+}
+
+$modules = [
+    'customers' => ['label' => 'Customers', 'icon' => 'users', 'permission' => 'view_customers'],
+    'devices' => ['label' => 'Devices', 'icon' => 'device-mobile', 'permission' => 'view_devices'],
+    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed', 'permission' => 'manage_permissions'],
+    'devtools' => ['label' => 'DevTools', 'icon' => 'wrench', 'permission' => 'view_devtools']
+];
+
+$accessible_modules = [];
+foreach ($modules as $module => $key) {
+    if (has_permission($key['permission'])) {
+        $accessible_modules[$module] = $key;
+    }
+}
+
+$current_module = isset($_GET['module']) && isset($accessible_modules[$_GET['module']]) ? $_GET['module'] : null;
+
+$dashboard_file = BASE_PATH . 'modules/dashboard.php';
+$module_file = $current_module ? BASE_PATH . "modules/{$current_module}.php" : null;
+
+if (!$db) {
+    error_log("Database connection is null.");
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPSM Control Panel</title>
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { 'teal-custom': '#00cec9', 'cyan-neon': '#00FFFF', 'magenta-neon': '#FF00FF', 'yellow-neon': '#FFFF00', 'black-smoke': '#1C2526' } } };
+    </script>
+    <style>
+        .glass { background: rgba(28, 37, 38, 0.8); border: none; box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(0,255,255,0.4); }
+        .menu-item { background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .menu-item.active { background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15)); }
+        .floating-module { position: absolute; top: 80px; left: 280px; right: 16px; bottom: 16px; z-index: 20; background: rgba(28,37,38,0.9); border-radius: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2); padding: 1.5rem; overflow-y: auto; }
+        @supports not (backdrop-filter: blur(10px)) { .glass { background: rgba(28,37,38,1); } }
+    </style>
+</head>
+<body class="bg-black-smoke text-white min-h-screen font-sans">
+    <header class="glass p-4 fixed w-full top-0 z-10">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
+            <div>
+                <form method="POST" action="" class="inline">
+                    <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded">
+                        <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
+                            <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>><?php echo $r; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+                <a href="logout.php" class="ml-4 text-magenta-neon">Logout</a>
+                <a href="?reset" class="ml-4 text-yellow-neon">Reset Setup</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex mt-16">
+        <aside class="glass w-64 p-4 fixed h-[calc(100vh-80px)] top-16 overflow-y-auto flex flex-col">
+            <nav class="flex-1">
+                <ul class="space-y-2">
+                    <?php foreach ($accessible_modules as $module => $key): ?>
+                        <li><a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 rounded-lg menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
+                            <?php $icons = ['users' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5a4 4 0 110 5.4M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.2M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>', 'device-mobile' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0v1-2V5a2a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2z"></path></svg>', 'lock-closed' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1 3.5-1 6.8-2.8 9.5m-3.4-2l.1-.1A14 14 0 008 11a4 4 0 118 0c0 1-.1 2-.2 3m-2.1 6.8A22 22 0 0015 17m3.8 1.1c.7-2.2 1-4.7 1-7A8 8 0 008 4M3 15.4c.6-1.3 1-2.8-4.4 1-4.4m-1 3.4a3 3 0 013-3m0 3.4a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>', 'wrench' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-2.3 3-.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c-.9 1.5-.8 3.4-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4-1-1-2.6 0-2.5c-1.4-1.8 1.9-2.4-2.3.9-.5 2.3 0 2.6-1.1z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>']; echo $icons[$key['icon']] ?? ''; ?>
+                            <span><?php echo $key['label']; ?></span>
+                        </a></li>
+                    <?php endforeach; ?>
+                </ul>
+            </nav>
+            <!-- Status Module (always visible) -->
+            <div class="mt-auto">
+                <?php include_once BASE_PATH . 'modules/status.php'; ?>
+            </div>
+        </aside>
+
+        <main class="glass flex-1 p-6 ml-64 mt-16 relative">
+            <?php include $dashboard_file; ?>
+            <?php if ($module_file): ?>
+                <div class="floating-module">
+                    <?php include $module_file; ?>
+                    <a href="<?php echo strtok($_SERVER['REQUEST_URI'], '?'); ?>" class="text-yellow-neon mt-4 inline-block">Close</a>
+                </div>
+            <?php endif; ?>
+        </main>
+    </div>
+</body>
+</html>
+
+
+==== PHP FILE: ./login.php ====
+Size: 3258 bytes
+Last Modified: Wed, Jun  4, 2025  9:46:05 PM
+----------------------------------------
+<?php
+// Enable PHP error display
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+session_start();
+
+// Define BASE_PATH
+define('BASE_PATH', __DIR__ . '/');
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'auth.php';
+
+// Handle login form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
+
+    try {
+        if (empty($username) || empty($password)) {
+            throw new Exception('Username and password are required.');
+        }
+
+        // Mock authentication (replace with your actual logic)
+        if ($username === 'admin' && $password === 'password') {
+            $_SESSION['user_id'] = 1;
+            $_SESSION['role'] = 'Admin';
+            header('Location: index.php');
+            exit;
+        } else {
+            throw new Exception('Invalid credentials.');
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MPSM Control Panel</title>
+    <!-- Tailwind CSS CDN with fallback -->
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css" type="text/css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'teal-custom': '#00cec9',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        /* Fallback for backdrop-filter and offline */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        @supports not (backdrop-filter: blur(10px)) {
+            .glass {
+                background: rgba(52, 73, 94, 0.5);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans flex items-center justify-center">
+    <div class="glass p-6 rounded-lg border border-gray-800 w-full max-w-md">
+        <h2 class="text-2xl text-teal-custom mb-4 text-center">Login to MPSM 🎛️</h2>
+        <?php if (isset($error)): ?>
+            <p class="text-red-500 mb-4 text-center"><?php echo htmlspecialchars($error); ?></p>
+        <?php endif; ?>
+        <form method="POST" action="" class="space-y-4">
+            <div>
+                <label class="block text-gray-300">Username:</label>
+                <input type="text" name="username" required class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Password:</label>
+                <input type="password" name="password" required class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded">
+            </div>
+            <button type="submit" class="w-full bg-gray-800 text-teal-custom p-2 rounded border border-gray-700 hover:bg-gray-700">Login 🔐</button>
+        </form>
+    </div>
+</body>
+</html>
+
+
+==== PHP FILE: ./logout.php ====
+Size: 86 bytes
+Last Modified: Wed, Jun  4, 2025  3:34:27 PM
+----------------------------------------
+<?php
+session_start();
+session_destroy();
+header('Location: login.php');
+exit;
+?>
+
+
+==== PHP FILE: ./modules/customers.php ====
+Size: 88 bytes
+Last Modified: Wed, Jun  4, 2025  2:52:27 PM
+----------------------------------------
+<?php
+?>
+<h1>Customers</h1>
+<p>Customer management module. Placeholder content.</p>
+
+
+
+==== PHP FILE: ./modules/dashboard.php ====
+Size: 128 bytes
+Last Modified: Wed, Jun  4, 2025  2:51:44 PM
+----------------------------------------
+<?php
+?>
+<h1>Dashboard</h1>
+<p>Welcome to the dashboard. This is the default module visible to all authenticated users.</p>
+
+
+
+==== PHP FILE: ./modules/devices.php ====
+Size: 86 bytes
+Last Modified: Wed, Jun  4, 2025  2:53:01 PM
+----------------------------------------
+<?php
+?>
+<h1>Devices</h1>
+<p>Device management module. Placeholder content.</p>
+
+
+
+
+==== PHP FILE: ./modules/devtools.php ====
+Size: 13449 bytes
+Last Modified: Thu, Jun  5, 2025  4:46:20 PM
+----------------------------------------
+<?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+// Include dependencies
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+
+// Check permissions
+if (!function_exists('has_permission') || !has_permission('view_devtools')) {
+    echo "<p class='text-red-500 p-4'>Access denied.</p>";
+    exit;
+}
+
+// Load environment variables using the shared load_env() from db.php
+$env_vars = load_env(BASE_PATH);
+
+$css_file = BASE_PATH . 'styles.css';
+$css_content = file_exists($css_file) ? file_get_contents($css_file) : '';
+$primary_color = preg_match('/--primary-color:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00cec9';
+$depth_intensity = preg_match('/--depth-intensity:\s*(\d+px)/', $css_content, $match) ? $match[1] : '8px';
+$neon_underglow = preg_match('/--neon-underglow:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00FFFF';
+$smoke_opacity = preg_match('/--smoke-opacity:\s*(\d*\.?\d+)/', $css_content, $match) ? $match[1] : '0.7';
+
+// Handle POST requests for module activation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_module'])) {
+    $module_name = $_POST['module_name'];
+    $active = $_POST['active'] === '1' ? 1 : 0;
+    $stmt = $db->prepare("UPDATE modules SET active = ? WHERE name = ?");
+    $stmt->bind_param('is', $active, $module_name);
+    $stmt->execute();
+    $stmt->close();
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (isset($_POST['update_env'])) {
+            $db_name = trim($_POST['DB_NAME'] ?? '');
+            $debug_mode = isset($_POST['DEBUG_MODE']) ? 'true' : 'false';
+            if (empty($db_name)) {
+                throw new Exception("Database name cannot be empty.");
+            }
+            $new_env = "DB_HOST=localhost\nDB_USER={$env_vars['DB_USER']}\nDB_PASS={$env_vars['DB_PASS']}\nDB_NAME=$db_name\nDEBUG_MODE=$debug_mode\n";
+            if (!file_put_contents(BASE_PATH . '.env', $new_env)) {
+                throw new Exception("Failed to write to .env.");
+            }
+            echo "<p class='text-green-500 p-2'>.env updated!</p>";
+        } elseif (isset($_POST['update_css'])) {
+            $new_color = trim($_POST['primary_color'] ?? '');
+            $new_depth = trim($_POST['depth_intensity'] ?? '');
+            $new_neon = trim($_POST['neon_underglow'] ?? '');
+            $new_opacity = trim($_POST['smoke_opacity'] ?? '');
+            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $new_color)) {
+                throw new Exception("Invalid primary color format.");
+            }
+            if (!preg_match('/^\d+px$/', $new_depth)) {
+                throw new Exception("Invalid depth format.");
+            }
+            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $new_neon)) {
+                throw new Exception("Invalid neon underglow format.");
+            }
+            if (!preg_match('/^\d*\.?\d+$/', $new_opacity) || $new_opacity > 1 || $new_opacity < 0) {
+                throw new Exception("Invalid opacity (0-1).");
+            }
+            $css_content = preg_replace('/--primary-color:\s*#[0-9a-fA-F]{6}/', "--primary-color: $new_color", $css_content);
+            $css_content = preg_replace('/--depth-intensity:\s*\d+px/', "--depth-intensity: $new_depth", $css_content);
+            $css_content = preg_replace('/--neon-underglow:\s*#[0-9a-fA-F]{6}/', "--neon-underglow: $new_neon", $css_content);
+            $css_content = preg_replace('/--smoke-opacity:\s*\d*\.?\d+/', "--smoke-opacity: $new_opacity", $css_content);
+            if (!file_put_contents($css_file, $css_content)) {
+                throw new Exception("Failed to write to styles.css.");
+            }
+            echo "<p class='text-green-500 p-2'>CSS updated!</p>";
+        } elseif (isset($_POST['run_tests'])) {
+            $api_result = test_api();
+            $db_result = test_database();
+            $php_result = test_php();
+            $env_result = test_environment();
+            echo "<div class='glass p-4 border border-gray-800 rounded mt-4'><h3 class='text-xl text-cyan-neon'>Test Results</h3><ul class='mt-2 space-y-2'>";
+            echo "<li>API Test: " . ($api_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
+            echo "<li>Database Test: " . ($db_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
+            echo "<li>PHP Test: " . ($php_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
+            echo "<li>Environment Test: " . ($env_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li></ul></div>";
+        }
+    } catch (Exception $e) {
+        echo "<p class='text-red-500 p-2'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+}
+
+function test_api() {
+    $env = load_env(BASE_PATH);
+    if (isset($env['API_URL']) && file_exists(BASE_PATH . 'working.php')) {
+        return true; // Mock success; replace with actual API call
+    }
+    return false;
+}
+
+function test_database() {
+    $env = load_env(BASE_PATH);
+    if (isset($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME'])) {
+        $conn = new mysqli($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME']);
+        return $conn->connect_error === null;
+    }
+    return false;
+}
+
+function test_php() {
+    return version_compare(PHP_VERSION, '7.4.0', '>=');
+}
+
+function test_environment() {
+    return file_exists(BASE_PATH . '.env') && is_writable(BASE_PATH . '.env');
+}
+?>
+
+<h2 class="text-2xl text-cyan-neon mb-4 flex items-center">
+    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+    DevTools
+</h2>
+<p class="mb-4">Developer settings and tools for MPSM.</p>
+
+<div class="space-y-6">
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-magenta-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+            </svg>
+            Environment Variables
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <div>
+                <label class="block text-gray-300">Database Name (DB_NAME):</label>
+                <input type="text" name="DB_NAME" value="<?php echo htmlspecialchars($env_vars['DB_NAME'] ?? ''); ?>" required class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Debug Mode (DEBUG_MODE):</label>
+                <input type="checkbox" name="DEBUG_MODE" <?php echo ($env_vars['DEBUG_MODE'] ?? 'false') === 'true' ? 'checked' : ''; ?> class="mr-2">
+            </div>
+            <button type="submit" name="update_env" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Save</button>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-yellow-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+            </svg>
+            Theme Customization
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <div>
+                <label class="block text-gray-300">Primary Color (--primary-color):</label>
+                <input type="color" name="primary_color" value="<?php echo $primary_color; ?>" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Depth Intensity (--depth-intensity):</label>
+                <input type="text" name="depth_intensity" value="<?php echo $depth_intensity; ?>" placeholder="e.g., 8px" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Neon Underglow (--neon-underglow):</label>
+                <input type="color" name="neon_underglow" value="<?php echo $neon_underglow; ?>" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <div>
+                <label class="block text-gray-300">Smoke Opacity (--smoke-opacity):</label>
+                <input type="number" name="smoke_opacity" value="<?php echo $smoke_opacity; ?>" step="0.1" min="0" max="1" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
+            </div>
+            <button type="submit" name="update_css" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Save</button>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-cyan-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Debug Settings
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <div>
+                <label class="block text-gray-300">Enable Debug Mode:</label>
+                <input type="checkbox" name="debug_enabled" <?php echo ($env_vars['DEBUG_MODE'] ?? 'false') === 'true' ? 'checked' : ''; ?> class="mr-2">
+                <button type="submit" name="toggle_debug" class="bg-black-smoke text-magenta-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Toggle</button>
+            </div>
+            <button type="submit" name="clear_cache" class="mt-2 bg-black-smoke text-magenta-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Clear Cache</button>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-yellow-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Module Management
+        </h3>
+        <form method="POST" class="mt-4 space-y-4">
+            <?php
+            $modules = $db->query("SELECT * FROM modules");
+            while ($module = $modules->fetch_assoc()): ?>
+                <div>
+                    <label class="block text-gray-300">
+                        <input type="checkbox" name="module_name" value="<?php echo $module['name']; ?>" 
+                               onchange="this.form.querySelector('input[name=active]').value=this.checked ? 1 : 0; this.form.submit()"
+                               <?php echo $module['active'] ? 'checked' : ''; ?> class="mr-2">
+                        <?php echo htmlspecialchars($module['name']); ?>
+                        <input type="hidden" name="active" value="<?php echo $module['active'] ? 1 : 0; ?>">
+                        <input type="hidden" name="toggle_module" value="1">
+                    </label>
+                </div>
+            <?php endwhile; ?>
+        </form>
+    </div>
+
+    <div class="glass p-4 border border-gray-800 rounded">
+        <h3 class="text-xl text-cyan-neon flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            Run Tests
+        </h3>
+        <form method="POST" class="mt-4">
+            <button type="submit" name="run_tests" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Run All Tests</button>
+        </form>
+    </div>
+</div>
+
+
+==== PHP FILE: ./modules/permissions.php ====
+Size: 22774 bytes
+Last Modified: Thu, Jun  5, 2025  4:45:51 PM
+----------------------------------------
+<?php
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+
+if (!has_permission('manage_permissions')) {
+    echo "<p class='text-red-500 p-4'>Access denied.</p>";
+    exit;
+}
+
+function get_active_modules() {
+    global $db;
+    if (!$db) {
+        error_log("Database connection is null in get_active_modules.");
+        return [];
+    }
+    $result = $db->query("SELECT name FROM modules WHERE active = 1");
+    $modules = [];
+    while ($row = $result->fetch_assoc()) {
+        $modules[] = $row['name'];
+    }
+    return $modules;
+}
+
+$active_modules = get_active_modules();
+$action = $_GET['action'] ?? 'list';
+
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (isset($_POST['add_role'])) {
+            $role_name = trim($_POST['role_name']);
+            if (empty($role_name)) {
+                throw new Exception("Role name is required.");
+            }
+            $stmt = $db->prepare("INSERT INTO roles (name) VALUES (?)");
+            $stmt->bind_param('s', $role_name);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['add_permission'])) {
+            $perm_name = trim($_POST['permission_name']);
+            if (empty($perm_name)) {
+                throw new Exception("Permission name is required.");
+            }
+            $stmt = $db->prepare("INSERT INTO permissions (name) VALUES (?)");
+            $stmt->bind_param('s', $perm_name);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['add_user'])) {
+            $username = trim($_POST['username']);
+            $password = trim($_POST['password']);
+            if (empty($username) || empty($password)) {
+                throw new Exception("Username and password are required.");
+            }
+            $stmt = $db->prepare("INSERT INTO users (username, password, role_id) VALUES (?, ?, 1)");
+            $stmt->bind_param('ss', $username, $password);
+            $stmt->execute();
+            $user_id = $db->insert_id;
+            if (isset($_POST['roles']) && is_array($_POST['roles'])) {
+                foreach ($_POST['roles'] as $role_id) {
+                    $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                    $stmt->bind_param('ii', $user_id, $role_id);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['assign_permissions'])) {
+            $role_id = filter_input(INPUT_POST, 'role_id', FILTER_VALIDATE_INT);
+            if ($role_id === false || $role_id <= 0) {
+                throw new Exception("Invalid role ID.");
+            }
+            $permissions = $_POST['permissions'] ?? [];
+            $permissions = array_filter($permissions, function($id) {
+                return filter_var($id, FILTER_VALIDATE_INT) && $id > 0;
+            });
+            $db->query("DELETE FROM role_permissions WHERE role_id = $role_id");
+            foreach ($permissions as $perm_id) {
+                $stmt = $db->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                $stmt->bind_param('ii', $role_id, $perm_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['assign_user_roles'])) {
+            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+            if ($user_id === false || $user_id <= 0) {
+                throw new Exception("Invalid user ID.");
+            }
+            $roles = $_POST['roles'] ?? [];
+            $roles = array_filter($roles, function($id) {
+                return filter_var($id, FILTER_VALIDATE_INT) && $id > 0;
+            });
+            $db->query("DELETE FROM user_roles WHERE user_id = $user_id");
+            foreach ($roles as $role_id) {
+                $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                $stmt->bind_param('ii', $user_id, $role_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        } elseif (isset($_POST['assign_custom_permissions'])) {
+            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+            if ($user_id === false || $user_id <= 0) {
+                throw new Exception("Invalid user ID.");
+            }
+            $permissions = $_POST['custom_permissions'] ?? [];
+            $permissions = array_filter($permissions, function($id) {
+                return filter_var($id, FILTER_VALIDATE_INT) && $id > 0;
+            });
+            $db->query("DELETE FROM user_permissions WHERE user_id = $user_id");
+            foreach ($permissions as $perm_id) {
+                $stmt = $db->prepare("INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?)");
+                $stmt->bind_param('ii', $user_id, $perm_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+            header("Location: index.php?module=permissions&action=list");
+            exit;
+        }
+    } catch (Exception $e) {
+        echo "<p class='text-red-500 p-4'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+}
+
+// Fetch data
+$result = $db->query("SELECT * FROM roles");
+$roles = $result->fetch_all(MYSQLI_ASSOC);
+
+$result = $db->query("SELECT * FROM permissions");
+$permissions = $result->fetch_all(MYSQLI_ASSOC);
+
+// Map permissions to modules
+$module_permissions = [
+    'view_dashboard' => 'dashboard',
+    'view_customers' => 'customers',
+    'view_devices' => 'devices',
+    'manage_permissions' => 'permissions',
+    'view_devtools' => 'devtools'
+];
+
+// Filter permissions based on active modules
+$available_permissions = array_filter($permissions, function($perm) use ($active_modules, $module_permissions) {
+    $perm_name = $perm['name'];
+    return in_array($module_permissions[$perm_name] ?? $perm_name, $active_modules);
+}, ARRAY_FILTER_USE_BOTH);
+
+$result = $db->query("SELECT * FROM users");
+$users = $result->fetch_all(MYSQLI_ASSOC);
+
+$result = $db->query("SELECT ur.user_id, r.name AS role_name FROM user_roles ur JOIN roles r ON ur.role_id = r.id");
+$user_roles = [];
+while ($row = $result->fetch_assoc()) {
+    $user_roles[$row['user_id']][] = $row['role_name'];
+}
+
+$result = $db->query("SELECT up.user_id, p.name AS perm_name FROM user_permissions up JOIN permissions p ON up.permission_id = p.id");
+$user_custom_perms = [];
+while ($row = $result->fetch_assoc()) {
+    $user_custom_perms[$row['user_id']][] = $row['perm_name'];
+}
+?>
+
+<div class="space-y-6">
+    <h1 class="text-2xl text-cyan-neon">Permissions Management</h1>
+    <nav class="flex space-x-4 text-gray-300">
+        <a href="index.php?module=permissions&action=list" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            List
+        </a>
+        <a href="index.php?module=permissions&action=add_role" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Role
+        </a>
+        <a href="index.php?module=permissions&action=add_permission" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Permission
+        </a>
+        <a href="index.php?module=permissions&action=add_user" class="flex items-center hover:text-yellow-neon">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add User
+        </a>
+    </nav>
+
+    <?php if ($action === 'list'): ?>
+        <h2 class="text-xl text-cyan-neon">Roles and Permissions</h2>
+        <?php if (empty($roles)): ?>
+            <p class="text-gray-300">No roles found. Add a role to get started.</p>
+        <?php else: ?>
+            <div class="glass p-4">
+                <table class="w-full text-gray-300">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-2 px-4 text-left">Role</th>
+                            <th class="py-2 px-4 text-left">Permissions</th>
+                            <th class="py-2 px-4 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($roles as $role): ?>
+                            <tr class="border-b border-gray-800">
+                                <td class="py-2 px-4"><?php echo htmlspecialchars($role['name']); ?></td>
+                                <td class="py-2 px-4">
+                                    <?php
+                                    $role_id = (int)$role['id'];
+                                    $result = $db->query("SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = $role_id");
+                                    $role_perms = $result->fetch_all(MYSQLI_ASSOC);
+                                    $filtered_perms = array_filter($role_perms, function($p) use ($active_modules, $module_permissions) {
+                                        return in_array($module_permissions[$p['name']] ?? $p['name'], $active_modules);
+                                    });
+                                    echo htmlspecialchars(implode(', ', array_column($filtered_perms, 'name')) ?: 'None');
+                                    ?>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <a href="index.php?module=permissions&action=edit&role_id=<?php echo $role['id']; ?>" class="text-yellow-neon flex items-center">
+                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+        <h2 class="text-xl text-cyan-neon mt-6">Users and Permissions</h2>
+        <?php if (empty($users)): ?>
+            <p class="text-gray-300">No users found. Add a user to get started.</p>
+        <?php else: ?>
+            <div class="glass p-4">
+                <table class="w-full text-gray-300">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-2 px-4 text-left">Username</th>
+                            <th class="py-2 px-4 text-left">Roles</th>
+                            <th class="py-2 px-4 text-left">Custom Permissions</th>
+                            <th class="py-2 px-4 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($users as $user): ?>
+                            <tr class="border-b border-gray-800">
+                                <td class="py-2 px-4"><?php echo htmlspecialchars($user['username']); ?></td>
+                                <td class="py-2 px-4"><?php echo htmlspecialchars(implode(', ', $user_roles[$user['id']] ?? ['None'])); ?></td>
+                                <td class="py-2 px-4"><?php echo htmlspecialchars(implode(', ', $user_custom_perms[$user['id']] ?? ['None'])); ?></td>
+                                <td class="py-2 px-4">
+                                    <a href="index.php?module=permissions&action=edit_user&user_id=<?php echo $user['id']; ?>" class="text-yellow-neon flex items-center">
+                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    <?php elseif ($action === 'add_role'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New Role</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Role Name:</label>
+                <input type="text" name="role_name" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <button type="submit" name="add_role" class="bg-teal-custom text-black px-4 py-2 rounded">Add Role</button>
+        </form>
+    <?php elseif ($action === 'add_permission'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New Permission</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Permission Name:</label>
+                <input type="text" name="permission_name" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <button type="submit" name="add_permission" class="bg-teal-custom text-black px-4 py-2 rounded">Add Permission</button>
+        </form>
+    <?php elseif ($action === 'add_user'): ?>
+        <h2 class="text-xl text-cyan-neon">Add New User</h2>
+        <form method="POST" class="glass p-4 space-y-4">
+            <div>
+                <label class="block text-gray-300 mb-1">Username:</label>
+                <input type="text" name="username" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <div>
+                <label class="block text-gray-300 mb-1">Password:</label>
+                <input type="password" name="password" required class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+            </div>
+            <div>
+                <label class="block text-gray-300 mb-1">Roles:</label>
+                <select name="roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                    <?php foreach ($roles as $role): ?>
+                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" name="add_user" class="bg-teal-custom text-black px-4 py-2 rounded">Add User</button>
+        </form>
+    <?php elseif ($action === 'edit' && isset($_GET['role_id'])): ?>
+        <?php
+        $role_id = filter_input(INPUT_GET, 'role_id', FILTER_VALIDATE_INT);
+        if ($role_id === false || $role_id <= 0): ?>
+            <p class='text-red-500 p-4'>Invalid role ID.</p>
+        <?php else: ?>
+            <?php
+            $result = $db->query("SELECT * FROM roles WHERE id = $role_id");
+            if ($result === false): ?>
+                <p class='text-red-500 p-4'>Error fetching role: <?php echo htmlspecialchars($db->error); ?></p>
+            <?php else: ?>
+                <?php
+                $role = $result->fetch_assoc();
+                if (!$role): ?>
+                    <p class='text-red-500 p-4'>Role not found.</p>
+                <?php else: ?>
+                    <?php
+                    $result = $db->query("SELECT permission_id FROM role_permissions WHERE role_id = $role_id");
+                    $role_perms = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
+                    ?>
+                    <h2 class="text-xl text-cyan-neon">Edit Permissions for <?php echo htmlspecialchars($role['name']); ?></h2>
+                    <form method="POST" class="glass p-4 space-y-4">
+                        <input type="hidden" name="role_id" value="<?php echo $role_id; ?>">
+                        <div>
+                            <label class="block text-gray-300 mb-1">Permissions:</label>
+                            <?php if (empty($available_permissions)): ?>
+                                <p class="text-gray-300">No permissions available based on active modules. Activate modules in DevTools.</p>
+                            <?php else: ?>
+                                <div class="space-y-2">
+                                    <?php foreach ($available_permissions as $perm): ?>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="permissions[]" value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $role_perms) ? 'checked' : ''; ?> class="mr-2">
+                                            <span><?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)</span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="submit" name="assign_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save</button>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php elseif ($action === 'edit_user' && isset($_GET['user_id'])): ?>
+        <?php
+        $user_id = filter_input(INPUT_GET, 'user_id', FILTER_VALIDATE_INT);
+        if ($user_id === false || $user_id <= 0): ?>
+            <p class='text-red-500 p-4'>Invalid user ID.</p>
+        <?php else: ?>
+            <?php
+            $result = $db->query("SELECT * FROM users WHERE id = $user_id");
+            if ($result === false): ?>
+                <p class='text-red-500 p-4'>Error fetching user: <?php echo htmlspecialchars($db->error); ?></p>
+            <?php else: ?>
+                <?php
+                $user = $result->fetch_assoc();
+                if (!$user): ?>
+                    <p class='text-red-500 p-4'>User not found.</p>
+                <?php else: ?>
+                    <?php
+                    $result = $db->query("SELECT role_id FROM user_roles WHERE user_id = $user_id");
+                    $user_role_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'role_id');
+                    $result = $db->query("SELECT permission_id FROM user_permissions WHERE user_id = $user_id");
+                    $user_perm_ids = array_column($result->fetch_all(MYSQLI_ASSOC), 'permission_id');
+                    ?>
+                    <h2 class="text-xl text-cyan-neon">Edit <?php echo htmlspecialchars($user['username']); ?></h2>
+                    <form method="POST" class="glass p-4 space-y-4">
+                        <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
+                        <div>
+                            <label class="block text-gray-300 mb-1">Roles:</label>
+                            <select name="roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                                <?php foreach ($roles as $role): ?>
+                                    <option value="<?php echo $role['id']; ?>" <?php echo in_array($role['id'], $user_role_ids) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($role['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 mb-1">Custom Permissions:</label>
+                            <select name="custom_permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                                <?php foreach ($available_permissions as $perm): ?>
+                                    <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="space-x-2">
+                            <button type="submit" name="assign_user_roles" class="bg-teal-custom text-black px-4 py-2 rounded">Save Roles</button>
+                            <button type="submit" name="assign_custom_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save Custom Permissions</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
+
+
+==== PHP FILE: ./modules/status.php ====
+Size: 1508 bytes
+Last Modified: Thu, Jun  5, 2025  6:01:27 PM
+----------------------------------------
+<?php
+require_once BASE_PATH . 'db.php';
+require_once BASE_PATH . 'functions.php';
+
+$username = $_SESSION['username'] ?? 'Unknown';
+$db_status = $db ? 'Connected' : 'Disconnected';
+
+?>
+
+<div class="glass p-4 border border-gray-800 rounded space-y-2">
+    <h3 class="text-xl text-cyan-neon flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Status
+    </h3>
+    <p class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Username: <?php echo htmlspecialchars($username); ?>
+    </p>
+    <p class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke="<?php echo $db ? '#10B981' : '#EF4444'; ?>">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 0v10"></path>
+        </svg>
+        Database: <?php echo $db_status; ?>
+    </p>
+</div>
+
+
+==== TEXT FILE: ./php_project_contents_20250605_182436.txt ====
+Size: 63302 bytes
+Last Modified: Thu, Jun  5, 2025  6:24:42 PM
+----------------------------------------
+
+
+
+==== PHP FILE: ./setup.php ====
+Size: 4236 bytes
+Last Modified: Thu, Jun  5, 2025  6:08:31 PM
+----------------------------------------
+<?php
+ob_start(); // Buffer output to avoid header issues
+require_once BASE_PATH . 'db.php';
+
+// Function to execute SQL with error checking
+function execute_query($db, $sql) {
+    if (!$db->query($sql)) {
+        error_log("Query failed: " . $db->error . " (SQL: $sql)");
+        return false;
+    }
+    echo "Query executed successfully: $sql<br>";
+    return true;
+}
+
+// Create tables
+execute_query($db, "CREATE TABLE IF NOT EXISTS modules (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL, active TINYINT(1) DEFAULT 1)");
+execute_query($db, "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, role_id INT, FOREIGN KEY (role_id) REFERENCES roles(id))");
+execute_query($db, "CREATE TABLE IF NOT EXISTS roles (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL)");
+execute_query($db, "CREATE TABLE IF NOT EXISTS permissions (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL)");
+execute_query($db, "CREATE TABLE IF NOT EXISTS role_permissions (role_id INT, permission_id INT, PRIMARY KEY (role_id, permission_id), FOREIGN KEY (role_id) REFERENCES roles(id), FOREIGN KEY (permission_id) REFERENCES permissions(id))");
+execute_query($db, "CREATE TABLE IF NOT EXISTS user_roles (user_id INT, role_id INT, PRIMARY KEY (user_id, role_id), FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (role_id) REFERENCES roles(id))");
+execute_query($db, "CREATE TABLE IF NOT EXISTS user_permissions (user_id INT, permission_id INT, PRIMARY KEY (user_id, permission_id), FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (permission_id) REFERENCES permissions(id))");
+
+// Seed roles
+$roles = ['Developer', 'Admin', 'Service', 'Sales', 'Guest'];
+foreach ($roles as $role) {
+    $escaped_role = $db->real_escape_string($role);
+    execute_query($db, "INSERT IGNORE INTO roles (name) VALUES ('$escaped_role')");
+}
+
+// Seed users with hashed passwords from your output
+execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('admin', '$2y$12$USJhMo47DHHIhiYVLD12we8AHT1qYGxzoLlnVqH2iZl6K/OLMv/w2', (SELECT id FROM roles WHERE name = 'Admin'))");
+execute_query($db, "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))");
+execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('testuser', '$2y$12$o2cNILBvip7suDfhNHV81.4KD3vQW7aP8cTvTvELt4OsPBoH/D.N2', (SELECT id FROM roles WHERE name = 'Service'))");
+execute_query($db, "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM roles WHERE name = 'Service'))");
+
+// Seed permissions
+$permissions = ['view_dashboard', 'view_customers', 'view_devices', 'manage_permissions', 'custom_access', 'view_devtools', 'view_status'];
+foreach ($permissions as $perm) {
+    $escaped_perm = $db->real_escape_string($perm);
+    execute_query($db, "INSERT IGNORE INTO permissions (name) VALUES ('$escaped_perm')");
+}
+
+// Seed role_permissions
+$role_permissions = [
+    [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], // Developer
+    [2, 1], [2, 2], [2, 3], [2, 4], // Admin
+    [3, 3], // Service
+    [4, 2], // Sales
+    [5, 1]  // Guest
+];
+foreach ($role_permissions as $rp) {
+    execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (" . implode(', ', $rp) . ")");
+}
+
+// Seed user_permissions
+execute_query($db, "INSERT IGNORE INTO user_permissions (user_id, permission_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM permissions WHERE name = 'custom_access'))");
+
+// Seed modules
+$modules = ['dashboard', 'customers', 'devices', 'permissions', 'devtools'];
+foreach ($modules as $module) {
+    $escaped_module = $db->real_escape_string($module);
+    execute_query($db, "INSERT IGNORE INTO modules (name, active) VALUES ('$escaped_module', 1)");
+}
+
+echo "<p class='text-green-500 p-4'>Database setup complete with hashed passwords. Setup will not run again.</p>";
+ob_end_flush(); // Flush buffered output
+?>
+
+
+==== TEXT FILE: ./styles-fallback.css ====
+Size: 378 bytes
+Last Modified: Thu, Jun  5, 2025  4:55:00 PM
+----------------------------------------
+/* Fallback CSS for Tailwind */
+body {
+    background-color: #1C2526;
+    color: #FFFFFF;
+    font-family: sans-serif;
+}
+p {
+    margin: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background-color: rgba(28, 37, 38, 0.8);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+}
+.text-green-500 {
+    color: #10B981;
+}
+.text-red-500 {
+    color: #EF4444;
+}
+
+
+==== TEXT FILE: ./styles.css ====
+Size: 5465 bytes
+Last Modified: Wed, Jun  4, 2025  8:56:05 PM
+----------------------------------------
+body {
+    background: #1e272e; /* Dark slate gray */
+    color: #d1d8e0; /* Light gray for text */
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background: #2d3436; /* Slightly lighter slate */
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 0 10px 15px rgba(0, 206, 201, 0.4); /* Deeper shadow */
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #00cec9;
+    text-shadow: 0 2px 4px rgba(0, 206, 201, 0.3); /* Subtle depth */
+}
+
+.header a {
+    color: #00cec9;
+    text-decoration: none;
+    margin-left: 20px;
+    padding: 8px 12px;
+    border-radius: 15px;
+    background: #2d3436;
+    box-shadow: 4px 4px 8px #1a2021, -4px -4px 8px #40484b;
+    transition: box-shadow 0.3s, text-shadow 0.3s;
+}
+
+.header a:hover {
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+    text-shadow: 0 0 6px #00cec9;
+}
+
+.main {
+    display: flex;
+    margin-top: 70px;
+}
+
+.sidebar {
+    width: 220px; /* Narrower sidebar */
+    background: #2d3436;
+    padding: 20px;
+    position: fixed;
+    top: 70px;
+    height: calc(100% - 70px);
+    overflow-y: auto;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 6px 0 15px rgba(0, 206, 201, 0.4);
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    margin: 15px 0;
+}
+
+.sidebar a {
+    display: block;
+    padding: 12px;
+    color: #d1d8e0;
+    text-decoration: none;
+    border-radius: 15px;
+    background: #2d3436;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b; /* Deeper shadow */
+    transition: box-shadow 0.3s, text-shadow 0.3s;
+}
+
+.sidebar a:hover, .sidebar a.active {
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
+}
+
+.content {
+    flex: 1;
+    padding: 40px;
+    margin-left: 220px; /* Matches narrower sidebar */
+    background: #1e272e;
+    box-shadow: inset 8px 8px 20px #1a2021, inset -8px -8px 20px #40484b;
+    border-radius: 15px;
+    min-height: calc(100vh - 70px);
+}
+
+.error {
+    color: #e74c3c;
+    padding: 12px;
+    border-radius: 10px;
+    background: #1e272e;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 30px;
+    background: #2d3436;
+    border-radius: 15px;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b;
+}
+
+.login-container h1 {
+    text-align: center;
+    color: #00cec9;
+}
+
+.login-container input {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    background: #2d3436;
+    border: none;
+    color: #d1d8e0;
+    border-radius: 10px;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    background: #2d3436;
+    border: none;
+    color: #00cec9;
+    font-weight: bold;
+    border-radius: 10px;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
+    transition: box-shadow 0.3s, text-shadow 0.3s;
+}
+
+.login-container button:hover {
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
+}
+
+.permissions-form {
+    margin-top: 20px;
+    padding: 20px;
+    background: #2d3436;
+    border-radius: 15px;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b;
+}
+
+.permissions-form label {
+    display: block;
+    margin: 10px 0 5px;
+    color: #d1d8e0;
+}
+
+.permissions-form input[type="text"],
+.permissions-form select {
+    width: 100%;
+    padding: 12px;
+    background: #2d3436;
+    border: none;
+    color: #d1d8e0;
+    border-radius: 10px;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+}
+
+.permissions-form button {
+    margin-top: 10px;
+    padding: 12px 20px;
+    background: #2d3436;
+    border: none;
+    color: #00cec9;
+    border-radius: 10px;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
+    transition: box-shadow 0.3s, text-shadow 0.3s;
+}
+
+.permissions-form button:hover {
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
+}
+
+.permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.permissions-table th, .permissions-table td {
+    padding: 12px;
+    border: 1px solid #00cec9;
+    text-align: left;
+    background: #2d3436;
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+}
+
+.permissions-table th {
+    background: #2d3436;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
+}
+
+.permissions-table a,
+nav a {
+    color: #00cec9;
+    text-decoration: none;
+    padding: 2px 5px;
+    border-radius: 5px;
+    transition: color 0.3s, text-shadow 0.3s;
+}
+
+.permissions-table a:hover,
+nav a:hover {
+    color: #1abc9c;
+    text-shadow: 0 0 6px #00cec9;
+}
+
+.permissions-table a:visited,
+nav a:visited {
+    color: #6d8299;
+    text-shadow: none;
+}
+
+
+==== PHP FILE: ./Working.php ====
+Size: 300 bytes
+Last Modified: Wed, Jun  4, 2025 11:53:36 AM
+----------------------------------------
+<?php
+/**
+ * Working.php
+ * Reference file containing API interaction functions.
+ */
+
+function getAccessToken() {
+    // Dummy placeholder: return a fake token
+    return 'fake_access_token_123';
+}
+
+function callGetCustomers($token) {
+    // Dummy placeholder: return an empty array
+    return [];
+}
+
+
+

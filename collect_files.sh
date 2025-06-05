@@ -1,19 +1,67 @@
 #!/bin/bash
 
-# Define the project directory (adjust if needed)
-PROJECT_DIR="/home/resolut7/public_html/mpsm.resolutionsbydesign.us/mpsm"
-OUTPUT_FILE="project_source_$(date +%Y%m%d_%H%M%S).txt"
+# Smart PHP Project File Collector
+OUTPUT_FILE="php_project_contents_$(date +'%Y%m%d_%H%M%S').txt"
 
-# Create or overwrite the output file
-echo "Collecting source files from $PROJECT_DIR at $(date)" > "$OUTPUT_FILE"
-echo "----------------------------------------" >> "$OUTPUT_FILE"
+# Configure exclusions (add more as needed)
+EXCLUDE_DIRS=("vendor" "node_modules" ".git" ".idea" "build" "dist")
+EXCLUDE_EXT=("png" "jpg" "jpeg" "gif" "svg" "ico" "woff" "woff2" "ttf" "eot" "pdf" "zip" "tar.gz")
 
-# Find and process PHP, HTML, and CSS files, excluding .env
-find "$PROJECT_DIR" -type f \( -name "*.php" -o -name "*.html" -o -name "*.css" \) ! -name ".env" | while read -r file; do
-    echo "// File: $file" >> "$OUTPUT_FILE"
-    echo "----------------------------------------" >> "$OUTPUT_FILE"
-    cat "$file" >> "$OUTPUT_FILE"
-    echo "" >> "$OUTPUT_FILE"  # Add a blank line between files
-done
+# Better text file detection
+is_text_file() {
+    file -b --mime-encoding "$1" | grep -qvi 'binary'
+}
 
-echo "Source files collected in $OUTPUT_FILE. Copy the contents and share with your assistant!"
+# Start output
+{
+    echo "PHP PROJECT CONTENT COLLECTION"
+    echo "Generated: $(date)"
+    echo "----------------------------------------"
+    echo ""
+    
+    find . -type f | while read -r file; do
+        # Skip excluded directories
+        for dir in "${EXCLUDE_DIRS[@]}"; do
+            if [[ "$file" == *"/$dir/"* ]]; then
+                continue 2
+            fi
+        done
+        
+        # Skip excluded extensions
+        extension="${file##*.}"
+        for ext in "${EXCLUDE_EXT[@]}"; do
+            if [[ "${extension,,}" == "${ext,,}" ]]; then
+                continue 2
+            fi
+        done
+        
+        # Special handling for PHP files - always include
+        if [[ "${file##*.}" == "php" ]]; then
+            echo "==== PHP FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            cat "$file"
+            echo -e "\n\n"
+            continue
+        fi
+        
+        # For other files, check if they're text
+        if is_text_file "$file"; then
+            echo "==== TEXT FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            head -c 100000 "$file"  # Show first 100KB
+            echo -e "\n\n"
+        else
+            echo "==== BINARY FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "[Binary content not displayed]"
+            echo -e "\n"
+        fi
+    done
+} > "$OUTPUT_FILE"
+
+echo "Collection complete! Output saved to $OUTPUT_FILE"
