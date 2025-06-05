@@ -50,13 +50,16 @@ $modules = [
 ];
 
 // Filter modules based on permissions
-$accessible_modules = array_filter($modules, function($module) {
-    return has_permission($module['permission']);
-});
+$accessible_modules = [];
+foreach ($modules as $module => $key) {
+    if (has_permission($key['permission'])) {
+        $accessible_modules[$module] = $key;
+    }
+}
 
 $current_module = $_GET['module'] ?? 'dashboard';
 if (!isset($accessible_modules[$current_module])) {
-    $current_module = 'dashboard'; // Default to dashboard if no permission
+    $current_module = array_key_first($accessible_modules) ?: 'dashboard'; // Fallback to first accessible module
 }
 
 // Load module content

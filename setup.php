@@ -1,6 +1,5 @@
 <?php
-// Define BASE_PATH in the entry point
-define('BASE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+// Remove BASE_PATH definition, rely on parameter from index.php
 
 require_once BASE_PATH . 'db.php';
 
@@ -68,9 +67,7 @@ $roles = ['Developer', 'Admin', 'Service', 'Sales', 'Guest'];
 foreach ($roles as $role) {
     $stmt = $db->prepare("INSERT IGNORE INTO roles (name) VALUES (?)");
     $stmt->bind_param('s', $role);
-    if (!$stmt->execute()) {
-        error_log("Failed to insert role: $role - " . $db->error);
-    }
+    $stmt->execute();
     $stmt->close();
 }
 
@@ -79,14 +76,10 @@ $plain_password = 'admin123';
 $hashed_password = password_hash($plain_password, PASSWORD_DEFAULT);
 $stmt = $db->prepare("INSERT IGNORE INTO users (username, password, role_id) VALUES (?, ?, (SELECT id FROM roles WHERE name = 'Admin'))");
 $stmt->bind_param('ss', 'admin', $hashed_password);
-if (!$stmt->execute()) {
-    error_log("Failed to insert admin user - " . $db->error);
-}
+$stmt->execute();
 $stmt->close();
 $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))");
-if (!$stmt->execute()) {
-    error_log("Failed to assign admin role - " . $db->error);
-}
+$stmt->execute();
 $stmt->close();
 
 // Seed test user with hashed password
@@ -94,14 +87,10 @@ $plain_password = 'user123';
 $hashed_password = password_hash($plain_password, PASSWORD_DEFAULT);
 $stmt = $db->prepare("INSERT IGNORE INTO users (username, password, role_id) VALUES (?, ?, (SELECT id FROM roles WHERE name = 'Service'))");
 $stmt->bind_param('ss', 'testuser', $hashed_password);
-if (!$stmt->execute()) {
-    error_log("Failed to insert testuser - " . $db->error);
-}
+$stmt->execute();
 $stmt->close();
 $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM roles WHERE name = 'Service'))");
-if (!$stmt->execute()) {
-    error_log("Failed to assign testuser role - " . $db->error);
-}
+$stmt->execute();
 $stmt->close();
 
 // Seed permissions
@@ -109,16 +98,14 @@ $permissions = ['view_dashboard', 'view_customers', 'view_devices', 'manage_perm
 foreach ($permissions as $perm) {
     $stmt = $db->prepare("INSERT IGNORE INTO permissions (name) VALUES (?)");
     $stmt->bind_param('s', $perm);
-    if (!$stmt->execute()) {
-        error_log("Failed to insert permission: $perm - " . $db->error);
-    }
+    $stmt->execute();
     $stmt->close();
 }
 
 // Assign permissions to roles
 $role_permissions = [
     ['Developer', ['view_dashboard', 'view_customers', 'view_devices', 'manage_permissions', 'custom_access', 'view_devtools']],
-    ['Admin', ['view_dashboard', 'view_customers', 'view_devices']],
+    ['Admin', ['view_dashboard', 'view_customers', 'view_devices', 'manage_permissions']],
     ['Service', ['view_devices']],
     ['Sales', ['view_customers']],
     ['Guest', ['view_dashboard']]
@@ -140,9 +127,7 @@ foreach ($role_permissions as $rp) {
         if ($role_id && $perm_id) {
             $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
             $stmt->bind_param('ii', $role_id, $perm_id);
-            if (!$stmt->execute()) {
-                error_log("Failed to assign permission $perm to role $role_name - " . $db->error);
-            }
+            $stmt->execute();
             $stmt->close();
         }
     }
@@ -150,9 +135,7 @@ foreach ($role_permissions as $rp) {
 
 // Seed custom permission for test user
 $stmt = $db->prepare("INSERT IGNORE INTO user_permissions (user_id, permission_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM permissions WHERE name = 'custom_access'))");
-if (!$stmt->execute()) {
-    error_log("Failed to assign custom permission to testuser - " . $db->error);
-}
+$stmt->execute();
 $stmt->close();
 
 // Seed modules
@@ -160,9 +143,7 @@ $modules = ['dashboard', 'customers', 'devices', 'permissions', 'devtools'];
 foreach ($modules as $module) {
     $stmt = $db->prepare("INSERT IGNORE INTO modules (name, active) VALUES (?, 1)");
     $stmt->bind_param('s', $module);
-    if (!$stmt->execute()) {
-        error_log("Failed to insert module: $module - " . $db->error);
-    }
+    $stmt->execute();
     $stmt->close();
 }
 
