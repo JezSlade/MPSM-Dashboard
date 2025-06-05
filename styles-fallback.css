@@ -1,32 +1,19 @@
-/* /mpsm/styles-fallback.css */
+/* Fallback CSS for Tailwind */
 body {
-    background: #1C2526; /* Black-smoke base */
-    color: #e0f7fa;
-    margin: 0;
-    font-family: Arial, sans-serif;
+    background-color: #1C2526;
+    color: #FFFFFF;
+    font-family: sans-serif;
 }
-header {
-    background: rgba(28, 37, 38, 0.7);
-    padding: 15px 30px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+p {
+    margin: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background-color: rgba(28, 37, 38, 0.8);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
 }
-aside {
-    background: rgba(28, 37, 38, 0.7);
-    padding: 20px;
-    width: 220px;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3); /* Neon underglow */
+.text-green-500 {
+    color: #10B981;
 }
-main {
-    padding: 40px;
-    margin-left: 220px;
-}
-.glass {
-    background: rgba(28, 37, 38, 0.7); /* Smoked glass */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), /* Deeper shadow */
-                inset 0 0 15px rgba(255, 0, 255, 0.3); /* Magenta underglow */
-    padding: 20px;
-    border-radius: 8px;
+.text-red-500 {
+    color: #EF4444;
 }

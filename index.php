@@ -13,32 +13,59 @@ require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 include_once BASE_PATH . 'auth.php';
 
-// Fallback if auth.php is missing or isLoggedIn is undefined
-if (!function_exists('isLoggedIn') || !isLoggedIn()) {
-    header('Location: login.php');
-    exit;
+// Check if setup is needed
+$setup_complete = false;
+if (file_exists(BASE_PATH . 'setup.lock')) {
+    $setup_complete = true;
+} else {
+    require_once BASE_PATH . 'setup.php';
+    if (!file_exists(BASE_PATH . 'setup.lock')) {
+        file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
+        $setup_complete = true;
+    }
+}
+
+if (!$setup_complete) {
+    die("Setting up database... Please refresh the page after a moment.");
 }
 
 // Handle role change from dropdown
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
     $_SESSION['role'] = $_POST['role'];
+    // Refresh permissions for the new role
+    if (isset($_SESSION['user_id'])) {
+        $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+    }
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
 $role = $_SESSION['role'] ?? 'Guest';
 $modules = [
-    'dashboard' => ['label' => 'Dashboard', 'icon' => 'home'],
-    'customers' => ['label' => 'Customers', 'icon' => 'users'],
-    'devices' => ['label' => 'Devices', 'icon' => 'device-mobile'],
-    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed'],
-    'devtools' => ['label' => 'DevTools', 'icon' => 'wrench']
+    'dashboard' => ['label' => 'Dashboard', 'icon' => 'home', 'permission' => 'view_dashboard'],
+    'customers' => ['label' => 'Customers', 'icon' => 'users', 'permission' => 'view_customers'],
+    'devices' => ['label' => 'Devices', 'icon' => 'device-mobile', 'permission' => 'view_devices'],
+    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed', 'permission' => 'manage_permissions'],
+    'devtools' => ['label' => 'DevTools', 'icon' => 'wrench', 'permission' => 'view_devtools']
 ];
+
+// Filter modules based on permissions
+$accessible_modules = array_filter($modules, function($module) {
+    return has_permission($module['permission']);
+});
+
 $current_module = $_GET['module'] ?? 'dashboard';
+if (!isset($accessible_modules[$current_module])) {
+    $current_module = 'dashboard'; // Default to dashboard if no permission
+}
 
 // Load module content
 $module_file = BASE_PATH . "modules/{$current_module}.php";
 $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashboard.php';
+
+if (!$db) {
+    error_log("Database connection is null, falling back to minimal functionality.");
+}
 ?>
 
 <!DOCTYPE html>
@@ -110,7 +137,7 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
         <aside class="glass w-64 p-4 fixed h-[calc(100vh-80px)] top-16 overflow-y-auto flex flex-col">
             <nav class="flex-1">
                 <ul class="space-y-2">
-                    <?php foreach ($modules as $module => $key): ?>
+                    <?php foreach ($accessible_modules as $module => $key): ?>
                         <li>
                             <a href="?module=<?php echo $module; ?>" class="flex items-center p-2 text-gray-300 rounded-lg menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
                                 <?php
