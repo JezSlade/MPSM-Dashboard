@@ -64,10 +64,10 @@ if (!execute_query($db, "CREATE TABLE IF NOT EXISTS user_permissions (
 
 // Debug: Check database connection state
 if (!$db) {
-    die("Database connection lost before role seeding.");
+    die("Database connection lost before seeding.");
 }
 
-// Seed roles using direct query
+// Seed roles
 $roles = ['Developer', 'Admin', 'Service', 'Sales', 'Guest'];
 foreach ($roles as $role) {
     $escaped_role = $db->real_escape_string($role);
@@ -78,33 +78,31 @@ foreach ($roles as $role) {
 
 // Seed admin user with hashed password
 $plain_password = 'admin123';
-$hashed_password = password_hash($plain_password, PASSWORD_DEFAULT);
-$stmt = $db->prepare("INSERT IGNORE INTO users (username, password, role_id) VALUES (?, ?, (SELECT id FROM roles WHERE name = 'Admin'))");
-$stmt->bind_param('ss', 'admin', $hashed_password);
-$stmt->execute();
-$stmt->close();
-$stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))");
-$stmt->execute();
-$stmt->close();
+$hashed_password = $db->real_escape_string(password_hash($plain_password, PASSWORD_DEFAULT));
+if (!execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('admin', '$hashed_password', (SELECT id FROM roles WHERE name = 'Admin'))")) {
+    error_log("Failed to insert admin user");
+}
+if (!execute_query($db, "INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM roles WHERE name = 'Admin'))")) {
+    error_log("Failed to assign admin role");
+}
 
 // Seed test user with hashed password
 $plain_password = 'user123';
-$hashed_password = password_hash($plain_password, PASSWORD_DEFAULT);
-$stmt = $db->prepare("INSERT IGNORE INTO users (username, password, role_id) VALUES (?, ?, (SELECT id FROM roles WHERE name = 'Service'))");
-$stmt->bind_param('ss', 'testuser', $hashed_password);
-$stmt->execute();
-$stmt->close();
-$stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM roles WHERE name = 'Service'))");
-$stmt->execute();
-$stmt->close();
+$hashed_password = $db->real_escape_string(password_hash($plain_password, PASSWORD_DEFAULT));
+if (!execute_query($db, "INSERT IGNORE INTO users (username, password, role_id) VALUES ('testuser', '$hashed_password', (SELECT id FROM roles WHERE name = 'Service'))")) {
+    error_log("Failed to insert testuser");
+}
+if (!execute_query($db, "INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM roles WHERE name = 'Service'))")) {
+    error_log("Failed to assign testuser role");
+}
 
 // Seed permissions
 $permissions = ['view_dashboard', 'view_customers', 'view_devices', 'manage_permissions', 'custom_access', 'view_devtools'];
 foreach ($permissions as $perm) {
-    $stmt = $db->prepare("INSERT IGNORE INTO permissions (name) VALUES (?)");
-    $stmt->bind_param('s', $perm);
-    $stmt->execute();
-    $stmt->close();
+    $escaped_perm = $db->real_escape_string($perm);
+    if (!execute_query($db, "INSERT IGNORE INTO permissions (name) VALUES ('$escaped_perm')")) {
+        error_log("Failed to insert permission: $perm");
+    }
 }
 
 // Assign permissions to roles
@@ -116,42 +114,36 @@ $role_permissions = [
     ['Guest', ['view_dashboard']]
 ];
 foreach ($role_permissions as $rp) {
-    $role_name = $rp[0];
+    $role_name = $db->real_escape_string($rp[0]);
     $perms = $rp[1];
-    $role_id_stmt = $db->prepare("SELECT id FROM roles WHERE name = ?");
-    $role_id_stmt->bind_param('s', $role_name);
-    $role_id_stmt->execute();
-    $role_id = $role_id_stmt->get_result()->fetch_row()[0];
-    $role_id_stmt->close();
+    $role_id_result = $db->query("SELECT id FROM roles WHERE name = '$role_name'");
+    $role_id = $role_id_result->fetch_row()[0];
+    $role_id_result->free();
     foreach ($perms as $perm) {
-        $perm_id_stmt = $db->prepare("SELECT id FROM permissions WHERE name = ?");
-        $perm_id_stmt->bind_param('s', $perm);
-        $perm_id_stmt->execute();
-        $perm_id = $perm_id_stmt->get_result()->fetch_row()[0];
-        $perm_id_stmt->close();
+        $escaped_perm = $db->real_escape_string($perm);
+        $perm_id_result = $db->query("SELECT id FROM permissions WHERE name = '$escaped_perm'");
+        $perm_id = $perm_id_result->fetch_row()[0];
+        $perm_id_result->free();
         if ($role_id && $perm_id) {
-            $insert_stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-            $bound_role_id = $role_id; // Fresh variable for binding
-            $bound_perm_id = $perm_id; // Fresh variable for binding
-            $insert_stmt->bind_param('ii', $bound_role_id, $bound_perm_id);
-            $insert_stmt->execute();
-            $insert_stmt->close();
+            if (!execute_query($db, "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES ($role_id, $perm_id)")) {
+                error_log("Failed to assign permission $perm to role $role_name");
+            }
         }
     }
 }
 
 // Seed custom permission for test user
-$stmt = $db->prepare("INSERT IGNORE INTO user_permissions (user_id, permission_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM permissions WHERE name = 'custom_access'))");
-$stmt->execute();
-$stmt->close();
+if (!execute_query($db, "INSERT IGNORE INTO user_permissions (user_id, permission_id) VALUES ((SELECT id FROM users WHERE username = 'testuser'), (SELECT id FROM permissions WHERE name = 'custom_access'))")) {
+    error_log("Failed to assign custom permission to testuser");
+}
 
 // Seed modules
 $modules = ['dashboard', 'customers', 'devices', 'permissions', 'devtools'];
 foreach ($modules as $module) {
-    $stmt = $db->prepare("INSERT IGNORE INTO modules (name, active) VALUES (?, 1)");
-    $stmt->bind_param('s', $module);
-    $stmt->execute();
-    $stmt->close();
+    $escaped_module = $db->real_escape_string($module);
+    if (!execute_query($db, "INSERT IGNORE INTO modules (name, active) VALUES ('$escaped_module', 1)")) {
+        error_log("Failed to insert module: $module");
+    }
 }
 
 echo "<p class='text-green-500 p-4'>Database setup complete with hashed passwords. Setup will not run again.</p>";
