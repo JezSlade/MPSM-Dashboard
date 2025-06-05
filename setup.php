@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Start output buffering
 // Remove BASE_PATH definition, rely on parameter from index.php
 
 require_once BASE_PATH . 'db.php';
@@ -147,4 +148,5 @@ foreach ($modules as $module) {
 }
 
 echo "<p class='text-green-500 p-4'>Database setup complete with hashed passwords. Setup will not run again.</p>";
+ob_end_flush(); // Flush the buffered output
 ?>

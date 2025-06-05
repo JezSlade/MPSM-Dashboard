@@ -13,32 +13,27 @@ require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
 include_once BASE_PATH . 'auth.php';
 
-// Check if setup is needed (moved after auth includes)
-$setup_complete = true; // Default to true to prevent auto-run
-if (!file_exists(BASE_PATH . 'setup.lock') || (isset($_GET['reset']) && $_GET['reset'] == 1)) {
-    $setup_complete = false;
-}
-
-if (!$setup_complete) {
+// Check if setup is needed
+$setup_complete = file_exists(BASE_PATH . 'setup.lock');
+if (!$setup_complete || isset($_GET['reset'])) {
     require_once BASE_PATH . 'setup.php';
     if (!file_exists(BASE_PATH . 'setup.lock')) {
         file_put_contents(BASE_PATH . 'setup.lock', date('Y-m-d H:i:s'));
     }
-    // Redirect to clean URL after setup
-    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-    exit;
+    // No redirect to keep it simple, just proceed
 }
 
-// Set default session data for testing (remove after proper login is implemented)
+// Set default session data for testing (remove after proper login)
 if (!isset($_SESSION['user_id'])) {
-    $_SESSION['user_id'] = 1; // Assume admin user ID from setup
-    $_SESSION['role'] = 'Admin'; // Default to Admin role
+    $result = $db->query("SELECT id FROM users WHERE username = 'admin'");
+    $user = $result->fetch_assoc();
+    $_SESSION['user_id'] = $user ? $user['id'] : 1; // Use actual ID if found, fallback to 1
+    $_SESSION['role'] = 'Admin';
 }
 
 // Handle role change from dropdown
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
     $_SESSION['role'] = $_POST['role'];
-    // Refresh permissions for the new role
     if (isset($_SESSION['user_id'])) {
         $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
         error_log("Permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
@@ -137,7 +132,7 @@ if (!$db) {
             <div>
                 <form method="POST" action="" class="inline">
                     <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded">
-                        <?php foreach (['Developer', 'Admin', 'Dealer', 'Service', 'Sales', 'Guest'] as $r): ?>
+                        <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
                             <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
                                 <?php echo $r; ?>
                             </option>
@@ -145,6 +140,7 @@ if (!$db) {
                     </select>
                 </form>
                 <a href="logout.php" class="ml-4 text-magenta-neon">Logout</a>
+                <a href="?reset" class="ml-4 text-yellow-neon">Reset Setup</a>
             </div>
         </div>
     </header>
