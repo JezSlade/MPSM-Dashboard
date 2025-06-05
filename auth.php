@@ -1,18 +1,17 @@
 <?php
 // auth.php
 function isLoggedIn() {
+    // Check if user_id is set in session (basic auth check)
     return isset($_SESSION['user_id']);
 }
 
 function has_permission($permission) {
-    $role = $_SESSION['role'] ?? 'Guest';
+    // Basic permission check based on role
+    $role = $_SESSION['role'] ?? 'User';
     $permissions = [
-        'Developer' => ['view_devtools', 'manage_modules', 'run_tests'],
-        'Admin' => ['manage_users', 'view_reports'],
-        'Dealer' => ['view_customers', 'view_devices'],
-        'Service' => ['manage_devices'],
-        'Sales' => ['view_sales'],
-        'Guest' => []
+        'User' => [],
+        'Developer' => ['view_devtools'],
+        'Admin' => ['view_devtools', 'manage_modules']
     ];
     return in_array($permission, $permissions[$role] ?? []);
 }

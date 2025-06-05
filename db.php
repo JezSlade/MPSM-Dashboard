@@ -16,11 +16,13 @@ function load_env($path) {
     return $env;
 }
 
+// Example database connection (adjust as needed)
 function connect_db() {
     $env = load_env(__DIR__);
     $host = $env['DB_HOST'] ?? 'localhost';
     $user = $env['DB_USER'] ?? '';
     $pass = $env['DB_PASS'] ?? '';
     $db = $env['DB_NAME'] ?? '';
+    // Add your mysqli or PDO connection here
     return new mysqli($host, $user, $pass, $db);
 }

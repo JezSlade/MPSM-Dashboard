@@ -1,14 +1,11 @@
 <?php
-<?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-if (!has_permission('manage_permissions')) {
-    echo "<p class='text-red-500 p-4'>Access denied.</p>";
-    exit;
-}
 require_once BASE_PATH . 'db.php';
 require_once BASE_PATH . 'functions.php';
+
+if (!has_permission('manage_permissions')) {
+    echo "<p class='error'>Access denied.</p>";
+    exit;
+}
 
 $action = $_GET['action'] ?? 'list';
 
