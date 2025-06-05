@@ -27,11 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
 
 $role = $_SESSION['role'] ?? 'Guest';
 $modules = [
-    'dashboard' => ['label' => 'Dashboard 📌', 'icon' => 'home'],
-    'customers' => ['label' => 'Customers 👥', 'icon' => 'users'],
-    'devices' => ['label' => 'Devices 📱', 'icon' => 'device-mobile'],
-    'permissions' => ['label' => 'Permissions 🔐', 'icon' => 'lock-closed'],
-    'devtools' => ['label' => 'DevTools ⚙️', 'icon' => 'wrench']
+    'dashboard' => ['label' => 'Dashboard', 'icon' => 'home'],
+    'customers' => ['label' => 'Customers', 'icon' => 'users'],
+    'devices' => ['label' => 'Devices', 'icon' => 'device-mobile'],
+    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed'],
+    'devtools' => ['label' => 'DevTools', 'icon' => 'wrench']
 ];
 $current_module = $_GET['module'] ?? 'dashboard';
 
@@ -55,22 +55,21 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
                 extend: {
                     colors: {
                         'teal-custom': '#00cec9',
-                        'cyan-neon': '#00FFFF', // CMYK Cyan
-                        'magenta-neon': '#FF00FF', // CMYK Magenta
-                        'yellow-neon': '#FFFF00', // CMYK Yellow
-                        'black-smoke': '#1C2526', // Dark smoked glass base
+                        'cyan-neon': '#00FFFF',
+                        'magenta-neon': '#FF00FF',
+                        'yellow-neon': '#FFFF00',
+                        'black-smoke': '#1C2526',
                     },
                 },
             },
         };
     </script>
     <style>
-        /* Smoked glass with neon underglow and depth */
         .glass {
-            background: rgba(28, 37, 38, 0.7); /* Smoked glass base */
+            background: rgba(28, 37, 38, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), /* Depth */
-                        inset 0 0 10px rgba(0, 255, 255, 0.3); /* Neon underglow */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5),
+                        inset 0 0 10px rgba(0, 255, 255, 0.3);
         }
         @supports not (backdrop-filter: blur(10px)) {
             .glass {
@@ -82,25 +81,25 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
 <body class="bg-black-smoke text-white min-h-screen font-sans">
     <header class="glass border-b border-gray-800 p-4 fixed w-full top-0 z-10">
         <div class="flex justify-between items-center">
-            <h1 class="text-2xl text-cyan-neon">MPSM Control Panel 🎛️</h1>
+            <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
             <div>
                 <form method="POST" action="" class="inline">
                     <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded border border-gray-700">
                         <?php foreach (['Developer', 'Admin', 'Dealer', 'Service', 'Sales', 'Guest'] as $r): ?>
                             <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
-                                <?php echo $r; ?> <?php echo $r === 'Guest' ? '👤' : ($r === 'Developer' ? '🛠️' : ($r === 'Admin' ? '👑' : '🔧')); ?>
+                                <?php echo $r; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </form>
-                <a href="logout.php" class="ml-4 text-magenta-neon hover:text-magenta-300">Logout 🚪</a>
+                <a href="logout.php" class="ml-4 text-magenta-neon hover:text-magenta-300">Logout</a>
             </div>
         </div>
     </header>
 
     <div class="flex mt-16">
-        <aside class="glass border-r border-gray-800 w-64 p-4 fixed h-[calc(100vh-64px)] overflow-y-auto">
-            <nav>
+        <aside class="glass border-r border-gray-800 w-64 p-4 fixed h-[calc(100vh-64px)] overflow-y-auto flex flex-col">
+            <nav class="flex-1">
                 <ul class="space-y-2">
                     <?php foreach ($modules as $module => $data): ?>
                         <li>
@@ -121,6 +120,10 @@ $content = file_exists($module_file) ? $module_file : BASE_PATH . 'modules/dashb
                     <?php endforeach; ?>
                 </ul>
             </nav>
+            <!-- Status Module -->
+            <div class="mt-auto">
+                <?php include_once BASE_PATH . 'modules/status.php'; ?>
+            </div>
         </aside>
 
         <main class="glass border-l border-gray-800 flex-1 p-6 ml-64 mt-2">
