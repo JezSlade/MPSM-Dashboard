@@ -7,11 +7,13 @@ if (!defined('BASE_PATH')) {
 // Assume basic module definitions for demonstration.
 // In a real application, these might come from a database or more complex configuration.
 $all_modules = [
-    'dashboard'     => ['label' => 'Dashboard', 'icon' => 'home'], // Using 'home' icon for dashboard if available, otherwise just label
+    'dashboard'     => ['label' => 'Dashboard', 'icon' => 'home'],
     'customers'     => ['label' => 'Customer Management', 'icon' => 'users'],
     'devices'       => ['label' => 'Device Inventory', 'icon' => 'device-mobile'],
     'access_control'=> ['label' => 'Access Control', 'icon' => 'lock-closed'],
     'system_settings'=>['label' => 'System Settings', 'icon' => 'wrench'],
+    'permissions'   => ['label' => 'Permissions', 'icon' => 'shield-check'], // Added back Permissions module
+    'devtools'      => ['label' => 'DevTools', 'icon' => 'code'],           // Added back DevTools module
 ];
 
 // Initialize role and accessible modules based on role
@@ -24,7 +26,8 @@ switch ($role) {
         $accessible_modules = $all_modules; // All modules
         break;
     case 'Admin':
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'customers', 'devices', 'access_control']), ARRAY_FILTER_USE_KEY);
+        // Ensure Admin has access to all previously available and newly added modules
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'customers', 'devices', 'access_control', 'system_settings', 'permissions', 'devtools']), ARRAY_FILTER_USE_KEY);
         break;
     case 'Service':
         $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'devices']), ARRAY_FILTER_USE_KEY);
@@ -316,14 +319,37 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
                                         'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
                                         'lock-closed'  => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>', // Adjusted lock icon
                                         'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>', // Adjusted wrench icon
-                                        'home'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>' // Basic home icon
+                                        'home'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>', // Basic home icon
+                                        'shield-check' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.001 12.001 0 002 12c0 2.298.508 4.513 1.417 6.425C4.857 20.358 8.09 22 12 22s7.143-1.642 8.583-3.575C21.492 16.513 22 14.298 22 12c0-3.379-1.282-6.529-3.382-8.616z"></path></svg>', // Shield Check icon for Permissions
+                                        'code'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>'  // Code icon for DevTools
                                     ];
                                 echo $icons[$key['icon']] ?? '';
                                 ?>
                                 <span><?php echo $key['label']; ?></span>
                             </a>
                         </li>
-                    <?php endforeach; ?>
+                    <?php foreach ($accessible_modules as $module_key => $module_data):
+                        if ($module_key === 'permissions' && in_array($role, ['Developer', 'Admin'])): // Only show 'Permissions' for Developer/Admin
+                    ?>
+                        <li>
+                            <a href="?module=permissions" class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === 'permissions' ? 'active' : ''; ?>">
+                                <?php echo $icons['shield-check']; ?>
+                                <span>Permissions</span>
+                            </a>
+                        </li>
+                    <?php
+                        endif;
+                        if ($module_key === 'devtools' && in_array($role, ['Developer', 'Admin'])): // Only show 'DevTools' for Developer/Admin
+                    ?>
+                        <li>
+                            <a href="?module=devtools" class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === 'devtools' ? 'active' : ''; ?>">
+                                <?php echo $icons['code']; ?>
+                                <span>DevTools</span>
+                            </a>
+                        </li>
+                    <?php
+                        endif;
+                    endforeach; ?>
                 </ul>
             </nav>
             <div class="mt-auto">
