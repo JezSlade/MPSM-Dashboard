@@ -55,43 +55,60 @@ if ($role_id !== null) {
     $accessible_modules = [];
 }
 
+// --- START: MODIFIED MODULE ACCESS LOGIC ---
+
+// If *no* modules are accessible for the user at all, deny access immediately.
+// This handles cases where a user genuinely has no permissions.
+if (empty($accessible_modules)) {
+    echo "<p style='color: yellow;'>DEBUG: No accessible modules array is empty, denying access.</p>"; // DEBUG
+    echo "<p class='text-red-500 p-4'>Access denied. No accessible modules found.</p>";
+    session_unset();
+    session_destroy();
+    exit();
+}
+
 // Default module or requested module
 $module = $_GET['module'] ?? 'dashboard';
+// IMPORTANT FIX: Make the requested module name consistent with the keys in $accessible_modules (which are ucfirst'd)
+$module = ucfirst($module);
+echo "<p style='color: yellow;'>DEBUG: Requested module (ucfirst): " . htmlspecialchars($module) . "</p>"; // DEBUG
 
 // Check if the requested module is accessible to the user
-if (!in_array($module, array_keys($accessible_modules))) { // Use array_keys for module names
-    // If the requested module is not accessible,
-    // and they can access the dashboard, redirect to dashboard.
-    // Otherwise, deny access.
-    if (in_array('dashboard', array_keys($accessible_modules))) { // Use array_keys here too
-        $module = 'dashboard';
-        echo "<p style='color: yellow;'>DEBUG: Access denied to requested module. Redirecting to dashboard.</p>"; // DEBUG
-        header("Location: index.php?module=dashboard&error=Access+denied+to+requested+module.+Redirected+to+dashboard.");
+if (!in_array($module, array_keys($accessible_modules))) {
+    // The requested module is not accessible.
+    // Since we know $accessible_modules is not empty (checked above),
+    // and your debug shows 'Dashboard' is in it, we try to redirect to Dashboard.
+    if (in_array('Dashboard', array_keys($accessible_modules))) { // Ensure 'Dashboard' is uppercase here for check
+        $module = 'Dashboard'; // Set module to 'Dashboard' for consistency
+        echo "<p style='color: yellow;'>DEBUG: Requested module '" . htmlspecialchars($_GET['module'] ?? 'no_module_param') . "' is not accessible. Redirecting to Dashboard.</p>"; // DEBUG
+        header("Location: index.php?module=Dashboard&error=Access+denied+to+requested+module.+Redirected+to+dashboard."); // Use uppercase Dashboard in URL
         exit();
     } else {
-        // If no modules are accessible at all, or only inaccessible ones are requested.
-        // This might happen for a new user with no permissions, or a misconfiguration.
-        echo "<p style='color: yellow;'>DEBUG: Final state: No accessible modules found or requested module inaccessible. Accessible modules array: <pre>" . htmlspecialchars(print_r($accessible_modules, true)) . "</pre></p>"; // DEBUG
-        echo "<p class='text-red-500 p-4'>Access denied. No accessible modules found.</p>";
+        // This case should only be reached if the user has NO access to their requested module AND NO access to Dashboard.
+        echo "<p style='color: yellow;'>DEBUG: Requested module '" . htmlspecialchars($_GET['module'] ?? 'no_module_param') . "' is not accessible AND Dashboard is also not accessible (implies deeper permission issue).</p>"; // DEBUG
+        echo "<p class='text-red-500 p-4'>Access denied. You do not have permission to view this page or the Dashboard.</p>";
         session_unset();
         session_destroy();
         exit();
     }
 }
 
-$module_path = SERVER_ROOT_PATH . 'modules/' . basename($module) . '.php';
+// --- END: MODIFIED MODULE ACCESS LOGIC ---
+
+// Construct the module path. Remember module filenames are typically lowercase (e.g., dashboard.php).
+$module_path = SERVER_ROOT_PATH . 'modules/' . basename(strtolower($module)) . '.php';
 
 // If the module file does not exist, and dashboard is accessible, default to dashboard.
 // Otherwise, display an error.
 if (!file_exists($module_path)) {
-    if (in_array('dashboard', array_keys($accessible_modules))) { // Use array_keys here too
-        $module = 'dashboard';
-        $module_path = SERVER_ROOT_PATH . 'modules/dashboard.php';
-        echo "<p style='color: yellow;'>DEBUG: Module not found. Redirecting to dashboard.</p>"; // DEBUG
-        header("Location: index.php?module=dashboard&error=Module+not+found.+Redirected+to+dashboard.");
+    if (in_array('Dashboard', array_keys($accessible_modules))) { // Check for 'Dashboard' (uppercase)
+        $module = 'Dashboard';
+        $module_path = SERVER_ROOT_PATH . 'modules/dashboard.php'; // Explicitly set to lowercase dashboard.php
+        echo "<p style='color: yellow;'>DEBUG: Module file not found for '" . htmlspecialchars($module) . "'. Redirecting to Dashboard.</p>"; // DEBUG
+        header("Location: index.php?module=Dashboard&error=Module+not+found.+Redirected+to+dashboard.");
         exit();
     } else {
-        echo "<p class='text-red-500 p-4'>Error: Module file not found and dashboard is not accessible.</p>";
+        echo "<p class='text-red-500 p-4'>Error: Module file not found and Dashboard is not accessible.</p>";
         exit();
     }
 }
