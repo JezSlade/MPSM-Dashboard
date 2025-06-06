@@ -113,7 +113,8 @@ function get_accessible_modules($role_id, $user_id) {
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
-        $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
+        // Corrected path: modules are in the root, not in a 'modules/' subfolder
+        $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . $row['name'] . '.php';
     }
     $stmt->close();
 
@@ -134,7 +135,8 @@ function get_accessible_modules($role_id, $user_id) {
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
-        $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
+        // Corrected path: modules are in the root, not in a 'modules/' subfolder
+        $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . $row['name'] . '.php';
     }
     $stmt->close();
 
