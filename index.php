@@ -10,7 +10,9 @@ ob_start();
 session_start();
 
 // Include configuration and core files
-require_once SERVER_ROOT_PATH . 'config.php';
+// IMPORTANT: Use __DIR__ for config.php as SERVER_ROOT_PATH is defined within it.
+require_once __DIR__ . '/config.php'; // <-- FIXED THIS LINE
+
 require_once SERVER_ROOT_PATH . 'db.php';
 require_once SERVER_ROOT_PATH . 'functions.php';
 require_once SERVER_ROOT_PATH . 'auth.php';
