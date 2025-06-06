@@ -1,228 +1,182 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// modules/devtools.php
+// ────────────────────────────────────────────────────────────────────────────────
+// “DevTools → Style Customizer” Module
+// Must be included inside <div class="floating-module">…</div> in index.php.
+// The only requirement here is that Neumorphic :root variables already exist
+// in styles.css. This file no longer checks for BASE_PATH.
 
-// Include dependencies
-require_once BASE_PATH . 'db.php';
-require_once BASE_PATH . 'functions.php';
-
-// Check permissions
-if (!function_exists('has_permission') || !has_permission('view_devtools')) {
-    echo "<p class='text-red-500 p-4'>Access denied.</p>";
-    exit;
+if (!defined('STDIN') && php_sapi_name() !== 'cli') {
+    // Optional: permission check here if needed
+    // For example: if (!user_is_sysop()) { die('Forbidden'); }
 }
 
-// Load environment variables using the shared load_env() from db.php
-$env_vars = load_env(BASE_PATH);
-
-$css_file = BASE_PATH . 'styles.css';
-$css_content = file_exists($css_file) ? file_get_contents($css_file) : '';
-$primary_color = preg_match('/--primary-color:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00cec9';
-$depth_intensity = preg_match('/--depth-intensity:\s*(\d+px)/', $css_content, $match) ? $match[1] : '8px';
-$neon_underglow = preg_match('/--neon-underglow:\s*(#[0-9a-fA-F]{6})/', $css_content, $match) ? $match[1] : '#00FFFF';
-$smoke_opacity = preg_match('/--smoke-opacity:\s*(\d*\.?\d+)/', $css_content, $match) ? $match[1] : '0.7';
-
-// Handle POST requests for module activation
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_module'])) {
-    $module_name = $_POST['module_name'];
-    $active = $_POST['active'] === '1' ? 1 : 0;
-    $stmt = $db->prepare("UPDATE modules SET active = ? WHERE name = ?");
-    $stmt->bind_param('is', $active, $module_name);
-    $stmt->execute();
-    $stmt->close();
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        if (isset($_POST['update_env'])) {
-            $db_name = trim($_POST['DB_NAME'] ?? '');
-            $debug_mode = isset($_POST['DEBUG_MODE']) ? 'true' : 'false';
-            if (empty($db_name)) {
-                throw new Exception("Database name cannot be empty.");
-            }
-            $new_env = "DB_HOST=localhost\nDB_USER={$env_vars['DB_USER']}\nDB_PASS={$env_vars['DB_PASS']}\nDB_NAME=$db_name\nDEBUG_MODE=$debug_mode\n";
-            if (!file_put_contents(BASE_PATH . '.env', $new_env)) {
-                throw new Exception("Failed to write to .env.");
-            }
-            echo "<p class='text-green-500 p-2'>.env updated!</p>";
-        } elseif (isset($_POST['update_css'])) {
-            $new_color = trim($_POST['primary_color'] ?? '');
-            $new_depth = trim($_POST['depth_intensity'] ?? '');
-            $new_neon = trim($_POST['neon_underglow'] ?? '');
-            $new_opacity = trim($_POST['smoke_opacity'] ?? '');
-            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $new_color)) {
-                throw new Exception("Invalid primary color format.");
-            }
-            if (!preg_match('/^\d+px$/', $new_depth)) {
-                throw new Exception("Invalid depth format.");
-            }
-            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $new_neon)) {
-                throw new Exception("Invalid neon underglow format.");
-            }
-            if (!preg_match('/^\d*\.?\d+$/', $new_opacity) || $new_opacity > 1 || $new_opacity < 0) {
-                throw new Exception("Invalid opacity (0-1).");
-            }
-            $css_content = preg_replace('/--primary-color:\s*#[0-9a-fA-F]{6}/', "--primary-color: $new_color", $css_content);
-            $css_content = preg_replace('/--depth-intensity:\s*\d+px/', "--depth-intensity: $new_depth", $css_content);
-            $css_content = preg_replace('/--neon-underglow:\s*#[0-9a-fA-F]{6}/', "--neon-underglow: $new_neon", $css_content);
-            $css_content = preg_replace('/--smoke-opacity:\s*\d*\.?\d+/', "--smoke-opacity: $new_opacity", $css_content);
-            if (!file_put_contents($css_file, $css_content)) {
-                throw new Exception("Failed to write to styles.css.");
-            }
-            echo "<p class='text-green-500 p-2'>CSS updated!</p>";
-        } elseif (isset($_POST['run_tests'])) {
-            $api_result = test_api();
-            $db_result = test_database();
-            $php_result = test_php();
-            $env_result = test_environment();
-            echo "<div class='glass p-4 border border-gray-800 rounded mt-4'><h3 class='text-xl text-cyan-neon'>Test Results</h3><ul class='mt-2 space-y-2'>";
-            echo "<li>API Test: " . ($api_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
-            echo "<li>Database Test: " . ($db_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
-            echo "<li>PHP Test: " . ($php_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li>";
-            echo "<li>Environment Test: " . ($env_result ? "<span class='text-green-500'>Pass</span>" : "<span class='text-red-500'>Fail</span>") . "</li></ul></div>";
-        }
-    } catch (Exception $e) {
-        echo "<p class='text-red-500 p-2'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
-}
-
-function test_api() {
-    $env = load_env(BASE_PATH);
-    if (isset($env['API_URL']) && file_exists(BASE_PATH . 'working.php')) {
-        return true; // Mock success; replace with actual API call
-    }
-    return false;
-}
-
-function test_database() {
-    $env = load_env(BASE_PATH);
-    if (isset($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME'])) {
-        $conn = new mysqli($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME']);
-        return $conn->connect_error === null;
-    }
-    return false;
-}
-
-function test_php() {
-    return version_compare(PHP_VERSION, '7.4.0', '>=');
-}
-
-function test_environment() {
-    return file_exists(BASE_PATH . '.env') && is_writable(BASE_PATH . '.env');
-}
+// No BASE_PATH check; we rely on __DIR__ for any includes if necessary.
 ?>
+<div class="glass p-4 border border-gray-800 rounded space-y-4">
+    <h2 class="text-2xl text-cyan-neon mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 
+                     11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        DevTools
+    </h2>
+    <p class="mb-4">Developer settings and tools for MPSM.</p>
 
-<h2 class="text-2xl text-cyan-neon mb-4 flex items-center">
-    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-    </svg>
-    DevTools
-</h2>
-<p class="mb-4">Developer settings and tools for MPSM.</p>
+    <!-- ── Style Customizer Form ──────────────────────────────────────────────────── -->
+    <div class="devtools-container">
+        <h2>Style Customizer</h2>
 
-<div class="space-y-6">
-    <div class="glass p-4 border border-gray-800 rounded">
-        <h3 class="text-xl text-magenta-neon flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-            </svg>
-            Environment Variables
-        </h3>
-        <form method="POST" class="mt-4 space-y-4">
-            <div>
-                <label class="block text-gray-300">Database Name (DB_NAME):</label>
-                <input type="text" name="DB_NAME" value="<?php echo htmlspecialchars($env_vars['DB_NAME'] ?? ''); ?>" required class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
-            </div>
-            <div>
-                <label class="block text-gray-300">Debug Mode (DEBUG_MODE):</label>
-                <input type="checkbox" name="DEBUG_MODE" <?php echo ($env_vars['DEBUG_MODE'] ?? 'false') === 'true' ? 'checked' : ''; ?> class="mr-2">
-            </div>
-            <button type="submit" name="update_env" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Save</button>
-        </form>
+        <!-- 1) Neumorphic Depth -->
+        <div class="devtools-row">
+            <label for="depthRange">Neumorphic Depth (<span id="depthValue">8</span>px):</label>
+            <input
+                type="range"
+                id="depthRange"
+                min="0"
+                max="20"
+                step="1"
+                value="8"
+                oninput="updateVar('--depth', this.value + 'px'); document.getElementById('depthValue').innerText = this.value;"
+            >
+            <span class="devtools-value" id="depthValueDisplay">8</span>
+        </div>
+
+        <!-- 2) Glass Opacity -->
+        <div class="devtools-row">
+            <label for="glassOpacityRange">Glass Opacity (0.1 – 1.0):</label>
+            <input
+                type="range"
+                id="glassOpacityRange"
+                min="0.1"
+                max="1.0"
+                step="0.1"
+                value="0.8"
+                oninput="updateVar('--glass-opacity', this.value); document.getElementById('opacityValue').innerText = this.value;"
+            >
+            <span class="devtools-value" id="opacityValue">0.8</span>
+        </div>
+
+        <!-- 3) Cyan Neon Color -->
+        <div class="devtools-row">
+            <label for="cyanColorPicker">Cyan Neon:</label>
+            <input
+                type="color"
+                id="cyanColorPicker"
+                value="#00FFFF"
+                onchange="updateVar('--cyan-neon', this.value);"
+            >
+        </div>
+
+        <!-- 4) Magenta Neon Color -->
+        <div class="devtools-row">
+            <label for="magentaColorPicker">Magenta Neon:</label>
+            <input
+                type="color"
+                id="magentaColorPicker"
+                value="#FF00FF"
+                onchange="updateVar('--magenta-neon', this.value);"
+            >
+        </div>
+
+        <!-- 5) Yellow Neon Color -->
+        <div class="devtools-row">
+            <label for="yellowColorPicker">Yellow Neon:</label>
+            <input
+                type="color"
+                id="yellowColorPicker"
+                value="#FFFF00"
+                onchange="updateVar('--yellow-neon', this.value);"
+            >
+        </div>
+
+        <!-- 6) Background Dark (optional) -->
+        <div class="devtools-row">
+            <label for="bgDarkPicker">Background Dark:</label>
+            <input
+                type="color"
+                id="bgDarkPicker"
+                value="#1E272E"
+                onchange="updateVar('--bg-dark', this.value);"
+            >
+        </div>
+
+        <!-- 7) Foreground Dark (cards/panels) (optional) -->
+        <div class="devtools-row">
+            <label for="fgDarkPicker">Foreground Dark:</label>
+            <input
+                type="color"
+                id="fgDarkPicker"
+                value="#2D3436"
+                onchange="updateVar('--fg-dark', this.value);"
+            >
+        </div>
+
+        <!-- Reset button -->
+        <button class="devtools-reset" onclick="resetDefaults()">
+            Reset to Default
+        </button>
     </div>
 
-    <div class="glass p-4 border border-gray-800 rounded">
-        <h3 class="text-xl text-yellow-neon flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
-            </svg>
-            Theme Customization
-        </h3>
-        <form method="POST" class="mt-4 space-y-4">
-            <div>
-                <label class="block text-gray-300">Primary Color (--primary-color):</label>
-                <input type="color" name="primary_color" value="<?php echo $primary_color; ?>" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
-            </div>
-            <div>
-                <label class="block text-gray-300">Depth Intensity (--depth-intensity):</label>
-                <input type="text" name="depth_intensity" value="<?php echo $depth_intensity; ?>" placeholder="e.g., 8px" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
-            </div>
-            <div>
-                <label class="block text-gray-300">Neon Underglow (--neon-underglow):</label>
-                <input type="color" name="neon_underglow" value="<?php echo $neon_underglow; ?>" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
-            </div>
-            <div>
-                <label class="block text-gray-300">Smoke Opacity (--smoke-opacity):</label>
-                <input type="number" name="smoke_opacity" value="<?php echo $smoke_opacity; ?>" step="0.1" min="0" max="1" class="w-full p-2 bg-black-smoke text-white border border-gray-700 rounded">
-            </div>
-            <button type="submit" name="update_css" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Save</button>
-        </form>
-    </div>
+    <!-- ── JavaScript for Live CSS‐Variable Updates ───────────────────────────────── -->
+    <script>
+    (function() {
+      // Default values must match :root defaults in styles.css
+      const defaults = {
+        '--depth'        : '8px',
+        '--glass-opacity': '0.8',
+        '--cyan-neon'    : '#00FFFF',
+        '--magenta-neon' : '#FF00FF',
+        '--yellow-neon'  : '#FFFF00',
+        '--bg-dark'      : '#1E272E',
+        '--fg-dark'      : '#2D3436'
+      };
 
-    <div class="glass p-4 border border-gray-800 rounded">
-        <h3 class="text-xl text-cyan-neon flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Debug Settings
-        </h3>
-        <form method="POST" class="mt-4 space-y-4">
-            <div>
-                <label class="block text-gray-300">Enable Debug Mode:</label>
-                <input type="checkbox" name="debug_enabled" <?php echo ($env_vars['DEBUG_MODE'] ?? 'false') === 'true' ? 'checked' : ''; ?> class="mr-2">
-                <button type="submit" name="toggle_debug" class="bg-black-smoke text-magenta-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Toggle</button>
-            </div>
-            <button type="submit" name="clear_cache" class="mt-2 bg-black-smoke text-magenta-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Clear Cache</button>
-        </form>
-    </div>
+      // Update a CSS variable on :root
+      window.updateVar = function(varName, value) {
+        document.documentElement.style.setProperty(varName, value);
+      };
 
-    <div class="glass p-4 border border-gray-800 rounded">
-        <h3 class="text-xl text-yellow-neon flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            Module Management
-        </h3>
-        <form method="POST" class="mt-4 space-y-4">
-            <?php
-            $modules = $db->query("SELECT * FROM modules");
-            while ($module = $modules->fetch_assoc()): ?>
-                <div>
-                    <label class="block text-gray-300">
-                        <input type="checkbox" name="module_name" value="<?php echo $module['name']; ?>" 
-                               onchange="this.form.querySelector('input[name=active]').value=this.checked ? 1 : 0; this.form.submit()"
-                               <?php echo $module['active'] ? 'checked' : ''; ?> class="mr-2">
-                        <?php echo htmlspecialchars($module['name']); ?>
-                        <input type="hidden" name="active" value="<?php echo $module['active'] ? 1 : 0; ?>">
-                        <input type="hidden" name="toggle_module" value="1">
-                    </label>
-                </div>
-            <?php endwhile; ?>
-        </form>
-    </div>
+      // Reset all variables to defaults
+      window.resetDefaults = function() {
+        for (const [varName, val] of Object.entries(defaults)) {
+          document.documentElement.style.setProperty(varName, val);
+        }
+        // Sync input values with defaults
+        document.getElementById('depthRange').value = parseInt(defaults['--depth']);
+        document.getElementById('depthValue').innerText = parseInt(defaults['--depth']);
+        document.getElementById('glassOpacityRange').value = defaults['--glass-opacity'];
+        document.getElementById('opacityValue').innerText = defaults['--glass-opacity'];
 
-    <div class="glass p-4 border border-gray-800 rounded">
-        <h3 class="text-xl text-cyan-neon flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-            </svg>
-            Run Tests
-        </h3>
-        <form method="POST" class="mt-4">
-            <button type="submit" name="run_tests" class="bg-black-smoke text-yellow-neon p-2 rounded border border-gray-700 hover:bg-gray-700">Run All Tests</button>
-        </form>
-    </div>
+        document.getElementById('cyanColorPicker').value    = defaults['--cyan-neon'];
+        document.getElementById('magentaColorPicker').value = defaults['--magenta-neon'];
+        document.getElementById('yellowColorPicker').value  = defaults['--yellow-neon'];
+        document.getElementById('bgDarkPicker').value       = defaults['--bg-dark'];
+        document.getElementById('fgDarkPicker').value       = defaults['--fg-dark'];
+      };
+
+      // On load, initialize inputs based on current CSS variables (or defaults)
+      document.addEventListener('DOMContentLoaded', function() {
+        for (const [varName, val] of Object.entries(defaults)) {
+          const current = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+          document.documentElement.style.setProperty(varName, current || val);
+        }
+        // Sync sliders/color inputs with whichever values are set in :root
+        const depth = getComputedStyle(document.documentElement).getPropertyValue('--depth').replace('px','').trim();
+        document.getElementById('depthRange').value = depth;
+        document.getElementById('depthValue').innerText = depth;
+
+        const opacity = getComputedStyle(document.documentElement).getPropertyValue('--glass-opacity').trim();
+        document.getElementById('glassOpacityRange').value = opacity;
+        document.getElementById('opacityValue').innerText = opacity;
+
+        document.getElementById('cyanColorPicker').value    = getComputedStyle(document.documentElement).getPropertyValue('--cyan-neon').trim();
+        document.getElementById('magentaColorPicker').value = getComputedStyle(document.documentElement).getPropertyValue('--magenta-neon').trim();
+        document.getElementById('yellowColorPicker').value  = getComputedStyle(document.documentElement).getPropertyValue('--yellow-neon').trim();
+        document.getElementById('bgDarkPicker').value       = getComputedStyle(document.documentElement).getPropertyValue('--bg-dark').trim();
+        document.getElementById('fgDarkPicker').value       = getComputedStyle(document.documentElement).getPropertyValue('--fg-dark').trim();
+      });
+    })();
+    </script>
 </div>
