@@ -1,37 +1,42 @@
 <?php
 // config.php
-// Define the server root path based on the directory of this file
-// Assumes config.php is directly in your project's root folder.
-define('SERVER_ROOT_PATH', __DIR__ . DIRECTORY_SEPARATOR);
 
-// Define the base path (can be same as SERVER_ROOT_PATH if all includes are relative to root)
-// This is often used for includes, like require_once BASE_PATH . 'db.php';
-define('BASE_PATH', SERVER_ROOT_PATH);
+// Define SERVER_ROOT_PATH for server-side file includes
+// This assumes config.php is in the root of your application (e.g., /mpsm/config.php)
+// __DIR__ gives the directory of the current file (config.php)
+// realpath() resolves symbolic links and redundant slashes
+define('SERVER_ROOT_PATH', realpath(__DIR__ . DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
 
-// Default module to load if none specified in URL
-define('DEFAULT_MODULE', 'dashboard');
+// Define WEB_ROOT_PATH for client-side URLs (e.g., for images, CSS, JavaScript)
+// This depends on your actual web server configuration.
+// If your application is directly in the domain's root (e.g., example.com/index.php), it's '/'.
+// If it's in a subdirectory (e.g., example.com/mpsm/index.php), it's '/mpsm/'.
+// You might need to adjust this based on your deployment.
 
-// Set error reporting for development (disable in production)
+// A common way to calculate WEB_ROOT_PATH dynamically:
+$doc_root = rtrim($_SERVER['DOCUMENT_ROOT'], '/'); // Remove trailing slash from DOCUMENT_ROOT
+$current_script_path = str_replace('\\', '/', realpath($_SERVER['SCRIPT_FILENAME'])); // Standardize slashes
+$app_path = str_replace($doc_root, '', $current_script_path);
+$app_dir = dirname($app_path); // Get the directory portion
+
+// If the app is in the root, $app_dir might be '/', otherwise it's like '/mpsm'
+// Ensure it ends with a slash if it's not just '/'
+if ($app_dir === '/' || $app_dir === '\\' || $app_dir === '.') {
+    define('WEB_ROOT_PATH', '/');
+} else {
+    define('WEB_ROOT_PATH', rtrim($app_dir, '/') . '/');
+}
+
+// Alternatively, for simplicity during development, you can hardcode it:
+// define('WEB_ROOT_PATH', '/mpsm/'); // If your app is at http://yourdomain.com/mpsm/
+
+// Error reporting (useful for debugging)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Include essential files
-require_once BASE_PATH . 'db.php';
-require_once BASE_PATH . 'auth.php';
-require_once BASE_PATH . 'functions.php';
+// Other configurations like default timezone, etc.
+date_default_timezone_set('America/New_York');
 
-// Start session if not already started
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Establish DB connection globally
-$db = connect_db();
-if (!$db) {
-    error_log("config.php: Failed to connect to database in config.php. Check .env and database server status.");
-    // In a production environment, you might want to redirect to an error page
-    // or display a more user-friendly message without revealing details.
-}
-
-?>
+// Define the default module to load when no module is specified in the URL
+define('DEFAULT_MODULE', 'dashboard'); // You can change 'dashboard' to any module name you want as the default
