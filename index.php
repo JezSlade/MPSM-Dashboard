@@ -141,16 +141,13 @@ if (!$db) {
             }
         }
 
-        /* ── Main Dashboard Area: Fixed and visible ───────────────────────────────── */
+        /* ── ADDED: `position: relative;` to `main.glass` for `absolute` children ──── */
         main.glass {
-            position: fixed;
-            top: 64px;   /* exactly under the 64px‐tall header */
-            left: 256px; /* exactly to the right of the 256px‐wide sidebar */
-            right: 0;
-            bottom: 0;
+            position: relative; /* Makes main a positioned parent for absolute children like .floating-module */
+            /* No other explicit positioning here, relies on flexbox for layout */
+            /* Tailwind's p-4 provides padding and flex-1 handles sizing */
             overflow-y: auto; /* Allows content within main to scroll */
             overflow-x: hidden;
-            padding: 1rem; /* Padding for the main content area itself */
             box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
         }
     </style>
