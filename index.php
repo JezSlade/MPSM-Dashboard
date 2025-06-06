@@ -87,7 +87,7 @@ if (!$db) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPSM Control Panel</title>
-    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css">
+    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {

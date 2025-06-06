@@ -18,3 +18,11 @@ p {
 .text-red-500 {
     color: #EF4444;
 }
+/* ── Reduce padding on main.glass and .floating-module ──────────────────── */
+main.glass {
+  padding: 1rem;   /* was effectively 1.5rem in your .glass rule */
+}
+
+.floating-module {
+  padding: 1rem;   /* was 1.5rem before */
+}
