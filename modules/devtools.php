@@ -2,19 +2,18 @@
 // modules/devtools.php
 // ────────────────────────────────────────────────────────────────────────────────
 // “DevTools → Style Customizer” Module
-// Must be included inside <div class="floating-module">…</div> in index.php.
-// The only requirement here is that Neumorphic :root variables already exist
-// in styles.css. This file no longer checks for BASE_PATH.
+// This file is included inside <div class="floating-module">…</div> by index.php.
+// We assume that Neumorphic :root variables already exist in styles.css.
 
-if (!defined('STDIN') && php_sapi_name() !== 'cli') {
-    // Optional: permission check here if needed
-    // For example: if (!user_is_sysop()) { die('Forbidden'); }
+if (! defined('BASE_PATH') && php_sapi_name() !== 'cli') {
+    // (Optional) permission check here, e.g. only sysop may access DevTools
+    // if (! user_is_sysop()) { die('Forbidden'); }
 }
 
-// No BASE_PATH check; we rely on __DIR__ for any includes if necessary.
+// We render everything inside a “glass” card for consistency.
 ?>
 <div class="glass p-4 border border-gray-800 rounded space-y-4">
-    <h2 class="text-2xl text-cyan-neon mb-4 flex items-center">
+    <h2 class="text-2xl text-[var(--cyan-neon)] mb-4 flex items-center">
         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 
@@ -119,7 +118,7 @@ if (!defined('STDIN') && php_sapi_name() !== 'cli') {
         </button>
     </div>
 
-    <!-- ── JavaScript for Live CSS‐Variable Updates ───────────────────────────────── -->
+    <!-- ── JavaScript for Live CSS Variable Updates ───────────────────────────────── -->
     <script>
     (function() {
       // Default values must match :root defaults in styles.css
@@ -144,7 +143,7 @@ if (!defined('STDIN') && php_sapi_name() !== 'cli') {
           document.documentElement.style.setProperty(varName, val);
         }
         // Sync input values with defaults
-        document.getElementById('depthRange').value = parseInt(defaults['--depth']);
+        document.getElementById('depthRange').value      = parseInt(defaults['--depth']);
         document.getElementById('depthValue').innerText = parseInt(defaults['--depth']);
         document.getElementById('glassOpacityRange').value = defaults['--glass-opacity'];
         document.getElementById('opacityValue').innerText = defaults['--glass-opacity'];
@@ -163,13 +162,13 @@ if (!defined('STDIN') && php_sapi_name() !== 'cli') {
           document.documentElement.style.setProperty(varName, current || val);
         }
         // Sync sliders/color inputs with whichever values are set in :root
-        const depth = getComputedStyle(document.documentElement).getPropertyValue('--depth').replace('px','').trim();
-        document.getElementById('depthRange').value = depth;
+        const depth   = getComputedStyle(document.documentElement).getPropertyValue('--depth').replace('px','').trim();
+        document.getElementById('depthRange').value      = depth;
         document.getElementById('depthValue').innerText = depth;
 
         const opacity = getComputedStyle(document.documentElement).getPropertyValue('--glass-opacity').trim();
         document.getElementById('glassOpacityRange').value = opacity;
-        document.getElementById('opacityValue').innerText = opacity;
+        document.getElementById('opacityValue').innerText   = opacity;
 
         document.getElementById('cyanColorPicker').value    = getComputedStyle(document.documentElement).getPropertyValue('--cyan-neon').trim();
         document.getElementById('magentaColorPicker').value = getComputedStyle(document.documentElement).getPropertyValue('--magenta-neon').trim();
