@@ -172,7 +172,7 @@ if (!$db) {
         </div>
     </header>
 
-    <div class="flex mt-16">
+    <div class="flex mt-16 h-[calc(100vh-64px)]">
         <aside class="glass w-64 p-4 fixed h-[calc(100vh-80px)] top-16 overflow-y-auto flex flex-col">
             <nav class="flex-1">
                 <ul class="space-y-2">
