@@ -1,7 +1,7 @@
 <?php
 // functions.php
-// Ensure db.php is included here if functions rely on $db
-require_once BASE_PATH . 'db.php'; // This line is crucial for $db and connect_db()
+// The global $db variable will be available from index.php's scope,
+// so no need to require_once db.php again here.
 
 function get_permissions_for_role($role_id) {
     global $db;
@@ -157,7 +157,6 @@ function has_permission_for_user($user_id, $permission_name) {
     return $count > 0;
 }
 
-// NOTE: table_exists() function has been moved to db.php to prevent redeclaration errors.
-// It is no longer in this file (functions.php).
+// table_exists() function should be in db.php, not here.
 
 ?>
