@@ -1,83 +1,53 @@
 <?php
-// index.php
-// ────────────────────────────────────────────────────────────────────────────────
-// Enable PHP error display
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-session_start();
-
-// Define BASE_PATH
-define('BASE_PATH', __DIR__ . '/');
-
-// Include dependencies
-require_once BASE_PATH . 'db.php';
-require_once BASE_PATH . 'functions.php';
-include_once BASE_PATH . 'auth.php';
-
-// Check if setup is needed - modified to always check tables
-$setup_needed = false;
-$required_tables = ['modules', 'users', 'roles', 'permissions', 'role_permissions', 'user_roles', 'user_permissions'];
-foreach ($required_tables as $table) {
-    $result = $db->query("SHOW TABLES LIKE '$table'");
-    if ($result->num_rows == 0) {
-        $setup_needed = true;
-        break;
-    }
+// Define BASE_PATH if not already defined (e.g., if you move this to a shared config)
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', '/'); // Adjust this if your project is in a subfolder
 }
 
-if ($setup_needed || isset($_GET['reset'])) {
-    require_once BASE_PATH . 'setup.php';
-    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-    exit;
-}
-
-// Set default session data for testing
-if (!isset($_SESSION['user_id'])) {
-    $result = $db->query("SELECT id FROM users WHERE username = 'admin'");
-    $user = $result->fetch_assoc();
-    $_SESSION['user_id'] = $user ? $user['id'] : 1;
-    $_SESSION['role'] = 'Admin';
-    $_SESSION['username'] = 'admin';
-    // Match status.php expectation
-}
-
-// Handle role change
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
-    $_SESSION['role'] = $_POST['role'];
-    if (isset($_SESSION['user_id'])) {
-        $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
-        error_log("Permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
-    }
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit;
-}
-
-$role = $_SESSION['role'] ?? 'Guest';
-if (isset($_SESSION['user_id'])) {
-    $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
-    error_log("Initial permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
-}
-
-$modules = [
-    'customers'   => ['label' => 'Customers',   'icon' => 'users',         'permission' => 'view_customers'],
-    'devices'     => ['label' => 'Devices',     'icon' => 'device-mobile', 'permission' => 'view_devices'],
-    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed',   'permission' => 'manage_permissions'],
-    'devtools'    => ['label' => 'DevTools',    'icon' => 'wrench',        'permission' => 'view_devtools']
+// Assume basic module definitions for demonstration.
+// In a real application, these might come from a database or more complex configuration.
+$all_modules = [
+    'dashboard'     => ['label' => 'Dashboard', 'icon' => 'home'], // Using 'home' icon for dashboard if available, otherwise just label
+    'customers'     => ['label' => 'Customer Management', 'icon' => 'users'],
+    'devices'       => ['label' => 'Device Inventory', 'icon' => 'device-mobile'],
+    'access_control'=> ['label' => 'Access Control', 'icon' => 'lock-closed'],
+    'system_settings'=>['label' => 'System Settings', 'icon' => 'wrench'],
 ];
+
+// Initialize role and accessible modules based on role
+$role = $_POST['role'] ?? $_COOKIE['user_role'] ?? 'Guest'; // Get role from POST, then cookie, default to Guest
+setcookie('user_role', $role, time() + (86400 * 30), "/"); // Set cookie for 30 days
+
 $accessible_modules = [];
-foreach ($modules as $module => $key) {
-    if (has_permission($key['permission'])) {
-        $accessible_modules[$module] = $key;
-    }
+switch ($role) {
+    case 'Developer':
+        $accessible_modules = $all_modules; // All modules
+        break;
+    case 'Admin':
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'customers', 'devices', 'access_control']), ARRAY_FILTER_USE_KEY);
+        break;
+    case 'Service':
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'devices']), ARRAY_FILTER_USE_KEY);
+        break;
+    case 'Sales':
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'customers']), ARRAY_FILTER_USE_KEY);
+        break;
+    case 'Guest':
+    default:
+        $accessible_modules = ['dashboard' => $all_modules['dashboard']];
+        break;
 }
 
-$current_module  = isset($_GET['module']) && isset($accessible_modules[$_GET['module']]) ? $_GET['module'] : null;
-$dashboard_file  = BASE_PATH . 'modules/dashboard.php';
-$module_file     = $current_module ? BASE_PATH . "modules/{$current_module}.php" : null;
-if (!$db) {
-    error_log("Database connection is null.");
+// Determine current module to display
+$current_module = $_GET['module'] ?? 'dashboard';
+
+// Check if the requested module is accessible and exists
+if (!array_key_exists($current_module, $accessible_modules)) {
+    $current_module = 'dashboard'; // Fallback to dashboard if not accessible or invalid
 }
+
+$module_file = __DIR__ . '/modules/' . $current_module . '.php';
+$dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual dashboard file
 ?>
 
 <!DOCTYPE html>
@@ -89,34 +59,134 @@ if (!$db) {
     <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Adjust Tailwind config to use CSS variables for dynamic colors
         tailwind.config = {
+            darkMode: 'class', // Enable dark mode based on 'dark' class on HTML or Body
             theme: {
                 extend: {
                     colors: {
-                        'teal-custom': '#00cec9',
-                        'cyan-neon':   '#00FFFF',
-                        'magenta-neon':'#FF00FF',
-                        'yellow-neon': '#FFFF00',
-                        'black-smoke': '#1C2526'
+                        // Use CSS variables for the main theme colors
+                        'bg-primary':    'var(--bg-primary)',
+                        'text-default':  'var(--text-default)',
+                        'bg-glass':      'var(--bg-glass)',
+                        'shadow-outer-dark': 'var(--shadow-outer-dark)',
+                        'shadow-outer-light': 'var(--shadow-outer-light)',
+                        'shadow-inset-dark': 'var(--shadow-inset-dark)',
+                        'shadow-inset-light': 'var(--shadow-inset-light)',
+                        'neon-cyan':     'var(--neon-cyan)',
+                        'neon-magenta':  'var(--neon-magenta)',
+                        'neon-yellow':   'var(--neon-yellow)',
+                        'menu-item-bg-start': 'var(--menu-item-bg-start)',
+                        'menu-item-bg-end': 'var(--menu-item-bg-end)',
+                        'menu-item-active-bg-start': 'var(--menu-item-active-bg-start)',
+                        'menu-item-active-bg-end': 'var(--menu-item-active-bg-end)',
+                        'panel-shadow-outer': 'var(--panel-shadow-outer)',
+                        'panel-shadow-inset': 'var(--panel-shadow-inset)',
                     }
                 }
             }
         };
     </script>
     <style>
-        /* ── Original “.glass”, “.menu-item”, and “.floating-module” rules ───────── */
-        .glass {
-            background: rgba(28, 37, 38, 0.8);
-            border: none;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(0,255,255,0.4);
+        /* Define CSS Variables for Light Mode (default) */
+        :root {
+            --bg-primary: #ecf0f3; /* Light gray background */
+            --text-default: #333333; /* Dark text */
+            --bg-glass: rgba(236, 240, 243, 0.8); /* Light glass background */
+            --shadow-outer-dark: rgba(174,174,192,0.4); /* Dark shadow for light neumorphism */
+            --shadow-outer-light: rgba(255,255,255,0.7); /* Light shadow for light neumorphism */
+            --shadow-inset-dark: rgba(255,255,255,0.7); /* Inset light highlight */
+            --shadow-inset-light: rgba(174,174,192,0.4); /* Inset dark shadow */
+
+            --neon-cyan: #00A3A0; /* Slightly darker cyan for readability on light */
+            --neon-magenta: #CC00CC; /* Slightly darker magenta */
+            --neon-yellow: #CCCC00; /* Slightly darker yellow */
+
+            --menu-item-bg-start: rgba(0,0,0,0.05); /* Very subtle dark overlay */
+            --menu-item-bg-end: rgba(0,0,0,0.01);
+            --menu-item-shadow-1: rgba(0,0,0,0.1);
+            --menu-item-shadow-2: rgba(255,255,255,0.8);
+
+            --menu-item-active-bg-start: rgba(255,255,0,0.1);
+            --menu-item-active-bg-end: rgba(255,255,0,0.05);
+
+            --panel-shadow-outer: 0 8px 25px rgba(0,0,0,0.1);
+            --panel-shadow-inset: inset 0 0 15px rgba(0,0,0,0.05);
+            --panel-border: none;
         }
+
+        /* Dark Mode overrides */
+        .dark {
+            --bg-primary: #1C2526; /* Deep dark gray background */
+            --text-default: #FFFFFF; /* White text */
+            --bg-glass: rgba(28, 37, 38, 0.8); /* Dark glass background */
+            --shadow-outer-dark: rgba(0,0,0,0.7); /* Dark shadow for dark neumorphism */
+            --shadow-outer-light: rgba(255,255,255,0.1); /* Light shadow for dark neumorphism (subtle) */
+            --shadow-inset-dark: rgba(0,255,255,0.4); /* Neon inner glow */
+            --shadow-inset-light: rgba(0,0,0,0.3); /* Inset dark shadow */
+
+            --neon-cyan: #00FFFF;
+            --neon-magenta: #FF00FF;
+            --neon-yellow: #FFFF00;
+
+            --menu-item-bg-start: rgba(255,255,255,0.1);
+            --menu-item-bg-end: rgba(255,255,255,0.03);
+            --menu-item-shadow-1: rgba(0,0,0,0.3);
+            --menu-item-shadow-2: rgba(255,255,255,0.1);
+
+            --menu-item-active-bg-start: rgba(255,255,0,0.3);
+            --menu-item-active-bg-end: rgba(255,255,0,0.15);
+
+            --panel-shadow-outer: 0 8px 25px rgba(0,0,0,0.7);
+            --panel-shadow-inset: inset 0 0 15px var(--neon-cyan); /* Use neon glow for dark glass */
+            --panel-border: none;
+        }
+
+        /* ── Apply variables to main elements ── */
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-default);
+            transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for theme change */
+        }
+
+        .glass {
+            background: var(--bg-glass);
+            border: var(--panel-border);
+            box-shadow: var(--panel-shadow-outer), var(--panel-shadow-inset);
+            backdrop-filter: blur(10px); /* Glass effect */
+            -webkit-backdrop-filter: blur(10px);
+        }
+        @supports not (backdrop-filter: blur(10px)) {
+            .glass {
+                /* Fallback for browsers not supporting backdrop-filter */
+                background: var(--bg-primary); /* Just the transparent background */
+            }
+            .dark .glass {
+                 /* Fallback for dark mode */
+                 background: var(--bg-primary);
+            }
+        }
+
         .menu-item {
-            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+            background: linear-gradient(145deg, var(--menu-item-bg-start), var(--menu-item-bg-end));
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            /* Neumorphic shadows for a raised effect */
+            box-shadow: 6px 6px 12px var(--menu-item-shadow-1), -6px -6px 12px var(--menu-item-shadow-2);
+            transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.1s ease;
         }
         .menu-item.active {
-            background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15));
+            background: linear-gradient(145deg, var(--menu-item-active-bg-start), var(--menu-item-active-bg-end));
+            /* Inset shadow for a "pressed" effect on active state */
+            box-shadow: inset 3px 3px 6px var(--menu-item-shadow-1), inset -3px -3px 6px var(--menu-item-shadow-2);
+        }
+        /* Neumorphic press effect for menu items */
+        .menu-item:not(.active):hover {
+            transform: translateY(-2px); /* Slight lift on hover */
+            box-shadow: 8px 8px 16px var(--menu-item-shadow-1), -8px -8px 16px var(--menu-item-shadow-2); /* More prominent hover shadow */
+        }
+        .menu-item:not(.active):active {
+            transform: translateY(1px); /* Slight sink on click */
+            box-shadow: inset 3px 3px 6px var(--menu-item-shadow-1), inset -3px -3px 6px var(--menu-item-shadow-2); /* Inset shadow for pressed state */
         }
 
         /* ── ADJUSTED: `.floating-module` for proper "floating" within its parent container ── */
@@ -127,18 +197,16 @@ if (!$db) {
             right: 1rem;  /* Aligns with padding of its parent */
             bottom: 1rem; /* Aligns with padding of its parent */
             z-index: 20; /* Ensures it's above other module content */
-            background: rgba(28,37,38,0.9);
+            background: var(--bg-glass); /* Use glass base color */
             border-radius: 8px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2);
+            /* Neumorphic/Glassmorphic shadow for the float, using yellow neon for its glow */
+            box-shadow: var(--panel-shadow-outer), inset 0 0 15px var(--neon-yellow);
             padding: 1.5rem; /* Internal padding for the module's content */
             overflow-y: auto;
             box-sizing: border-box; /* Crucial for including padding in total size */
-        }
-
-        @supports not (backdrop-filter: blur(10px)) {
-            .glass {
-                background: rgba(28,37,38,1);
-            }
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
 
         /* ── Styles for the overall main content area ── */
@@ -146,41 +214,90 @@ if (!$db) {
             position: relative; /* Crucial for positioning absolute children (if any directly inside main) */
             overflow-x: hidden; /* Prevent horizontal scroll from padding etc. */
             box-sizing: border-box;
-            /* overflow-y: auto; removed from here; let inner divs handle their own scrolling */
         }
 
-        /* ── NEW: Styles for the 20% static dashboard section ── */
+        /* ── Styles for the 20% static dashboard section ── */
         .dashboard-static-20 {
             height: 20%; /* Takes 20% of its flex parent's height */
             flex-shrink: 0; /* Prevents it from shrinking */
             overflow-y: auto; /* Allows internal scrolling if content overflows */
         }
 
-        /* ── NEW: Styles for the 80% dynamic module section ── */
+        /* ── Styles for the 80% dynamic module section ── */
         .module-area-80 {
             /* flex-1 from Tailwind will make it take remaining height */
             position: relative; /* Crucial for `.floating-module` to position itself correctly within this area */
             overflow-y: auto; /* Allows internal scrolling for module content */
         }
+
+        /* Neon text colors using variables */
+        .text-cyan-neon { color: var(--neon-cyan); }
+        .text-magenta-neon { color: var(--neon-magenta); }
+        .text-yellow-neon { color: var(--neon-yellow); }
+
+        /* Additional neumorphic styling for form elements (e.g., select) */
+        select {
+            background-color: var(--bg-glass);
+            border: none;
+            box-shadow: inset 2px 2px 5px var(--shadow-inset-light), inset -3px -3px 5px var(--shadow-inset-dark);
+            color: var(--text-default);
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+        }
+        select:focus {
+            outline: none;
+            box-shadow: inset 2px 2px 5px var(--shadow-inset-light), inset -3px -3px 5px var(--shadow-inset-dark), 0 0 0 2px var(--neon-cyan);
+        }
+
+        /* Theme toggle button styling */
+        #theme-toggle {
+            background-color: var(--bg-glass); /* Glass background for toggle */
+            border-radius: 9999px; /* Make it perfectly round */
+            width: 2.5rem; /* Fixed width and height for a button */
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Neumorphic shadow for the button */
+            box-shadow: 3px 3px 6px var(--menu-item-shadow-1), -3px -3px 6px var(--menu-item-shadow-2);
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.1s ease;
+            color: var(--neon-yellow); /* Icon color */
+        }
+        #theme-toggle:hover {
+            transform: translateY(-1px);
+            box-shadow: 4px 4px 8px var(--menu-item-shadow-1), -4px -4px 8px var(--menu-item-shadow-2);
+        }
+        #theme-toggle:active {
+            transform: translateY(0);
+            box-shadow: inset 2px 2px 5px var(--menu-item-shadow-1), inset -2px -2px 5px var(--menu-item-shadow-2);
+        }
     </style>
 </head>
-<body class="bg-black-smoke text-white min-h-screen font-sans flex flex-col">
-    <header class="glass p-4 fixed w-full top-0 z-10 h-16">
-        <div class="flex justify-between items-center">
-            <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
-            <div>
-                <form method="POST" action="" class="inline">
-                    <select name="role" onchange="this.form.submit()" class="bg-black-smoke text-white p-2 rounded">
-                        <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
-                            <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
-                                <?php echo $r; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </form>
-                <a href="logout.php" class="ml-4 text-magenta-neon">Logout</a>
-                <a href="?reset"    class="ml-4 text-yellow-neon">Reset Setup</a>
-            </div>
+<body class="min-h-screen font-sans flex flex-col">
+    <header class="glass p-4 fixed w-full top-0 z-10 h-16 flex justify-between items-center">
+        <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
+        <div class="flex items-center space-x-4">
+            <form method="POST" action="" class="inline">
+                <select name="role" onchange="this.form.submit()">
+                    <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
+                        <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
+                            <?php echo $r; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            <a href="logout.php" class="text-magenta-neon hover:text-magenta-400 transition-colors">Logout</a>
+            <a href="?reset"    class="text-yellow-neon hover:text-yellow-400 transition-colors">Reset Setup</a>
+            <button id="theme-toggle">
+                <svg id="moon-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                </svg>
+                <svg id="sun-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h1M4 12H3m15.354 5.354l-.707.707M6.346 6.346l-.707-.707m12.728 0l-.707-.707M6.346 17.654l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </button>
         </div>
     </header>
 
@@ -191,13 +308,15 @@ if (!$db) {
                     <?php foreach ($accessible_modules as $module => $key): ?>
                         <li>
                             <a href="?module=<?php echo $module; ?>"
-                               class="flex items-center p-2 text-gray-300 rounded-lg menu-item <?php echo $current_module === $module ? 'active text-yellow-neon' : ''; ?>">
+                               class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === $module ? 'active' : ''; ?>">
                                 <?php
+                                    // Icons array - using heroicons path data for simplicity
                                     $icons = [
-                                        'users'        => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5a4 4 0 110 5.4M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.2M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>',
-                                        'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 01-2-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
-                                        'lock-closed'  => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1 3.5-1 6.8-2.8 9.5m-3.4-2l.1-.1A14 14 0 008 11a4 4 0 118 0c0 1-.1 2-.2 3m-2.1 6.8A22 22 0 0015 17m3.8 1.1c.7-2.2 1-4.7 1-7A8 8 0 008 4M3 15.4c.6-1.3 1-2.8 2-4.4m1 3.4a3 3 0 013-3m0 3.4a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>',
-                                        'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-2.3 3-.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c-.9 1.5-.8 3.4-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4-1-1-2.6 0-2 1 0c-1.4 1.8 1.9 2.4-2.3-.9-.5-2.3 0-2.6-1.1z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
+                                        'users'        => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h2v-2a6 6 0 00-6-6H9a6 6 0 00-6 6v2H5m11-9a4 4 0 10-8 0 4 4 0 008 0z"></path></svg>', // Adjusted users icon
+                                        'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
+                                        'lock-closed'  => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>', // Adjusted lock icon
+                                        'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>', // Adjusted wrench icon
+                                        'home'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>' // Basic home icon
                                     ];
                                 echo $icons[$key['icon']] ?? '';
                                 ?>
@@ -208,18 +327,24 @@ if (!$db) {
                 </ul>
             </nav>
             <div class="mt-auto">
-                <?php include_once BASE_PATH . 'modules/status.php'; ?>
+                <?php
+                // Placeholder for status module content.
+                // In a real application, you'd include the actual status.php file here.
+                // For this example, we'll just show a placeholder.
+                echo '<div class="glass p-4 rounded-lg mt-4 text-sm text-center">';
+                echo '<h3 class="text-md text-yellow-neon mb-2">System Status</h3>';
+                echo '<p>All systems <span class="text-cyan-neon font-bold">Online</span></p>';
+                echo '<p>Role: <span class="font-semibold text-yellow-neon">' . htmlspecialchars($role) . '</span></p>';
+                echo '</div>';
+                ?>
             </div>
         </aside>
 
         <main class="glass flex-1 p-4 ml-64 flex flex-col">
-            <div class="dashboard-static-20 glass p-4 mb-4"> <h2 class="text-xl text-teal-custom mb-4">MPSM Overview</h2>
+            <div class="dashboard-static-20 glass p-4 mb-4">
+                <h2 class="text-xl text-cyan-neon mb-4">MPSM Overview</h2>
                 <p>This is a static summary section for key dashboard information. It occupies 20% of the available vertical space in the main content area.</p>
-                <?php
-                    // Example: if you had a separate file for just static overview, e.g., modules/dashboard_overview.php
-                    // include BASE_PATH . 'modules/dashboard_overview.php';
-                ?>
-            </div>
+                </div>
 
             <div class="module-area-80 relative flex-1 p-4">
                 <?php
@@ -240,5 +365,49 @@ if (!$db) {
             </div>
         </main>
     </div>
+
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement; // Target the <html> element for theme class
+
+        // Function to set the theme
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.classList.add('dark');
+                // Ensure correct icon is shown based on current theme state
+                document.getElementById('moon-icon').style.display = 'inline-block';
+                document.getElementById('sun-icon').style.display = 'none';
+            } else {
+                htmlElement.classList.remove('dark');
+                // Ensure correct icon is shown based on current theme state
+                document.getElementById('moon-icon').style.display = 'none';
+                document.getElementById('sun-icon').style.display = 'inline-block';
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        // Get stored theme or default to system preference
+        const storedTheme = localStorage.getItem('theme');
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const initialTheme = storedTheme || systemTheme; // Use stored, else system
+
+        // Apply initial theme
+        setTheme(initialTheme);
+
+        // Add event listener to toggle button
+        themeToggle.addEventListener('click', () => {
+            // Check the current theme based on the class on the html element
+            const currentTheme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        });
+
+        // Listen for system theme changes (if no stored preference)
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) { // Only update if no explicit user preference
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    </script>
 </body>
 </html>
