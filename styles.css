@@ -19,7 +19,7 @@
 
     /* Neumorphic Shadow Mixins for easier use */
     --shadow-neumorphic-light: 6px 6px 12px var(--shadow-outer-dark), -6px -6px 12px var(--shadow-outer-light);
-    --shadow-neumorphic-dark: 6px 6px 12px rgba(0,0,0,0.5), -6px -6px 12px rgba(255,255,255,0.1);
+    --shadow-neumorphic-dark: 6px 6px 12px rgba(0,0,0,0.5), -6px -6px 12px rgba(255,255,255,0.1); /* Adjusted for dark mode default */
     --shadow-neumorphic-inset-light: inset 2px 2px 5px var(--shadow-inset-light), inset -3px -3px 5px var(--shadow-inset-dark);
     --shadow-neumorphic-inset-dark: inset 2px 2px 5px rgba(0,0,0,0.5), inset -3px -3px 5px rgba(255,255,255,0.1);
 
@@ -69,38 +69,40 @@ body {
     color: var(--text-default);
     transition: background-color 0.3s ease, color 0.3s ease;
     min-height: 100vh; /* Ensure body takes full viewport height */
-    display: flex; /* Use flex to center the dashboard layout if it's smaller than viewport */
-    justify-content: center;
-    align-items: center;
+    /* Changed to direct grid for full width */
+    display: grid;
+    grid-template-columns: 250px 1fr; /* Fixed sidebar, rest for main content */
+    gap: 0; /* Remove gap from body level, manage within dashboard-layout if needed */
+    overflow: hidden; /* Prevent body scrollbars */
 }
 
 /* --- Layout Specific Styles --- */
 .dashboard-layout {
+    /* This now acts as the direct content of the body grid */
+    grid-column: 1 / -1; /* Span entire grid width */
     display: grid;
-    /* Define two columns: fixed width sidebar, rest for main content */
-    grid-template-columns: 250px 1fr; /* Adjust 250px as needed for your sidebar width */
-    width: 100%;
-    max-width: 1400px; /* Max width for the entire dashboard */
-    height: 90vh; /* Make dashboard take most of the viewport height */
-    max-height: 900px; /* Max height for the entire dashboard */
+    grid-template-columns: inherit; /* Inherit grid columns from body */
+    height: 100vh; /* Take full viewport height */
     gap: 20px; /* Space between sidebar and main content */
     padding: 20px; /* Padding around the entire layout */
     overflow: hidden; /* Hide overflow if content exceeds */
 }
 
 .sidebar {
-    background-color: var(--bg-primary); /* Should match body or be slightly different */
+    grid-column: 1; /* Place in the first column */
+    background-color: var(--bg-primary);
     border-radius: 12px;
     box-shadow: var(--shadow-neumorphic-dark); /* Apply neumorphic shadow */
     padding: 20px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: flex-start; /* Align content to start */
     align-items: flex-start;
     overflow-y: auto; /* Enable scrolling for long menus */
 }
 
 .main-content {
+    grid-column: 2; /* Place in the second column */
     display: flex;
     flex-direction: column;
     background-color: var(--bg-primary);
@@ -110,29 +112,74 @@ body {
 }
 
 .top-header {
-    background-color: var(--bg-primary); /* Should match main-content or be slightly different */
-    border-radius: 12px; /* Adjusted to fit within main-content */
+    background-color: var(--bg-primary);
+    border-radius: 12px;
     box-shadow: var(--shadow-neumorphic-dark);
-    margin-bottom: 20px; /* Space below header */
+    margin-bottom: 20px;
     padding: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-shrink: 0; /* Prevent header from shrinking */
+    flex-shrink: 0;
 }
 
-.module-content {
+.dashboard-fixed-section {
+    flex-shrink: 0; /* Prevent dashboard from shrinking */
+    margin-bottom: 20px; /* Space below dashboard section */
+    /* Ensure padding is consistent with modules */
     padding: 20px;
-    flex-grow: 1; /* Allow content to take remaining space */
+}
+
+.other-modules-content {
+    flex-grow: 1; /* Allow other modules area to take remaining space */
     overflow-y: auto; /* Enable scrolling for module content */
-    background-color: var(--bg-primary); /* Ensure background is consistent */
+    background-color: var(--bg-primary);
+    padding: 20px; /* Padding inside the module content area */
+}
+
+/* Access Denied Container (for login page) */
+.access-denied-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-primary); /* Ensure it matches body background */
+}
+
+/* Sidebar Status Container (to push status to bottom) */
+.sidebar-status-container {
+    margin-top: auto; /* Pushes element to the bottom of a flex container */
+    width: 100%; /* Ensure it spans full width of sidebar */
+}
+
+/* Theme Toggle Button */
+.theme-toggle-button {
+    background-color: var(--bg-primary); /* Matches parent background */
+    border: none;
+    border-radius: 50%; /* Make it round */
+    width: 40px; /* Fixed size */
+    height: 40px; /* Fixed size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.theme-toggle-button svg {
+    width: 24px; /* Icon size */
+    height: 24px;
+}
+
+.theme-toggle-button:hover {
+    box-shadow: var(--shadow-neumorphic-inset-dark); /* Inset on hover */
 }
 
 /* --- General Components / Neumorphic Styles --- */
 .glass {
     background-color: var(--bg-glass);
-    backdrop-filter: blur(10px); /* Apply blur effect */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for glass effect */
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .shadow-neumorphic-light {
@@ -177,7 +224,7 @@ button, input[type="submit"], select {
 }
 
 button:hover, input[type="submit"]:hover, select:hover {
-    box-shadow: var(--shadow-neumorphic-inset-dark); /* Inset on hover for neumorphic feel */
+    box-shadow: var(--shadow-neumorphic-inset-dark);
 }
 
 input[type="text"], input[type="password"], input[type="email"], textarea {
@@ -186,12 +233,12 @@ input[type="text"], input[type="password"], input[type="email"], textarea {
     border: none;
     border-radius: 8px;
     padding: 10px 15px;
-    box-shadow: var(--shadow-neumorphic-inset-dark); /* Inset for input fields */
-    outline: none; /* Remove default outline */
+    box-shadow: var(--shadow-neumorphic-inset-dark);
+    outline: none;
 }
 
 input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, textarea:focus {
-    box-shadow: var(--shadow-neumorphic-inset-dark), 0 0 5px var(--cyan-neon); /* Add neon glow on focus */
+    box-shadow: var(--shadow-neumorphic-inset-dark), 0 0 5px var(--cyan-neon);
 }
 
 
@@ -209,22 +256,22 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 }
 
 .menu-item:hover {
-    box-shadow: var(--shadow-neumorphic-inset-dark); /* Inset on hover */
-    color: var(--neon-cyan); /* Highlight text on hover */
+    box-shadow: var(--shadow-neumorphic-inset-dark);
+    color: var(--neon-cyan);
 }
 
 .menu-item.active {
-    background: linear-gradient(145deg, var(--neon-cyan), var(--blue-neon)); /* Neon gradient for active */
-    color: var(--bg-primary); /* Dark text on bright background */
-    box-shadow: var(--shadow-neumorphic-inset-dark), 0 0 15px var(--neon-cyan); /* Stronger glow for active */
+    background: linear-gradient(145deg, var(--neon-cyan), var(--blue-neon));
+    color: var(--bg-primary);
+    box-shadow: var(--shadow-neumorphic-inset-dark), 0 0 15px var(--neon-cyan);
     font-weight: bold;
 }
 
 /* Logout Button Specific Styling */
 .logout-button {
     background: linear-gradient(145deg, var(--red-neon), var(--magenta-neon));
-    color: white; /* Always white text on vibrant logout button */
-    margin-top: 20px; /* Space it out from other menu items */
+    color: white;
+    margin-top: 20px;
     text-align: center;
 }
 
@@ -238,12 +285,15 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 .mb-4 { margin-bottom: 1rem; }
 .mb-6 { margin-bottom: 1.5rem; }
 .mt-4 { margin-top: 1rem; }
+.mt-auto { margin-top: auto; } /* For pushing elements to bottom in flex column */
 .rounded-lg { border-radius: 0.5rem; }
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
+.flex-grow { flex-grow: 1; }
 .justify-between { justify-content: space-between; }
 .items-center { align-items: center; }
 .space-y-3 > * + * { margin-top: 0.75rem; }
+.space-x-4 > * + * { margin-left: 1rem; }
 .text-sm { font-size: 0.875rem; }
 .text-xl { font-size: 1.25rem; }
 .text-2xl { font-size: 1.5rem; }
@@ -253,11 +303,10 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 .w-full { width: 100%; }
 .min-h-screen { min-height: 100vh; }
 .justify-center { justify-content: center; }
-.items-center { align-items: center; }
+.align-center { align-items: center; } /* Adjusted from items-center for consistency */
 .text-center { text-align: center; }
 .mr-2 { margin-right: 0.5rem; }
 .ml-1 { margin-left: 0.25rem; }
-.space-x-4 > * + * { margin-left: 1rem; }
 .block { display: block; }
 .mb-1 { margin-bottom: 0.25rem; }
 .w-5 { width: 1.25rem; }
@@ -276,7 +325,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 .devtools-control-group {
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.1); /* Subtle separator */
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .devtools-control-group:last-of-type {
@@ -292,7 +341,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 }
 
 .devtools-row label {
-  flex-basis: 8rem; /* Fixed width for labels */
+  flex-basis: 8rem;
   flex-shrink: 0;
   color: var(--text-default);
 }
@@ -315,12 +364,12 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
   box-shadow:
     2px 2px 6px rgba(0,0,0,0.5),
     -2px -2px 6px rgba(255,255,255,0.1);
-  margin-top: -6px; /* Adjust thumb position */
+  margin-top: -6px;
 }
 
 .devtools-row input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: var(--fg-dark); /* Assuming fg-dark exists, if not, pick a color */
+  background: var(--fg-dark);
   border-radius: 2px;
 }
 
@@ -341,8 +390,8 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 .devtools-reset {
   align-self: flex-end;
   padding: 0.5rem 1rem;
-  background: var(--fg-dark); /* Assuming fg-dark exists */
-  color: var(--text-light); /* Assuming text-light exists */
+  background: var(--fg-dark);
+  color: var(--text-light);
   border: none;
   border-radius: 8px;
   box-shadow:
@@ -376,7 +425,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
     background: linear-gradient(145deg, var(--menu-item-active-bg-start), var(--menu-item-active-bg-end));
     box-shadow: 3px 3px 6px var(--menu-item-shadow-1), -3px -3px 6px var(--menu-item-shadow-2);
     transition: all 0.2s ease-in-out;
-    color: var(--text-default); /* Ensure text color adapts */
+    color: var(--text-default);
 }
 
 .devtools-button:hover {
@@ -384,8 +433,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
 }
 
 /* Fallback for missing theme variables if any */
-/* These ensure basic functionality even if devtools hasn't set custom vars */
 body {
-    --fg-dark: #333; /* A sensible default if not set by devtools */
-    --text-light: #eee; /* A sensible default if not set by devtools */
+    --fg-dark: #333;
+    --text-light: #eee;
 }

@@ -97,11 +97,11 @@ function get_accessible_modules($role_id, $user_id) {
     $accessible_modules = [];
 
     // Modules based on role permissions
-    // We join with `modules` table to ensure only active modules are considered
+    // Modified to include 'manage_permissions' for the 'permissions' module
     $stmt = $db->prepare("
         SELECT DISTINCT m.name
         FROM modules m
-        JOIN permissions p ON p.name = CONCAT('view_', m.name)
+        JOIN permissions p ON p.name = CONCAT('view_', m.name) OR (m.name = 'permissions' AND p.name = 'manage_permissions')
         JOIN role_permissions rp ON p.id = rp.permission_id
         WHERE rp.role_id = ? AND m.active = 1
     ");
@@ -118,10 +118,11 @@ function get_accessible_modules($role_id, $user_id) {
     $stmt->close();
 
     // Modules based on user-specific permissions (e.g., 'custom_access')
+    // Also modified for 'manage_permissions' on the 'permissions' module
     $stmt = $db->prepare("
         SELECT DISTINCT m.name
         FROM modules m
-        JOIN permissions p ON p.name = CONCAT('view_', m.name) OR p.name = 'custom_access'
+        JOIN permissions p ON p.name = CONCAT('view_', m.name) OR p.name = 'custom_access' OR (m.name = 'permissions' AND p.name = 'manage_permissions')
         JOIN user_permissions up ON p.id = up.permission_id
         WHERE up.user_id = ? AND m.active = 1
     ");
@@ -136,6 +137,9 @@ function get_accessible_modules($role_id, $user_id) {
         $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
     }
     $stmt->close();
+
+    // Sort accessible modules alphabetically for consistent display
+    ksort($accessible_modules);
 
     return array_unique($accessible_modules);
 }
