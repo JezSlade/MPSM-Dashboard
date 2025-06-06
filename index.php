@@ -56,6 +56,23 @@ if (!empty($current_module) && !array_key_exists($current_module, $accessible_mo
 $module_file = __DIR__ . '/modules/' . $current_module . '.php';
 $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Dashboard is always loaded in the top 20%
 $status_file = __DIR__ . '/modules/status.php'; // Status is always loaded in the sidebar
+
+// --- DEBUGGING OUTPUT START ---
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+// --- DEBUGGING OUTPUT END ---
+
 ?>
 
 <!DOCTYPE html>
@@ -169,7 +186,7 @@ $status_file = __DIR__ . '/modules/status.php'; // Status is always loaded in th
                 } else {
                     // Display a message when no specific module is loaded in this area
                     echo '<p class="text-default">Select a module from the sidebar to view its content here.</p>';
-                    // Optionally, if a module was requested but it's not accessible/found
+                    // Optionally, if a module was requested but it\'s not accessible/found
                     if (!empty($_GET['module']) && !array_key_exists($_GET['module'], $all_modules)) {
                         echo '<p class="text-yellow-neon mt-2">The requested module "' . htmlspecialchars($_GET['module']) . '" does not exist.</p>';
                     } else if (!empty($_GET['module']) && !array_key_exists($_GET['module'], $accessible_modules)) {
