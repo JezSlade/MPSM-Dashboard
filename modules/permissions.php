@@ -1,19 +1,23 @@
 <?php
-// modules/permissions.php
-
-// Include config.php to define SERVER_ROOT_PATH
-require_once SERVER_ROOT_PATH . 'config.php';
-
-// These includes are kept as per your original file.
 require_once SERVER_ROOT_PATH . 'db.php';
 require_once SERVER_ROOT_PATH . 'functions.php';
-
-global $db; // Ensure $db is accessible here
 
 if (!has_permission('manage_permissions')) {
     echo "<p class='text-red-500 p-4'>Access denied.</p>";
     exit;
 }
+
+// Define the mapping from permission names to module names
+$module_permissions = [
+    'view_dashboard' => 'Dashboard',
+    'view_customers' => 'Customers',
+    'view_devices' => 'Devices',
+    'manage_permissions' => 'Permissions', // Permission related to the Permissions module itself
+    'view_devtools' => 'DevTools',
+    'view_status' => 'Status',
+    // 'custom_access' is a general permission and will remain 'N/A' unless specifically mapped.
+];
+
 
 function get_active_modules() {
     global $db;
@@ -44,7 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param('s', $role_name);
             $stmt->execute();
             $stmt->close();
-            header("Location: index.php?module=permissions&success=Role added.");
+            header("Location: index.php?module=permissions&success=Role+added+successfully");
+            exit;
+        } elseif (isset($_POST['delete_role'])) {
+            $role_id = $_POST['role_id'];
+            $stmt = $db->prepare("DELETE FROM roles WHERE id = ?");
+            $stmt->bind_param('i', $role_id);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&success=Role+deleted+successfully");
             exit;
         } elseif (isset($_POST['add_permission'])) {
             $permission_name = trim($_POST['permission_name']);
@@ -55,376 +67,438 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param('s', $permission_name);
             $stmt->execute();
             $stmt->close();
-            header("Location: index.php?module=permissions&success=Permission added.");
+            header("Location: index.php?module=permissions&success=Permission+added+successfully");
             exit;
-        } elseif (isset($_POST['toggle_module_status'])) {
-            $module_name = $_POST['module_name'];
-            $new_status = $_POST['status'] == '1' ? 1 : 0;
-            $stmt = $db->prepare("UPDATE modules SET active = ? WHERE name = ?");
-            $stmt->bind_param('is', $new_status, $module_name);
+        } elseif (isset($_POST['delete_permission'])) {
+            $permission_id = $_POST['permission_id'];
+            $stmt = $db->prepare("DELETE FROM permissions WHERE id = ?");
+            $stmt->bind_param('i', $permission_id);
             $stmt->execute();
             $stmt->close();
-            header("Location: index.php?module=permissions&success=Module status updated.");
+            header("Location: index.php?module=permissions&success=Permission+deleted+successfully");
+            exit;
+        } elseif (isset($_POST['update_module_status'])) {
+            $module_name = $_POST['module_name'];
+            $active = isset($_POST['active']) ? 1 : 0;
+            $stmt = $db->prepare("UPDATE modules SET active = ? WHERE name = ?");
+            $stmt->bind_param('is', $active, $module_name);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=modules&success=Module+status+updated");
+            exit;
+        } elseif (isset($_POST['add_user'])) {
+            $username = trim($_POST['username']);
+            $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+            $role_id = $_POST['role_id'];
+
+            if (empty($username) || empty($password)) {
+                throw new Exception("Username and password are required.");
+            }
+
+            $stmt = $db->prepare("INSERT INTO users (username, password, role_id) VALUES (?, ?, ?)");
+            $stmt->bind_param('ssi', $username, $password, $role_id);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=users&success=User+added+successfully");
+            exit;
+        } elseif (isset($_POST['delete_user'])) {
+            $user_id = $_POST['user_id'];
+            $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
+            $stmt->bind_param('i', $user_id);
+            $stmt->execute();
+            $stmt->close();
+            header("Location: index.php?module=permissions&action=users&success=User+deleted+successfully");
             exit;
         } elseif (isset($_POST['assign_role_permissions'])) {
             $role_id = $_POST['role_id'];
-            $selected_permissions = $_POST['permissions'] ?? [];
+            $permission_ids = $_POST['permission_ids'] ?? [];
 
-            // Clear existing permissions for the role
+            $db->begin_transaction();
             $stmt = $db->prepare("DELETE FROM role_permissions WHERE role_id = ?");
             $stmt->bind_param('i', $role_id);
             $stmt->execute();
             $stmt->close();
 
-            // Insert new permissions
-            if (!empty($selected_permissions)) {
-                $insert_values = [];
-                $params = [];
-                $types = '';
-                foreach ($selected_permissions as $perm_id) {
-                    $insert_values[] = '(?, ?)';
-                    $params[] = $role_id;
-                    $params[] = $perm_id;
-                    $types .= 'ii';
+            if (!empty($permission_ids)) {
+                $sql = "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)";
+                $stmt = $db->prepare($sql);
+                foreach ($permission_ids as $perm_id) {
+                    $stmt->bind_param('ii', $role_id, $perm_id);
+                    $stmt->execute();
                 }
-                $stmt = $db->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES " . implode(', ', $insert_values));
-                $stmt->bind_param($types, ...$params);
-                $stmt->execute();
                 $stmt->close();
             }
-            header("Location: index.php?module=permissions&success=Role permissions updated.");
+            $db->commit();
+            header("Location: index.php?module=permissions&action=roles&success=Role+permissions+updated");
             exit;
-        } elseif (isset($_POST['assign_user_roles']) || isset($_POST['assign_custom_permissions'])) {
-            $user_id_to_manage = $_POST['user_id'];
+        } elseif (isset($_POST['assign_user_roles'])) {
+            $user_id = $_POST['user_id'];
+            $role_ids = $_POST['role_ids'] ?? [];
 
-            if (isset($_POST['assign_user_roles'])) {
-                $selected_roles = $_POST['user_roles'] ?? [];
+            $db->begin_transaction();
+            $stmt = $db->prepare("DELETE FROM user_roles WHERE user_id = ?");
+            $stmt->bind_param('i', $user_id);
+            $stmt->execute();
+            $stmt->close();
 
-                // Clear existing roles for the user
-                $stmt = $db->prepare("DELETE FROM user_roles WHERE user_id = ?");
-                $stmt->bind_param('i', $user_id_to_manage);
-                $stmt->execute();
-                $stmt->close();
-
-                // Insert new roles
-                if (!empty($selected_roles)) {
-                    $insert_values = [];
-                    $params = [];
-                    $types = '';
-                    foreach ($selected_roles as $role_id) {
-                        $insert_values[] = '(?, ?)';
-                        $params[] = $user_id_to_manage;
-                        $params[] = $role_id;
-                        $types .= 'ii';
-                    }
-                    $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES " . implode(', ', $insert_values));
-                    $stmt->bind_param($types, ...$params);
+            if (!empty($role_ids)) {
+                $sql = "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)";
+                $stmt = $db->prepare($sql);
+                foreach ($role_ids as $role_id) {
+                    $stmt->bind_param('ii', $user_id, $role_id);
                     $stmt->execute();
-                    $stmt->close();
-
-                    // Update primary role in users table (if applicable, e.g., to the first selected role)
-                    if (!empty($selected_roles)) {
-                        $primary_role_id = $selected_roles[0]; // Set the first role as primary
-                        $stmt = $db->prepare("UPDATE users SET role_id = ? WHERE id = ?");
-                        $stmt->bind_param('ii', $primary_role_id, $user_id_to_manage);
-                        $stmt->execute();
-                        $stmt->close();
-                    }
                 }
-                header("Location: index.php?module=permissions&action=manage_users&user_id=" . $user_id_to_manage . "&success=User roles updated.");
-                exit;
-
-            } elseif (isset($_POST['assign_custom_permissions'])) {
-                $selected_permissions = $_POST['custom_permissions'] ?? [];
-
-                // Clear existing custom permissions for the user
-                $stmt = $db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
-                $stmt->bind_param('i', $user_id_to_manage);
-                $stmt->execute();
                 $stmt->close();
-
-                // Insert new custom permissions
-                if (!empty($selected_permissions)) {
-                    $insert_values = [];
-                    $params = [];
-                    $types = '';
-                    foreach ($selected_permissions as $perm_id) {
-                        $insert_values[] = '(?, ?)';
-                        $params[] = $user_id_to_manage;
-                        $params[] = $perm_id;
-                        $types .= 'ii';
-                    }
-                    $stmt = $db->prepare("INSERT INTO user_permissions (user_id, permission_id) VALUES " . implode(', ', $insert_values));
-                    $stmt->bind_param($types, ...$params);
-                    $stmt->execute();
-                    $stmt->close();
-                }
-                header("Location: index.php?module=permissions&action=manage_users&user_id=" . $user_id_to_manage . "&success=Custom permissions updated.");
-                exit;
             }
-        }
+            $db->commit();
+            header("Location: index.php?module=permissions&action=users&success=User+roles+updated");
+            exit;
+        } elseif (isset($_POST['assign_custom_permissions'])) {
+            $user_id = $_POST['user_id'];
+            $custom_permission_ids = $_POST['custom_permissions'] ?? [];
 
+            $db->begin_transaction();
+            $stmt = $db->prepare("DELETE FROM user_permissions WHERE user_id = ?");
+            $stmt->bind_param('i', $user_id);
+            $stmt->execute();
+            $stmt->close();
+
+            if (!empty($custom_permission_ids)) {
+                $sql = "INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?)";
+                $stmt = $db->prepare($sql);
+                foreach ($custom_permission_ids as $perm_id) {
+                    $stmt->bind_param('ii', $user_id, $perm_id);
+                    $stmt->execute();
+                }
+                $stmt->close();
+            }
+            $db->commit();
+            header("Location: index.php?module=permissions&action=users&success=User+custom+permissions+updated");
+            exit;
+        }
     } catch (Exception $e) {
-        $error_message = $e->getMessage();
-        // Fallback to list view with error
-        header("Location: index.php?module=permissions&error=" . urlencode($error_message));
+        error_log("Permissions POST error: " . $e->getMessage());
+        header("Location: index.php?module=permissions&error=" . urlencode($e->getMessage()));
         exit;
     }
 }
 
 // Fetch data for display
-$roles = [];
-$result = $db->query("SELECT id, name FROM roles ORDER BY name");
-while ($row = $result->fetch_assoc()) {
-    $roles[] = $row;
-}
+$roles = $db->query("SELECT * FROM roles")->fetch_all(MYSQLI_ASSOC);
+$permissions = $db->query("SELECT * FROM permissions")->fetch_all(MYSQLI_ASSOC);
+$users = $db->query("SELECT * FROM users")->fetch_all(MYSQLI_ASSOC);
+$modules = $db->query("SELECT * FROM modules")->fetch_all(MYSQLI_ASSOC);
 
-$permissions = [];
-$result = $db->query("SELECT id, name FROM permissions ORDER BY name");
-while ($row = $result->fetch_assoc()) {
-    $permissions[] = $row;
-}
+$all_permissions = $db->query("SELECT id, name FROM permissions")->fetch_all(MYSQLI_ASSOC);
 
-$modules = [];
-$result = $db->query("SELECT id, name, active FROM modules ORDER BY name");
-while ($row = $result->fetch_assoc()) {
-    $modules[] = $row;
-}
 
-// For Role Permissions Management
-$role_permissions = []; // role_id => [permission_id1, permission_id2]
-$result = $db->query("SELECT role_id, permission_id FROM role_permissions");
-while ($row = $result->fetch_assoc()) {
-    $role_permissions[$row['role_id']][] = $row['permission_id'];
-}
-
-// For User Management
-$users = [];
-$result = $db->query("SELECT u.id, u.username, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.username");
-while ($row = $result->fetch_assoc()) {
-    $users[] = $row;
-}
-
-$available_roles = $roles; // All roles for user assignment
-$available_permissions = $permissions; // All permissions for custom assignment
-
-$user_to_manage = null;
-if ($action === 'manage_users' && isset($_GET['user_id'])) {
-    $user_id_param = $_GET['user_id'];
-    $stmt = $db->prepare("SELECT id, username, role_id FROM users WHERE id = ?");
-    $stmt->bind_param('i', $user_id_param);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $user_to_manage = $result->fetch_assoc();
-
-    if ($user_to_manage) {
-        // Fetch roles assigned to this specific user
-        $user_roles_ids = [];
-        $stmt_roles = $db->prepare("SELECT role_id FROM user_roles WHERE user_id = ?");
-        $stmt_roles->bind_param('i', $user_to_manage['id']);
-        $stmt_roles->execute();
-        $result_roles = $stmt_roles->get_result();
-        while ($row_role = $result_roles->fetch_assoc()) {
-            $user_roles_ids[] = $row_role['role_id'];
-        }
-
-        // Fetch custom permissions assigned to this specific user
-        $user_perm_ids = [];
-        $module_permissions = []; // To map permission name to module name
-        $stmt_perms = $db->prepare("SELECT p.id, p.name FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?");
-        $stmt_perms->bind_param('i', $user_to_manage['id']);
-        $stmt_perms->execute();
-        $result_perms = $stmt_perms->get_result();
-        while ($row_perm = $result_perms->fetch_assoc()) {
-            $user_perm_ids[] = $row_perm['id'];
-            // Attempt to link permissions to modules for better context (optional)
-            foreach ($active_modules as $module_name) {
-                if (str_starts_with($row_perm['name'], 'view_' . $module_name)) {
-                    $module_permissions[$row_perm['name']] = $module_name;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-$success_message = $_GET['success'] ?? '';
-$error_message = $_GET['error'] ?? '';
+// Get roles and permissions for display in forms
+$available_roles = $db->query("SELECT id, name FROM roles")->fetch_all(MYSQLI_ASSOC);
+$available_permissions = $db->query("SELECT id, name FROM permissions")->fetch_all(MYSQLI_ASSOC);
 
 ?>
 
-<div class="floating-module p-6">
+<div class="glass p-6 rounded-lg shadow-neumorphic-dark">
     <h2 class="text-2xl text-cyan-neon mb-6">Permissions Management</h2>
 
-    <?php if ($success_message): ?>
-        <p class="text-green-500 mb-4"><?php echo htmlspecialchars($success_message); ?></p>
+    <?php if (isset($_GET['success'])): ?>
+        <p class="text-green-500 mb-4"><?php echo htmlspecialchars($_GET['success']); ?></p>
     <?php endif; ?>
-    <?php if ($error_message): ?>
-        <p class="text-red-500 mb-4"><?php echo htmlspecialchars($error_message); ?></p>
+    <?php if (isset($_GET['error'])): ?>
+        <p class="text-red-500 mb-4"><?php echo htmlspecialchars($_GET['error']); ?></p>
     <?php endif; ?>
 
-    <div class="tabs mb-4">
-        <a href="?module=permissions&action=list" class="tab-button <?php echo $action === 'list' ? 'active' : ''; ?>">Overview</a>
-        <a href="?module=permissions&action=roles" class="tab-button <?php echo $action === 'roles' ? 'active' : ''; ?>">Manage Roles</a>
-        <a href="?module=permissions&action=permissions" class="tab-button <?php echo $action === 'permissions' ? 'active' : ''; ?>">Manage Permissions</a>
-        <a href="?module=permissions&action=modules" class="tab-button <?php echo $action === 'modules' ? 'active' : ''; ?>">Manage Modules</a>
-        <a href="?module=permissions&action=manage_users" class="tab-button <?php echo $action === 'manage_users' ? 'active' : ''; ?>">Manage Users</a>
+    <div class="flex space-x-4 mb-6">
+        <a href="?module=permissions&action=list" class="btn-primary <?php echo $action === 'list' ? 'active' : ''; ?>">Overview</a>
+        <a href="?module=permissions&action=roles" class="btn-primary <?php echo $action === 'roles' ? 'active' : ''; ?>">Roles</a>
+        <a href="?module=permissions&action=permissions" class="btn-primary <?php echo $action === 'permissions' ? 'active' : ''; ?>">Permissions</a>
+        <a href="?module=permissions&action=users" class="btn-primary <?php echo $action === 'users' ? 'active' : ''; ?>">Users</a>
+        <a href="?module=permissions&action=modules" class="btn-primary <?php echo $action === 'modules' ? 'active' : ''; ?>">Modules</a>
     </div>
 
     <?php if ($action === 'list'): ?>
-        <h3 class="text-xl text-yellow-neon mb-4">Current Roles & Permissions Summary</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="glass p-4 rounded-lg">
-                <h4 class="font-semibold text-lg text-teal-custom mb-2">Roles</h4>
-                <ul class="list-disc ml-5">
-                    <?php foreach ($roles as $role): ?>
-                        <li><?php echo htmlspecialchars($role['name']); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <div class="glass p-4 rounded-lg">
-                <h4 class="font-semibold text-lg text-teal-custom mb-2">Permissions</h4>
-                <ul class="list-disc ml-5">
-                    <?php foreach ($permissions as $permission): ?>
-                        <li><?php echo htmlspecialchars($permission['name']); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <div class="glass p-4 rounded-lg">
-                <h4 class="font-semibold text-lg text-teal-custom mb-2">Active Modules</h4>
-                <ul class="list-disc ml-5">
-                    <?php foreach ($modules as $module): ?>
-                        <?php if ($module['active']): ?>
-                            <li><?php echo htmlspecialchars($module['name']); ?></li>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        </div>
+        <h3 class="text-xl text-yellow-neon mb-4">System Overview</h3>
+        <p class="text-default">Manage roles, permissions, users, and module visibility within the system.</p>
 
     <?php elseif ($action === 'roles'): ?>
-        <h3 class="text-xl text-yellow-neon mb-4">Manage Roles and Role Permissions</h3>
-
-        <div class="glass p-4 rounded-lg mb-6">
-            <h4 class="font-semibold text-lg text-teal-custom mb-2">Add New Role</h4>
-            <form method="POST" action="?module=permissions&action=roles" class="flex flex-col space-y-4">
-                <input type="text" name="role_name" placeholder="New Role Name" required class="input-field">
-                <button type="submit" name="add_role" class="btn btn-primary">Add Role</button>
+        <h3 class="text-xl text-yellow-neon mb-4">Manage Roles</h3>
+        <div class="mb-6">
+            <h4 class="text-lg text-default mb-2">Add New Role</h4>
+            <form method="POST" class="flex space-x-2 items-center">
+                <input type="text" name="role_name" placeholder="Role Name" required class="flex-1 max-w-xs p-2 bg-black-smoke text-white rounded border border-gray-700">
+                <button type="submit" name="add_role" class="btn-secondary">Add Role</button>
             </form>
         </div>
 
-        <div class="glass p-4 rounded-lg">
-            <h4 class="font-semibold text-lg text-teal-custom mb-2">Assign Permissions to Roles</h4>
-            <?php foreach ($roles as $role): ?>
-                <div class="mb-4 p-3 rounded-lg bg-black-smoke">
-                    <h5 class="font-semibold text-lg text-orange-neon mb-2"><?php echo htmlspecialchars($role['name']); ?></h5>
-                    <form method="POST" action="?module=permissions&action=roles">
-                        <input type="hidden" name="role_id" value="<?php echo $role['id']; ?>">
-                        <select name="permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
-                            <?php
-                            $current_role_permissions = $role_permissions[$role['id']] ?? [];
-                            foreach ($permissions as $permission):
-                            ?>
-                                <option value="<?php echo $permission['id']; ?>"
-                                    <?php echo in_array($permission['id'], $current_role_permissions) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($permission['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button type="submit" name="assign_role_permissions" class="btn btn-primary mt-3">Save Permissions</button>
-                    </form>
-                </div>
-            <?php endforeach; ?>
+        <h4 class="text-lg text-default mb-2">Existing Roles</h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left table-auto">
+                <thead>
+                    <tr class="bg-gray-800">
+                        <th class="p-2">ID</th>
+                        <th class="p-2">Name</th>
+                        <th class="p-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($roles as $role): ?>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2"><?php echo htmlspecialchars($role['id']); ?></td>
+                            <td class="p-2"><?php echo htmlspecialchars($role['name']); ?></td>
+                            <td class="p-2">
+                                <form method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this role and its associated permissions and user roles?');">
+                                    <input type="hidden" name="role_id" value="<?php echo $role['id']; ?>">
+                                    <button type="submit" name="delete_role" class="text-red-500 hover:text-red-700 text-sm">Delete</button>
+                                </form>
+                                <a href="?module=permissions&action=assign_role_permissions&role_id=<?php echo $role['id']; ?>" class="text-blue-500 hover:text-blue-700 text-sm ml-2">Assign Permissions</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
+
+    <?php elseif ($action === 'assign_role_permissions' && isset($_GET['role_id'])):
+        $role_id = (int)$_GET['role_id'];
+        $role_name_stmt = $db->prepare("SELECT name FROM roles WHERE id = ?");
+        $role_name_stmt->bind_param('i', $role_id);
+        $role_name_stmt->execute();
+        $result_role_name = $role_name_stmt->get_result();
+        $current_role = $result_role_name->fetch_assoc();
+        $role_name_stmt->close();
+
+        if ($current_role):
+            $assigned_permissions = $db->prepare("SELECT permission_id FROM role_permissions WHERE role_id = ?");
+            $assigned_permissions->bind_param('i', $role_id);
+            $assigned_permissions->execute();
+            $result_assigned_perms = $assigned_permissions->get_result();
+            $current_perm_ids = [];
+            while($row = $result_assigned_perms->fetch_assoc()) {
+                $current_perm_ids[] = $row['permission_id'];
+            }
+            $assigned_permissions->close();
+        ?>
+            <h3 class="text-xl text-yellow-neon mb-4">Assign Permissions for Role: <?php echo htmlspecialchars($current_role['name']); ?></h3>
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="role_id" value="<?php echo $role_id; ?>">
+                <div>
+                    <label for="permission_ids" class="block text-gray-300 mb-1">Select Permissions:</label>
+                    <select id="permission_ids" name="permission_ids[]" multiple size="10" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                        <?php foreach ($available_permissions as $perm): ?>
+                            <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $current_perm_ids) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" name="assign_role_permissions" class="btn-secondary">Save Permissions</button>
+            </form>
+        <?php else: ?>
+            <p class="text-red-500">Role not found.</p>
+        <?php endif; ?>
 
     <?php elseif ($action === 'permissions'): ?>
-        <h3 class="text-xl text-yellow-neon mb-4">Manage Global Permissions</h3>
-        <div class="glass p-4 rounded-lg mb-6">
-            <h4 class="font-semibold text-lg text-teal-custom mb-2">Add New Permission</h4>
-            <form method="POST" action="?module=permissions&action=permissions" class="flex flex-col space-y-4">
-                <input type="text" name="permission_name" placeholder="New Permission Name (e.g., edit_users)" required class="input-field">
-                <button type="submit" name="add_permission" class="btn btn-primary">Add Permission</button>
+        <h3 class="text-xl text-yellow-neon mb-4">Manage Permissions</h3>
+        <div class="mb-6">
+            <h4 class="text-lg text-default mb-2">Add New Permission</h4>
+            <form method="POST" class="flex space-x-2 items-center">
+                <input type="text" name="permission_name" placeholder="Permission Name" required class="flex-1 max-w-xs p-2 bg-black-smoke text-white rounded border border-gray-700">
+                <button type="submit" name="add_permission" class="btn-secondary">Add Permission</button>
             </form>
         </div>
-        <div class="glass p-4 rounded-lg">
-            <h4 class="font-semibold text-lg text-teal-custom mb-2">Existing Permissions</h4>
-            <ul class="list-disc ml-5">
-                <?php foreach ($permissions as $permission): ?>
-                    <li><?php echo htmlspecialchars($permission['name']); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
 
-    <?php elseif ($action === 'modules'): ?>
-        <h3 class="text-xl text-yellow-neon mb-4">Manage Module Visibility</h3>
-        <div class="glass p-4 rounded-lg">
-            <?php foreach ($modules as $module): ?>
-                <div class="flex items-center justify-between p-2 mb-2 bg-black-smoke rounded">
-                    <span><?php echo htmlspecialchars(ucwords($module['name'])); ?></span>
-                    <form method="POST" action="?module=permissions&action=modules">
-                        <input type="hidden" name="module_name" value="<?php echo htmlspecialchars($module['name']); ?>">
-                        <select name="status" onchange="this.form.submit()" class="select-field">
-                            <option value="1" <?php echo $module['active'] ? 'selected' : ''; ?>>Active</option>
-                            <option value="0" <?php echo !$module['active'] ? 'selected' : ''; ?>>Inactive</option>
-                        </select>
-                        <noscript><button type="submit" name="toggle_module_status" class="btn btn-primary ml-2">Update</button></noscript>
-                    </form>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-    <?php elseif ($action === 'manage_users'): ?>
-        <h3 class="text-xl text-yellow-neon mb-4">Manage User Roles & Custom Permissions</h3>
-
-        <div class="glass p-4 rounded-lg mb-6">
-            <h4 class="font-semibold text-lg text-teal-custom mb-2">Select User to Manage</h4>
-            <form method="GET" action="">
-                <input type="hidden" name="module" value="permissions">
-                <input type="hidden" name="action" value="manage_users">
-                <select name="user_id" onchange="this.form.submit()" class="select-field">
-                    <option value="">-- Select a User --</option>
-                    <?php foreach ($users as $user): ?>
-                        <option value="<?php echo $user['id']; ?>" <?php echo ($user_to_manage['id'] ?? '') == $user['id'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($user['username']); ?> (<?php echo htmlspecialchars($user['role_name']); ?>)
-                        </option>
+        <h4 class="text-lg text-default mb-2">Existing Permissions</h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left table-auto">
+                <thead>
+                    <tr class="bg-gray-800">
+                        <th class="p-2">ID</th>
+                        <th class="p-2">Name</th>
+                        <th class="p-2">Module</th> <th class="p-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($permissions as $perm): ?>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2"><?php echo htmlspecialchars($perm['id']); ?></td>
+                            <td class="p-2"><?php echo htmlspecialchars($perm['name']); ?></td>
+                            <td class="p-2"><?php echo htmlspecialchars($module_permissions[$perm['name']] ?? 'N/A'); ?></td> <td class="p-2">
+                                <form method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this permission?');">
+                                    <input type="hidden" name="permission_id" value="<?php echo $perm['id']; ?>">
+                                    <button type="submit" name="delete_permission" class="text-red-500 hover:text-red-700 text-sm">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
-                </select>
+                </tbody>
+            </table>
+        </div>
+
+    <?php elseif ($action === 'users'): ?>
+        <h3 class="text-xl text-yellow-neon mb-4">Manage Users</h3>
+        <div class="mb-6">
+            <h4 class="text-lg text-default mb-2">Add New User</h4>
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-gray-300 mb-1">Username:</label>
+                    <input type="text" id="username" name="username" placeholder="Username" required class="w-full p-2 bg-black-smoke text-white rounded border border-gray-700">
+                </div>
+                <div>
+                    <label for="password" class="block text-gray-300 mb-1">Password:</label>
+                    <input type="password" id="password" name="password" placeholder="Password" required class="w-full p-2 bg-black-smoke text-white rounded border border-gray-700">
+                </div>
+                <div>
+                    <label for="role_id" class="block text-gray-300 mb-1">Default Role:</label>
+                    <select id="role_id" name="role_id" required class="w-full p-2 bg-black-smoke text-white rounded border border-gray-700">
+                        <?php foreach ($available_roles as $role): ?>
+                            <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" name="add_user" class="btn-secondary">Add User</button>
             </form>
         </div>
 
-        <?php if ($user_to_manage): ?>
-            <div class="glass p-4 rounded-lg">
-                <h4 class="font-semibold text-lg text-orange-neon mb-4">Managing Permissions for: <?php echo htmlspecialchars($user_to_manage['username']); ?></h4>
+        <h4 class="text-lg text-default mb-2">Existing Users</h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left table-auto">
+                <thead>
+                    <tr class="bg-gray-800">
+                        <th class="p-2">ID</th>
+                        <th class="p-2">Username</th>
+                        <th class="p-2">Role</th>
+                        <th class="p-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($users as $user):
+                        $user_role_name = 'N/A';
+                        foreach ($roles as $role) {
+                            if ($role['id'] == $user['role_id']) {
+                                $user_role_name = $role['name'];
+                                break;
+                            }
+                        }
+                    ?>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2"><?php echo htmlspecialchars($user['id']); ?></td>
+                            <td class="p-2"><?php echo htmlspecialchars($user['username']); ?></td>
+                            <td class="p-2"><?php echo htmlspecialchars($user_role_name); ?></td>
+                            <td class="p-2 flex space-x-2">
+                                <form method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                    <button type="submit" name="delete_user" class="text-red-500 hover:text-red-700 text-sm">Delete</button>
+                                </form>
+                                <a href="?module=permissions&action=assign_user_details&user_id=<?php echo $user['id']; ?>" class="text-blue-500 hover:text-blue-700 text-sm">Manage</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
 
-                <form method="POST" action="?module=permissions&action=manage_users&user_id=<?php echo $user_to_manage['id']; ?>" class="space-y-6">
-                    <input type="hidden" name="user_id" value="<?php echo $user_to_manage['id']; ?>">
+    <?php elseif ($action === 'assign_user_details' && isset($_GET['user_id'])):
+        $user_id = (int)$_GET['user_id'];
+        $user_details_stmt = $db->prepare("SELECT username FROM users WHERE id = ?");
+        $user_details_stmt->bind_param('i', $user_id);
+        $user_details_stmt->execute();
+        $result_user_details = $user_details_stmt->get_result();
+        $current_user = $result_user_details->fetch_assoc();
+        $user_details_stmt->close();
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-gray-300 mb-1">Assigned Roles:</label>
-                            <select name="user_roles[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
-                                <?php foreach ($available_roles as $role_option): ?>
-                                    <option value="<?php echo $role_option['id']; ?>" <?php echo in_array($role_option['id'], $user_roles_ids) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($role_option['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-gray-300 mb-1">Custom Permissions:</label>
-                            <select name="custom_permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
-                                <?php foreach ($available_permissions as $perm): ?>
-                                    <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="space-x-2">
-                            <button type="submit" name="assign_user_roles" class="bg-teal-custom text-black px-4 py-2 rounded">Save Roles</button>
-                            <button type="submit" name="assign_custom_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save Custom Permissions</button>
-                        </div>
-                    </form>
-                <?php endif; ?>
-            <?php endif; ?>
+        if ($current_user):
+            // Fetch roles assigned to this user
+            $user_roles_stmt = $db->prepare("SELECT role_id FROM user_roles WHERE user_id = ?");
+            $user_roles_stmt->bind_param('i', $user_id);
+            $user_roles_stmt->execute();
+            $result_user_roles = $user_roles_stmt->get_result();
+            $user_role_ids = [];
+            while ($row = $result_user_roles->fetch_assoc()) {
+                $user_role_ids[] = $row['role_id'];
+            }
+            $user_roles_stmt->close();
+
+            // Fetch custom permissions assigned to this user
+            $user_perms_stmt = $db->prepare("SELECT permission_id FROM user_permissions WHERE user_id = ?");
+            $user_perms_stmt->bind_param('i', $user_id);
+            $user_perms_stmt->execute();
+            $result_user_perms = $user_perms_stmt->get_result();
+            $user_perm_ids = [];
+            while ($row = $result_user_perms->fetch_assoc()) {
+                $user_perm_ids[] = $row['permission_id'];
+            }
+            $user_perms_stmt->close();
+        ?>
+            <h3 class="text-xl text-yellow-neon mb-4">Manage Details for User: <?php echo htmlspecialchars($current_user['username']); ?></h3>
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
+                <div>
+                    <label class="block text-gray-300 mb-1">Assign Roles:</label>
+                    <select name="role_ids[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                        <?php foreach ($available_roles as $role): ?>
+                            <option value="<?php echo $role['id']; ?>" <?php echo in_array($role['id'], $user_role_ids) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($role['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-1">Custom Permissions:</label>
+                    <select name="custom_permissions[]" multiple size="5" class="w-full bg-black-smoke text-white p-2 rounded border border-gray-700">
+                        <?php foreach ($available_permissions as $perm): ?>
+                            <option value="<?php echo $perm['id']; ?>" <?php echo in_array($perm['id'], $user_perm_ids) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($perm['name']); ?> (Module: <?php echo $module_permissions[$perm['name']] ?? 'N/A'; ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="space-x-2">
+                    <button type="submit" name="assign_user_roles" class="bg-teal-custom text-black px-4 py-2 rounded">Save Roles</button>
+                    <button type="submit" name="assign_custom_permissions" class="bg-teal-custom text-black px-4 py-2 rounded">Save Custom Permissions</button>
+                </div>
+            </form>
+        <?php endif; ?>
+    <?php elseif ($action === 'modules'): ?>
+        <h3 class="text-xl text-yellow-neon mb-4">Manage Modules</h3>
+        <p class="text-default mb-4">Toggle visibility for modules. Inactive modules will not appear in the navigation.</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left table-auto">
+                <thead>
+                    <tr class="bg-gray-800">
+                        <th class="p-2">Name</th>
+                        <th class="p-2">Active</th>
+                        <th class="p-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($modules as $module): ?>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2"><?php echo htmlspecialchars($module['name']); ?></td>
+                            <td class="p-2">
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                    <?php echo $module['active'] ? 'bg-green-600 text-white' : 'bg-red-600 text-white'; ?>">
+                                    <?php echo $module['active'] ? 'Active' : 'Inactive'; ?>
+                                </span>
+                            </td>
+                            <td class="p-2">
+                                <form method="POST" class="inline-block">
+                                    <input type="hidden" name="module_name" value="<?php echo $module['name']; ?>">
+                                    <?php if ($module['name'] === 'dashboard' || $module['name'] === 'status'): ?>
+                                        <button type="button" class="text-gray-500 text-sm cursor-not-allowed" disabled title="This module cannot be deactivated.">Cannot Deactivate</button>
+                                    <?php else: ?>
+                                        <label class="inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="active" value="1" class="sr-only peer" onchange="this.form.submit()" <?php echo $module['active'] ? 'checked' : ''; ?>>
+                                            <div class="relative w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-300"><?php echo $module['active'] ? 'Deactivate' : 'Activate'; ?></span>
+                                        </label>
+                                        <button type="submit" name="update_module_status" class="hidden">Update</button>
+                                    <?php endif; ?>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
 </div>
