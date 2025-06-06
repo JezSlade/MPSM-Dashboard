@@ -342,24 +342,29 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
 
         <main class="glass flex-1 p-4 ml-64 flex flex-col">
             <div class="dashboard-static-20 glass p-4 mb-4">
-                <h2 class="text-xl text-cyan-neon mb-4">MPSM Overview</h2>
-                <p>This is a static summary section for key dashboard information. It occupies 20% of the available vertical space in the main content area.</p>
-                </div>
+                <?php
+                // Always include dashboard.php in this top 20% area.
+                if (file_exists($dashboard_file)) {
+                    include $dashboard_file;
+                } else {
+                    echo '<h2 class="text-xl text-cyan-neon mb-4">Dashboard Not Found</h2>';
+                    echo '<p>The dashboard file (' . htmlspecialchars($dashboard_file) . ') could not be found. Please ensure it exists.</p>';
+                }
+                ?>
+            </div>
 
             <div class="module-area-80 relative flex-1 p-4">
                 <?php
-                // This section loads the dynamic module content or the default dashboard
-                // (which likely contains your floating module).
-                if ($current_module && file_exists($module_file)) {
+                // Only load other modules in this area if the current module is NOT dashboard.
+                // If dashboard is selected, this area remains empty or shows a specific message.
+                if ($current_module !== 'dashboard' && file_exists($module_file)) {
                     include $module_file; // Loads specific module content (e.g., customers, devices)
+                } else if ($current_module === 'dashboard') {
+                    // Display a message when only the dashboard (top 20%) is active
+                    echo '<p class="text-default">Select a module from the sidebar to view its content in this area.</p>';
                 } else {
-                    // Default to the original dashboard content if no module is selected
-                    // This is where your original 'dashboard.php' and its floating module should now appear.
-                    if (file_exists($dashboard_file)) {
-                        include $dashboard_file;
-                    } else {
-                        echo '<p class="text-yellow-neon">Welcome to the MPSM Control Panel. Select a module from the sidebar, or view the default dashboard.</p>';
-                    }
+                    // This else block handles cases where a non-dashboard module was requested but not found or accessible.
+                    echo '<p class="text-yellow-neon">Module not found or not accessible. Please select another module from the sidebar.</p>';
                 }
                 ?>
             </div>
