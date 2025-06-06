@@ -38,4 +38,5 @@ error_reporting(E_ALL);
 // Other configurations like default timezone, etc.
 date_default_timezone_set('America/New_York');
 
-?>
+// Define the default module to load when no module is specified in the URL
+define('DEFAULT_MODULE', 'dashboard'); // You can change 'dashboard' to any module name you want as the default
