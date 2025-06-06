@@ -3,6 +3,25 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Diagnostic: Check for required variables and files
+if (!defined('BASE_PATH')) {
+    die('<pre style="color:red;background:#fff;padding:1em;">Error: BASE_PATH is not defined.</pre>');
+}
+foreach (['accessible_modules', 'current_module', 'dashboard_file', 'module_file'] as $var) {
+    if (!isset($$var)) {
+        die('<pre style="color:red;background:#fff;padding:1em;">Error: $' . $var . ' is not set.</pre>');
+    }
+}
+if (!file_exists($dashboard_file)) {
+    die('<pre style="color:red;background:#fff;padding:1em;">Error: Dashboard file not found: ' . htmlspecialchars($dashboard_file) . '</pre>');
+}
+if ($module_file && !file_exists($module_file)) {
+    die('<pre style="color:red;background:#fff;padding:1em;">Error: Module file not found: ' . htmlspecialchars($module_file) . '</pre>');
+}
+if (!file_exists(BASE_PATH . 'modules/status.php')) {
+    die('<pre style="color:red;background:#fff;padding:1em;">Error: Status module not found: ' . htmlspecialchars(BASE_PATH . 'modules/status.php') . '</pre>');
+}
+
 // index.php
 // ────────────────────────────────────────────────────────────────────────────────
 // Main entry for MPSM Dashboard
