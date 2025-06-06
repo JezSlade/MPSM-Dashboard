@@ -1,248 +1,94 @@
-/*────────────────────────────────────────────────────────────────────────────────
-  styles.css
-  Global Neumorphic + CMYK Theme (applies to your original layout)
-─────────────────────────────────────────────────────────────────────────────────*/
-
-/* ── 1) Root Variables ───────────────────────────────────────────────────────── */
-:root {
-  /* Neumorphic “depth” and glass opacity */
-  --depth: 8px;
-  --glass-opacity: 0.8;
-
-  /* CMYK neon highlights */
-  --cyan-neon:   #00FFFF;
-  --magenta-neon:#FF00FF;
-  --yellow-neon: #FFFF00;
-
-  /* Background / foreground palette */
-  --bg-dark:    #1E272E;
-  --fg-dark:    #2D3436;
-  --text-light: #D1D8E0;
-}
-
-/* ── 2) Base Resets ───────────────────────────────────────────────────────────── */
-* {
-  box-sizing: border-box;
-}
+/* styles.css */
 body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg-dark);
-  color: var(--text-light);
-  font-family: Arial, sans-serif;
+    background: #1e272e; /* Dark slate gray */
+    color: #d1d8e0;     /* Light gray for text */
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-/* ── 3) Glass / Neumorphic Panels ─────────────────────────────────────────────── */
-/* This covers any element with class="glass" (sidebar, main content, etc.) */
-.glass {
-  background: rgba(30, 39, 46, var(--glass-opacity));
-  backdrop-filter: blur(10px);
-  box-shadow:
-    var(--depth) var(--depth) 20px #1A2021,
-    calc(-1 * var(--depth)) calc(-1 * var(--depth)) 20px #40484B,
-    inset 0 0 15px var(--cyan-neon);
-  border-radius: 16px;
-  color: var(--text-light);
-}
-
-/* Fallback if backdrop-filter unsupported */
-@supports not (backdrop-filter: blur(10px)) {
-  .glass {
-    background: rgba(30, 39, 46, 1);
-  }
-}
-
-/* ── 4) HEADER ─────────────────────────────────────────────────────────────────── */
 .header {
-  background: var(--fg-dark);
-  padding: 15px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: fixed;
-  top: 0;
-  width: 100%;
-  box-shadow:
-    var(--depth) var(--depth) 20px #1A2021,
-    calc(-1 * var(--depth)) calc(-1 * var(--depth)) 20px #40484B,
-    0 10px 15px rgba(var(--cyan-neon), 0.4);
-  z-index: 100;
+    background: #2d3436; /* Slightly lighter slate */
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 0 10px 15px rgba(0, 206, 201, 0.4);
 }
+
 .header h1 {
-  margin: 0;
-  font-size: 24px;
-  color: var(--cyan-neon);
-  text-shadow: 0 2px 4px rgba(var(--cyan-neon), 0.3);
-}
-.header nav a {
-  color: var(--cyan-neon);
-  margin-left: 20px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: var(--fg-dark);
-  box-shadow:
-    calc(var(--depth)/2) calc(var(--depth)/2) 12px #1A2021,
-    calc(-1 * var(--depth)/2) calc(-1 * var(--depth)/2) 12px #40484B;
-  transition: box-shadow 0.3s, text-shadow 0.3s;
-  text-decoration: none;
-}
-.header nav a:hover {
-  box-shadow:
-    inset calc(var(--depth)/2) calc(var(--depth)/2) 12px #1A2021,
-    inset calc(-1 * var(--depth)/2) calc(-1 * var(--depth)/2) 12px #40484B,
-    0 0 10px var(--cyan-neon);
-  text-shadow: 0 0 6px var(--cyan-neon);
+    margin: 0;
+    font-size: 24px;
+    color: #00cec9;
+    text-shadow: 0 2px 4px rgba(0, 206, 201, 0.3);
 }
 
-/* ── 5) SIDEBAR LINKS ──────────────────────────────────────────────────────────── */
-.menu-item {
-  background: var(--fg-dark);
-  border-radius: 16px;
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  color: var(--text-light);
-  text-decoration: none;
-  box-shadow:
-    var(--depth) var(--depth) 20px #1A2021,
-    calc(-1 * var(--depth)) calc(-1 * var(--depth)) 20px #40484B;
-  transition: box-shadow 0.3s, text-shadow 0.3s;
-}
-.menu-item:hover {
-  box-shadow:
-    inset var(--depth) var(--depth) 20px #1A2021,
-    inset calc(-1 * var(--depth)) calc(-1 * var(--depth)) 20px #40484B,
-    0 0 10px var(--magenta-neon);
-  text-shadow: 0 0 6px var(--cyan-neon), 0 0 12px var(--cyan-neon);
-  color: var(--cyan-neon);
-}
-.menu-item.active {
-  background: var(--fg-dark);
-  box-shadow:
-    inset var(--depth) var(--depth) 20px #1A2021,
-    inset calc(-1 * var(--depth)) calc(-1 * var(--depth)) 20px #40484B,
-    0 0 12px var(--yellow-neon);
-  text-shadow: 0 0 6px var(--yellow-neon), 0 0 12px var(--yellow-neon);
-  color: var(--yellow-neon);
+.header a {
+    color: #00cec9;
+    text-decoration: none;
+    margin-left: 20px;
+    padding: 8px 12px;
+    border-radius: 15px;
+    background: #2d3436;
+    box-shadow: 4px 4px 8px #1a2021, -4px -4px 8px #40484b;
+    transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
-/* ── 6) FLOATING MODULE (Modal) ───────────────────────────────────────────────── */
-.floating-module {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  height: 80%;
-  max-width: 1200px;
-  max-height: 800px;
-  background: rgba(30, 39, 46, var(--glass-opacity));
-  backdrop-filter: blur(10px);
-  box-shadow:
-    var(--depth) var(--depth) 20px #1A2021,
-    calc(-1 * var(--depth)) calc(-1 * var(--depth)) 20px #40484B,
-    inset 0 0 15px var(--magenta-neon);
-  border-radius: 16px;
-  padding: 1.5rem;
-  overflow-y: auto;
-  z-index: 50;
+.header a:hover {
+    box-shadow: inset 4px 4px 8px #1a2021, inset -4px -4px 8px #40484b;
+    text-shadow: 0 0 6px #00cec9;
 }
 
-/* ── 7) TABLES / FORMS (Force dark panels) ─────────────────────────────────────── */
-table, th, td, input, select, button {
-  background: var(--fg-dark) !important;
-  color: var(--text-light) !important;
-  box-shadow:
-    inset calc(var(--depth)/2) calc(var(--depth)/2) 8px #1A2021,
-    inset calc(-1 * var(--depth)/2) calc(-1 * var(--depth)/2) 8px #40484B !important;
-  border-radius: 8px;
-  border: none !important;
-}
-/* In case login/permissions forms hard‐coded white backgrounds */
-.login-container,
-.permissions-form,
-.permissions-table th,
-.permissions-table td {
-  background: var(--fg-dark) !important;
-  box-shadow:
-    inset calc(var(--depth)/2) calc(var(--depth)/2) 8px #1A2021,
-    inset calc(-1 * var(--depth)/2) calc(-1 * var(--depth)/2) 8px #40484B !important;
+.main {
+    display: flex;
+    margin-top: 70px;
 }
 
-/* ── 8) DevTools: Live Style Customizer ───────────────────────────────────────── */
-.devtools-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  color: var(--text-light);
+.sidebar {
+    width: 220px; /* Narrower sidebar */
+    background: #2d3436;
+    padding: 20px;
+    position: fixed;
+    top: 70px;
+    height: calc(100% - 70px);
+    overflow-y: auto;
+    box-shadow: 8px 8px 20px #1a2021, -8px -8px 20px #40484b, 6px 0 15px rgba(0, 206, 201, 0.4);
 }
-.devtools-container h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.5rem;
-  color: var(--cyan-neon);
-  text-shadow: 0 2px 4px rgba(var(--cyan-neon), 0.4);
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
 }
-.devtools-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+
+.sidebar li {
+    margin: 15px 0;
 }
-.devtools-row label {
-  flex: 1 0 150px;
-  font-size: 1rem;
+
+.sidebar a {
+    display: block;
+    padding: 12px;
+    color: #d1d8e0;
+    text-decoration: none;
+    border-radius: 15px;
+    background: #2d3436;
+    box-shadow: 6px 6px 12px #1a2021, -6px -6px 12px #40484b;
+    transition: box-shadow 0.3s, text-shadow 0.3s;
 }
-.devtools-row input[type="range"] {
-  flex: 1 1 auto;
-  -webkit-appearance: none;
-  background: transparent;
+
+.sidebar a:hover,
+.sidebar a.active {
+    box-shadow: inset 6px 6px 12px #1a2021, inset -6px -6px 12px #40484b, 0 12px 18px rgba(255, 0, 255, 0.6);
+    text-shadow: 0 0 6px #00cec9, 0 0 12px #00cec9;
 }
-.devtools-row input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: var(--magenta-neon);
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  box-shadow:
-    2px 2px 6px rgba(0,0,0,0.5),
-    -2px -2px 6px rgba(255,255,255,0.1);
-}
-.devtools-row input[type="range"]::-webkit-slider-runnable-track {
-  height: 4px;
-  background: var(--fg-dark);
-  border-radius: 2px;
-}
-.devtools-row input[type="color"] {
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  cursor: pointer;
-  background: none;
-}
-.devtools-value {
-  width: 2rem;
-  text-align: center;
-  font-family: monospace;
-}
-.devtools-reset {
-  align-self: flex-end;
-  padding: 0.5rem 1rem;
-  background: var(--fg-dark);
-  color: var(--text-light);
-  border: none;
-  border-radius: 8px;
-  box-shadow:
-    inset 2px 2px 6px #1A2021,
-    inset -2px -2px 6px #40484B,
-    0 0 10px var(--yellow-neon);
-  cursor: pointer;
-  transition: box-shadow 0.3s, color 0.3s;
-}
-.devtools-reset:hover {
-  box-shadow:
-    inset -2px -2px 6px #1A2021,
-    inset 2px 2px 6px #40484B,
-    0 0 12px var(--yellow-neon);
-  color: var(--yellow-neon);
+
+.content {
+    flex: 1;
+    padding: 40px;
+    margin-left: 220px; /* Matches narrower sidebar */
+    background: #1e272e;
+    box-shadow: inset 8px 8px 20px #1a2021, inset -8px -8px 20px #40484b;
 }
