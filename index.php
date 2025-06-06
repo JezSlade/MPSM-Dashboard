@@ -1,7 +1,8 @@
 <?php
 // Define BASE_PATH if not already defined (e.g., if you move this to a shared config)
+// --- IMPORTANT CHANGE: Adjusted BASE_PATH to '/mpsm/' based on your file location ---
 if (!defined('BASE_PATH')) {
-    define('BASE_PATH', '/'); // Adjust this if your project is in a subfolder
+    define('BASE_PATH', '/mpsm/'); // Adjust this if your project is in a subfolder
 }
 
 // Define module properties: label and icon for sidebar menu items.
