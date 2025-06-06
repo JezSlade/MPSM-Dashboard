@@ -1,6 +1,5 @@
 <?php
 // These includes are kept as per your original file.
-// Ensure db.php and functions.php exist in your BASE_PATH.
 require_once SERVER_ROOT_PATH . 'db.php';
 require_once SERVER_ROOT_PATH . 'functions.php';
 
@@ -17,6 +16,33 @@ $current_user_role = $role ?? 'N/A'; // Use $role from index.php
 $num_accessible_modules = count($accessible_modules ?? []);
 
 ?>
+
+<header class="bg-gray-800 p-4 flex justify-between items-center shadow-md">
+    <div class="flex items-center">
+        <img src="logo.png" alt="Logo" class="h-10 mr-3"> <h1 class="text-2xl font-bold text-cyan-neon">My PHP System</h1>
+    </div>
+    <nav>
+        <ul class="flex space-x-4">
+            <?php if (isLoggedIn()): ?>
+                <?php foreach ($accessible_modules as $mod_name): ?>
+                    <?php if ($mod_name === 'dashboard'): ?>
+                        <li><a href="?module=dashboard" class="text-gray-300 hover:text-white transition duration-300">Dashboard</a></li>
+                    <?php else: ?>
+                        <li><a href="?module=<?php echo htmlspecialchars($mod_name); ?>" class="text-gray-300 hover:text-white transition duration-300"><?php echo ucfirst(htmlspecialchars($mod_name)); ?></a></li>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </ul>
+    </nav>
+    <div class="flex items-center space-x-4">
+        <?php if (isLoggedIn()): ?>
+            <span class="text-sm text-gray-400">Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Guest'); ?> (<?php echo htmlspecialchars($role); ?>)</span>
+            <a href="logout.php" class="btn-primary">Logout</a>
+        <?php else: ?>
+            <a href="login.php" class="btn-primary">Login</a>
+        <?php endif; ?>
+    </div>
+</header>
 
 <div class="glass p-4 rounded-lg mt-4 text-sm">
     <h3 class="text-xl text-cyan-neon flex items-center mb-2">
