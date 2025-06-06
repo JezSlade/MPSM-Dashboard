@@ -108,10 +108,14 @@ if (!file_exists($module_path)) {
         header("Location: index.php?module=Dashboard&error=Module+not+found.+Redirected+to+dashboard.");
         exit();
     } else {
+        echo "<p style='color: yellow;'>DEBUG: Module file not found and Dashboard is not accessible.</p>"; // DEBUG
         echo "<p class='text-red-500 p-4'>Error: Module file not found and Dashboard is not accessible.</p>";
         exit();
     }
 }
+
+// *** ADD THIS NEW DEBUG LINE ***
+echo "<p style='color: yellow;'>DEBUG: Attempting to include module: " . htmlspecialchars($module_path) . "</p>"; // DEBUG
 
 ?>
 <!DOCTYPE html>
