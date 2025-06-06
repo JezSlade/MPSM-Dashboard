@@ -119,14 +119,14 @@ if (!$db) {
             background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15));
         }
 
-        /* ── ADJUSTED: `.floating-module` for proper "floating" within the main area ── */
+        /* ── ADJUSTED: `.floating-module` for proper "floating" within its parent container ── */
         .floating-module {
-            position: absolute; /* Keeps it positioned relative to its parent (main.glass) */
-            top: 1rem; /* Aligns with the 1rem padding of main.glass */
-            left: 1rem; /* Aligns with the 1rem padding of main.glass */
-            right: 1rem; /* Aligns with the 1rem padding of main.glass */
-            bottom: 1rem; /* Aligns with the 1rem padding of main.glass */
-            z-index: 20; /* Ensures it's above other dashboard content */
+            position: absolute; /* Keeps it positioned relative to its parent (module-area-80) */
+            top: 1rem;    /* Aligns with padding of its parent */
+            left: 1rem;   /* Aligns with padding of its parent */
+            right: 1rem;  /* Aligns with padding of its parent */
+            bottom: 1rem; /* Aligns with padding of its parent */
+            z-index: 20; /* Ensures it's above other module content */
             background: rgba(28,37,38,0.9);
             border-radius: 8px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2);
@@ -141,13 +141,26 @@ if (!$db) {
             }
         }
 
-        /* ── ADDED: `position: relative;` to `main.glass` for `absolute` children ──── */
+        /* ── Styles for the overall main content area ── */
         main.glass {
-            position: relative; /* Makes main a positioned parent for absolute children like .floating-module */
-            /* Relies on flexbox for layout, so no explicit top/left/right/bottom */
-            overflow-y: auto; /* Allows content within main to scroll */
-            overflow-x: hidden;
-            box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
+            position: relative; /* Crucial for positioning absolute children (if any directly inside main) */
+            overflow-x: hidden; /* Prevent horizontal scroll from padding etc. */
+            box-sizing: border-box;
+            /* overflow-y: auto; removed from here; let inner divs handle their own scrolling */
+        }
+
+        /* ── NEW: Styles for the 20% static dashboard section ── */
+        .dashboard-static-20 {
+            height: 20%; /* Takes 20% of its flex parent's height */
+            flex-shrink: 0; /* Prevents it from shrinking */
+            overflow-y: auto; /* Allows internal scrolling if content overflows */
+        }
+
+        /* ── NEW: Styles for the 80% dynamic module section ── */
+        .module-area-80 {
+            /* flex-1 from Tailwind will make it take remaining height */
+            position: relative; /* Crucial for `.floating-module` to position itself correctly within this area */
+            overflow-y: auto; /* Allows internal scrolling for module content */
         }
     </style>
 </head>
@@ -199,16 +212,32 @@ if (!$db) {
             </div>
         </aside>
 
-        <main class="glass flex-1 p-4 ml-64 overflow-y-auto relative">
-            <?php
-            if ($current_module && file_exists($module_file)) {
-                include $module_file;
-            } elseif (file_exists($dashboard_file)) {
-                include $dashboard_file;
-            } else {
-                echo '<p class="text-yellow-neon">Welcome to the MPSM Control Panel. Select a module from the sidebar.</p>';
-            }
-            ?>
+        <main class="glass flex-1 p-4 ml-64 flex flex-col">
+            <div class="dashboard-static-20 glass p-4 mb-4"> <h2 class="text-xl text-teal-custom mb-4">MPSM Overview</h2>
+                <p>This is a static summary section for key dashboard information. It occupies 20% of the available vertical space in the main content area.</p>
+                <?php
+                    // Example: if you had a separate file for just static overview, e.g., modules/dashboard_overview.php
+                    // include BASE_PATH . 'modules/dashboard_overview.php';
+                ?>
+            </div>
+
+            <div class="module-area-80 relative flex-1 p-4">
+                <?php
+                // This section loads the dynamic module content or the default dashboard
+                // (which likely contains your floating module).
+                if ($current_module && file_exists($module_file)) {
+                    include $module_file; // Loads specific module content (e.g., customers, devices)
+                } else {
+                    // Default to the original dashboard content if no module is selected
+                    // This is where your original 'dashboard.php' and its floating module should now appear.
+                    if (file_exists($dashboard_file)) {
+                        include $dashboard_file;
+                    } else {
+                        echo '<p class="text-yellow-neon">Welcome to the MPSM Control Panel. Select a module from the sidebar, or view the default dashboard.</p>';
+                    }
+                }
+                ?>
+            </div>
         </main>
     </div>
 </body>
