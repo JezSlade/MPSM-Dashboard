@@ -4,14 +4,11 @@ if (!defined('BASE_PATH')) {
     define('BASE_PATH', '/'); // Adjust this if your project is in a subfolder
 }
 
-// Assume basic module definitions.
-// In a real application, these might come from a database or more complex configuration.
+// Define module properties: label and icon.
+// Dashboard and Status are NOT listed here as they are not dynamic menu items.
 $all_modules = [
-    'dashboard'     => ['label' => 'Dashboard', 'icon' => 'home'],
     'customers'     => ['label' => 'Customer Management', 'icon' => 'users'],
     'devices'       => ['label' => 'Device Inventory', 'icon' => 'device-mobile'],
-    'access_control'=> ['label' => 'Access Control', 'icon' => 'lock-closed'],
-    'system_settings'=>['label' => 'System Settings', 'icon' => 'wrench'],
     'permissions'   => ['label' => 'Permissions', 'icon' => 'shield-check'],
     'devtools'      => ['label' => 'DevTools', 'icon' => 'code'],
 ];
@@ -21,36 +18,43 @@ $role = $_POST['role'] ?? $_COOKIE['user_role'] ?? 'Guest'; // Get role from POS
 setcookie('user_role', $role, time() + (86400 * 30), "/"); // Set cookie for 30 days
 
 $accessible_modules = [];
+// Dashboard is always loaded in the top panel, not a selectable module in the sidebar.
+// Status is always visible in the sidebar and doesn't need to be in accessible_modules for menu purposes.
 switch ($role) {
     case 'Developer':
-        $accessible_modules = $all_modules; // All modules
+        // Developer has access to all dynamic modules
+        $accessible_modules = $all_modules;
         break;
     case 'Admin':
-        // Admin has access to all core modules including system_settings, permissions, and devtools
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'customers', 'devices', 'access_control', 'system_settings', 'permissions', 'devtools']), ARRAY_FILTER_USE_KEY);
+        // Admin has access to customers, devices, and permissions
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['customers', 'devices', 'permissions']), ARRAY_FILTER_USE_KEY);
         break;
     case 'Service':
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'devices']), ARRAY_FILTER_USE_KEY);
+        // Service has access to devices
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['devices']), ARRAY_FILTER_USE_KEY);
         break;
     case 'Sales':
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['dashboard', 'customers']), ARRAY_FILTER_USE_KEY);
+        // Sales has access to customers
+        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['customers']), ARRAY_FILTER_USE_KEY);
         break;
     case 'Guest':
     default:
-        $accessible_modules = ['dashboard' => $all_modules['dashboard']]; // Guest only sees dashboard
+        $accessible_modules = []; // Guests have no specific dynamic module access
         break;
 }
 
-// Determine current module to display
-$current_module = $_GET['module'] ?? 'dashboard';
+// Determine current module to display in the 80% area
+$current_module = $_GET['module'] ?? ''; // Default to empty string on initial load
 
-// Check if the requested module is accessible and exists
-if (!array_key_exists($current_module, $accessible_modules)) {
-    $current_module = 'dashboard'; // Fallback to dashboard if not accessible or invalid
+// Validate if the requested module is accessible and should be loaded
+if (!empty($current_module) && !array_key_exists($current_module, $accessible_modules)) {
+    // If a module was requested but it's not accessible for the current role, clear it.
+    $current_module = '';
 }
 
+// Define file paths for includes
 $module_file = __DIR__ . '/modules/' . $current_module . '.php';
-$dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual dashboard file
+$dashboard_file = __DIR__ . '/modules/dashboard.php'; // Dashboard is always loaded in the top 20%
 ?>
 
 <!DOCTYPE html>
@@ -179,8 +183,8 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
         }
         .menu-item.active {
             background: linear-gradient(145deg, var(--menu-item-active-bg-start), var(--menu-item-active-bg-end));
-            /* Inset shadow for a "pressed" effect on active state */
-            box-shadow: inset 3px 3px 6px var(--menu-item-shadow-1), inset -3px -3px 6px var(--menu-item-shadow-2);
+            /* Inset shadow for a "pressed" effect on active state, using consistent shadow variables */
+            box-shadow: inset 3px 3px 6px var(--shadow-outer-dark), inset -3px -3px 6px var(--shadow-outer-light);
         }
         /* Neumorphic press effect for menu items */
         .menu-item:not(.active):hover {
@@ -282,17 +286,6 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
     <header class="glass p-4 fixed w-full top-0 z-10 h-16 flex justify-between items-center">
         <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
         <div class="flex items-center space-x-4">
-            <form method="POST" action="" class="inline">
-                <select name="role" onchange="this.form.submit()">
-                    <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
-                        <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
-                            <?php echo $r; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-            <a href="logout.php" class="text-magenta-neon hover:text-magenta-400 transition-colors">Logout</a>
-            <a href="?reset"    class="text-yellow-neon hover:text-yellow-400 transition-colors">Reset Setup</a>
             <button id="theme-toggle">
                 <svg id="moon-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display: none;">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -314,13 +307,13 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
                         'users'        => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h2v-2a6 6 0 00-6-6H9a6 6 0 00-6 6v2H5m11-9a4 4 0 10-8 0 4 4 0 008 0z"></path></svg>',
                         'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
                         'lock-closed'  => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>',
-                        'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
-                        'home'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>',
+                        'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>', // Not used in menu, but kept for consistency if needed elsewhere
+                        'home'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>', // Not used in menu, but kept for consistency
                         'shield-check' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.001 12.001 0 002 12c0 2.298.508 4.513 1.417 6.425C4.857 20.358 8.09 22 12 22s7.143-1.642 8.583-3.575C21.492 16.513 22 14.298 22 12c0-3.379-1.282-6.529-3.382-8.616z"></path></svg>',
                         'code'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>'
                     ];
                     ?>
-                    <?php foreach ($accessible_modules as $module_key => $module_data): // Corrected loop: iterate directly over accessible modules ?>
+                    <?php foreach ($accessible_modules as $module_key => $module_data): ?>
                         <li>
                             <a href="?module=<?php echo $module_key; ?>"
                                class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === $module_key ? 'active' : ''; ?>">
@@ -332,16 +325,12 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
                 </ul>
             </nav>
             <div class="mt-auto">
-                <?php
-                // Placeholder for status module content.
-                // In a real application, you'd include the actual status.php file here.
-                // For this example, we'll just show a placeholder.
-                echo '<div class="glass p-4 rounded-lg mt-4 text-sm text-center">';
-                echo '<h3 class="text-md text-yellow-neon mb-2">System Status</h3>';
-                echo '<p>All systems <span class="text-cyan-neon font-bold">Online</span></p>';
-                echo '<p>Role: <span class="font-semibold text-yellow-neon">' . htmlspecialchars($role) . '</span></p>';
-                echo '</div>';
-                ?>
+                <div class="glass p-4 rounded-lg mt-4 text-sm text-center">
+                    <h3 class="text-md text-yellow-neon mb-2">System Status</h3>
+                    <p>Core Services: <span class="text-cyan-neon font-bold">Operational</span></p>
+                    <p>User Role: <span class="font-semibold text-yellow-neon"><?php echo htmlspecialchars($role); ?></span></p>
+                    <p>Active Modules: <?php echo count($accessible_modules); ?></p>
+                    </div>
             </div>
         </aside>
 
@@ -360,16 +349,17 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
 
             <div class="module-area-80 relative flex-1 p-4">
                 <?php
-                // Only load other modules in this area if the current module is NOT dashboard.
-                // If dashboard is selected, this area remains empty or shows a specific message.
-                if ($current_module !== 'dashboard' && file_exists($module_file)) {
-                    include $module_file; // Loads specific module content (e.g., customers, devices)
-                } else if ($current_module === 'dashboard') {
-                    // Display a message when only the dashboard (top 20%) is active
-                    echo '<p class="text-default">Select a module from the sidebar to view its content in this area.</p>';
+                if (!empty($current_module) && file_exists($module_file)) {
+                    include $module_file; // Loads specific module content (e.g., customers, devices, permissions, devtools)
                 } else {
-                    // This else block handles cases where a non-dashboard module was requested but not found or accessible.
-                    echo '<p class="text-yellow-neon">Module not found or not accessible. Please select another module from the sidebar.</p>';
+                    // Display a message when no specific module is loaded in this area
+                    echo '<p class="text-default">Select a module from the sidebar to view its content here.</p>';
+                    // Optionally, if a module was requested but it's not accessible/found
+                    if (!empty($_GET['module']) && !array_key_exists($_GET['module'], $all_modules)) {
+                        echo '<p class="text-yellow-neon mt-2">The requested module "' . htmlspecialchars($_GET['module']) . '" does not exist.</p>';
+                    } else if (!empty($_GET['module']) && !array_key_exists($_GET['module'], $accessible_modules)) {
+                         echo '<p class="text-yellow-neon mt-2">The requested module "' . htmlspecialchars($_GET['module']) . '" is not accessible for your current role (' . htmlspecialchars($role) . ').</p>';
+                    }
                 }
                 ?>
             </div>
@@ -380,16 +370,14 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
         const themeToggle = document.getElementById('theme-toggle');
         const htmlElement = document.documentElement; // Target the <html> element for theme class
 
-        // Function to set the theme
+        // Function to set the theme and update the icon
         function setTheme(theme) {
             if (theme === 'dark') {
                 htmlElement.classList.add('dark');
-                // Ensure correct icon is shown based on current theme state
                 document.getElementById('moon-icon').style.display = 'inline-block';
                 document.getElementById('sun-icon').style.display = 'none';
             } else {
                 htmlElement.classList.remove('dark');
-                // Ensure correct icon is shown based on current theme state
                 document.getElementById('moon-icon').style.display = 'none';
                 document.getElementById('sun-icon').style.display = 'inline-block';
             }
@@ -406,7 +394,6 @@ $dashboard_file = __DIR__ . '/modules/dashboard.php'; // Path to your actual das
 
         // Add event listener to toggle button
         themeToggle.addEventListener('click', () => {
-            // Check the current theme based on the class on the html element
             const currentTheme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             setTheme(newTheme);
