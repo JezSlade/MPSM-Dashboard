@@ -1,5 +1,6 @@
 <?php
 // index.php
+// ────────────────────────────────────────────────────────────────────────────────
 // Enable PHP error display
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -104,6 +105,7 @@ if (!$db) {
         };
     </script>
     <style>
+        /* ── Original “.glass”, “.menu-item”, and “.floating-module” rules ───────── */
         .glass {
             background: rgba(28, 37, 38, 0.8);
             border: none;
@@ -117,32 +119,35 @@ if (!$db) {
         .menu-item.active {
             background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15));
         }
-.floating-module {
-  position: fixed;
-
-  /* 80% of the area under the 64px‐tall header */
-  top: calc(64px + ((100vh - 64px) * 0.10));
-  /* 10% of the sidebar‐plus‐main width = 256px + 10% of remaining viewport width */
-  left: calc(256px + ((100vw - 256px) * 0.10));
-
-  /* Make the panel 80% of the “remaining width” (viewport minus sidebar) */
-  width:  calc((100vw - 256px) * 0.80);
-  /* Make the panel 80% of the “remaining height” (viewport minus header) */
-  height: calc((100vh - 64px) * 0.80);
-
-  background: rgba(28, 37, 38, 0.9);
-  border-radius: 8px;
-  box-shadow:
-    0 8px 25px rgba(0, 0, 0, 0.7),
-    inset 0 0 15px rgba(255, 255, 0, 0.2);
-
-  padding: 1.5rem;
-  overflow-y: auto;
-  z-index: 20;
-}
+        .floating-module {
+            position: absolute;
+            top: 80px;
+            left: 280px;
+            right: 16px;
+            bottom: 16px;
+            z-index: 20;
+            background: rgba(28,37,38,0.9);
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
 
         @supports not (backdrop-filter: blur(10px)) {
-            .glass { background: rgba(28,37,38,1); }
+            .glass {
+                background: rgba(28,37,38,1);
+            }
+        }
+
+        /* ── NEW: Make <main class="glass"> fixed, so only its contents scroll ────── */
+        main.glass {
+            position: fixed;
+            top: 64px;              /* exactly under the 64px‐tall header */
+            left: 256px;            /* exactly to the right of the 256px‐wide sidebar */
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
     </style>
 </head>
@@ -177,9 +182,9 @@ if (!$db) {
                                 <?php
                                     $icons = [
                                         'users'        => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5a4 4 0 110 5.4M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.2M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>',
-                                        'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0v1-2V5a2a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2z"></path></svg>',
-                                        'lock-closed'  => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1 3.5-1 6.8-2.8 9.5m-3.4-2l.1-.1A14 14 0 008 11a4 4 0 118 0c0 1-.1 2-.2 3m-2.1 6.8A22 22 0 0015 17m3.8 1.1c.7-2.2 1-4.7 1-7A8 8 0 008 4M3 15.4c.6-1.3 1-2.8-4.4 1-4.4m-1 3.4a3 3 0 013-3m0 3.4a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>',
-                                        'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-2.3 3-.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c-.9 1.5-.8 3.4-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4-1-1-2.6 0-2.5c-1.4-1.8 1.9-2.4-2.3.9-.5 2.3 0 2.6-1.1z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
+                                        'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0v1-2V5a2a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2z"></path></svg>',
+                                        'lock-closed'  => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1 3.5-1 6.8-2.8 9.5m-3.4-2l.1-.1A14 14 0 008 11a4 4 0 118 0c0 1-.1 2-.2 3m-2.1 6.8A22 22 0 00115 17m3.8 1.1c.7-2.2 1-4.7 1-7A8 8 0 008 4M3 15.4c.6-1.3 1-2.8-4.4 1-4.4m-1 3.4a3 3 0 013-3m0 3.4a3 3 0 00-3 3m3-3v6m-1.5-1.5a1.5 1.5 0 113 0m-3 0a1.5 1.5 0 00-1.5-1.5m1.5 4.5v-3m0 3h-3"></path></svg>',
+                                        'wrench'       => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-2.3 3-.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c-.9 1.5-.8 3.4-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4-1-1-2.6 0-2.5 0c-1.4-1.8 1.9-2.4-2.3.9-.5 2.3 0 2.6-1.1z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
                                     ];
                                     echo $icons[$key['icon']] ?? '';
                                 ?>
