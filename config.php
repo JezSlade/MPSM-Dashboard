@@ -1,38 +1,41 @@
 <?php
 // config.php
 
-// --- DEBUGGING SETTINGS ---
-// IMPORTANT: These settings are for development environments ONLY.
-// DO NOT use these on a live production server.
+// Define SERVER_ROOT_PATH for server-side file includes
+// This assumes config.php is in the root of your application (e.g., /mpsm/config.php)
+// __DIR__ gives the directory of the current file (config.php)
+// realpath() resolves symbolic links and redundant slashes
+define('SERVER_ROOT_PATH', realpath(__DIR__ . DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
+
+// Define WEB_ROOT_PATH for client-side URLs (e.g., for images, CSS, JavaScript)
+// This depends on your actual web server configuration.
+// If your application is directly in the domain's root (e.g., example.com/index.php), it's '/'.
+// If it's in a subdirectory (e.g., example.com/mpsm/index.php), it's '/mpsm/'.
+// You might need to adjust this based on your deployment.
+
+// A common way to calculate WEB_ROOT_PATH dynamically:
+$doc_root = rtrim($_SERVER['DOCUMENT_ROOT'], '/'); // Remove trailing slash from DOCUMENT_ROOT
+$current_script_path = str_replace('\\', '/', realpath($_SERVER['SCRIPT_FILENAME'])); // Standardize slashes
+$app_path = str_replace($doc_root, '', $current_script_path);
+$app_dir = dirname($app_path); // Get the directory portion
+
+// If the app is in the root, $app_dir might be '/', otherwise it's like '/mpsm'
+// Ensure it ends with a slash if it's not just '/'
+if ($app_dir === '/' || $app_dir === '\\' || $app_dir === '.') {
+    define('WEB_ROOT_PATH', '/');
+} else {
+    define('WEB_ROOT_PATH', rtrim($app_dir, '/') . '/');
+}
+
+// Alternatively, for simplicity during development, you can hardcode it:
+// define('WEB_ROOT_PATH', '/mpsm/'); // If your app is at http://yourdomain.com/mpsm/
+
+// Error reporting (useful for debugging)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-// --- END DEBUGGING SETTINGS ---
 
+// Other configurations like default timezone, etc.
+date_default_timezone_set('America/New_York');
 
-// --- APPLICATION PATHS ---
-// Define server-side absolute path to the project root
-// This will be the absolute path to the directory containing index.php and config.php
-define('SERVER_ROOT_PATH', __DIR__ . '/');
-
-// Define web-facing URL path to the project root
-// Adjust '/mpsm/' if your project is directly in your domain root (e.g., '/')
-define('WEB_ROOT_PATH', '/mpsm/');
-
-
-// --- APPLICATION METADATA & SETTINGS ---
-define('APP_NAME', 'MPSM Dashboard'); // Your application's name
-define('APP_VERSION', '1.0.0');      // Current version of your application
-
-// Default timezone for all date/time functions
-date_default_timezone_set('America/New_York'); // Example: Use your desired timezone
-
-// Default module to load if none is specified in the URL
-define('DEFAULT_MODULE', 'dashboard');
-
-// Asset version for cache busting (change this value to force CSS/JS reload)
-define('ASSET_VERSION', '2025060601'); // Example: YYYYMMDD + increment
-
-
-// This file is purely for defining global constants and core debugging settings.
-// Database environment variables are handled by db.php's load_env function.
+?>

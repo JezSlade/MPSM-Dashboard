@@ -1,8 +1,6 @@
 <?php
 // functions.php
-
-// Use SERVER_ROOT_PATH from config.php
-require_once SERVER_ROOT_PATH . 'db.php';
+require_once BASE_PATH . 'db.php'; // Ensure db.php is included here if functions rely on $db
 
 function get_permissions_for_role($role_id) {
     global $db;
@@ -62,28 +60,32 @@ function get_user_permissions($user_id) {
     return array_unique($permissions); // Remove duplicates
 }
 
-// Function to check if a user has a specific permission
+/**
+ * Checks if the current logged-in user has a specific permission.
+ * Requires get_user_permissions() to be available.
+ * @param string $permission_name The name of the permission to check (e.g., 'view_dashboard', 'manage_users').
+ * @return bool True if the user has the permission, false otherwise.
+ */
 function has_permission($permission_name) {
-    // For now, always grant access to the 'Developer' role.
-    // This allows developers to see all modules and manage permissions.
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'Developer') {
-        return true;
+    // Ensure $_SESSION['user_permissions'] is populated
+    if (!isset($_SESSION['user_permissions']) || !is_array($_SESSION['user_permissions'])) {
+        // If permissions aren't in session, attempt to load them (should happen on login)
+        if (isset($_SESSION['user_id'])) {
+            $_SESSION['user_permissions'] = get_user_permissions($_SESSION['user_id']);
+        } else {
+            return false; // No user logged in, no permissions
+        }
     }
-
-    // If session user_id is not set, the user is not logged in.
-    // Guest role handling is done via assigned modules in index.php or login logic.
-    if (!isset($_SESSION['user_id'])) {
-        return false;
-    }
-
-    // Get user's permissions
-    $user_permissions = get_user_permissions($_SESSION['user_id']);
-
-    // Check if the requested permission exists in the user's permissions
-    return in_array($permission_name, $user_permissions);
+    return in_array($permission_name, $_SESSION['user_permissions']);
 }
 
-// Function to fetch accessible modules for a user based on their role and custom permissions
+/**
+ * Fetches a list of modules accessible by a given role and user, considering both role-based and user-specific permissions.
+ *
+ * @param int $role_id The ID of the user's role.
+ * @param int $user_id The ID of the user.
+ * @return array An associative array of accessible module names (keys) and their file paths (values).
+ */
 function get_accessible_modules($role_id, $user_id) {
     global $db;
     if (!$db) {
@@ -93,68 +95,97 @@ function get_accessible_modules($role_id, $user_id) {
 
     $accessible_modules = [];
 
-    // Get role-based permissions
-    $role_permissions = get_permissions_for_role($role_id);
-    foreach ($role_permissions as $permission) {
-        // Map permissions to modules. This is a simplified mapping.
-        // You might need a more sophisticated mapping or a 'module_permissions' table.
-        switch ($permission) {
-            case 'view_dashboard':
-                $accessible_modules['Dashboard'] = SERVER_ROOT_PATH . 'modules/dashboard.php';
-                break;
-            case 'view_customers':
-                $accessible_modules['Customers'] = SERVER_ROOT_PATH . 'modules/customers.php';
-                break;
-            case 'view_devices':
-                $accessible_modules['Devices'] = SERVER_ROOT_PATH . 'modules/devices.php';
-                break;
-            case 'manage_permissions':
-                $accessible_modules['Permissions'] = SERVER_ROOT_PATH . 'modules/permissions.php';
-                break;
-            case 'view_devtools':
-                $accessible_modules['Dev Tools'] = SERVER_ROOT_PATH . 'modules/devtools.php';
-                break;
-            case 'view_status':
-                $accessible_modules['Status'] = SERVER_ROOT_PATH . 'modules/status.php';
-                break;
-            // Add other module mappings here
-        }
+    // Modules based on role permissions
+    // We join with `modules` table to ensure only active modules are considered
+    $stmt = $db->prepare("
+        SELECT DISTINCT m.name
+        FROM modules m
+        JOIN permissions p ON p.name = CONCAT('view_', m.name)
+        JOIN role_permissions rp ON p.id = rp.permission_id
+        WHERE rp.role_id = ? AND m.active = 1
+    ");
+    if (!$stmt) {
+        error_log("Failed to prepare statement for role modules: " . $db->error);
+        return [];
     }
-
-    // Get custom user-specific permissions
-    $custom_user_permissions = get_user_permissions($user_id);
-    foreach ($custom_user_permissions as $permission) {
-        // Re-map custom permissions to modules.
-        // This ensures custom permissions can also grant module access.
-        switch ($permission) {
-            case 'view_dashboard':
-                $accessible_modules['Dashboard'] = SERVER_ROOT_PATH . 'modules/dashboard.php';
-                break;
-            case 'view_customers':
-                $accessible_modules['Customers'] = SERVER_ROOT_PATH . 'modules/customers.php';
-                break;
-            case 'view_devices':
-                $accessible_modules['Devices'] = SERVER_ROOT_PATH . 'modules/devices.php';
-                break;
-            case 'manage_permissions':
-                $accessible_modules['Permissions'] = SERVER_ROOT_PATH . 'modules/permissions.php';
-                break;
-            case 'view_devtools':
-                $accessible_modules['Dev Tools'] = SERVER_ROOT_PATH . 'modules/devtools.php';
-                break;
-            case 'view_status':
-                $accessible_modules['Status'] = SERVER_ROOT_PATH . 'modules/status.php';
-                break;
-            // Add other module mappings here for custom permissions
-        }
+    $stmt->bind_param('i', $role_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
     }
+    $stmt->close();
 
-    // Remove duplicates and return
-    return array_unique($accessible_modules);
+    // Modules based on user-specific permissions (e.g., 'custom_access')
+    // This query fetches modules related to user-specific 'view_' permissions
+    // as well as the 'custom_access' permission which might grant access to all modules.
+    // The logic for 'custom_access' might need to be more explicit if it should grant ALL module access,
+    // rather than just checking for a permission named 'view_module' or 'custom_access'.
+    // For now, it assumes 'custom_access' is a specific permission that might relate to certain modules or a special case.
+    // If 'custom_access' means access to ALL modules, the logic below would need to be adjusted.
+    $stmt = $db->prepare("
+        SELECT DISTINCT m.name
+        FROM modules m
+        JOIN permissions p ON p.name = CONCAT('view_', m.name) OR p.name = 'custom_access'
+        JOIN user_permissions up ON p.id = up.permission_id
+        WHERE up.user_id = ? AND m.active = 1
+    ");
+    if (!$stmt) {
+        error_log("Failed to prepare statement for user modules: " . $db->error);
+        // If the statement fails, return what we have from role permissions
+        return array_unique($accessible_modules);
+    }
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        // Only add if not already added by role permissions, or if it's a new unique module
+        $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
+    }
+    $stmt->close();
+
+    // If the 'custom_access' permission means access to *all* modules,
+    // you would add logic here to fetch all active modules and merge them.
+    // For example:
+    // if (has_permission_for_user($user_id, 'custom_access')) { // You'd need a way to check user permissions here
+    //     $all_active_modules = get_all_active_modules(); // A new function to fetch all active modules
+    //     foreach ($all_active_modules as $module_name) {
+    //         $accessible_modules[ucfirst($module_name)] = SERVER_ROOT_PATH . 'modules/' . $module_name . '.php';
+    //     }
+    // }
+
+
+    return array_unique($accessible_modules); // Use array_unique to prevent duplicate module entries
 }
 
-// Ensure the database connection is available for other functions that might need it
-global $db;
-if (!isset($db) || $db === null) {
-    $db = connect_db(); // Call connect_db only if $db is not already set
+// You might also want to add a function to check user permissions in general
+// This is a simplified version and assumes user_permissions is already populated in session
+// For a more robust solution, `has_permission` function above is better.
+function has_permission_for_user($user_id, $permission_name) {
+    global $db;
+    $stmt = $db->prepare("
+        SELECT COUNT(*)
+        FROM user_permissions up
+        JOIN permissions p ON up.permission_id = p.id
+        WHERE up.user_id = ? AND p.name = ?
+    ");
+    $stmt->bind_param('is', $user_id, $permission_name);
+    $stmt->execute();
+    $stmt->bind_result($count);
+    $stmt->fetch();
+    $stmt->close();
+    return $count > 0;
 }
+
+/**
+ * Checks if a database table exists.
+ * @param mysqli $db The database connection object.
+ * @param string $table_name The name of the table to check.
+ * @return bool True if the table exists, false otherwise.
+ */
+function table_exists($db, $table_name) {
+    $result = $db->query("SHOW TABLES LIKE '" . $db->real_escape_string($table_name) . "'");
+    return $result && $result->num_rows > 0;
+}
+
+?>
