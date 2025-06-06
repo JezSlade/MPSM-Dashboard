@@ -1,17 +1,13 @@
 <?php
-// Load environment variables
-function load_env($file) {
-    $env_file = BASE_PATH . $file;
-    if (!file_exists($env_file)) {
-        die("Environment file not found: $env_file");
-    }
-    $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos($line, '=') !== false) {
-            list($key, $value) = explode('=', $line, 2);
-            putenv("$key=$value");
-        }
-    }
-}
-load_env('.env');
-?>
+// config.php
+
+// Define server-side absolute path to the project root
+// This will be the absolute path to the directory containing index.php and config.php
+define('SERVER_ROOT_PATH', __DIR__ . '/');
+
+// Define web-facing URL path to the project root
+// Adjust '/mpsm/' if your project is directly in your domain root (e.g., '/')
+define('WEB_ROOT_PATH', '/mpsm/');
+
+// This file is purely for defining global paths.
+// Database environment variables are handled by db.php's load_env function.
