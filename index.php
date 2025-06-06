@@ -117,19 +117,26 @@ if (!$db) {
         .menu-item.active {
             background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15));
         }
-        .floating-module {
-            position: absolute;
-            top: 80px;
-            left: 280px;
-            right: 16px;
-            bottom: 16px;
-            z-index: 20;
-            background: rgba(28,37,38,0.9);
-            border-radius: 8px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2);
-            padding: 1.5rem;
-            overflow-y: auto;
-        }
+/* Replace your existing .floating-module rule with this: */
+.floating-module {
+  position: absolute;
+  /* 10% from the top of <main> and 10% from the left of <main> */
+  top: 10%;
+  left: 10%;
+  
+  /* Take up 80% of main’s width and 80% of main’s height */
+  width: 80%;
+  height: 80%;
+  
+  /* Preserve your existing styling */
+  background: rgba(28, 37, 38, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(255, 255, 0, 0.2);
+  padding: 1.5rem;
+  overflow-y: auto;
+  z-index: 20;
+}
+
         @supports not (backdrop-filter: blur(10px)) {
             .glass { background: rgba(28,37,38,1); }
         }
