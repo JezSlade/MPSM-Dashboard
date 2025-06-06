@@ -87,10 +87,18 @@ function has_permission($permission_name) {
  * @param int $user_id The ID of the user.
  * @return array An associative array of accessible module names (keys) and their file paths (values).
  */
+/**
+ * Fetches a list of modules accessible by a given role and user, considering both role-based and user-specific permissions.
+ *
+ * @param int $role_id The ID of the user's role.
+ * @param int $user_id The ID of the user.
+ * @return array An associative array of accessible module names (keys) and their file paths (values).
+ */
 function get_accessible_modules($role_id, $user_id) {
     global $db;
+    error_log("DEBUG (get_accessible_modules): Called with Role ID: $role_id, User ID: $user_id"); // ADD THIS LINE
     if (!$db) {
-        error_log("Database connection is null in get_accessible_modules.");
+        error_log("DEBUG (get_accessible_modules): Database connection is null."); // ADD THIS LINE
         return [];
     }
 
@@ -106,12 +114,13 @@ function get_accessible_modules($role_id, $user_id) {
         WHERE rp.role_id = ? AND m.active = 1
     ");
     if (!$stmt) {
-        error_log("Failed to prepare statement for role modules: " . $db->error);
+        error_log("DEBUG (get_accessible_modules): Failed to prepare statement for role modules: " . $db->error); // ADD THIS LINE
         return [];
     }
     $stmt->bind_param('i', $role_id);
     $stmt->execute();
     $result = $stmt->get_result();
+    error_log("DEBUG (get_accessible_modules): Role modules query num_rows: " . $result->num_rows); // ADD THIS LINE
     while ($row = $result->fetch_assoc()) {
         $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
     }
@@ -127,12 +136,13 @@ function get_accessible_modules($role_id, $user_id) {
         WHERE up.user_id = ? AND m.active = 1
     ");
     if (!$stmt) {
-        error_log("Failed to prepare statement for user modules: " . $db->error);
+        error_log("DEBUG (get_accessible_modules): Failed to prepare statement for user modules: " . $db->error); // ADD THIS LINE
         return array_unique($accessible_modules);
     }
     $stmt->bind_param('i', $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
+    error_log("DEBUG (get_accessible_modules): User modules query num_rows: " . $result->num_rows); // ADD THIS LINE
     while ($row = $result->fetch_assoc()) {
         $accessible_modules[ucfirst($row['name'])] = SERVER_ROOT_PATH . 'modules/' . $row['name'] . '.php';
     }
@@ -141,6 +151,7 @@ function get_accessible_modules($role_id, $user_id) {
     // Sort accessible modules alphabetically for consistent display
     ksort($accessible_modules);
 
+    error_log("DEBUG (get_accessible_modules): Final accessible modules array: " . print_r($accessible_modules, true)); // ADD THIS LINE
     return array_unique($accessible_modules);
 }
 

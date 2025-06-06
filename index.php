@@ -19,6 +19,7 @@ if (!isLoggedIn()) {
 // User role and accessible modules
 $user_id = $_SESSION['user_id'];
 $role = $_SESSION['role'] ?? 'Guest'; // Default to 'Guest' if not set
+error_log("DEBUG: User ID: $user_id, Session Role: $role"); // ADD THIS LINE
 
 // Fetch role_id from the database based on the role name
 $role_id = null;
@@ -31,23 +32,25 @@ if ($db) { // Ensure $db is connected before querying
         $role_data = $result->fetch_assoc();
         if ($role_data) {
             $role_id = $role_data['id'];
+            error_log("DEBUG: Fetched Role ID: $role_id for role: $role"); // ADD THIS LINE
         } else {
-            error_log("Role '$role' not found in database for user_id: $user_id");
+            error_log("DEBUG: Role '$role' not found in database for user_id: $user_id"); // ADD THIS LINE
         }
         $stmt->close();
     } else {
-        error_log("Failed to prepare statement for fetching role_id: " . $db->error);
+        error_log("DEBUG: Failed to prepare statement for fetching role_id: " . $db->error); // ADD THIS LINE
     }
 } else {
-    error_log("Database connection is null when trying to fetch role_id.");
+    error_log("DEBUG: Database connection is null when trying to fetch role_id in index.php."); // ADD THIS LINE
 }
 
 // Now call get_accessible_modules with $role_id and $user_id
 if ($role_id !== null) {
     $accessible_modules = get_accessible_modules($role_id, $user_id);
+    error_log("DEBUG: Accessible modules array after get_accessible_modules call: " . print_r($accessible_modules, true)); // ADD THIS LINE
 } else {
     // Fallback if role_id cannot be determined (e.g., if role doesn't exist or DB error)
-    error_log("Role ID could not be determined for user $user_id with role: $role. Setting accessible modules to empty array.");
+    error_log("DEBUG: Role ID is null, accessible modules set to empty array for user $user_id with role: $role."); // ADD THIS LINE
     $accessible_modules = [];
 }
 
@@ -66,6 +69,7 @@ if (!in_array($module, array_keys($accessible_modules))) { // Use array_keys for
     } else {
         // If no modules are accessible at all, or only inaccessible ones are requested.
         // This might happen for a new user with no permissions, or a misconfiguration.
+        error_log("DEBUG: Final state: No accessible modules found or requested module inaccessible. Accessible modules array: " . print_r($accessible_modules, true)); // ADD THIS LINE
         echo "<p class='text-red-500 p-4'>Access denied. No accessible modules found.</p>";
         session_unset();
         session_destroy();
