@@ -1,78 +1,113 @@
 <?php
-// Define BASE_PATH if not already defined (e.g., if you move this to a shared config)
-// --- IMPORTANT CHANGE: Adjusted BASE_PATH to '/mpsm/' based on your file location ---
-if (!defined('BASE_PATH')) {
-    define('BASE_PATH', '/mpsm/'); // Adjust this if your project is in a subfolder
+// index.php
+// ────────────────────────────────────────────────────────────────────────────────
+// Enable PHP error display for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+session_start();
+
+// Define SERVER_ROOT_PATH for server-side file includes
+// This will be the absolute path to the directory containing index.php
+define('SERVER_ROOT_PATH', __DIR__ . '/');
+
+// Define WEB_ROOT_PATH for browser-facing URLs (e.g., for CSS, JS, image links)
+// This should be the URL path to your project's root on the web server
+// Adjust '/mpsm/' if your project is directly in your domain root (e.g., '/')
+define('WEB_ROOT_PATH', '/mpsm/'); 
+
+// --- DEBUGGING INFO ---
+// This will output comments in your HTML source, viewable via "Inspect Element" or "View Source"
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+// --- END DEBUGGING INFO ---
+
+
+// Include dependencies
+require_once SERVER_ROOT_PATH . 'db.php';
+require_once SERVER_ROOT_PATH . 'functions.php';
+include_once SERVER_ROOT_PATH . 'auth.php'; // Consider changing to require_once if auth is critical
+
+// Check if setup is needed - modified to always check tables
+$setup_needed = false;
+$required_tables = ['modules', 'users', 'roles', 'permissions', 'role_permissions', 'user_roles', 'user_permissions'];
+foreach ($required_tables as $table) {
+    $result = $db->query("SHOW TABLES LIKE '$table'");
+    if ($result->num_rows == 0) {
+        $setup_needed = true;
+        break;
+    }
 }
 
-// Define module properties: label and icon for sidebar menu items.
-// Dashboard and Status are NOT listed here as they are fixed, non-selectable panels.
-$all_modules = [
-    'customers'     => ['label' => 'Customer Management', 'icon' => 'users'],
-    'devices'       => ['label' => 'Device Inventory', 'icon' => 'device-mobile'],
-    'permissions'   => ['label' => 'Permissions', 'icon' => 'shield-check'],
-    'devtools'      => ['label' => 'DevTools', 'icon' => 'code'],
+if ($setup_needed || isset($_GET['reset'])) {
+    require_once SERVER_ROOT_PATH . 'setup.php';
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
+// Set default session data for testing
+if (!isset($_SESSION['user_id'])) {
+    $result = $db->query("SELECT id FROM users WHERE username = 'admin'");
+    $user = $result->fetch_assoc();
+    $_SESSION['user_id'] = $user ? $user['id'] : 1;
+    $_SESSION['role'] = 'Admin';
+    $_SESSION['username'] = 'admin';
+    // Match status.php expectation
+}
+
+// Handle role change
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role'])) {
+    $_SESSION['role'] = $_POST['role'];
+    if (isset($_SESSION['user_id'])) {
+        $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+        error_log("Permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+    }
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+$role = $_SESSION['role'] ?? 'Guest';
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['permissions'] = get_user_permissions($_SESSION['user_id']);
+    error_log("Initial permissions for user_id " . $_SESSION['user_id'] . ": " . json_encode($_SESSION['permissions']));
+}
+
+$modules = [
+    'customers'   => ['label' => 'Customers',   'icon' => 'users',         'permission' => 'view_customers'],
+    'devices'     => ['label' => 'Devices',     'icon' => 'device-mobile', 'permission' => 'view_devices'],
+    'permissions' => ['label' => 'Permissions', 'icon' => 'lock-closed',   'permission' => 'manage_permissions'],
+    'devtools'    => ['label' => 'DevTools',    'icon' => 'wrench',        'permission' => 'view_devtools']
 ];
-
-// Initialize role and accessible modules based on role
-$role = $_POST['role'] ?? $_COOKIE['user_role'] ?? 'Guest'; // Get role from POST, then cookie, default to Guest
-setcookie('user_role', $role, time() + (86400 * 30), "/"); // Set cookie for 30 days
-
 $accessible_modules = [];
-// Assign access to dynamic modules based on role
-switch ($role) {
-    case 'Developer':
-        // Developer has access to all dynamic modules
-        $accessible_modules = $all_modules;
-        break;
-    case 'Admin':
-        // Admin has access to customers, devices, and permissions
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['customers', 'devices', 'permissions']), ARRAY_FILTER_USE_KEY);
-        break;
-    case 'Service':
-        // Service has access to devices
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['devices']), ARRAY_FILTER_USE_KEY);
-        break;
-    case 'Sales':
-        // Sales has access to customers
-        $accessible_modules = array_filter($all_modules, fn($k) => in_array($k, ['customers']), ARRAY_FILTER_USE_KEY);
-        break;
-    case 'Guest':
-    default:
-        $accessible_modules = []; // Guests have no specific dynamic module access
-        break;
+foreach ($modules as $module => $key) {
+    if (has_permission($key['permission'])) {
+        $accessible_modules[$module] = $key;
+    }
 }
 
-// Determine current module to display in the 80% area
-$current_module = $_GET['module'] ?? ''; // Default to empty string on initial load
+$current_module  = isset($_GET['module']) && isset($accessible_modules[$_GET['module']]) ? $_GET['module'] : null;
 
-// Validate if the requested module is accessible and should be loaded
-if (!empty($current_module) && !array_key_exists($current_module, $accessible_modules)) {
-    // If a module was requested but it's not accessible for the current role, clear it.
-    $current_module = '';
+// Paths for actual file inclusion
+$dashboard_file  = SERVER_ROOT_PATH . 'modules/dashboard.php';
+$status_file     = SERVER_ROOT_PATH . 'modules/status.php'; // Explicitly define for include below
+$module_to_include = $current_module ? SERVER_ROOT_PATH . "modules/{$current_module}.php" : null;
+
+// --- DEBUGGING INFO (File Existence Checks) ---
+echo "\n";
+echo "\n";
+echo "\n";
+echo "\n";
+if ($current_module) {
+    echo "\n";
+    echo "\n";
 }
+// --- END DEBUGGING INFO ---
 
-// Define file paths for includes
-$module_file = __DIR__ . '/modules/' . $current_module . '.php';
-$dashboard_file = __DIR__ . '/modules/dashboard.php'; // Dashboard is always loaded in the top 20%
-$status_file = __DIR__ . '/modules/status.php'; // Status is always loaded in the sidebar
-
-// --- DEBUGGING OUTPUT START ---
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-echo "\n";
-// --- DEBUGGING OUTPUT END ---
-
+if (!$db) {
+    error_log("Database connection is null.");
+}
 ?>
 
 <!DOCTYPE html>
@@ -81,7 +116,7 @@ echo "\n";
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPSM Control Panel</title>
-    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles.css">
+    <link rel="stylesheet" href="<?php echo WEB_ROOT_PATH; ?>styles.css"> 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Adjust Tailwind config to use CSS variables for dynamic colors
@@ -125,6 +160,17 @@ echo "\n";
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h1M4 12H3m15.354 5.354l-.707.707M6.346 6.346l-.707-.707m12.728 0l-.707-.707M6.346 17.654l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                 </svg>
             </button>
+            <form method="POST" action="" class="inline">
+                <select name="role" onchange="this.form.submit()" class="bg-bg-primary text-text-default p-2 rounded glass-inner-shadow">
+                    <?php foreach (['Developer', 'Admin', 'Service', 'Sales', 'Guest'] as $r): ?>
+                        <option value="<?php echo $r; ?>" <?php echo $role === $r ? 'selected' : ''; ?>>
+                            <?php echo $r; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            <a href="logout.php" class="text-neon-magenta">Logout</a>
+            <a href="?reset" class="text-neon-yellow">Reset Setup</a>
         </div>
     </header>
 
@@ -132,35 +178,50 @@ echo "\n";
         <aside class="glass w-64 p-4 fixed h-[calc(100vh-64px)] top-16 overflow-y-auto flex flex-col">
             <nav class="flex-1">
                 <ul class="space-y-2">
-                    <?php
-                    // Icons array - using heroicons path data for simplicity
-                    $icons = [
-                        'users'        => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h2v-2a6 6 0 00-6-6H9a6 6 0 00-6 6v2H5m11-9a4 4 0 10-8 0 4 4 0 008 0z"></path></svg>',
-                        'device-mobile'=> '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
-                        'shield-check' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.001 12.001 0 002 12c0 2.298.508 4.513 1.417 6.425C4.857 20.358 8.09 22 12 22s7.143-1.642 8.583-3.575C21.492 16.513 22 14.298 22 12c0-3.379-1.282-6.529-3.382-8.616z"></path></svg>',
-                        'code'         => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>'
-                    ];
-                    ?>
-                    <?php foreach ($accessible_modules as $module_key => $module_data): ?>
-                        <li>
-                            <a href="?module=<?php echo $module_key; ?>"
-                               class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === $module_key ? 'active' : ''; ?>">
-                                <?php echo $icons[$module_data['icon']] ?? ''; ?>
-                                <span><?php echo $module_data['label']; ?></span>
-                            </a>
-                        </li>
+                    <li>
+                        <a href="?module=dashboard"
+                           class="flex items-center p-2 rounded-lg menu-item <?php echo ($current_module === 'dashboard' || !$current_module) ? 'active text-neon-yellow' : ''; ?>">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-9v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="?module=status"
+                           class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === 'status' ? 'active text-neon-yellow' : ''; ?>">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-4m3 4v-6m3 4v-2m3.5-3.5a9 9 0 11-16.1 0 9 9 0 0116.1 0z"></path></svg>
+                            <span>Status</span>
+                        </a>
+                    </li>
+
+                    <?php foreach ($modules as $module_key => $details): ?>
+                        <?php if (has_permission($details['permission'])): ?>
+                            <li>
+                                <a href="?module=<?php echo $module_key; ?>"
+                                   class="flex items-center p-2 rounded-lg menu-item <?php echo $current_module === $module_key ? 'active text-neon-yellow' : ''; ?>">
+                                    <?php
+                                        // Simplified icons array - you'll likely want to put this in functions.php or similar
+                                        $icons = [
+                                            'customers'   => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h2v-2a6 6 0 00-6-6H9a6 6 0 00-6 6v2H5m11-9a4 4 0 10-8 0 4 4 0 008 0z"></path></svg>',
+                                            'devices'     => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
+                                            'permissions' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.001 12.001 0 002 12c0 2.298.508 4.513 1.417 6.425C4.857 20.358 8.09 22 12 22s7.143-1.642 8.583-3.575C21.492 16.513 22 14.298 22 12c0-3.379-1.282-6.529-3.382-8.616z"></path></svg>',
+                                            'devtools'    => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m6.364-12.364l-1.414 1.414M6.05 18.05l-1.414 1.414m-1.414-1.414l1.414-1.414m12.728 0l1.414 1.414M12 12a4 4 0 110-8 4 4 0 010 8z"></path></svg>'
+                                        ];
+                                        echo $icons[$details['icon']] ?? '';
+                                    ?>
+                                    <span><?php echo $details['label']; ?></span>
+                                </a>
+                            </li>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </ul>
             </nav>
             <div class="mt-auto">
                 <?php
+                // Include the Status module directly here for the footer of the sidebar
                 if (file_exists($status_file)) {
                     include $status_file;
                 } else {
-                    echo '<div class="glass p-4 rounded-lg mt-4 text-sm text-center">';
-                    echo '<h3 class="text-md text-yellow-neon mb-2">System Status Error</h3>';
-                    echo '<p>Status module file not found: ' . htmlspecialchars($status_file) . '</p>';
-                    echo '</div>';
+                    echo "";
                 }
                 ?>
             </div>
@@ -168,95 +229,59 @@ echo "\n";
 
         <main class="glass flex-1 p-4 ml-64 flex flex-col">
             <div class="dashboard-static-20 glass p-4 mb-4">
+                <h2 class="text-xl text-neon-cyan mb-4">MPSM Overview</h2>
+                <p>This is a static summary section for key dashboard information. It occupies 20% of the available vertical space in the main content area.</p>
                 <?php
-                // Always include dashboard.php in this top 20% area.
-                if (file_exists($dashboard_file)) {
-                    include $dashboard_file;
-                } else {
-                    echo '<h2 class="text-xl text-cyan-neon mb-4">Dashboard Not Found</h2>';
-                    echo '<p>The dashboard file (' . htmlspecialchars($dashboard_file) . ') could not be found. Please ensure it exists.</p>';
-                }
+                    // You can include a separate file for static overview here if needed
                 ?>
             </div>
 
             <div class="module-area-80 relative flex-1 p-4">
                 <?php
-                if (!empty($current_module) && file_exists($module_file)) {
-                    include $module_file; // Loads specific module content (e.g., customers, devices, permissions, devtools)
+                // This section loads the dynamic module content or the default dashboard
+                if ($current_module && file_exists($module_to_include)) {
+                    include $module_to_include; // Loads specific module content (e.g., customers, devices, devtools)
+                } else if (file_exists($dashboard_file)) {
+                    // Default to the dashboard content if no valid module is selected
+                    include $dashboard_file;
                 } else {
-                    // Display a message when no specific module is loaded in this area
-                    echo '<p class="text-default">Select a module from the sidebar to view its content here.</p>';
-                    // Optionally, if a module was requested but it\'s not accessible/found
-                    if (!empty($_GET['module']) && !array_key_exists($_GET['module'], $all_modules)) {
-                        echo '<p class="text-yellow-neon mt-2">The requested module "' . htmlspecialchars($_GET['module']) . '" does not exist.</p>';
-                    } else if (!empty($_GET['module']) && !array_key_exists($_GET['module'], $accessible_modules)) {
-                         echo '<p class="text-yellow-neon mt-2">The requested module "' . htmlspecialchars($_GET['module']) . '" is not accessible for your current role (' . htmlspecialchars($role) . ').</p>';
-                    }
+                    echo '<p class="text-neon-yellow">Welcome to the MPSM Control Panel. Select a module from the sidebar, or view the default dashboard.</p>';
+                    echo "";
                 }
                 ?>
             </div>
         </main>
     </div>
-
     <script>
         const themeToggle = document.getElementById('theme-toggle');
-        const htmlElement = document.documentElement; // Target the <html> element for theme class
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
 
-        // Function to set the theme and update the icon
-        function setTheme(theme) {
-            if (theme === 'dark') {
-                htmlElement.classList.add('dark');
-                document.getElementById('moon-icon').style.display = 'inline-block';
-                document.getElementById('sun-icon').style.display = 'none';
-            } else {
-                htmlElement.classList.remove('dark');
-                document.getElementById('moon-icon').style.display = 'none';
-                document.getElementById('sun-icon').style.display = 'inline-block';
-            }
-            localStorage.setItem('theme', theme);
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            document.documentElement.classList.remove('dark');
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
         }
 
-        // --- Custom Theme Loading Logic ---
-        function applyCustomTheme() {
-            try {
-                const customSettings = JSON.parse(localStorage.getItem('customThemeSettings'));
-                if (customSettings) {
-                    for (const [prop, value] of Object.entries(customSettings)) {
-                        document.documentElement.style.setProperty(prop, value);
-                    }
-                }
-            } catch (e) {
-                console.error("Error parsing custom theme settings from localStorage:", e);
-                localStorage.removeItem('customThemeSettings'); // Clear corrupted data
-            }
-        }
-
-        // Get stored theme or default to system preference
-        const storedTheme = localStorage.getItem('theme');
-        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const initialTheme = storedTheme || systemTheme; // Use stored, else system
-
-        // Apply initial theme
-        setTheme(initialTheme);
-        // Apply custom theme settings AFTER the base theme is set
-        applyCustomTheme();
-
-        // Add event listener to toggle button
         themeToggle.addEventListener('click', () => {
-            const currentTheme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            setTheme(newTheme);
-            // After changing the base theme, reapply custom settings in case they interact
-            applyCustomTheme();
-        });
-
-        // Listen for system theme changes (if no stored preference)
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            if (!localStorage.getItem('theme')) { // Only update if no explicit user preference
-                setTheme(e.matches ? 'dark' : 'light');
-                applyCustomTheme(); // Also reapply customs
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
             }
         });
     </script>
+    <?php echo "\n"; ?>
 </body>
 </html>
