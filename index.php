@@ -117,21 +117,25 @@ if (!$db) {
         .menu-item.active {
             background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15));
         }
-/* Replace your existing .floating-module rule with this: */
 .floating-module {
-  position: absolute;
-  /* 10% from the top of <main> and 10% from the left of <main> */
-  top: 10%;
-  left: 10%;
-  
-  /* Take up 80% of main’s width and 80% of main’s height */
-  width: 80%;
-  height: 80%;
-  
-  /* Preserve your existing styling */
+  position: fixed;
+
+  /* 80% of the area under the 64px‐tall header */
+  top: calc(64px + ((100vh - 64px) * 0.10));
+  /* 10% of the sidebar‐plus‐main width = 256px + 10% of remaining viewport width */
+  left: calc(256px + ((100vw - 256px) * 0.10));
+
+  /* Make the panel 80% of the “remaining width” (viewport minus sidebar) */
+  width:  calc((100vw - 256px) * 0.80);
+  /* Make the panel 80% of the “remaining height” (viewport minus header) */
+  height: calc((100vh - 64px) * 0.80);
+
   background: rgba(28, 37, 38, 0.9);
   border-radius: 8px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(255, 255, 0, 0.2);
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.7),
+    inset 0 0 15px rgba(255, 255, 0, 0.2);
+
   padding: 1.5rem;
   overflow-y: auto;
   z-index: 20;
