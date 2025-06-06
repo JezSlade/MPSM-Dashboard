@@ -118,20 +118,21 @@ if (!$db) {
         .menu-item.active {
             background: linear-gradient(145deg, rgba(255,255,0,0.3), rgba(255,255,0,0.15));
         }
+
+        /* ── ADJUSTED: `.floating-module` for proper "floating" within the main area ── */
         .floating-module {
-            position: absolute;
-            /* Adjust these values to control the padding around the floating module */
-            top: 20px; /* Reduced from 80px to be relative to its positioned parent, the 'main' element */
-            left: 20px; /* Reduced from 280px to be relative to its positioned parent, the 'main' element */
-            right: 20px; /* Keep consistent padding on the right */
-            bottom: 20px; /* Keep consistent padding on the bottom */
-            z-index: 20;
+            position: absolute; /* Keeps it positioned relative to its parent (main.glass) */
+            top: 1rem; /* Aligns with the 1rem padding of main.glass */
+            left: 1rem; /* Aligns with the 1rem padding of main.glass */
+            right: 1rem; /* Aligns with the 1rem padding of main.glass */
+            bottom: 1rem; /* Aligns with the 1rem padding of main.glass */
+            z-index: 20; /* Ensures it's above other dashboard content */
             background: rgba(28,37,38,0.9);
             border-radius: 8px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(255,255,0,0.2);
-            padding: 1.5rem;
+            padding: 1.5rem; /* Internal padding for the module's content */
             overflow-y: auto;
-            box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
+            box-sizing: border-box; /* Crucial for including padding in total size */
         }
 
         @supports not (backdrop-filter: blur(10px)) {
@@ -140,16 +141,16 @@ if (!$db) {
             }
         }
 
-        /* ── NEW: Make <main class="glass"> fixed, so only its contents scroll ────── */
+        /* ── Main Dashboard Area: Fixed and visible ───────────────────────────────── */
         main.glass {
             position: fixed;
             top: 64px;   /* exactly under the 64px‐tall header */
             left: 256px; /* exactly to the right of the 256px‐wide sidebar */
             right: 0;
             bottom: 0;
-            overflow-y: auto;
+            overflow-y: auto; /* Allows content within main to scroll */
             overflow-x: hidden;
-            padding: 1rem; /* Add padding to the main content area itself */
+            padding: 1rem; /* Padding for the main content area itself */
             box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
         }
     </style>
@@ -202,7 +203,7 @@ if (!$db) {
             </div>
         </aside>
 
-        <main class="glass flex-1 p-4"> 
+        <main class="glass flex-1 p-4">
             <?php
             if ($current_module && file_exists($module_file)) {
                 include $module_file;
