@@ -48,6 +48,10 @@ foreach ($queries as $query) {
     execute_query($db, $query);
 }
 
+function table_exists($db, $table_name) {
+    $result = $db->query("SHOW TABLES LIKE '$table_name'");
+    return $result->num_rows > 0;
+}
 // Seed initial data
 // Roles
 execute_query($db, "INSERT IGNORE INTO roles (id, name) VALUES (1, 'Developer'), (2, 'Admin'), (3, 'Service'), (4, 'Sales'), (5, 'Guest')");

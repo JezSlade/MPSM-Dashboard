@@ -10,6 +10,7 @@ error_reporting(E_ALL);
 // --- END DEBUGGING SETTINGS ---
 
 
+// --- APPLICATION PATHS ---
 // Define server-side absolute path to the project root
 // This will be the absolute path to the directory containing index.php and config.php
 define('SERVER_ROOT_PATH', __DIR__ . '/');
@@ -18,5 +19,20 @@ define('SERVER_ROOT_PATH', __DIR__ . '/');
 // Adjust '/mpsm/' if your project is directly in your domain root (e.g., '/')
 define('WEB_ROOT_PATH', '/mpsm/');
 
-// This file is purely for defining global paths and core debugging settings.
+
+// --- APPLICATION METADATA & SETTINGS ---
+define('APP_NAME', 'MPSM Dashboard'); // Your application's name
+define('APP_VERSION', '1.0.0');      // Current version of your application
+
+// Default timezone for all date/time functions
+date_default_timezone_set('America/New_York'); // Example: Use your desired timezone
+
+// Default module to load if none is specified in the URL
+define('DEFAULT_MODULE', 'dashboard');
+
+// Asset version for cache busting (change this value to force CSS/JS reload)
+define('ASSET_VERSION', '2025060601'); // Example: YYYYMMDD + increment
+
+
+// This file is purely for defining global constants and core debugging settings.
 // Database environment variables are handled by db.php's load_env function.

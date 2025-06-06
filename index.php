@@ -14,7 +14,7 @@ require_once __DIR__ . '/config.php';
 require_once SERVER_ROOT_PATH . 'db.php';
 require_once SERVER_ROOT_PATH . 'functions.php';
 include_once SERVER_ROOT_PATH . 'auth.php'; // Consider changing to require_once if auth is critical
-
+require_once SERVER_ROOT_PATH . 'setup.php'; //
 // --- DEBUGGING INFO ---
 // This will output comments in your HTML source, viewable via "Inspect Element" or "View Source"
 echo "\n";
