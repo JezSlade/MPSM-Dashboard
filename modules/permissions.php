@@ -427,6 +427,4 @@ $error_message = $_GET['error'] ?? '';
                     </form>
                 <?php endif; ?>
             <?php endif; ?>
-        <?php endif; ?>
-    <?php endif; ?>
 </div>

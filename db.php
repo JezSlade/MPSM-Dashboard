@@ -41,15 +41,15 @@ function connect_db() {
         error_log("Database connection failed: " . $mysqli->connect_error);
         return null;
     }
-    error_log("Database connection successful.");
     return $mysqli;
 }
 
-// Set global $db on include
-global $db;
-$db = connect_db();
-
-if ($db === null) {
-    error_log("Database connection not established in db.php.");
+// ADD THIS FUNCTION TO db.php
+function table_exists($db, $table_name) {
+    if (!$db) {
+        error_log("Database connection is null in table_exists.");
+        return false;
+    }
+    $result = $db->query("SHOW TABLES LIKE '$table_name'");
+    return $result->num_rows > 0;
 }
-?>
