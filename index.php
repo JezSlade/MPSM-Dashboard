@@ -1,5 +1,5 @@
 <?php
-session_start();
+session_start(); // MUST BE THE VERY FIRST LINE
 
 // Define SERVER_ROOT_PATH
 defined('SERVER_ROOT_PATH') or define('SERVER_ROOT_PATH', __DIR__ . DIRECTORY_SEPARATOR);
@@ -12,14 +12,15 @@ require_once SERVER_ROOT_PATH . 'auth.php';
 $db = connect_db();
 
 if (!isLoggedIn()) {
+    echo "<p style='color: yellow;'>DEBUG: Not logged in. Redirecting to login.php</p>"; // DEBUG
     header('Location: login.php');
     exit;
 }
 
 // User role and accessible modules
-$user_id = $_SESSION['user_id'];
+$user_id = $_SESSION['user_id'] ?? 'N/A';
 $role = $_SESSION['role'] ?? 'Guest'; // Default to 'Guest' if not set
-error_log("DEBUG: User ID: $user_id, Session Role: $role"); // ADD THIS LINE
+echo "<p style='color: yellow;'>DEBUG: User ID: " . htmlspecialchars($user_id) . ", Session Role: " . htmlspecialchars($role) . "</p>"; // DEBUG
 
 // Fetch role_id from the database based on the role name
 $role_id = null;
@@ -32,25 +33,25 @@ if ($db) { // Ensure $db is connected before querying
         $role_data = $result->fetch_assoc();
         if ($role_data) {
             $role_id = $role_data['id'];
-            error_log("DEBUG: Fetched Role ID: $role_id for role: $role"); // ADD THIS LINE
+            echo "<p style='color: yellow;'>DEBUG: Fetched Role ID: " . htmlspecialchars($role_id) . " for role: " . htmlspecialchars($role) . "</p>"; // DEBUG
         } else {
-            error_log("DEBUG: Role '$role' not found in database for user_id: $user_id"); // ADD THIS LINE
+            echo "<p style='color: yellow;'>DEBUG: Role '" . htmlspecialchars($role) . "' not found in database for user_id: " . htmlspecialchars($user_id) . "</p>"; // DEBUG
         }
         $stmt->close();
     } else {
-        error_log("DEBUG: Failed to prepare statement for fetching role_id: " . $db->error); // ADD THIS LINE
+        echo "<p style='color: yellow;'>DEBUG: Failed to prepare statement for fetching role_id: " . htmlspecialchars($db->error) . "</p>"; // DEBUG
     }
 } else {
-    error_log("DEBUG: Database connection is null when trying to fetch role_id in index.php."); // ADD THIS LINE
+    echo "<p style='color: yellow;'>DEBUG: Database connection is null when trying to fetch role_id in index.php.</p>"; // DEBUG
 }
 
 // Now call get_accessible_modules with $role_id and $user_id
 if ($role_id !== null) {
     $accessible_modules = get_accessible_modules($role_id, $user_id);
-    error_log("DEBUG: Accessible modules array after get_accessible_modules call: " . print_r($accessible_modules, true)); // ADD THIS LINE
+    echo "<p style='color: yellow;'>DEBUG: Accessible modules array after get_accessible_modules call: <pre>" . htmlspecialchars(print_r($accessible_modules, true)) . "</pre></p>"; // DEBUG
 } else {
     // Fallback if role_id cannot be determined (e.g., if role doesn't exist or DB error)
-    error_log("DEBUG: Role ID is null, accessible modules set to empty array for user $user_id with role: $role."); // ADD THIS LINE
+    echo "<p style='color: yellow;'>DEBUG: Role ID is null, accessible modules set to empty array for user " . htmlspecialchars($user_id) . " with role: " . htmlspecialchars($role) . ".</p>"; // DEBUG
     $accessible_modules = [];
 }
 
@@ -64,12 +65,13 @@ if (!in_array($module, array_keys($accessible_modules))) { // Use array_keys for
     // Otherwise, deny access.
     if (in_array('dashboard', array_keys($accessible_modules))) { // Use array_keys here too
         $module = 'dashboard';
+        echo "<p style='color: yellow;'>DEBUG: Access denied to requested module. Redirecting to dashboard.</p>"; // DEBUG
         header("Location: index.php?module=dashboard&error=Access+denied+to+requested+module.+Redirected+to+dashboard.");
         exit();
     } else {
         // If no modules are accessible at all, or only inaccessible ones are requested.
         // This might happen for a new user with no permissions, or a misconfiguration.
-        error_log("DEBUG: Final state: No accessible modules found or requested module inaccessible. Accessible modules array: " . print_r($accessible_modules, true)); // ADD THIS LINE
+        echo "<p style='color: yellow;'>DEBUG: Final state: No accessible modules found or requested module inaccessible. Accessible modules array: <pre>" . htmlspecialchars(print_r($accessible_modules, true)) . "</pre></p>"; // DEBUG
         echo "<p class='text-red-500 p-4'>Access denied. No accessible modules found.</p>";
         session_unset();
         session_destroy();
@@ -85,6 +87,7 @@ if (!file_exists($module_path)) {
     if (in_array('dashboard', array_keys($accessible_modules))) { // Use array_keys here too
         $module = 'dashboard';
         $module_path = SERVER_ROOT_PATH . 'modules/dashboard.php';
+        echo "<p style='color: yellow;'>DEBUG: Module not found. Redirecting to dashboard.</p>"; // DEBUG
         header("Location: index.php?module=dashboard&error=Module+not+found.+Redirected+to+dashboard.");
         exit();
     } else {
