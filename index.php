@@ -1,52 +1,38 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// Diagnostic: Check for required variables and files
-if (!defined('BASE_PATH')) {
-    die('<pre style="color:red;background:#fff;padding:1em;">Error: BASE_PATH is not defined.</pre>');
-}
-foreach (['accessible_modules', 'current_module', 'dashboard_file', 'module_file'] as $var) {
-    if (!isset($$var)) {
-        die('<pre style="color:red;background:#fff;padding:1em;">Error: $' . $var . ' is not set.</pre>');
-    }
-}
-if (!file_exists($dashboard_file)) {
-    die('<pre style="color:red;background:#fff;padding:1em;">Error: Dashboard file not found: ' . htmlspecialchars($dashboard_file) . '</pre>');
-}
-if ($module_file && !file_exists($module_file)) {
-    die('<pre style="color:red;background:#fff;padding:1em;">Error: Module file not found: ' . htmlspecialchars($module_file) . '</pre>');
-}
-if (!file_exists(BASE_PATH . 'modules/status.php')) {
-    die('<pre style="color:red;background:#fff;padding:1em;">Error: Status module not found: ' . htmlspecialchars(BASE_PATH . 'modules/status.php') . '</pre>');
-}
-
 // index.php
 // ────────────────────────────────────────────────────────────────────────────────
 // Main entry for MPSM Dashboard
-// Assumes BASE_PATH is defined, and $accessible_modules / $current_module / $dashboard_file / $module_file are set
+// Assumes session/auth logic sets these variables before including anything:
+//   - $accessible_modules    (array of ['module_key' => ['label' => 'Name', 'icon' => '…']])
+//   - $current_module        (string, the module key currently selected)
+//   - $dashboard_file        (full filesystem path to whichever dashboard view to include)
+//   - $module_file           (full filesystem path to whichever module to include, if any)
+//
+// Make sure you set those up in your bootstrap or routing logic above this line.
+// Example (not shown here):
+//   session_start();
+//   $accessible_modules = [ 'status'=> ['label'=>'Status','icon'=>'status'], 'devtools'=>['label'=>'DevTools','icon'=>'devtools'] ];
+//   $current_module = $_GET['module'] ?? 'status';
+//   $dashboard_file = __DIR__ . '/dashboards/main.php';
+//   $module_file = isset($_GET['module']) ? __DIR__ . '/modules/' . $_GET['module'] . '.php' : null;
+//   if ($module_file && !file_exists($module_file)) { $module_file = null; }
+//   // …authentication, permission checks, etc.
 
-// Example at top of file (not shown here):
-// define('BASE_PATH', '/path/to/your/project/');
-// session_start();
-// … authentication, permission checks, etc.
-?>
-<!DOCTYPE html>
+?><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>MPS Monitor Dashboard</title>
 
-    <!-- 1a. Load our custom styles first -->
-    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles.css">
-    <!-- 1b. Keep the fallback in case Tailwind isn’t available -->
-    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>styles-fallback.css">
-    <!-- 1c. Tailwind can still augment things, but our overrides come first -->
+    <!-- 1) Load custom styles first -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- 2) Fallback styles (if Tailwind fails) -->
+    <link rel="stylesheet" href="styles-fallback.css">
+    <!-- 3) Tailwind can augment, but our overrides take precedence -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-    <!-- Header -->
+    <!-- HEADER -->
     <header class="header">
         <h1>Resolutions by Design • MPSM Dashboard</h1>
         <nav>
@@ -57,20 +43,20 @@ if (!file_exists(BASE_PATH . 'modules/status.php')) {
     </header>
 
     <div class="flex mt-16">
-        <!-- Sidebar -->
+        <!-- SIDEBAR -->
         <aside class="sidebar">
             <nav>
                 <ul class="space-y-2">
                     <?php foreach ($accessible_modules as $module => $key): ?>
                         <li>
                             <a href="?module=<?php echo $module; ?>"
-                               class="menu-item <?php echo $current_module === $module ? 'active' : ''; ?>">
+                               class="menu-item <?php echo ($current_module === $module) ? 'active' : ''; ?>">
                                 <?php
-                                  // Example icon logic; replace with your SVGs as needed
+                                  // Example icon logic. Replace these SVGs with your own if desired.
                                   $icons = [
                                     'status'   => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>',
                                     'devtools' => '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-                                    // …add other icons here…
+                                    // …add other icons for other modules here…
                                   ];
                                   echo $icons[$module] ?? '';
                                 ?>
@@ -81,17 +67,23 @@ if (!file_exists(BASE_PATH . 'modules/status.php')) {
                 </ul>
             </nav>
 
-            <!-- Status Module (always visible at bottom of sidebar) -->
+            <!-- Status Module at bottom -->
             <div class="mt-auto">
-                <?php include_once BASE_PATH . 'modules/status.php'; ?>
+                <?php
+                  // Adjust path if your modules folder is elsewhere
+                  include_once __DIR__ . '/modules/status.php';
+                ?>
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- MAIN CONTENT -->
         <main class="main-content">
-            <?php include $dashboard_file; ?>
+            <?php
+              // This is your “dashboard” view (e.g. overview charts, stats, etc.)
+              include $dashboard_file;
+            ?>
 
-            <?php if ($module_file): ?>
+            <?php if (!empty($module_file)): ?>
                 <div class="floating-module">
                     <?php include $module_file; ?>
                     <a href="<?php echo strtok($_SERVER['REQUEST_URI'], '?'); ?>"

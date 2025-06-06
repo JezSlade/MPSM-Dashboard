@@ -2,15 +2,16 @@
 // modules/devtools.php
 // ────────────────────────────────────────────────────────────────────────────────
 // “DevTools → Style Customizer” Module
-// Relies on the Neumorphic CSS variables defined in styles.css.
-// Must be included inside a <div class="floating-module">…</div> wrapper.
+// Must be included inside <div class="floating-module">…</div> in index.php.
+// The only requirement here is that Neumorphic :root variables already exist
+// in styles.css. This file no longer checks for BASE_PATH.
 
-if (!defined('BASE_PATH')) {
-    die('Direct access forbidden');
+if (!defined('STDIN') && php_sapi_name() !== 'cli') {
+    // Optional: permission check here if needed
+    // For example: if (!user_is_sysop()) { die('Forbidden'); }
 }
 
-// (Optional) any permission checks, environment loading, etc., go here
-
+// No BASE_PATH check; we rely on __DIR__ for any includes if necessary.
 ?>
 <div class="glass p-4 border border-gray-800 rounded space-y-4">
     <h2 class="text-2xl text-cyan-neon mb-4 flex items-center">
@@ -118,7 +119,7 @@ if (!defined('BASE_PATH')) {
         </button>
     </div>
 
-    <!-- ── JavaScript for Live CSS-Variable Updates ──────────────────────────────── -->
+    <!-- ── JavaScript for Live CSS‐Variable Updates ───────────────────────────────── -->
     <script>
     (function() {
       // Default values must match :root defaults in styles.css
