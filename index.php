@@ -144,16 +144,15 @@ if (!$db) {
         /* ── ADDED: `position: relative;` to `main.glass` for `absolute` children ──── */
         main.glass {
             position: relative; /* Makes main a positioned parent for absolute children like .floating-module */
-            /* No other explicit positioning here, relies on flexbox for layout */
-            /* Tailwind's p-4 provides padding and flex-1 handles sizing */
+            /* Relies on flexbox for layout, so no explicit top/left/right/bottom */
             overflow-y: auto; /* Allows content within main to scroll */
             overflow-x: hidden;
             box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
         }
     </style>
 </head>
-<body class="bg-black-smoke text-white min-h-screen font-sans">
-    <header class="glass p-4 fixed w-full top-0 z-10">
+<body class="bg-black-smoke text-white min-h-screen font-sans flex flex-col">
+    <header class="glass p-4 fixed w-full top-0 z-10 h-16">
         <div class="flex justify-between items-center">
             <h1 class="text-2xl text-cyan-neon">MPSM Control Panel</h1>
             <div>
@@ -172,8 +171,8 @@ if (!$db) {
         </div>
     </header>
 
-    <div class="flex mt-16 h-[calc(100vh-64px)]">
-        <aside class="glass w-64 p-4 fixed h-[calc(100vh-80px)] top-16 overflow-y-auto flex flex-col">
+    <div class="flex flex-1 mt-16">
+        <aside class="glass w-64 p-4 fixed h-[calc(100vh-64px)] top-16 overflow-y-auto flex flex-col">
             <nav class="flex-1">
                 <ul class="space-y-2">
                     <?php foreach ($accessible_modules as $module => $key): ?>
@@ -200,7 +199,7 @@ if (!$db) {
             </div>
         </aside>
 
-        <main class="glass flex-1 p-4">
+        <main class="glass flex-1 p-4 ml-64 overflow-y-auto relative">
             <?php
             if ($current_module && file_exists($module_file)) {
                 include $module_file;
