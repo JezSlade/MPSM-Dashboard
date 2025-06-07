@@ -1,0 +1,6 @@
+body.light { background:#fff;color:#000;font-family:sans-serif; }
+header,footer{background:#eee;padding:10px;}
+aside{background:#f9f9f9;float:left;width:200px;padding:10px;}
+main{margin-left:220px;padding:10px;}
+.module { border:1px solid #ccc;padding:10px;margin-bottom:10px; }
+.module-error{color:red;}
