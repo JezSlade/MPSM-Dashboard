@@ -1,4 +1,4 @@
-name: Simple FTP Deploy
+name: FTP Deploy - Testing Mode
 
 on:
   push:
@@ -11,53 +11,53 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Bump version in version.txt
+      - name: Debug - Show files before upload
+        run: |
+          echo "=== CURRENT DIRECTORY STRUCTURE ==="
+          ls -laR
+          echo "=================================="
+
+      - name: Bump version with validation
         id: bump_version
         run: |
-          # If version.txt doesn't exist, initialize it to 0.0.0.0
+          set -euo pipefail
+          
+          # Initialize version.txt if missing
           if [ ! -f version.txt ]; then
             echo "0.0.0.0" > version.txt
           fi
 
-          # Read the four segments
+          # Validate version format
+          if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' version.txt; then
+            echo "::error::Invalid version format in version.txt"
+            exit 1
+          fi
+
+          # Increment version
           IFS='.' read -r MAJOR MINOR PATCH BUILD < version.txt
-
-          # Increment only the BUILD segment
           BUILD=$((BUILD + 1))
-
-          # Recompose the version string
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}.${BUILD}"
-
-          # Write it back
           echo "$NEW_VERSION" > version.txt
-
-          # Expose as an output if needed
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version bumped to: $NEW_VERSION"
 
-      # (Optional) If you want to commit the bumped version back to the repo,
-      # uncomment the next two steps. Make sure to include “[skip ci]” in your commit message
-      # so that this push does NOT retrigger this same workflow.
-
-      # - name: Commit bumped version.txt
-      #   if: always()
-      #   run: |
-      #     git config user.name "github-actions[bot]"
-      #     git config user.email "github-actions[bot]@users.noreply.github.com"
-      #     git add version.txt
-      #     git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]" || echo "No changes to commit."
-
-      # - name: Push version bump
-      #   if: always()
-      #   run: |
-      #     git push
-
-      - name: FTP Upload (clean mirror)
+      - name: FTP Upload with verbose logging
         uses: sebastianpopp/ftp-action@releases/v2
         with:
-          host:     "ftp.resolutionsbydesign.us"
-          user:     "mpsm@resolutionsbydesign.us"
+          host: "ftp.resolutionsbydesign.us"
+          user: "mpsm@resolutionsbydesign.us"
           password: "MP$M_Nr0lr"
           localDir: "./"
-          remoteDir: "./"
-          options:  "--delete"
+          remoteDir: "./"  # Try "public_html/" or "htdocs/" if this fails
+          options: "--delete --transfer-all --passive --verbose --exclude .git/"
+        
+      - name: Verify upload
+        run: |
+          echo "If you see this, the FTP upload completed without immediate errors"
+          echo "Check your server for files. If missing:"
+          echo "1. Your remoteDir path might be incorrect"
+          echo "2. Your FTP user may not have write permissions"
+          echo "3. The server might silently reject certain files"
