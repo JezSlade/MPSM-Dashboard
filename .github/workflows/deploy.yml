@@ -24,8 +24,8 @@ jobs:
           echo "Testing FTP login with corrected username and provided credentials..."
           # WARNING: These credentials are hardcoded for debugging.
           # Please switch to GitHub Secrets (e.g., ${{ secrets.FTP_USERNAME }}) for production!
-          curl -v --disable-epsv -u "mpsm@mpsm.resolutionsbydesign.us:Mpsm1234!!!" \
-            ftp://ftp.resolutionsbydesign.us/ > auth_test.log 2>&1 || true # `|| true` prevents step failure if curl fails
+          curl -v --disable-epsv -u "mpsm@mpsm.resolutionsbydesign.us:Deploy123!" \
+            ftp://ftp.resolutionsbydesign.us/ > auth_test.log 2>&2 || true # `|| true` prevents step failure if curl fails
           
           echo "=== FTP LOGIN TEST RESULTS ==="
           if grep "230 Login successful" auth_test.log; then
@@ -46,7 +46,7 @@ jobs:
           lftp -e "
             set ftp:ssl-allow no; 
             set net:timeout 30;   
-            open -u mpsm@mpsm.resolutionsbydesign.us,Mpsm1234 ftp.resolutionsbydesign.us;
+            open -u mpsm@mpsm.resolutionsbydesign.us,Deploy123! ftp.resolutionsbydesign.us;
             echo '=== FTP ACCOUNT EFFECTIVE ROOT (ls -la) ===';
             ls -la; # List contents of the directory you land in after login
             pwd; # Print working directory on the remote server
@@ -64,7 +64,7 @@ jobs:
         with:
           server: ftp.resolutionsbydesign.us
           username: mpsm@mpsm.resolutionsbydesign.us # Corrected FTP username for subdomain
-          password: Mpsm1234!!!
+          password: Deploy123! # Corrected FTP password
           local-dir: ./ # Deploy from the root of your GitHub repository
           # IMPORTANT: Set server-directory to '/' if your cPanel FTP user's
           # "Home Directory" is already set to the target web root (e.g., /home/resolut7/public_html/mpsm.resolutionsbydesign.us/).
