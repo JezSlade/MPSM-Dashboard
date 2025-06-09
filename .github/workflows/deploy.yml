@@ -89,4 +89,77 @@ jobs:
           echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/mpsm.resolutionsbydesign.us/'." >> report.md
           echo "3. **File Permissions/Caching:** If files aren't visible, check server permissions or clear website cache." >> report.md
           echo "4. **Contact GreenGeeks Support:** Provide them with the full GitHub Actions workflow run link for detailed assistance if issues persist." >> report.md
+<<<<<<< HEAD
+=======
+          
+          cat report.md
+Discovery/verification
+
+      - name: 🛡️ Verify FTP Credentials
+        # This step performs a basic login test with the FTP server.
+        # It ensures credentials are valid before proceeding to deployment.
+        run: |
+          # WARNING: These credentials are hardcoded for debugging.
+          # Please switch to GitHub Secrets (e.g., ${{ secrets.FTP_USERNAME }}) for production!
+          curl -v --disable-epsv -u "mpsm@mpsm.resolutionsbydesign.us:Deploy123!" \
+            ftp://ftp.resolutionsbydesign.us/ > auth_test.log 2>&2 || true # `|| true` prevents step failure if curl fails
+          
+          if grep "230 " auth_test.log; then # Check for a generic '230' success code
+            echo "✅ FTP Credentials WORKED."
+          else
+            echo "❌ FTP Credentials FAILED or connection issue. See full curl output in logs above."
+            exit 1 # Fail the workflow step if login was not successful
+          fi
+
+      - name: 🗺️ Confirm FTP Account's Effective Root Path
+        # This step confirms the starting directory after FTP login.
+        # It's helpful to ensure the server-directory in the deploy action is correct.
+        run: |
+          # WARNING: These credentials are hardcoded for debugging.
+          lftp -e "
+            set ftp:ssl-allow no; 
+            set net:timeout 30;   
+            open -u mpsm@mpsm.resolutionsbydesign.us,Deploy123! ftp.resolutionsbydesign.us;
+            ls -la; # List contents of the directory you land in after login
+            bye;
+          " > effective_root.log 2>&1
+          echo "FTP Account's Effective Root Contents (from ls -la):"
+          cat effective_root.log
+          echo "---"
+          echo "Expected FTP user landing directory: /home/resolut7/public_html/mpsm.resolutionsbydesign.us/"
+
+      - name: 🚀 Deploy with FTP-Deploy-Action
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.0
+        with:
+          server: ftp.resolutionsbydesign.us
+          username: mpsm@mpsm.resolutionsbydesign.us # Corrected FTP username for subdomain
+          password: Deploy123! # Corrected FTP password
+          local-dir: ./ # Deploy from the root of your GitHub repository
+          # IMPORTANT: Set server-directory to '/' if your cPanel FTP user's
+          # "Home Directory" is already set to the target web root (e.g., /home/resolut7/public_html/mpsm.resolutionsbydesign.us/).
+          # This tells the action to deploy INTO the root of your FTP login.
+          server-directory: / # Corrected path for direct deployment into the FTP account's home directory
+          protocol: ftp
+          exclude: .git/ # Exclude the .git directory from being uploaded
+          log-level: verbose # Keep verbose logging for the deploy action itself
+          delete: true # Delete files on the server that are not in the local repository
+          timeout: 120 # Timeout for the deploy operation in seconds (2 minutes)
+
+      - name: 📜 Final Report
+        # This step provides a summary of the deployment outcome.
+        run: |
+          echo "### DEPLOYMENT SUMMARY ###" > report.md
+          echo "- Credentials: ✅ Validated (hardcoded for debugging - **TEMPORARY!**)" >> report.md
+          echo "- Deployment Method: SamKirkland/FTP-Deploy-Action" >> report.md
+          echo "- Local repository root (./) deployed to: FTP account's home directory (expected: /home/resolut7/public_html/mpsm.resolutionsbydesign.us/)" >> report.md
+          echo "- Files should now be live at: https://mpsm.resolutionsbydesign.us" >> report.md
+          echo "" >> report.md
+          echo "---" >> report.md
+          echo "**Troubleshooting Tips:**" >> report.md
+          echo "1. **Check 'Deploy with FTP-Deploy-Action' logs:** This step now has verbose logging enabled." >> report.md
+          echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/mpsm.resolutionsbydesign.us/'." >> report.md
+          echo "3. **File Permissions/Caching:** If files aren't visible, check server permissions or clear website cache." >> report.md
+          echo "4. **Contact GreenGeeks Support:** Provide them with the full GitHub Actions workflow run link for detailed assistance if issues persist." >> report.md
+          
+>>>>>>> b5994de0c1aae8543096afd1eefc8e8a515377d7
           cat report.md
