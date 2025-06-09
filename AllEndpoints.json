@@ -1,4 +1,0 @@
-{
-  "GetCustomers": "/Account/GetAccounts",
-  "GetDevices": "/Device/GetDevices"
-}
