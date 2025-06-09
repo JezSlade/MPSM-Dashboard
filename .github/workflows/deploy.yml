@@ -16,7 +16,7 @@ jobs:
       - name: 🛡️ Verify FTP Credentials
         run: |
           echo "Testing FTP login with new password..."
-          curl -v --disable-epsv -u "mpsm@resolutionsbydesign.us:Mpsm1234" \
+          curl -v --disable-epsv -u "mpsm@resolutionsbydesign.us:Mpsm1234!!!" \
             ftp://ftp.resolutionsbydesign.us/ > auth_test.log 2>&1
           
           echo "=== AUTH TEST RESULTS ==="
