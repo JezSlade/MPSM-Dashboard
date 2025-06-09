@@ -52,7 +52,7 @@ jobs:
           password: "MP$M_Nr0lr"
           localDir: "./"
           remoteDir: "./"  # Try "public_html/" or "htdocs/" if this fails
-          options: "--delete --transfer-all --passive --verbose --exclude .git/"
+          options: "--delete --transfer-all --verbose --exclude .git/"
         
       - name: Verify upload
         run: |
