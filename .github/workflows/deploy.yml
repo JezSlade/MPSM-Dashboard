@@ -36,7 +36,7 @@ jobs:
           user: "mpsm@resolutionsbydesign.us"
           password: "MP$M_Nr0lr"
           localDir: "./"
-          remoteDir: "/home/resolut7/public_html/resolutionsbydesign.us"
+          remoteDir: ""
           options: "--delete --transfer-all --verbose"
 
       - name: Deployment verification
