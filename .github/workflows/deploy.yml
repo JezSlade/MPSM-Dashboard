@@ -1,4 +1,4 @@
-name: FTP Deploy - Exact Path Configuration
+name: FTP Deploy - Flat Structure
 
 on:
   push:
@@ -14,36 +14,46 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Show complete file structure
+      - name: Prepare deployment bundle
         run: |
-          echo "=== FILE STRUCTURE ==="
-          find . -type d | sort
-          echo "====================="
+          # Create a temporary deployment directory
+          mkdir -p deployment_temp
+          
+          # Move all files (except .git/) into the root of deployment_temp
+          find . -maxdepth 1 ! -name '.' ! -name '.git' ! -name 'deployment_temp' -exec cp -r {} deployment_temp/ \;
+          
+          echo "=== Files to be deployed ==="
+          ls -la deployment_temp/
+          echo "==========================="
 
       - name: Bump version
         id: bump_version
         run: |
-          set -euo pipefail
           [ -f version.txt ] || echo "0.0.0.0" > version.txt
           IFS='.' read -r a b c d < version.txt
           echo "$a.$b.$c.$((d + 1))" > version.txt
+          cp version.txt deployment_temp/
           echo "new_version=$(cat version.txt)" >> $GITHUB_OUTPUT
 
-      - name: FTP Deploy
+      - name: FTP Deploy (Flat Structure)
         uses: sebastianpopp/ftp-action@releases/v2
         with:
           host: "ftp.resolutionsbydesign.us"
           user: "mpsm@resolutionsbydesign.us"
           password: "MP$M_Nr0lr"
-          localDir: "./"
-          remoteDir: "/home/resolut7/public_html/"
+          localDir: "./deployment_temp/"
+          remoteDir: "/home/resolut7/public_html/resolutionsbydesign.us/"
           options: "--delete --transfer-all --verbose"
 
-      - name: Deployment verification
+      - name: Clean up
+        run: rm -rf deployment_temp
+
+      - name: Verify deployment
         run: |
-          echo "Deployment completed without errors"
-          echo "Check your site at: https://resolutionsbydesign.us"
-          echo "If files aren't visible:"
-          echo "1. Verify exact case sensitivity of paths"
-          echo "2. Check for .htaccess or permission issues"
-          echo "3. Contact host about possible write delays"
+          echo "Files should now be in your ROOT directory:"
+          echo "/home/resolut7/public_html/resolutionsbydesign.us/"
+          echo ""
+          echo "If you still see subfolders:"
+          echo "1. Your host might have directory redirection"
+          echo "2. Check if there's a 'public_html' subfolder in your FTP client"
+          echo "3. Contact your host about the correct root path"
