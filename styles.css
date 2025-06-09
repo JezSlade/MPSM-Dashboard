@@ -1,0 +1,91 @@
+/* styles.css
+   Dark Glassmorphic theme for dashboard
+*/
+
+/* Base page styles */
+body.dark-glassmorphic {
+  margin: 0;
+  padding: 0;
+  /* Very dark background */
+  background: #0a0a0a;
+  font-family: Arial, sans-serif;
+  color: #e0e0e0;
+  /* Ensure content sits in front */
+  overflow-x: hidden;
+}
+
+/* Reusable glass panel */
+.glassmorphic-panel {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Header styling */
+.header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  margin: 1rem;
+}
+
+/* Status icons */
+.status span {
+  margin-right: 1rem;
+  font-size: 1rem;
+}
+.status-icon.ok {
+  color: #4caf50; /* green check */
+}
+
+/* Role switcher dropdown */
+.role-switcher label {
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+.role-switcher select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: none;
+  background: rgba(30, 30, 30, 0.8);
+  color: #e0e0e0;
+  font-size: 1rem;
+}
+
+/* Cards container */
+.cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 2rem;
+}
+
+/* Individual card */
+.card {
+  flex: 1 1 calc(33% - 2rem); /* three per row minimum */
+  min-width: 250px;
+  max-width: 350px;
+  background: rgba(25, 25, 25, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+}
+
+/* Card title */
+.card h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+/* Endpoint list inside card

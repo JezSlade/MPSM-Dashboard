@@ -1,8 +1,8 @@
-name: FTP File Hunter
+name: FTP Deploy - Managed Hosting Edition
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   deploy:
@@ -10,82 +10,65 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: 🕵️‍♂️ Checkout Code
+      - name: 🛠️ Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔍 Debug - Create Test Files
+      - name: 🔍 Debug - Create Path Test Files
         run: |
-          echo "Creating test files with unique markers..."
-          echo "THIS IS TEST FILE 1 - DEPLOY ROOT" > test_root.txt
-          echo "THIS IS TEST FILE 2 - DEPLOY SUBDIR" > test_subdir.txt
-          mkdir -p testdir
-          echo "THIS IS TEST FILE 3 - DEPLOY TESTDIR" > testdir/test_nested.txt
-          echo "=== TEST FILES CREATED ==="
-          find . -name "test_*" -exec ls -la {} \;
+          echo "=== TEST FILES ==="
+          echo "This should appear in WEB ROOT" > web_root.txt
+          echo "This should appear in PUBLIC_HTML" > public_html.txt
+          echo "This tests SUBDIR" > subdir_test.txt
+          mkdir -p public_html
+          cp public_html.txt public_html/
+          ls -la
 
-      - name: 🚨 Nuclear Debugging FTP Session
+      - name: 🚀 Smart FTP Deploy
         run: |
-          echo "Starting FTP debug session..."
           sudo apt-get install -y lftp
-          
-          # Debug script that explores server paths
-          lftp -d -e "
+          lftp -e "
             set ftp:ssl-allow no;
-            set net:timeout 10;
+            set net:timeout 15;
+            set ftp:passive-mode on;
             set xfer:log yes;
-            set cmd:verbose true;
+            
             open -u mpsm@resolutionsbydesign.us,'MP$M_Nr0lr' ftp.resolutionsbydesign.us;
             
-            echo '=== CURRENT REMOTE PATH ===';
+            echo '=== SERVER PATH DEBUG ===';
+            echo 'Current path:';
             pwd;
-            
-            echo '=== ATTEMPTING TO LIST ROOT ===';
-            ls -la;
-            
-            echo '=== ATTEMPTING TO LIST HOME ===';
+            echo 'Home directory:';
             ls -la ~;
-            
-            echo '=== ATTEMPTING TO LIST PUBLIC_HTML ===';
+            echo 'Public_html contents:';
             ls -la ~/public_html;
             
-            echo '=== ATTEMPTING TO LIST TARGET PATH ===';
-            ls -la /home/resolut7/public_html/resolutionsbydesign.us;
+            echo '=== TRYING MULTIPLE LOCATIONS ===';
+            put web_root.txt -o ./web_root.txt;
+            put public_html.txt -o ./public_html/public_html.txt;
+            put subdir_test.txt -o ./subdir_test.txt;
             
-            echo '=== UPLOADING TEST FILES TO VARIOUS LOCATIONS ===';
-            put test_root.txt -o /test_root.txt;
-            put test_root.txt -o ~/test_root_home.txt;
-            put test_root.txt -o public_html/test_root_public_html.txt;
-            put test_root.txt -o /home/resolut7/public_html/resolutionsbydesign.us/test_root_target.txt;
-            
-            echo '=== FINAL VERIFICATION ===';
-            find /home -name 'test_*.txt' -exec ls -la {} \;;
-            find ~ -name 'test_*.txt' -exec ls -la {} \;;
-            find . -name 'test_*.txt' -exec ls -la {} \;;
-            
-            echo '=== COMPLETE DEBUG OUTPUT ===';
+            echo '=== FINAL CHECK ===';
+            find . -name '*.txt' -exec ls -la {} \;
             bye;
-          " > lftp_debug.log 2>&1
-          
-          echo "=== LFTP DEBUG LOG ==="
-          cat lftp_debug.log
-          echo "====================="
+          "
 
-      - name: 📜 Generate Investigation Report
+      - name: 📜 Generate Location Report
         run: |
-          echo "### FILE HUNT REPORT ###" > report.md
-          echo "1. Check these potential locations for test files:" >> report.md
-          echo "   - /test_root.txt (root)" >> report.md
-          echo "   - ~/test_root_home.txt (user home)" >> report.md
-          echo "   - public_html/test_root_public_html.txt" >> report.md
-          echo "   - /home/resolut7/public_html/resolutionsbydesign.us/test_root_target.txt" >> report.md
+          echo "### WHERE TO CHECK YOUR FILES ###" > report.md
+          echo "1. Primary test file locations:" >> report.md
+          echo "   - https://resolutionsbydesign.us/web_root.txt" >> report.md
+          echo "   - https://resolutionsbydesign.us/public_html.txt" >> report.md
+          echo "   - https://resolutionsbydesign.us/subdir_test.txt" >> report.md
+          echo "   - https://resolutionsbydesign.us/public_html/public_html.txt" >> report.md
           echo "" >> report.md
-          echo "2. Compare with FTP client manually:" >> report.md
-          echo "   - Connect to ftp.resolutionsbydesign.us" >> report.md
-          echo "   - Navigate to different paths" >> report.md
+          echo "2. If none work, try these via FTP client:" >> report.md
+          echo "   - /home/resolut7/web_root.txt" >> report.md
+          echo "   - /home/resolut7/public_html/public_html.txt" >> report.md
+          echo "   - /var/www/html/web_root.txt" >> report.md
           echo "" >> report.md
-          echo "3. Contact host with this info:" >> report.md
-          echo "   - Where should files go for https://resolutionsbydesign.us?" >> report.md
-          echo "   - What's the exact FTP path to my web root?" >> report.md
+          echo "3. Required fix:" >> report.md
+          echo "   - Compare which path actually works" >> report.md
+          echo "   - Update remoteDir in workflow to match" >> report.md
           
-          echo "=== INVESTIGATION REPORT ==="
+          echo "=== DEPLOYMENT REPORT ==="
           cat report.md
