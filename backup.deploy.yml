@@ -55,9 +55,9 @@ jobs:
       - name: FTP Upload (clean mirror)
         uses: sebastianpopp/ftp-action@releases/v2
         with:
-          host:     "ftp.resolutionsbydesign.us"
-          user:     "mpsm@resolutionsbydesign.us"
-          password: "MP$M_Nr0lr"
+          host:     ${{ secrets.FTP_SERVER }}
+          user:     ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
           localDir: "./"
-          remoteDir: "/"
+          remoteDir: ${{ secrets.REMOTE_DIR }}
           options:  "--delete"
