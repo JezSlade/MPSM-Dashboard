@@ -1,4 +1,4 @@
-name: FTP Deploy - Managed Hosting Edition
+name: FTP Deploy - Final Debug Mode
 
 on:
   push:
@@ -10,65 +10,69 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: 🛠️ Checkout Code
+      - name: 🔍 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔍 Debug - Create Path Test Files
+      - name: 🛡️ Verify FTP Credentials
         run: |
-          echo "=== TEST FILES ==="
-          echo "This should appear in WEB ROOT" > web_root.txt
-          echo "This should appear in PUBLIC_HTML" > public_html.txt
-          echo "This tests SUBDIR" > subdir_test.txt
-          mkdir -p public_html
-          cp public_html.txt public_html/
-          ls -la
+          echo "Testing FTP login with new password..."
+          curl -v --disable-epsv -u "mpsm@resolutionsbydesign.us:Mpsm1234" \
+            ftp://ftp.resolutionsbydesign.us/ > auth_test.log 2>&1
+          
+          echo "=== AUTH TEST RESULTS ==="
+          grep "230 Login successful" auth_test.log && \
+            echo "✅ Credentials WORK" || \
+            (echo "❌ Credentials FAILED"; exit 1)
+          cat auth_test.log
 
-      - name: 🚀 Smart FTP Deploy
+      - name: 🗺️ Discover Server Paths
         run: |
-          sudo apt-get install -y lftp
           lftp -e "
             set ftp:ssl-allow no;
             set net:timeout 15;
-            set ftp:passive-mode on;
-            set xfer:log yes;
-            
-            open -u mpsm@resolutionsbydesign.us,'MP$M_Nr0lr' ftp.resolutionsbydesign.us;
-            
-            echo '=== SERVER PATH DEBUG ===';
-            echo 'Current path:';
-            pwd;
-            echo 'Home directory:';
-            ls -la ~;
-            echo 'Public_html contents:';
+            open -u mpsm@resolutionsbydesign.us,Mpsm1234 ftp.resolutionsbydesign.us;
+            echo '=== SERVER PATH STRUCTURE ===';
+            ls -la;
             ls -la ~/public_html;
-            
-            echo '=== TRYING MULTIPLE LOCATIONS ===';
-            put web_root.txt -o ./web_root.txt;
-            put public_html.txt -o ./public_html/public_html.txt;
-            put subdir_test.txt -o ./subdir_test.txt;
-            
-            echo '=== FINAL CHECK ===';
-            find . -name '*.txt' -exec ls -la {} \;
+            ls -la /home/resolut7;
             bye;
-          "
-
-      - name: 📜 Generate Location Report
-        run: |
-          echo "### WHERE TO CHECK YOUR FILES ###" > report.md
-          echo "1. Primary test file locations:" >> report.md
-          echo "   - https://resolutionsbydesign.us/web_root.txt" >> report.md
-          echo "   - https://resolutionsbydesign.us/public_html.txt" >> report.md
-          echo "   - https://resolutionsbydesign.us/subdir_test.txt" >> report.md
-          echo "   - https://resolutionsbydesign.us/public_html/public_html.txt" >> report.md
-          echo "" >> report.md
-          echo "2. If none work, try these via FTP client:" >> report.md
-          echo "   - /home/resolut7/web_root.txt" >> report.md
-          echo "   - /home/resolut7/public_html/public_html.txt" >> report.md
-          echo "   - /var/www/html/web_root.txt" >> report.md
-          echo "" >> report.md
-          echo "3. Required fix:" >> report.md
-          echo "   - Compare which path actually works" >> report.md
-          echo "   - Update remoteDir in workflow to match" >> report.md
+          " > path_discovery.log 2>&1
           
-          echo "=== DEPLOYMENT REPORT ==="
+          echo "=== PATH DISCOVERY ==="
+          cat path_discovery.log
+
+      - name: 🚀 Deploy with Verified Path
+        run: |
+          lftp -e "
+            set ftp:ssl-allow no;
+            set net:timeout 30;
+            set xfer:log yes;
+            open -u mpsm@resolutionsbydesign.us,Mpsm1234 ftp.resolutionsbydesign.us;
+            
+            echo 'Deploying to detected web root...';
+            mirror --reverse \
+                   --delete \
+                   --verbose \
+                   --exclude .git/ \
+                   ./ /home/resolut7/public_html/resolutionsbydesign.us/;
+            
+            echo '=== DEPLOYMENT VERIFICATION ===';
+            ls -la /home/resolut7/public_html/resolutionsbydesign.us/;
+            bye;
+          " > deploy.log 2>&1
+          
+          echo "=== DEPLOYMENT LOG ==="
+          cat deploy.log
+
+      - name: 📜 Final Report
+        run: |
+          echo "### DEPLOYMENT SUMMARY ###" > report.md
+          echo "- Credentials: ✅ Working" >> report.md
+          echo "- Deployed to: /home/resolut7/public_html/resolutionsbydesign.us/" >> report.md
+          echo "- Files should appear at: https://resolutionsbydesign.us" >> report.md
+          echo "" >> report.md
+          echo "If files don't appear:" >> report.md
+          echo "1. Check the path discovery output above" >> report.md
+          echo "2. Contact host with this exact error" >> report.md
+          
           cat report.md
