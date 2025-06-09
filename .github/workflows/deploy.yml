@@ -27,7 +27,7 @@ jobs:
           password: "MP$M_Nr0lr"  # 🔴 REMOVE AFTER TESTING
           localDir: "./"
           remoteDir: "/home/resolut7/public_html/resolutionsbydesign.us/"
-          options: "--delete --transfer-all --verbose --no-perms --timeout=30"
+          options: "--delete --transfer-all --verbose --no-perms"
 
       - name: ✅ Verify Completion
         run: |
