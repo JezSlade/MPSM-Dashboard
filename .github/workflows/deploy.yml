@@ -21,10 +21,10 @@ jobs:
         # This step uses curl to perform a basic login test with the FTP server.
         # It's good for quickly verifying if the credentials themselves are valid.
         run: |
-          echo "Testing FTP login with provided credentials..."
+          echo "Testing FTP login with corrected username and provided credentials..."
           # WARNING: These credentials are hardcoded for debugging.
           # Please switch to GitHub Secrets (e.g., ${{ secrets.FTP_USERNAME }}) for production!
-          curl -v --disable-epsv -u "mpsm@resolutionsbydesign.us:Mpsm1234!!!" \
+          curl -v --disable-epsv -u "mpsm@mpsm.resolutionsbydesign.us:Mpsm1234!!!" \
             ftp://ftp.resolutionsbydesign.us/ > auth_test.log 2>&1 || true # `|| true` prevents step failure if curl fails
           
           echo "=== FTP LOGIN TEST RESULTS ==="
@@ -46,7 +46,7 @@ jobs:
           lftp -e "
             set ftp:ssl-allow no; 
             set net:timeout 30;   
-            open -u mpsm@resolutionsbydesign.us,Mpsm1234 ftp.resolutionsbydesign.us;
+            open -u mpsm@mpsm.resolutionsbydesign.us,Mpsm1234 ftp.resolutionsbydesign.us;
             echo '=== FTP ACCOUNT EFFECTIVE ROOT (ls -la) ===';
             ls -la; # List contents of the directory you land in after login
             pwd; # Print working directory on the remote server
@@ -63,7 +63,7 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
           server: ftp.resolutionsbydesign.us
-          username: mpsm@resolutionsbydesign.us
+          username: mpsm@mpsm.resolutionsbydesign.us # Corrected FTP username for subdomain
           password: Mpsm1234!!!
           local-dir: ./ # Deploy from the root of your GitHub repository
           # IMPORTANT: Set server-directory to '/' if your cPanel FTP user's
@@ -87,7 +87,7 @@ jobs:
           echo "---" >> report.md
           echo "**Troubleshooting Tips:**" >> report.md
           echo "1. **Check Action Logs:** Review the 'Deploy with FTP-Deploy-Action' step logs for detailed transfer information and any errors." >> report.md
-          echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel under 'FTP Accounts' for 'mpsm@resolutionsbydesign.us' to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/mpsm.resolutionsbydesign.us/'." >> report.md
+          echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel under 'FTP Accounts' for 'mpsm@mpsm.resolutionsbydesign.us' to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/mpsm.resolutionsbydesign.us/'." >> report.md
           echo "3. **File Permissions:** Ensure correct file/directory permissions on the server if files are not accessible (often a cPanel setting)." >> report.md
           echo "4. **Clear Cache:** Sometimes, browser or server-side caching might prevent immediate display of new files." >> report.md
           echo "5. **Contact GreenGeeks Support:** Provide them with the full GitHub Actions workflow run link for detailed assistance if issues persist." >> report.md
