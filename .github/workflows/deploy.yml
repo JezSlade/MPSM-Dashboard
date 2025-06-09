@@ -1,4 +1,4 @@
-name: FTP Deploy - Flat Structure
+name: FTP Deploy - Bulletproof
 
 on:
   push:
@@ -7,53 +7,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout code
+      - name: 🔍 Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Prepare deployment bundle
+      - name: 📦 Prepare Files
         run: |
-          # Create a temporary deployment directory
-          mkdir -p deployment_temp
-          
-          # Move all files (except .git/) into the root of deployment_temp
-          find . -maxdepth 1 ! -name '.' ! -name '.git' ! -name 'deployment_temp' -exec cp -r {} deployment_temp/ \;
-          
-          echo "=== Files to be deployed ==="
-          ls -la deployment_temp/
-          echo "==========================="
+          echo "=== 🗂️ Files to Deploy ==="
+          ls -la
+          echo "========================="
 
-      - name: Bump version
-        id: bump_version
-        run: |
-          [ -f version.txt ] || echo "0.0.0.0" > version.txt
-          IFS='.' read -r a b c d < version.txt
-          echo "$a.$b.$c.$((d + 1))" > version.txt
-          cp version.txt deployment_temp/
-          echo "new_version=$(cat version.txt)" >> $GITHUB_OUTPUT
-
-      - name: FTP Deploy (Flat Structure)
+      - name: 🚀 FTP Deploy (Verbose)
         uses: sebastianpopp/ftp-action@releases/v2
         with:
           host: "ftp.resolutionsbydesign.us"
           user: "mpsm@resolutionsbydesign.us"
-          password: "MP$M_Nr0lr"
-          localDir: "./deployment_temp/"
+          password: "MP$M_Nr0lr"  # 🔴 REMOVE AFTER TESTING
+          localDir: "./"
           remoteDir: "/home/resolut7/public_html/resolutionsbydesign.us/"
-          options: "--delete --transfer-all --verbose"
+          options: "--delete --transfer-all --verbose --no-perms --timeout=30"
 
-      - name: Clean up
-        run: rm -rf deployment_temp
-
-      - name: Verify deployment
+      - name: ✅ Verify Completion
         run: |
-          echo "Files should now be in your ROOT directory:"
-          echo "/home/resolut7/public_html/resolutionsbydesign.us/"
-          echo ""
-          echo "If you still see subfolders:"
-          echo "1. Your host might have directory redirection"
-          echo "2. Check if there's a 'public_html' subfolder in your FTP client"
-          echo "3. Contact your host about the correct root path"
+          echo "Deployment completed without errors"
+          echo "Check your site: https://resolutionsbydesign.us"
