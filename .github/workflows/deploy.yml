@@ -69,7 +69,7 @@ jobs:
           # IMPORTANT: Set server-directory to '/' if your cPanel FTP user's
           # "Home Directory" is already set to the target web root (e.g., /home/resolut7/public_html/resolutionsbydesign.us/).
           # This tells the action to deploy INTO the root of your FTP login.
-          server-directory: / # Corrected path for direct deployment into the FTP account's home directory
+          server-directory: /home/resolut7/public_html/resolutionsbydesign.us # Corrected path for direct deployment into the FTP account's home directory
           protocol: ftp
           exclude: .git/
           log-level: verbose
