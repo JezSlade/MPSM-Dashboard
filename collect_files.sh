@@ -64,4 +64,4 @@ is_text_file() {
     done
 } > "$OUTPUT_FILE"
 
-echo "Collection complete! Output saved to $OUTPUT_FILE"
+echo "Collection complete! Output saved to $OUTPUT_FILE" 
