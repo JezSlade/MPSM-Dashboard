@@ -108,7 +108,7 @@ jobs:
           echo "4. **Contact GreenGeeks Support:** Provide them with the full GitHub Actions workflow run link for detailed assistance if issues persist." >> report.md
           
           cat report.md
-iscovery/verification
+Discovery/verification
 
       - name: 🛡️ Verify FTP Credentials
         # This step performs a basic login test with the FTP server.
