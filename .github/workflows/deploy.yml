@@ -56,7 +56,7 @@ jobs:
           echo "=== EFFECTIVE ROOT DISCOVERY LOG ==="
           cat effective_root.log
           echo "---"
-          echo "Based on your cPanel setting, your FTP user should land in '/home/resolut7/public_html/resolutionsbydesign.us/'."
+          echo "Based on common subdomain setup, your FTP user should land in '/home/resolut7/public_html/mpsm.resolutionsbydesign.us/'."
           echo "The 'ls -la' above should show the *contents* of that directory."
 
       - name: 🚀 Deploy with FTP-Deploy-Action
@@ -67,9 +67,9 @@ jobs:
           password: Mpsm1234!!!
           local-dir: ./ # Deploy from the root of your GitHub repository
           # IMPORTANT: Set server-directory to '/' if your cPanel FTP user's
-          # "Home Directory" is already set to the target web root (e.g., /home/resolut7/public_html/resolutionsbydesign.us/).
+          # "Home Directory" is already set to the target web root (e.g., /home/resolut7/public_html/mpsm.resolutionsbydesign.us/).
           # This tells the action to deploy INTO the root of your FTP login.
-          server-directory: /home/resolut7/public_html/resolutionsbydesign.us # Corrected path for direct deployment into the FTP account's home directory
+          server-directory: / # Corrected path for direct deployment into the FTP account's home directory
           protocol: ftp
           exclude: .git/
           log-level: verbose
@@ -81,13 +81,13 @@ jobs:
           echo "### DEPLOYMENT SUMMARY ###" > report.md
           echo "- Credentials: ✅ Validated (hardcoded for debugging - TEMPORARY!)" >> report.md
           echo "- Deployment Method: SamKirkland/FTP-Deploy-Action" >> report.md
-          echo "- Local repository root (./) deployed to: FTP account's home directory (which should be /home/resolut7/public_html/resolutionsbydesign.us/)" >> report.md
-          echo "- Files should now be live at: https://resolutionsbydesign.us" >> report.md
+          echo "- Local repository root (./) deployed to: FTP account's home directory (which should be /home/resolut7/public_html/mpsm.resolutionsbydesign.us/)" >> report.md
+          echo "- Files should now be live at: https://mpsm.resolutionsbydesign.us" >> report.md
           echo "" >> report.md
           echo "---" >> report.md
           echo "**Troubleshooting Tips:**" >> report.md
           echo "1. **Check Action Logs:** Review the 'Deploy with FTP-Deploy-Action' step logs for detailed transfer information and any errors." >> report.md
-          echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel under 'FTP Accounts' for 'mpsm@resolutionsbydesign.us' to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/resolutionsbydesign.us/'." >> report.md
+          echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel under 'FTP Accounts' for 'mpsm@resolutionsbydesign.us' to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/mpsm.resolutionsbydesign.us/'." >> report.md
           echo "3. **File Permissions:** Ensure correct file/directory permissions on the server if files are not accessible (often a cPanel setting)." >> report.md
           echo "4. **Clear Cache:** Sometimes, browser or server-side caching might prevent immediate display of new files." >> report.md
           echo "5. **Contact GreenGeeks Support:** Provide them with the full GitHub Actions workflow run link for detailed assistance if issues persist." >> report.md
