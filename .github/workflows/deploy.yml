@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest # Run the job on a fresh Ubuntu environment
-    timeout-minutes: 15 # Increased overall job timeout to 15 minutes
+    timeout-minutes: 15 # Overall job timeout
 
     steps:
       - name: 🔍 Checkout Code
@@ -20,7 +20,6 @@ jobs:
       - name: 🛡️ Verify FTP Credentials (using curl for basic check)
         # This step uses curl to perform a basic login test with the FTP server.
         # It's good for quickly verifying if the credentials themselves are valid.
-        # Errors here mean a credential or immediate connection problem.
         run: |
           echo "Testing FTP login with provided credentials..."
           # WARNING: These credentials are hardcoded for debugging.
@@ -38,62 +37,57 @@ jobs:
           fi
           cat auth_test.log
 
-      - name: 🗺️ Discover Server Paths (using lftp for directory listing)
-        # This step uses lftp to list directories on the FTP server.
-        # It helps confirm the remote path structure and if `public_html` is accessible.
-        # Errors here might indicate incorrect remote paths or permissions.
+      - name: 🗺️ Confirm FTP Account's Effective Root Path
+        # This step helps confirm what directory the FTP user's login actually lands them in.
+        # If your cPanel FTP user's "Home Directory" is set to the final web root,
+        # then 'ls -la' here should show the contents of that web root.
         run: |
           # WARNING: These credentials are hardcoded for debugging.
-          # Please switch to GitHub Secrets (e.g., ${{ secrets.FTP_USERNAME }}) for production!
           lftp -e "
-            set ftp:ssl-allow no; # Disable SSL for compatibility if your server doesn't enforce it (consider sftp for security)
-            set net:timeout 30;   # Set a timeout for network operations
+            set ftp:ssl-allow no; 
+            set net:timeout 30;   
             open -u mpsm@resolutionsbydesign.us,Mpsm1234 ftp.resolutionsbydesign.us;
-            echo '=== SERVER ROOT STRUCTURE ===';
-            ls -la; # List contents of the root FTP directory
-            echo '=== PUBLIC_HTML STRUCTURE (if applicable) ===';
-            ls -la public_html/; # List contents of public_html
-            echo '=== USER HOME DIRECTORY STRUCTURE (if applicable) ===';
-            ls -la /home/resolut7/; # List contents of the specific home directory you found
+            echo '=== FTP ACCOUNT EFFECTIVE ROOT (ls -la) ===';
+            ls -la; # List contents of the directory you land in after login
+            pwd; # Print working directory on the remote server
             bye;
-          " > path_discovery.log 2>&1
+          " > effective_root.log 2>&1
           
-          echo "=== PATH DISCOVERY LOG ==="
-          cat path_discovery.log
+          echo "=== EFFECTIVE ROOT DISCOVERY LOG ==="
+          cat effective_root.log
+          echo "---"
+          echo "Based on your cPanel setting, your FTP user should land in '/home/resolut7/public_html/resolutionsbydesign.us/'."
+          echo "The 'ls -la' above should show the *contents* of that directory."
 
       - name: 🚀 Deploy with FTP-Deploy-Action
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.0 # Using a dedicated action for robust deployment
-        # This action is highly recommended as it's designed for FTP deployments.
-        # It handles file syncing, retries, and provides clearer output than raw lftp.
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
-          server: ftp.resolutionsbydesign.us # Your FTP server hostname
-          username: mpsm@resolutionsbydesign.us # Your FTP username (hardcoded for debugging)
-          password: Mpsm1234!!! # Your FTP password (hardcoded for debugging)
-          local-dir: ./ # Directory to deploy from (current repository root)
-          server-directory: /home/resolut7/public_html/resolutionsbydesign.us/ # Target directory on your FTP server
-          # Ensure this path is correct based on your path discovery step!
-          # If this path is wrong, files won't appear on your website.
-          protocol: ftp # Or 'ftps' if your server supports and requires explicit FTPS
-          # port: 21 # Default FTP port. Specify if different.
-          exclude: .git/ # Exclude the .git directory from being uploaded
-          log-level: verbose # Increased logging level for better debugging
-          delete: true # Delete files on the server that are not in the local repository
-          timeout: 120 # Timeout for the deploy operation in seconds (120s = 2 minutes)
+          server: ftp.resolutionsbydesign.us
+          username: mpsm@resolutionsbydesign.us
+          password: Mpsm1234!!!
+          local-dir: ./ # Deploy from the root of your GitHub repository
+          # IMPORTANT: Set server-directory to '/' if your cPanel FTP user's
+          # "Home Directory" is already set to the target web root (e.g., /home/resolut7/public_html/resolutionsbydesign.us/).
+          # This tells the action to deploy INTO the root of your FTP login.
+          server-directory: / # Corrected path for direct deployment into the FTP account's home directory
+          protocol: ftp
+          exclude: .git/
+          log-level: verbose
+          delete: true
+          timeout: 120 # Timeout for the deploy operation in seconds (2 minutes)
 
       - name: 📜 Final Report
-        # This step provides a summary of the deployment outcome.
-        # It's a good final check to ensure everything ran as expected.
         run: |
           echo "### DEPLOYMENT SUMMARY ###" > report.md
-          echo "- Credentials: ✅ Validated (hardcoded for debugging)" >> report.md
+          echo "- Credentials: ✅ Validated (hardcoded for debugging - TEMPORARY!)" >> report.md
           echo "- Deployment Method: SamKirkland/FTP-Deploy-Action" >> report.md
-          echo "- Deployed to: /home/resolut7/public_html/resolutionsbydesign.us/" >> report.md
+          echo "- Local repository root (./) deployed to: FTP account's home directory (which should be /home/resolut7/public_html/resolutionsbydesign.us/)" >> report.md
           echo "- Files should now be live at: https://resolutionsbydesign.us" >> report.md
           echo "" >> report.md
           echo "---" >> report.md
           echo "**Troubleshooting Tips:**" >> report.md
           echo "1. **Check Action Logs:** Review the 'Deploy with FTP-Deploy-Action' step logs for detailed transfer information and any errors." >> report.md
-          echo "2. **Verify Server Path:** Confirm the `server-directory` in the 'Deploy' step matches the actual web root path on your GreenGeeks cPanel." >> report.md
+          echo "2. **Verify FTP Account Home Directory:** Double-check your GreenGeeks cPanel under 'FTP Accounts' for 'mpsm@resolutionsbydesign.us' to confirm its 'Home Directory' is exactly '/home/resolut7/public_html/resolutionsbydesign.us/'." >> report.md
           echo "3. **File Permissions:** Ensure correct file/directory permissions on the server if files are not accessible (often a cPanel setting)." >> report.md
           echo "4. **Clear Cache:** Sometimes, browser or server-side caching might prevent immediate display of new files." >> report.md
           echo "5. **Contact GreenGeeks Support:** Provide them with the full GitHub Actions workflow run link for detailed assistance if issues persist." >> report.md
