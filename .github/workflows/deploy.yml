@@ -1,4 +1,4 @@
-name: FTP Deploy - No Nonsense
+name: FTP File Hunter
 
 on:
   push:
@@ -7,43 +7,85 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # Hard timeout for entire job
+    timeout-minutes: 5
 
     steps:
-      - name: 🛠️ Checkout Code
+      - name: 🕵️‍♂️ Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1  # Faster checkout
 
-      - name: 📜 List Files to Upload
+      - name: 🔍 Debug - Create Test Files
         run: |
-          echo "=== FILES TO DEPLOY ==="
-          ls -la
-          echo "======================"
+          echo "Creating test files with unique markers..."
+          echo "THIS IS TEST FILE 1 - DEPLOY ROOT" > test_root.txt
+          echo "THIS IS TEST FILE 2 - DEPLOY SUBDIR" > test_subdir.txt
+          mkdir -p testdir
+          echo "THIS IS TEST FILE 3 - DEPLOY TESTDIR" > testdir/test_nested.txt
+          echo "=== TEST FILES CREATED ==="
+          find . -name "test_*" -exec ls -la {} \;
 
-      - name: ⚡ LFTP Deploy (Most Reliable)
-        timeout-minutes: 3  # Step-specific timeout
+      - name: 🚨 Nuclear Debugging FTP Session
         run: |
+          echo "Starting FTP debug session..."
           sudo apt-get install -y lftp
-          lftp -e "
+          
+          # Debug script that explores server paths
+          lftp -d -e "
             set ftp:ssl-allow no;
             set net:timeout 10;
-            set net:max-retries 2;
-            set ftp:passive-mode on;  # Try active mode if passive hangs
+            set xfer:log yes;
+            set cmd:verbose true;
             open -u mpsm@resolutionsbydesign.us,'MP$M_Nr0lr' ftp.resolutionsbydesign.us;
-            mirror --reverse \
-                   --delete \
-                   --verbose \
-                   --exclude .git/ \
-                   ./ /home/resolut7/public_html/resolutionsbydesign.us/;
-            bye
-          " || echo "LFTP exited with error (check logs above)"
+            
+            echo '=== CURRENT REMOTE PATH ===';
+            pwd;
+            
+            echo '=== ATTEMPTING TO LIST ROOT ===';
+            ls -la;
+            
+            echo '=== ATTEMPTING TO LIST HOME ===';
+            ls -la ~;
+            
+            echo '=== ATTEMPTING TO LIST PUBLIC_HTML ===';
+            ls -la ~/public_html;
+            
+            echo '=== ATTEMPTING TO LIST TARGET PATH ===';
+            ls -la /home/resolut7/public_html/resolutionsbydesign.us;
+            
+            echo '=== UPLOADING TEST FILES TO VARIOUS LOCATIONS ===';
+            put test_root.txt -o /test_root.txt;
+            put test_root.txt -o ~/test_root_home.txt;
+            put test_root.txt -o public_html/test_root_public_html.txt;
+            put test_root.txt -o /home/resolut7/public_html/resolutionsbydesign.us/test_root_target.txt;
+            
+            echo '=== FINAL VERIFICATION ===';
+            find /home -name 'test_*.txt' -exec ls -la {} \;;
+            find ~ -name 'test_*.txt' -exec ls -la {} \;;
+            find . -name 'test_*.txt' -exec ls -la {} \;;
+            
+            echo '=== COMPLETE DEBUG OUTPUT ===';
+            bye;
+          " > lftp_debug.log 2>&1
+          
+          echo "=== LFTP DEBUG LOG ==="
+          cat lftp_debug.log
+          echo "====================="
 
-      - name: ✅ Final Verification
+      - name: 📜 Generate Investigation Report
         run: |
-          echo "If you see this, deployment command at least completed"
-          echo "Check your website for updated files"
-          echo "If files are missing:"
-          echo "1. Verify path with your host"
-          echo "2. Check FTP server logs"
-          echo "3. Try manual FTP upload to compare"
+          echo "### FILE HUNT REPORT ###" > report.md
+          echo "1. Check these potential locations for test files:" >> report.md
+          echo "   - /test_root.txt (root)" >> report.md
+          echo "   - ~/test_root_home.txt (user home)" >> report.md
+          echo "   - public_html/test_root_public_html.txt" >> report.md
+          echo "   - /home/resolut7/public_html/resolutionsbydesign.us/test_root_target.txt" >> report.md
+          echo "" >> report.md
+          echo "2. Compare with FTP client manually:" >> report.md
+          echo "   - Connect to ftp.resolutionsbydesign.us" >> report.md
+          echo "   - Navigate to different paths" >> report.md
+          echo "" >> report.md
+          echo "3. Contact host with this info:" >> report.md
+          echo "   - Where should files go for https://resolutionsbydesign.us?" >> report.md
+          echo "   - What's the exact FTP path to my web root?" >> report.md
+          
+          echo "=== INVESTIGATION REPORT ==="
+          cat report.md
