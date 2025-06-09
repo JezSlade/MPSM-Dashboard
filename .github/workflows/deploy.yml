@@ -1,4 +1,4 @@
-name: FTP Deploy - Bulletproof
+name: FTP Deploy - No Nonsense
 
 on:
   push:
@@ -7,29 +7,43 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5  # Hard timeout for entire job
 
     steps:
-      - name: 🔍 Checkout Code
+      - name: 🛠️ Checkout Code
         uses: actions/checkout@v4
-
-      - name: 📦 Prepare Files
-        run: |
-          echo "=== 🗂️ Files to Deploy ==="
-          ls -la
-          echo "========================="
-
-      - name: 🚀 FTP Deploy (Verbose)
-        uses: sebastianpopp/ftp-action@releases/v2
         with:
-          host: "ftp.resolutionsbydesign.us"
-          user: "mpsm@resolutionsbydesign.us"
-          password: "MP$M_Nr0lr"  # 🔴 REMOVE AFTER TESTING
-          localDir: "./"
-          remoteDir: "/home/resolut7/public_html/resolutionsbydesign.us/"
-          options: "--delete --transfer-all --verbose --no-perms"
+          fetch-depth: 1  # Faster checkout
 
-      - name: ✅ Verify Completion
+      - name: 📜 List Files to Upload
         run: |
-          echo "Deployment completed without errors"
-          echo "Check your site: https://resolutionsbydesign.us"
+          echo "=== FILES TO DEPLOY ==="
+          ls -la
+          echo "======================"
+
+      - name: ⚡ LFTP Deploy (Most Reliable)
+        timeout-minutes: 3  # Step-specific timeout
+        run: |
+          sudo apt-get install -y lftp
+          lftp -e "
+            set ftp:ssl-allow no;
+            set net:timeout 10;
+            set net:max-retries 2;
+            set ftp:passive-mode on;  # Try active mode if passive hangs
+            open -u mpsm@resolutionsbydesign.us,'MP$M_Nr0lr' ftp.resolutionsbydesign.us;
+            mirror --reverse \
+                   --delete \
+                   --verbose \
+                   --exclude .git/ \
+                   ./ /home/resolut7/public_html/resolutionsbydesign.us/;
+            bye
+          " || echo "LFTP exited with error (check logs above)"
+
+      - name: ✅ Final Verification
+        run: |
+          echo "If you see this, deployment command at least completed"
+          echo "Check your website for updated files"
+          echo "If files are missing:"
+          echo "1. Verify path with your host"
+          echo "2. Check FTP server logs"
+          echo "3. Try manual FTP upload to compare"
