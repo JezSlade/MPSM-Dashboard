@@ -1,4 +1,4 @@
-name: FTP Deploy - Testing Mode
+name: FTP Deploy - Exact Path Configuration
 
 on:
   push:
@@ -14,50 +14,36 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug - Show files before upload
+      - name: Show complete file structure
         run: |
-          echo "=== CURRENT DIRECTORY STRUCTURE ==="
-          ls -laR
-          echo "=================================="
+          echo "=== FILE STRUCTURE ==="
+          find . -type d | sort
+          echo "====================="
 
-      - name: Bump version with validation
+      - name: Bump version
         id: bump_version
         run: |
           set -euo pipefail
-          
-          # Initialize version.txt if missing
-          if [ ! -f version.txt ]; then
-            echo "0.0.0.0" > version.txt
-          fi
+          [ -f version.txt ] || echo "0.0.0.0" > version.txt
+          IFS='.' read -r a b c d < version.txt
+          echo "$a.$b.$c.$((d + 1))" > version.txt
+          echo "new_version=$(cat version.txt)" >> $GITHUB_OUTPUT
 
-          # Validate version format
-          if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' version.txt; then
-            echo "::error::Invalid version format in version.txt"
-            exit 1
-          fi
-
-          # Increment version
-          IFS='.' read -r MAJOR MINOR PATCH BUILD < version.txt
-          BUILD=$((BUILD + 1))
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}.${BUILD}"
-          echo "$NEW_VERSION" > version.txt
-          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Version bumped to: $NEW_VERSION"
-
-      - name: FTP Upload with verbose logging
+      - name: FTP Deploy
         uses: sebastianpopp/ftp-action@releases/v2
         with:
           host: "ftp.resolutionsbydesign.us"
           user: "mpsm@resolutionsbydesign.us"
           password: "MP$M_Nr0lr"
           localDir: "./"
-          remoteDir: "./"  # Try "public_html/" or "htdocs/" if this fails
-          options: "--delete --transfer-all --verbose --exclude .git/"
-        
-      - name: Verify upload
+          remoteDir: "/home/resolut7/public_html/resolutionsbydesign.us"
+          options: "--delete --transfer-all --verbose"
+
+      - name: Deployment verification
         run: |
-          echo "If you see this, the FTP upload completed without immediate errors"
-          echo "Check your server for files. If missing:"
-          echo "1. Your remoteDir path might be incorrect"
-          echo "2. Your FTP user may not have write permissions"
-          echo "3. The server might silently reject certain files"
+          echo "Deployment completed without errors"
+          echo "Check your site at: https://resolutionsbydesign.us"
+          echo "If files aren't visible:"
+          echo "1. Verify exact case sensitivity of paths"
+          echo "2. Check for .htaccess or permission issues"
+          echo "3. Contact host about possible write delays"
