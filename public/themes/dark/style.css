@@ -1,0 +1,6 @@
+body.dark { background:#222;color:#ddd;font-family:sans-serif; }
+header,footer{background:#333;padding:10px;}
+aside{background:#2a2a2a;float:left;width:200px;padding:10px;}
+main{margin-left:220px;padding:10px;}
+.module { border:1px solid #444;padding:10px;margin-bottom:10px; }
+.module-error{color:#f88;}
