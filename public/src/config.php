@@ -1,28 +1,42 @@
 <?php
 // public/src/config.php
 // ---------------------------
-// Load environment and define constants.
-// Enable full PHP error reporting.
+// Load environment variables from .env located
+// either in public/ or one level above.
 // ---------------------------
 
 ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
-// Path to .env (one above public)
-$envPath = __DIR__ . '/../.env';
-if (file_exists($envPath)) {
+// Determine .env location
+$envPath = null;
+$candidates = [
+    __DIR__ . '/../.env',    // public/.env
+    __DIR__ . '/../..../.env', // adjust if your structure differs
+    __DIR__ . '/../../.env'  // project-root/.env
+];
+foreach ($candidates as $path) {
+    if (file_exists($path)) {
+        $envPath = $path;
+        break;
+    }
+}
+
+if ($envPath) {
     foreach (file($envPath, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
-        if ($line === '' || strpos($line,'#') === 0) continue;
+        if ($line === '' || $line[0] === '#') continue;
         [$key, $val] = explode('=', $line, 2);
         $val = trim($val, "\"'");
         putenv("$key=$val");
         $_ENV[$key] = $val;
     }
+} else {
+    // No .env found; you must set constants manually
 }
 
-// Define constants
+// Define constants (falling back to empty)
 define('CLIENT_ID',       getenv('CLIENT_ID')       ?: '');
 define('CLIENT_SECRET',   getenv('CLIENT_SECRET')   ?: '');
 define('USERNAME',        getenv('USERNAME')        ?: '');
