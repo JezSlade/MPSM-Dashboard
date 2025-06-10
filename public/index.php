@@ -1,9 +1,9 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Main entrypoint. Enables full PHP error reporting,
-// loads your Swagger spec (AllEndpoints.json),
-// extracts every endpoint → passes to JS.
+// Main UI: loads AllEndpoints.json → passes data
+// and API_BASE_URL into JS. Renders header, cards,
+// modal, and the PHP Debug Panel.
 // -----------------------------------------------------
 
 ini_set('display_errors', 1);
@@ -13,7 +13,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../src/config.php';
 require_once __DIR__ . '/../src/DebugPanel.php';
 
-// Load and parse AllEndpoints.json
+// 1. Load and parse your Swagger spec
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
     DebugPanel::log("AllEndpoints.json not found at $specFile");
@@ -22,7 +22,7 @@ if (!file_exists($specFile)) {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
-        DebugPanel::log("JSON parse error: " . json_last_error_msg());
+        DebugPanel::log("Swagger JSON parse error: " . json_last_error_msg());
         $allEndpoints = [];
     } else {
         $allEndpoints = [];
@@ -39,20 +39,19 @@ if (!file_exists($specFile)) {
         DebugPanel::log("Extracted " . count($allEndpoints) . " endpoints");
     }
 }
-
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
-
-  <!-- **NEW** asset paths, no ../ -->
   <link rel="stylesheet" href="css/styles.css">
 
+  <!-- Pass data & config into JS -->
   <script>
     window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.debugMode    = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
+    window.apiBaseUrl   = '<?php echo API_BASE_URL; ?>';
   </script>
 </head>
 <body>
@@ -75,10 +74,9 @@ if (!file_exists($specFile)) {
     </div>
   </div>
 
-  <!-- PHP DEBUG PANEL -->
+  <!-- PHP Debug Panel -->
   <?php DebugPanel::output(); ?>
 
-  <!-- **NEW** JS path, no ../ -->
   <script src="js/app.js"></script>
 </body>
 </html>

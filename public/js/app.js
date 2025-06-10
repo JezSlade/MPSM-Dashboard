@@ -1,32 +1,18 @@
 /*!
  * js/app.js
  * ------------------------------------------------------
- * Renders one card per endpoint from window.allEndpoints,
- * handles DB/API HEAD checks, drill‐down modal, and
- * JS debug logging into the Debug Panel.
+ * Renders one card per endpoint (window.allEndpoints),
+ * fetches OAuth token, handles connectivity checks,
+ * drill-down modal, and JS Debug logging.
  * ------------------------------------------------------
  */
 (function(){
   'use strict';
 
+  // === JS Debug Setup ===
   const debugMode  = window.debugMode === true || window.debugMode === 'true';
   const debugPanel = debugMode ? document.getElementById('debug-panel') : null;
 
-  // Capture uncaught JS errors
-  if (debugMode) {
-    window.onerror = function(msg, src, ln, col) {
-      jsLog(`Error: ${msg} at ${src}:${ln}:${col}`);
-    };
-    const origErr = console.error;
-    console.error = function(...args) {
-      jsLog('Console.error: ' + args.join(' '));
-      origErr.apply(console, args);
-    };
-  }
-
-  /**
-   * Append a line to the JS Debug Panel.
-   */
   function jsLog(msg) {
     if (!debugPanel) return;
     const line = document.createElement('div');
@@ -36,23 +22,45 @@
     debugPanel.scrollTop = debugPanel.scrollHeight;
   }
 
-  // DOM refs
-  const dbDot     = document.getElementById('dbStatus');
-  const apiDot    = document.getElementById('apiStatus');
-  const cardsView = document.getElementById('cardsViewport');
-  const modal     = document.getElementById('modal');
-  const modalBody = document.getElementById('modalBody');
-  const modalClose= document.getElementById('modalClose');
+  if (debugMode) {
+    window.onerror = (msg, src, ln, col) => jsLog(`Error: ${msg} at ${src}:${ln}:${col}`);
+    const origErr = console.error;
+    console.error = (...args) => {
+      jsLog('Console.error: ' + args.join(' '));
+      origErr.apply(console, args);
+    };
+  }
 
-  document.addEventListener('DOMContentLoaded', function(){
-    // Check connectivity
+  // === DOM refs ===
+  const dbDot      = document.getElementById('dbStatus');
+  const apiDot     = document.getElementById('apiStatus');
+  const cardsView  = document.getElementById('cardsViewport');
+  const modal      = document.getElementById('modal');
+  const modalBody  = document.getElementById('modalBody');
+  const modalClose = document.getElementById('modalClose');
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1) Fetch the OAuth2 token
+    fetch('get-token.php')
+      .then(r => r.json())
+      .then(json => {
+        if (json.access_token) {
+          window.apiToken = json.access_token;
+          jsLog('API token acquired');
+        } else {
+          jsLog('Token error: ' + (json.error || 'unknown'));
+        }
+      })
+      .catch(err => jsLog('Token fetch failed: ' + err.message));
+
+    // 2) Health checks
     checkConn('db-status.php', dbDot, 'DB');
     checkConn('api-status.php', apiDot, 'API');
 
-    // Render all endpoint cards
+    // 3) Render cards
     renderAllCards();
 
-    // Modal close handlers
+    // 4) Modal close
     modalClose.addEventListener('click', () => modal.style.display = 'none');
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.style.display = 'none';
@@ -60,39 +68,74 @@
   });
 
   /**
-   * Render one card per endpoint.
+   * Render one Glass-morphic card per endpoint.
    */
   function renderAllCards() {
     cardsView.innerHTML = '';
     const endpoints = window.allEndpoints || [];
     jsLog(`Rendering ${endpoints.length} endpoint cards`);
-    endpoints.forEach(op => {
+    endpoints.forEach(ep => {
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <h3>${op.method} ${op.path}</h3>
-        <p class="summary">${op.summary || ''}</p>
+        <h3>${ep.method} ${ep.path}</h3>
+        <p class="summary">${ep.summary || ''}</p>
       `;
-      card.addEventListener('click', () => openModal(op));
+      card.addEventListener('click', () => openModal(ep));
       cardsView.appendChild(card);
     });
   }
 
   /**
-   * Open the drill‐down modal for a single endpoint.
+   * Open drill-down modal showing details and a Try-It stub.
    */
-  function openModal(op) {
+  function openModal(ep) {
     modalBody.innerHTML = `
-      <h2>${op.method} ${op.path}</h2>
-      <p><strong>Summary:</strong> ${op.summary || '(none)'}</p>
-      <p><strong>Description:</strong> ${op.description || '(none)'}</p>
+      <h2>${ep.method} ${ep.path}</h2>
+      <p><strong>Summary:</strong> ${ep.summary || '(none)'}</p>
+      <p><strong>Description:</strong> ${ep.description || '(none)'}</p>
+      <button id="tryBtn">Try It</button>
+      <pre id="tryResult"></pre>
     `;
+    document.getElementById('tryBtn').addEventListener('click', () => tryIt(ep));
     modal.style.display = 'flex';
-    jsLog(`Opened modal for ${op.method} ${op.path}`);
+    jsLog(`Opened modal for ${ep.method} ${ep.path}`);
   }
 
   /**
-   * Generic HEAD‐request connectivity check.
+   * Stub for invoking the live endpoint.
+   */
+  function tryIt(ep) {
+    const resEl = document.getElementById('tryResult');
+    if (!window.apiToken) {
+      jsLog('Cannot call API: no token');
+      resEl.textContent = 'No API token available.';
+      return;
+    }
+    const url = window.apiBaseUrl.replace(/\/$/, '') + ep.path;
+    jsLog(`Trying endpoint: ${ep.method} ${url}`);
+    fetch(url, {
+      method: ep.method,
+      headers: {
+        'Authorization': `Bearer ${window.apiToken}`,
+        'Accept':        'application/json',
+        'Content-Type':  'application/json'
+      }
+      // TODO: add request body for POST calls
+    })
+      .then(r => r.json().then(data => ({ status: r.status, data })))
+      .then(obj => {
+        resEl.textContent = JSON.stringify(obj, null, 2);
+        jsLog(`TryIt success: ${ep.method} ${ep.path}`);
+      })
+      .catch(err => {
+        resEl.textContent = 'Error: ' + err.message;
+        jsLog(`TryIt error: ${err.message}`);
+      });
+  }
+
+  /**
+   * Generic HEAD-request connectivity check.
    */
   function checkConn(url, dotEl, name) {
     fetch(url, { method: 'HEAD' })
