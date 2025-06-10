@@ -1,8 +1,9 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Entry point. Reads public/AllEndpoints.json, role mappings,
-// injects data into JS, renders header, cards, modal, and static Debug Panel.
+// Entry point: loads AllEndpoints.json & roleMappings,
+// injects into JS, renders left sidebar with role icons,
+// header/status, cards, modal, and Debug Panel.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -12,7 +13,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/src/config.php';
 require_once __DIR__ . '/src/DebugPanel.php';
 
-// 1) Load AllEndpoints.json (now in public/)
+// 1) Load AllEndpoints.json
 $allEndpoints = [];
 $specFile = __DIR__ . '/AllEndpoints.json';
 if (file_exists($specFile)) {
@@ -29,14 +30,10 @@ if (file_exists($specFile)) {
                 ];
             }
         }
-    } else {
-        DebugPanel::log("Error parsing AllEndpoints.json: " . json_last_error_msg());
     }
-} else {
-    DebugPanel::log("AllEndpoints.json not found in public/");
 }
 
-// 2) Role → paths
+// 2) Role→paths mapping
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -54,6 +51,7 @@ $roleMappings = [
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 
+  <!-- Inject data into JS -->
   <script>
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
@@ -61,18 +59,25 @@ $roleMappings = [
   </script>
 </head>
 <body>
-  <!-- HEADER -->
-  <header class="glass-panel">
-    <div class="status-panel">
-      DB: <span id="dbStatus" class="status-dot"></span>
-      API:<span id="apiStatus" class="status-dot"></span>
-    </div>
-    <select id="roleSelect" class="dropdown"></select>
-    <button id="toggleDebug" class="btn">Hide Debug</button>
-  </header>
+  <div class="app-container">
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar" class="sidebar"></aside>
 
-  <!-- CARDS VIEW -->
-  <main id="cardsViewport" class="cards-container"></main>
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+      <header class="glass-panel">
+        <div class="status-panel">
+          DB: <span id="dbStatus" class="status-dot"></span>
+          API: <span id="apiStatus" class="status-dot"></span>
+        </div>
+        <div class="header-right">
+          <span class="version-display">v<span id="versionDisplay"></span></span>
+          <button id="toggleDebug" class="btn">Hide Debug</button>
+        </div>
+      </header>
+      <main id="cardsViewport" class="cards-container"></main>
+    </div>
+  </div>
 
   <!-- MODAL -->
   <div id="modal" class="modal">
@@ -82,7 +87,7 @@ $roleMappings = [
     </div>
   </div>
 
-  <!-- STATIC DEBUG PANEL -->
+  <!-- DEBUG PANEL -->
   <div id="debug-panel" class="debug-panel">
     <div class="debug-header">
       <div class="debug-title">🐛 Debug Console</div>
