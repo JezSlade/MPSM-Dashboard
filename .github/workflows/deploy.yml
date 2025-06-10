@@ -30,19 +30,18 @@ jobs:
           protocol: ftp
           port: 21
 
-          # NOTE: local-dir must end with a slash
+          # Note: trailing slash required
           local-dir: ./public/
 
-          # Remote directory to deploy into
+          # Deploy into the root of your site
           server-dir: /
 
-          # Delete files on the server not present locally
+          # Remove remote files not present locally
           dangerous-clean-slate: true
 
-          # Exclude files/folders
+          # Exclude source files outside public/ and GitHub metadata
           exclude: |
             AllEndpoints.json
-            src/**
             .github/**
           
           log-level: verbose
