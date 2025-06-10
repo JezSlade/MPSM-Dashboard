@@ -1,0 +1,4 @@
+laravel_app/vendor/
+laravel_app/node_modules/
+laravel_app/.env
+.env
