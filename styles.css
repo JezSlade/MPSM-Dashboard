@@ -51,12 +51,16 @@ header.glass-panel {
 /* Debug toggle button */
 .debug-toggle {
   padding: 0.3rem 0.6rem;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.15);
   border: none;
   border-radius: 6px;
   color: #eee;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background 0.2s;
+}
+.debug-toggle:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 /* Cards Layout */
@@ -123,15 +127,18 @@ header.glass-panel {
   padding: 0.5rem;
   border-top: 1px solid #0f0;
   z-index: 10000;
-  transition: max-height 0.3s ease;
+  transition: max-height 0.3s ease, padding 0.3s ease;
 }
-/* Collapsed state */
-#debug-panel.collapsed {
-  max-height: 24px;
+/* Hidden state */
+#debug-panel.hidden {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
   overflow: hidden;
 }
 
-/* Individual log line */
+/* Log line */
 .debug-log-line {
   margin-bottom: 2px;
+  word-break: break-all;
 }

@@ -3,8 +3,8 @@
  * ------------------------------------------------------
  * Renders cards, fetches OAuth token, proxies all API
  * calls via api-proxy.php (no CORS), and logs every
- * JS error, request, response, and health-check into
- * the Debug Panel, which can be toggled.
+ * request, response, and JavaScript error into the
+ * Debug Panel, which can now be toggled on/off.
  * ------------------------------------------------------
  */
 (function(){
@@ -32,19 +32,14 @@
 
   // === Global JS error handlers ===
   window.addEventListener('error', event => {
-    jsLog(`Global Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`);
+    jsLog(`Global Error: ${event.message} at ${event.filename}:${event.lineno}`);
   });
   window.addEventListener('unhandledrejection', event => {
-    jsLog(`Unhandled Promise Rejection: ${String(event.reason)}`);
-    if (event.reason && event.reason.stack) {
-      jsLog(event.reason.stack);
-    }
+    jsLog(`Unhandled Promise Rejection: ${event.reason}`);
   });
   const origErr = console.error;
   console.error = function(...args) {
-    jsLog('Console.error: ' + args.map(a => {
-      try { return JSON.stringify(a); } catch { return String(a); }
-    }).join(' '));
+    jsLog('Console.error: ' + args.join(' '));
     origErr.apply(console, args);
   };
 
@@ -52,8 +47,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     // 1) Toggle debug panel
     toggleBtn.addEventListener('click', () => {
-      debugPanel.classList.toggle('collapsed');
-      jsLog('Toggled debug panel ' + (debugPanel.classList.contains('collapsed') ? 'OFF' : 'ON'));
+      const hidden = debugPanel.classList.toggle('hidden');
+      toggleBtn.textContent = hidden ? 'Show Debug' : 'Hide Debug';
+      jsLog(`Debug panel ${hidden ? 'hidden' : 'visible'}`);
     });
 
     // 2) Fetch OAuth token
@@ -69,7 +65,6 @@
       })
       .catch(err => {
         jsLog('Token fetch failed: ' + err.message);
-        if (err.stack) jsLog(err.stack);
       });
 
     // 3) Health checks
@@ -79,7 +74,7 @@
     // 4) Render cards
     renderAllCards();
 
-    // 5) Modal close handlers
+    // 5) Modal close
     modalClose.addEventListener('click', () => modal.style.display = 'none');
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.style.display = 'none';
@@ -87,7 +82,7 @@
   });
 
   /**
-   * Render one Glass-morphic card per endpoint.
+   * Render one card per endpoint.
    */
   function renderAllCards() {
     cardsView.innerHTML = '';
@@ -148,18 +143,14 @@
 
     // Fetch via proxy
     fetch(proxyUrl, {
-      method: method === 'GET' ? 'GET' : 'POST',
-      headers: {
-        'Accept':       'application/json',
-        'Content-Type': 'application/json'
-      },
+      method: method,
+      headers: {'Accept':'application/json','Content-Type':'application/json'},
       body: method === 'POST'
-            ? JSON.stringify({ /* TODO: real payload */ }, null, 2)
+            ? JSON.stringify({ /* TODO: payload */ }, null, 2)
             : undefined
     })
       .then(r => {
         jsLog(`[Response Status] ${r.status} ${r.statusText}`);
-        // Log response headers
         const hdrs = {};
         r.headers.forEach((v,k)=> hdrs[k]=v);
         jsLog(`[Response Headers] ${JSON.stringify(hdrs, null, 2)}`);
@@ -168,17 +159,14 @@
       .then(obj => {
         jsLog('[Response Body]');
         jsLog(obj.body);
-        // Pretty-print in UI
         try {
-          const json = JSON.parse(obj.body);
-          resEl.textContent = JSON.stringify(json, null, 2);
+          resEl.textContent = JSON.stringify(JSON.parse(obj.body), null, 2);
         } catch {
           resEl.textContent = obj.body;
         }
       })
       .catch(err => {
         jsLog(`Proxy error: ${err.message}`);
-        if (err.stack) jsLog(err.stack);
         resEl.textContent = `Error: ${err.message}`;
       });
   }
@@ -187,7 +175,7 @@
    * Generic HEAD-request health-check.
    */
   function checkConn(url, dotEl, name) {
-    jsLog(`Checking ${name} connectivity → ${url}`);
+    jsLog(`Checking ${name} → ${url}`);
     fetch(url, { method: 'HEAD' })
       .then(r => {
         if (r.ok) {
@@ -200,7 +188,6 @@
       .catch(err => {
         dotEl.classList.add('error');
         jsLog(`${name} HEAD ERROR: ${err.message}`);
-        if (err.stack) jsLog(err.stack);
       });
   }
-})();
+})(); 

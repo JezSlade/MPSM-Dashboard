@@ -1,39 +1,83 @@
-<!DOCTYPE html>
+<?php
+// public/index.php
+// -----------------------------------------------------
+// Main UI: loads AllEndpoints.json → passes data & config
+// into JS, renders header with Debug toggle, cards,
+// modal, and the PHP Debug Panel.
+// -----------------------------------------------------
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/../src/config.php';
+require_once __DIR__ . '/../src/DebugPanel.php';
+
+// Load and parse AllEndpoints.json
+$specFile = __DIR__ . '/../AllEndpoints.json';
+if (!file_exists($specFile)) {
+    DebugPanel::log("AllEndpoints.json not found at $specFile");
+    $allEndpoints = [];
+} else {
+    $raw     = file_get_contents($specFile);
+    $swagger = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        DebugPanel::log("Swagger JSON parse error: " . json_last_error_msg());
+        $allEndpoints = [];
+    } else {
+        $allEndpoints = [];
+        foreach (($swagger['paths'] ?? []) as $path => $methods) {
+            foreach ($methods as $http => $details) {
+                $allEndpoints[] = [
+                    'method'      => strtoupper($http),
+                    'path'        => $path,
+                    'summary'     => $details['summary']     ?? '',
+                    'description' => $details['description'] ?? ''
+                ];
+            }
+        }
+        DebugPanel::log("Extracted " . count($allEndpoints) . " endpoints");
+    }
+}
+?><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
-  <!-- Link to the glassmorphic dark theme styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Inject data & config into JS -->
+  <script>
+    window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
+    window.debugMode    = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
+    window.apiBaseUrl   = '<?php echo API_BASE_URL; ?>';
+  </script>
 </head>
-<body class="dark-glassmorphic">
-  <!--
-    HEADER: shows database/API status and lets the user switch roles.
-    .glassmorphic-panel applies the frosted-glass styling.
-  -->
-  <header class="glassmorphic-panel header-panel">
-    <div class="status">
-      <!-- Database connectivity status -->
-      <span>DB: <span class="status-icon ok">✓</span></span>
-      <!-- API connectivity status -->
-      <span>API: <span class="status-icon ok">✓</span></span>
+<body>
+  <!-- HEADER -->
+  <header class="glass-panel">
+    <div class="status-panel">
+      DB:<span id="dbStatus" class="status-dot"></span>
+      API:<span id="apiStatus" class="status-dot"></span>
     </div>
-    <div class="role-switcher">
-      <label for="role">Current Role:</label>
-      <select id="role"><!-- populated by script.js --></select>
-    </div>
+    <button id="toggleDebug" class="debug-toggle">Hide Debug</button>
   </header>
 
-  <!--
-    MAIN VIEWPORT: cards for the selected role will be injected here.
-  -->
-  <main id="cards-viewport" class="cards-container">
-    <!-- cards are rendered here -->
-  </main>
+  <!-- CARDS VIEW -->
+  <main id="cardsViewport" class="cards-container"></main>
 
-  <!-- Core logic for loading roles & rendering cards -->
-  <script src="script.js" defer></script>
+  <!-- DRILLDOWN MODAL -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span id="modalClose" class="modal-close">&times;</span>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- PHP Debug Panel -->
+  <?php DebugPanel::output(); ?>
+
+  <script src="js/app.js"></script>
 </body>
 </html>
