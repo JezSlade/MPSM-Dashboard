@@ -2,58 +2,48 @@ name: FTP Deploy - Final Lean
 
 on:
   push:
-    branches: ["main"] # Trigger on pushes to the 'main' branch
+    branches: ["main"] 
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # Run the job on a fresh Ubuntu environment
-    timeout-minutes: 15 # Overall job timeout (can be adjusted if deployments are very fast)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@v4 # Action to check out your repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed if you ever tag
+
+      - name: 🔢 Generate Version File
+        run: |
+          echo "window.appVersion = \"0.0.0.${GITHUB_RUN_NUMBER}\";" > public/version.js
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
       - name: 🚀 Deploy Website via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
-          # IMPORTANT: Replace these hardcoded values with GitHub Secrets for production!
-          # Go to your repository settings -> Secrets and variables -> Actions
-          # Add:
-          #   FTP_SERVER: ftp.resolutionsbydesign.us
-          #   FTP_USERNAME: mpsm@mpsm.resolutionsbydesign.us
-          #   FTP_PASSWORD: YourActualStrongPassword!
-          server: ftp.resolutionsbydesign.us
-          username: mpsm@mpsm.resolutionsbydesign.us
-          password: Deploy123! 
-          
-          local-dir: ./ # Deploy from the root of your GitHub repository
-          # The 'server-directory' should be '/' if your cPanel FTP user's
-          # "Home Directory" is already set to the target web root
-          # (e.g., /home/resolut7/public_html/mpsm.resolutionsbydesign.us/).
-          # This tells the action to deploy INTO the root of your FTP login.
-          server-directory: / 
-          
-          protocol: ftp # Use 'ftps' if your server supports and requires explicit FTPS
-          exclude: .git/ # Exclude the .git directory from being uploaded
-          log-level: verbose # Keep verbose logging for detailed transfer info
-          delete: true # Delete files on the server that are not in the local repository
-          timeout: 120 # Timeout for the deploy operation in seconds (2 minutes)
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./public
+          server-directory: /
+          protocol: ftp
+          exclude: |
+            ../.git/
+            ../src/
+            ../AllEndpoints.json
+          log-level: verbose
+          delete: true
+          timeout: 120
 
       - name: 📜 Deployment Completed Report
-        # This step provides a summary of the deployment outcome.
         run: |
           echo "### DEPLOYMENT SUMMARY ###" > report.md
-          echo "- Deployment Method: SamKirkland/FTP-Deploy-Action" >> report.md
-          echo "- Local repository root (./) deployed to: FTP account's home directory" >> report.md
-          echo "  (Expected server path: /home/resolut7/public_html/mpsm.resolutionsbydesign.us/)" >> report.md
-          echo "- Website URL: https://mpsm.resolutionsbydesign.us" >> report.md
-          echo "" >> report.md
-          echo "---" >> report.md
-          echo "**Next Steps:**" >> report.md
-          echo "1. **Verify Live Site:** Check https://mpsm.resolutionsbydesign.us in your browser." >> report.md
-          echo "2. **IMPORTANT: Secure Credentials!** Move your FTP server, username, and password into GitHub Repository Secrets." >> report.md
-          echo "   (Go to Settings -> Secrets and variables -> Actions in your GitHub repo)" >> report.md
-          echo "3. **Clear Cache:** If changes aren't visible, try clearing your browser cache or any server-side caching." >> report.md
-          echo "4. **GreenGeeks Support:** If issues persist, contact GreenGeeks support with a link to this successful workflow run." >> report.md
-          
+          echo "- Version: 0.0.0.${GITHUB_RUN_NUMBER}" >> report.md
+          echo "- Method: FTP-Deploy-Action" >> report.md
+          echo "- URL: https://mpsm.resolutionsbydesign.us" >> report.md
           cat report.md
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
