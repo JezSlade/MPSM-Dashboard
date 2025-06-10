@@ -1,5 +1,5 @@
 PHP PROJECT CONTENT COLLECTION
-Generated: Tue, Jun 10, 2025  8:30:26 AM
+Generated: Tue, Jun 10, 2025  9:44:03 AM
 ----------------------------------------
 
 ==== BINARY FILE: ./.DS_Store ====
@@ -506,12 +506,12 @@ Last Modified: Tue, Jun 10, 2025  7:54:51 AM
 
 
 
-==== TEXT FILE: ./php_project_contents_20250610_083025.txt ====
+==== TEXT FILE: ./php_project_contents_20250610_094403.txt ====
 Size: 120475 bytes
-Last Modified: Tue, Jun 10, 2025  8:30:31 AM
+Last Modified: Tue, Jun 10, 2025  9:44:07 AM
 ----------------------------------------
 PHP PROJECT CONTENT COLLECTION
-Generated: Tue, Jun 10, 2025  8:30:26 AM
+Generated: Tue, Jun 10, 2025  9:44:03 AM
 ----------------------------------------
 
 ==== BINARY FILE: ./.DS_Store ====
@@ -864,16 +864,16 @@ echo json_encode(['access_token' => $token]);
 
 
 ==== PHP FILE: ./public/index.php ====
-Size: 4075 bytes
-Last Modified: Tue, Jun 10, 2025  8:27:56 AM
+Size: 3669 bytes
+Last Modified: Tue, Jun 10, 2025  9:39:38 AM
 ----------------------------------------
 <?php
 // public/index.php
 // -----------------------------------------------------
 // Main UI: loads AllEndpoints.json, injects endpoints
-// and role‐mappings into JS, renders header with
-// role selector & Debug toggle, cards, modal, and
-// a static Debug Panel (with Clear).
+// and role→paths mapping into JS, renders header
+// with role selector & Debug toggle, cards container,
+// modal, and a static Debug Panel with Clear.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -881,21 +881,16 @@ ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/config.php';
-require_once __DIR__ . '/../src/DebugPanel.php';
 
-// 1) Load AllEndpoints.json
+// 1) Load Swagger/OpenAPI
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
-    DebugPanel::log("AllEndpoints.json missing at $specFile");
     $allEndpoints = [];
 } else {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        DebugPanel::log("Swagger JSON parse error: " . json_last_error_msg());
-        $allEndpoints = [];
-    } else {
-        $allEndpoints = [];
+    $allEndpoints = [];
+    if (json_last_error() === JSON_ERROR_NONE) {
         foreach (($swagger['paths'] ?? []) as $path => $methods) {
             foreach ($methods as $http => $details) {
                 $allEndpoints[] = [
@@ -906,7 +901,6 @@ if (!file_exists($specFile)) {
                 ];
             }
         }
-        DebugPanel::log("Extracted " . count($allEndpoints) . " endpoints");
     }
 }
 
@@ -929,11 +923,9 @@ $roleMappings = [
   <link rel="stylesheet" href="css/styles.css">
 
   <script>
-    // Inject into JS
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
     window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
-    window.debugMode     = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
   </script>
 </head>
 <body>
@@ -941,7 +933,7 @@ $roleMappings = [
   <header class="glass-panel">
     <div class="status-panel">
       DB: <span id="dbStatus" class="status-dot"></span>
-      API: <span id="apiStatus" class="status-dot"></span>
+      API:<span id="apiStatus" class="status-dot"></span>
     </div>
     <select id="roleSelect" class="dropdown"></select>
     <button id="toggleDebug" class="btn">Hide Debug</button>
@@ -974,16 +966,16 @@ $roleMappings = [
 
 
 ==== TEXT FILE: ./public/js/app.js ====
-Size: 7239 bytes
-Last Modified: Tue, Jun 10, 2025  8:28:22 AM
+Size: 7149 bytes
+Last Modified: Tue, Jun 10, 2025  9:40:09 AM
 ----------------------------------------
 /*!
  * public/js/app.js
  * ------------------------------------------------------
- * Groups endpoints by role (via window.roleMappings),
- * renders a beautiful selector, displays cards,
- * powers Try-It proxy, and logs everything into the
- * toggleable/clearable enhanced Debug Panel.
+ * Dynamically groups endpoints by role, renders
+ * a beautiful selector, displays cards,
+ * powers Try-It proxy calls, and logs everything into
+ * the enhanced Debug Panel (toggleable & clearable).
  * ------------------------------------------------------
  */
 (function(){
@@ -1015,7 +1007,7 @@ Last Modified: Tue, Jun 10, 2025  8:28:22 AM
     if (debugContent.children.length > 200) debugContent.removeChild(debugContent.firstChild);
   }
 
-  // Global JS errors
+  // Global error capture
   window.addEventListener('error', e => jsLog(`${e.message} at ${e.filename}:${e.lineno}`, 'error'));
   window.addEventListener('unhandledrejection', e => jsLog(`Promise Rejection: ${e.reason}`, 'error'));
   console.error = function(...args) { jsLog('Console.error: '+args.join(' '),'error'); };
@@ -1024,23 +1016,23 @@ Last Modified: Tue, Jun 10, 2025  8:28:22 AM
   const mappings  = window.roleMappings || {};
   const endpoints = window.allEndpoints || [];
   const roleGroups= {};
-  Object.entries(mappings).forEach(([role, paths]) => {
-    roleGroups[role] = endpoints.filter(ep => paths.includes(ep.path));
+  Object.entries(mappings).forEach(([role, paths])=>{
+    roleGroups[role] = endpoints.filter(ep=> paths.includes(ep.path));
   });
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', ()=>{
     jsLog('App initialized','success');
 
     // Populate roles
     const roles = Object.keys(roleGroups);
-    roles.forEach(role => {
-      const o = document.createElement('option');
-      o.value = o.textContent = role;
-      roleSelect.appendChild(o);
+    roles.forEach(role=>{
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = role;
+      roleSelect.appendChild(opt);
     });
     roleSelect.value = roles[0];
     renderRole(roles[0]);
-    roleSelect.addEventListener('change', () => {
+    roleSelect.addEventListener('change', ()=>{
       renderRole(roleSelect.value);
       jsLog(`Role switched to ${roleSelect.value}`,'info');
     });
@@ -1059,35 +1051,33 @@ Last Modified: Tue, Jun 10, 2025  8:28:22 AM
     checkConn('db-status.php', dbDot, 'DB');
     checkConn('api-status.php', apiDot, 'API');
 
-    // Toggle debug panel
-    toggleBtn.addEventListener('click', () => {
+    // Debug toggle
+    toggleBtn.addEventListener('click', ()=>{
       const hidden = debugPanel.classList.toggle('hidden');
-      toggleBtn.textContent = hidden ? 'Show Debug' : 'Hide Debug';
-      toggleBtn.classList.toggle('panel-hidden', hidden);
-      document.body.style.paddingBottom = hidden ? '0' : '220px';
+      toggleBtn.textContent = hidden?'Show Debug':'Hide Debug';
+      toggleBtn.classList.toggle('panel-hidden',hidden);
+      document.body.style.paddingBottom = hidden?'0':'220px';
       jsLog(`Debug panel ${hidden?'hidden':'shown'}`,'info');
     });
 
     // Clear debug log
-    clearBtn.addEventListener('click', () => {
+    clearBtn.addEventListener('click', ()=>{
       debugContent.innerHTML = '';
-      jsLog('Debug log cleared','info');
+      jsLog('Cleared debug log','info');
     });
 
     // Modal close
-    modalClose.addEventListener('click', () => modal.style.display = 'none');
-    modal.addEventListener('click', e => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        modal.style.display = 'none';
+    modalClose.addEventListener('click', ()=> modal.style.display='none');
+    modal.addEventListener('click', e=>{ if(e.target===modal) modal.style.display='none'; });
+    document.addEventListener('keydown', e=> {
+      if(e.key==='Escape') {
+        modal.style.display='none';
         jsLog('Modal closed via Escape','info');
       }
     });
   });
 
-  // Render cards for role
+  // Render cards for a role
   function renderRole(role) {
     cardsView.innerHTML = '';
     const group = roleGroups[role] || [];
@@ -1099,12 +1089,12 @@ Last Modified: Tue, Jun 10, 2025  8:28:22 AM
         <h3>${ep.method} ${ep.path}</h3>
         <p class="summary">${ep.summary}</p>
       `;
-      card.addEventListener('click', () => openModal(ep));
+      card.addEventListener('click', ()=> openModal(ep));
       cardsView.appendChild(card);
     });
   }
 
-  // Open modal with Try It
+  // Open modal
   function openModal(ep) {
     modalBody.innerHTML = `
       <h2>${ep.method} ${ep.path}</h2>
@@ -1113,49 +1103,50 @@ Last Modified: Tue, Jun 10, 2025  8:28:22 AM
       <button id="tryBtn" class="btn">Try It</button>
       <pre id="tryResult"></pre>
     `;
-    document.getElementById('tryBtn').addEventListener('click', () => tryIt(ep));
+    document.getElementById('tryBtn').addEventListener('click', ()=> tryIt(ep));
     modal.style.display = 'flex';
     jsLog(`Modal opened for ${ep.method} ${ep.path}`,'info');
   }
 
-  // TryIt via proxy
+  // Try It via proxy
   function tryIt(ep) {
     const resEl = document.getElementById('tryResult');
-    if (!window.apiToken) {
+    if(!window.apiToken){
       jsLog('No API token','error');
-      return void (resEl.textContent = 'No API token available.');
+      return void(resEl.textContent='No API token available.');
     }
     const url = `api-proxy.php?method=${encodeURIComponent(ep.method)}&path=${encodeURIComponent(ep.path)}`;
     jsLog(`[Request] ${ep.method} ${ep.path}`,'request');
     jsLog(`[Proxy URL] ${url}`,'request');
+
     fetch(url,{
       method: ep.method,
-      headers: { 'Accept':'application/json','Content-Type':'application/json' },
+      headers: {'Accept':'application/json','Content-Type':'application/json'},
       body: ep.method==='POST'?JSON.stringify({},null,2):undefined
     })
-    .then(r=>{
-      jsLog(`[Response Status] ${r.status} ${r.statusText}`,'response');
+    .then(r=> {
+      jsLog(`[Status] ${r.status} ${r.statusText}`,'response');
       const hdrs={}; r.headers.forEach((v,k)=>hdrs[k]=v);
-      jsLog(`[Response Headers] ${JSON.stringify(hdrs,null,2)}`,'response');
+      jsLog(`[Headers] ${JSON.stringify(hdrs,null,2)}`,'response');
       return r.text().then(body=>({body}));
     })
     .then(obj=>{
-      jsLog('[Response Body]','response'); jsLog(obj.body,'response');
+      jsLog('[Body]','response'); jsLog(obj.body,'response');
       try{ resEl.textContent=JSON.stringify(JSON.parse(obj.body),null,2); }
       catch{ resEl.textContent=obj.body; }
     })
     .catch(err=>{
       jsLog(`Proxy error: ${err.message}`,'error');
-      resEl.textContent = `Error: ${err.message}`;
+      resEl.textContent=`Error: ${err.message}`;
     });
   }
 
-  // HEAD health-check
+  // Health check
   function checkConn(url,dot,name) {
     jsLog(`Checking ${name}`,'info');
     fetch(url,{method:'HEAD'})
       .then(r=>{
-        if(r.ok){ dot.classList.add('ok'); jsLog(`${name} OK`,'success'); }
+        if(r.ok){dot.classList.add('ok'); jsLog(`${name} OK`,'success');}
         else throw new Error(`HTTP ${r.status}`);
       })
       .catch(err=>{
@@ -1163,8 +1154,9 @@ Last Modified: Tue, Jun 10, 2025  8:28:22 AM
       });
   }
 
-  // Expose
+  // Expose logger
   window.jsLog = jsLog;
+
 })();
 
 
@@ -1737,14 +1729,14 @@ Last Modified: Tue, Jun 10, 2025  7:50:33 AM
 
 
 ==== TEXT FILE: ./styles.css ====
-Size: 5367 bytes
-Last Modified: Tue, Jun 10, 2025  8:28:09 AM
+Size: 5379 bytes
+Last Modified: Tue, Jun 10, 2025  9:39:53 AM
 ----------------------------------------
 /* ==========================================================================
-   DARK GLASSMORPHIC THEME + .btn / .dropdown + DEBUG PANEL
+   DARK GLASSMORPHIC THEME + .btn/.dropdown + DEBUG PANEL
    ========================================================================== */
 
-/* Reset */
+/* Reset & Base */
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: Arial, sans-serif;
@@ -1754,7 +1746,7 @@ body {
   padding-bottom:220px; /* room for debug panel */
 }
 
-/* Glass panels */
+/* Glassmorphic Panels */
 .glass-panel,
 .cards-container .card,
 .modal-content {

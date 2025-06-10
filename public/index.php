@@ -2,9 +2,9 @@
 // public/index.php
 // -----------------------------------------------------
 // Main UI: loads AllEndpoints.json, injects endpoints
-// and role→paths mapping into JS, renders header
-// with role selector & Debug toggle, cards container,
-// modal, and a static Debug Panel with Clear.
+// and roleMappings into JS, renders header with beautiful
+// role selector & Debug toggle, cards container, modal,
+// and a static Debug Panel with Clear.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -13,7 +13,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/config.php';
 
-// 1) Load Swagger/OpenAPI
+// 1) Load swagger spec
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
     $allEndpoints = [];
@@ -35,7 +35,7 @@ if (!file_exists($specFile)) {
     }
 }
 
-// 2) Define role→paths mapping
+// 2) Role → path list mapping
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -52,7 +52,6 @@ $roleMappings = [
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
-
   <script>
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
@@ -76,13 +75,13 @@ $roleMappings = [
   <!-- MODAL -->
   <div id="modal" class="modal">
     <div class="modal-content">
-      <span id="modalClose" class="modal-close">&times;</span>
+      <button id="modalClose" class="modal-close btn">×</button>
       <div id="modalBody"></div>
     </div>
   </div>
 
   <!-- STATIC DEBUG PANEL -->
-  <div id="debug-panel">
+  <div id="debug-panel" class="debug-panel">
     <div class="debug-header">
       <div class="debug-title">🐛 Debug Console</div>
       <button id="debugClear" class="btn debug-clear">Clear</button>
