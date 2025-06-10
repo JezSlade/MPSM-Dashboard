@@ -1,19 +1,19 @@
 <?php
 // public/index.php
-// -----------------------------------------------------
-// Main UI: loads AllEndpoints.json → passes data & config
-// into JS, renders header with Debug toggle, cards,
-// modal, and the PHP Debug Panel.
-// -----------------------------------------------------
+// -----------------
+// Main UI: loads AllEndpoints.json, injects config into JS,
+// renders header with Debug toggle, cards, modal, and the
+// **static** Debug Panel (client-side).
+// -----------------
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/config.php';
-require_once __DIR__ . '/../src/DebugPanel.php';
+require_once __DIR__ . '/../src/DebugPanel.php';  // still available for PHP logs
 
-// Load and parse AllEndpoints.json
+// Load AllEndpoints.json
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
     DebugPanel::log("AllEndpoints.json not found at $specFile");
@@ -46,11 +46,9 @@ if (!file_exists($specFile)) {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
-
-  <!-- Inject data & config into JS -->
   <script>
+    // Inject data & config
     window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
-    window.debugMode    = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
     window.apiBaseUrl   = '<?php echo API_BASE_URL; ?>';
   </script>
 </head>
@@ -64,10 +62,10 @@ if (!file_exists($specFile)) {
     <button id="toggleDebug" class="debug-toggle">Hide Debug</button>
   </header>
 
-  <!-- CARDS VIEW -->
+  <!-- CARDS VIEW (populated by JS) -->
   <main id="cardsViewport" class="cards-container"></main>
 
-  <!-- DRILLDOWN MODAL -->
+  <!-- MODAL -->
   <div id="modal" class="modal">
     <div class="modal-content">
       <span id="modalClose" class="modal-close">&times;</span>
@@ -75,8 +73,14 @@ if (!file_exists($specFile)) {
     </div>
   </div>
 
-  <!-- PHP Debug Panel -->
-  <?php DebugPanel::output(); ?>
+  <!-- STATIC Debug Panel -->
+  <div id="debug-panel">
+    <div class="debug-header">
+      <div class="debug-title">🐛 Debug Console</div>
+      <button class="debug-clear" id="debugClear">Clear</button>
+    </div>
+    <div class="debug-content" id="debug-content"></div>
+  </div>
 
   <script src="js/app.js"></script>
 </body>
