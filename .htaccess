@@ -1,0 +1,11 @@
+# File: /home/…/public_html/mpsm/.htaccess
+RewriteEngine On
+RewriteBase /mpsm/
+
+# Serve actual files (css, js, images) from public/ directly
+RewriteCond %{REQUEST_URI} !^/mpsm/public/
+RewriteCond %{DOCUMENT_ROOT}/mpsm/public%{REQUEST_URI} -f
+RewriteRule ^(.+) /mpsm/public/$1 [L]
+
+# Everything else → public/index.php
+RewriteRule ^.*$ /mpsm/public/index.php [L,QSA]
