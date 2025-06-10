@@ -1,14 +1,10 @@
-# .htaccess (place beside your public/ folder)
-
+# .htaccess (in your project root)
 RewriteEngine On
 
-# Serve index.php when hitting the root
-RewriteRule ^$ public/index.php [L]
-
-# If the file/folder exists under public/, serve it
+# If the request matches a real file or directory under public/, serve it directly
 RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -f [OR]
 RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -d
 RewriteRule ^(.*)$ public/$1 [L]
 
-# Otherwise rewrite anything else to public/index.php
+# Otherwise route everything to public/index.php
 RewriteRule ^ public/index.php [L]
