@@ -1,19 +1,20 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Main UI: loads AllEndpoints.json, injects data & mappings
-// into JS, renders header with role selector & Debug toggle,
-// cards container, modal, and PHP DebugPanel.
+// Main UI: loads AllEndpoints.json, injects endpoints
+// and role‐mappings into JS, renders header with
+// role selector & Debug toggle, cards, modal, and
+// a static Debug Panel (with Clear).
 // -----------------------------------------------------
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors',1);
+ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/config.php';
 require_once __DIR__ . '/../src/DebugPanel.php';
 
-// 1) Load swagger spec
+// 1) Load AllEndpoints.json
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
     DebugPanel::log("AllEndpoints.json missing at $specFile");
@@ -40,7 +41,7 @@ if (!file_exists($specFile)) {
     }
 }
 
-// 2) Define roles → paths
+// 2) Define role→paths mapping
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -58,12 +59,12 @@ $roleMappings = [
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Inject data & config -->
   <script>
-    window.allEndpoints   = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
-    window.roleMappings   = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
-    window.apiBaseUrl     = '<?php echo API_BASE_URL; ?>';
-    window.debugMode      = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
+    // Inject into JS
+    window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
+    window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
+    window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
+    window.debugMode     = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
   </script>
 </head>
 <body>
@@ -71,7 +72,7 @@ $roleMappings = [
   <header class="glass-panel">
     <div class="status-panel">
       DB: <span id="dbStatus" class="status-dot"></span>
-      API:<span id="apiStatus" class="status-dot"></span>
+      API: <span id="apiStatus" class="status-dot"></span>
     </div>
     <select id="roleSelect" class="dropdown"></select>
     <button id="toggleDebug" class="btn">Hide Debug</button>
@@ -88,8 +89,14 @@ $roleMappings = [
     </div>
   </div>
 
-  <!-- PHP DebugPanel -->
-  <?php DebugPanel::output(); ?>
+  <!-- STATIC DEBUG PANEL -->
+  <div id="debug-panel">
+    <div class="debug-header">
+      <div class="debug-title">🐛 Debug Console</div>
+      <button id="debugClear" class="btn debug-clear">Clear</button>
+    </div>
+    <div class="debug-content" id="debug-content"></div>
+  </div>
 
   <script src="js/app.js"></script>
 </body>
