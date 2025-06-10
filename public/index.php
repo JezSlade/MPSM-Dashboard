@@ -2,9 +2,9 @@
 // public/index.php
 // -----------------------------------------------------
 // Main UI: loads AllEndpoints.json, injects endpoints
-// and role‐mappings into JS, renders header with
-// role selector & Debug toggle, cards, modal, and
-// a static Debug Panel (with Clear).
+// and role→paths mapping into JS, renders header
+// with role selector & Debug toggle, cards container,
+// modal, and a static Debug Panel with Clear.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -12,21 +12,16 @@ ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/config.php';
-require_once __DIR__ . '/../src/DebugPanel.php';
 
-// 1) Load AllEndpoints.json
+// 1) Load Swagger/OpenAPI
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
-    DebugPanel::log("AllEndpoints.json missing at $specFile");
     $allEndpoints = [];
 } else {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        DebugPanel::log("Swagger JSON parse error: " . json_last_error_msg());
-        $allEndpoints = [];
-    } else {
-        $allEndpoints = [];
+    $allEndpoints = [];
+    if (json_last_error() === JSON_ERROR_NONE) {
         foreach (($swagger['paths'] ?? []) as $path => $methods) {
             foreach ($methods as $http => $details) {
                 $allEndpoints[] = [
@@ -37,7 +32,6 @@ if (!file_exists($specFile)) {
                 ];
             }
         }
-        DebugPanel::log("Extracted " . count($allEndpoints) . " endpoints");
     }
 }
 
@@ -60,11 +54,9 @@ $roleMappings = [
   <link rel="stylesheet" href="css/styles.css">
 
   <script>
-    // Inject into JS
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
     window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
-    window.debugMode     = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
   </script>
 </head>
 <body>
@@ -72,7 +64,7 @@ $roleMappings = [
   <header class="glass-panel">
     <div class="status-panel">
       DB: <span id="dbStatus" class="status-dot"></span>
-      API: <span id="apiStatus" class="status-dot"></span>
+      API:<span id="apiStatus" class="status-dot"></span>
     </div>
     <select id="roleSelect" class="dropdown"></select>
     <button id="toggleDebug" class="btn">Hide Debug</button>

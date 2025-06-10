@@ -1,8 +1,8 @@
 /* ==========================================================================
-   DARK GLASSMORPHIC THEME + .btn / .dropdown + DEBUG PANEL
+   DARK GLASSMORPHIC THEME + .btn/.dropdown + DEBUG PANEL
    ========================================================================== */
 
-/* Reset */
+/* Reset & Base */
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: Arial, sans-serif;
@@ -12,7 +12,7 @@ body {
   padding-bottom:220px; /* room for debug panel */
 }
 
-/* Glass panels */
+/* Glassmorphic Panels */
 .glass-panel,
 .cards-container .card,
 .modal-content {
