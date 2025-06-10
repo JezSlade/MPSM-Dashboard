@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DARK GLASSMORPHIC THEME + DEBUG PANEL STYLING
+   DARK GLASSMORPHIC THEME + .btn & .dropdown + DEBUG PANEL
    ========================================================================== */
 
 /* Reset & Base */
@@ -13,6 +13,44 @@ body {
   background: #111;
   color: #eee;
   min-height: 100vh;
+  padding-bottom: 220px; /* room for debug panel */
+}
+
+/* ---------------------------
+   Unified Button & Dropdown
+   --------------------------- */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+  padding: 0.3rem 0.6rem !important;
+  background: rgba(255,255,255,0.15) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #eee !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: background 0.2s !important;
+}
+.btn:hover {
+  background: rgba(255,255,255,0.25) !important;
+}
+
+.dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+  padding: 0.3rem 0.6rem !important;
+  background: rgba(255,255,255,0.15) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #eee !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: background 0.2s !important;
+}
+.dropdown:hover {
+  background: rgba(255,255,255,0.25) !important;
 }
 
 /* Glassmorphic Panels */
@@ -45,25 +83,14 @@ header.glass-panel {
   background: gray;
   transition: background 0.3s;
 }
-.status-dot.ok    { background: #4caf50; }
-.status-dot.error { background: #f44336; }
-
-/* Debug toggle button */
-.debug-toggle {
-  padding: 0.3rem 0.6rem;
-  background: rgba(255,255,255,0.15);
-  border: none;
-  border-radius: 6px;
-  color: #eee;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.2s;
+.status-dot.ok {
+  background: #4caf50;
 }
-.debug-toggle:hover {
-  background: rgba(255,255,255,0.25);
+.status-dot.error {
+  background: #f44336;
 }
 
-/* Cards Layout */
+/* Cards */
 .cards-container {
   display: flex;
   flex-wrap: wrap;
@@ -92,8 +119,10 @@ header.glass-panel {
 /* Modal */
 .modal {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0,0,0,0.6);
   display: none;
   align-items: center;
@@ -101,6 +130,7 @@ header.glass-panel {
   z-index: 1000;
 }
 .modal-content {
+  position: relative;
   padding: 1rem;
   width: 80%;
   max-width: 600px;
@@ -108,33 +138,106 @@ header.glass-panel {
   overflow-y: auto;
 }
 .modal-close {
-  float: right;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
   font-size: 1.5rem;
+  color: #eee;
   cursor: pointer;
+  line-height: 1;
 }
 
-/* Debug Panel */
-#debug-panel {
+/* Enhanced Debug Panel */
+.debug-panel {
   position: fixed;
-  bottom: 0; left: 0;
-  width: 100%;
+  bottom: 0;
+  left: 0;
+  right: 0;
   height: 200px;
+  background: linear-gradient(180deg, rgba(0,20,0,0.95), rgba(0,0,0,0.98));
+  border-top: 2px solid #0f0;
+  border-radius: 12px 12px 0 0;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -4px 20px rgba(0,255,0,0.1);
+  overflow: hidden;
+  transition: transform 0.4s, opacity 0.4s;
+  transform: translateY(0);
+  opacity: 1;
+}
+.debug-panel.hidden {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+/* Debug header */
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(0,255,0,0.1);
+  border-bottom: 1px solid rgba(0,255,0,0.3);
+}
+.debug-title {
+  font-family: 'Courier New', monospace;
+  color: #0f0;
+  font-weight: bold;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.debug-clear {
+  padding: 0.3rem 0.6rem !important;
+}
+
+/* Debug content */
+.debug-content {
+  height: calc(100% - 50px);
   overflow-y: auto;
-  background: rgba(20,20,20,0.9);
-  color: #a0f0a0;
-  font-family: monospace;
+  padding: 0.5rem;
+  font-family: 'Courier New', monospace;
   font-size: 11px;
-  padding: 0.75rem;
-  border-top: 2px solid #4caf50;
-  z-index: 10000;
-  display: block;
+  line-height: 1.4;
 }
-#debug-panel.hidden {
-  display: none !important;
+.debug-content::-webkit-scrollbar {
+  width: 8px;
 }
+.debug-content::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.3);
+}
+.debug-content::-webkit-scrollbar-thumb {
+  background: rgba(0,255,0,0.3);
+  border-radius: 4px;
+}
+.debug-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,255,0,0.5);
+}
+
+/* Log lines */
 .debug-log-line {
-  margin-bottom: 4px;
-  line-height: 1.2;
+  margin-bottom: 3px;
+  padding: 2px 4px;
+  border-radius: 3px;
   white-space: pre-wrap;
   word-break: break-word;
+  border-left: 2px solid transparent;
+  transition: background 0.2s;
+}
+.debug-log-line:hover {
+  background: rgba(0,255,0,0.05);
+}
+.debug-log-line.error    { color: #ff6b6b; border-left-color: #ff6b6b; }
+.debug-log-line.warning  { color: #ffd93d; border-left-color: #ffd93d; }
+.debug-log-line.success  { color: #6bcf7f; border-left-color: #6bcf7f; }
+.debug-log-line.info     { color: #4dabf7; border-left-color: #4dabf7; }
+.debug-log-line.request  { color: #ff8cc8; border-left-color: #ff8cc8; }
+.debug-log-line.response { color: #74c0fc; border-left-color: #74c0fc; }
+
+/* Timestamp */
+.debug-timestamp {
+  color: rgba(255,255,255,0.5);
+  font-size: 10px;
+  margin-right: 6px;
 }
