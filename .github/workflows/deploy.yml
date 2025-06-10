@@ -2,7 +2,7 @@ name: FTP Deploy - Final Lean
 
 on:
   push:
-    branches: ["main"]  # Trigger on pushes to the 'main' branch
+    branches: ["main"]
 
 jobs:
   deploy:
@@ -30,18 +30,12 @@ jobs:
           protocol: ftp
           port: 21
 
-          # Note: trailing slash required
-          local-dir: ./public/
+          local-dir:   ./public/
+          server-dir:  /
 
-          # Deploy into the root of your site
-          server-dir: /
-
-          # Remove remote files not present locally
           dangerous-clean-slate: true
 
-          # Exclude source files outside public/ and GitHub metadata
           exclude: |
-            AllEndpoints.json
             .github/**
           
           log-level: verbose
