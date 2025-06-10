@@ -14,14 +14,14 @@ $client = new ApiClient();
 try {
     $data = $client->getTokenData();
     if (empty($data['access_token'])) {
-        throw new Exception('No access_token in response');
+        throw new Exception($data['error_description'] ?? 'No access_token');
     }
     echo json_encode([
         'access_token' => $data['access_token'],
-        'expires_in'   => $data['expires_in'] ?? 3600,
-        'token_type'   => $data['token_type'] ?? 'Bearer'
+        'expires_in'   => $data['expires_in']   ?? 3600,
+        'token_type'   => $data['token_type']   ?? 'Bearer'
     ]);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error'=>'Token fetch error: '.$e->getMessage()]);
+    echo json_encode(['error' => 'Token fetch error: '.$e->getMessage()]);
 }
