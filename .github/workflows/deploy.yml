@@ -2,7 +2,7 @@ name: FTP Deploy - Final Lean
 
 on:
   push:
-    branches: ["main"] # Trigger on pushes to the 'main' branch
+    branches: ["main"]  # Trigger on pushes to the 'main' branch
 
 jobs:
   deploy:
@@ -24,23 +24,22 @@ jobs:
       - name: 🚀 Deploy Website via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
-          # Use your GitHub Secrets for production!
-          server:   ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: ftp.resolutionsbydesign.us
+          username: mpsm@mpsm.resolutionsbydesign.us
+          password: Deploy123!
           protocol: ftp
-          port:     21
+          port: 21
 
           # NOTE: local-dir must end with a slash
-          local-dir:   ./public/
+          local-dir: ./public/
 
-          # The remote directory to deploy into
-          server-dir:  /
+          # Remote directory to deploy into
+          server-dir: /
 
-          # Remove files on the server not present locally
+          # Delete files on the server not present locally
           dangerous-clean-slate: true
 
-          # Exclude things that shouldn't go up
+          # Exclude files/folders
           exclude: |
             AllEndpoints.json
             src/**
@@ -52,7 +51,7 @@ jobs:
         run: |
           echo "### DEPLOYMENT SUMMARY ###"
           echo "- Version: 0.0.0.${GITHUB_RUN_NUMBER}"
-          echo "- FTP Server: ${{ secrets.FTP_SERVER }}"
+          echo "- FTP Server: ftp.resolutionsbydesign.us"
           echo "- Server Directory: /"
           echo "- Local Directory: ./public/"
         env:
