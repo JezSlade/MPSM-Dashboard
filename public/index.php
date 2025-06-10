@@ -2,8 +2,8 @@
 // public/index.php
 // -----------------------------------------------------
 // Entry point: loads AllEndpoints.json & roleMappings,
-// injects into JS, renders left sidebar with role icons,
-// header/status, cards, modal, and Debug Panel.
+// injects into JS, renders left sidebar, header/status,
+// cards, modal, and Debug Panel.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -30,7 +30,11 @@ if (file_exists($specFile)) {
                 ];
             }
         }
+    } else {
+        DebugPanel::log("Error parsing AllEndpoints.json: " . json_last_error_msg());
     }
+} else {
+    DebugPanel::log("AllEndpoints.json not found in public/");
 }
 
 // 2) Role→paths mapping
@@ -51,21 +55,20 @@ $roleMappings = [
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Inject data into JS -->
   <script>
-    window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
-    window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
-    window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
+    window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
+    window.roleMappings = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
+    window.apiBaseUrl   = '<?php echo API_BASE_URL; ?>';
   </script>
 </head>
 <body>
   <div class="app-container">
-    <!-- LEFT SIDEBAR -->
+    <!-- SIDEBAR -->
     <aside id="sidebar" class="sidebar"></aside>
 
     <!-- MAIN CONTENT -->
     <div class="main-content">
-      <header class="glass-panel">
+      <header class="glass-panel header">
         <div class="status-panel">
           DB: <span id="dbStatus" class="status-dot"></span>
           API: <span id="apiStatus" class="status-dot"></span>
@@ -75,6 +78,7 @@ $roleMappings = [
           <button id="toggleDebug" class="btn">Hide Debug</button>
         </div>
       </header>
+
       <main id="cardsViewport" class="cards-container"></main>
     </div>
   </div>
@@ -98,5 +102,11 @@ $roleMappings = [
 
   <script src="version.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    // Populate version
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('versionDisplay').textContent = window.appVersion || 'n/a';
+    });
+  </script>
 </body>
 </html>
