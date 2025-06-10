@@ -1,19 +1,21 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Loads endpoints + roleMappings into JS, renders UI
-// with version display in header.
+// Entry point: loads endpoints & roleMappings, injects
+// into JS, renders header, cards, modal, and static Debug Panel.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../src/config.php';
+// Load config & DebugPanel from public/src
+require_once __DIR__ . '/src/config.php';
+require_once __DIR__ . '/src/DebugPanel.php';
 
-// Load Swagger spec
+// 1) Load Swagger spec
 $allEndpoints = [];
-$specFile = __DIR__ . '/../AllEndpoints.json';
+$specFile = __DIR__ . '/AllEndpoints.json';
 if (file_exists($specFile)) {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
@@ -31,7 +33,7 @@ if (file_exists($specFile)) {
     }
 }
 
-// Role → paths
+// 2) Define role→paths mapping
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -47,18 +49,13 @@ $roleMappings = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
-
-  <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- App data -->
   <script>
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
     window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
   </script>
-  <!-- Version info injected by workflow -->
-  <script src="version.js"></script>
 </head>
 <body>
   <!-- HEADER -->
@@ -68,10 +65,7 @@ $roleMappings = [
       API:<span id="apiStatus" class="status-dot"></span>
     </div>
     <select id="roleSelect" class="dropdown"></select>
-    <div class="header-right">
-      <span class="version-display">v<span id="versionDisplay"></span></span>
-      <button id="toggleDebug" class="btn">Hide Debug</button>
-    </div>
+    <button id="toggleDebug" class="btn">Hide Debug</button>
   </header>
 
   <!-- CARDS VIEW -->
@@ -95,12 +89,5 @@ $roleMappings = [
   </div>
 
   <script src="js/app.js"></script>
-  <script>
-    // Display version
-    document.addEventListener('DOMContentLoaded', () => {
-      const vd = document.getElementById('versionDisplay');
-      vd.textContent = window.appVersion || 'n/a';
-    });
-  </script>
 </body>
 </html>
