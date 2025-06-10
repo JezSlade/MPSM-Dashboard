@@ -127,3 +127,41 @@ body {
 .debug-log-line { margin-bottom:3px; padding:2px 4px; border-radius:3px; border-left:2px solid transparent; white-space:pre-wrap; word-break:break-word; transition:background .2s; } .debug-log-line:hover { background:rgba(0,255,0,0.05); } .debug-log-line.error { color:#ff6b6b; border-left-color:#ff6b6b; } .debug-log-line.warning { color:#ffd93d; border-left-color:#ffd93d; } .debug-log-line.success { color:#6bcf7f; border-left-color:#6bcf7f; } .debug-log-line.info { color:#4dabf7; border-left-color:#4dabf7; } .debug-log-line.request { color:#ff8cc8; border-left-color:#ff8cc8; } .debug-log-line.response { color:#74c0fc; border-left-color:#74c0fc; }
 
 .debug-timestamp { color:rgba(255,255,255,0.5); font-size:9px; margin-right:6px; }
+/* Customer dropdown & search container */
+.search-container {
+  position: relative;
+}
+.dropdown {
+  backdrop-filter: blur(10px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  min-width: 220px;
+  color: #eee;
+  font-size: 0.9rem;
+  cursor: text;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.dropdown:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 5px var(--accent);
+}
+
+/* Collapsible debug response blocks */
+.debug-response {
+  margin-bottom: 4px;
+}
+.debug-response summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--accent);
+}
+.debug-response pre {
+  margin: 0;
+  padding: 4px;
+  background: rgba(0,0,0,0.8);
+  border-radius: 4px;
+  overflow-x: auto;
+}
