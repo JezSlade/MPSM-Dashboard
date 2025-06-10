@@ -4,10 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\ApiProxyController;
+use App\Http\Controllers\DashboardController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [DashboardController::class, 'show']);
 
 Route::get('/api-status', [StatusController::class, 'api']);
 Route::get('/db-status', [StatusController::class, 'db']);
