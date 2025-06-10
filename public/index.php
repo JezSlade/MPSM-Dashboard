@@ -1,19 +1,19 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Entry point: loads endpoints & roleMappings, injects
-// into JS, renders header, cards, modal, and static Debug Panel.
+// Entry point: loads endpoints + mappings, renders UI.
+// Helper classes live in public/src/ so they deploy.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
-// Load config & DebugPanel from public/src
+// Load helpers from public/src
 require_once __DIR__ . '/src/config.php';
 require_once __DIR__ . '/src/DebugPanel.php';
 
-// 1) Load Swagger spec
+// 1) Load AllEndpoints.json
 $allEndpoints = [];
 $specFile = __DIR__ . '/AllEndpoints.json';
 if (file_exists($specFile)) {
@@ -33,7 +33,7 @@ if (file_exists($specFile)) {
     }
 }
 
-// 2) Define role→paths mapping
+// 2) Role→paths mapping
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -88,6 +88,7 @@ $roleMappings = [
     <div class="debug-content" id="debug-content"></div>
   </div>
 
+  <script src="version.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
