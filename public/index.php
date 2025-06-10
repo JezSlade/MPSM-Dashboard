@@ -1,8 +1,8 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Main UI: loads AllEndpoints.json → injects data & mappings
-// into JS, renders header with role dropdown & Debug toggle,
+// Main UI: loads AllEndpoints.json, injects data & mappings
+// into JS, renders header with role selector & Debug toggle,
 // cards container, modal, and PHP DebugPanel.
 // -----------------------------------------------------
 
@@ -25,7 +25,6 @@ if (!file_exists($specFile)) {
         DebugPanel::log("Swagger JSON parse error: " . json_last_error_msg());
         $allEndpoints = [];
     } else {
-        // Flatten to array of endpoints
         $allEndpoints = [];
         foreach (($swagger['paths'] ?? []) as $path => $methods) {
             foreach ($methods as $http => $details) {
@@ -41,15 +40,15 @@ if (!file_exists($specFile)) {
     }
 }
 
-// 2) Role → list of allowed paths
+// 2) Define roles → paths
 $roleMappings = [
-  'Developer' => ['/ApiClient/List'],
-  'Admin'     => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
-  'Dealer'    => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Service'   => ['/AlertLimit2/GetAllLimits','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Sales'     => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Accounting'=> ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Guest'     => ['/Account/GetProfile','/Account/Logout','/Account/UpdateProfile']
+  'Developer'  => ['/ApiClient/List'],
+  'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
+  'Dealer'     => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Service'    => ['/AlertLimit2/GetAllLimits','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Sales'      => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Accounting' => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Guest'      => ['/Account/GetProfile','/Account/Logout','/Account/UpdateProfile']
 ];
 ?><!DOCTYPE html>
 <html lang="en">
@@ -59,12 +58,12 @@ $roleMappings = [
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Inject data & mappings into JS -->
+  <!-- Inject data & config -->
   <script>
-    window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
-    window.roleMappings = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
-    window.apiBaseUrl   = '<?php echo API_BASE_URL; ?>';
-    window.debugMode    = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
+    window.allEndpoints   = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
+    window.roleMappings   = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
+    window.apiBaseUrl     = '<?php echo API_BASE_URL; ?>';
+    window.debugMode      = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
   </script>
 </head>
 <body>
@@ -74,8 +73,8 @@ $roleMappings = [
       DB: <span id="dbStatus" class="status-dot"></span>
       API:<span id="apiStatus" class="status-dot"></span>
     </div>
-    <select id="roleSelect" class="role-select"></select>
-    <button id="toggleDebug" class="debug-toggle">Hide Debug</button>
+    <select id="roleSelect" class="dropdown"></select>
+    <button id="toggleDebug" class="btn">Hide Debug</button>
   </header>
 
   <!-- CARDS VIEW -->
