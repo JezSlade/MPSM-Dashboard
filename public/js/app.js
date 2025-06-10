@@ -83,29 +83,45 @@
     setTimeout(fetchToken, Math.max(expires - 60, 10)*1000);
   }
 
-  // Load customers into datalist
-  async function loadCustomers() {
-    if (!apiToken) { jsLog('No token—cannot load customers','error'); return; }
-    jsLog('Loading customers…','request');
-    try {
-      const resp = await fetch('api-proxy.php?method=POST&path=Customer/List', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ dealerCode: window.DEALER_CODE })
-      });
-      const list = await resp.json();
-      jsLog('Customers loaded','success');
-      customerList.innerHTML = '';
-      list.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.customerName;
-        opt.dataset.id = c.customerId;
-        customerList.appendChild(opt);
-      });
-    } catch (err) {
-      jsLog('Customer load failed: '+err.message,'error');
-    }
+ async function loadCustomers() {
+  if (!apiToken) {
+    jsLog('Cannot load customers without token','error');
+    return;
   }
+  jsLog('Loading customers…','request');
+  try {
+    const resp = await fetch('api-proxy.php?method=POST&path=Customer/List', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // MPS Monitor API expects "DealerCode" (PascalCase), not "dealerCode"
+      body: JSON.stringify({ DealerCode: window.DEALER_CODE })
+    });
+
+    const raw = await resp.text();
+    jsLog('[Customer Raw Response]','response'); 
+    jsLog(raw,'response');
+
+    let list;
+    try {
+      list = JSON.parse(raw);
+    } catch (err) {
+      jsLog('Customer JSON parse error: ' + err.message, 'error');
+      return;
+    }
+
+    // Populate datalist
+    customerList.innerHTML = '';
+    list.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.customerName;
+      opt.dataset.id = c.customerId;
+      customerList.appendChild(opt);
+    });
+    jsLog('Customers loaded successfully','success');
+  } catch (err) {
+    jsLog('Customer load failed: ' + err.message, 'error');
+  }
+}
 
   document.addEventListener('DOMContentLoaded', () => {
     fetchToken();
