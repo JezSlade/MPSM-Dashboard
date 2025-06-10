@@ -1,11 +1,4 @@
 <?php
-// public/index.php
-// -----------------------------------------------------
-// Entry point: loads endpoints & roleMappings, injects
-// into JS, renders top header, left sidebar, main content,
-// modal, and Debug Panel.
-// -----------------------------------------------------
-
 ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
@@ -17,9 +10,8 @@ require_once __DIR__ . '/src/DebugPanel.php';
 $allEndpoints = [];
 $specFile = __DIR__ . '/AllEndpoints.json';
 if (file_exists($specFile)) {
-    $raw     = file_get_contents($specFile);
-    $swagger = json_decode($raw, true);
-    if (json_last_error() === JSON_ERROR_NONE) {
+    $swagger = json_decode(file_get_contents($specFile), true);
+    if (json_last_error()===JSON_ERROR_NONE) {
         foreach (($swagger['paths']??[]) as $path => $methods) {
             foreach ($methods as $http => $details) {
                 $allEndpoints[] = [
@@ -57,7 +49,7 @@ $roleMappings = [
   </script>
 </head>
 <body>
-  <!-- TOP HEADER -->
+  <!-- FIXED HEADER -->
   <header class="glass-panel header">
     <div class="status-panel">
       DB: <span id="dbStatus" class="status-dot"></span>
@@ -69,7 +61,7 @@ $roleMappings = [
     </div>
   </header>
 
-  <!-- BODY: SIDEBAR + MAIN -->
+  <!-- BODY -->
   <div class="body-container">
     <aside id="sidebar" class="sidebar"></aside>
     <main class="main-content">
@@ -97,6 +89,7 @@ $roleMappings = [
   <script src="version.js"></script>
   <script src="js/app.js"></script>
   <script>
+    // Populate version
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('versionDisplay').textContent = window.appVersion || 'n/a';
     });

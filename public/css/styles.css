@@ -1,13 +1,9 @@
 /* ==========================================================================
-   Glassmorphic Dashboard – Sidebar Reset + Gap Spacing
+   Glassmorphic Dashboard: Fixed Header + Sidebar Alignment
    ========================================================================== */
 
 /* Base Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: Consolas, monospace;
   background: #111;
@@ -17,87 +13,77 @@ body {
 
 /* Variables */
 :root {
-  --glass-bg:      rgba(255,255,255,0.05);
-  --glass-border:  rgba(255,255,255,0.15);
-  --btn-bg:        rgba(255,255,255,0.1);
-  --btn-hover:     rgba(255,255,255,0.2);
-  --accent:        #0af;
-  --shadow-top:    rgba(0,0,0,0.6);
-  --shadow-side:   rgba(0,0,0,0.4);
-  --sidebar-gap:   1rem;    /* Vertical space between icons */
+  --glass-bg:        rgba(255,255,255,0.05);
+  --glass-border:    rgba(255,255,255,0.15);
+  --btn-bg:          rgba(255,255,255,0.1);
+  --btn-hover:       rgba(255,255,255,0.2);
+  --accent:          #0af;
+  --shadow-top:      rgba(0,0,0,0.6);
+  --shadow-side:     rgba(0,0,0,0.4);
+  --sidebar-width:   80px;
 }
 
-/* ==========================================================================
-   HEADER
-   ========================================================================== */
+/* --------------------------------------------
+   HEADER (fixed top, full width)
+   -------------------------------------------- */
 .header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
   height: 60px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   padding: 0 1rem;
   background: var(--glass-bg);
   border-bottom: 1px solid var(--glass-border);
   box-shadow: 0 4px 12px var(--shadow-top);
+  z-index: 100;
 }
 .status-panel { font-weight: bold; }
 .status-dot {
-  display: inline-block;
-  width: 12px; height: 12px;
-  margin-left: 6px;
-  border-radius: 50%;
-  background: gray;
+  display: inline-block; width:12px; height:12px;
+  margin-left:6px; border-radius:50%; background:gray;
   transition: background .3s;
 }
 .status-dot.ok    { background: #4caf50; }
 .status-dot.error { background: #f44336; }
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.version-display { font-size: 0.9rem; color: #ccc; }
+.header-right { display:flex; align-items:center; gap:1rem; }
+.version-display { font-size:0.9rem; color:#ccc; }
 
-/* ==========================================================================
-   LAYOUT – Sidebar + Main
-   ========================================================================== */
+/* --------------------------------------------
+   BODY LAYOUT (below header)
+   -------------------------------------------- */
 .body-container {
-  display: flex;
+  display:flex;
+  margin-top: 60px; /* push below header */
   height: calc(100vh - 60px);
 }
 
-/* ==========================================================================
-   SIDEBAR – No padding/margin, uses gap for spacing
-   ========================================================================== */
+/* --------------------------------------------
+   SIDEBAR (fixed width, icons spaced by gap)
+   -------------------------------------------- */
 .sidebar {
-  width: auto;                  /* auto to fit content */
-  padding: 0;                   /* stripped */
-  margin: 0;                    /* stripped */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sidebar-gap);      /* spacing between buttons */
+  width: var(--sidebar-width);
   background: var(--glass-bg);
   border-right: 1px solid var(--glass-border);
   box-shadow: 4px 0 12px var(--shadow-side);
   backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem; /* space between icons */
+  padding-top: 1rem;
 }
 
-/* Role Buttons – icon-only, no padding/margin */
+/* Role icon button (no padding/margin) */
 .role-btn {
   appearance: none;
   background: transparent;
   border: none;
-  padding: 0;                   /* stripped */
-  margin: 0;                    /* stripped */
-  width: auto;
-  height: auto;
   cursor: pointer;
   transition: background .2s, color .2s;
 }
 .role-btn svg {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 .role-btn.active {
   background: var(--accent);
@@ -109,9 +95,9 @@ body {
   color: #fff;
 }
 
-/* ==========================================================================
-   MAIN CONTENT
-   ========================================================================== */
+/* --------------------------------------------
+   MAIN CONTENT: CARDS
+   -------------------------------------------- */
 .main-content {
   flex: 1;
   overflow-y: auto;
@@ -124,10 +110,10 @@ body {
 }
 .card {
   padding: 1rem;
+  backdrop-filter: blur(12px);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  backdrop-filter: blur(12px);
   cursor: pointer;
   transition: transform .2s, background .2s, box-shadow .2s;
 }
@@ -139,9 +125,9 @@ body {
 .card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
 .card .summary { font-size: 0.9rem; color: #ccc; }
 
-/* ==========================================================================
-   UNIFORM BUTTONS
-   ========================================================================== */
+/* --------------------------------------------
+   UNIFORM BUTTON
+   -------------------------------------------- */
 .btn {
   appearance: none;
   background: var(--btn-bg);
@@ -151,21 +137,20 @@ body {
   color: #eee;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background .2s;
 }
 .btn:hover { background: var(--btn-hover); }
 
-/* ==========================================================================
+/* --------------------------------------------
    MODAL
-   ========================================================================== */
+   -------------------------------------------- */
 .modal {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.6); display: none;
   align-items: center; justify-content: center; z-index: 1000;
 }
 .modal-content {
-  position: relative;
-  padding: 1rem; width: 80%; max-width: 600px;
+  position: relative; padding: 1rem; width: 80%; max-width: 600px;
   backdrop-filter: blur(12px); background: var(--glass-bg);
   border: 1px solid var(--glass-border); border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.7);
@@ -177,16 +162,17 @@ body {
   line-height: 1;
 }
 
-/* ==========================================================================
+/* --------------------------------------------
    DEBUG PANEL
-   ========================================================================== */
+   -------------------------------------------- */
 .debug-panel {
   position: fixed; bottom: 0; left: 0; right: 0; height: 200px;
   background: linear-gradient(180deg, var(--debug-bg), rgba(0,0,0,0.8));
   border-top: 2px solid var(--accent);
   border-radius: 12px 12px 0 0;
   backdrop-filter: blur(10px); overflow: hidden; z-index: 1000;
-  transition: transform 0.4s, opacity 0.4s; transform: translateY(0); opacity: 1;
+  transition: transform .4s, opacity .4s;
+  transform: translateY(0); opacity: 1;
 }
 .debug-panel.hidden { transform: translateY(100%); opacity: 0; }
 .debug-header {
@@ -200,9 +186,9 @@ body {
 }
 .debug-clear { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 
-/* ==========================================================================
+/* --------------------------------------------
    DEBUG CONTENT
-   ========================================================================== */
+   -------------------------------------------- */
 .debug-content {
   height: calc(100% - 50px); overflow-y: auto; padding: 0.5rem;
   font-family: Consolas, monospace; font-size: 10px; line-height: 1.2;
@@ -212,9 +198,9 @@ body {
 .debug-content::-webkit-scrollbar-thumb { background: rgba(0,255,0,0.3); border-radius: 4px; }
 .debug-content::-webkit-scrollbar-thumb:hover { background: rgba(0,255,0,0.5); }
 
-/* ==========================================================================
+/* --------------------------------------------
    LOG LINES & TIMESTAMP
-   ========================================================================== */
+   -------------------------------------------- */
 .debug-log-line {
   margin-bottom: 3px; padding: 2px 4px; border-radius: 3px;
   border-left: 2px solid transparent; white-space: pre-wrap; word-break: break-word;
