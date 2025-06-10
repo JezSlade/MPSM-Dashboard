@@ -1,21 +1,19 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Main UI: loads AllEndpoints.json, passes data & config
+// Main UI: loads AllEndpoints.json → passes data & config
 // into JS, renders header with Debug toggle, cards,
 // modal, and the PHP Debug Panel.
 // -----------------------------------------------------
 
-// 1) PHP error reporting
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// 2) Bootstrap config & debug
 require_once __DIR__ . '/../src/config.php';
 require_once __DIR__ . '/../src/DebugPanel.php';
 
-// 3) Load and parse AllEndpoints.json
+// Load and parse AllEndpoints.json
 $specFile = __DIR__ . '/../AllEndpoints.json';
 if (!file_exists($specFile)) {
     DebugPanel::log("AllEndpoints.json not found at $specFile");
@@ -49,7 +47,7 @@ if (!file_exists($specFile)) {
   <title>MPSM Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Pass data & config into JS -->
+  <!-- Inject data & config into JS -->
   <script>
     window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.debugMode    = <?php echo DEBUG_MODE ? 'true' : 'false'; ?>;
@@ -63,7 +61,7 @@ if (!file_exists($specFile)) {
       DB: <span id="dbStatus" class="status-dot"></span>
       API:<span id="apiStatus" class="status-dot"></span>
     </div>
-    <button id="toggleDebug" class="debug-toggle">Toggle Debug</button>
+    <button id="toggleDebug" class="debug-toggle">Hide Debug</button>
   </header>
 
   <!-- CARDS VIEW -->

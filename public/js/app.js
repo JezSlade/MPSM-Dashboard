@@ -10,7 +10,7 @@
 (function(){
   'use strict';
 
-  // === DOM refs ===
+  // DOM refs
   const debugPanel = document.getElementById('debug-panel');
   const dbDot      = document.getElementById('dbStatus');
   const apiDot     = document.getElementById('apiStatus');
@@ -20,7 +20,7 @@
   const modalClose = document.getElementById('modalClose');
   const toggleBtn  = document.getElementById('toggleDebug');
 
-  // === Utility: log into Debug Panel ===
+  // Utility: log into Debug Panel
   function jsLog(msg) {
     if (!debugPanel) return;
     const line = document.createElement('div');
@@ -30,7 +30,7 @@
     debugPanel.scrollTop = debugPanel.scrollHeight;
   }
 
-  // === Global JS error handlers ===
+  // Global JS error handlers
   window.addEventListener('error', event => {
     jsLog(`Global Error: ${event.message} at ${event.filename}:${event.lineno}`);
   });
@@ -43,16 +43,16 @@
     origErr.apply(console, args);
   };
 
-  // === On DOM ready ===
+  // On DOM ready
   document.addEventListener('DOMContentLoaded', () => {
-    // 1) Toggle debug panel
+    // Toggle debug panel
     toggleBtn.addEventListener('click', () => {
       const hidden = debugPanel.classList.toggle('hidden');
       toggleBtn.textContent = hidden ? 'Show Debug' : 'Hide Debug';
       jsLog(`Debug panel ${hidden ? 'hidden' : 'visible'}`);
     });
 
-    // 2) Fetch OAuth token
+    // Fetch OAuth token
     fetch('get-token.php')
       .then(r => r.json())
       .then(json => {
@@ -67,23 +67,21 @@
         jsLog('Token fetch failed: ' + err.message);
       });
 
-    // 3) Health checks
+    // Health checks
     checkConn('db-status.php', dbDot, 'DB');
     checkConn('api-status.php', apiDot, 'API');
 
-    // 4) Render cards
+    // Render cards
     renderAllCards();
 
-    // 5) Modal close
+    // Modal close
     modalClose.addEventListener('click', () => modal.style.display = 'none');
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.style.display = 'none';
     });
   });
 
-  /**
-   * Render one card per endpoint.
-   */
+  // Render one card per endpoint
   function renderAllCards() {
     cardsView.innerHTML = '';
     const eps = window.allEndpoints || [];
@@ -100,9 +98,7 @@
     });
   }
 
-  /**
-   * Show drill-down modal with a “Try It” proxy button.
-   */
+  // Show drill-down modal with “Try It”
   function openModal(ep) {
     modalBody.innerHTML = `
       <h2>${ep.method} ${ep.path}</h2>
@@ -117,10 +113,7 @@
     jsLog(`Opened modal for ${ep.method} ${ep.path}`);
   }
 
-  /**
-   * Invoke the endpoint via our PHP proxy (no CORS),
-   * and log request/response headers, bodies, and status.
-   */
+  // Invoke the endpoint via our PHP proxy (no CORS)
   function tryIt(ep) {
     const resEl = document.getElementById('tryResult');
     if (!window.apiToken) {
@@ -128,8 +121,8 @@
       resEl.textContent = 'No API token available.';
       return;
     }
-    const method = ep.method;
-    const path   = ep.path;
+    const method   = ep.method;
+    const path     = ep.path;
     const proxyUrl = `api-proxy.php?method=${encodeURIComponent(method)}&path=${encodeURIComponent(path)}`;
 
     // Log request
@@ -152,7 +145,7 @@
       .then(r => {
         jsLog(`[Response Status] ${r.status} ${r.statusText}`);
         const hdrs = {};
-        r.headers.forEach((v,k)=> hdrs[k]=v);
+        r.headers.forEach((v,k) => hdrs[k]=v);
         jsLog(`[Response Headers] ${JSON.stringify(hdrs, null, 2)}`);
         return r.text().then(text => ({ status: r.status, body: text }));
       })
@@ -171,9 +164,7 @@
       });
   }
 
-  /**
-   * Generic HEAD-request health-check.
-   */
+  // Generic HEAD-request health-check
   function checkConn(url, dotEl, name) {
     jsLog(`Checking ${name} → ${url}`);
     fetch(url, { method: 'HEAD' })
@@ -190,4 +181,4 @@
         jsLog(`${name} HEAD ERROR: ${err.message}`);
       });
   }
-})(); 
+})();
