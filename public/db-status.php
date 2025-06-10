@@ -1,8 +1,8 @@
 <?php
 // public/db-status.php
 // -------------------------
-// HEAD request stub for DB connectivity.
-// Always returns 200 OK for now.
+// HEAD stub for DB connectivity.
+// Always returns 200 OK.
 // -------------------------
 
 ini_set('display_errors',1);
@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'HEAD') {
     http_response_code(200);
     exit;
 }
-// Fallback: allow GET to see status
+
 header('Content-Type: text/plain');
 echo 'DB OK';
 http_response_code(200);

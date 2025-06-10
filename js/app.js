@@ -1,26 +1,22 @@
 /*!
  * js/app.js
  * ------------------------------------------------------
- * Renders cards from window.roleEndpoints,
- * handles DB/API checks, modals, and JS debug logging.
+ * Renders one card per endpoint from window.allEndpoints,
+ * handles DB/API HEAD checks, drill‐down modal, and
+ * JS debug logging into the Debug Panel.
  * ------------------------------------------------------
  */
 (function(){
   'use strict';
 
-  // === Setup JS debug logging ===
-  const debugMode = window.debugMode === true || window.debugMode === 'true';
+  const debugMode  = window.debugMode === true || window.debugMode === 'true';
   const debugPanel = debugMode ? document.getElementById('debug-panel') : null;
-  if (debugMode && !debugPanel) {
-    console.warn('Debug panel element missing!');
-  }
 
   // Capture uncaught JS errors
   if (debugMode) {
-    window.onerror = function(msg, src, ln, col, err) {
+    window.onerror = function(msg, src, ln, col) {
       jsLog(`Error: ${msg} at ${src}:${ln}:${col}`);
     };
-    // Wrap console.error
     const origErr = console.error;
     console.error = function(...args) {
       jsLog('Console.error: ' + args.join(' '));
@@ -28,115 +24,89 @@
     };
   }
 
-  /** Append a line to the JS debug panel */
-  function jsLog(message) {
+  /**
+   * Append a line to the JS Debug Panel.
+   */
+  function jsLog(msg) {
     if (!debugPanel) return;
     const line = document.createElement('div');
     line.className = 'debug-log-line';
-    line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
     debugPanel.appendChild(line);
     debugPanel.scrollTop = debugPanel.scrollHeight;
   }
 
-  // === DOM Refs ===
+  // DOM refs
   const dbDot     = document.getElementById('dbStatus');
   const apiDot    = document.getElementById('apiStatus');
-  const roleSel   = document.getElementById('roleSelect');
   const cardsView = document.getElementById('cardsViewport');
   const modal     = document.getElementById('modal');
   const modalBody = document.getElementById('modalBody');
   const modalClose= document.getElementById('modalClose');
 
   document.addEventListener('DOMContentLoaded', function(){
-    populateRoles();
-    jsLog('Roles dropdown initialized');
+    // Check connectivity
+    checkConn('db-status.php', dbDot, 'DB');
+    checkConn('api-status.php', apiDot, 'API');
 
-    checkConnectivity('db-status.php', dbDot, 'DB');
-    checkConnectivity('api-status.php', apiDot, 'API');
+    // Render all endpoint cards
+    renderAllCards();
 
-    renderCards(roleSel.value);
-
-    roleSel.addEventListener('change', function(){
-      jsLog(`Role switched to ${this.value}`);
-      renderCards(this.value);
-    });
-
+    // Modal close handlers
     modalClose.addEventListener('click', () => modal.style.display = 'none');
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.style.display = 'none';
     });
   });
 
-  /** Fill the role <select> */
-  function populateRoles() {
-    Object.keys(window.roleEndpoints).forEach(role => {
-      const o = document.createElement('option');
-      o.value = role;
-      o.textContent = role;
-      roleSel.appendChild(o);
-    });
-    roleSel.value = Object.keys(window.roleEndpoints)[0];
-  }
-
   /**
-   * Render all cards for a given role
-   * @param {string} role
+   * Render one card per endpoint.
    */
-  function renderCards(role) {
+  function renderAllCards() {
     cardsView.innerHTML = '';
-    const cards = window.roleEndpoints[role] || [];
-    jsLog(`Rendering ${cards.length} cards for ${role}`);
-    cards.forEach(card => {
-      const el = document.createElement('div');
-      el.className = 'card';
-      const h3 = document.createElement('h3'); h3.textContent = card.title;
-      const ul = document.createElement('ul');
-      card.endpoints.forEach(ep => {
-        const li = document.createElement('li');
-        li.textContent = `${ep.method} ${ep.path}`;
-        ul.appendChild(li);
-      });
-      el.append(h3, ul);
-      el.addEventListener('click', () => {
-        jsLog(`Card opened: ${card.title}`);
-        openModal(card);
-      });
-      cardsView.appendChild(el);
+    const endpoints = window.allEndpoints || [];
+    jsLog(`Rendering ${endpoints.length} endpoint cards`);
+    endpoints.forEach(op => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${op.method} ${op.path}</h3>
+        <p class="summary">${op.summary || ''}</p>
+      `;
+      card.addEventListener('click', () => openModal(op));
+      cardsView.appendChild(card);
     });
-  }
-
-  /** Show drilldown modal */
-  function openModal(card) {
-    modalBody.innerHTML = `<h2>${card.title}</h2>`;
-    const ul = document.createElement('ul');
-    card.endpoints.forEach(ep => {
-      const li = document.createElement('li');
-      li.textContent = `${ep.method} ${ep.path}`;
-      ul.appendChild(li);
-    });
-    modalBody.appendChild(ul);
-    modal.style.display = 'flex';
   }
 
   /**
-   * Generic HEAD‐request connectivity check
-   * @param {string} url
-   * @param {HTMLElement} dotEl
-   * @param {string} name
+   * Open the drill‐down modal for a single endpoint.
    */
-  function checkConnectivity(url, dotEl, name) {
+  function openModal(op) {
+    modalBody.innerHTML = `
+      <h2>${op.method} ${op.path}</h2>
+      <p><strong>Summary:</strong> ${op.summary || '(none)'}</p>
+      <p><strong>Description:</strong> ${op.description || '(none)'}</p>
+    `;
+    modal.style.display = 'flex';
+    jsLog(`Opened modal for ${op.method} ${op.path}`);
+  }
+
+  /**
+   * Generic HEAD‐request connectivity check.
+   */
+  function checkConn(url, dotEl, name) {
     fetch(url, { method: 'HEAD' })
       .then(r => {
         if (r.ok) {
           dotEl.classList.add('ok');
-          jsLog(`${name} status OK`);
+          jsLog(`${name} HEAD OK`);
         } else {
-          throw new Error(`Status ${r.status}`);
+          throw new Error(`HTTP ${r.status}`);
         }
       })
       .catch(err => {
         dotEl.classList.add('error');
-        jsLog(`${name} status ERROR: ${err.message}`);
+        jsLog(`${name} HEAD ERROR: ${err.message}`);
       });
   }
 })();

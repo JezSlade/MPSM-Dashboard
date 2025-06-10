@@ -1,8 +1,8 @@
 <?php
 // public/api-status.php
 // -------------------------
-// HEAD request stub for API connectivity.
-// Always returns 200 OK for now.
+// HEAD stub for API connectivity.
+// Always returns 200 OK.
 // -------------------------
 
 ini_set('display_errors',1);
@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'HEAD') {
     http_response_code(200);
     exit;
 }
+
 header('Content-Type: text/plain');
 echo 'API OK';
 http_response_code(200);
