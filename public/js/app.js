@@ -2,30 +2,30 @@
  * public/js/app.js
  * ------------------------------------------------------
  * Implements:
- * 1) Token fetch & auto-refresh
- * 2) Customer dropdown (searchable)
- * 3) Developer-only debug panel
- * 4) Role sidebar & card rendering
+ * 1) OAuth2 token fetch + auto-refresh → then loadCustomers()
+ * 2) Single searchable Customer dropdown
+ * 3) Developer-only debug panel toggle
+ * 4) Sidebar with per-role icons from the `icons` map
+ * 5) Card rendering & Try-It proxy
  * ------------------------------------------------------
  */
 (function(){
   'use strict';
 
   // DOM refs
-  const sidebar      = document.getElementById('sidebar');
-  const headerRight  = document.querySelector('.header-right');
-  const toggleBtn    = document.getElementById('toggleDebug');
-  const debugPanel   = document.getElementById('debug-panel');
-  const debugContent = document.getElementById('debug-content');
-  const clearBtn     = document.getElementById('debugClear');
-  const dbDot        = document.getElementById('dbStatus');
-  const apiDot       = document.getElementById('apiStatus');
-  const cardsView    = document.getElementById('cardsViewport');
-  const modal        = document.getElementById('modal');
-  const modalBody    = document.getElementById('modalBody');
-  const modalClose   = document.getElementById('modalClose');
-  const customerSelect = document.getElementById('customerSelect');
-  const customerList   = document.getElementById('customerList');
+  const sidebar       = document.getElementById('sidebar');
+  const toggleBtn     = document.getElementById('toggleDebug');
+  const debugPanel    = document.getElementById('debug-panel');
+  const debugContent  = document.getElementById('debug-content');
+  const clearBtn      = document.getElementById('debugClear');
+  const dbDot         = document.getElementById('dbStatus');
+  const apiDot        = document.getElementById('apiStatus');
+  const cardsView     = document.getElementById('cardsViewport');
+  const modal         = document.getElementById('modal');
+  const modalBody     = document.getElementById('modalBody');
+  const modalClose    = document.getElementById('modalClose');
+  const customerInput = document.getElementById('customerSelect');
+  const customerList  = document.getElementById('customerList');
 
   // Globals
   let apiToken = null;
@@ -33,159 +33,205 @@
   let currentRole = null;
   let currentCustomer = null;
 
-  // Logging
-  function jsLog(msg,type='info'){
+  // Icon map for sidebar
+  const icons = {
+    Developer:  '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>',
+    Admin:      '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17v2a2 2 0 002 2h2a2 2 0 002-2v-2M4 9h12"/></svg>',
+    Dealer:     '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h4l3-6 4 12h4"/></svg>',
+    Service:    '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="3"/><path d="M2 10a8 8 0 0116 0"/></svg>',
+    Sales:      '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 15l6-6 4 4 4-8"/></svg>',
+    Accounting: '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="14" height="4"/><rect x="3" y="9" width="14" height="4"/><rect x="3" y="15" width="14" height="2"/></svg>',
+    Guest:      '<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="6" r="3"/><path d="M2 18a8 8 0 0116 0"/></svg>'
+  };
+
+  // Styled JS logger
+  function jsLog(msg, type='info') {
     if (!debugContent) return;
-    const line=document.createElement('div');
-    line.className=`debug-log-line ${type}`;
-    const ts=`<span class="debug-timestamp">[${new Date().toLocaleTimeString()}]</span>`;
-    const iconMap={error:'❌',warning:'⚠️',success:'✅',info:'ℹ️',request:'📤',response:'📥'};
-    line.innerHTML=`${ts}${iconMap[type]||'ℹ️'} ${msg}`;
-    debugContent.append(line);
-    debugContent.scrollTop=debugContent.scrollHeight;
-    while(debugContent.children.length>200) debugContent.removeChild(debugContent.firstChild);
+    const line = document.createElement('div');
+    line.className = `debug-log-line ${type}`;
+    const ts = `<span class="debug-timestamp">[${new Date().toLocaleTimeString()}]</span>`;
+    const iconsMap = { error:'❌', warning:'⚠️', success:'✅', info:'ℹ️', request:'📤', response:'📥' };
+    line.innerHTML = `${ts}${iconsMap[type]||'ℹ️'} ${msg}`;
+    debugContent.appendChild(line);
+    debugContent.scrollTop = debugContent.scrollHeight;
+    while (debugContent.children.length > 200) {
+      debugContent.removeChild(debugContent.firstChild);
+    }
   }
-  console.error=(...a)=>jsLog('Console.error: '+a.join(' '),'error');
+  console.error = (...args) => jsLog('Console.error: '+args.join(' '), 'error');
 
-  // Token management
-  async function fetchToken(){
+  // 1) Fetch token + schedule refresh + load customers
+  async function fetchToken() {
     jsLog('Fetching token…','request');
-    const r = await fetch('get-token.php');
-    const j = await r.json();
-    apiToken = j.access_token;
-    tokenExpiry = Date.now() + (j.expires_in||3600)*1000;
+    const resp = await fetch('get-token.php');
+    const data = await resp.json();
+    if (!data.access_token) {
+      jsLog('Token fetch error','error');
+      return;
+    }
+    apiToken = data.access_token;
+    // expires_in is seconds
+    const expires = Number(data.expires_in) || 3600;
+    tokenExpiry = Date.now() + expires*1000;
     jsLog('Token acquired','success');
-    // Refresh 1 minute before expiry
-    setTimeout(fetchToken, (j.expires_in - 60)*1000);
+    await loadCustomers();
+    // Refresh 60s before expiry
+    const delay = Math.max(expires - 60, 10)*1000;
+    setTimeout(fetchToken, delay);
   }
 
-  // Fetch customers for constant dealer code
-  async function loadCustomers(){
-    if(!apiToken) return;
+  // 2) Load customers into datalist
+  async function loadCustomers() {
+    if (!apiToken) return;
     jsLog('Loading customers…','request');
-    const r = await fetch(`api-proxy.php?method=POST&path=Customer/List`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ dealerCode: window.DEALER_CODE })
-    });
-    const data = await r.json();
-    jsLog('Customers loaded','success');
-    customerList.innerHTML='';
-    data.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.customerName; 
-      opt.dataset.id = c.customerId;
-      customerList.append(opt);
-    });
+    try {
+      const r = await fetch('api-proxy.php?method=POST&path=Customer/List', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ dealerCode: window.DEALER_CODE })
+      });
+      const customers = await r.json();
+      jsLog('Customers loaded','success');
+      customerList.innerHTML = '';
+      customers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.customerName;
+        opt.dataset.id = c.customerId;
+        customerList.appendChild(opt);
+      });
+    } catch (err) {
+      jsLog('Customer load failed: '+err.message,'error');
+    }
   }
 
-  document.addEventListener('DOMContentLoaded',()=>{
-    // 1) Token + refresh
+  document.addEventListener('DOMContentLoaded', () => {
+    // Start token + customer load
     fetchToken();
 
-    // 2) Sidebar & Roles
-    const mappings = window.roleMappings||{};
-    const endpoints = window.allEndpoints||{};
-    Object.keys(mappings).forEach(role=>{
+    // 3) Build sidebar with role icons
+    const mappings = window.roleMappings || {};
+    Object.keys(mappings).forEach((role, idx) => {
       const btn = document.createElement('button');
-      btn.className='role-btn'; btn.dataset.role=role;
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="none"
-         viewBox="0 0 20 20" stroke="currentColor">
-         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-           d="M10 2a8 8 0 100 16 8 8 0 000-16z"/>
-       </svg>`;
-      btn.title=role;
-      btn.addEventListener('click', ()=>{
-        // activate
+      btn.className = 'role-btn';
+      btn.dataset.role = role;
+      btn.innerHTML = icons[role] || '';
+      btn.title = role;
+      btn.addEventListener('click', () => {
+        // Activate
         document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
-        currentRole=role;
+        currentRole = role;
         renderRole(role);
-        // Show Debug only for Developer
-        if(role==='Developer'){ toggleBtn.style.display='inline-block'; debugPanel.style.display='block'; }
-        else { toggleBtn.style.display='none'; debugPanel.style.display='none'; }
+        // Show debug only for Developer
+        if (role==='Developer') {
+          toggleBtn.style.display = 'inline-block';
+          debugPanel.style.display = 'block';
+        } else {
+          toggleBtn.style.display = 'none';
+          debugPanel.style.display = 'none';
+        }
       });
-      sidebar.append(btn);
+      sidebar.appendChild(btn);
+      if (idx === 0) btn.classList.add('active');
     });
-    // Click first role
-    sidebar.querySelector('.role-btn').click();
+    // Initial render
+    const firstRole = Object.keys(mappings)[0];
+    currentRole = firstRole;
+    renderRole(firstRole);
 
-    // 3) Customer selector
-    customerSelect.addEventListener('input', ()=>{
-      const val = customerSelect.value;
-      const option = Array.from(customerList.options).find(o=>o.value===val);
-      currentCustomer = option ? option.dataset.id : null;
-      jsLog(`Selected customer: ${currentCustomer}`,'info');
+    // 4) Customer select
+    customerInput.addEventListener('input', () => {
+      const val = customerInput.value;
+      const opt = Array.from(customerList.options).find(o=>o.value === val);
+      currentCustomer = opt ? opt.dataset.id : null;
+      jsLog('Selected customer: '+currentCustomer,'info');
       renderRole(currentRole);
     });
-    // Load customers once token is ready
-    setTimeout(loadCustomers, 2000);
 
-    // 4) Debug toggle
-    toggleBtn.addEventListener('click', ()=>{
-      const hidden=debugPanel.classList.toggle('hidden');
-      toggleBtn.textContent = hidden?'Show Debug':'Hide Debug';
-      jsLog(`Debug ${hidden?'hidden':'visible'}`,'info');
+    // 5) Debug toggle / clear
+    toggleBtn.addEventListener('click', () => {
+      const hidden = debugPanel.classList.toggle('hidden');
+      toggleBtn.textContent = hidden ? 'Show Debug' : 'Hide Debug';
+      jsLog(`Debug panel ${hidden ? 'hidden' : 'shown'}`,'info');
     });
-    clearBtn.addEventListener('click', ()=>{ debugContent.innerHTML=''; jsLog('Cleared debug log','info'); });
+    clearBtn.addEventListener('click', () => {
+      debugContent.innerHTML = '';
+      jsLog('Cleared debug log','info');
+    });
 
-    // 5) Modal close
-    modalClose.addEventListener('click',()=>modal.style.display='none');
-    modal.addEventListener('click',e=>{ if(e.target===modal) modal.style.display='none';});
-    document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ modal.style.display='none'; jsLog('Modal closed','info'); }});
+    // 6) Modal close handlers
+    modalClose.addEventListener('click', ()=> modal.style.display='none');
+    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display='none'; });
+    document.addEventListener('keydown', e => { if (e.key==='Escape') modal.style.display='none'; });
   });
 
-  // Render cards filtered by currentRole & currentCustomer
-  function renderRole(role){
-    cardsView.innerHTML='';
-    const paths = window.roleMappings[role]||[];
-    jsLog(`Rendering ${paths.length} cards for ${role}`,'info');
-    paths.forEach(path=>{
-      // find endpoint metadata
-      const ep = window.allEndpoints.find(e=>e.path===path);
-      if(!ep) return;
+  // Render cards for a role
+  function renderRole(role) {
+    cardsView.innerHTML = '';
+    const paths = window.roleMappings[role] || [];
+    jsLog(`Rendering ${paths.length} cards for ${role}`,'success');
+    paths.forEach(path => {
+      const ep = window.allEndpoints.find(e=>e.path === path);
+      if (!ep) return;
       const card = document.createElement('div');
-      card.className='card';
-      card.innerHTML=`
+      card.className = 'card';
+      card.innerHTML = `
         <h3>${ep.method} ${ep.path}</h3>
         <p>${ep.summary}</p>
       `;
       card.addEventListener('click', ()=> openModal(ep));
-      cardsView.append(card);
+      cardsView.appendChild(card);
     });
   }
 
-  // Modal & Try-It
-  async function tryIt(ep){
-    const res = document.getElementById('tryResult');
-    if(!apiToken){ jsLog('No token','error'); return res.textContent='No token'; }
-    const payload = {};
-    if(currentCustomer) payload.customerId = currentCustomer;
-    jsLog(`[Request] ${ep.method} ${ep.path}`,'request');
-    const r=await fetch(`api-proxy.php?method=${encodeURIComponent(ep.method)}&path=${encodeURIComponent(ep.path)}`,{
-      method:ep.method,headers:{'Content-Type':'application/json'},body:ep.method==='POST'?JSON.stringify(payload):undefined
-    });
-    const text = await r.text();
-    res.textContent = text;
-    jsLog(`[Response] ${r.status}`,'response');
-  }
-  function openModal(ep){
-    modalBody.innerHTML=`
+  // Open modal & Try-It
+  function openModal(ep) {
+    modalBody.innerHTML = `
       <h2>${ep.method} ${ep.path}</h2>
       <p><strong>Summary:</strong> ${ep.summary}</p>
       <button id="tryBtn" class="btn">Try It</button>
       <pre id="tryResult"></pre>
     `;
-    document.getElementById('tryBtn').addEventListener('click',()=>tryIt(ep));
-    modal.style.display='flex';
-    jsLog(`Modal opened for ${ep.method}`,'info');
+    document.getElementById('tryBtn').addEventListener('click', ()=> tryIt(ep));
+    modal.style.display = 'flex';
+    jsLog(`Modal opened for ${ep.method} ${ep.path}`,'info');
   }
 
-  // Health-check
-  function checkConn(url,dot,name){
+  async function tryIt(ep) {
+    const resEl = document.getElementById('tryResult');
+    if (!apiToken) {
+      jsLog('No API token','error');
+      return void(resEl.textContent = 'No API token available.');
+    }
+    const payload = {};
+    if (currentCustomer) payload.customerId = currentCustomer;
+    jsLog(`[Request] ${ep.method} ${ep.path}`,'request');
+    try {
+      const r = await fetch(`api-proxy.php?method=${encodeURIComponent(ep.method)}&path=${encodeURIComponent(ep.path)}`, {
+        method: ep.method,
+        headers: { 'Content-Type':'application/json' },
+        body: ep.method==='POST' ? JSON.stringify(payload) : undefined
+      });
+      const text = await r.text();
+      jsLog(`[Response status] ${r.status}`,'response');
+      resEl.textContent = text;
+    } catch(err) {
+      jsLog(`TryIt error: ${err.message}`,'error');
+    }
+  }
+
+  // Health-checks (unchanged)
+  function checkConn(url,dot,name) {
     fetch(url,{method:'HEAD'}).then(r=>{
       if(r.ok){ dot.classList.add('ok'); jsLog(`${name} OK`,'success'); }
       else throw new Error(r.status);
-    }).catch(err=>{ dot.classList.add('error'); jsLog(`${name} ERROR: ${err.message}`,'error'); });
+    }).catch(err=>{
+      dot.classList.add('error');
+      jsLog(`${name} ERROR: ${err.message}`,'error');
+    });
   }
-  window.jsLog=jsLog;
+
+  // Expose
+  window.jsLog = jsLog;
+
 })();
