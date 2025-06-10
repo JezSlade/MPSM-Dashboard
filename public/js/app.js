@@ -1,15 +1,17 @@
 /*!
  * public/js/app.js
  * ------------------------------------------------------
- * Groups endpoints by role, renders a beautiful selector,
- * displays cards, powers the Try-It proxy, and logs everything
- * into an enhanced Debug Panel with toggle & clear.
+ * Groups endpoints by role (window.roleMappings),
+ * renders a styled dropdown & buttons, displays cards,
+ * powers Try-It via php proxy, and logs all into the
+ * enhanced Debug Panel (toggle/clear). Modal closes via X,
+ * backdrop click, and Escape.
  * ------------------------------------------------------
  */
 (function(){
   'use strict';
 
-  // DOM references
+  // DOM refs
   const debugPanel   = document.getElementById('debug-panel');
   const debugContent = document.getElementById('debug-content');
   const toggleBtn    = document.getElementById('toggleDebug');
@@ -28,51 +30,38 @@
     const line = document.createElement('div');
     line.className = `debug-log-line ${type}`;
     const ts = `<span class="debug-timestamp">[${new Date().toLocaleTimeString()}]</span>`;
-    const icons = {
-      error:    '❌',
-      warning:  '⚠️',
-      success:  '✅',
-      info:     'ℹ️',
-      request:  '📤',
-      response: '📥'
-    };
+    const icons = { error:'❌', warning:'⚠️', success:'✅', info:'ℹ️', request:'📤', response:'📥' };
     line.innerHTML = `${ts}${icons[type]||'ℹ️'} ${msg}`;
     debugContent.appendChild(line);
     debugContent.scrollTop = debugContent.scrollHeight;
-    // cap to 200 lines
-    while (debugContent.children.length > 200) {
+    if (debugContent.children.length > 200) {
       debugContent.removeChild(debugContent.firstChild);
     }
   }
 
-  // Global JS error capture
+  // Global JS errors
   window.addEventListener('error', e => jsLog(`${e.message} at ${e.filename}:${e.lineno}`, 'error'));
   window.addEventListener('unhandledrejection', e => jsLog(`Promise Rejection: ${e.reason}`, 'error'));
-  const origConsoleError = console.error;
-  console.error = function(...args) {
-    jsLog('Console.error: ' + args.join(' '), 'error');
-    origConsoleError.apply(console, args);
-  };
+  console.error = function(...args) { jsLog('Console.error: ' + args.join(' '), 'error'); };
 
-  // Precompute roleGroups from mappings + endpoints
-  const mappings = window.roleMappings || {};
+  // Build roleGroups
+  const mappings  = window.roleMappings || {};
   const endpoints = window.allEndpoints || [];
-  const roleGroups = {};
+  const roleGroups= {};
   Object.entries(mappings).forEach(([role, paths]) => {
     roleGroups[role] = endpoints.filter(ep => paths.includes(ep.path));
   });
 
   document.addEventListener('DOMContentLoaded', () => {
-    jsLog('Application initialized', 'success');
+    jsLog('App initialized','success');
 
-    // Populate the role dropdown
+    // Populate role selector
     const roles = Object.keys(roleGroups);
     roles.forEach(role => {
-      const option = document.createElement('option');
-      option.value = option.textContent = role;
-      roleSelect.appendChild(option);
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = role;
+      roleSelect.appendChild(opt);
     });
-    // Initial render
     roleSelect.value = roles[0];
     renderRole(roles[0]);
     roleSelect.addEventListener('change', () => {
@@ -81,15 +70,15 @@
     });
 
     // Fetch API token
-    jsLog('Fetching API token…', 'request');
+    jsLog('Fetching API token…','request');
     fetch('get-token.php')
       .then(r => r.json())
       .then(json => {
         if (json.access_token) {
           window.apiToken = json.access_token;
-          jsLog('API token acquired', 'success');
+          jsLog('Token acquired','success');
         } else {
-          jsLog('Token error: ' + (json.error || 'unknown'), 'error');
+          jsLog('Token error: ' + (json.error||'unknown'), 'error');
         }
       })
       .catch(err => jsLog('Token fetch failed: ' + err.message, 'error'));
@@ -98,27 +87,33 @@
     checkConn('db-status.php', dbDot, 'DB');
     checkConn('api-status.php', apiDot, 'API');
 
-    // Debug panel toggle & clear
+    // Debug toggle & clear
     toggleBtn.addEventListener('click', () => {
       const hidden = debugPanel.classList.toggle('hidden');
       toggleBtn.textContent = hidden ? 'Show Debug' : 'Hide Debug';
       toggleBtn.classList.toggle('panel-hidden', hidden);
       document.body.style.paddingBottom = hidden ? '0' : '220px';
-      jsLog(`Debug panel ${hidden ? 'hidden' : 'shown'}`, 'info');
+      jsLog(`Debug panel ${hidden?'hidden':'shown'}`, 'info');
     });
     clearBtn.addEventListener('click', () => {
       debugContent.innerHTML = '';
-      jsLog('Cleared debug log', 'info');
+      jsLog('Debug log cleared','info');
     });
 
-    // Modal close handlers
-    modalClose.addEventListener('click', () => { modal.style.display = 'none'; });
+    // Modal close
+    modalClose.addEventListener('click', () => modal.style.display = 'none');
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.style.display = 'none';
     });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        modal.style.display = 'none';
+        jsLog('Modal closed via Escape','info');
+      }
+    });
   });
 
-  // Render all cards for the given role
+  // Render cards for a role
   function renderRole(role) {
     cardsView.innerHTML = '';
     const group = roleGroups[role] || [];
@@ -135,26 +130,26 @@
     });
   }
 
-  // Open modal and attach Try It button
+  // Open modal & attach Try It
   function openModal(ep) {
     modalBody.innerHTML = `
       <h2>${ep.method} ${ep.path}</h2>
       <p><strong>Summary:</strong> ${ep.summary}</p>
       <p><strong>Description:</strong> ${ep.description}</p>
-      <button id="tryBtn">Try It</button>
+      <button id="tryBtn" class="btn">Try It</button>
       <pre id="tryResult"></pre>
     `;
     document.getElementById('tryBtn').addEventListener('click', () => tryIt(ep));
     modal.style.display = 'flex';
-    jsLog(`Opened modal for ${ep.method} ${ep.path}`, 'info');
+    jsLog(`Modal opened for ${ep.method} ${ep.path}`, 'info');
   }
 
-  // Invoke the endpoint via our PHP proxy
+  // Try It via proxy
   function tryIt(ep) {
     const resEl = document.getElementById('tryResult');
     if (!window.apiToken) {
-      jsLog('Cannot call API: no token', 'error');
-      return void (resEl.textContent = 'No API token available.');
+      jsLog('No API token','error');
+      return void(resEl.textContent = 'No API token available.');
     }
     const url = `api-proxy.php?method=${encodeURIComponent(ep.method)}&path=${encodeURIComponent(ep.path)}`;
     jsLog(`[Request] ${ep.method} ${ep.path}`, 'request');
@@ -162,7 +157,7 @@
 
     fetch(url, {
       method: ep.method,
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      headers: { 'Accept':'application/json','Content-Type':'application/json' },
       body: ep.method === 'POST' ? JSON.stringify({}, null, 2) : undefined
     })
     .then(r => {
@@ -187,7 +182,7 @@
     });
   }
 
-  // Generic HEAD-request health check
+  // HEAD health-check
   function checkConn(url, dot, name) {
     jsLog(`Checking ${name}`, 'info');
     fetch(url, { method: 'HEAD' })
@@ -205,6 +200,6 @@
       });
   }
 
-  // Expose jsLog for manual use
+  // Expose logger
   window.jsLog = jsLog;
 })();
