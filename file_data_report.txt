@@ -23207,3 +23207,883 @@ Access: 2025-06-06 18:31:38.295553400 -0400
 Modify: 2025-03-17 07:08:44.000000000 -0400
 Change: 2025-06-03 15:40:30.869542400 -0400
  Birth: 2025-06-03 15:40:30.863213500 -0400
+File Type: text/plain
+Checksum (MD5): 2926366654dbc6711ee71ba2589161c3
+
+--- File: /mingw64/share/antiword/cp1252.txt ---
+  File: /mingw64/share/antiword/cp1252.txt
+  Size: 9624      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575784  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.298256700 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.881411900 -0400
+ Birth: 2025-06-03 15:40:30.874890700 -0400
+File Type: text/plain
+Checksum (MD5): 93fb108016f8a1e87e4129b21fe9984b
+
+--- File: /mingw64/share/antiword/cp437.txt ---
+  File: /mingw64/share/antiword/cp437.txt
+  Size: 9847      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575785  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.300778500 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.891151900 -0400
+ Birth: 2025-06-03 15:40:30.884583900 -0400
+File Type: text/plain
+Checksum (MD5): 8c9acc2e686b6cde6fd8d8cd87eb5b76
+
+--- File: /mingw64/share/antiword/cp850.txt ---
+  File: /mingw64/share/antiword/cp850.txt
+  Size: 9693      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575786  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.303391100 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.901340200 -0400
+ Birth: 2025-06-03 15:40:30.895340200 -0400
+File Type: text/plain
+Checksum (MD5): 9dd494e7d591740c12de4a8fa1651fee
+
+--- File: /mingw64/share/antiword/cp852.txt ---
+  File: /mingw64/share/antiword/cp852.txt
+  Size: 9992      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575787  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.306828800 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.913031700 -0400
+ Birth: 2025-06-03 15:40:30.906025400 -0400
+File Type: text/plain
+Checksum (MD5): 7ac39eac594d187affa3d8ed5ab07a1a
+
+--- File: /mingw64/share/antiword/cp862.txt ---
+  File: /mingw64/share/antiword/cp862.txt
+  Size: 9448      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575788  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.310215800 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.922804000 -0400
+ Birth: 2025-06-03 15:40:30.916286900 -0400
+File Type: text/plain
+Checksum (MD5): 3b05f95118d90d1ee79c560af417551d
+
+--- File: /mingw64/share/antiword/cp864.txt ---
+  File: /mingw64/share/antiword/cp864.txt
+  Size: 9612      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575789  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.312225000 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.933743000 -0400
+ Birth: 2025-06-03 15:40:30.927377200 -0400
+File Type: text/plain
+Checksum (MD5): 42ad2bd496ea0c3f64e259917c3b8b83
+
+--- File: /mingw64/share/antiword/cp866.txt ---
+  File: /mingw64/share/antiword/cp866.txt
+  Size: 9817      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575790  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.314824500 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.945758600 -0400
+ Birth: 2025-06-03 15:40:30.938418400 -0400
+File Type: text/plain
+Checksum (MD5): b6d058f54d857344d4701a94bc88fcb4
+
+--- File: /mingw64/share/antiword/fontnames ---
+  File: /mingw64/share/antiword/fontnames
+  Size: 4696      	Blocks: 8          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575791  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.317188000 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.956077200 -0400
+ Birth: 2025-06-03 15:40:30.949853400 -0400
+File Type: text/plain
+Checksum (MD5): 2e667c74c41f2139c156f4a679ff3382
+
+--- File: /mingw64/share/antiword/koi8-r.txt ---
+  File: /mingw64/share/antiword/koi8-r.txt
+  Size: 11204     	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575792  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.320691100 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.966601300 -0400
+ Birth: 2025-06-03 15:40:30.960428600 -0400
+File Type: text/plain
+Checksum (MD5): a66fb8e72381bf5af69d69f1ee6e0ff0
+
+--- File: /mingw64/share/antiword/koi8-u.txt ---
+  File: /mingw64/share/antiword/koi8-u.txt
+  Size: 11259     	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575793  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.322862000 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.975945500 -0400
+ Birth: 2025-06-03 15:40:30.968601500 -0400
+File Type: text/plain
+Checksum (MD5): b89334d5f29b1630c195355120ff8836
+
+--- File: /mingw64/share/antiword/MacCyrillic.txt ---
+  File: /mingw64/share/antiword/MacCyrillic.txt
+  Size: 13353     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575779  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.326363500 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.828946400 -0400
+ Birth: 2025-06-03 15:40:30.821516800 -0400
+File Type: text/plain
+Checksum (MD5): 87e3bb393d087bdc8057e33be6f366dd
+
+--- File: /mingw64/share/antiword/MacRoman.txt ---
+  File: /mingw64/share/antiword/MacRoman.txt
+  Size: 14271     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575780  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.330359700 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.838128500 -0400
+ Birth: 2025-06-03 15:40:30.831945800 -0400
+File Type: text/plain
+Checksum (MD5): a08a3363aa070353bb61e0932caf0f40
+
+--- File: /mingw64/share/antiword/roman.txt ---
+  File: /mingw64/share/antiword/roman.txt
+  Size: 14030     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575794  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.332368200 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.985629800 -0400
+ Birth: 2025-06-03 15:40:30.979943500 -0400
+File Type: text/plain
+Checksum (MD5): e7f3fc02807179d7d3961c56fdb9e1b3
+
+--- File: /mingw64/share/antiword/UTF-8.txt ---
+  File: /mingw64/share/antiword/UTF-8.txt
+  Size: 107       	Blocks: 1          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575781  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.334473300 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:30.848470800 -0400
+ Birth: 2025-06-03 15:40:30.842254800 -0400
+File Type: text/plain
+Checksum (MD5): c31bddb42e69de8e6eb52f00d43bd108
+
+--- File: /mingw64/share/doc ---
+  File: /mingw64/share/doc
+  Size: 0         	Blocks: 0          IO Block: 65536  directory
+Device: 2a74c930h/712296752d	Inode: 562949953575795  Links: 1
+Access: (0755/drwxr-xr-x)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-10 11:47:50.777309400 -0400
+Modify: 2025-06-03 15:40:48.544036100 -0400
+Change: 2025-06-03 15:40:48.544036100 -0400
+ Birth: 2025-06-03 15:40:30.989139900 -0400
+
+--- File: /mingw64/share/doc/connect ---
+  File: /mingw64/share/doc/connect
+  Size: 0         	Blocks: 0          IO Block: 65536  directory
+Device: 2a74c930h/712296752d	Inode: 562949953575796  Links: 1
+Access: (0755/drwxr-xr-x)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-10 11:47:50.778503600 -0400
+Modify: 2025-06-03 15:40:31.013460800 -0400
+Change: 2025-06-03 15:40:31.013460800 -0400
+ Birth: 2025-06-03 15:40:30.989139900 -0400
+
+--- File: /mingw64/share/doc/connect/manual.html ---
+  File: /mingw64/share/doc/connect/manual.html
+  Size: 42566     	Blocks: 44         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575797  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.339389400 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:31.002127800 -0400
+ Birth: 2025-06-03 15:40:30.991148500 -0400
+File Type: text/html
+Checksum (MD5): 5ece43f1cb07ee9c0f4d216f2cc81e5e
+
+--- File: /mingw64/share/doc/connect/manual.txt ---
+  File: /mingw64/share/doc/connect/manual.txt
+  Size: 20983     	Blocks: 24         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930286454  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.343374100 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:31.013460800 -0400
+ Birth: 2025-06-03 15:40:31.006342600 -0400
+File Type: text/plain
+Checksum (MD5): 1351b390ae62d5623b2373ad1ff4cc2d
+
+--- File: /mingw64/share/doc/expat ---
+  File: /mingw64/share/doc/expat
+  Size: 0         	Blocks: 0          IO Block: 65536  directory
+Device: 2a74c930h/712296752d	Inode: 562949953575799  Links: 1
+Access: (0755/drwxr-xr-x)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-10 11:47:50.779868300 -0400
+Modify: 2025-06-03 15:40:31.038521600 -0400
+Change: 2025-06-03 15:40:31.038521600 -0400
+ Birth: 2025-06-03 15:40:31.016641000 -0400
+
+--- File: /mingw64/share/doc/expat/AUTHORS ---
+  File: /mingw64/share/doc/expat/AUTHORS
+  Size: 142       	Blocks: 1          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575800  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.344922800 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:31.021641200 -0400
+ Birth: 2025-06-03 15:40:31.017640800 -0400
+File Type: text/plain
+Checksum (MD5): 4fcc7d1effd5d9789581801bd86b27d2
+
+--- File: /mingw64/share/doc/expat/changelog ---
+  File: /mingw64/share/doc/expat/changelog
+  Size: 83235     	Blocks: 84         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575801  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:38.351451000 -0400
+Modify: 2025-03-17 07:08:44.000000000 -0400
+Change: 2025-06-03 15:40:31.038521600 -0400
+ Birth: 2025-06-03 15:40:31.026817000 -0400
+File Type: text/plain
+Checksum (MD5): 04b771c197457cb5485cff11eb60db30
+
+--- File: /mingw64/share/doc/git-doc ---
+  File: /mingw64/share/doc/git-doc
+  Size: 0         	Blocks: 256        IO Block: 65536  directory
+Device: 2a74c930h/712296752d	Inode: 562949953575802  Links: 1
+Access: (0755/drwxr-xr-x)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-10 11:47:50.793935800 -0400
+Modify: 2025-06-03 15:40:48.239581700 -0400
+Change: 2025-06-03 15:40:48.239581700 -0400
+ Birth: 2025-06-03 15:40:31.042829200 -0400
+
+--- File: /mingw64/share/doc/git-doc/blame-options.adoc ---
+  File: /mingw64/share/doc/git-doc/blame-options.adoc
+  Size: 6002      	Blocks: 8          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930286997  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.158383800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.777810100 -0400
+ Birth: 2025-06-03 15:40:36.769453700 -0400
+File Type: text/plain
+Checksum (MD5): 75b51f51ebb24f411fc9423dfac9562c
+
+--- File: /mingw64/share/doc/git-doc/BreakingChanges.adoc ---
+  File: /mingw64/share/doc/git-doc/BreakingChanges.adoc
+  Size: 9676      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575803  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.161365100 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:31.051041600 -0400
+ Birth: 2025-06-03 15:40:31.044032300 -0400
+File Type: text/plain
+Checksum (MD5): f2317605cd970348754b9d11ee134990
+
+--- File: /mingw64/share/doc/git-doc/cmds-ancillaryinterrogators.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-ancillaryinterrogators.adoc
+  Size: 1294      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576342  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.162367000 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.786956100 -0400
+ Birth: 2025-06-03 15:40:36.781554500 -0400
+File Type: text/plain
+Checksum (MD5): 7ae6dd1493e064dcb10094accaccc885
+
+--- File: /mingw64/share/doc/git-doc/cmds-ancillarymanipulators.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-ancillarymanipulators.adoc
+  Size: 796       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576343  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.164820500 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.802369000 -0400
+ Birth: 2025-06-03 15:40:36.792905900 -0400
+File Type: text/plain
+Checksum (MD5): 8347ecec8746807f8270d06c3b242006
+
+--- File: /mingw64/share/doc/git-doc/cmds-developerinterfaces.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-developerinterfaces.adoc
+  Size: 678       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576344  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.166166800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.816668600 -0400
+ Birth: 2025-06-03 15:40:36.809190300 -0400
+File Type: text/plain
+Checksum (MD5): 72254f99041af948218b03916200825f
+
+--- File: /mingw64/share/doc/git-doc/cmds-foreignscminterface.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-foreignscminterface.adoc
+  Size: 763       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576345  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.167223200 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.830113900 -0400
+ Birth: 2025-06-03 15:40:36.821743300 -0400
+File Type: text/plain
+Checksum (MD5): ca33d82cf3624a1c06a674a58713c0ad
+
+--- File: /mingw64/share/doc/git-doc/cmds-guide.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-guide.adoc
+  Size: 833       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576346  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.169283500 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.842914600 -0400
+ Birth: 2025-06-03 15:40:36.835497900 -0400
+File Type: text/plain
+Checksum (MD5): 1300033e980b50ade51b90a843d502d6
+
+--- File: /mingw64/share/doc/git-doc/cmds-mainporcelain.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-mainporcelain.adoc
+  Size: 3194      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576347  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.171304300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.857283600 -0400
+ Birth: 2025-06-03 15:40:36.848669200 -0400
+File Type: text/plain
+Checksum (MD5): d8eb62dac8fc24eb970fa9554b773b53
+
+--- File: /mingw64/share/doc/git-doc/cmds-plumbinginterrogators.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-plumbinginterrogators.adoc
+  Size: 1539      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576348  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.173446200 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.873179300 -0400
+ Birth: 2025-06-03 15:40:36.865505300 -0400
+File Type: text/plain
+Checksum (MD5): 6a9ebf07d6b1b87490d38593b839266e
+
+--- File: /mingw64/share/doc/git-doc/cmds-plumbingmanipulators.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-plumbingmanipulators.adoc
+  Size: 1507      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576349  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.175454300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.888218300 -0400
+ Birth: 2025-06-03 15:40:36.880389700 -0400
+File Type: text/plain
+Checksum (MD5): 7c82e741318d9edc76752ceb32100218
+
+--- File: /mingw64/share/doc/git-doc/cmds-purehelpers.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-purehelpers.adoc
+  Size: 1268      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576350  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.176454400 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.902150700 -0400
+ Birth: 2025-06-03 15:40:36.894914900 -0400
+File Type: text/plain
+Checksum (MD5): e98e8361ef21bab1d8863d0af6e7bb7d
+
+--- File: /mingw64/share/doc/git-doc/cmds-synchelpers.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-synchelpers.adoc
+  Size: 449       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576351  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.178454400 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.915779700 -0400
+ Birth: 2025-06-03 15:40:36.908285100 -0400
+File Type: text/plain
+Checksum (MD5): c55901a472b71980d592efcd56c246c1
+
+--- File: /mingw64/share/doc/git-doc/cmds-synchingrepositories.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-synchingrepositories.adoc
+  Size: 397       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576352  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.179957600 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.927315000 -0400
+ Birth: 2025-06-03 15:40:36.920099000 -0400
+File Type: text/plain
+Checksum (MD5): 5c13fdc26062c93437b6510dcd2e1566
+
+--- File: /mingw64/share/doc/git-doc/cmds-userinterfaces.adoc ---
+  File: /mingw64/share/doc/git-doc/cmds-userinterfaces.adoc
+  Size: 507       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576353  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.180962100 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.939450800 -0400
+ Birth: 2025-06-03 15:40:36.933416400 -0400
+File Type: text/plain
+Checksum (MD5): 51108cd4cdc26130830065fb5c43d7d3
+
+--- File: /mingw64/share/doc/git-doc/config.adoc ---
+  File: /mingw64/share/doc/git-doc/config.adoc
+  Size: 18644     	Blocks: 20         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576354  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.184109900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.954042100 -0400
+ Birth: 2025-06-03 15:40:36.944507400 -0400
+File Type: text/plain
+Checksum (MD5): b52888e0cf99462b9ebfd7638e495b6e
+
+--- File: /mingw64/share/doc/git-doc/date-formats.adoc ---
+  File: /mingw64/share/doc/git-doc/date-formats.adoc
+  Size: 1171      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576355  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.186234900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.968735900 -0400
+ Birth: 2025-06-03 15:40:36.961956800 -0400
+File Type: text/plain
+Checksum (MD5): 612a355ca72e41f9aa137760af45a4f0
+
+--- File: /mingw64/share/doc/git-doc/DecisionMaking.adoc ---
+  File: /mingw64/share/doc/git-doc/DecisionMaking.adoc
+  Size: 3856      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575804  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.188225800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:31.061423800 -0400
+ Birth: 2025-06-03 15:40:31.055752700 -0400
+File Type: text/plain
+Checksum (MD5): 95c4c3ded47a84d26a9c553810b34c79
+
+--- File: /mingw64/share/doc/git-doc/DecisionMaking.html ---
+  File: /mingw64/share/doc/git-doc/DecisionMaking.html
+  Size: 34429     	Blocks: 36         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953575805  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.193508000 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:31.076158900 -0400
+ Birth: 2025-06-03 15:40:31.065629400 -0400
+File Type: text/html
+Checksum (MD5): b14da8b620ee1c7f297cbfc945c82d06
+
+--- File: /mingw64/share/doc/git-doc/diff-format.adoc ---
+  File: /mingw64/share/doc/git-doc/diff-format.adoc
+  Size: 6596      	Blocks: 8          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576356  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.197020700 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:36.985844200 -0400
+ Birth: 2025-06-03 15:40:36.974561900 -0400
+File Type: text/plain
+Checksum (MD5): 55d805dbf4b6852a94b38ae22e402ada
+
+--- File: /mingw64/share/doc/git-doc/diff-generate-patch.adoc ---
+  File: /mingw64/share/doc/git-doc/diff-generate-patch.adoc
+  Size: 7189      	Blocks: 8          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287013  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.200032300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.003359000 -0400
+ Birth: 2025-06-03 15:40:36.994164000 -0400
+File Type: text/x-diff
+Checksum (MD5): 38dc415642165e0eaac66c94e9d4690d
+
+--- File: /mingw64/share/doc/git-doc/diff-options.adoc ---
+  File: /mingw64/share/doc/git-doc/diff-options.adoc
+  Size: 33011     	Blocks: 36         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576358  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.291526500 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.216094500 -0400
+ Birth: 2025-06-03 15:40:37.012013700 -0400
+File Type: text/plain
+Checksum (MD5): d21f3cc3f3abef553d1fdd3374525f45
+
+--- File: /mingw64/share/doc/git-doc/docbook-xsl.css ---
+  File: /mingw64/share/doc/git-doc/docbook-xsl.css
+  Size: 4557      	Blocks: 8          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287015  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.295073400 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.226823500 -0400
+ Birth: 2025-06-03 15:40:37.220575800 -0400
+File Type: text/plain
+Checksum (MD5): a5a9a46fabb3f200e05ce6d5d5318dd5
+
+--- File: /mingw64/share/doc/git-doc/docinfo.html ---
+  File: /mingw64/share/doc/git-doc/docinfo.html
+  Size: 50        	Blocks: 1          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 1125899906997672  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.297703800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.234369000 -0400
+ Birth: 2025-06-03 15:40:37.229825700 -0400
+File Type: text/html
+Checksum (MD5): bc962947bf19b5213712c1d6a552ef4a
+
+--- File: /mingw64/share/doc/git-doc/everyday.html ---
+  File: /mingw64/share/doc/git-doc/everyday.html
+  Size: 30250     	Blocks: 32         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576361  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.302875800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.246089600 -0400
+ Birth: 2025-06-03 15:40:37.237370600 -0400
+File Type: text/html
+Checksum (MD5): 677b930eaecb9eb73ec0a9d5d58a4f62
+
+--- File: /mingw64/share/doc/git-doc/fetch-options.adoc ---
+  File: /mingw64/share/doc/git-doc/fetch-options.adoc
+  Size: 12583     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287018  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.305885000 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.254820100 -0400
+ Birth: 2025-06-03 15:40:37.249150600 -0400
+File Type: text/plain
+Checksum (MD5): 81a294f9f7571a6612c737e790786e89
+
+--- File: /mingw64/share/doc/git-doc/fsck-msgids.adoc ---
+  File: /mingw64/share/doc/git-doc/fsck-msgids.adoc
+  Size: 5705      	Blocks: 8          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576363  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.307885300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.264542300 -0400
+ Birth: 2025-06-03 15:40:37.259352400 -0400
+File Type: text/plain
+Checksum (MD5): 914a834c75948462c02dc225fce705ba
+
+--- File: /mingw64/share/doc/git-doc/git-add.adoc ---
+  File: /mingw64/share/doc/git-doc/git-add.adoc
+  Size: 16318     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576364  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.311593500 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.274001700 -0400
+ Birth: 2025-06-03 15:40:37.268486100 -0400
+File Type: text/plain
+Checksum (MD5): 621140224dc2a2fabab2ada62f90a724
+
+--- File: /mingw64/share/doc/git-doc/git-add.html ---
+  File: /mingw64/share/doc/git-doc/git-add.html
+  Size: 53186     	Blocks: 52         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576365  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.316104900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.286953600 -0400
+ Birth: 2025-06-03 15:40:37.278208100 -0400
+File Type: text/html
+Checksum (MD5): 435d1fc05b0a357985f408b6f7194103
+
+--- File: /mingw64/share/doc/git-doc/git-am.adoc ---
+  File: /mingw64/share/doc/git-doc/git-am.adoc
+  Size: 9602      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287022  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.319627400 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.299033900 -0400
+ Birth: 2025-06-03 15:40:37.291614600 -0400
+File Type: text/plain
+Checksum (MD5): 5b487691273edca2b1e8d80296eb579d
+
+--- File: /mingw64/share/doc/git-doc/git-am.html ---
+  File: /mingw64/share/doc/git-doc/git-am.html
+  Size: 45631     	Blocks: 48         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576367  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.324238700 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.311996000 -0400
+ Birth: 2025-06-03 15:40:37.303040900 -0400
+File Type: text/html
+Checksum (MD5): e4ed278adcbe06257f3c8b3075c70ad1
+
+--- File: /mingw64/share/doc/git-doc/git-annotate.adoc ---
+  File: /mingw64/share/doc/git-doc/git-annotate.adoc
+  Size: 772       	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287024  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.327119500 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.319160600 -0400
+ Birth: 2025-06-03 15:40:37.315152000 -0400
+File Type: text/plain
+Checksum (MD5): 3e2993fc7478a87f059ff7ca918faf82
+
+--- File: /mingw64/share/doc/git-doc/git-annotate.html ---
+  File: /mingw64/share/doc/git-doc/git-annotate.html
+  Size: 40778     	Blocks: 40         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576369  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.331627600 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.332102600 -0400
+ Birth: 2025-06-03 15:40:37.323677700 -0400
+File Type: text/html
+Checksum (MD5): aa187fc46ad9f0548a80db7bbb4878c8
+
+--- File: /mingw64/share/doc/git-doc/git-apply.adoc ---
+  File: /mingw64/share/doc/git-doc/git-apply.adoc
+  Size: 11147     	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287026  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.333750700 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.341548400 -0400
+ Birth: 2025-06-03 15:40:37.335263200 -0400
+File Type: text/plain
+Checksum (MD5): 0cdc385fc8c81279cb490d5f41398872
+
+--- File: /mingw64/share/doc/git-doc/git-apply.html ---
+  File: /mingw64/share/doc/git-doc/git-apply.html
+  Size: 45436     	Blocks: 48         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576371  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.340192300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.354188500 -0400
+ Birth: 2025-06-03 15:40:37.345109100 -0400
+File Type: text/html
+Checksum (MD5): 64f070586f3193538c8f33ffe429f6ff
+
+--- File: /mingw64/share/doc/git-doc/git-archive.adoc ---
+  File: /mingw64/share/doc/git-doc/git-archive.adoc
+  Size: 8471      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287028  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.342193700 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.365461800 -0400
+ Birth: 2025-06-03 15:40:37.359210300 -0400
+File Type: text/plain
+Checksum (MD5): 198a4629edbe23cc874bb03ede17dec7
+
+--- File: /mingw64/share/doc/git-doc/git-archive.html ---
+  File: /mingw64/share/doc/git-doc/git-archive.html
+  Size: 42704     	Blocks: 44         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576373  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.346799300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.543543500 -0400
+ Birth: 2025-06-03 15:40:37.368471200 -0400
+File Type: text/html
+Checksum (MD5): e99f1bce2c3931449ef2d88e63f2f08f
+
+--- File: /mingw64/share/doc/git-doc/git-backfill.adoc ---
+  File: /mingw64/share/doc/git-doc/git-backfill.adoc
+  Size: 2568      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287030  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.349643300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.556964800 -0400
+ Birth: 2025-06-03 15:40:37.548359300 -0400
+File Type: text/plain
+Checksum (MD5): a40451645a3251f366d52500af470a35
+
+--- File: /mingw64/share/doc/git-doc/git-backfill.html ---
+  File: /mingw64/share/doc/git-doc/git-backfill.html
+  Size: 33818     	Blocks: 36         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576375  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.354921900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.576821000 -0400
+ Birth: 2025-06-03 15:40:37.563222900 -0400
+File Type: text/html
+Checksum (MD5): f7d893a2c99e5005fb47bd931420c0fa
+
+--- File: /mingw64/share/doc/git-doc/git-bisect-lk2009.adoc ---
+  File: /mingw64/share/doc/git-doc/git-bisect-lk2009.adoc
+  Size: 49694     	Blocks: 52         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287032  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.357932100 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.593969600 -0400
+ Birth: 2025-06-03 15:40:37.584136200 -0400
+File Type: text/x-diff
+Checksum (MD5): 30a60be8f1898a5b2e74bf5d6a5c87d8
+
+--- File: /mingw64/share/doc/git-doc/git-bisect-lk2009.html ---
+  File: /mingw64/share/doc/git-doc/git-bisect-lk2009.html
+  Size: 92862     	Blocks: 92         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576377  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.364569500 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.612974200 -0400
+ Birth: 2025-06-03 15:40:37.599415200 -0400
+File Type: text/html
+Checksum (MD5): 10dd5e1c68c911b1cbd8ddf2c7fd2a11
+
+--- File: /mingw64/share/doc/git-doc/git-bisect.adoc ---
+  File: /mingw64/share/doc/git-doc/git-bisect.adoc
+  Size: 17912     	Blocks: 20         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287034  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.368117800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.628609000 -0400
+ Birth: 2025-06-03 15:40:37.619492000 -0400
+File Type: text/plain
+Checksum (MD5): 80945b8f96febc30df0f8f98c4213536
+
+--- File: /mingw64/share/doc/git-doc/git-bisect.html ---
+  File: /mingw64/share/doc/git-doc/git-bisect.html
+  Size: 53879     	Blocks: 56         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576379  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.373273300 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.645060800 -0400
+ Birth: 2025-06-03 15:40:37.632610300 -0400
+File Type: text/html
+Checksum (MD5): fd6c2f53a0f482889d3a7d61bf2e42dd
+
+--- File: /mingw64/share/doc/git-doc/git-blame.adoc ---
+  File: /mingw64/share/doc/git-doc/git-blame.adoc
+  Size: 8735      	Blocks: 12         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287036  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.376608000 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.654943600 -0400
+ Birth: 2025-06-03 15:40:37.648059000 -0400
+File Type: text/plain
+Checksum (MD5): e036e989f82f56ba7ab502b8a507b4dd
+
+--- File: /mingw64/share/doc/git-doc/git-blame.html ---
+  File: /mingw64/share/doc/git-doc/git-blame.html
+  Size: 53962     	Blocks: 56         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576381  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.381994900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.670274400 -0400
+ Birth: 2025-06-03 15:40:37.659966800 -0400
+File Type: text/html
+Checksum (MD5): 5021edf1b3c71b9ba0110cbeafabd892
+
+--- File: /mingw64/share/doc/git-doc/git-branch.adoc ---
+  File: /mingw64/share/doc/git-doc/git-branch.adoc
+  Size: 15823     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287038  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.386018800 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.683379900 -0400
+ Birth: 2025-06-03 15:40:37.674958700 -0400
+File Type: text/plain
+Checksum (MD5): aef3db3f3d56086be68c2b9aeeb2797f
+
+--- File: /mingw64/share/doc/git-doc/git-branch.html ---
+  File: /mingw64/share/doc/git-doc/git-branch.html
+  Size: 59580     	Blocks: 60         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287039  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.391141400 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.698803200 -0400
+ Birth: 2025-06-03 15:40:37.687041000 -0400
+File Type: text/html
+Checksum (MD5): f98a5e4c08e286daaee338845f6cd226
+
+--- File: /mingw64/share/doc/git-doc/git-bugreport.adoc ---
+  File: /mingw64/share/doc/git-doc/git-bugreport.adoc
+  Size: 2566      	Blocks: 4          IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287040  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.393273900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.708108100 -0400
+ Birth: 2025-06-03 15:40:37.701800300 -0400
+File Type: text/plain
+Checksum (MD5): 6676cdfcde2aa0463ffc17b8ffa20cd7
+
+--- File: /mingw64/share/doc/git-doc/git-bugreport.html ---
+  File: /mingw64/share/doc/git-doc/git-bugreport.html
+  Size: 33813     	Blocks: 36         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576385  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.397068900 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.721896700 -0400
+ Birth: 2025-06-03 15:40:37.713112100 -0400
+File Type: text/html
+Checksum (MD5): e5bb1ce548b7657f9969fc0d5c4f03a1
+
+--- File: /mingw64/share/doc/git-doc/git-bundle.adoc ---
+  File: /mingw64/share/doc/git-doc/git-bundle.adoc
+  Size: 13310     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287042  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.400742600 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.734849600 -0400
+ Birth: 2025-06-03 15:40:37.727258500 -0400
+File Type: text/x-c
+Checksum (MD5): b8406f03c4896551eaff9f2a8eb37e84
+
+--- File: /mingw64/share/doc/git-doc/git-bundle.html ---
+  File: /mingw64/share/doc/git-doc/git-bundle.html
+  Size: 48108     	Blocks: 48         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576387  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.405923700 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.749733500 -0400
+ Birth: 2025-06-03 15:40:37.738364100 -0400
+File Type: text/html
+Checksum (MD5): 8e87adbb8b50ddc6fabdccfcff187204
+
+--- File: /mingw64/share/doc/git-doc/git-cat-file.adoc ---
+  File: /mingw64/share/doc/git-doc/git-cat-file.adoc
+  Size: 13656     	Blocks: 16         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 844424930287044  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.408726700 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.762156300 -0400
+ Birth: 2025-06-03 15:40:37.752838400 -0400
+File Type: text/plain
+Checksum (MD5): 79942f56cb34e5c2caa6ccf02199bd78
+
+--- File: /mingw64/share/doc/git-doc/git-cat-file.html ---
+  File: /mingw64/share/doc/git-doc/git-cat-file.html
+  Size: 50499     	Blocks: 52         IO Block: 65536  regular file
+Device: 2a74c930h/712296752d	Inode: 562949953576389  Links: 1
+Access: (0644/-rw-r--r--)  Uid: (1715973/jez.slade)   Gid: (1049089/ UNKNOWN)
+Access: 2025-06-06 18:31:41.413398600 -0400
+Modify: 2025-03-17 07:09:38.000000000 -0400
+Change: 2025-06-03 15:40:37.778083200 -0400
+ Birth: 2025-06-03 15:40:37.766339000 -0400
