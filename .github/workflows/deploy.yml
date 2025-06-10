@@ -2,7 +2,7 @@ name: FTP Deploy - Final Lean
 
 on:
   push:
-    branches: ["main"] 
+    branches: ["main"] # Trigger on pushes to the 'main' branch
 
 jobs:
   deploy:
@@ -13,7 +13,7 @@ jobs:
       - name: 🔍 Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # needed if you ever tag
+          fetch-depth: 0
 
       - name: 🔢 Generate Version File
         run: |
@@ -24,26 +24,36 @@ jobs:
       - name: 🚀 Deploy Website via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          # Use your GitHub Secrets for production!
+          server:   ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./public
-          server-directory: /
           protocol: ftp
+          port:     21
+
+          # NOTE: local-dir must end with a slash
+          local-dir:   ./public/
+
+          # The remote directory to deploy into
+          server-dir:  /
+
+          # Remove files on the server not present locally
+          dangerous-clean-slate: true
+
+          # Exclude things that shouldn't go up
           exclude: |
-            ../.git/
-            ../src/
-            ../AllEndpoints.json
+            AllEndpoints.json
+            src/**
+            .github/**
+          
           log-level: verbose
-          delete: true
-          timeout: 120
 
       - name: 📜 Deployment Completed Report
         run: |
-          echo "### DEPLOYMENT SUMMARY ###" > report.md
-          echo "- Version: 0.0.0.${GITHUB_RUN_NUMBER}" >> report.md
-          echo "- Method: FTP-Deploy-Action" >> report.md
-          echo "- URL: https://mpsm.resolutionsbydesign.us" >> report.md
-          cat report.md
+          echo "### DEPLOYMENT SUMMARY ###"
+          echo "- Version: 0.0.0.${GITHUB_RUN_NUMBER}"
+          echo "- FTP Server: ${{ secrets.FTP_SERVER }}"
+          echo "- Server Directory: /"
+          echo "- Local Directory: ./public/"
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
