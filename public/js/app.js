@@ -1,10 +1,10 @@
 /*!
  * public/js/app.js
  * ------------------------------------------------------
- * Groups endpoints by role, renders a fancy dropdown,
- * displays cards, powers Try-It via proxy, and logs all
- * into a toggleable, clearable Debug Panel; modal close
- * by X, backdrop, or Escape.
+ * Groups endpoints by role, renders a styled selector,
+ * displays cards, powers Try-It proxy, and logs all
+ * into the enhanced Debug Panel (toggleable & clearable).
+ * Modal closes via X, backdrop, and Escape.
  * ------------------------------------------------------
  */
 (function(){
@@ -33,13 +33,21 @@
     line.innerHTML = `${ts}${icons[type]||'ℹ️'} ${msg}`;
     debugContent.appendChild(line);
     debugContent.scrollTop = debugContent.scrollHeight;
-    while (debugContent.children.length > 200) debugContent.removeChild(debugContent.firstChild);
+    if (debugContent.children.length > 200) {
+      debugContent.removeChild(debugContent.firstChild);
+    }
   }
 
   // Global error capture
   window.addEventListener('error', e => jsLog(`${e.message} at ${e.filename}:${e.lineno}`, 'error'));
   window.addEventListener('unhandledrejection', e => jsLog(`Promise Rejection: ${e.reason}`, 'error'));
-  console.error = function(...args) { jsLog('Console.error: '+args.join(' '),'error'); };
+
+  // Uniform console.error
+  const origErr = console.error;
+  console.error = (...args) => {
+    jsLog('Console.error: ' + args.join(' '), 'error');
+    origErr.apply(console, args);
+  };
 
   // Build roleGroups
   const mappings  = window.roleMappings || {};
@@ -63,7 +71,7 @@
     renderRole(roles[0]);
     roleSelect.addEventListener('change', () => {
       renderRole(roleSelect.value);
-      jsLog(`Role switched to ${roleSelect.value}`,'info');
+      jsLog(`Role switched to ${roleSelect.value}`, 'info');
     });
 
     // Fetch token
@@ -75,28 +83,28 @@
           window.apiToken = json.access_token;
           jsLog('Token acquired','success');
         } else {
-          jsLog('Token error: ' + (json.error||'unknown'),'error');
+          jsLog('Token error: ' + (json.error || 'unknown'), 'error');
         }
       })
-      .catch(err => jsLog('Token fetch failed: ' + err.message,'error'));
+      .catch(err => jsLog('Token fetch failed: ' + err.message, 'error'));
 
     // Health checks
     checkConn('db-status.php', dbDot, 'DB');
     checkConn('api-status.php', apiDot, 'API');
 
-    // Debug toggle
+    // Toggle debug panel
     toggleBtn.addEventListener('click', () => {
       const hidden = debugPanel.classList.toggle('hidden');
       toggleBtn.textContent = hidden ? 'Show Debug' : 'Hide Debug';
       toggleBtn.classList.toggle('panel-hidden', hidden);
       document.body.style.paddingBottom = hidden ? '0' : '220px';
-      jsLog(`Debug panel ${hidden?'hidden':'shown'}`,'info');
+      jsLog(`Debug panel ${hidden ? 'hidden' : 'shown'}`, 'info');
     });
 
     // Clear debug log
     clearBtn.addEventListener('click', () => {
       debugContent.innerHTML = '';
-      jsLog('Debug log cleared','info');
+      jsLog('Cleared debug log', 'info');
     });
 
     // Modal close handlers
@@ -112,7 +120,7 @@
     });
   });
 
-  // Render cards for role
+  // Render cards for a role
   function renderRole(role) {
     cardsView.innerHTML = '';
     const group = roleGroups[role] || [];
@@ -129,7 +137,7 @@
     });
   }
 
-  // Open modal + Try It
+  // Open modal with Try It
   function openModal(ep) {
     modalBody.innerHTML = `
       <h2>${ep.method} ${ep.path}</h2>
@@ -140,7 +148,7 @@
     `;
     document.getElementById('tryBtn').addEventListener('click', () => tryIt(ep));
     modal.style.display = 'flex';
-    jsLog(`Modal opened for ${ep.method} ${ep.path}`,'info');
+    jsLog(`Modal opened for ${ep.method} ${ep.path}`, 'info');
   }
 
   // Try It via proxy
@@ -162,18 +170,15 @@
     .then(r => {
       jsLog(`[Response Status] ${r.status} ${r.statusText}`,'response');
       const hdrs = {};
-      r.headers.forEach((v, k) => hdrs[k] = v);
-      jsLog(`[Response Headers] ${JSON.stringify(hdrs, null, 2)}`,'response');
+      r.headers.forEach((v,k) => hdrs[k]=v);
+      jsLog(`[Response Headers] ${JSON.stringify(hdrs,null,2)}`, 'response');
       return r.text().then(body => ({ body }));
     })
     .then(obj => {
       jsLog('[Response Body]','response');
       jsLog(obj.body,'response');
-      try {
-        resEl.textContent = JSON.stringify(JSON.parse(obj.body), null, 2);
-      } catch {
-        resEl.textContent = obj.body;
-      }
+      try { resEl.textContent = JSON.stringify(JSON.parse(obj.body), null,2); }
+      catch { resEl.textContent = obj.body; }
     })
     .catch(err => {
       jsLog(`Proxy error: ${err.message}`,'error');
@@ -182,16 +187,12 @@
   }
 
   // Health-check
-  function checkConn(url, dot, name) {
+  function checkConn(url,dot,name) {
     jsLog(`Checking ${name}`,'info');
     fetch(url, { method:'HEAD' })
       .then(r => {
-        if (r.ok) {
-          dot.classList.add('ok');
-          jsLog(`${name} OK`,'success');
-        } else {
-          throw new Error(`HTTP ${r.status}`);
-        }
+        if (r.ok) { dot.classList.add('ok'); jsLog(`${name} OK`,'success'); }
+        else throw new Error(`HTTP ${r.status}`);
       })
       .catch(err => {
         dot.classList.add('error');
@@ -199,7 +200,7 @@
       });
   }
 
-  // Expose for console
+  // Expose logger
   window.jsLog = jsLog;
 
 })();

@@ -1,10 +1,9 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Main UI: loads AllEndpoints.json, injects endpoints
-// and roleMappings into JS, renders header with beautiful
-// role selector & Debug toggle, cards container, modal,
-// and a static Debug Panel with Clear.
+// Loads AllEndpoints.json, injects endpoints + roleMappings
+// into JS, renders header with styled dropdown & buttons,
+// cards container, modal, and a static Debug Panel.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -15,12 +14,10 @@ require_once __DIR__ . '/../src/config.php';
 
 // 1) Load swagger spec
 $specFile = __DIR__ . '/../AllEndpoints.json';
-if (!file_exists($specFile)) {
-    $allEndpoints = [];
-} else {
+$allEndpoints = [];
+if (file_exists($specFile)) {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
-    $allEndpoints = [];
     if (json_last_error() === JSON_ERROR_NONE) {
         foreach (($swagger['paths'] ?? []) as $path => $methods) {
             foreach ($methods as $http => $details) {
@@ -35,7 +32,7 @@ if (!file_exists($specFile)) {
     }
 }
 
-// 2) Role → path list mapping
+// 2) Role→paths mapping
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -75,7 +72,7 @@ $roleMappings = [
   <!-- MODAL -->
   <div id="modal" class="modal">
     <div class="modal-content">
-      <button id="modalClose" class="modal-close btn">×</button>
+      <button id="modalClose" class="btn modal-close">×</button>
       <div id="modalBody"></div>
     </div>
   </div>
