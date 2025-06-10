@@ -1,42 +1,39 @@
 /* ==========================================================================
-   CONSTANTS: ICON SIZE, BUTTON PADDING, SIDEBAR WIDTH
+   UPDATED: Smaller Icons + Sidebar Sizing + Header Alignment
    ========================================================================== */
 :root {
   /* Icon inside each role button */
-  --icon-size: 32px;
+  --icon-size:        24px;
   /* Vertical spacing around each icon */
-  --role-btn-padding: 16px;
+  --role-btn-padding: 12px;
   /* Sidebar width = icon size + 2×padding */
-  --sidebar-width: calc(var(--icon-size) + var(--role-btn-padding)*2);
+  --sidebar-width: calc(var(--icon-size) + var(--role-btn-padding) * 2);
 
   /* Glassmorphic & accent colors */
-  --glass-bg:        rgba(255,255,255,0.05);
-  --glass-border:    rgba(255,255,255,0.15);
-  --btn-bg:          rgba(255,255,255,0.1);
-  --btn-hover:       rgba(255,255,255,0.2);
-  --accent:          #0af;
-  --shadow-top:      rgba(0,0,0,0.6);
-  --shadow-side:     rgba(0,0,0,0.4);
+  --glass-bg:         rgba(255,255,255,0.05);
+  --glass-border:     rgba(255,255,255,0.15);
+  --btn-bg:           rgba(255,255,255,0.1);
+  --btn-hover:        rgba(255,255,255,0.2);
+  --accent:           #0af;
+  --shadow-top:       rgba(0,0,0,0.6);
+  --shadow-side:      rgba(0,0,0,0.4);
 }
 
 /* Reset & Base */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  margin: 0; padding: 0; box-sizing: border-box;
 }
 body {
   font-family: Consolas, monospace;
-  background: #111;
-  color: #eee;
-  overflow: hidden;
+  background: #111; color: #eee; overflow: hidden;
 }
 
 /* --------------------------------------------
-   HEADER: Full-width top bar
+   HEADER: Full-width top bar, no bottom margin
    -------------------------------------------- */
 .header {
   height: 60px;
+  margin: 0; /* removed bottom margin */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -45,22 +42,17 @@ body {
   border-bottom: 1px solid var(--glass-border);
   box-shadow: 0 4px 12px var(--shadow-top);
 }
+
+/* Status dots and version */
 .status-panel { font-weight: bold; }
 .status-dot {
-  display: inline-block;
-  width: 12px; height: 12px;
-  margin-left: 6px;
-  border-radius: 50%;
-  background: gray;
-  transition: background 0.3s;
+  display: inline-block; width: 12px; height: 12px;
+  margin-left: 6px; border-radius: 50%; background: gray;
+  transition: background .3s;
 }
 .status-dot.ok    { background: #4caf50; }
 .status-dot.error { background: #f44336; }
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+.header-right { display: flex; align-items: center; gap: 1rem; }
 .version-display { font-size: 0.9rem; color: #ccc; }
 
 /* --------------------------------------------
@@ -72,18 +64,16 @@ body {
 }
 
 /* --------------------------------------------
-   SIDEBAR: Fixed dynamic width
+   SIDEBAR: Fixed dynamic width, flush under header
    -------------------------------------------- */
 .sidebar {
   width: var(--sidebar-width);
-  padding: var(--role-btn-padding) 0;
+  padding-top: var(--role-btn-padding);
   background: var(--glass-bg);
   border-right: 1px solid var(--glass-border);
   box-shadow: 4px 0 12px var(--shadow-side);
   backdrop-filter: blur(12px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: flex; flex-direction: column; align-items: center;
 }
 
 /* Role buttons (icons only) */
@@ -94,11 +84,9 @@ body {
   color: #ccc;
   width: 100%;
   margin-bottom: var(--role-btn-padding);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background .2s, color .2s;
 }
 .role-btn svg {
   width: var(--icon-size);
@@ -127,6 +115,8 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
   gap: 1rem;
 }
+
+/* Card styling */
 .card {
   padding: 1rem;
   background: var(--glass-bg);
@@ -134,7 +124,7 @@ body {
   border-radius: 12px;
   backdrop-filter: blur(12px);
   cursor: pointer;
-  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: transform .2s, background .2s, box-shadow .2s;
 }
 .card:hover {
   transform: translateY(-4px);
@@ -170,9 +160,12 @@ body {
 }
 .modal-content {
   position: relative;
-  padding: 1rem; width: 80%; max-width: 600px;
-  backdrop-filter: blur(12px); background: var(--glass-bg);
-  border: 1px solid var(--glass-border); border-radius: 12px;
+  padding: 1rem;
+  width: 80%; max-width: 600px;
+  backdrop-filter: blur(12px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.7);
 }
 .modal-close {
@@ -188,8 +181,10 @@ body {
 .debug-panel {
   position: fixed; bottom: 0; left: 0; right: 0; height: 200px;
   background: linear-gradient(180deg, var(--debug-bg), rgba(0,0,0,0.8));
-  border-top: 2px solid var(--accent); border-radius: 12px 12px 0 0;
-  backdrop-filter: blur(10px); overflow: hidden; z-index: 1000;
+  border-top: 2px solid var(--accent);
+  border-radius: 12px 12px 0 0;
+  backdrop-filter: blur(10px);
+  overflow: hidden; z-index: 1000;
   transition: transform 0.4s, opacity 0.4s;
   transform: translateY(0); opacity: 1;
 }
@@ -202,18 +197,21 @@ body {
   border-bottom: 1px solid rgba(0,255,0,0.3);
 }
 .debug-title {
-  font-family: Consolas, monospace; color: var(--accent);
+  font-family: Consolas, monospace;
+  color: var(--accent);
   font-weight: bold; font-size: 0.9rem;
 }
 .debug-clear {
-  padding: 0.3rem 0.6rem; font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
 }
 
 /* --------------------------------------------
    DEBUG CONTENT
    -------------------------------------------- */
 .debug-content {
-  height: calc(100% - 50px); overflow-y: auto; padding: 0.5rem;
+  height: calc(100% - 50px);
+  overflow-y: auto; padding: 0.5rem;
   font-family: Consolas, monospace; font-size: 10px; line-height: 1.2;
 }
 .debug-content::-webkit-scrollbar { width: 8px; }
@@ -226,7 +224,8 @@ body {
    -------------------------------------------- */
 .debug-log-line {
   margin-bottom: 3px; padding: 2px 4px; border-radius: 3px;
-  border-left: 2px solid transparent; white-space: pre-wrap; word-break: break-word;
+  border-left: 2px solid transparent;
+  white-space: pre-wrap; word-break: break-word;
   transition: background 0.2s;
 }
 .debug-log-line:hover { background: rgba(0,255,0,0.05); }
@@ -238,5 +237,6 @@ body {
 .debug-log-line.response { color: #74c0fc; border-left-color: #74c0fc; }
 
 .debug-timestamp {
-  color: rgba(255,255,255,0.5); font-size: 9px; margin-right: 6px;
+  color: rgba(255,255,255,0.5);
+  font-size: 9px; margin-right: 6px;
 }
