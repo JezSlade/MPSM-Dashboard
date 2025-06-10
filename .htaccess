@@ -1,10 +1,10 @@
-# .htaccess (in your project root)
 RewriteEngine On
 
-# If the request matches a real file or directory under public/, serve it directly
-RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -d
-RewriteRule ^(.*)$ public/$1 [L]
+# 1) If the request matches an existing file or directory (including /public/css/…),
+#    serve it directly and stop rewriting.
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f [OR]
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -d
+RewriteRule ^ - [L]
 
-# Otherwise route everything to public/index.php
+# 2) Otherwise forward everything to public/index.php
 RewriteRule ^ public/index.php [L]
