@@ -1,9 +1,9 @@
 <?php
 // public/index.php
 // -----------------------------------------------------
-// Loads AllEndpoints.json, injects endpoints + roleMappings
-// into JS, renders header with styled dropdown & buttons,
-// cards container, modal, and a static Debug Panel.
+// Loads AllEndpoints.json and roleMappings, injects into JS,
+// renders header with styled dropdown & buttons, cards,
+// modal, and a static Debug Panel.
 // -----------------------------------------------------
 
 ini_set('display_errors',1);
@@ -12,9 +12,9 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/config.php';
 
-// 1) Load swagger spec
-$specFile = __DIR__ . '/../AllEndpoints.json';
+// Load allEndpoints
 $allEndpoints = [];
+$specFile = __DIR__ . '/../AllEndpoints.json';
 if (file_exists($specFile)) {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
@@ -32,7 +32,7 @@ if (file_exists($specFile)) {
     }
 }
 
-// 2) Role→paths mapping
+// Define roles
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -48,7 +48,7 @@ $roleMappings = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css" type="text/css">
   <script>
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
@@ -60,7 +60,7 @@ $roleMappings = [
   <header class="glass-panel">
     <div class="status-panel">
       DB: <span id="dbStatus" class="status-dot"></span>
-      API:<span id="apiStatus" class="status-dot"></span>
+      API: <span id="apiStatus" class="status-dot"></span>
     </div>
     <select id="roleSelect" class="dropdown"></select>
     <button id="toggleDebug" class="btn">Hide Debug</button>
