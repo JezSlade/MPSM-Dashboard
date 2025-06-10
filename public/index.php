@@ -1,21 +1,15 @@
 <?php
 // public/index.php
-// -----------------------------------------------------
-// Entry point: loads endpoints + mappings, renders UI.
-// Helper classes live in public/src/ so they deploy.
-// -----------------------------------------------------
-
 ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
 
-// Load helpers from public/src
 require_once __DIR__ . '/src/config.php';
 require_once __DIR__ . '/src/DebugPanel.php';
 
-// 1) Load AllEndpoints.json
+// Load AllEndpoints.json
 $allEndpoints = [];
-$specFile = __DIR__ . '/AllEndpoints.json';
+$specFile     = __DIR__ . '/AllEndpoints.json';
 if (file_exists($specFile)) {
     $raw     = file_get_contents($specFile);
     $swagger = json_decode($raw, true);
@@ -33,7 +27,7 @@ if (file_exists($specFile)) {
     }
 }
 
-// 2) Role→paths mapping
+// Role→paths
 $roleMappings = [
   'Developer'  => ['/ApiClient/List'],
   'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
@@ -49,13 +43,22 @@ $roleMappings = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="css/styles.css">
 
+  <!-- Favicon (optional) -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css" type="text/css">
+
+  <!-- Inject data & mappings -->
   <script>
     window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
     window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
     window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
   </script>
+
+  <!-- Version (auto-generated) -->
+  <script src="version.js"></script>
 </head>
 <body>
   <!-- HEADER -->
@@ -65,7 +68,10 @@ $roleMappings = [
       API:<span id="apiStatus" class="status-dot"></span>
     </div>
     <select id="roleSelect" class="dropdown"></select>
-    <button id="toggleDebug" class="btn">Hide Debug</button>
+    <div class="header-right">
+      <span class="version-display">v<span id="versionDisplay"></span></span>
+      <button id="toggleDebug" class="btn">Hide Debug</button>
+    </div>
   </header>
 
   <!-- CARDS VIEW -->
@@ -79,7 +85,7 @@ $roleMappings = [
     </div>
   </div>
 
-  <!-- STATIC DEBUG PANEL -->
+  <!-- DEBUG PANEL -->
   <div id="debug-panel" class="debug-panel">
     <div class="debug-header">
       <div class="debug-title">🐛 Debug Console</div>
@@ -88,7 +94,13 @@ $roleMappings = [
     <div class="debug-content" id="debug-content"></div>
   </div>
 
-  <script src="version.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Application JS -->
+  <script src="js/app.js" type="text/javascript"></script>
+  <script>
+    // Show auto-generated version
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('versionDisplay').textContent = window.appVersion || 'n/a';
+    });
+  </script>
 </body>
 </html>
