@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# 1) If the request matches an existing file or directory (including /public/css/…),
+#    serve it directly and stop rewriting.
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f [OR]
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -d
+RewriteRule ^ - [L]
+
+# 2) Otherwise forward everything to public/index.php
+RewriteRule ^ public/index.php [L]
