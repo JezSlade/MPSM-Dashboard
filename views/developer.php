@@ -3,18 +3,17 @@
  * views/developer.php
  *
  * Default “Developer” view.
- * Self-contained PHP file to render whatever
- * cards or data you choose for this POC.
+ * Self-contained: call whichever endpoints/cards you like here.
  */
 
-DebugPanel::log('Loaded Developer view');
+DebugPanel::log('Developer view loaded');
 ?>
 
 <h1>Developer View</h1>
-<p>This is your starting point. Replace or extend with your first “card” logic.</p>
+<p>Replace this with your first card logic.</p>
 
 <?php
-// Example: fetch and dump Customer/GetCustomers
+// Example card: fetch Customer/GetCustomers
 try {
     $client   = new ApiClient();
     $response = $client->post('Customer/GetCustomers', [
@@ -24,10 +23,8 @@ try {
         'SortColumn' => 'Id',
         'SortOrder'  => 0,
     ]);
-
-    echo '<pre>' . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT), ENT_QUOTES, 'UTF-8') . '</pre>';
+    echo '<pre>' . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT), ENT_QUOTES) . '</pre>';
 } catch (Exception $e) {
-    echo '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
-    DebugPanel::log('Customer/GetCustomers exception', $e->getTrace());
+    echo '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage(), ENT_QUOTES) . '</p>';
+    DebugPanel::log('Customer/GetCustomers failed', $e->getTrace());
 }
-?>
