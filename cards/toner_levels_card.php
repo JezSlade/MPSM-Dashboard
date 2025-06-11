@@ -1,13 +1,6 @@
 <?php
 /**
- * cards/toner_levels_card.php
- *
- * Card: Toner Levels
- * Expects:
- *   - $customer_id
- *   - $card_title
- *   - $toner_data (array: black, cyan, magenta, yellow)
- *   - $low_threshold (int)
+ * Toner Levels Card
  */
 $cid   = $customer_id   ?? 'N/A';
 $title = $card_title    ?? 'Toner Levels';
@@ -17,20 +10,18 @@ debug_log("Rendering Toner Levels Card for {$cid}", 'DEBUG');
 ?>
 <div class="card toner-levels-card">
   <h3><?php echo sanitize_html($title); ?></h3>
-  <?php if ($cid!=='N/A'): ?>
-    <p class="card-subtitle">Customer: <?php echo sanitize_html($cid); ?></p>
-  <?php endif; ?>
+  <?php if($cid!=='N/A'): ?><p class="card-subtitle">Customer: <?php echo sanitize_html($cid); ?></p><?php endif; ?>
   <ul class="toner-list">
-    <?php foreach ($data as $color => $level):
-      $warn = $level < $th ? 'low' : '';
+    <?php foreach($data as $c=>$lvl):
+      $warn = $lvl < $th ? 'low' : '';
     ?>
       <li class="toner-item <?php echo sanitize_html($warn); ?>">
-        <span class="toner-color"><?php echo ucfirst(sanitize_html($color)); ?>:</span>
-        <span class="toner-level"><?php echo sanitize_html((string)$level); ?>%</span>
+        <span class="toner-color"><?php echo ucfirst(sanitize_html($c)); ?>:</span>
+        <span class="toner-level"><?php echo sanitize_html((string)$lvl); ?>%</span>
       </li>
     <?php endforeach; ?>
   </ul>
-  <?php if (min($data) < $th): ?>
+  <?php if(min($data) < $th): ?>
     <p class="toner-warning">⚠️ Some toners below <?php echo sanitize_html((string)$th); ?>%</p>
   <?php endif; ?>
 </div>

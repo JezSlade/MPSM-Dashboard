@@ -1,10 +1,6 @@
 <?php
 /**
- * views/reports.php
- *
- * View: Reports
- * Expects:
- *   - $selected_customer_id
+ * Reports View
  */
 $cid = $selected_customer_id ?? null;
 debug_log("Loading Reports view. Customer: ".($cid??'None'), 'INFO');

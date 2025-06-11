@@ -1,10 +1,6 @@
 <?php
 /**
- * views/analytics.php
- *
- * View: Analytics
- * Expects:
- *   - $selected_customer_id
+ * Analytics View
  */
 $cid = $selected_customer_id ?? null;
 debug_log("Loading Analytics view. Customer: ".($cid??'None'), 'INFO');

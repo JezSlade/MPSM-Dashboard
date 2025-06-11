@@ -1,8 +1,6 @@
 <?php
 /**
- * includes/footer.php
- *
- * Dashboard footer and debug panel.
+ * Dashboard Footer & Debug Panel
  */
 if(!isset($GLOBALS['debug_messages'])) {
     $GLOBALS['debug_messages'] = [];
@@ -11,10 +9,9 @@ if(!isset($GLOBALS['debug_messages'])) {
 debug_log("Rendering footer", 'DEBUG');
 ?>
 <footer class="dashboard-footer">
-  <p>&copy; <?php echo date('Y'); ?> <?php echo sanitize_html(APP_NAME); ?>. Version <?php echo sanitize_html(APP_VERSION); ?>.</p>
+  <p>&copy; <?php echo date('Y');?> <?php echo sanitize_html(APP_NAME);?>. Version <?php echo sanitize_html(APP_VERSION);?>.</p>
 </footer>
-
-<?php if (DEBUG_MODE && DEBUG_PANEL_ENABLED): ?>
+<?php if (DEBUG_MODE && DEBUG_PANEL_ENABLED):?>
   <div id="debug-panel" class="debug-panel">
     <div class="debug-header">
       <h3>Debug Log</h3>
@@ -24,12 +21,12 @@ debug_log("Rendering footer", 'DEBUG');
     <div class="debug-content">
       <pre id="debug-log-output" class="debug-log-output">
 <?php
-      if (empty($GLOBALS['debug_messages'])) {
-        echo "[INFO] No log messages yet.\n";
+      if(empty($GLOBALS['debug_messages'])) {
+          echo "[INFO] No log messages yet.\n";
       } else {
-        foreach ($GLOBALS['debug_messages'] as $line) {
-          echo sanitize_html($line) . "\n";
-        }
+          foreach($GLOBALS['debug_messages'] as $line) {
+              echo sanitize_html($line) . "\n";
+          }
       }
 ?>
       </pre>
@@ -37,18 +34,16 @@ debug_log("Rendering footer", 'DEBUG');
   </div>
   <script>
   (function(){
-    const p = document.getElementById('debug-panel');
-    const t = document.getElementById('debug-toggle-visibility');
-    const c = document.getElementById('debug-clear-log');
-    const o = document.getElementById('debug-log-output');
-    if (localStorage.getItem('debugPanelHidden') === 'true') {
-      p.classList.add('hidden');
-    }
-    t.addEventListener('click', () => {
-      p.classList.toggle('hidden');
-      localStorage.setItem('debugPanelHidden', p.classList.contains('hidden'));
+    const panel = document.getElementById('debug-panel');
+    const tgl   = document.getElementById('debug-toggle-visibility');
+    const clr   = document.getElementById('debug-clear-log');
+    const out   = document.getElementById('debug-log-output');
+    if (localStorage.getItem('debugPanelHidden')==='true') panel.classList.add('hidden');
+    tgl.addEventListener('click',()=>{
+      panel.classList.toggle('hidden');
+      localStorage.setItem('debugPanelHidden', panel.classList.contains('hidden'));
     });
-    c.addEventListener('click', () => { o.textContent = "[INFO] Logs cleared.\n"; });
+    clr.addEventListener('click',()=>out.textContent="[INFO] Logs cleared.\n");
   })();
   </script>
-<?php endif; ?>
+<?php endif;?>
