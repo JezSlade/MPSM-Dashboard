@@ -1,91 +1,50 @@
 <?php
-/**
- * MPSM Dashboard - Main Entry Point
- *
- * This file serves as the primary entry point for the MPS Monitor Dashboard application.
- * It handles initial setup, configuration loading, routing to different views,
- * and the overall structure of the HTML page.
- *
- * Debugging Philosophy:
- * Every major step, from configuration loading to view rendering, should be
- * explicitly logged. This helps trace the application's flow and identify
- * where issues might arise during the request lifecycle.
- */
+// MPSM Dashboard - index.php
 
-// 1. Core Application Setup and Configuration Loading
-debug_log("Starting MPSM Dashboard application bootstrap.", 'INFO');
+// 1. Configuration and Utility Inclusion
+// Make sure your config.php defines APP_BASE_PATH, BASE_URL, JS_PATH, CSS_PATH, APP_VERSION
+// Example:
+// define('APP_BASE_PATH', __DIR__ . '/'); // If index.php is in the root
+// define('BASE_URL', 'http://yourdomain.com/');
+// define('JS_PATH', 'js/');
+// define('CSS_PATH', 'css/');
+// define('APP_VERSION', '1.0.0'); // This APP_VERSION is a PHP constant, separate from JS version.js
+// define('DEBUG_MODE', true); // Example
+// define('APP_NAME', 'MPSM Dashboard'); // Example
 
-// Include the configuration file first. This defines global constants and settings.
-require_once __DIR__ . DIRECTORY_SEPARATOR . 'config.php';
-debug_log("Configuration loaded from config.php.", 'INFO');
+require_once 'config.php';
+require_once 'functions.php'; // Assuming debug_log, sanitize_html, sanitize_url, include_partial are here
 
-// Include the global utility functions.
-require_once APP_BASE_PATH . 'functions.php';
-debug_log("Utility functions loaded from functions.php.", 'INFO');
+// 2. Session Management (if used)
+// session_start(); // Uncomment if you are using sessions
 
-// 2. Initialize Debugging
-// The debug_log function is now available after functions.php is loaded.
-// It's crucial to call debug_log for actions happening early in the bootstrap process.
-debug_log("Debugging system initialized. DEBUG_MODE: " . (DEBUG_MODE ? 'ON' : 'OFF'), 'INFO');
-if (DEBUG_LOG_TO_FILE) {
-    debug_log("Logging to file enabled: " . DEBUG_LOG_FILE, 'INFO');
-} else {
-    debug_log("Logging to file disabled.", 'INFO');
-}
+// 3. Routing and View Selection
+$current_view_slug = $_GET['view'] ?? 'dashboard'; // Default to 'dashboard' view
 
-// 3. Handle incoming requests and determine current view
-// Get the requested view from the URL query parameter (e.g., ?view=service).
-// Default to a 'dashboard' view if no specific view is requested.
-$current_view_slug = get_get_param('view', 'dashboard');
-debug_log("Requested view slug: '" . sanitize_html($current_view_slug) . "'", 'INFO');
+$available_views = [
+    'dashboard' => 'Dashboard Overview',
+    'reports' => 'Detailed Reports',
+    // Add other views as they are created
+];
 
-// Get all available views to validate the requested view.
-$available_views = get_available_views();
-
-// Check if the requested view is valid. If not, default to 'dashboard' or a fallback view.
-if (!array_key_exists($current_view_slug, $available_views)) {
-    debug_log("Invalid view slug '" . sanitize_html($current_view_slug) . "' requested. Defaulting to 'dashboard'.", 'WARNING');
-    $current_view_slug = 'dashboard';
-    // If 'dashboard' also doesn't exist, this might be an issue.
-    if (!array_key_exists('dashboard', $available_views)) {
-        debug_log("Default 'dashboard' view not found either. Application may not display correctly.", 'ERROR');
-        // As a last resort, if no view exists, we might show an error page or a blank screen.
-        // For now, we'll just continue, and the main content area will be empty or show an error.
-    }
-}
-debug_log("Current active view: '" . sanitize_html($current_view_slug) . "'", 'INFO');
-
-// Store the selected customer in session (placeholder for future logic)
-$selected_customer_id = get_get_param('customer_id', null, 'int');
-if ($selected_customer_id !== null) {
-    $_SESSION['selected_customer_id'] = $selected_customer_id;
-    debug_log("Customer ID " . $selected_customer_id . " selected and stored in session.", 'INFO');
-} else if (isset($_SESSION['selected_customer_id'])) {
-    $selected_customer_id = $_SESSION['selected_customer_id'];
-    debug_log("Customer ID " . $selected_customer_id . " loaded from session.", 'INFO');
-} else {
-    debug_log("No customer ID selected or found in session.", 'INFO');
-}
-
-// Prepare data to be passed to the header and views.
+// Data to be passed to header, views, and footer
 $header_data = [
-    'db_status'  => get_db_status(),
-    'api_status' => get_api_status(),
-    'customers'  => get_customers(), // This will be used by the customer dropdown
-    'current_customer_id' => $selected_customer_id,
-    'available_views' => $available_views,
-    'current_view_slug' => $current_view_slug,
+    'app_name' => APP_NAME,
+    'current_view_title' => $available_views[$current_view_slug] ?? 'Dashboard',
 ];
-debug_log("Header data prepared.", 'DEBUG');
 
-// Prepare data for the current view.
-// This is where you would fetch data specific to the selected view.
-// For now, it's just a placeholder.
 $view_data = [
-    'selected_customer_id' => $selected_customer_id,
-    // Add other view-specific data here later
+    // Data specific to the view can be populated here based on $current_view_slug
+    // For example, fetching data from a database
+    'cards' => [
+        // Example structure for cards
+        ['title' => 'Total Printers', 'value' => '1200', 'icon' => 'printer'],
+        ['title' => 'Devices Online', 'value' => '1150', 'icon' => 'wifi'],
+        // ... more dynamic card data
+    ],
 ];
-debug_log("View data prepared.", 'DEBUG');
+
+debug_log("Application started. Current view: " . sanitize_html($current_view_slug), 'INFO');
 
 // 4. HTML Document Structure and Content Inclusion
 ?>
@@ -101,15 +60,11 @@ debug_log("View data prepared.", 'DEBUG');
 
     <?php debug_log("HTML head section rendered.", 'DEBUG'); ?>
 </head>
-<body class="theme-dark"> <?php
+<body class="theme-dark">
+    <?php
     debug_log("Including header.php.", 'INFO');
+    // Assuming header.php is in the root, or include_partial handles it correctly
     include_partial('header.php', $header_data);
-    if (!file_exists(APP_BASE_PATH . 'header.php')) {
-        debug_log("CRITICAL ERROR: header.php not found at expected path: " . APP_BASE_PATH . 'header.php', 'ERROR');
-        if (DEBUG_MODE) {
-            echo "<div class='critical-error-banner'>CRITICAL ERROR: Header file missing. Please check file paths.</div>";
-        }
-    }
     ?>
 
     <main class="dashboard-main-content">
@@ -120,9 +75,11 @@ debug_log("View data prepared.", 'DEBUG');
                 <?php
                 // Include the selected view file.
                 // The view file is responsible for deciding which cards to render.
-                $view_file_path = VIEWS_PATH . sanitize_url($current_view_slug) . '.php'; // Use sanitize_url for security
+                $view_file_path = VIEWS_PATH . sanitize_url($current_view_slug) . '.php'; // Using VIEWS_PATH constant
+
                 debug_log("Attempting to include view file: " . $view_file_path, 'INFO');
 
+                // Basic security check: ensure the path is within the intended views directory
                 if (strpos(realpath($view_file_path), realpath(VIEWS_PATH)) === 0 && file_exists($view_file_path)) {
                     // Extract view_data into the scope of the included view file.
                     extract($view_data);
@@ -144,16 +101,11 @@ debug_log("View data prepared.", 'DEBUG');
 
     <?php
     debug_log("Including footer.php.", 'INFO');
+    // Assuming footer.php is in the root, or include_partial handles it correctly
     include_partial('footer.php');
-    if (!file_exists(APP_BASE_PATH . 'footer.php')) {
-        debug_log("CRITICAL ERROR: footer.php not found at expected path: " . APP_BASE_PATH . 'footer.php', 'ERROR');
-        if (DEBUG_MODE) {
-            echo "<div class='critical-error-banner'>CRITICAL ERROR: Footer file missing. Please check file paths.</div>";
-        }
-    }
     ?>
 
-    <script src="<?php echo BASE_URL . JS_PATH; ?>script.js?v=<?php echo APP_VERSION; ?>"></script>
+    <script src="/version.js?v=<?php echo APP_VERSION; ?>"></script> <script src="<?php echo BASE_URL . JS_PATH; ?>script.js?v=<?php echo APP_VERSION; ?>"></script>
     <?php debug_log("JavaScript files linked.", 'DEBUG'); ?>
 
 </body>

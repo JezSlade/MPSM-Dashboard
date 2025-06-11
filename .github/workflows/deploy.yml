@@ -15,37 +15,43 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔢 Generate Version File
+      - name: 🔢 Generate Version File in Root
+        # This command creates 'version.js' directly in the root of the checked-out repository.
         run: |
-          echo "window.appVersion = \"0.0.0.${GITHUB_RUN_NUMBER}\";" > public/version.js
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          echo "window.appVersion = \"0.0.0.${{ github.run_number }}\";" > version.js
 
       - name: 🚀 Deploy Website via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
           server: ftp.resolutionsbydesign.us
           username: mpsm@mpsm.resolutionsbydesign.us
+          # IMPORTANT: Use a GitHub Secret for your password in a real-world scenario!
+          # For this non-production example, it's hardcoded as per your instruction.
           password: Deploy123!
           protocol: ftp
           port: 21
 
-          local-dir:   ./public/
-          server-dir:  /
+          # Deploy everything from the root of the checked-out repository
+          local-dir: ./
+          # Deploy to the root directory of the FTP server
+          server-dir: /
 
+          # CAUTION: This will delete EVERYTHING on the server-dir before uploading!
           dangerous-clean-slate: true
 
           exclude: |
-            .github/**
-          
+            .git/
+            .github/ # Exclude GitHub Actions workflow files and their directories
+            # Add any other files/directories you do NOT want to deploy from your repository root.
+            # Example: node_modules/
+            # Example: .env.development
+
           log-level: verbose
 
       - name: 📜 Deployment Completed Report
         run: |
           echo "### DEPLOYMENT SUMMARY ###"
-          echo "- Version: 0.0.0.${GITHUB_RUN_NUMBER}"
+          echo "- Version: 0.0.0.${{ github.run_number }}"
           echo "- FTP Server: ftp.resolutionsbydesign.us"
           echo "- Server Directory: /"
-          echo "- Local Directory: ./public/"
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          echo "- Local Directory: ./"
