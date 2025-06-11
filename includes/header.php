@@ -2,22 +2,14 @@
 /**
  * includes/header.php
  *
- * Renders:
- *  - Application title (APP_NAME)
- *  - Database & API status indicators
- *  - Theme toggle
- *  - Views navigation
- *  - Customer selection dropdown
+ * Dashboard header partial.
  */
-
-// Fallbacks if the parent hasn’t passed these in
 $db_status           = $db_status           ?? ['status'=>'unknown','message'=>'Status not retrieved.'];
 $api_status          = $api_status          ?? ['status'=>'unknown','message'=>'Status not retrieved.'];
 $customers           = $customers           ?? [];
 $current_customer_id = $current_customer_id ?? null;
 $available_views     = $available_views     ?? [];
 $current_view_slug   = $current_view_slug   ?? 'dashboard';
-
 debug_log("Rendering header", 'DEBUG');
 ?>
 <header class="dashboard-header glassmorphic">
@@ -37,49 +29,41 @@ debug_log("Rendering header", 'DEBUG');
         <span>API</span>
       </div>
       <button id="theme-toggle" class="theme-toggle" title="Toggle Theme">
-        <span class="icon-light">☀️</span>
-        <span class="icon-dark">🌙</span>
+        <span class="icon-light">☀️</span><span class="icon-dark">🌙</span>
       </button>
     </div>
   </div>
-
   <div class="header-bottom">
-    <nav class="main-navigation">
-      <ul>
-        <?php foreach ($available_views as $slug => $label):
+    <nav class="main-navigation"><ul>
+      <?php foreach($available_views as $slug=>$label):
           $active = ($slug === $current_view_slug) ? 'active' : '';
           $url    = BASE_URL . '?view=' . sanitize_url($slug);
-        ?>
-          <li>
-            <a href="<?php echo sanitize_html($url); ?>" class="<?php echo sanitize_html($active); ?>">
-              <?php echo sanitize_html($label); ?>
-            </a>
-          </li>
-        <?php endforeach; ?>
-        <?php if (empty($available_views)): ?>
-          <li><span>No views available</span></li>
-        <?php endif; ?>
-      </ul>
-    </nav>
+      ?>
+        <li>
+          <a href="<?php echo sanitize_html($url);?>" class="<?php echo sanitize_html($active);?>">
+            <?php echo sanitize_html($label);?>
+          </a>
+        </li>
+      <?php endforeach;?>
+      <?php if(empty($available_views)):?>
+        <li><span>No views available</span></li>
+      <?php endif;?>
+    </ul></nav>
 
     <div class="customer-selection">
       <label for="customer-select" class="sr-only">Select Customer</label>
       <div class="select-wrapper">
         <select id="customer-select" name="customer_code">
           <option value="">-- Select Customer --</option>
-          <?php if (!empty($customers)): ?>
-            <?php foreach ($customers as $cust):
-              $code = sanitize_html($cust['Code']);
-              $desc = sanitize_html($cust['Description']);
-              $sel  = ($code === $current_customer_id) ? 'selected' : '';
-            ?>
-              <option value="<?php echo $code; ?>" <?php echo $sel; ?>>
-                <?php echo $desc; ?>
-              </option>
-            <?php endforeach; ?>
-          <?php else: ?>
+          <?php if($customers) foreach($customers as $c):
+            $code = sanitize_html($c['Code']);
+            $desc = sanitize_html($c['Description']);
+            $sel  = ($code === $current_customer_id) ? 'selected' : '';
+          ?>
+            <option value="<?php echo $code;?>" <?php echo $sel;?>><?php echo $desc;?></option>
+          <?php endforeach; else:?>
             <option disabled>No customers available</option>
-          <?php endif; ?>
+          <?php endif;?>
         </select>
         <input type="text" id="customer-search" placeholder="Search customer…" aria-label="Search customer">
       </div>
@@ -87,4 +71,3 @@ debug_log("Rendering header", 'DEBUG');
     </div>
   </div>
 </header>
-<?php debug_log("Header rendered", 'DEBUG'); ?>
