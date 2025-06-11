@@ -3,12 +3,13 @@
  * functions.php
  *
  * MPSM Dashboard helper library:
- *  - Output buffering to prevent stray output before headers/JSON
+ *  - Output buffering to prevent stray output
  *  - Debug logging (debug_log), mirrored to footer via $GLOBALS['debug_messages']
  *  - Template partial inclusion (include_partial)
  *  - Data sanitization (sanitize_html, sanitize_url, sanitize_int)
  *  - OAuth2 password-grant token management (loadEnv, loadCachedToken, cacheToken, requestNewToken, getAccessToken)
  *  - JSON response helper (respond_json)
+ *  - Customer list fetcher (fetch_customers) – now defaults to DEALER_CODE from .env
  *
  * PHP 8.2+ required.
  */
@@ -16,8 +17,6 @@
 // -----------------------------------------------------------------------------
 //  Output Buffering
 // -----------------------------------------------------------------------------
-// Start buffering all output so we can clean any accidental whitespace
-// or PHP warnings before sending JSON or headers.
 if (function_exists('ob_start')) {
     ob_start();
 }
@@ -25,8 +24,6 @@ if (function_exists('ob_start')) {
 // -----------------------------------------------------------------------------
 //  Global Debug Log Storage
 // -----------------------------------------------------------------------------
-// In-memory store for debug entries used by header (for potential floating panel)
-// and mirrored into $GLOBALS['debug_messages'] for the footer panel.
 $debug_log_entries = [];
 if (! isset($GLOBALS['debug_messages'])) {
     $GLOBALS['debug_messages'] = [];
@@ -35,20 +32,6 @@ if (! isset($GLOBALS['debug_messages'])) {
 // -----------------------------------------------------------------------------
 //  Debug Logging
 // -----------------------------------------------------------------------------
-/**
- * Logs a message with a specific severity level.
- *
- * Messages are stored in:
- *  - $debug_log_entries[]    (for potential header panels)
- *  - $GLOBALS['debug_messages'][]  (footer panel display)
- *
- * Levels: INFO, WARNING, ERROR, CRITICAL, DEBUG, SECURITY.
- * - DEBUG/INFO/WARNING only if DEBUG_MODE===true and enabled in DEBUG_LOG_LEVELS.
- * - ERROR/CRITICAL/SECURITY always logged.
- *
- * @param string $message  The message to log.
- * @param string $level    Severity level (case-insensitive).
- */
 function debug_log(string $message, string $level = 'INFO'): void
 {
     global $debug_log_entries;
@@ -57,19 +40,17 @@ function debug_log(string $message, string $level = 'INFO'): void
     $logLevels = defined('DEBUG_LOG_LEVELS') ? DEBUG_LOG_LEVELS : [];
 
     $shouldLog =
-        in_array($level, ['ERROR', 'CRITICAL', 'SECURITY'], true)
+        in_array($level, ['ERROR','CRITICAL','SECURITY'], true)
         || (
             defined('DEBUG_MODE')
             && DEBUG_MODE === true
             && isset($logLevels[$level])
             && $logLevels[$level] === true
         );
-
     if (! $shouldLog) {
         return;
     }
 
-    // 1) Build structured entry
     $entry = [
         'time'    => date('Y-m-d H:i:s'),
         'level'   => $level,
@@ -77,11 +58,11 @@ function debug_log(string $message, string $level = 'INFO'): void
     ];
     $debug_log_entries[] = $entry;
 
-    // 2) Mirror into footer array as formatted string
+    // Mirror to footer array
     $formatted = "[{$entry['time']}] [{$entry['level']}] {$entry['message']}";
     $GLOBALS['debug_messages'][] = $formatted;
 
-    // 3) Optional file logging
+    // Optional file logging
     if (defined('DEBUG_LOG_TO_FILE') && DEBUG_LOG_TO_FILE && defined('DEBUG_LOG_FILE')) {
         $filePath = DEBUG_LOG_FILE;
         $dir      = dirname($filePath);
@@ -92,25 +73,19 @@ function debug_log(string $message, string $level = 'INFO'): void
                 goto skip_file;
             }
         }
-        if (defined('MAX_DEBUG_LOG_SIZE_MB') && MAX_DEBUG_LOG_SIZE_MB > 0) {
-            if (file_exists($filePath) && filesize($filePath)/(1024*1024) > MAX_DEBUG_LOG_SIZE_MB) {
-                file_put_contents(
-                    $filePath,
-                    "--- Log truncated (exceeded " . MAX_DEBUG_LOG_SIZE_MB . " MB) ---\n",
-                    LOCK_EX
-                );
-            }
+
+        if (defined('MAX_DEBUG_LOG_SIZE_MB') && MAX_DEBUG_LOG_SIZE_MB > 0
+            && file_exists($filePath)
+            && filesize($filePath)/(1024*1024) > MAX_DEBUG_LOG_SIZE_MB
+        ) {
+            file_put_contents($filePath, "--- Log truncated ---\n", LOCK_EX);
         }
-        file_put_contents(
-            $filePath,
-            $formatted . "\n",
-            FILE_APPEND | LOCK_EX
-        );
+
+        file_put_contents($filePath, $formatted . "\n", FILE_APPEND | LOCK_EX);
     }
     skip_file:
 
-    // 4) Critical levels to PHP error log
-    if (in_array($level, ['ERROR', 'CRITICAL', 'SECURITY'], true)) {
+    if (in_array($level, ['ERROR','CRITICAL','SECURITY'], true)) {
         error_log("[MPSM_APP_LOG][{$level}] {$message}");
     }
 }
@@ -118,17 +93,9 @@ function debug_log(string $message, string $level = 'INFO'): void
 // -----------------------------------------------------------------------------
 //  Template Partial Inclusion
 // -----------------------------------------------------------------------------
-/**
- * Includes a PHP partial file and injects data into its scope.
- *
- * @param string $relativePath  Path to partial, relative to APP_BASE_PATH.
- * @param array  $data          Variables to extract for the partial.
- * @return bool  True on success; false if file missing.
- */
 function include_partial(string $relativePath, array $data = []): bool
 {
     $fullPath = APP_BASE_PATH . $relativePath;
-
     if (! file_exists($fullPath)) {
         debug_log("Partial not found: {$fullPath}", 'WARNING');
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
@@ -136,7 +103,6 @@ function include_partial(string $relativePath, array $data = []): bool
         }
         return false;
     }
-
     extract($data, EXTR_SKIP);
     include $fullPath;
     debug_log("Included partial: {$relativePath}", 'DEBUG');
@@ -146,13 +112,11 @@ function include_partial(string $relativePath, array $data = []): bool
 // -----------------------------------------------------------------------------
 //  Data Sanitization
 // -----------------------------------------------------------------------------
-/** Escape a string for safe HTML output. */
 function sanitize_html(string $input): string
 {
     return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
 }
 
-/** Clean a string for use in URLs (slugs, IDs). */
 function sanitize_url(string $input): string
 {
     $slug = preg_replace('/[^a-zA-Z0-9_-]/', '', $input);
@@ -160,7 +124,6 @@ function sanitize_url(string $input): string
     return strtolower(trim($slug, '-_'));
 }
 
-/** Validate and return an integer. Returns 0 if invalid. */
 function sanitize_int($input): int
 {
     $val = filter_var($input, FILTER_VALIDATE_INT);
@@ -170,11 +133,6 @@ function sanitize_int($input): int
 // -----------------------------------------------------------------------------
 //  JSON Response Helper
 // -----------------------------------------------------------------------------
-/**
- * Send JSON response and terminate script, ensuring no stray output.
- *
- * @param mixed $data Data to JSON-encode and send.
- */
 function respond_json($data): void
 {
     if (ob_get_length() !== false) {
@@ -191,13 +149,12 @@ function respond_json($data): void
 define('ENV_FILE', __DIR__ . '/.env');
 define('TOKEN_CACHE_FILE', __DIR__ . '/logs/token_cache.json');
 
-/** Load key=value pairs from .env into $_ENV. */
 function loadEnv(): void
 {
     if (! file_exists(ENV_FILE) || ! is_readable(ENV_FILE)) {
         throw new RuntimeException("Cannot load .env at " . ENV_FILE);
     }
-    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
+    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
@@ -208,7 +165,6 @@ function loadEnv(): void
     debug_log(".env loaded into \$_ENV", 'DEBUG');
 }
 
-/** Attempt to read a valid cached token. */
 function loadCachedToken(): ?array
 {
     if (! file_exists(TOKEN_CACHE_FILE)) {
@@ -234,12 +190,11 @@ function loadCachedToken(): ?array
     return $data;
 }
 
-/** Write a fresh token to cache for reuse. */
 function cacheToken(string $accessToken, int $expiresIn): void
 {
     $payload = [
         'access_token'=> $accessToken,
-        'expires_at'  => time() + $expiresIn - 30, // 30s buffer
+        'expires_at'  => time() + $expiresIn - 30,
     ];
     $dir = dirname(TOKEN_CACHE_FILE);
     if (! is_dir($dir)) {
@@ -251,7 +206,6 @@ function cacheToken(string $accessToken, int $expiresIn): void
     debug_log("Cached new token (expires in {$expiresIn} seconds)", 'DEBUG');
 }
 
-/** Perform the OAuth2 password-grant request to obtain a new token. */
 function requestNewToken(): array
 {
     loadEnv();
@@ -297,7 +251,6 @@ function requestNewToken(): array
     return $data;
 }
 
-/** Get a valid OAuth2 bearer token, using cache if possible. */
 function getAccessToken(): string
 {
     debug_log("getAccessToken() called", 'DEBUG');
@@ -313,4 +266,84 @@ function getAccessToken(): string
     cacheToken($tokenData['access_token'], (int)$tokenData['expires_in']);
     debug_log("getAccessToken returning new token", 'DEBUG');
     return $tokenData['access_token'];
+}
+
+// -----------------------------------------------------------------------------
+//  Customer List Fetcher (updated)
+// -----------------------------------------------------------------------------
+/**
+ * Fetch a list of customers.
+ *
+ * If you omit $dealerCode, it will automatically use DEALER_CODE from .env.
+ *
+ * @param string|null $dealerCode
+ * @return array  List of customer arrays, each with 'Code' and 'Description'.
+ */
+function fetch_customers(string $dealerCode = null): array
+{
+    // Ensure .env values are loaded (so $_ENV['DEALER_CODE'] is available)
+    loadEnv();
+
+    if ($dealerCode === null) {
+        if (empty($_ENV['DEALER_CODE'])) {
+            throw new RuntimeException("Missing DEALER_CODE in .env");
+        }
+        $dealerCode = $_ENV['DEALER_CODE'];
+        debug_log("fetch_customers defaulting to DEALER_CODE {$dealerCode} from .env", 'DEBUG');
+    } else {
+        debug_log("fetch_customers using explicit DealerCode {$dealerCode}", 'DEBUG');
+    }
+
+    $token   = getAccessToken();
+    $url     = MPSM_API_BASE_URL . 'Customer/GetCustomers';
+    $payload = [
+        'DealerCode' => $dealerCode,
+        'Code'       => null,
+        'HasHpSds'   => null,
+        'FilterText' => null,
+        'PageNumber' => 1,
+        'PageRows'   => 2147483647,
+        'SortColumn' => 'Id',
+        'SortOrder'  => 0
+    ];
+
+    debug_log("Sending Customer/GetCustomers request: " . json_encode($payload), 'DEBUG');
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token
+        ],
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+    ]);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        $err = curl_error($ch);
+        curl_close($ch);
+        debug_log("cURL error in fetch_customers: {$err}", 'ERROR');
+        return [];
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200) {
+        debug_log("Customer/GetCustomers returned HTTP {$httpCode}: {$response}", 'ERROR');
+        return [];
+    }
+
+    $data = json_decode($response, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        debug_log("JSON error parsing customers: " . json_last_error_msg(), 'ERROR');
+        return [];
+    }
+
+    $resultCount = count($data['Result'] ?? []);
+    debug_log("fetch_customers returned {$resultCount} entries", 'DEBUG');
+
+    return $data['Result'] ?? [];
 }
