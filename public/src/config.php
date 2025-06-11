@@ -1,49 +1,86 @@
 <?php
 /**
- * config.php
+ * src/config.php
  *
- * Loads environment variables and defines application constants
- * for the MPS Monitor API integration.
+ * Loads environment variables from a .env file (project root),
+ * then defines them as PHP constants. Uses a simple parser,
+ * no external dependencies. Throws clear errors if required
+ * vars are missing, avoiding PHP “undefined index” warnings.
  *
- * Requires a .env file with at least:
- *   CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD,
- *   SCOPE, TOKEN_URL, BASE_URL, DEALER_CODE, DEALER_ID,
- *   DEVICE_PAGE_SIZE
- *
- * Reference: .env configuration requirements :contentReference[oaicite:0]{index=0}
+ * Project structure assumption:
+ *  ├─ .env
+ *  └─ src/
+ *      └─ config.php  ← this file
  */
 
-// If you're using vlucas/phpdotenv, ensure it's installed and autoloaded:
-// require __DIR__ . '/vendor/autoload.php';
-// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-// $dotenv->load();
-
-// Define core API credentials as constants
-define('CLIENT_ID',        $_ENV['CLIENT_ID']);
-define('CLIENT_SECRET',    $_ENV['CLIENT_SECRET']);
-define('USERNAME',         $_ENV['USERNAME']);
-define('PASSWORD',         $_ENV['PASSWORD']);
-define('SCOPE',            $_ENV['SCOPE']);
-define('TOKEN_URL',        $_ENV['TOKEN_URL']);
-define('BASE_URL',         rtrim($_ENV['BASE_URL'], '/'));
-define('DEALER_CODE',      $_ENV['DEALER_CODE']);
-define('DEALER_ID',        $_ENV['DEALER_ID']);
-define('DEVICE_PAGE_SIZE', (int) $_ENV['DEVICE_PAGE_SIZE']);
+/**
+ * 1) MANUAL .env LOADER
+ * Reads each non-comment, non-empty line of "../.env",
+ * splits on the first "=", trims quotes, and populates
+ * both $_ENV and putenv() so our env() helper can see them.
+ */
+$envPath = __DIR__ . '/../.env';
+if (is_readable($envPath)) {
+    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        // Skip comments and malformed lines
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            continue;
+        }
+        list($name, $value) = array_map('trim', explode('=', $line, 2));
+        // Strip surrounding quotes if present
+        $value = trim($value, "\"'");
+        $_ENV[$name] = $value;
+        putenv("{$name}={$value}");
+    }
+}
 
 /**
- * DEBUG_MODE flag.
- *
- * Controls whether DebugPanel outputs its logs.
- * Defaults to false if not set in environment.
- *
- * Add to your .env:
- *   DEBUG_MODE=true
- *
- * This follows our logging advice: “Use debugging flag to show raw JSON errors.” :contentReference[oaicite:1]{index=1}
+ * 2) ENV HELPER
+ * Usage: env('KEY', $default = null)
+ * - Returns $_ENV or getenv() if set.
+ * - If not set and $default provided, returns $default.
+ * - If not set and no default, throws to prevent warnings.
+ */
+function env(string $key, $default = null)
+{
+    if (array_key_exists($key, $_ENV)) {
+        return $_ENV[$key];
+    }
+    $val = getenv($key);
+    if ($val !== false) {
+        return $val;
+    }
+    if ($default !== null) {
+        return $default;
+    }
+    throw new RuntimeException("Required environment variable '{$key}' not defined in .env or system environment.");
+}
+
+/**
+ * 3) DEFINE CONSTANTS
+ * Now we pull each required setting via env(). If any
+ * is missing, the RuntimeException above will surface
+ * immediately, avoiding undefined‐index warnings.
+ */
+define('CLIENT_ID',      env('CLIENT_ID'));
+define('CLIENT_SECRET',  env('CLIENT_SECRET'));
+define('USERNAME',       env('USERNAME'));
+define('PASSWORD',       env('PASSWORD'));
+define('SCOPE',          env('SCOPE'));
+define('TOKEN_URL',      env('TOKEN_URL'));
+define('BASE_URL',       rtrim(env('BASE_URL'), '/'));          // ensure no trailing slash
+define('DEALER_CODE',    env('DEALER_CODE'));
+define('DEALER_ID',      env('DEALER_ID'));
+define('DEVICE_PAGE_SIZE', (int) env('DEVICE_PAGE_SIZE', 25));  // default to 25 if unspecified
+
+/**
+ * DEBUG_MODE toggle
+ * Controls whether DebugPanel::log() actually echoes logs.
+ * Default: false if not present.
  */
 define(
     'DEBUG_MODE',
-    isset($_ENV['DEBUG_MODE'])
-        ? filter_var($_ENV['DEBUG_MODE'], FILTER_VALIDATE_BOOLEAN)
-        : false
+    filter_var(env('DEBUG_MODE', 'false'), FILTER_VALIDATE_BOOLEAN)
 );
