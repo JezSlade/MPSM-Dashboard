@@ -1,5 +1,4 @@
 <?php
-// public/index.php
 ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(E_ALL);
@@ -9,63 +8,56 @@ require_once __DIR__ . '/src/DebugPanel.php';
 
 // Load endpoints
 $allEndpoints = [];
-$specFile     = __DIR__ . '/AllEndpoints.json';
+$specFile = __DIR__ . '/AllEndpoints.json';
 if (file_exists($specFile)) {
     $swagger = json_decode(file_get_contents($specFile), true);
-    if (json_last_error() === JSON_ERROR_NONE) {
-        foreach (($swagger['paths'] ?? []) as $path => $methods) {
+    if (json_last_error()===JSON_ERROR_NONE) {
+        foreach (($swagger['paths']??[]) as $path => $methods) {
             foreach ($methods as $http => $details) {
                 $allEndpoints[] = [
-                    'method'      => strtoupper($http),
-                    'path'        => $path,
-                    'summary'     => $details['summary'] ?? '',
-                    'description' => $details['description'] ?? ''
+                    'method'=>strtoupper($http),
+                    'path'=>$path,
+                    'summary'=>$details['summary']??'',
+                    'description'=>$details['description']??''
                 ];
             }
         }
     }
 }
 
-// Role mappings (same as before)
+// Role mappings
 $roleMappings = [
-  'Developer'  => ['/ApiClient/List'],
-  'Admin'      => ['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
-  'Dealer'     => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Service'    => ['/AlertLimit2/GetAllLimits','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Sales'      => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Accounting' => ['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
-  'Guest'      => ['/Account/GetProfile','/Account/Logout','/Account/UpdateProfile']
+  'Developer'=>['/ApiClient/List'],
+  'Admin'=>['/Analytics/GetReportResult','/ApiClient/List','/Account/GetAccounts','/Account/UpdateProfile'],
+  'Dealer'=>['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Service'=>['/AlertLimit2/GetAllLimits','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Sales'=>['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Accounting'=>['/Analytics/GetReportResult','/Alert/List','/Contract/List','/Customer/List','/Device/List','/MeterReading/List','/SupplyItem/List'],
+  'Guest'=>['/Account/GetProfile','/Account/Logout','/Account/UpdateProfile']
 ];
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>MPSM Dashboard</title>
-  <link rel="stylesheet" href="css/styles.css"/>
+  <link rel="stylesheet" href="css/styles.css">
   <script>
-    window.allEndpoints  = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
-    window.roleMappings  = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
-    window.apiBaseUrl    = '<?php echo API_BASE_URL; ?>';
-    window.DEALER_CODE   = '<?php echo DEALER_CODE; ?>';
+    window.allEndpoints = <?php echo json_encode($allEndpoints, JSON_HEX_TAG); ?>;
+    window.roleMappings = <?php echo json_encode($roleMappings, JSON_HEX_TAG); ?>;
+    window.apiBaseUrl   = '<?php echo API_BASE_URL; ?>';
   </script>
 </head>
 <body>
-  <!-- HEADER -->
+  <!-- FIXED HEADER -->
   <header class="glass-panel header">
     <div class="status-panel">
       DB: <span id="dbStatus" class="status-dot"></span>
-      API:<span id="apiStatus" class="status-dot"></span>
+      API: <span id="apiStatus" class="status-dot"></span>
     </div>
     <div class="header-right">
-      <!-- Customer Dropdown -->
-      <div class="search-container">
-        <input list="customerList" id="customerSelect" class="dropdown" placeholder="Search Customer"/>
-        <datalist id="customerList"></datalist>
-      </div>
       <span class="version-display">v<span id="versionDisplay"></span></span>
-      <!-- Debug toggle: only show if role=Developer -->
-      <button id="toggleDebug" class="btn" style="display:none">Hide Debug</button>
+      <button id="toggleDebug" class="btn">Hide Debug</button>
     </div>
   </header>
 
@@ -86,7 +78,7 @@ $roleMappings = [
   </div>
 
   <!-- DEBUG PANEL -->
-  <div id="debug-panel" class="debug-panel" style="display:none">
+  <div id="debug-panel" class="debug-panel">
     <div class="debug-header">
       <div class="debug-title">🐛 Debug Console</div>
       <button id="debugClear" class="btn debug-clear">Clear</button>
@@ -97,9 +89,9 @@ $roleMappings = [
   <script src="version.js"></script>
   <script src="js/app.js"></script>
   <script>
-    // Show version
-    document.addEventListener('DOMContentLoaded',()=>{
-      document.getElementById('versionDisplay').textContent = window.appVersion||'n/a';
+    // Populate version
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('versionDisplay').textContent = window.appVersion || 'n/a';
     });
   </script>
 </body>
