@@ -240,19 +240,28 @@ if (DEBUG_LOG_TO_FILE && !is_dir(dirname(DEBUG_LOG_FILE))) {
     // Log this action if possible, though it's a bootstrap step.
 }
 
-// Pre-flight check for configurations. This is a basic sanity check.
+// --- Pre-flight Configuration Checks ---
+// These checks ensure essential directories exist.
+// Replaced trigger_error(E_USER_ERROR) with exit() for PHP 8.4+ compatibility.
+// This will halt execution with a clear message if a critical path is missing.
 if (DEBUG_MODE) {
-    if (!defined('APP_BASE_PATH') || !is_dir(APP_BASE_PATH)) {
-        trigger_error("Configuration error: APP_BASE_PATH is not defined or is not a valid directory.", E_USER_ERROR);
+    if (!is_dir(APP_BASE_PATH)) {
+        exit("Configuration error: APP_BASE_PATH is not defined or is not a valid directory. Expected: " . APP_BASE_PATH);
     }
-    if (!defined('VIEWS_PATH') || !is_dir(VIEWS_PATH)) {
-        trigger_error("Configuration error: VIEWS_PATH is not defined or is not a valid directory. Expected: " . VIEWS_PATH, E_USER_ERROR);
+    if (!is_dir(VIEWS_PATH)) {
+        exit("Configuration error: VIEWS_PATH is not defined or is not a valid directory. Expected: " . VIEWS_PATH);
     }
-    if (!defined('CARDS_PATH') || !is_dir(CARDS_PATH)) {
-        trigger_error("Configuration error: CARDS_PATH is not defined or is not a valid directory. Expected: " . CARDS_PATH, E_USER_ERROR);
+    if (!is_dir(CARDS_PATH)) {
+        exit("Configuration error: CARDS_PATH is not defined or is not a valid directory. Expected: " . CARDS_PATH);
     }
-    if (!defined('INCLUDES_PATH') || !is_dir(INCLUDES_PATH)) {
-        trigger_error("Configuration error: INCLUDES_PATH is not defined or is not a valid directory. Expected: " . INCLUDES_PATH, E_USER_ERROR);
+    if (!is_dir(INCLUDES_PATH)) {
+        // This is the specific line that was causing your fatal error with trigger_error
+        exit("Configuration error: INCLUDES_PATH is not defined or is not a valid directory. Expected: " . INCLUDES_PATH);
+    }
+    // You might also want to check if DEBUG_LOG_FILE's directory is writable if DEBUG_LOG_TO_FILE is true
+    // (though mkdir will attempt to create it if it doesn't exist).
+    if (DEBUG_LOG_TO_FILE && !is_writable(dirname(DEBUG_LOG_FILE))) {
+         exit("Configuration error: Log directory is not writable. Expected: " . dirname(DEBUG_LOG_FILE));
     }
 }
 
