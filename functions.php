@@ -9,7 +9,7 @@
  *  - Data sanitization (sanitize_html, sanitize_url, sanitize_int)
  *  - OAuth2 password-grant token management (loadEnv, loadCachedToken, cacheToken, requestNewToken, getAccessToken)
  *  - JSON response helper (respond_json)
- *  - Customer list fetcher (fetch_customers) – now defaults to DEALER_CODE from .env
+ *  - Customer list fetcher (fetch_customers) – defaults to DEALER_CODE in .env
  *
  * PHP 8.2+ required.
  */
@@ -36,7 +36,7 @@ function debug_log(string $message, string $level = 'INFO'): void
 {
     global $debug_log_entries;
 
-    $level = strtoupper($level);
+    $level     = strtoupper($level);
     $logLevels = defined('DEBUG_LOG_LEVELS') ? DEBUG_LOG_LEVELS : [];
 
     $shouldLog =
@@ -51,6 +51,7 @@ function debug_log(string $message, string $level = 'INFO'): void
         return;
     }
 
+    // 1) Build structured entry
     $entry = [
         'time'    => date('Y-m-d H:i:s'),
         'level'   => $level,
@@ -58,33 +59,28 @@ function debug_log(string $message, string $level = 'INFO'): void
     ];
     $debug_log_entries[] = $entry;
 
-    // Mirror to footer array
+    // 2) Mirror into footer array
     $formatted = "[{$entry['time']}] [{$entry['level']}] {$entry['message']}";
     $GLOBALS['debug_messages'][] = $formatted;
 
-    // Optional file logging
+    // 3) Optional file logging
     if (defined('DEBUG_LOG_TO_FILE') && DEBUG_LOG_TO_FILE && defined('DEBUG_LOG_FILE')) {
         $filePath = DEBUG_LOG_FILE;
         $dir      = dirname($filePath);
-
         if (! is_dir($dir)) {
-            if (! mkdir($dir, 0755, true)) {
-                error_log("Failed to create log directory: {$dir}");
-                goto skip_file;
-            }
+            mkdir($dir, 0755, true) or error_log("Failed to create log dir: {$dir}");
         }
-
-        if (defined('MAX_DEBUG_LOG_SIZE_MB') && MAX_DEBUG_LOG_SIZE_MB > 0
+        if (
+            defined('MAX_DEBUG_LOG_SIZE_MB') && MAX_DEBUG_LOG_SIZE_MB > 0
             && file_exists($filePath)
             && filesize($filePath)/(1024*1024) > MAX_DEBUG_LOG_SIZE_MB
         ) {
             file_put_contents($filePath, "--- Log truncated ---\n", LOCK_EX);
         }
-
-        file_put_contents($filePath, $formatted . "\n", FILE_APPEND | LOCK_EX);
+        file_put_contents($filePath, $formatted."\n", FILE_APPEND|LOCK_EX);
     }
-    skip_file:
 
+    // 4) PHP error_log for critical levels
     if (in_array($level, ['ERROR','CRITICAL','SECURITY'], true)) {
         error_log("[MPSM_APP_LOG][{$level}] {$message}");
     }
@@ -154,7 +150,7 @@ function loadEnv(): void
     if (! file_exists(ENV_FILE) || ! is_readable(ENV_FILE)) {
         throw new RuntimeException("Cannot load .env at " . ENV_FILE);
     }
-    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
@@ -269,7 +265,7 @@ function getAccessToken(): string
 }
 
 // -----------------------------------------------------------------------------
-//  Customer List Fetcher (updated)
+//  Customer List Fetcher (updated signature)
 // -----------------------------------------------------------------------------
 /**
  * Fetch a list of customers.
@@ -279,9 +275,8 @@ function getAccessToken(): string
  * @param string|null $dealerCode
  * @return array  List of customer arrays, each with 'Code' and 'Description'.
  */
-function fetch_customers(string $dealerCode = null): array
+function fetch_customers(?string $dealerCode = null): array
 {
-    // Ensure .env values are loaded (so $_ENV['DEALER_CODE'] is available)
     loadEnv();
 
     if ($dealerCode === null) {
