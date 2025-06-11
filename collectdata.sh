@@ -1,17 +1,62 @@
 #!/bin/bash
 
-OUTPUT_FILE="app_core_files_$(date +'%Y%m%d_%H%M%S').json"
-FULL_EXTENSIONS=("php" "html" "htm" "css" "js" "json" "xml" "md" "txt")
+# Combined Web Application Code Collector
+# Outputs both JSON structure and readable text content
+
+# Configuration
+JSON_OUTPUT="app_structure_$(date +'%Y%m%d_%H%M%S').json"
+TEXT_OUTPUT="app_contents_$(date +'%Y%m%d_%H%M%S').txt"
+
+# Files to include full content for
+FULL_EXTENSIONS=("php" "html" "htm" "css" "js" "json" "xml" "md" "txt" "env" "gitignore" "htaccess" "sh")
 MAX_PREVIEW_SIZE=5000  # 5KB previews for other text files
 
-echo "[" > "$OUTPUT_FILE"
-first_entry=true
+# Directories to exclude
+EXCLUDE_DIRS=("vendor" "node_modules" ".git" ".idea" "build" "dist" "cache" "logs")
 
+# Binary extensions to skip content for
+EXCLUDE_EXT=("png" "jpg" "jpeg" "gif" "svg" "ico" "woff" "woff2" "ttf" "eot" "pdf" "zip" "tar.gz" "mp3" "mp4" "avi" "mov")
+
+# Helper functions
 escape_json() {
     sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g; s/\r/\\r/g; s/\n/\\n/g'
 }
 
+is_text_file() {
+    file -b --mime-encoding "$1" | grep -qvi 'binary'
+}
+
+should_exclude() {
+    local file="$1"
+    
+    # Check excluded directories
+    for dir in "${EXCLUDE_DIRS[@]}"; do
+        if [[ "$file" == *"/$dir/"* ]]; then
+            return 0
+        fi
+    done
+    
+    # Check excluded extensions
+    local extension="${file##*.}"
+    for ext in "${EXCLUDE_EXT[@]}"; do
+        if [[ "${extension,,}" == "${ext,,}" ]]; then
+            return 0
+        fi
+    done
+    
+    return 1
+}
+
+# Generate JSON structure
+echo "Generating JSON structure..."
+echo "[" > "$JSON_OUTPUT"
+first_entry=true
+
 find . -type f -print0 | while IFS= read -r -d '' file; do
+    if should_exclude "$file"; then
+        continue
+    fi
+
     FILE_SIZE=$(stat -f '%z' "$file" 2>/dev/null || stat -c '%s' "$file")
 
     CREATION_DATE=$(stat -f '%B' "$file" 2>/dev/null || stat -c '%W' "$file" 2>/dev/null)
@@ -47,12 +92,12 @@ find . -type f -print0 | while IFS= read -r -d '' file; do
     fi
 
     if [[ "$first_entry" == false ]]; then
-        echo "," >> "$OUTPUT_FILE"
+        echo "," >> "$JSON_OUTPUT"
     else
         first_entry=false
     fi
 
-    cat <<EOF >> "$OUTPUT_FILE"
+    cat <<EOF >> "$JSON_OUTPUT"
 {
     "path": "$(echo "${file#./}" | escape_json)",
     "name": "$(basename "$file" | escape_json)",
@@ -65,9 +110,74 @@ find . -type f -print0 | while IFS= read -r -d '' file; do
     "content": "$CONTENT"
 }
 EOF
-
 done
 
-echo "]" >> "$OUTPUT_FILE"
+echo "]" >> "$JSON_OUTPUT"
 
-echo "Human-readable JSON with text extracted to $OUTPUT_FILE"
+# Generate readable text output
+echo "Generating readable text output..."
+{
+    echo "WEB APPLICATION CONTENT COLLECTION"
+    echo "Generated: $(date)"
+    echo "----------------------------------------"
+    echo ""
+    
+    find . -type f | while read -r file; do
+        if should_exclude "$file"; then
+            continue
+        fi
+        
+        EXT="${file##*.}"
+        
+        # Special handling for important files
+        if [[ "${EXT,,}" == "php" ]]; then
+            echo "==== PHP FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            cat "$file"
+            echo -e "\n\n"
+            continue
+        fi
+        
+        if [[ "${EXT,,}" == "js" || "${EXT,,}" == "css" || "${EXT,,}" == "html" || "${EXT,,}" == "htm" ]]; then
+            echo "==== ${EXT^^} FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            cat "$file"
+            echo -e "\n\n"
+            continue
+        fi
+        
+        if [[ "${EXT,,}" == "env" || "${EXT,,}" == "gitignore" || "${EXT,,}" == "htaccess" ]]; then
+            echo "==== CONFIG FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            cat "$file"
+            echo -e "\n\n"
+            continue
+        fi
+        
+        # For other files, check if they're text
+        if is_text_file "$file"; then
+            echo "==== TEXT FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "----------------------------------------"
+            head -c 100000 "$file"  # Show first 100KB
+            echo -e "\n\n"
+        else
+            echo "==== BINARY FILE: $file ===="
+            echo "Size: $(stat -c%s "$file") bytes"
+            echo "Last Modified: $(date -r "$file")"
+            echo "[Binary content not displayed]"
+            echo -e "\n"
+        fi
+    done
+} > "$TEXT_OUTPUT"
+
+echo "Collection complete!"
+echo "1. JSON structure saved to: $JSON_OUTPUT"
+echo "2. Readable text content saved to: $TEXT_OUTPUT"
