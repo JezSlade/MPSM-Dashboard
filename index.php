@@ -3,52 +3,58 @@
  * index.php
  *
  * Main entry point for the MPSM Dashboard.
- * Boots configuration and helpers, fetches data, then renders:
- *  1. Header (includes/header.php)
- *  2. Main content view (views/{view}.php)
- *  3. Footer (includes/footer.php)
+ * Boots configuration, helper functions, then renders:
+ *  1. <head> + CSS link
+ *  2. Header (includes/header.php)
+ *  3. Main content view (views/{view}.php)
+ *  4. Footer (includes/footer.php)
  */
 
-// 1) Bootstrap configuration and helper functions
+// 1) Bootstrap config and helpers
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/functions.php';
 
-// 2) Start session (for persisting selected customer)
+// 2) Start session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 3) Fetch customers (uses DEALER_CODE from .env by default)
+// 3) Fetch customers
 $customers = fetch_customers();
 
-// 4) Handle customer selection via POST
-if (! empty($_POST['customer_code'])) {
+// 4) Handle customer selection
+if (!empty($_POST['customer_code'])) {
     $_SESSION['customer_code'] = $_POST['customer_code'];
 }
 $current_customer_code = $_SESSION['customer_code'] ?? null;
 
-// 5) Prepare status indicators for header
-$db_status = [
-    'status'  => 'ok',
-    'message' => 'Database connected successfully.'
-];
-$api_status = [
-    'status'  => 'ok',
-    'message' => 'API reachable.'
-];
+// 5) Status indicators for header
+$db_status  = ['status'=>'ok','message'=>'DB connected.'];
+$api_status = ['status'=>'ok','message'=>'API reachable.'];
 
-// 6) Define the available “Views” (tabs) and pick the current one
+// 6) Define Views (tabs)
 $available_views = [
     'dashboard' => 'Dashboard Overview',
     'reports'   => 'Reports',
     'analytics' => 'Analytics'
 ];
-// Use ?view= in URL to switch; default to 'dashboard' if not valid
 $current_view_slug = isset($_GET['view']) && array_key_exists($_GET['view'], $available_views)
     ? $_GET['view']
     : 'dashboard';
 
-// 7) Render header partial from includes/header.php
+// 7) Output HTML head
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title><?php echo sanitize_html(APP_NAME); ?></title>
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>css/styles.css">
+</head>
+<body class="theme-dark">
+<?php
+
+// 8) Render header
 include_partial('includes/header.php', [
     'db_status'           => $db_status,
     'api_status'          => $api_status,
@@ -58,22 +64,24 @@ include_partial('includes/header.php', [
     'current_view_slug'   => $current_view_slug,
 ]);
 
-// 8) Main content container
+// 9) Main container
 echo '<main class="dashboard-main">';
 
-// 9) Attempt to load the specific view partial from views/{slug}.php
+// 10) Load view from views/{slug}.php
 $viewFile = 'views/' . $current_view_slug . '.php';
 if (! include_partial($viewFile)) {
-    // Fallback UI if the view file is missing
     echo '<div class="view-not-found">';
     echo '<h2>View Not Found!</h2>';
     echo '<p>The requested view \'' . sanitize_html($current_view_slug) . '\' could not be loaded.</p>';
-    echo '<p>Please check the URL or ensure the view file exists in the <code>views/</code> directory.</p>';
+    echo '<p>Check the URL or ensure <code>views/' . sanitize_html($current_view_slug) . '.php</code> exists.</p>';
     echo '</div>';
 }
 
-// 10) Close main container
 echo '</main>';
 
-// 11) Render footer partial from includes/footer.php
+// 11) Render footer
 include_partial('includes/footer.php');
+
+?>
+</body>
+</html>
