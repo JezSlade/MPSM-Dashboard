@@ -1,38 +1,33 @@
 <?php
-// public/src/config.php
-// ---------------------------
-// Load environment and define constants.
-// Enable full PHP error reporting.
-// ---------------------------
-
-ini_set('display_errors',1);
-ini_set('display_startup_errors',1);
-error_reporting(E_ALL);
-
-// Path to .env (one above public)
-$envPath = __DIR__ . '/../.env';
-if (file_exists($envPath)) {
-    foreach (file($envPath, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
-        $line = trim($line);
-        if ($line === '' || strpos($line,'#') === 0) continue;
-        [$key, $val] = explode('=', $line, 2);
-        $val = trim($val, "\"'");
-        putenv("$key=$val");
-        $_ENV[$key] = $val;
+/**
+ * Load .env into $_ENV (unchanged)
+ */
+function loadEnv($path) {
+    if (!file_exists($path)) return;
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $t = trim($line);
+        if (str_starts_with($t, '#') || !str_contains($t, '=')) continue;
+        [$name, $value] = explode('=', $t, 2);
+        $_ENV[trim($name)] = trim($value);
     }
 }
+loadEnv(__DIR__ . '/../.env');
 
-// Define constants
-define('CLIENT_ID',       getenv('CLIENT_ID')       ?: '');
-define('CLIENT_SECRET',   getenv('CLIENT_SECRET')   ?: '');
-define('USERNAME',        getenv('USERNAME')        ?: '');
-define('PASSWORD',        getenv('PASSWORD')        ?: '');
-define('SCOPE',           getenv('SCOPE')           ?: '');
-define('TOKEN_URL',       getenv('TOKEN_URL')       ?: '');
-define('API_BASE_URL',    getenv('BASE_URL')        ?: '');
-define('DEALER_CODE',     getenv('DEALER_CODE')     ?: '');
-define('DEALER_ID',       getenv('DEALER_ID')       ?: '');
-define('DEVICE_PAGE_SIZE',getenv('DEVICE_PAGE_SIZE')?: '');
+/**
+ * Hard-coded Dealer Code
+ */
+define('DEALER_CODE', 'NY06AGDWUQ');  // ← now fixed, no more env misses
 
-// Debug toggle
-define('DEBUG_MODE', true);
+/**
+ * The rest of your config…
+ */
+define('API_BASE_URL', rtrim($_ENV['BASE_URL'] ?? '', '/'));
+define('CLIENT_ID',      $_ENV['CLIENT_ID']       ?? '');
+define('CLIENT_SECRET',  $_ENV['CLIENT_SECRET']   ?? '');
+define('USERNAME',       $_ENV['USERNAME']        ?? '');
+define('PASSWORD',       $_ENV['PASSWORD']        ?? '');
+define('SCOPE',          $_ENV['SCOPE']           ?? '');
+define('TOKEN_URL',      $_ENV['TOKEN_URL']       ?? '');
+define('DEALER_ID',      $_ENV['DEALER_ID']       ?? '');
+define('DEVICE_PAGE_SIZE', intval($_ENV['DEVICE_PAGE_SIZE'] ?? 50));
