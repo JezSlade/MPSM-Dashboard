@@ -8,13 +8,14 @@
  *  - Theme toggle
  *  - Navigation links
  *  - Customer dropdown + search
- *  - Collapsible debug panel when enabled
+ *
+ * This version has the floating debug panel removed in favor of the footer one.
  */
 
-// Ensure we can access the debug log entries collected so far.
+// Bring in any debug entries collected so far
 global $debug_log_entries;
 
-// Default guard in case variables weren’t passed in
+// Default guards in case variables weren’t passed
 $db_status           = $db_status ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
 $api_status          = $api_status ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
 $customers           = $customers ?? [];
@@ -55,8 +56,8 @@ debug_log("Current view slug: " . sanitize_html($current_view_slug), 'DEBUG');
       <ul>
         <?php
         foreach ($available_views as $slug => $display_name) {
-            $is_active   = ($slug === $current_view_slug) ? 'active' : '';
-            $nav_link    = BASE_URL . '?view=' . sanitize_url($slug);
+            $is_active = ($slug === $current_view_slug) ? 'active' : '';
+            $nav_link  = BASE_URL . '?view=' . sanitize_url($slug);
             debug_log("Rendering navigation link for view: $slug (Active: $is_active)", 'DEBUG');
             echo '<li><a href="' . sanitize_html($nav_link) . '" class="' . sanitize_html($is_active) . '">' .
                   sanitize_html($display_name) .
@@ -105,49 +106,5 @@ debug_log("Current view slug: " . sanitize_html($current_view_slug), 'DEBUG');
     </div>
   </div>
 </header>
-
-<?php if (DEBUG_MODE && defined('DEBUG_PANEL_ENABLED') && DEBUG_PANEL_ENABLED): ?>
-  <button id="debug-panel-toggle" style="position:fixed;bottom:1rem;right:1rem;z-index:999;">
-    Show Debug
-  </button>
-  <div id="debug-panel" style="
-      position:fixed;
-      bottom:0;
-      left:0;
-      width:100%;
-      max-height:40%;
-      overflow-y:auto;
-      background:#111;
-      color:#eee;
-      font-family:monospace;
-      font-size:0.85rem;
-      display:none;
-      z-index:998;
-      padding:0.5rem;
-  ">
-    <div style="text-align:right;">
-      <button id="debug-panel-hide">Hide</button>
-    </div>
-    <ul style="list-style:none; padding:0; margin:0;">
-      <?php foreach ($debug_log_entries as $e): ?>
-        <li style="margin-bottom:0.25rem;">
-          <strong><?php echo sanitize_html($e['time']); ?></strong>
-          [<span style="color:#f66;"><?php echo sanitize_html($e['level']); ?></span>]
-          <?php echo sanitize_html($e['message']); ?>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-  </div>
-  <script>
-    document.getElementById('debug-panel-toggle').addEventListener('click', function(){
-      document.getElementById('debug-panel').style.display = 'block';
-      this.style.display = 'none';
-    });
-    document.getElementById('debug-panel-hide').addEventListener('click', function(){
-      document.getElementById('debug-panel').style.display = 'none';
-      document.getElementById('debug-panel-toggle').style.display = 'block';
-    });
-  </script>
-<?php endif; ?>
 
 <?php debug_log("Header.php rendering complete.", 'INFO'); ?>
