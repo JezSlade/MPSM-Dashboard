@@ -78,6 +78,16 @@
     // Render initial role
     renderRole(Object.keys(roleGroups)[0]);
 
+    // Optional customer input
+    const customerInput = document.getElementById('customerInput');
+    if (customerInput) {
+      customerInput.addEventListener('input', () => {
+        jsLog(`Customer input: ${customerInput.value}`,'info');
+      });
+    } else {
+      jsLog('customerInput element not found','warning');
+    }
+
     // Fetch token
     jsLog('Fetching API token…','request');
     fetch('get-token.php').then(r=>r.json()).then(json=>{
