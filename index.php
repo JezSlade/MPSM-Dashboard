@@ -1,115 +1,79 @@
 <?php
-// MPSM Dashboard - index.php
+/**
+ * index.php
+ *
+ * Main entry point for the MPSM Dashboard.
+ * Boots configuration and helpers, fetches data, then renders:
+ *  1. Header (includes/header.php)
+ *  2. Main content view (views/{view}.php)
+ *  3. Footer (includes/footer.php)
+ */
 
-// 1. Configuration and Utility Inclusion
-// Make sure your config.php defines APP_BASE_PATH, BASE_URL, JS_PATH, CSS_PATH, APP_VERSION
-// Example:
-// define('APP_BASE_PATH', __DIR__ . '/'); // If index.php is in the root
-// define('BASE_URL', 'http://yourdomain.com/');
-// define('JS_PATH', 'js/');
-// define('CSS_PATH', 'css/');
-// define('APP_VERSION', '1.0.0'); // This APP_VERSION is a PHP constant, separate from JS version.js
-// define('DEBUG_MODE', true); // Example
-// define('APP_NAME', 'MPSM Dashboard'); // Example
+// 1) Bootstrap configuration and helper functions
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/functions.php';
 
-require_once 'config.php';
-require_once 'functions.php'; // Assuming debug_log, sanitize_html, sanitize_url, include_partial are here
+// 2) Start session (for persisting selected customer)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 2. Session Management (if used)
-// session_start(); // Uncomment if you are using sessions
+// 3) Fetch customers (uses DEALER_CODE from .env by default)
+$customers = fetch_customers();
 
-// 3. Routing and View Selection
-$current_view_slug = $_GET['view'] ?? 'dashboard'; // Default to 'dashboard' view
+// 4) Handle customer selection via POST
+if (! empty($_POST['customer_code'])) {
+    $_SESSION['customer_code'] = $_POST['customer_code'];
+}
+$current_customer_code = $_SESSION['customer_code'] ?? null;
 
+// 5) Prepare status indicators for header
+$db_status = [
+    'status'  => 'ok',
+    'message' => 'Database connected successfully.'
+];
+$api_status = [
+    'status'  => 'ok',
+    'message' => 'API reachable.'
+];
+
+// 6) Define the available “Views” (tabs) and pick the current one
 $available_views = [
     'dashboard' => 'Dashboard Overview',
-    'reports' => 'Detailed Reports',
-    // Add other views as they are created
+    'reports'   => 'Reports',
+    'analytics' => 'Analytics'
 ];
+// Use ?view= in URL to switch; default to 'dashboard' if not valid
+$current_view_slug = isset($_GET['view']) && array_key_exists($_GET['view'], $available_views)
+    ? $_GET['view']
+    : 'dashboard';
 
-// Data to be passed to header, views, and footer
-$header_data = [
-    'app_name' => APP_NAME,
-    'current_view_title' => $available_views[$current_view_slug] ?? 'Dashboard',
-];
+// 7) Render header partial from includes/header.php
+include_partial('includes/header.php', [
+    'db_status'           => $db_status,
+    'api_status'          => $api_status,
+    'customers'           => $customers,
+    'current_customer_id' => $current_customer_code,
+    'available_views'     => $available_views,
+    'current_view_slug'   => $current_view_slug,
+]);
 
-$view_data = [
-    // Data specific to the view can be populated here based on $current_view_slug
-    // For example, fetching data from a database
-    'cards' => [
-        // Example structure for cards
-        ['title' => 'Total Printers', 'value' => '1200', 'icon' => 'printer'],
-        ['title' => 'Devices Online', 'value' => '1150', 'icon' => 'wifi'],
-        // ... more dynamic card data
-    ],
-];
+// 8) Main content container
+echo '<main class="dashboard-main">';
 
-debug_log("Application started. Current view: " . sanitize_html($current_view_slug), 'INFO');
+// 9) Attempt to load the specific view partial from views/{slug}.php
+$viewFile = 'views/' . $current_view_slug . '.php';
+if (! include_partial($viewFile)) {
+    // Fallback UI if the view file is missing
+    echo '<div class="view-not-found">';
+    echo '<h2>View Not Found!</h2>';
+    echo '<p>The requested view \'' . sanitize_html($current_view_slug) . '\' could not be loaded.</p>';
+    echo '<p>Please check the URL or ensure the view file exists in the <code>views/</code> directory.</p>';
+    echo '</div>';
+}
 
-// 4. HTML Document Structure and Content Inclusion
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo sanitize_html(APP_NAME); ?> | <?php echo sanitize_html($available_views[$current_view_slug] ?? 'Dashboard'); ?></title>
-    <meta name="description" content="A customizable user interface dashboard for MPS Monitor.">
+// 10) Close main container
+echo '</main>';
 
-    <link rel="stylesheet" href="<?php echo BASE_URL . CSS_PATH; ?>style.css?v=<?php echo APP_VERSION; ?>">
-
-    <?php debug_log("HTML head section rendered.", 'DEBUG'); ?>
-</head>
-<body class="theme-dark">
-    <?php
-    debug_log("Including header.php.", 'INFO');
-    // Assuming header.php is in the root, or include_partial handles it correctly
-    include_partial('header.php', $header_data);
-    ?>
-
-    <main class="dashboard-main-content">
-        <?php debug_log("Main content area started.", 'INFO'); ?>
-        <section class="view-container">
-            <h2 class="view-title"><?php echo sanitize_html($available_views[$current_view_slug] ?? 'Unknown View'); ?></h2>
-            <div class="cards-grid">
-                <?php
-                // Include the selected view file.
-                // The view file is responsible for deciding which cards to render.
-                $view_file_path = VIEWS_PATH . sanitize_url($current_view_slug) . '.php'; // Using VIEWS_PATH constant
-
-                debug_log("Attempting to include view file: " . $view_file_path, 'INFO');
-
-                // Basic security check: ensure the path is within the intended views directory
-                if (strpos(realpath($view_file_path), realpath(VIEWS_PATH)) === 0 && file_exists($view_file_path)) {
-                    // Extract view_data into the scope of the included view file.
-                    extract($view_data);
-                    include $view_file_path;
-                    debug_log("Successfully included view: " . sanitize_html($current_view_slug), 'INFO');
-                } else {
-                    debug_log("View file not found for slug '" . sanitize_html($current_view_slug) . "' at: " . $view_file_path, 'ERROR');
-                    echo "<div class='card error-card'>
-                            <h3>View Not Found!</h3>
-                            <p>The requested view '<strong>" . sanitize_html($current_view_slug) . "</strong>' could not be loaded.</p>
-                            <p>Please check the URL or ensure the view file exists in the <code>" . sanitize_html(basename(VIEWS_PATH)) . "/</code> directory.</p>
-                          </div>";
-                }
-                ?>
-            </div>
-        </section>
-        <?php debug_log("Main content area ended.", 'INFO'); ?>
-    </main>
-
-    <?php
-    debug_log("Including footer.php.", 'INFO');
-    // Assuming footer.php is in the root, or include_partial handles it correctly
-    include_partial('footer.php');
-    ?>
-
-    <script src="/version.js?v=<?php echo APP_VERSION; ?>"></script> <script src="<?php echo BASE_URL . JS_PATH; ?>script.js?v=<?php echo APP_VERSION; ?>"></script>
-    <?php debug_log("JavaScript files linked.", 'DEBUG'); ?>
-
-</body>
-</html>
-<?php
-debug_log("MPSM Dashboard application finished rendering.", 'INFO');
-// End of index.php
+// 11) Render footer partial from includes/footer.php
+include_partial('includes/footer.php');
