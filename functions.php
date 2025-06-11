@@ -3,8 +3,8 @@
  * functions.php
  *
  * MPSM Dashboard helper library:
- *  - Output buffering to prevent stray output
- *  - Debug logging (debug_log)
+ *  - Output buffering to prevent stray output before headers/JSON
+ *  - Debug logging (debug_log), mirrored to footer via $GLOBALS['debug_messages']
  *  - Template partial inclusion (include_partial)
  *  - Data sanitization (sanitize_html, sanitize_url, sanitize_int)
  *  - OAuth2 password-grant token management (loadEnv, loadCachedToken, cacheToken, requestNewToken, getAccessToken)
@@ -16,8 +16,8 @@
 // -----------------------------------------------------------------------------
 //  Output Buffering
 // -----------------------------------------------------------------------------
-// Start buffering all output. This ensures we can clean any accidental
-// whitespace or warnings before sending JSON or headers.
+// Start buffering all output so we can clean any accidental whitespace
+// or PHP warnings before sending JSON or headers.
 if (function_exists('ob_start')) {
     ob_start();
 }
@@ -25,11 +25,12 @@ if (function_exists('ob_start')) {
 // -----------------------------------------------------------------------------
 //  Global Debug Log Storage
 // -----------------------------------------------------------------------------
-/**
- * @var array $debug_log_entries
- *   In-memory store for all debug log entries during this request.
- */
+// In-memory store for debug entries used by header (for potential floating panel)
+// and mirrored into $GLOBALS['debug_messages'] for the footer panel.
 $debug_log_entries = [];
+if (! isset($GLOBALS['debug_messages'])) {
+    $GLOBALS['debug_messages'] = [];
+}
 
 // -----------------------------------------------------------------------------
 //  Debug Logging
@@ -37,10 +38,13 @@ $debug_log_entries = [];
 /**
  * Logs a message with a specific severity level.
  *
+ * Messages are stored in:
+ *  - $debug_log_entries[]    (for potential header panels)
+ *  - $GLOBALS['debug_messages'][]  (footer panel display)
+ *
  * Levels: INFO, WARNING, ERROR, CRITICAL, DEBUG, SECURITY.
- * - DEBUG and INFO: only if DEBUG_MODE===true and enabled in DEBUG_LOG_LEVELS.
- * - WARNING: same as INFO/DEBUG.
- * - ERROR, CRITICAL, SECURITY: always logged.
+ * - DEBUG/INFO/WARNING only if DEBUG_MODE===true and enabled in DEBUG_LOG_LEVELS.
+ * - ERROR/CRITICAL/SECURITY always logged.
  *
  * @param string $message  The message to log.
  * @param string $level    Severity level (case-insensitive).
@@ -65,6 +69,7 @@ function debug_log(string $message, string $level = 'INFO'): void
         return;
     }
 
+    // 1) Build structured entry
     $entry = [
         'time'    => date('Y-m-d H:i:s'),
         'level'   => $level,
@@ -72,7 +77,11 @@ function debug_log(string $message, string $level = 'INFO'): void
     ];
     $debug_log_entries[] = $entry;
 
-    // File logging if enabled
+    // 2) Mirror into footer array as formatted string
+    $formatted = "[{$entry['time']}] [{$entry['level']}] {$entry['message']}";
+    $GLOBALS['debug_messages'][] = $formatted;
+
+    // 3) Optional file logging
     if (defined('DEBUG_LOG_TO_FILE') && DEBUG_LOG_TO_FILE && defined('DEBUG_LOG_FILE')) {
         $filePath = DEBUG_LOG_FILE;
         $dir      = dirname($filePath);
@@ -84,7 +93,7 @@ function debug_log(string $message, string $level = 'INFO'): void
             }
         }
         if (defined('MAX_DEBUG_LOG_SIZE_MB') && MAX_DEBUG_LOG_SIZE_MB > 0) {
-            if (file_exists($filePath) && filesize($filePath) / (1024*1024) > MAX_DEBUG_LOG_SIZE_MB) {
+            if (file_exists($filePath) && filesize($filePath)/(1024*1024) > MAX_DEBUG_LOG_SIZE_MB) {
                 file_put_contents(
                     $filePath,
                     "--- Log truncated (exceeded " . MAX_DEBUG_LOG_SIZE_MB . " MB) ---\n",
@@ -94,12 +103,13 @@ function debug_log(string $message, string $level = 'INFO'): void
         }
         file_put_contents(
             $filePath,
-            "[{$entry['time']}] [{$entry['level']}] {$entry['message']}\n",
+            $formatted . "\n",
             FILE_APPEND | LOCK_EX
         );
     }
     skip_file:
 
+    // 4) Critical levels to PHP error log
     if (in_array($level, ['ERROR', 'CRITICAL', 'SECURITY'], true)) {
         error_log("[MPSM_APP_LOG][{$level}] {$message}");
     }
@@ -136,32 +146,25 @@ function include_partial(string $relativePath, array $data = []): bool
 // -----------------------------------------------------------------------------
 //  Data Sanitization
 // -----------------------------------------------------------------------------
-/**
- * Escape a string for safe HTML output.
- */
+/** Escape a string for safe HTML output. */
 function sanitize_html(string $input): string
 {
     return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
 }
 
-/**
- * Clean a string for use in URLs (slugs, IDs).
- */
+/** Clean a string for use in URLs (slugs, IDs). */
 function sanitize_url(string $input): string
 {
     $slug = preg_replace('/[^a-zA-Z0-9_-]/', '', $input);
     $slug = preg_replace('/[-_]+/', '-', $slug);
-    $slug = trim($slug, '-_');
-    return strtolower($slug);
+    return strtolower(trim($slug, '-_'));
 }
 
-/**
- * Validate and return an integer. Returns 0 if invalid.
- */
+/** Validate and return an integer. Returns 0 if invalid. */
 function sanitize_int($input): int
 {
-    $validated = filter_var($input, FILTER_VALIDATE_INT);
-    return ($validated !== false) ? (int)$validated : 0;
+    $val = filter_var($input, FILTER_VALIDATE_INT);
+    return ($val !== false) ? (int)$val : 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -174,7 +177,6 @@ function sanitize_int($input): int
  */
 function respond_json($data): void
 {
-    // Clean any buffered output
     if (ob_get_length() !== false) {
         ob_clean();
     }
@@ -189,97 +191,75 @@ function respond_json($data): void
 define('ENV_FILE', __DIR__ . '/.env');
 define('TOKEN_CACHE_FILE', __DIR__ . '/logs/token_cache.json');
 
-/**
- * Load key=value pairs from .env into $_ENV.
- */
+/** Load key=value pairs from .env into $_ENV. */
 function loadEnv(): void
 {
     if (! file_exists(ENV_FILE) || ! is_readable(ENV_FILE)) {
         throw new RuntimeException("Cannot load .env at " . ENV_FILE);
     }
-
-    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
         }
-        [$key, $val] = explode('=', $line, 2) + [1 => ''];
+        [$key, $val] = explode('=', $line, 2) + [1=>''];
         $_ENV[trim($key)] = trim($val);
     }
     debug_log(".env loaded into \$_ENV", 'DEBUG');
 }
 
-/**
- * Attempt to read a valid cached token.
- *
- * @return array|null  ['access_token'=>string, 'expires_at'=>int] or null.
- */
+/** Attempt to read a valid cached token. */
 function loadCachedToken(): ?array
 {
     if (! file_exists(TOKEN_CACHE_FILE)) {
         debug_log("Token cache file not found", 'DEBUG');
         return null;
     }
-
     $raw = file_get_contents(TOKEN_CACHE_FILE);
     if ($raw === false) {
         debug_log("Failed to read token cache file", 'WARNING');
         return null;
     }
-
     $data = json_decode($raw, true);
     if (! is_array($data) || empty($data['access_token']) || empty($data['expires_at'])) {
         debug_log("Token cache corrupted or incomplete", 'WARNING');
         return null;
     }
-
     if (time() >= (int)$data['expires_at']) {
         debug_log("Cached token expired at {$data['expires_at']}", 'DEBUG');
         return null;
     }
-
-    // Log the actual token and expiry for debugging
     debug_log("Using cached token (expires at {$data['expires_at']})", 'DEBUG');
     debug_log("Cached access token: {$data['access_token']}", 'DEBUG');
-
     return $data;
 }
 
-/**
- * Write a fresh token to cache for reuse.
- */
+/** Write a fresh token to cache for reuse. */
 function cacheToken(string $accessToken, int $expiresIn): void
 {
     $payload = [
-        'access_token' => $accessToken,
-        'expires_at'   => time() + $expiresIn - 30, // 30s buffer
+        'access_token'=> $accessToken,
+        'expires_at'  => time() + $expiresIn - 30, // 30s buffer
     ];
-
     $dir = dirname(TOKEN_CACHE_FILE);
     if (! is_dir($dir)) {
         mkdir($dir, 0755, true);
     }
-
     if (file_put_contents(TOKEN_CACHE_FILE, json_encode($payload, JSON_PRETTY_PRINT)) === false) {
         throw new RuntimeException("Failed to write token cache to " . TOKEN_CACHE_FILE);
     }
-
     debug_log("Cached new token (expires in {$expiresIn} seconds)", 'DEBUG');
 }
 
-/**
- * Perform the OAuth2 password-grant request to obtain a new token.
- */
+/** Perform the OAuth2 password-grant request to obtain a new token. */
 function requestNewToken(): array
 {
     loadEnv();
-
     foreach (['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','TOKEN_URL'] as $key) {
         if (empty($_ENV[$key])) {
             throw new RuntimeException("Missing \${$key} in .env");
         }
     }
-
     $form = http_build_query([
         'grant_type'    => 'password',
         'client_id'     => $_ENV['CLIENT_ID'],
@@ -288,9 +268,7 @@ function requestNewToken(): array
         'password'      => $_ENV['PASSWORD'],
         'scope'         => $_ENV['SCOPE'] ?? '',
     ]);
-
     debug_log("Requesting new OAuth2 token from {$_ENV['TOKEN_URL']}", 'DEBUG');
-
     $ch = curl_init($_ENV['TOKEN_URL']);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
@@ -299,54 +277,40 @@ function requestNewToken(): array
         CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
         CURLOPT_FAILONERROR    => false,
     ]);
-
     $response = curl_exec($ch);
     if ($response === false) {
         $err = curl_error($ch);
         curl_close($ch);
         throw new RuntimeException("cURL error fetching token: {$err}");
     }
-
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
     if ($httpCode !== 200) {
         throw new RuntimeException("Token endpoint returned HTTP {$httpCode}: {$response}");
     }
-
     $data = json_decode($response, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new RuntimeException("Invalid JSON from token endpoint: " . json_last_error_msg());
     }
-
-    // Log the raw token details
     debug_log("Received new OAuth2 token response", 'DEBUG');
     debug_log("New access token: {$data['access_token']} (expires_in {$data['expires_in']}s)", 'DEBUG');
-
     return $data;
 }
 
-/**
- * Get a valid OAuth2 bearer token, using cache if possible.
- */
+/** Get a valid OAuth2 bearer token, using cache if possible. */
 function getAccessToken(): string
 {
     debug_log("getAccessToken() called", 'DEBUG');
-
     $cached = loadCachedToken();
     if ($cached !== null) {
         debug_log("getAccessToken returning cached token", 'DEBUG');
         return $cached['access_token'];
     }
-
     $tokenData = requestNewToken();
-
     if (empty($tokenData['access_token']) || empty($tokenData['expires_in'])) {
         throw new RuntimeException("Token response missing required fields");
     }
-
     cacheToken($tokenData['access_token'], (int)$tokenData['expires_in']);
-
     debug_log("getAccessToken returning new token", 'DEBUG');
     return $tokenData['access_token'];
 }

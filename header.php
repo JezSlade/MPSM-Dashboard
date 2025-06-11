@@ -9,25 +9,25 @@
  *  - Navigation links
  *  - Customer dropdown + search
  *
- * This version has the floating debug panel removed in favor of the footer one.
+ * Note: Floating debug toggle has been removed. Footer debug panel remains active.
  */
 
-// Bring in any debug entries collected so far
+// Bring in any debug entries if needed (not used here)
 global $debug_log_entries;
 
 // Default guards in case variables weren’t passed
-$db_status           = $db_status ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
-$api_status          = $api_status ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
+$db_status           = $db_status ?? ['status'=>'unknown','message'=>'Status not retrieved.'];
+$api_status          = $api_status ?? ['status'=>'unknown','message'=>'Status not retrieved.'];
 $customers           = $customers ?? [];
 $current_customer_id = $current_customer_id ?? null;
 $available_views     = $available_views ?? [];
 $current_view_slug   = $current_view_slug ?? 'dashboard';
 
-debug_log("Rendering header.php. DB Status: " . $db_status['status'] . ", API Status: " . $api_status['status'], 'DEBUG');
+debug_log("Rendering header.php. DB Status: {$db_status['status']}, API Status: {$api_status['status']}", 'DEBUG');
 debug_log("Available views: " . implode(', ', array_keys($available_views)), 'DEBUG');
 debug_log("Current view slug: " . sanitize_html($current_view_slug), 'DEBUG');
 ?>
-<header class="dashboard-header">
+<header class="dashboard-header glassmorphic">
   <div class="header-top">
     <div class="app-branding">
       <h1><?php echo sanitize_html(APP_NAME); ?></h1>
@@ -57,14 +57,14 @@ debug_log("Current view slug: " . sanitize_html($current_view_slug), 'DEBUG');
         <?php
         foreach ($available_views as $slug => $display_name) {
             $is_active = ($slug === $current_view_slug) ? 'active' : '';
-            $nav_link  = BASE_URL . '?view=' . sanitize_url($slug);
-            debug_log("Rendering navigation link for view: $slug (Active: $is_active)", 'DEBUG');
-            echo '<li><a href="' . sanitize_html($nav_link) . '" class="' . sanitize_html($is_active) . '">' .
+            $link      = BASE_URL . '?view=' . sanitize_url($slug);
+            debug_log("Nav link for view '{$slug}' (active={$is_active})", 'DEBUG');
+            echo '<li><a href="' . sanitize_html($link) . '" class="' . sanitize_html($is_active) . '">' .
                   sanitize_html($display_name) .
                  '</a></li>';
         }
         if (empty($available_views)) {
-            debug_log("No views found to render in navigation. Check 'views/' directory.", 'WARNING');
+            debug_log("No views available for navigation.", 'WARNING');
             echo '<li><span>No views available</span></li>';
         }
         ?>
@@ -78,16 +78,16 @@ debug_log("Current view slug: " . sanitize_html($current_view_slug), 'DEBUG');
           <option value="">-- Select Customer --</option>
           <?php
           if (!empty($customers)) {
-              debug_log("Populating customer dropdown with " . count($customers) . " customers.", 'INFO');
+              debug_log("Populating customer dropdown ({count} entries).", 'INFO');
               foreach ($customers as $cust) {
                   $cid      = sanitize_int($cust['id']);
                   $cname    = sanitize_html($cust['name']);
-                  $selected = ($cid === $current_customer_id) ? 'selected' : '';
-                  echo "<option value=\"{$cid}\" {$selected}>{$cname}</option>";
+                  $sel      = ($cid === $current_customer_id) ? 'selected' : '';
+                  echo "<option value=\"{$cid}\" {$sel}>{$cname}</option>";
                   debug_log("Added customer: ID {$cid}, Name '{$cname}'.", 'DEBUG');
               }
           } else {
-              debug_log("No customer data available to populate dropdown.", 'WARNING');
+              debug_log("Customer list empty, showing placeholder.", 'WARNING');
               echo '<option disabled>No customers available</option>';
           }
           ?>
@@ -99,10 +99,10 @@ debug_log("Current view slug: " . sanitize_html($current_view_slug), 'DEBUG');
           placeholder="Search customer…"
           aria-label="Search customer"
         >
-        <?php debug_log("Customer dropdown and search input rendered.", 'DEBUG'); ?>
+        <?php debug_log("Customer search input rendered.", 'DEBUG'); ?>
       </div>
       <button id="apply-customer-filter" class="cta-button">Apply Filter</button>
-      <?php debug_log("Apply customer filter button rendered.", 'DEBUG'); ?>
+      <?php debug_log("Apply filter button rendered.", 'DEBUG'); ?>
     </div>
   </div>
 </header>
