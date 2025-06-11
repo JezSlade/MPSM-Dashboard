@@ -57,7 +57,7 @@ if (! array_key_exists($current_view, $available_views)) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title><?php echo sanitize_html(APP_NAME); ?></title>
+  <title><?php echo sanitize_html(defined('APP_NAME') ? APP_NAME : 'MPSM Dashboard'); ?></title>
   <link rel="stylesheet" href="<?php echo BASE_URL; ?>css/styles.css">
 </head>
 <body class="theme-dark">
