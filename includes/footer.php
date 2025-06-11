@@ -4,7 +4,7 @@
  *
  * Renders:
  *  - Dashboard footer
- *  - Fixed overlay debug panel with working minimize/clear and scrolling
+ *  - Fixed overlay debug panel (modern buttons, scrollable, persistent state)
  */
 
 if (!isset($GLOBALS['debug_messages'])) {
@@ -21,8 +21,8 @@ debug_log("Rendering footer", 'DEBUG');
   <div id="debug-panel" class="debug-panel">
     <div class="debug-header">
       <h3>Debug Log</h3>
-      <button id="debug-toggle-visibility" class="debug-button" title="Minimize">▁▔</button>
-      <button id="debug-clear-log" class="debug-button" title="Clear Logs">🗑</button>
+      <button id="debug-toggle-visibility" class="debug-button" title="Minimize">−</button>
+      <button id="debug-clear-log" class="debug-button" title="Clear Logs">🗑️</button>
     </div>
     <div class="debug-content">
       <pre id="debug-log-output" class="debug-log-output">
@@ -41,14 +41,20 @@ debug_log("Rendering footer", 'DEBUG');
 
   <script>
     (function(){
-      const panel = document.getElementById('debug-panel');
+      const panel  = document.getElementById('debug-panel');
       const toggle = document.getElementById('debug-toggle-visibility');
       const clear  = document.getElementById('debug-clear-log');
       const output = document.getElementById('debug-log-output');
 
+      // Restore collapsed state
+      if (localStorage.getItem('debugPanelHidden') === 'true') {
+        panel.classList.add('hidden');
+      }
+
       // Toggle minimize/restore
       toggle.addEventListener('click', () => {
         panel.classList.toggle('hidden');
+        localStorage.setItem('debugPanelHidden', panel.classList.contains('hidden'));
       });
 
       // Clear logs
