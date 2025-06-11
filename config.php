@@ -3,25 +3,29 @@
  * config.php
  *
  * 1) Loads key=value from .env
- * 2) Defines all constants from .env or sensible defaults
- * 3) Auto-detects APP_VERSION from version.js (fallback .env, then timestamp)
- * 4) Sets up BASE_URL, paths, debug, and API endpoint
+ * 2) Defines constants from .env or sensible defaults
+ * 3) Auto-detects APP_VERSION
+ * 4) Sets BASE_URL, paths, debug, and API endpoint
  */
 
-// 1) Parse .env
+// 1) Parse .env (no PHP tags inside .env!)
 $envFile = __DIR__ . '/.env';
 if (! file_exists($envFile) || ! is_readable($envFile)) {
     throw new RuntimeException("Cannot load .env at {$envFile}");
 }
-$env = parse_ini_file($envFile, false, INI_SCANNER_RAW);
-if ($env === false) {
-    throw new RuntimeException("Failed to parse .env");
+$env = [];
+foreach (file($envFile, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
+    $line = trim($line);
+    if ($line === '' || $line[0] === '#') continue;
+    if (strpos($line, '=') === false) continue;
+    list($key, $val) = explode('=', $line, 2);
+    $env[trim($key)] = trim($val);
 }
 
-// Helper to define constants from .env
+// Helper to define constants
 function define_env(string $key, $default = ''): void {
     global $env;
-    $val = array_key_exists($key, $env) ? trim($env[$key]) : $default;
+    $val = array_key_exists($key, $env) ? $env[$key] : $default;
     define($key, $val);
 }
 
@@ -34,22 +38,22 @@ define_env('SCOPE');
 define_env('TOKEN_URL');
 define_env('DEALER_CODE');
 define_env('DEALER_ID');
-define_env('BASE_URL'); // <-- Now honors BASE_URL in .env if provided
+define_env('BASE_URL'); // optional override
 
-// 3) Application metadata & versioning
+// 3) APP_NAME + APP_VERSION
 define_env('APP_NAME', 'MPSM Dashboard');
 $version = '';
 $versionJs = __DIR__ . '/version.js';
 if (file_exists($versionJs)) {
     $js = file_get_contents($versionJs);
-    if (preg_match('/version\s*[:=]\s*[\'"]([^\'"]+)[\'"]/i', $js, $m)) {
+    if (preg_match('/version\s*[:=]\s*[\'"]([^\'"]+)[\'"]/', $js, $m)) {
         $version = $m[1];
     }
 }
-if (empty($version) && ! empty($env['APP_VERSION'])) {
-    $version = trim($env['APP_VERSION']);
+if (!$version && ! empty($env['APP_VERSION'])) {
+    $version = $env['APP_VERSION'];
 }
-if (empty($version)) {
+if (!$version) {
     $version = date('YmdHis');
 }
 define('APP_VERSION', $version);
@@ -79,7 +83,7 @@ define('DEBUG_LOG_LEVELS', [
 // 6) API Base URL
 define('MPSM_API_BASE_URL', $env['MPSM_API_BASE_URL'] ?? 'https://api.abassetmanagement.com/api3/');
 
-// 7) Auto-detect BASE_URL if not set
+// 7) Auto BASE_URL if not provided
 if (!defined('BASE_URL') || BASE_URL === '') {
     $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off') ? 'https://' : 'http://';
     $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -104,8 +108,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 11) Ensure logs directory exists
+// 11) Ensure logs dir exists
 if (DEBUG_LOG_TO_FILE) {
     $logDir = dirname(DEBUG_LOG_FILE);
-    if (!is_dir($logDir)) mkdir($logDir, 0755, true);
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
 }
