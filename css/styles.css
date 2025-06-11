@@ -451,3 +451,91 @@ body.theme-light .icon-dark  { display: none; }
         max-height:70vh;
     }
 }
+/* --- Debug Panel Styles & Button Flair --- */
+#debug-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 10%;
+  width: 80%;
+  max-width: 1200px;
+  height: 50vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 2px solid var(--highlight-cyan);
+  border-radius: var(--glass-border-radius);
+  box-shadow:
+    0 0 20px var(--highlight-cyan),
+    0 0 40px var(--highlight-magenta),
+    inset 0 0 10px var(--highlight-yellow);
+  overflow: hidden;
+  z-index: 9999;
+  animation: debugPanelGlow 3s infinite alternate;
+  transition: transform 0.3s ease;
+}
+
+#debug-panel.hidden {
+  transform: translateY(calc(100% - 40px));
+}
+
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.debug-header h3 {
+  margin: 0;
+  color: var(--highlight-yellow);
+  font-size: 1rem;
+}
+
+.debug-button {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.debug-button:hover {
+  background: rgba(0,188,212,0.1);
+  color: var(--highlight-cyan);
+  border-color: var(--highlight-cyan);
+}
+
+.debug-content {
+  flex: 1 1 auto;
+  padding: 10px 15px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.1);
+}
+
+.debug-log-output {
+  margin: 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+/* Neon glow animation */
+@keyframes debugPanelGlow {
+  from {
+    box-shadow:
+      0 0 10px var(--highlight-cyan),
+      0 0 20px var(--highlight-magenta),
+      inset 0 0 5px var(--highlight-yellow);
+  }
+  to {
+    box-shadow:
+      0 0 20px var(--highlight-cyan),
+      0 0 40px var(--highlight-magenta),
+      inset 0 0 15px var(--highlight-yellow);
+  }
+}
