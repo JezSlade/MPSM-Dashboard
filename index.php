@@ -49,7 +49,8 @@ $current_view_slug = isset($_GET['view']) && array_key_exists($_GET['view'], $av
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title><?php echo sanitize_html(APP_NAME); ?></title>
-  <link rel="stylesheet" href="<?php echo BASE_URL; ?>css/styles.css">
+  <!-- THIS IS THE CRITICAL LINE -->
+  <link rel="stylesheet" href="<?php echo CSS_PATH; ?>styles.css">
 </head>
 <body class="theme-dark">
 <?php
