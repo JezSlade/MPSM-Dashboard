@@ -3,13 +3,24 @@
  * functions.php
  *
  * MPSM Dashboard helper library:
+ *  - Output buffering to prevent stray output
  *  - Debug logging (debug_log)
  *  - Template partial inclusion (include_partial)
- *  - Data sanitization (sanitize_html, sanitize_url)
+ *  - Data sanitization (sanitize_html, sanitize_url, sanitize_int)
  *  - OAuth2 password-grant token management (loadEnv, loadCachedToken, cacheToken, requestNewToken, getAccessToken)
+ *  - JSON response helper (respond_json)
  *
  * PHP 8.2+ required.
  */
+
+// -----------------------------------------------------------------------------
+//  Output Buffering
+// -----------------------------------------------------------------------------
+// Start buffering all output. This ensures we can clean any accidental
+// whitespace or warnings before sending JSON or headers.
+if (function_exists('ob_start')) {
+    ob_start();
+}
 
 // -----------------------------------------------------------------------------
 //  Global Debug Log Storage
@@ -142,6 +153,34 @@ function sanitize_url(string $input): string
     $slug = preg_replace('/[-_]+/', '-', $slug);
     $slug = trim($slug, '-_');
     return strtolower($slug);
+}
+
+/**
+ * Validate and return an integer. Returns 0 if invalid.
+ */
+function sanitize_int($input): int
+{
+    $validated = filter_var($input, FILTER_VALIDATE_INT);
+    return ($validated !== false) ? (int)$validated : 0;
+}
+
+// -----------------------------------------------------------------------------
+//  JSON Response Helper
+// -----------------------------------------------------------------------------
+/**
+ * Send JSON response and terminate script, ensuring no stray output.
+ *
+ * @param mixed $data Data to JSON-encode and send.
+ */
+function respond_json($data): void
+{
+    // Clean any buffered output
+    if (ob_get_length() !== false) {
+        ob_clean();
+    }
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
 }
 
 // -----------------------------------------------------------------------------
