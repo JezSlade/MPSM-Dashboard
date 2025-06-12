@@ -10,6 +10,7 @@ declare(strict_types=1);
  *  4. Inherited error-reporting settings from config.php.
  *  5. Passing all variables required by views (including available_views & current_view_slug).
  *  6. Correct JS reference to js/script.js.
+ *  7. Unified glassmorphic debug panel + toggle.
  */
 
 // ─── 0) Enable inline error display ──────────────────────────────────────────
@@ -17,7 +18,7 @@ ini_set('display_errors',        '1');
 ini_set('display_startup_errors','1');
 error_reporting(E_ALL);
 
-// ─── 1) Bootstrap application settings & helpers ────────────────────────────
+// ─── 1) Bootstrap config & helpers ──────────────────────────────────────────
 try {
     require_once __DIR__ . '/config.php';
     require_once __DIR__ . '/functions.php';
@@ -35,47 +36,41 @@ ini_set('display_errors',        DEBUG_MODE ? '1' : '0');
 ini_set('display_startup_errors',DEBUG_MODE ? '1' : '0');
 error_reporting(E_ALL);
 
-// ─── 3) Fetch initial data ───────────────────────────────────────────────────
+// ─── 3) Fetch data and handle inputs ────────────────────────────────────────
 $customers = fetch_customers();
-
-// ─── 4) Handle customer selection ────────────────────────────────────────────
 if (! empty($_POST['customer_code'])) {
     $_SESSION['customer_code'] = $_POST['customer_code'];
 }
 
-// ─── 5) Determine API status ────────────────────────────────────────────────
+// ─── 4) API status (example) ────────────────────────────────────────────────
 $api_status = [
     'status'  => 'ok',
     'message' => 'API reachable.',
 ];
 
-// ─── 6) Define available views ───────────────────────────────────────────────
+// ─── 5) Views setup ─────────────────────────────────────────────────────────
 $available_views = [
     'dashboard' => 'Dashboard Overview',
     'reports'   => 'Reports',
     'analytics' => 'Analytics',
 ];
-
-// ─── 7) Determine current view slug ─────────────────────────────────────────
 $current_view = $_GET['view'] ?? 'dashboard';
 if (! isset($available_views[$current_view])) {
     $current_view = 'dashboard';
 }
-
-// ─── 8) Render HTML ─────────────────────────────────────────────────────────
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo sanitize_html(APP_NAME); ?></title>
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="js/script.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title><?php echo sanitize_html(APP_NAME); ?></title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/script.js" defer></script>
 </head>
 <body>
 
 <?php
-// ─── 9) Header ───────────────────────────────────────────────────────────────
+// ─── 6) Header ─────────────────────────────────────────────────────────────
 include_partial('includes/header.php', [
     'app_name'            => APP_NAME,
     'customers'           => $customers,
@@ -87,7 +82,7 @@ include_partial('includes/header.php', [
 ?>
 
 <?php
-// ─── 10) CardEditor ─────────────────────────────────────────────────────────
+// ─── 7) CardEditor ─────────────────────────────────────────────────────────
 $cardEditorPath = __DIR__ . '/includes/CardEditor.php';
 if (file_exists($cardEditorPath)) {
     require_once $cardEditorPath;
@@ -98,23 +93,33 @@ if (file_exists($cardEditorPath)) {
 }
 ?>
 
-<?php if (DEBUG_MODE): ?>
-    <!-- ─── 11) Debug Panel ─────────────────────────────────────────────────── -->
-    <div id="debug-panel" class="hidden">
-        <h4>🐞 Debug Log (<?php echo date('Y-m-d'); ?>)</h4>
-        <pre><?php
-            $logfile = __DIR__ . '/logs/debug-' . date('Y-m-d') . '.log';
-            if (file_exists($logfile)) {
-                echo sanitize_html(file_get_contents($logfile));
-            } else {
-                echo 'No log file found for today.';
-            }
-        ?></pre>
-    </div>
+<?php if (DEBUG_MODE && DEBUG_PANEL_ENABLED): ?>
+  <!-- ─── 8) Debug Toggle & Panel ────────────────────────────────────────── -->
+  <button id="debug-toggle" title="Toggle Debug Panel">🐞</button>
+  <div id="debug-panel" class="hidden">
+    <h4>Debug Log (<?php echo date('Y-m-d'); ?>)</h4>
+    <pre><?php
+      $logfile = __DIR__ . '/logs/debug-' . date('Y-m-d') . '.log';
+      if (file_exists($logfile)) {
+          echo sanitize_html(file_get_contents($logfile));
+      } else {
+          echo 'No log file found for today.';
+      }
+    ?></pre>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn   = document.getElementById('debug-toggle');
+      const panel = document.getElementById('debug-panel');
+      btn.addEventListener('click', () => {
+        panel.classList.toggle('hidden');
+      });
+    });
+  </script>
 <?php endif; ?>
 
 <?php
-// ─── 12) Main View ─────────────────────────────────────────────────────────
+// ─── 9) Main View ─────────────────────────────────────────────────────────
 include_partial("views/{$current_view}.php", [
     'customers'           => $customers,
     'current_customer_id' => $_SESSION['customer_code'] ?? null,
@@ -125,20 +130,9 @@ include_partial("views/{$current_view}.php", [
 ?>
 
 <?php
-// ─── 13) Footer ─────────────────────────────────────────────────────────────
+// ─── 10) Footer ───────────────────────────────────────────────────────────
 include_partial('includes/footer.php');
 ?>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var btn   = document.getElementById('debug-toggle');
-    var panel = document.getElementById('debug-panel');
-    if (btn && panel) {
-        btn.addEventListener('click', function() {
-            panel.classList.toggle('hidden');
-        });
-    }
-});
-</script>
 </body>
 </html>

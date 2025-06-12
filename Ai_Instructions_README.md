@@ -4,6 +4,7 @@
 #### Perform linted and smoke-test on asset references
 - In the all files, scan for any references to external libraries or classes (e.g. Dotenv\Dotenv) that aren’t actually installed, and either remove them or wrap them in class_exists()/file_exists() guards.
 - Scan all files for any constants they reference and ensure each is defined in config.php, or flag missing ones.
+- When auditing, grep all PHP view and include files for bare constant names (e.g. anything matching /[A-Z_]{2,}/) and ensure each one is defined in config.php. Flag any missing constants.
 - 
 ### Step 1: Repository Structure Analysis
 - Examine the overall project structure and organization
