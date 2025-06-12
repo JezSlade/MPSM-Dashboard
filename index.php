@@ -79,11 +79,16 @@ include_partial('includes/header.php', [
 ]);
 
 // ---------------
-// 4) Render Main View
+// 4) Card Browser
+// ---------------
+require_once __DIR__ . '/includes/CardEditor.php';
+(new CardEditor())->render();
+
+// ---------------
+// 5) Render Main View
 // ---------------
 echo '<main class="dashboard-main">';
 
-// Pass all needed variables into the view
 $viewData = [
     'selected_customer_id' => $current_customer_code,
     'available_views'      => $available_views,
@@ -91,7 +96,6 @@ $viewData = [
 ];
 
 if (! include_partial("views/{$current_view}.php", $viewData)) {
-    // Fallback if view file missing
     echo '<div class="view-not-found">';
     echo '<h2>View Not Found!</h2>';
     echo '<p>The requested view <code>' . sanitize_html($current_view) . '</code> could not be loaded.</p>';
@@ -102,10 +106,9 @@ if (! include_partial("views/{$current_view}.php", $viewData)) {
 echo '</main>';
 
 // ---------------
-// 5) Render Footer
+// 6) Render Footer
 // ---------------
 include_partial('includes/footer.php');
-
 ?>
 </body>
 </html>
