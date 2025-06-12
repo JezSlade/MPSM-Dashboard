@@ -5,46 +5,24 @@
  * Dashboard Header Partial
  *
  * Renders:
- *  - Application title (APP_NAME)
- *  - Database & API status indicators
+ *  - App title
+ *  - Status indicators (DB/API)
  *  - Theme toggle
- *  - Views navigation
- *  - Customer selection dropdown (glassmorphic)
+ *  - View navigation tabs
+ *  - Customer-select form with instant GET submit
  */
-
-// Fallbacks in case variables weren’t passed in
-$db_status           = $db_status           ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
-$api_status          = $api_status          ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
-$customers           = $customers           ?? [];
-$current_customer_id = $current_customer_id ?? null;
-$available_views     = $available_views     ?? [];
-$current_view_slug   = $current_view_slug   ?? 'dashboard';
-
-debug_log("Rendering header", 'DEBUG');
 ?>
-<header class="dashboard-header glassmorphic">
+<header class="dashboard-header">
   <div class="header-top">
-    <div class="app-branding">
-      <h1><?php echo sanitize_html(APP_NAME); ?></h1>
-    </div>
+    <h1 class="app-title"><?php echo sanitize_html(APP_NAME); ?></h1>
     <div class="status-indicators">
-      <div class="status-item db-status">
-        <span
-          class="status-dot status-<?php echo sanitize_html($db_status['status']); ?>"
-          title="Database: <?php echo sanitize_html($db_status['message']); ?>"
-        ></span>
-        <span>Database</span>
-      </div>
-      <div class="status-item api-status">
-        <span
-          class="status-dot status-<?php echo sanitize_html($api_status['status']); ?>"
-          title="API: <?php echo sanitize_html($api_status['message']); ?>"
-        ></span>
-        <span>API</span>
-      </div>
-      <button id="theme-toggle" class="theme-toggle" title="Toggle Theme">
-        <span class="icon-light">☀️</span>
+      <span class="status-dot <?php echo $db_status['status']==='ok'?'status-ok':'status-error'; ?>"></span>
+      <span>Database</span>
+      <span class="status-dot <?php echo $api_status['status']==='ok'?'status-ok':'status-error'; ?>"></span>
+      <span>API</span>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
         <span class="icon-dark">🌙</span>
+        <span class="icon-light">☀️</span>
       </button>
     </div>
   </div>
@@ -52,54 +30,54 @@ debug_log("Rendering header", 'DEBUG');
   <div class="header-bottom">
     <nav class="main-navigation">
       <ul>
-        <?php if (!empty($available_views)): ?>
-          <?php foreach ($available_views as $slug => $label):
-            $active = ($slug === $current_view_slug) ? 'active' : '';
-            $url    = BASE_URL . '?view=' . sanitize_url($slug);
-          ?>
-            <li>
-              <a
-                href="<?php echo sanitize_html($url); ?>"
-                class="<?php echo sanitize_html($active); ?>"
-              >
-                <?php echo sanitize_html($label); ?>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        <?php else: ?>
-          <li><span>No views available</span></li>
-        <?php endif; ?>
+        <?php foreach ($available_views as $slug => $label): ?>
+          <li>
+            <a
+              href="?view=<?php echo urlencode($slug); ?>"
+              class="<?php echo $slug === $current_view_slug ? 'active' : ''; ?>"
+            >
+              <?php echo sanitize_html($label); ?>
+            </a>
+          </li>
+        <?php endforeach; ?>
       </ul>
     </nav>
 
     <div class="customer-selection">
-      <label for="customer-select" class="sr-only">Select Customer</label>
-      <div class="select-wrapper glassmorphic">
-        <select id="customer-select" name="customer_code">
-          <option value="">-- Select Customer --</option>
-          <?php if (!empty($customers)): ?>
-            <?php foreach ($customers as $cust):
-              $code = sanitize_html($cust['Code']);
-              $desc = sanitize_html($cust['Description']);
-              $sel  = ($code === $current_customer_id) ? 'selected' : '';
-            ?>
-              <option value="<?php echo $code; ?>" <?php echo $sel; ?>>
-                <?php echo $desc; ?>
-              </option>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <option disabled>No customers available</option>
-          <?php endif; ?>
-        </select>
+      <form
+        id="customer-form"
+        action="?view=<?php echo urlencode($current_view_slug); ?>"
+        method="GET"
+        class="select-wrapper glassmorphic"
+      >
+        <input type="hidden" name="view" value="<?php echo sanitize_html($current_view_slug); ?>">
+        <label for="customer-search" class="sr-only">Search Customer</label>
         <input
-          type="text"
+          type="search"
           id="customer-search"
+          name="customer_search"
           class="customer-search-input"
-          placeholder="Search customer…"
-          aria-label="Search customer"
+          placeholder="Search…"
+          autocomplete="off"
         >
-      </div>
-      <button id="apply-customer-filter" class="cta-button">Apply Filter</button>
+        <label for="customer-select" class="sr-only">Select Customer</label>
+        <select
+          id="customer-select"
+          name="customer_code"
+          onchange="this.form.submit()"
+        >
+          <option value="">-- Select Customer --</option>
+          <?php foreach ($customers as $cust):
+            $code = sanitize_html($cust['Code']);
+            $desc = sanitize_html($cust['Description']);
+            $sel  = ($code === $current_customer_id) ? 'selected' : '';
+          ?>
+            <option value="<?php echo $code; ?>" <?php echo $sel; ?>>
+              <?php echo $desc; ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </form>
     </div>
   </div>
 </header>
