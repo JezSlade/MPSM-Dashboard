@@ -26,8 +26,7 @@ $low_threshold = $_data['low_threshold'] ?? 20; // Default low threshold
       <?php foreach ($toner_data as $color => $level):
         $status_class = ($level <= $low_threshold) ? 'toner-low' : 'toner-ok';
       ?>
-        <li class="<?= sanitize_html($status_class) ?>">
-          <?php echo sanitize_html(ucfirst($color)); ?>: <strong><?php echo sanitize_html($level); ?>%</strong>
+        <li class="<?= $status_class ?>"> <?php echo sanitize_html(ucfirst($color)); ?>: <strong><?php echo sanitize_html($level); ?>%</strong>
           <?php if ($level <= $low_threshold): ?>
             <span class="warning-icon">&#9888; Low!</span>
           <?php endif; ?>
