@@ -1,0 +1,84 @@
+# .github/workflows/ci.yml
+name: CI / Lint & Validate
+
+# Run this workflow on pushes and PRs to main
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Job: PHP syntax validation
+  php-lint:
+    name: "Lint PHP"
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Set up PHP environment
+      - name: Setup PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+
+      # 3. (Optional) Install composer dependencies if your code uses them
+      # - name: Install Composer dependencies
+      #   run: composer install --no-progress --no-suggest --prefer-dist
+
+      # 4. Validate PHP syntax for every .php file
+      - name: PHP Syntax Check (php -l)
+        run: |
+          # find all PHP files except vendor, run php -l on each
+          find . -type f -name '*.php' \
+            -not -path './vendor/*' \
+            -print0 | xargs -0 -n1 php -l
+
+  # Job: JavaScript linting
+  js-lint:
+    name: "Lint JS"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 1. Install Node.js for ESLint
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # 2. Install your JS dependencies (assuming package.json in repo root)
+      - name: Install dependencies
+        run: npm ci
+
+      # 3. Run ESLint over your js/ folder
+      - name: Run ESLint
+        run: npx eslint js/
+
+  # Job: JSON validation
+  json-validate:
+    name: "Validate JSON"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 1. Install jq (JSON CLI) for linting
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      # 2. Lint each JSON schema file
+      - name: Lint JSON files
+        run: |
+          for file in AllEndpoints.json \
+                      "Refined Endpoint Groups JSON.json" \
+                      Swagger.json; do
+            echo "Checking $file"
+            jq . "$file" >/dev/null || (echo "✖ Invalid JSON in $file" && exit 1)
+          done
