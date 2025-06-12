@@ -1,3 +1,6 @@
+Size: 3841 bytes
+Last Modified: Wed Jun 11 17:09:50 EDT 2025
+----------------------------------------
 <?php
 /**
  * includes/header.php
@@ -11,64 +14,28 @@
  *  - Views navigation
  *  - Customer selection dropdown (glassmorphic)
  */
-
-// Fallbacks in case variables weren’t passed in
-$db_status           = $db_status           ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
-$api_status          = $api_status          ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
-$customers           = $customers           ?? [];
-$current_customer_id = $current_customer_id ?? null;
-$available_views     = $available_views     ?? [];
-$current_view_slug   = $current_view_slug   ?? 'dashboard';
-
-debug_log("Rendering header", 'DEBUG');
 ?>
-<header class="dashboard-header glassmorphic">
+<header class="dashboard-header">
   <div class="header-top">
-    <div class="app-branding">
-      <h1><?php echo sanitize_html(APP_NAME); ?></h1>
-    </div>
+    <h1 class="app-title"><?php echo sanitize_html(APP_NAME); ?></h1>
     <div class="status-indicators">
-      <div class="status-item db-status">
-        <span
-          class="status-dot status-<?php echo sanitize_html($db_status['status']); ?>"
-          title="Database: <?php echo sanitize_html($db_status['message']); ?>"
-        ></span>
-        <span>Database</span>
-      </div>
-      <div class="status-item api-status">
-        <span
-          class="status-dot status-<?php echo sanitize_html($api_status['status']); ?>"
-          title="API: <?php echo sanitize_html($api_status['message']); ?>"
-        ></span>
-        <span>API</span>
-      </div>
-      <button id="theme-toggle" class="theme-toggle" title="Toggle Theme">
-        <span class="icon-light">☀️</span>
-        <span class="icon-dark">🌙</span>
-      </button>
+      <span class="status-dot db-status"></span><span>Database</span>
+      <span class="status-dot api-status"></span><span>API</span>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme"></button>
     </div>
   </div>
 
   <div class="header-bottom">
     <nav class="main-navigation">
       <ul>
-        <?php if (!empty($available_views)): ?>
-          <?php foreach ($available_views as $slug => $label):
-            $active = ($slug === $current_view_slug) ? 'active' : '';
-            $url    = BASE_URL . '?view=' . sanitize_url($slug);
-          ?>
-            <li>
-              <a
-                href="<?php echo sanitize_html($url); ?>"
-                class="<?php echo sanitize_html($active); ?>"
-              >
-                <?php echo sanitize_html($label); ?>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        <?php else: ?>
-          <li><span>No views available</span></li>
-        <?php endif; ?>
+        <?php foreach ($available_views as $slug => $label): ?>
+          <li>
+            <a href="?view=<?php echo urlencode($slug); ?>"
+               class="<?php echo $slug === $current_view_slug ? 'active' : ''; ?>">
+              <?php echo sanitize_html($label); ?>
+            </a>
+          </li>
+        <?php endforeach; ?>
       </ul>
     </nav>
 
@@ -88,7 +55,7 @@ debug_log("Rendering header", 'DEBUG');
               </option>
             <?php endforeach; ?>
           <?php else: ?>
-            <option disabled>No customers available</option>
+            <option value="">No customers available</option>
           <?php endif; ?>
         </select>
         <input
@@ -99,7 +66,6 @@ debug_log("Rendering header", 'DEBUG');
           aria-label="Search customer"
         >
       </div>
-      <button id="apply-customer-filter" class="cta-button">Apply Filter</button>
     </div>
   </div>
 </header>
