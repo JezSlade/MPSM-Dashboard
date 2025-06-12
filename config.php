@@ -53,5 +53,12 @@ if (! defined('DEALER_ID')) {
 if (! defined('DEVICE_PAGE_SIZE')) {
     define('DEVICE_PAGE_SIZE', (int) ($_ENV['DEVICE_PAGE_SIZE'] ?? 50));
 }
+// Turn debug logging on/off. Defaults to false unless you set DEBUG_MODE=true in .env
+if (! defined('DEBUG_MODE')) {
+    define(
+        'DEBUG_MODE',
+        filter_var($_ENV['DEBUG_MODE'] ?? 'false', FILTER_VALIDATE_BOOLEAN)
+    );
+}
 
 // End of config.php

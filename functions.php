@@ -8,6 +8,10 @@
 
 // Start output buffering
 if (function_exists('ob_start')) ob_start();
+// Ensure DEBUG_MODE is always defined
+if (! defined('DEBUG_MODE')) {
+    define('DEBUG_MODE', false);
+}
 
 // Globals for debug
 $debug_log_entries = [];
