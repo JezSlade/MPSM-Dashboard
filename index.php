@@ -8,7 +8,7 @@ declare(strict_types=1);
  *  2. Wrapped bootstrap in try/catch to expose fatal errors.
  *  3. Safe includes of config.php and functions.php.
  *  4. Inherited error-reporting settings from config.php.
- *  5. Retains existing rendering logic unchanged.
+ *  5. Updated JS include to reference js/script.js (correct file).
  */
 
 // ─── 0) Enable inline error display ──────────────────────────────────────────
@@ -42,7 +42,7 @@ if (!empty($_POST['customer_code'])) {
     $_SESSION['customer_code'] = $_POST['customer_code'];
 }
 
-// ─── 5) Determine API status (example) ──────────────────────────────────────
+// ─── 5) Determine API status ────────────────────────────────────────────────
 $api_status = [
     'status'  => 'ok',
     'message' => 'API reachable.',
@@ -68,13 +68,14 @@ if (!isset($available_views[$current_view])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo sanitize_html(APP_NAME); ?></title>
     <link rel="stylesheet" href="css/styles.css">
-    <script src="js/main.js" defer></script>
+    <!-- Updated to actual JS file name -->  
+    <script src="js/script.js" defer></script>
 </head>
 <body>
 
 <?php
 // ─── Render header partial ───────────────────────────────────────────────────
-include_partial('views/header.php', [
+include_partial('includes/header.php', [
     'app_name'            => APP_NAME,
     'customers'           => $customers,
     'current_customer_id' => $_SESSION['customer_code'] ?? null,
@@ -122,7 +123,7 @@ include_partial("views/{$current_view}.php", [
 
 <?php
 // ─── Render footer partial ───────────────────────────────────────────────────
-include_partial('views/footer.php');
+include_partial('includes/footer.php');
 ?>
 
 <script>
