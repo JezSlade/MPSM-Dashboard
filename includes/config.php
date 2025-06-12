@@ -48,6 +48,11 @@ if (!defined('APP_VERSION')) {
     define('APP_VERSION', getenv('APP_VERSION') ?: '0.0.0');
 }
 
+// Application Name (New)
+if (!defined('APP_NAME')) {
+    define('APP_NAME', getenv('APP_NAME') ?: 'Application');
+}
+
 // Timezone
 if (!defined('TIMEZONE')) {
     define('TIMEZONE', getenv('TIMEZONE') ?: 'America/New_York');

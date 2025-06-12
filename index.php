@@ -2,6 +2,7 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
 /**
  * Main Application Entry Point
  *
@@ -17,7 +18,7 @@ if (session_status() == PHP_SESSION_NONE) {
 // Load configuration and utility functions
 require_once 'includes/config.php'; // This should load constants from .env
 require_once 'includes/constants.php'; // For other general constants if any
-require_once 'includes/functions.php';
+require_once 'includes/functions.php'; // <-- ENSURE THIS FILE IS IN includes/
 
 // Basic routing logic
 $current_view_slug = $_GET['view'] ?? 'dashboard';
@@ -38,18 +39,14 @@ if (!array_key_exists($current_view_slug, $available_views)) {
 }
 
 // Set selected customer ID from query parameter or session
-// Cleaned up direct session access slightly, though still direct for PoC.
 $selected_customer_id = $_GET['customer_id'] ?? null;
 if ($selected_customer_id) {
     $_SESSION['customer_id'] = $selected_customer_id;
 } else if (!isset($_SESSION['customer_id'])) {
-    // Only unset if it was never set, or if explicitly passed as null/empty string
-    // For PoC, keep it simple. If customer_id param is absent and not in session, it's null.
     $selected_customer_id = null;
 } else {
     $selected_customer_id = $_SESSION['customer_id'];
 }
-
 
 // Include header
 include_once 'includes/header.php';
