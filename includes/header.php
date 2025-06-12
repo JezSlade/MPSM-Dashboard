@@ -8,7 +8,7 @@
  * - Application title (APP_NAME)
  * - Database & API status indicators
  * - Theme toggle
- * - Views navigation
+ * - Views navigation (NOTE: Navigation moved to includes/navigation.php)
  * - Customer selection dropdown (glassmorphic)
  */
 
@@ -28,7 +28,9 @@ debug_log("Rendering header", 'DEBUG');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo sanitize_html(APP_NAME); ?></title>
-    <link rel="stylesheet" href="css/styles.css"> <script src="js/script.js" defer></script> </head>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/script.js" defer></script>
+</head>
 <body>
     <div id="wrapper">
         <header class="dashboard-header glassmorphic">
@@ -59,28 +61,6 @@ debug_log("Rendering header", 'DEBUG');
             </div>
 
             <div class="header-bottom">
-                <nav class="main-navigation">
-                    <ul>
-                        <?php if (!empty($available_views)): ?>
-                            <?php foreach ($available_views as $slug => $label):
-                                $active = ($slug === $current_view_slug) ? 'active' : '';
-                                $url    = BASE_URL . '?view=' . urlencode($slug);
-                            ?>
-                                <li>
-                                    <a
-                                        href="<?php echo sanitize_html($url); ?>"
-                                        class="<?php echo sanitize_html($active); ?>"
-                                    >
-                                        <?php echo sanitize_html($label); ?>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <li><span>No views available</span></li>
-                        <?php endif; ?>
-                    </ul>
-                </nav>
-
                 <div class="customer-selection">
                     <label for="customer-select" class="sr-only">Select Customer</label>
                     <div class="select-wrapper glassmorphic">

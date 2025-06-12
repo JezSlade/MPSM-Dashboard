@@ -553,3 +553,38 @@ body.theme-light .icon-dark  { display: none; }
       max-height: 70vh;
   }
 }
+/* Basic styling for the main navigation */
+.main-navigation ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex; /* Use flexbox for horizontal layout */
+    justify-content: flex-start; /* Align items to the start */
+    gap: 20px; /* Space between navigation items */
+    background-color: #333; /* Dark background for the nav bar */
+    padding: 10px 20px;
+    border-radius: 5px;
+}
+
+.main-navigation li a {
+    text-decoration: none;
+    color: #fff; /* White text for links */
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.main-navigation li a:hover,
+.main-navigation li.active a {
+    background-color: #555; /* Slightly lighter background on hover/active */
+    color: #f0c000; /* Example yellow color for active/hover */
+}
+
+/* You can adjust the colors above to match your specific "yellow" theme */
+/* For example, for a strong yellow: */
+/* background-color: #FFD700; */
+/* color: #333; */
+/* For a subtle yellow hover/active: */
+/* background-color: rgba(255, 255, 0, 0.2); */
+/* color: #FFD700; */
