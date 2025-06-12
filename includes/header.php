@@ -8,13 +8,13 @@
  *  - Application title (APP_NAME)
  *  - Database & API status indicators
  *  - Theme toggle
+ *  - Debug toggle (🐞) when DEBUG_MODE=true
  *  - Views navigation
- *  - Customer selection dropdown (glassmorphic)
+ *  - Customer selection dropdown
  */
 
-// Fallbacks in case variables weren’t passed in
-$db_status           = $db_status           ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
-$api_status          = $api_status          ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
+$db_status           = $db_status           ?? ['status'=>'unknown','message'=>'Status not retrieved.'];
+$api_status          = $api_status          ?? ['status'=>'unknown','message'=>'Status not retrieved.'];
 $customers           = $customers           ?? [];
 $current_customer_id = $current_customer_id ?? null;
 $available_views     = $available_views     ?? [];
@@ -23,7 +23,8 @@ $current_view_slug   = $current_view_slug   ?? 'dashboard';
 debug_log("Rendering header", 'DEBUG');
 ?>
 <header class="dashboard-header glassmorphic">
-  <!-- API token for JS calls -->
+
+  <!-- Hidden API token for JS -->
   <input
     type="hidden"
     id="api-token"
@@ -53,29 +54,26 @@ debug_log("Rendering header", 'DEBUG');
         <span class="icon-light">☀️</span>
         <span class="icon-dark">🌙</span>
       </button>
+      <?php if (DEBUG_MODE): ?>
+        <button id="debug-toggle" class="debug-toggle" title="Toggle Debug 🐞">🐞</button>
+      <?php endif; ?>
     </div>
   </div>
 
   <div class="header-bottom">
     <nav class="main-navigation">
       <ul>
-        <?php if (!empty($available_views)): ?>
-          <?php foreach ($available_views as $slug => $label):
-            $active = ($slug === $current_view_slug) ? 'active' : '';
-            $url    = BASE_URL . '?view=' . sanitize_url($slug);
-          ?>
-            <li>
-              <a
-                href="<?php echo sanitize_html($url); ?>"
-                class="<?php echo sanitize_html($active); ?>"
-              >
-                <?php echo sanitize_html($label); ?>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        <?php else: ?>
-          <li><span>No views available</span></li>
-        <?php endif; ?>
+        <?php foreach ($available_views as $slug => $label): 
+          $active = ($slug === $current_view_slug) ? 'active' : '';
+          $url    = BASE_URL . '?view=' . sanitize_url($slug);
+        ?>
+          <li>
+            <a href="<?php echo sanitize_html($url); ?>"
+               class="<?php echo sanitize_html($active); ?>">
+              <?php echo sanitize_html($label); ?>
+            </a>
+          </li>
+        <?php endforeach; ?>
       </ul>
     </nav>
 
@@ -84,19 +82,15 @@ debug_log("Rendering header", 'DEBUG');
       <div class="select-wrapper glassmorphic">
         <select id="customer-select" name="customer_code">
           <option value="">-- Select Customer --</option>
-          <?php if (!empty($customers)): ?>
-            <?php foreach ($customers as $cust):
-              $code = sanitize_html($cust['Code']);
-              $desc = sanitize_html($cust['Description']);
-              $sel  = ($code === $current_customer_id) ? 'selected' : '';
-            ?>
-              <option value="<?php echo $code; ?>" <?php echo $sel; ?>>
-                <?php echo $desc; ?>
-              </option>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <option disabled>No customers available</option>
-          <?php endif; ?>
+          <?php foreach ($customers as $cust):
+            $code = sanitize_html($cust['Code']);
+            $desc = sanitize_html($cust['Description']);
+            $sel  = ($code === $current_customer_id) ? 'selected' : '';
+          ?>
+            <option value="<?php echo $code; ?>" <?php echo $sel; ?>>
+              <?php echo $desc; ?>
+            </option>
+          <?php endforeach; ?>
         </select>
         <input
           type="text"
