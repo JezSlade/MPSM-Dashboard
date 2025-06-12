@@ -23,6 +23,13 @@ $current_view_slug   = $current_view_slug   ?? 'dashboard';
 debug_log("Rendering header", 'DEBUG');
 ?>
 <header class="dashboard-header glassmorphic">
+  <!-- API token for JS calls -->
+  <input
+    type="hidden"
+    id="api-token"
+    value="<?php echo sanitize_html($_SESSION['access_token'] ?? ''); ?>"
+  >
+
   <div class="header-top">
     <div class="app-branding">
       <h1><?php echo sanitize_html(APP_NAME); ?></h1>
