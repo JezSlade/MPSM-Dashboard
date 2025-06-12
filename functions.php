@@ -203,5 +203,17 @@ function getAccessToken(): string {
     }
     return requestNewToken();
 }
+// functions.php (add towards the end, before the final “no closing tag” comment)
+
+/**
+ * render_card – include one of the cards under /cards by name
+ *
+ * @param string $partialName  The basename of the card file (without “.php”)
+ * @param array  $vars         Variables to pass into that card
+ */
+function render_card(string $partialName, array $vars = []): void {
+    // e.g. "printer_status_card" → include "cards/printer_status_card.php"
+    include_partial("cards/{$partialName}.php", $vars);
+}
 
 // End of file – no closing PHP tag

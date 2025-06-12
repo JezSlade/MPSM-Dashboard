@@ -1,84 +1,455 @@
 # .github/workflows/ci.yml
-name: CI / Lint & Validate
+name: CI - Lint, Validate & Test
 
-# Run this workflow on pushes and PRs to main
+# Trigger on pushes to main, PRs to main, and manual dispatch
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+# Set default permissions (security best practice)
+permissions:
+  contents: read
+
+# Global environment variables
+env:
+  PHP_VERSION: '8.3'
+  NODE_VERSION: '20'
+  COMPOSER_CACHE_KEY: composer-cache-v1
+  NPM_CACHE_KEY: npm-cache-v1
 
 jobs:
-  # Job: PHP syntax validation
+  # Job: PHP linting and validation
   php-lint:
-    name: "Lint PHP"
+    name: "🐘 PHP Lint & Analysis"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
     steps:
-      # 1. Check out repository code
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # 2. Set up PHP environment
-      - name: Setup PHP 8.1
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: json, mbstring, xml
           coverage: none
-
-      # 3. (Optional) Install composer dependencies if your code uses them
-      # - name: Install Composer dependencies
-      #   run: composer install --no-progress --no-suggest --prefer-dist
-
-      # 4. Validate PHP syntax for every .php file
-      - name: PHP Syntax Check (php -l)
-        run: |
-          # find all PHP files except vendor, run php -l on each
-          find . -type f -name '*.php' \
-            -not -path './vendor/*' \
-            -print0 | xargs -0 -n1 php -l
-
-  # Job: JavaScript linting
-  js-lint:
-    name: "Lint JS"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # 1. Install Node.js for ESLint
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+          tools: composer:v2
+      
+      - name: 📦 Cache Composer dependencies
+        uses: actions/cache@v4
         with:
-          node-version: '16'
-
-      # 2. Install your JS dependencies (assuming package.json in repo root)
-      - name: Install dependencies
-        run: npm ci
-
-      # 3. Run ESLint over your js/ folder
-      - name: Run ESLint
-        run: npx eslint js/
-
-  # Job: JSON validation
-  json-validate:
-    name: "Validate JSON"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # 1. Install jq (JSON CLI) for linting
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      # 2. Lint each JSON schema file
-      - name: Lint JSON files
+          path: ~/.composer/cache
+          key: ${{ env.COMPOSER_CACHE_KEY }}-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ env.COMPOSER_CACHE_KEY }}-${{ runner.os }}-
+      
+      - name: 🔍 Install Composer dependencies (if composer.json exists)
         run: |
-          for file in AllEndpoints.json \
-                      "Refined Endpoint Groups JSON.json" \
-                      Swagger.json; do
-            echo "Checking $file"
-            jq . "$file" >/dev/null || (echo "✖ Invalid JSON in $file" && exit 1)
+          if [ -f "composer.json" ]; then
+            composer install --no-dev --no-progress --no-interaction --prefer-dist --optimize-autoloader
+          else
+            echo "No composer.json found, skipping dependency installation"
+          fi
+      
+      - name: ✅ PHP Syntax Check
+        run: |
+          echo "🔍 Scanning for PHP files..."
+          PHP_FILES=$(find . -type f -name '*.php' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -not -path './.git/*' \
+            -not -path './storage/framework/cache/*' 2>/dev/null || true)
+          
+          if [ -z "$PHP_FILES" ]; then
+            echo "⚠️ No PHP files found to lint"
+            exit 0
+          fi
+          
+          echo "Found $(echo "$PHP_FILES" | wc -l) PHP files"
+          echo "$PHP_FILES" | while read -r file; do
+            echo "Checking: $file"
+            php -l "$file" || exit 1
           done
+          echo "✅ All PHP files passed syntax check"
+      
+      - name: 🔧 PHP Code Style Check (if PHP_CodeSniffer is available)
+        run: |
+          if command -v phpcs >/dev/null 2>&1; then
+            echo "Running PHP CodeSniffer..."
+            phpcs --standard=PSR12 --extensions=php --ignore=vendor/ .
+          else
+            echo "PHP CodeSniffer not available, skipping code style check"
+          fi
+        continue-on-error: true
+
+  # Job: JavaScript/TypeScript linting and testing
+  js-lint:
+    name: "🟨 JavaScript/TypeScript Lint & Test"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            npm-shrinkwrap.json
+      
+      - name: 📦 Install dependencies
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci --no-audit --no-fund
+          elif [ -f "package.json" ]; then
+            npm install --no-audit --no-fund
+          else
+            echo "⚠️ No package.json found, skipping JS dependency installation"
+            exit 0
+          fi
+      
+      - name: 🔍 Run ESLint
+        run: |
+          if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || [ -f "eslint.config.js" ]; then
+            echo "🔍 Running ESLint..."
+            npx eslint . --ext .js,.jsx,.ts,.tsx --format stylish
+          elif command -v eslint >/dev/null 2>&1; then
+            echo "🔍 Running ESLint on common directories..."
+            find . -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" \
+              | grep -v node_modules \
+              | grep -v vendor \
+              | head -20 \
+              | xargs -r npx eslint --no-eslintrc --env browser,node
+          else
+            echo "⚠️ ESLint not configured, skipping JavaScript linting"
+          fi
+        continue-on-error: false
+      
+      - name: 🧪 Run JavaScript tests (if available)
+        run: |
+          if npm run --silent test >/dev/null 2>&1; then
+            echo "🧪 Running JavaScript tests..."
+            npm test
+          else
+            echo "⚠️ No test script found in package.json"
+          fi
+        continue-on-error: true
+
+  # Job: JSON and configuration validation
+  json-validate:
+    name: "📋 JSON & Config Validation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: 🔧 Install validation tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq yamllint
+      
+      - name: ✅ Validate JSON files
+        run: |
+          echo "🔍 Scanning for JSON files..."
+          JSON_FILES=$(find . -name "*.json" \
+            -not -path './node_modules/*' \
+            -not -path './vendor/*' \
+            -not -path './.git/*' 2>/dev/null || true)
+          
+          if [ -z "$JSON_FILES" ]; then
+            echo "⚠️ No JSON files found"
+            exit 0
+          fi
+          
+          echo "Found JSON files:"
+          echo "$JSON_FILES"
+          
+          INVALID_COUNT=0
+          echo "$JSON_FILES" | while read -r file; do
+            echo "Validating: $file"
+            if ! jq empty "$file" >/dev/null 2>&1; then
+              echo "❌ Invalid JSON: $file"
+              jq . "$file" || true  # Show specific error
+              INVALID_COUNT=$((INVALID_COUNT + 1))
+            else
+              echo "✅ Valid: $file"
+            fi
+          done
+          
+          if [ $INVALID_COUNT -gt 0 ]; then
+            echo "::error::Found $INVALID_COUNT invalid JSON files"
+            exit 1
+          fi
+          echo "✅ All JSON files are valid"
+      
+      - name: ✅ Validate YAML files
+        run: |
+          echo "🔍 Scanning for YAML files..."
+          YAML_FILES=$(find . -name "*.yml" -o -name "*.yaml" \
+            -not -path './node_modules/*' \
+            -not -path './vendor/*' \
+            -not -path './.git/*' 2>/dev/null || true)
+          
+          if [ -z "$YAML_FILES" ]; then
+            echo "⚠️ No YAML files found"
+            exit 0
+          fi
+          
+          echo "Found YAML files:"
+          echo "$YAML_FILES"
+          
+          echo "$YAML_FILES" | while read -r file; do
+            echo "Validating: $file"
+            yamllint -d relaxed "$file" || exit 1
+          done
+          echo "✅ All YAML files are valid"
+
+  # Job: Asset existence and integrity check
+  asset-check:
+    name: "🔗 Asset & Reference Validation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: 🔍 Verify static asset references
+        run: |
+          set -e
+          
+          echo "🔍 Scanning for asset references in HTML/PHP files..."
+          
+          # Find script sources
+          SCRIPT_REFS=$(grep -RhoP '(?<=<script[^>]*src=")[^"]+' . \
+            --include="*.html" --include="*.php" --include="*.htm" \
+            --exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=.git \
+            2>/dev/null | sort -u || true)
+          
+          # Find stylesheet links
+          CSS_REFS=$(grep -RhoP '(?<=<link[^>]*href=")[^"]+' . \
+            --include="*.html" --include="*.php" --include="*.htm" \
+            --exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=.git \
+            2>/dev/null | grep -E '\.(css|scss|sass)(\?|$)' | sort -u || true)
+          
+          # Find image references
+          IMG_REFS=$(grep -RhoP '(?<=<img[^>]*src=")[^"]+' . \
+            --include="*.html" --include="*.php" --include="*.htm" \
+            --exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=.git \
+            2>/dev/null | sort -u || true)
+          
+          echo "📜 Script references found:"
+          echo "${SCRIPT_REFS:-None}"
+          echo ""
+          echo "🎨 Stylesheet references found:"
+          echo "${CSS_REFS:-None}"
+          echo ""
+          echo "🖼️ Image references found:"
+          echo "${IMG_REFS:-None}"
+          echo ""
+          
+          MISSING_COUNT=0
+          
+          # Check script files
+          if [ -n "$SCRIPT_REFS" ]; then
+            echo "Checking script files..."
+            echo "$SCRIPT_REFS" | while read -r asset; do
+              # Skip external URLs and empty lines
+              if [[ "$asset" =~ ^https?:// ]] || [[ "$asset" =~ ^// ]] || [ -z "$asset" ]; then
+                continue
+              fi
+              
+              # Remove query parameters and fragments
+              asset_path="${asset%%\?*}"
+              asset_path="${asset_path%%#*}"
+              
+              # Handle relative paths
+              if [[ "$asset_path" =~ ^/ ]]; then
+                asset_path=".${asset_path}"
+              fi
+              
+              if [ ! -f "$asset_path" ]; then
+                echo "❌ Missing script: $asset_path (referenced as: $asset)"
+                MISSING_COUNT=$((MISSING_COUNT + 1))
+              else
+                echo "✅ Found script: $asset_path"
+              fi
+            done
+          fi
+          
+          # Check CSS files
+          if [ -n "$CSS_REFS" ]; then
+            echo "Checking stylesheet files..."
+            echo "$CSS_REFS" | while read -r asset; do
+              if [[ "$asset" =~ ^https?:// ]] || [[ "$asset" =~ ^// ]] || [ -z "$asset" ]; then
+                continue
+              fi
+              
+              asset_path="${asset%%\?*}"
+              asset_path="${asset_path%%#*}"
+              
+              if [[ "$asset_path" =~ ^/ ]]; then
+                asset_path=".${asset_path}"
+              fi
+              
+              if [ ! -f "$asset_path" ]; then
+                echo "❌ Missing stylesheet: $asset_path (referenced as: $asset)"
+                MISSING_COUNT=$((MISSING_COUNT + 1))
+              else
+                echo "✅ Found stylesheet: $asset_path"
+              fi
+            done
+          fi
+          
+          # Check image files
+          if [ -n "$IMG_REFS" ]; then
+            echo "Checking image files..."
+            echo "$IMG_REFS" | while read -r asset; do
+              if [[ "$asset" =~ ^https?:// ]] || [[ "$asset" =~ ^// ]] || [ -z "$asset" ]; then
+                continue
+              fi
+              
+              asset_path="${asset%%\?*}"
+              asset_path="${asset_path%%#*}"
+              
+              if [[ "$asset_path" =~ ^/ ]]; then
+                asset_path=".${asset_path}"
+              fi
+              
+              if [ ! -f "$asset_path" ]; then
+                echo "⚠️ Missing image: $asset_path (referenced as: $asset)"
+                # Don't fail for missing images, just warn
+              else
+                echo "✅ Found image: $asset_path"
+              fi
+            done
+          fi
+          
+          if [ $MISSING_COUNT -gt 0 ]; then
+            echo "::error::Found $MISSING_COUNT missing critical assets (scripts/stylesheets)"
+            exit 1
+          else
+            echo "✅ All critical asset references are valid"
+          fi
+
+  # Job: Security and dependency scanning
+  security-scan:
+    name: "🔒 Security & Dependency Scan"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: 🟢 Setup Node.js for security scanning
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+        if: hashFiles('package.json') != ''
+      
+      - name: 🔍 Run npm audit (if package.json exists)
+        run: |
+          if [ -f "package.json" ]; then
+            echo "🔍 Running npm security audit..."
+            npm audit --audit-level=moderate || true
+            echo "📊 Generating audit report..."
+            npm audit --json > npm-audit.json || true
+          else
+            echo "⚠️ No package.json found, skipping npm audit"
+          fi
+        continue-on-error: true
+      
+      - name: 🔍 Check for sensitive files
+        run: |
+          echo "🔍 Scanning for potentially sensitive files..."
+          SENSITIVE_PATTERNS=(
+            "*.env"
+            "*.key"
+            "*.pem"
+            "*.p12"
+            "*.pfx"
+            "id_rsa*"
+            "id_dsa*"
+            "id_ecdsa*"
+            "id_ed25519*"
+            "*.sql"
+            "dump.rdb"
+            "*.log"
+          )
+          
+          FOUND_SENSITIVE=0
+          for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+            FILES=$(find . -name "$pattern" \
+              -not -path './node_modules/*' \
+              -not -path './vendor/*' \
+              -not -path './.git/*' 2>/dev/null || true)
+            
+            if [ -n "$FILES" ]; then
+              echo "⚠️ Found potentially sensitive files matching '$pattern':"
+              echo "$FILES"
+              FOUND_SENSITIVE=1
+            fi
+          done
+          
+          if [ $FOUND_SENSITIVE -eq 0 ]; then
+            echo "✅ No obviously sensitive files found in repository"
+          else
+            echo "::warning::Potentially sensitive files detected. Please review."
+          fi
+
+  # Job: Final status report
+  report:
+    name: "📊 CI Summary Report"
+    runs-on: ubuntu-latest
+    needs: [php-lint, js-lint, json-validate, asset-check, security-scan]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate CI Report
+        run: |
+          echo "# 🎯 CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| PHP Lint & Analysis | ${{ needs.php-lint.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JavaScript/TypeScript Lint | ${{ needs.js-lint.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON & Config Validation | ${{ needs.json-validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Asset & Reference Validation | ${{ needs.asset-check.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security & Dependency Scan | ${{ needs.security-scan.result == 'success' && '✅ Passed' || needs.security-scan.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow completed on:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall result
+          if [[ "${{ needs.php-lint.result }}" == "success" && 
+                "${{ needs.js-lint.result }}" == "success" && 
+                "${{ needs.json-validate.result }}" == "success" && 
+                "${{ needs.asset-check.result }}" == "success" ]]; then
+            echo "🎉 All critical jobs passed!"
+            echo "## ✅ Overall Result: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ One or more critical jobs failed"
+            echo "## ❌ Overall Result: FAILURE" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

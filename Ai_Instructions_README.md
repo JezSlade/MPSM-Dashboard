@@ -1,6 +1,8 @@
 # AI AUDIT INSTRUCTIONS
 
 ## HOW TO PERFORM THE AUDIT
+**Perform linted and smoke-test on asset references**
+
 
 ### Step 1: Repository Structure Analysis
 - Examine the overall project structure and organization
