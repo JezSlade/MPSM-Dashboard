@@ -8,7 +8,8 @@ declare(strict_types=1);
  *  2. Wrapped bootstrap in try/catch to expose fatal errors.
  *  3. Safe includes of config.php and functions.php.
  *  4. Inherited error-reporting settings from config.php.
- *  5. Updated JS include to reference js/script.js (correct file).
+ *  5. Passing all variables required by views (including available_views & current_view_slug).
+ *  6. Correct JS reference to js/script.js.
  */
 
 // ─── 0) Enable inline error display ──────────────────────────────────────────
@@ -38,7 +39,7 @@ error_reporting(E_ALL);
 $customers = fetch_customers();
 
 // ─── 4) Handle customer selection ────────────────────────────────────────────
-if (!empty($_POST['customer_code'])) {
+if (! empty($_POST['customer_code'])) {
     $_SESSION['customer_code'] = $_POST['customer_code'];
 }
 
@@ -57,10 +58,11 @@ $available_views = [
 
 // ─── 7) Determine current view slug ─────────────────────────────────────────
 $current_view = $_GET['view'] ?? 'dashboard';
-if (!isset($available_views[$current_view])) {
+if (! isset($available_views[$current_view])) {
     $current_view = 'dashboard';
 }
 
+// ─── 8) Render HTML ─────────────────────────────────────────────────────────
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,13 +70,12 @@ if (!isset($available_views[$current_view])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo sanitize_html(APP_NAME); ?></title>
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Updated to actual JS file name -->  
     <script src="js/script.js" defer></script>
 </head>
 <body>
 
 <?php
-// ─── Render header partial ───────────────────────────────────────────────────
+// ─── 9) Header ───────────────────────────────────────────────────────────────
 include_partial('includes/header.php', [
     'app_name'            => APP_NAME,
     'customers'           => $customers,
@@ -86,7 +87,7 @@ include_partial('includes/header.php', [
 ?>
 
 <?php
-// ─── Render CardEditor component safely ─────────────────────────────────────
+// ─── 10) CardEditor ─────────────────────────────────────────────────────────
 $cardEditorPath = __DIR__ . '/includes/CardEditor.php';
 if (file_exists($cardEditorPath)) {
     require_once $cardEditorPath;
@@ -98,7 +99,7 @@ if (file_exists($cardEditorPath)) {
 ?>
 
 <?php if (DEBUG_MODE): ?>
-    <!-- ─── Debug Panel ────────────────────────────────────────────────────── -->
+    <!-- ─── 11) Debug Panel ─────────────────────────────────────────────────── -->
     <div id="debug-panel" class="hidden">
         <h4>🐞 Debug Log (<?php echo date('Y-m-d'); ?>)</h4>
         <pre><?php
@@ -113,16 +114,18 @@ if (file_exists($cardEditorPath)) {
 <?php endif; ?>
 
 <?php
-// ─── Render main view template ───────────────────────────────────────────────
+// ─── 12) Main View ─────────────────────────────────────────────────────────
 include_partial("views/{$current_view}.php", [
     'customers'           => $customers,
     'current_customer_id' => $_SESSION['customer_code'] ?? null,
     'api_status'          => $api_status,
+    'available_views'     => $available_views,
+    'current_view_slug'   => $current_view,
 ]);
 ?>
 
 <?php
-// ─── Render footer partial ───────────────────────────────────────────────────
+// ─── 13) Footer ─────────────────────────────────────────────────────────────
 include_partial('includes/footer.php');
 ?>
 
@@ -137,6 +140,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
 </body>
 </html>
