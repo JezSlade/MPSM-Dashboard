@@ -6,6 +6,7 @@
 - Scan all files for any constants they reference and ensure each is defined in config.php, or flag missing ones.
 - When auditing, grep all PHP view and include files for bare constant names (e.g. anything matching /[A-Z_]{2,}/) and ensure each one is defined in config.php. Flag any missing constants.
 - Identify and flag any instances of redundant code or unnecessary operations, such as redundant sanitization on internally generated strings or minor logical inefficiencies, even if they do not cause functional errors or security vulnerabilities.
+- When proposing any changes that involve file system operations (creating new files, deleting files, moving or renaming existing files, or updating existing files), explicitly list all such operations at the beginning of the response. For each new file, provide its exact relative path. Clearly distinguish between new files and modifications to existing ones. Consolidate these file system instructions before presenting the corresponding code blocks.
 - 
 ### Step 1: Repository Structure Analysis
 - Examine the overall project structure and organization
