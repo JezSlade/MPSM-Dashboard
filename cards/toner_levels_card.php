@@ -1,27 +1,41 @@
 <?php
 /**
- * Toner Levels Card
+ * Toner Levels Card Component
+ *
+ * This card displays an overview of toner levels for a customer's printers.
+ *
+ * @param array $_data Associative array containing:
+ * - 'customer_id': The ID of the currently selected customer.
+ * - 'card_title': Title for the card.
+ * - 'toner_data': An associative array of toner colors (black, cyan, magenta, yellow) and their percentage levels.
+ * - 'low_threshold': The percentage threshold below which toner is considered low.
  */
-$cid   = $customer_id   ?? 'N/A';
-$title = $card_title    ?? 'Toner Levels';
-$data  = $toner_data    ?? ['black'=>0,'cyan'=>0,'magenta'=>0,'yellow'=>0];
-$th    = isset($low_threshold) ? (int)$low_threshold : 20;
-debug_log("Rendering Toner Levels Card for {$cid}", 'DEBUG');
+// Access data passed from render_view via $_data
+$customer_id = $_data['customer_id'] ?? null;
+$card_title = $_data['card_title'] ?? 'Toner Levels';
+$toner_data = $_data['toner_data'] ?? [
+    'black' => 0, 'cyan' => 0, 'magenta' => 0, 'yellow' => 0
+];
+$low_threshold = $_data['low_threshold'] ?? 20; // Default low threshold
 ?>
+
 <div class="card toner-levels-card">
-  <h3><?php echo sanitize_html($title); ?></h3>
-  <?php if($cid!=='N/A'): ?><p class="card-subtitle">Customer: <?php echo sanitize_html($cid); ?></p><?php endif; ?>
-  <ul class="toner-list">
-    <?php foreach($data as $c=>$lvl):
-      $warn = $lvl < $th ? 'low' : '';
-    ?>
-      <li class="toner-item <?php echo sanitize_html($warn); ?>">
-        <span class="toner-color"><?php echo ucfirst(sanitize_html($c)); ?>:</span>
-        <span class="toner-level"><?php echo sanitize_html((string)$lvl); ?>%</span>
-      </li>
-    <?php endforeach; ?>
-  </ul>
-  <?php if(min($data) < $th): ?>
-    <p class="toner-warning">⚠️ Some toners below <?php echo sanitize_html((string)$th); ?>%</p>
-  <?php endif; ?>
+  <h3><?php echo sanitize_html($card_title); ?></h3>
+  <div class="card-content">
+    <ul>
+      <?php foreach ($toner_data as $color => $level):
+        $status_class = ($level <= $low_threshold) ? 'toner-low' : 'toner-ok';
+      ?>
+        <li class="<?= sanitize_html($status_class) ?>">
+          <?php echo sanitize_html(ucfirst($color)); ?>: <strong><?php echo sanitize_html($level); ?>%</strong>
+          <?php if ($level <= $low_threshold): ?>
+            <span class="warning-icon">&#9888; Low!</span>
+          <?php endif; ?>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+  <div class="card-actions">
+    <a href="#" class="small-button view-details-button">View Details</a>
+  </div>
 </div>

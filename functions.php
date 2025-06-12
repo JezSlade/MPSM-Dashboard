@@ -1,217 +1,128 @@
 <?php
 /**
- * functions.php
+ * Global Utility Functions
+ */
+
+// BASE_URL is now defined in includes/config.php
+
+/**
+ * Sanitizes HTML output to prevent XSS.
  *
- * Helpers: output buffering, debug logging, templating, sanitizers,
- * JSON responses, OAuth2 token mgmt, data fetching, and card rendering.
+ * @param string $string The string to sanitize.
+ * @return string The sanitized string.
  */
-
-// Start output buffering
-if (function_exists('ob_start')) ob_start();
-
-// Globals for debug
-$debug_log_entries = [];
-if (!isset($GLOBALS['debug_messages'])) {
-    $GLOBALS['debug_messages'] = [];
+function sanitize_html($string) {
+    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
 }
 
 /**
- * Logs a message and mirrors it to the footer panel.
+ * Renders a view file.
+ *
+ * @param string $view_path The path to the view file (e.g., 'views/dashboard.php').
+ * @param array $data An associative array of data to pass to the view.
  */
-function debug_log(string $message, string $level = 'INFO'): void
-{
-    global $debug_log_entries;
-    $level = strtoupper($level);
-    $levels = defined('DEBUG_LOG_LEVELS') ? DEBUG_LOG_LEVELS : [];
+function render_view($view_path, array $data = []) {
+    // Start output buffering to capture the view's content
+    ob_start();
 
-    $should = in_array($level, ['ERROR','CRITICAL','SECURITY'], true)
-           || (DEBUG_MODE && ($levels[$level] ?? false));
-    if (!$should) return;
+    // Ensure the view file exists before including it
+    if (file_exists($view_path)) {
+        // Make $data available to the view via a local variable
+        // The view file can now access variables like $data['key']
+        $_data = $data; // Use a distinct variable name to avoid collision with view-level variables if any
 
-    $entry = ['time'=>date('Y-m-d H:i:s'),'level'=>$level,'message'=>$message];
-    $debug_log_entries[] = $entry;
-    $formatted = "[{$entry['time']}] [{$entry['level']}] {$entry['message']}";
-    $GLOBALS['debug_messages'][] = $formatted;
+        include $view_path;
+    } else {
+        debug_log("View file not found: " . $view_path, 'ERROR');
+        // Optionally, render a 404 view or an error message
+        echo "<p class=\"error\">Error: View could not be loaded.</p>";
+    }
 
-    if (DEBUG_LOG_TO_FILE) {
-        $file = DEBUG_LOG_FILE; $dir = dirname($file);
-        if (!is_dir($dir)) mkdir($dir,0755,true);
-        if ((MAX_DEBUG_LOG_SIZE_MB ?? 0) > 0
-            && file_exists($file)
-            && filesize($file)/(1024*1024) > MAX_DEBUG_LOG_SIZE_MB
-        ) {
-            file_put_contents($file, "--- Truncated ---\n", LOCK_EX);
+    // End output buffering and return the content
+    ob_end_flush(); // Or ob_get_clean() if you want to return the content as a string
+}
+
+/**
+ * Renders a card component.
+ *
+ * @param string $card_slug The slug of the card to render (e.g., 'printer_status_card').
+ * @param array $data An associative array of data to pass to the card.
+ */
+function render_card($card_slug, array $data = []) {
+    // Whitelist for card slugs to prevent arbitrary file inclusion for PoC
+    $allowed_card_slugs = ['printer_status_card', 'toner_levels_card'];
+    if (!in_array($card_slug, $allowed_card_slugs)) {
+        debug_log("Attempted to render invalid card: " . $card_slug, 'WARNING');
+        return; // Do not render if not whitelisted
+    }
+
+    $card_path = 'cards/' . $card_slug . '.php';
+    render_view($card_path, $data);
+}
+
+/**
+ * Simple logging function.
+ *
+ * @param string $message The message to log.
+ * @param string $level The log level (INFO, WARNING, ERROR, DEBUG, SECURITY).
+ */
+function debug_log($message, $level = 'INFO') {
+    // Configuration values for logging (from config.php)
+    $log_levels = [
+        'INFO' => LOG_INFO,
+        'WARNING' => LOG_WARNING,
+        'ERROR' => LOG_ERROR,
+        'DEBUG' => LOG_DEBUG,
+        'SECURITY' => LOG_SECURITY,
+    ];
+
+    // Check if logging is enabled for this level
+    if (isset($log_levels[$level]) && $log_levels[$level] === true) {
+        $timestamp = date('Y-m-d H:i:s');
+        $log_entry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
+
+        // Log to debug panel (in-browser) if enabled
+        if (DEBUG_PANEL_ENABLED) {
+            if (!isset($_SESSION['debug_log']) || !is_array($_SESSION['debug_log'])) {
+                $_SESSION['debug_log'] = [];
+            }
+            $_SESSION['debug_log'][] = $log_entry;
+            // Trim log to avoid excessive memory usage in session
+            while (count($_SESSION['debug_log']) > 500) { // Keep last 500 entries
+                array_shift($_SESSION['debug_log']);
+            }
         }
-        file_put_contents($file, $formatted."\n", FILE_APPEND|LOCK_EX);
-    }
-    if (in_array($level, ['ERROR','CRITICAL','SECURITY'], true)) {
-        error_log("[MPSM_APP_LOG][$level] $message");
-    }
-}
 
-/**
- * Includes a PHP partial, passing in $data.
- */
-function include_partial(string $relativePath, array $data = []): bool
-{
-    $full = APP_BASE_PATH . $relativePath;
-    if (!file_exists($full)) {
-        debug_log("Partial not found: $full", 'WARNING');
-        if (DEBUG_MODE) {
-            echo "<div class='warning-banner'>WARNING: Partial '{$relativePath}' missing.</div>";
+        // Log to file if enabled
+        if (DEBUG_LOG_TO_FILE) {
+            $log_file = LOG_FILE_PATH; // Use the constant for log file path
+            // Check log file size and rotate if necessary
+            if (file_exists($log_file) && filesize($log_file) > (MAX_DEBUG_LOG_SIZE_MB * 1024 * 1024)) {
+                rename($log_file, $log_file . '.' . date('YmdHis') . '.old');
+            }
+            file_put_contents($log_file, $log_entry, FILE_APPEND);
         }
-        return false;
     }
-    extract($data, EXTR_SKIP);
-    include $full;
-    debug_log("Included partial: {$relativePath}", 'DEBUG');
-    return true;
-}
-
-// Sanitizers
-function sanitize_html(string $s): string {
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-}
-function sanitize_url(string $s): string {
-    $slug = preg_replace('/[^a-zA-Z0-9_-]/','',$s);
-    return strtolower(trim(preg_replace('/[-_]+/','-',$slug),'-_'));
-}
-function sanitize_int($i): int {
-    $v = filter_var($i, FILTER_VALIDATE_INT);
-    return $v!==false ? (int)$v : 0;
 }
 
 /**
- * Sends JSON response and exits.
+ * Renders the debug panel HTML.
  */
-function respond_json($data): void
-{
-    if (ob_get_length()!==false) ob_clean();
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
-}
-
-// OAuth2 token mgmt
-define('ENV_FILE',        __DIR__ . '/.env');
-define('TOKEN_CACHE_FILE',__DIR__ . '/logs/token_cache.json');
-
-function loadEnv(): void
-{
-    if (!file_exists(ENV_FILE) || !is_readable(ENV_FILE)) {
-        throw new RuntimeException("Cannot load .env");
+function render_debug_panel() {
+    echo '<div id="debug-panel" class="debug-panel hidden">';
+    echo '<div class="debug-header">';
+    echo '<h3>Debug Log <button id="debug-toggle" class="debug-button">Toggle</button></h3>';
+    echo '</div>';
+    echo '<div class="debug-content">';
+    echo '<pre class="debug-log-output">';
+    if (isset($_SESSION['debug_log']) && is_array($_SESSION['debug_log'])) {
+        foreach ($_SESSION['debug_log'] as $entry) {
+            echo sanitize_html($entry);
+        }
+    } else {
+        echo 'No debug messages yet.';
     }
-    foreach (file(ENV_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $l) {
-        $l = trim($l);
-        if ($l==='' || $l[0]==='#') continue;
-        [$k,$v] = explode('=',$l,2)+[1=>''];
-        $_ENV[trim($k)] = trim($v);
-    }
-    debug_log(".env loaded into \$_ENV", 'DEBUG');
-}
-
-function loadCachedToken(): ?array
-{
-    if (!file_exists(TOKEN_CACHE_FILE)) return null;
-    $d = json_decode(file_get_contents(TOKEN_CACHE_FILE), true) ?: [];
-    if (empty($d['access_token'])||empty($d['expires_at'])||time()>= $d['expires_at']) return null;
-    debug_log("Using cached token", 'DEBUG');
-    return $d;
-}
-
-function cacheToken(string $t, int $e): void
-{
-    $p = ['access_token'=>$t,'expires_at'=>time()+$e-30];
-    $dir = dirname(TOKEN_CACHE_FILE);
-    if (!is_dir($dir)) mkdir($dir,0755,true);
-    file_put_contents(TOKEN_CACHE_FILE, json_encode($p,JSON_PRETTY_PRINT));
-    debug_log("Cached new token", 'DEBUG');
-}
-
-function requestNewToken(): array
-{
-    loadEnv();
-    foreach (['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','TOKEN_URL'] as $k) {
-        if (empty($_ENV[$k])) throw new RuntimeException("Missing \${$k} in .env");
-    }
-    $form = http_build_query([
-        'grant_type'=>'password',
-        'client_id'=>$_ENV['CLIENT_ID'],
-        'client_secret'=>$_ENV['CLIENT_SECRET'],
-        'username'=>$_ENV['USERNAME'],
-        'password'=>$_ENV['PASSWORD'],
-        'scope'=>$_ENV['SCOPE']??''
-    ]);
-    debug_log("Requesting token from {$_ENV['TOKEN_URL']}", 'DEBUG');
-    $ch = curl_init($_ENV['TOKEN_URL']);
-    curl_setopt_array($ch,[
-        CURLOPT_POST=>true,
-        CURLOPT_POSTFIELDS=>$form,
-        CURLOPT_RETURNTRANSFER=>true,
-        CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded'],
-        CURLOPT_FOLLOWLOCATION=>true,
-        CURLOPT_MAXREDIRS=>3,
-    ]);
-    $r = curl_exec($ch);
-    if ($r===false) { $e=curl_error($ch); curl_close($ch); throw new RuntimeException($e); }
-    $c = curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-    if ($c!==200) throw new RuntimeException("Token HTTP $c: $r");
-    $j = json_decode($r,true);
-    debug_log("Received new token", 'DEBUG');
-    return $j;
-}
-
-function getAccessToken(): string
-{
-    debug_log("getAccessToken() called", 'DEBUG');
-    $c = loadCachedToken();
-    if ($c) return $c['access_token'];
-    $j = requestNewToken();
-    cacheToken($j['access_token'], (int)$j['expires_in']);
-    return $j['access_token'];
-}
-
-/**
- * Fetch customer list.
- */
-function fetch_customers(?string $dealerCode=null): array
-{
-    loadEnv();
-    if (!$dealerCode) {
-        if (empty($_ENV['DEALER_CODE'])) throw new RuntimeException("Missing DEALER_CODE");
-        $dealerCode = $_ENV['DEALER_CODE'];
-    }
-    debug_log("fetch_customers({$dealerCode})", 'DEBUG');
-    $token = getAccessToken();
-    $url   = MPSM_API_BASE_URL . 'Customer/GetCustomers';
-    $p     = ['DealerCode'=>$dealerCode,'Code'=>null,'HasHpSds'=>null,'FilterText'=>null,
-              'PageNumber'=>1,'PageRows'=>2147483647,'SortColumn'=>'Id','SortOrder'=>0];
-    $ch = curl_init($url);
-    curl_setopt_array($ch,[
-        CURLOPT_RETURNTRANSFER=>true,
-        CURLOPT_HTTPHEADER=>[
-          'Content-Type: application/json',
-          'Authorization: Bearer '.$token
-        ],
-        CURLOPT_POST=>true,
-        CURLOPT_POSTFIELDS=>json_encode($p),
-        CURLOPT_FOLLOWLOCATION=>true,
-        CURLOPT_MAXREDIRS=>3
-    ]);
-    $r = curl_exec($ch);
-    if ($r===false) { $e=curl_error($ch); curl_close($ch); debug_log($e,'ERROR'); return []; }
-    $c = curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-    if ($c!==200) { debug_log("HTTP $c: $r",'ERROR'); return []; }
-    $d = json_decode($r,true)?:[];
-    debug_log("fetch_customers returned ".count($d['Result']??[]),'DEBUG');
-    return $d['Result'] ?? [];
-}
-
-/**
- * Include a card partial.
- */
-function render_card(string $name, array $data): void
-{
-    debug_log("Rendering card: {$name}", 'DEBUG');
-    include_partial("cards/{$name}.php", $data);
+    echo '</pre>';
+    echo '</div>';
+    echo '</div>';
 }

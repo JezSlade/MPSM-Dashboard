@@ -2,6 +2,11 @@
 /**
  * Dashboard Overview View
  */
+// Access data passed from render_view via $_data
+$available_views = $_data['available_views'] ?? [];
+$current_view_slug = $_data['current_view_slug'] ?? 'dashboard';
+$selected_customer_id = $_data['selected_customer_id'] ?? null;
+
 $cid = $selected_customer_id ?? null;
 debug_log("Loading Dashboard view. Customer: ".($cid??'None'), 'INFO');
 ?>
