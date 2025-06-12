@@ -8,8 +8,9 @@
  * - Application title (APP_NAME)
  * - Database & API status indicators
  * - Theme toggle
- * - Views navigation (NOTE: Navigation moved to includes/navigation.php)
  * - Customer selection dropdown (glassmorphic)
+ *
+ * NOTE: Navigation is handled by includes/navigation.php
  */
 
 // Fallbacks in case variables weren’t passed in
@@ -17,7 +18,7 @@ $db_status           = $db_status           ?? ['status' => 'unknown', 'message'
 $api_status          = $api_status          ?? ['status' => 'unknown', 'message' => 'Status not retrieved.'];
 $customers           = $customers           ?? [];
 $current_customer_id = $current_customer_id ?? null;
-$available_views     = $available_views     ?? [];
+$available_views     = $available_views     ?? []; // Still available for APP_NAME/title, but not used by this header for nav
 $current_view_slug   = $current_view_slug   ?? 'dashboard';
 
 debug_log("Rendering header", 'DEBUG');
@@ -49,7 +50,7 @@ debug_log("Rendering header", 'DEBUG');
                     <div class="status-item api-status">
                         <span
                             class="status-dot status-<?php echo sanitize_html($api_status['status']); ?>"
-                            title="API: <?php echo sanitize_html($api_status['message']); ?>"
+                            title="API: Status not retrieved."
                         ></span>
                         <span>API</span>
                     </div>
@@ -62,7 +63,6 @@ debug_log("Rendering header", 'DEBUG');
 
             <div class="header-bottom">
                 <div class="customer-selection">
-                    <label for="customer-select" class="sr-only">Select Customer</label>
                     <div class="select-wrapper glassmorphic">
                         <select id="customer-select" name="customer_code">
                             <option value="">-- Select Customer --</option>
@@ -88,8 +88,7 @@ debug_log("Rendering header", 'DEBUG');
                             aria-label="Search customer"
                         >
                     </div>
-                    <button id="apply-customer-filter" class="cta-button">Apply Filter</button>
-                </div>
+                    </div>
             </div>
         </header>
 
