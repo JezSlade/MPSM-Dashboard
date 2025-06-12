@@ -1,107 +1,113 @@
 <?php
-declare(strict_types=1);
 /**
- * config.php – single‐point bootstrap for environment, error reporting,
- *               session, and application constants, with no external library dependencies.
+ * config.php
  *
- * Patches applied:
- *  - Added DEBUG_PANEL_ENABLED constant (from .env or default = false).
- *  - Added DEBUG_LOG_TO_FILE and MAX_DEBUG_LOG_SIZE_MB flags for future use.
- *  - Manual .env parsing ensures $_ENV contains DEBUG_PANEL_ENABLED. :contentReference[oaicite:3]{index=3}
- *  - Full E_ALL reporting always on for dev.
+ * Loads .env, defines constants, auto-detects version, and configures paths/debug/API.
  */
 
-// ─── 1) EARLY ERROR REPORTING ─────────────────────────────────────────────────
-ini_set('display_errors',        '1');
-ini_set('display_startup_errors','1');
-error_reporting(E_ALL);
-
-// ─── 2) MANUAL .env PARSING ───────────────────────────────────────────────────
-$envPath = __DIR__ . '/.env';
-if (is_readable($envPath)) {
-    foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
-            continue;
-        }
-        [$name, $value] = explode('=', $line, 2);
-        $_ENV[trim($name)] = trim($value);
-    }
+// 1) Parse .env
+$envFile = __DIR__ . '/.env';
+if (!file_exists($envFile) || !is_readable($envFile)) {
+    throw new RuntimeException("Cannot load .env at {$envFile}");
+}
+$env = [];
+foreach (file($envFile, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
+    $line = trim($line);
+    if ($line === '' || $line[0] === '#') continue;
+    if (strpos($line, '=') === false) continue;
+    list($k, $v) = explode('=', $line, 2);
+    $env[trim($k)] = trim($v);
 }
 
-// ─── 3) DEBUG FLAGS ───────────────────────────────────────────────────────────
-// Turn debug mode on/off
-define('DEBUG_MODE',
-    filter_var($_ENV['DEBUG_MODE'] ?? 'false', FILTER_VALIDATE_BOOLEAN)
-);
+// Helper to define constants from .env
+function define_env(string $key, $default = ''): void {
+    global $env;
+    $val = $env[$key] ?? $default;
+    define($key, $val);
+}
 
-// Show or hide the debug‐panel in your footer. :contentReference[oaicite:4]{index=4}
-define('DEBUG_PANEL_ENABLED',
-    filter_var($_ENV['DEBUG_PANEL_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN)
-);
+// 2) Environment constants
+define_env('CLIENT_ID');
+define_env('CLIENT_SECRET');
+define_env('USERNAME');
+define_env('PASSWORD');
+define_env('SCOPE');
+define_env('TOKEN_URL');
+define_env('DEALER_CODE');
+define_env('DEALER_ID');
 
-// If you later decide to log debug messages to file:
-define('DEBUG_LOG_TO_FILE',
-    filter_var($_ENV['DEBUG_LOG_TO_FILE'] ?? 'false', FILTER_VALIDATE_BOOLEAN)
-);
+// 3) APP_NAME + Version
+define_env('APP_NAME', 'MPSM Dashboard');
+$version = '';
+$versionJs = __DIR__ . '/version.js';
+if (file_exists($versionJs) && preg_match('/version\s*[:=]\s*[\'"]([^\'"]+)[\'"]/', file_get_contents($versionJs), $m)) {
+    $version = $m[1];
+}
+if (!$version && !empty($env['APP_VERSION'])) {
+    $version = $env['APP_VERSION'];
+}
+if (!$version) {
+    $version = date('YmdHis');
+}
+define('APP_VERSION', $version);
 
-// Max size in MB for rotating debug log files:
-define('MAX_DEBUG_LOG_SIZE_MB',
-    (int) ($_ENV['MAX_DEBUG_LOG_SIZE_MB'] ?? 5)
-);
+// 4) BASE_URL from .env (if set)
+if (!empty($env['BASE_URL'])) {
+    define('BASE_URL', $env['BASE_URL']);
+}
 
-// ─── 4) RE-APPLY ERROR REPORTING BASED ON DEBUG_MODE ─────────────────────────
-ini_set('display_errors',        '1');
-ini_set('display_startup_errors','1');
-error_reporting(E_ALL);
+// 5) Auto-detect BASE_URL otherwise
+if (!defined('BASE_URL') || BASE_URL === '') {
+    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+    $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $uri   = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+    define('BASE_URL', $proto . $host . $uri . '/');
+}
 
-// ─── 5) SECURE SESSION STARTUP ──────────────────────────────────────────────
-session_set_cookie_params([
-    'httponly' => true,
-    'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
-    'samesite' => 'Strict',
+// 6) Other paths
+define('APP_BASE_PATH', __DIR__ . DIRECTORY_SEPARATOR);
+define('CSS_PATH',      'css/');
+define('JS_PATH',       'js/');
+define('VIEWS_PATH',    APP_BASE_PATH . 'views' . DIRECTORY_SEPARATOR);
+define('CARDS_PATH',    APP_BASE_PATH . 'cards' . DIRECTORY_SEPARATOR);
+define('INCLUDES_PATH', APP_BASE_PATH . 'includes' . DIRECTORY_SEPARATOR);
+
+// 7) Debug settings
+define('DEBUG_MODE',          filter_var($env['DEBUG_MODE']          ?? 'true', FILTER_VALIDATE_BOOLEAN));
+define('DEBUG_PANEL_ENABLED', filter_var($env['DEBUG_PANEL_ENABLED'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
+define('DEBUG_LOG_FILE',      APP_BASE_PATH . 'logs' . DIRECTORY_SEPARATOR . 'debug.log');
+define('DEBUG_LOG_TO_FILE',   filter_var($env['DEBUG_LOG_TO_FILE']   ?? 'true', FILTER_VALIDATE_BOOLEAN));
+define('MAX_DEBUG_LOG_SIZE_MB', intval($env['MAX_DEBUG_LOG_SIZE_MB'] ?? 5));
+define('DEBUG_LOG_LEVELS', [
+    'INFO'     => filter_var($env['LOG_INFO']     ?? 'true', FILTER_VALIDATE_BOOLEAN),
+    'WARNING'  => filter_var($env['LOG_WARNING']  ?? 'true', FILTER_VALIDATE_BOOLEAN),
+    'ERROR'    => filter_var($env['LOG_ERROR']    ?? 'true', FILTER_VALIDATE_BOOLEAN),
+    'DEBUG'    => filter_var($env['LOG_DEBUG']    ?? 'true', FILTER_VALIDATE_BOOLEAN),
+    'SECURITY' => filter_var($env['LOG_SECURITY'] ?? 'true', FILTER_VALIDATE_BOOLEAN),
 ]);
+
+// 8) API Base URL
+define('MPSM_API_BASE_URL', $env['MPSM_API_BASE_URL'] ?? 'https://api.abassetmanagement.com/api3/');
+
+// 9) Error reporting
+if (DEBUG_MODE) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 'On');
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 'Off');
+}
+
+// 10) Timezone
+date_default_timezone_set($env['TIMEZONE'] ?? 'America/New_York');
+
+// 11) Session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ─── 6) APPLICATION CONSTANTS ────────────────────────────────────────────────
-define('APP_NAME',      $_ENV['APP_NAME']      ?? 'MPSM Dashboard');
-define('APP_VERSION',   $_ENV['APP_VERSION']   ?? '1.0.0');
-define('SITE_BASE_URL', rtrim($_ENV['SITE_BASE_URL'] ?? '/', '/') . '/');
-define('API_BASE_URL',  rtrim(
-    $_ENV['API_BASE_URL'] ?? 'https://api.abassetmanagement.com/api3/',
-    '/'
-) . '/');
-define('BASE_URL', SITE_BASE_URL); // legacy alias
-
-// OAuth2 / API credentials
-define('CLIENT_ID',       $_ENV['CLIENT_ID']       ?? '');
-define('CLIENT_SECRET',   $_ENV['CLIENT_SECRET']   ?? '');
-define('USERNAME',        $_ENV['USERNAME']        ?? '');
-define('PASSWORD',        $_ENV['PASSWORD']        ?? '');
-define('SCOPE',           $_ENV['SCOPE']           ?? '');
-define('TOKEN_URL',       $_ENV['TOKEN_URL']       ?? '');
-
-// Dealer configuration
-define('DEALER_CODE',     $_ENV['DEALER_CODE']     ?? '');
-define('DEALER_ID',       $_ENV['DEALER_ID']       ?? '');
-
-// Pagination default
-define('DEVICE_PAGE_SIZE', (int) ($_ENV['DEVICE_PAGE_SIZE'] ?? 50));
-
-// ─── 7) VALIDATE ESSENTIAL CONFIG ───────────────────────────────────────────
-$missing = [];
-if (!CLIENT_ID)     $missing[] = 'CLIENT_ID';
-if (!CLIENT_SECRET) $missing[] = 'CLIENT_SECRET';
-if (!DEALER_CODE)   $missing[] = 'DEALER_CODE';
-
-if (!empty($missing)) {
-    $msg = 'Missing essential .env variables: ' . implode(', ', $missing);
-    if (DEBUG_MODE) {
-        throw new RuntimeException($msg);
-    }
-    error_log("⚠️ config.php warning: {$msg}");
+// 12) Ensure logs directory
+if (DEBUG_LOG_TO_FILE) {
+    $logDir = dirname(DEBUG_LOG_FILE);
+    if (!is_dir($logDir)) mkdir($logDir, 0755, true);
 }
-
-// End of config.php – no closing PHP tag to prevent accidental output
