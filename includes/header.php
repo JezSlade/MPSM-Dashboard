@@ -27,17 +27,15 @@ debug_log("Rendering header", 'DEBUG');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo sanitize_html(APP_NAME); ?></title> <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <script src="js/main.js" defer></script>
-    <script src="js/dashboard.js" defer></script>
-</head>
+    <title><?php echo sanitize_html(APP_NAME); ?></title>
+    <link rel="stylesheet" href="css/styles.css"> <script src="js/script.js" defer></script> </head>
 <body>
     <div id="wrapper">
         <header class="dashboard-header glassmorphic">
             <div class="header-top">
                 <div class="app-branding">
-                    <h1><?php echo sanitize_html(APP_NAME); ?></h1> </div>
+                    <h1><?php echo sanitize_html(APP_NAME); ?></h1>
+                </div>
                 <div class="status-indicators">
                     <div class="status-item db-status">
                         <span
@@ -66,7 +64,7 @@ debug_log("Rendering header", 'DEBUG');
                         <?php if (!empty($available_views)): ?>
                             <?php foreach ($available_views as $slug => $label):
                                 $active = ($slug === $current_view_slug) ? 'active' : '';
-                                $url    = BASE_URL . '?view=' . urlencode($slug); // CORRECTED: Replaced sanitize_url with urlencode
+                                $url    = BASE_URL . '?view=' . urlencode($slug);
                             ?>
                                 <li>
                                     <a

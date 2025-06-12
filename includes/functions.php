@@ -28,7 +28,7 @@ function render_view($view_path, array $data = []) {
     // Ensure the view file exists before including it
     if (file_exists($view_path)) {
         // Make $data available to the view via a local variable
-        // The view file can now access variables like $data['key']
+        // The view file can now access variables like $_data['key']
         $_data = $data; // Use a distinct variable name to avoid collision with view-level variables if any
 
         include $view_path;

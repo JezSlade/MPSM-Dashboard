@@ -18,7 +18,7 @@ if (session_status() == PHP_SESSION_NONE) {
 // Load configuration and utility functions
 require_once 'includes/config.php'; // This should load constants from .env
 require_once 'includes/constants.php'; // For other general constants if any
-require_once 'includes/functions.php'; // <-- ENSURE THIS FILE IS IN includes/
+require_once 'includes/functions.php'; // Ensure this file is in includes/
 
 // Basic routing logic
 $current_view_slug = $_GET['view'] ?? 'dashboard';
@@ -49,6 +49,7 @@ if ($selected_customer_id) {
 }
 
 // Include header
+// Note: header.php now takes additional data for dynamic content
 include_once 'includes/header.php';
 
 // Include navigation

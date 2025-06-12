@@ -48,7 +48,7 @@ if (!defined('APP_VERSION')) {
     define('APP_VERSION', getenv('APP_VERSION') ?: '0.0.0');
 }
 
-// Application Name (New)
+// Application Name
 if (!defined('APP_NAME')) {
     define('APP_NAME', getenv('APP_NAME') ?: 'Application');
 }

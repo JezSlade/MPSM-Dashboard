@@ -8,4 +8,4 @@
         <li><a href="?logout=true">Logout</a></li>
     </ul>
 </nav>
-<main></main>
+<main>
