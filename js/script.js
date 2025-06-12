@@ -20,30 +20,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (themeToggleBtn && body) {
         console.log('Theme toggle button found. Initializing theme functionality.');
-        themeToggleBtn.addEventListener('click', () => {
-            body.classList.toggle('light-mode');
-            const newTheme = body.classList.contains('light-mode') ? 'light' : 'dark';
-            console.log('Theme switched to:', newTheme);
-            localStorage.setItem('dashboardTheme', newTheme);
-        });
 
-        // Load persisted theme
-        const savedTheme = localStorage.getItem('dashboardTheme');
-        if (savedTheme === 'light') {
-            body.classList.add('light-mode');
-            console.log('Applied saved light theme.');
+        // Function to set the theme based on local storage or system preference
+        function applyTheme(theme) {
+            console.log('Applying theme:', theme);
+            if (theme === 'dark') {
+                body.classList.remove('theme-light');
+                body.classList.add('theme-dark');
+            } else {
+                body.classList.remove('theme-dark');
+                body.classList.add('theme-light');
+            }
+            localStorage.setItem('mpsm_theme', theme); // Save preference
+            console.log('Theme applied and saved to localStorage:', theme);
         }
+
+        // Check for saved theme preference or system preference on load
+        const savedTheme = localStorage.getItem('mpsm_theme');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+            console.log('Loaded theme from localStorage:', savedTheme);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            // Check for system dark mode preference
+            applyTheme('dark');
+            console.log('Applying system dark mode preference.');
+        } else {
+            // Default to light theme if no preference found
+            applyTheme('light'); // Explicitly set light as default if no dark preference
+            console.log('Defaulting to light theme.');
+        }
+
+        // Add event listener for theme toggle button
+        themeToggleBtn.addEventListener('click', function() {
+            const currentTheme = body.classList.contains('theme-dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            console.log('Theme toggled from', currentTheme, 'to', newTheme);
+        });
+    } else {
+        console.warn('Theme toggle button or body element not found. Theme functionality skipped.');
     }
 
-
     // --- Customer Selection Dropdown with Search Functionality ---
-    const customerSelect       = document.getElementById('customer-select');
-    const customerSearchInput  = document.getElementById('customer-search');
+    const customerSelect = document.getElementById('customer-select');
+    const customerSearchInput = document.getElementById('customer-search');
+    const applyCustomerFilterBtn = document.getElementById('apply-customer-filter');
 
-    if (customerSelect && customerSearchInput) {
+    if (customerSelect && customerSearchInput && applyCustomerFilterBtn) {
         console.log('Customer selection elements found. Initializing customer filter.');
 
-        // Initially hide the dropdown and show the search input
+        // Hide the dropdown and show the search input initially
         customerSelect.style.display = 'none';
         customerSearchInput.classList.add('active');
         console.log('Customer dropdown hidden, search input shown.');
@@ -51,113 +77,152 @@ document.addEventListener('DOMContentLoaded', function() {
         // Cache the original options for filtering
         const originalOptions = Array.from(customerSelect.options).map(option => ({
             value: option.value,
-            text:  option.textContent.trim()
+            text: option.textContent
         }));
         console.log('Original customer options cached:', originalOptions);
 
-        // Filter on typing
         customerSearchInput.addEventListener('input', function() {
-            const term = customerSearchInput.value.toLowerCase();
-            console.log('Customer search input changed. Search term:', term);
+            const searchTerm = customerSearchInput.value.toLowerCase();
+            console.log('Customer search input changed. Search term:', searchTerm);
 
-            // Clear and rebuild
+            // Clear current options
             customerSelect.innerHTML = '';
-            customerSelect.style.display = 'block'; // show to update
-            let firstMatch = null;
+            customerSelect.style.display = 'block'; // Temporarily show to update options
 
-            originalOptions.forEach(opt => {
-                if (opt.text.toLowerCase().includes(term)) {
-                    const newOpt = document.createElement('option');
-                    newOpt.value = opt.value;
-                    newOpt.textContent = opt.text;
-                    customerSelect.appendChild(newOpt);
-                    if (!firstMatch) {
-                        firstMatch = opt.value;
+            let matchFound = false;
+            let firstMatchValue = null;
+
+            // Add a default "Select Customer" option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '-- Select Customer --';
+            customerSelect.appendChild(defaultOption);
+
+            originalOptions.forEach(option => {
+                if (option.value === '') return; // Skip the initial default option
+
+                if (option.text.toLowerCase().includes(searchTerm)) {
+                    const newOption = document.createElement('option');
+                    newOption.value = option.value;
+                    newOption.textContent = option.text;
+                    customerSelect.appendChild(newOption);
+                    if (!matchFound) {
+                        firstMatchValue = option.value;
+                        matchFound = true;
                     }
+                    console.log('Found match for customer:', option.text);
                 }
             });
 
-            // Auto-select the first match if any
-            if (firstMatch) {
-                customerSelect.value = firstMatch;
-                console.log('Auto-selected first match:', firstMatch);
+            // If a single exact match or first fuzzy match is found, select it
+            if (firstMatchValue) {
+                customerSelect.value = firstMatchValue;
+                console.log('Automatically selected first matching customer:', firstMatchValue);
             } else {
-                customerSelect.value = '';
-                console.log('No match found for term.');
+                customerSelect.value = ''; // No match, reset selection
+                console.log('No customer match found for search term.');
             }
 
-            // Hide dropdown again after rebuild
-            customerSelect.style.display = 'none';
+            customerSelect.style.display = 'none'; // Hide dropdown again after updating
         });
 
-        // Prefill search input if customer_id is in URL
-        const initCid = new URLSearchParams(window.location.search).get('customer_id');
-        if (initCid) {
-            const found = originalOptions.find(o => o.value === initCid);
-            if (found) {
-                customerSearchInput.value = found.text;
-                console.log('Prefilled search with:', found.text);
-            }
-        }
+        // Event listener for the "Apply Filter" button
+        applyCustomerFilterBtn.addEventListener('click', function() {
+            const selectedCustomerId = customerSelect.value; // This will hold the value from the filtered dropdown
+            const currentView = new URLSearchParams(window.location.search).get('view') || 'dashboard'; // Get current view
 
-        // **NEW**: apply immediately when the user picks from the dropdown
-        customerSelect.addEventListener('change', function() {
-            const selectedCustomerId = this.value;
-            const currentView = new URLSearchParams(window.location.search).get('view') || 'dashboard';
-            console.log('Customer selected. Redirecting:', selectedCustomerId);
+            console.log('Apply Filter button clicked. Selected Customer ID:', selectedCustomerId);
 
             if (selectedCustomerId) {
-                window.location.href =
-                    `?view=${encodeURIComponent(currentView)}&customer_id=${encodeURIComponent(selectedCustomerId)}`;
+                // Redirect with the selected customer ID and current view
+                window.location.href = `?view=${encodeURIComponent(currentView)}&customer_id=${encodeURIComponent(selectedCustomerId)}`;
+                console.log('Redirecting to:', `?view=${encodeURIComponent(currentView)}&customer_id=${encodeURIComponent(selectedCustomerId)}`);
             } else {
-                // No selection => remove customer_id
+                // If no customer is selected, remove customer_id from URL
                 const url = new URL(window.location.href);
                 url.searchParams.delete('customer_id');
                 window.location.href = url.toString();
+                console.log('No customer selected, redirecting to remove customer_id from URL:', url.toString());
             }
         });
+
+        // Initialize search input value if customer_id is already in URL
+        const initialCustomerId = new URLSearchParams(window.location.search).get('customer_id');
+        if (initialCustomerId) {
+            const selectedOption = originalOptions.find(option => option.value == initialCustomerId);
+            if (selectedOption) {
+                customerSearchInput.value = selectedOption.text;
+                console.log('Pre-filled customer search input with:', selectedOption.text);
+            }
+        }
+    } else {
+        console.warn('Customer selection elements not fully found. Customer filter functionality skipped.');
     }
 
+    // --- Debug Panel Functionality ---
+    const debugPanel = document.getElementById('debug-panel');
+    const debugToggleVisibilityBtn = document.getElementById('debug-toggle-visibility');
+    const debugClearLogBtn = document.getElementById('debug-clear-log');
+    const debugLogOutput = document.getElementById('debug-log-output');
 
-    // --- Debug Panel Toggle & Dragging (unchanged) ---
-    const debugPanel   = document.getElementById('debug-panel');
-    const debugToggle  = document.getElementById('debug-toggle');
-    const clearLogBtn  = document.getElementById('clear-log-btn');
+    if (debugPanel && debugToggleVisibilityBtn && debugClearLogBtn && debugLogOutput) {
+        console.log('Debug panel elements found. Initializing debug panel functionality.');
 
-    // Toggle visibility
-    if (debugToggle && debugPanel) {
-        debugToggle.addEventListener('click', () => {
+        // Toggle Visibility
+        debugToggleVisibilityBtn.addEventListener('click', function() {
             debugPanel.classList.toggle('hidden');
+            console.log('Debug panel visibility toggled. Hidden status:', debugPanel.classList.contains('hidden'));
         });
-    }
 
-    // Clear contents
-    if (clearLogBtn) {
-        clearLogBtn.addEventListener('click', () => {
-            const output = debugPanel.querySelector('.debug-log-output');
-            if (output) output.textContent = '';
+        // Clear Log
+        debugClearLogBtn.addEventListener('click', function() {
+            debugLogOutput.innerHTML = '[INFO] Log cleared by user.\n';
+            console.log('Debug log cleared.');
         });
-    }
 
-    // Drag functionality
-    let isDragging = false, offsetX = 0, offsetY = 0;
-    const debugHeader = debugPanel.querySelector('.debug-header');
-    if (debugHeader) {
-        debugHeader.addEventListener('mousedown', e => {
-            isDragging = true;
-            offsetX = e.clientX - debugPanel.getBoundingClientRect().left;
-            offsetY = e.clientY - debugPanel.getBoundingClientRect().top;
-            debugPanel.style.cursor = 'grabbing';
-        });
-        document.addEventListener('mousemove', e => {
-            if (!isDragging) return;
-            debugPanel.style.left = `${e.clientX - offsetX}px`;
-            debugPanel.style.top  = `${e.clientY - offsetY}px`;
-        });
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            debugPanel.style.cursor = 'default';
-        });
+        // Drag Functionality (Basic)
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        const debugHeader = debugPanel.querySelector('.debug-header');
+        if (debugHeader) {
+            debugHeader.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - debugPanel.getBoundingClientRect().left;
+                offsetY = e.clientY - debugPanel.getBoundingClientRect().top;
+                debugPanel.style.cursor = 'grabbing';
+                console.log('Debug panel dragging started.');
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                debugPanel.style.left = (e.clientX - offsetX) + 'px';
+                debugPanel.style.top = (e.clientY - offsetY) + 'px';
+                // Prevent panel from going off-screen (basic boundary check)
+                const panelRect = debugPanel.getBoundingClientRect();
+                if (panelRect.left < 0) debugPanel.style.left = '0px';
+                if (panelRect.top < 0) debugPanel.style.top = '0px';
+                if (panelRect.right > window.innerWidth) debugPanel.style.left = (window.innerWidth - panelRect.width) + 'px';
+                if (panelRect.bottom > window.innerHeight) debugPanel.style.top = (window.innerHeight - panelRect.height) + 'px';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    debugPanel.style.cursor = 'grab';
+                    console.log('Debug panel dragging ended.');
+                }
+            });
+        } else {
+            console.warn('Debug panel header not found. Drag functionality skipped.');
+        }
+
+        // Scroll debug log to bottom on load
+        debugLogOutput.scrollTop = debugLogOutput.scrollHeight;
+        console.log('Debug log scrolled to bottom on load.');
+
+    } else {
+        console.warn('Debug panel elements not fully found. Debug panel functionality skipped.');
     }
 
     console.log('JavaScript initialization complete.');
