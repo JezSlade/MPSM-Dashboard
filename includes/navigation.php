@@ -6,6 +6,8 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ----------------------------------------
 
+require_once __DIR__ . '/config.php';
+
 // Load customers list via internal API
 $customers = [];
 try {
@@ -18,6 +20,7 @@ try {
 } catch (Exception $e) {
     // Fail silently, keep customers empty
 }
+
 $selected_customer = $_GET['customer'] ?? '';
 ?>
 <nav class="glass-nav" style="display: flex; justify-content: space-between; align-items: center;">

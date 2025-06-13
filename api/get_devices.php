@@ -73,16 +73,19 @@ $token = get_token($env);
 $customerCode = $_GET['customer'] ?? null;
 
 $payload = [
-    'DealerCode'   => $env['DEALER_CODE'],
-    'CustomerCode' => $customerCode ?: null,
-    'FilterText'   => null,
-    'HasAlerts'    => null,
-    'HasHpSds'     => null,
-    'PageNumber'   => 1,
-    'PageRows'     => 2147483647,
-    'SortColumn'   => 'Id',
-    'SortOrder'    => 0
+    'FilterDealerId'      => $env['DEALER_ID'],
+    'FilterCustomerCodes' => [$customerCode],
+    'ProductBrand'        => null,
+    'ProductModel'        => null,
+    'OfficeId'            => null,
+    'Status'              => 1,
+    'FilterText'          => null,
+    'PageNumber'          => 1,
+    'PageRows'            => 2147483647,
+    'SortColumn'          => 'Id',
+    'SortOrder'           => 0
 ];
+
 
 $api_url = rtrim($env['API_BASE_URL'], '/') . '/Device/List';
 
