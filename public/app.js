@@ -49,7 +49,9 @@ function getToken() {
  */
 function loadCustomers() {
     const select = document.getElementById('customerSelect');
-    fetch(`${window.__ENV__.BASE_URL}/Customer/GetCustomers`, {
+    const url = `${window.__ENV__.BASE_URL}/Customer/GetCustomers`;
+
+    fetch(url, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${window.authToken}`,
@@ -61,7 +63,20 @@ function loadCustomers() {
             DealerId: window.__ENV__.DEALER_ID
         })
     })
-    .then(res => res.json())
+    .then(async res => {
+        const contentType = res.headers.get("content-type") || "";
+        const text = await res.text();
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+
+        if (!contentType.includes("application/json")) {
+            throw new Error("Expected JSON response but received:\n" + text);
+        }
+
+        return JSON.parse(text);
+    })
     .then(response => {
         const customers = response.Result || [];
         select.innerHTML = '<option disabled selected value="">-- Select Customer --</option>';
@@ -73,10 +88,11 @@ function loadCustomers() {
         });
     })
     .catch(err => {
-        console.error('Customer fetch error:', err);
+        console.error('Failed to load customers:', err);
         select.innerHTML = '<option disabled>Error loading customers</option>';
     });
 }
+
 
 /**
  * Handle dropdown selection.
