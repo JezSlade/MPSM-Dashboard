@@ -1,5 +1,5 @@
 <?php
-// api/get_customers.php — Retrieves customers via internal proxy
+// api/get_customer_list.php — Fetches customer list from /Customer/List
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../sanitize_env.php';
@@ -21,23 +21,15 @@ if (empty($env['BASE_URL']) || empty($env['DEALER_CODE'])) {
     exit;
 }
 
+// Build POST payload
 $request = [
-    'Url' => 'Customer/GetCustomers',
-    'Method' => 'POST',
-    'Request' => [
-        'DealerCode' => $env['DEALER_CODE'],
-        'Code' => null,
-        'HasHpSds' => null,
-        'FilterText' => null,
-        'PageNumber' => 1,
-        'PageRows' => 2147483647,
-        'SortColumn' => 'Id',
-        'SortOrder' => 0
-    ]
+    'pageNumber' => 1,
+    'pageRows' => 100,
+    'dealerCode' => $env['DEALER_CODE']
 ];
 
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/GetCustomers');
+curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/List');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [

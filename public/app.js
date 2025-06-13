@@ -119,13 +119,14 @@ function loadCustomers() {
     const select = document.getElementById('customerSelect');
     const url = '/api/get_customers.php';
 
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${window.authToken}`,
-            'Accept': 'application/json'
-        }
-    })
+fetch('/api/get_customer_list.php', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${window.authToken}`,
+    'Accept': 'application/json'
+  }
+})
+
     .then(async res => {
         const contentType = res.headers.get("content-type") || "";
         const text = await res.text();
