@@ -1,19 +1,25 @@
 <?php
-// api/get_customer_list.php — Flat structure for /Customer/List
+// api/get_customer_list.php — Securely fetch customers via MPSM API
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../sanitize_env.php';
 
 $env = loadEnv(__DIR__ . '/../.env');
 
-if (empty($env['BASE_URL']) || empty($env['DEALER_CODE'])) {
+// === Determine API base URL from either env variable
+$baseUrl = $env['BASE_URL'] ?? $env['MPSM_API_BASE_URL'] ?? '';
+if (empty($baseUrl) || empty($env['DEALER_CODE'])) {
     http_response_code(500);
     echo json_encode(['error' => 'Missing BASE_URL or DEALER_CODE in .env']);
     exit;
 }
 
-$headers = getallheaders();
-$tokenHeader = $headers['Authorization'] ?? '';
+// === Robust Authorization header support (Apache/NGINX/FPM)
+$headers = getallheaders() ?: [];
+$tokenHeader = $headers['Authorization'] ??
+               $headers['authorization'] ??
+               $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+
 if (!str_starts_with($tokenHeader, 'Bearer ')) {
     http_response_code(401);
     echo json_encode(['error' => 'Missing or invalid Authorization header']);
@@ -21,17 +27,18 @@ if (!str_starts_with($tokenHeader, 'Bearer ')) {
 }
 $token = trim(substr($tokenHeader, 7));
 
-// === Flat payload format
+// === Construct flat request payload
 $request = [
     'pageNumber' => 1,
     'pageRows' => 100,
     'dealerCode' => $env['DEALER_CODE']
 ];
 
+// === Debug log for validation (optional)
 error_log("Flat payload to /Customer/List: " . json_encode($request));
 
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/List');
+curl_setopt($ch, CURLOPT_URL, $baseUrl . '/Customer/List');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
