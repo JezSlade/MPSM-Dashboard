@@ -1,5 +1,5 @@
 <?php
-// api/get_customer_list.php — Fetches customers from MPSM API using self-contained token
+// api/get_customer_list.php — Fetches customers using correct payload structure
 
 header('Content-Type: application/json');
 
@@ -17,16 +17,20 @@ if (!$baseUrl || !$dealerCode) {
     exit;
 }
 
-// === Pagination from GET
-$limit = min(intval($_GET['limit'] ?? 10), 100);
-$offset = max(intval($_GET['offset'] ?? 0), 0);
-$pageNumber = floor($offset / $limit) + 1;
-
-// === Payload to MPSM
-$payload = [
-    'pageNumber' => $pageNumber,
-    'pageRows' => $limit,
-    'dealerCode' => $dealerCode
+// === Construct wrapped payload as you specified
+$wrappedPayload = [
+    'Url' => 'Customer/GetCustomers',
+    'Method' => 'POST',
+    'Request' => [
+        'DealerCode' => $dealerCode,
+        'Code' => null,
+        'HasHpSds' => null,
+        'FilterText' => null,
+        'PageNumber' => 1,
+        'PageRows' => 2147483647,
+        'SortColumn' => 'Id',
+        'SortOrder' => 0
+    ]
 ];
 
 try {
@@ -38,7 +42,7 @@ try {
 }
 
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $baseUrl . '/Customer/List');
+curl_setopt($ch, CURLOPT_URL, $baseUrl . '/Customer/GetCustomers');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -46,7 +50,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json",
     "Accept: application/json"
 ]);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($wrappedPayload));
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -64,7 +68,7 @@ if ($httpCode !== 200 || !$response || strpos($contentType, 'application/json') 
 }
 
 $data = json_decode($response, true);
-$results = $data['result'] ?? [];
+$results = $data['Result'] ?? [];
 
 echo json_encode([
     'status' => 'success',
@@ -72,7 +76,7 @@ echo json_encode([
     'data' => [
         'customers' => $results,
         'total' => count($results),
-        'limit' => $limit,
-        'offset' => $offset
+        'limit' => count($results),
+        'offset' => 0
     ]
 ]);
