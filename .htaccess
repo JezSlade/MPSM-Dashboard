@@ -1,12 +1,27 @@
-# Ensure PHP index loads
-DirectoryIndex index.php
-
-# Allow access to PHP files
-<FilesMatch "\.php$">
-    Require all granted
-</FilesMatch>
-
-# Optional: Redirect all to HTTPS
+# Enable rewrite engine
 RewriteEngine On
+
+# Preserve HTTP Authorization headers (for APIs)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Redirect HTTP to HTTPS (optional but recommended)
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Ensure index.php is used as default for root
+DirectoryIndex index.php
+
+# Allow access to .php files
+<FilesMatch "\.php$">
+  Require all granted
+</FilesMatch>
+
+# If you want to allow direct access to /api/ files
+<IfModule mod_dir.c>
+  <IfModule mod_access_compat.c>
+    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/api">
+      Require all granted
+    </Directory>
+  </IfModule>
+</IfModule>
