@@ -1,5 +1,5 @@
 <?php
-// api/get_customer_list.php — Fetches customers using correct payload structure
+// api/get_customer_list.php — Retrieves customers from MPSM API with full validation and debug
 
 header('Content-Type: application/json');
 
@@ -17,10 +17,9 @@ if (!$baseUrl || !$dealerCode) {
     exit;
 }
 
-// === Construct wrapped payload as you specified
+// === Wrapped payload from SDK
 $wrappedPayload = [
     'Url' => 'Customer/GetCustomers',
-    'Method' => 'POST',
     'Request' => [
         'DealerCode' => $dealerCode,
         'Code' => null,
@@ -30,7 +29,8 @@ $wrappedPayload = [
         'PageRows' => 2147483647,
         'SortColumn' => 'Id',
         'SortOrder' => 0
-    ]
+    ],
+    'Method' => 'POST'
 ];
 
 try {
@@ -41,6 +41,7 @@ try {
     exit;
 }
 
+// === Curl request to MPSM
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $baseUrl . '/Customer/GetCustomers');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -57,26 +58,52 @@ $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 curl_close($ch);
 
+// === Raw response logging (for backend debug only)
+error_log("MPSM /Customer/GetCustomers response: $response");
+
 if ($httpCode !== 200 || !$response || strpos($contentType, 'application/json') === false) {
     http_response_code($httpCode);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Failed to fetch customer data.',
-        'data' => null
+        'message' => 'Unexpected response from MPSM API.',
+        'data' => [
+            'httpCode' => $httpCode,
+            'raw' => $response
+        ]
     ]);
     exit;
 }
 
+// === Decode and validate payload
 $data = json_decode($response, true);
-$results = $data['Result'] ?? [];
+if (!$data || !isset($data['Result'])) {
+    http_response_code(502);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'MPSM returned invalid structure.',
+        'data' => ['raw' => $response]
+    ]);
+    exit;
+}
 
+if (!is_array($data['Result'])) {
+    http_response_code(502);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Expected Result to be an array.',
+        'data' => ['result' => $data['Result']]
+    ]);
+    exit;
+}
+
+// === Success
 echo json_encode([
     'status' => 'success',
     'message' => '',
     'data' => [
-        'customers' => $results,
-        'total' => count($results),
-        'limit' => count($results),
+        'customers' => $data['Result'],
+        'total' => count($data['Result']),
+        'limit' => count($data['Result']),
         'offset' => 0
     ]
 ]);
