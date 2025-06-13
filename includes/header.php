@@ -49,7 +49,7 @@ if (!empty($env['CLIENT_ID']) && !empty($env['TOKEN_URL'])) {
   <title><?= APP_NAME ?></title>
   <link rel="stylesheet" href="<?= APP_BASE_URL ?>public/css/styles.css" />
 </head>
-<body class="light-theme">
+<body class="dark-theme">
   <div id="wrapper">
     <header class="glass-header">
       <h1><?= APP_NAME ?></h1>

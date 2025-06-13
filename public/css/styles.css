@@ -201,3 +201,44 @@ body.dark-theme .customer-select {
     font-size: 0.85rem;
   }
 }
+body.dark-theme {
+  background: radial-gradient(circle at top, #0d0d0f, #000);
+  color: var(--text-dark);
+}
+
+body.dark-theme header,
+body.dark-theme nav,
+body.dark-theme footer,
+body.dark-theme .glass-main {
+  background: rgba(10, 10, 10, 0.4);
+  box-shadow:
+    0 0 5px #0ff2,
+    0 0 10px #f0f2,
+    0 0 15px #ff02,
+    inset 0 0 10px rgba(255,255,255,0.05);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Inset dark neumorphic dropdown */
+body.dark-theme .customer-select {
+  background: #151519;
+  color: #eee;
+  border: 1px solid #333;
+  box-shadow:
+    inset 3px 3px 6px #0a0a0e,
+    inset -3px -3px 6px #1e1e25,
+    0 0 3px #0ff4,
+    0 0 3px #f0f4;
+  transition: all 0.2s ease;
+}
+
+body.dark-theme .customer-select:hover,
+body.dark-theme .customer-select:focus {
+  border-color: var(--magenta);
+  outline: none;
+  box-shadow:
+    inset 1px 1px 2px #0a0a0e,
+    inset -1px -1px 2px #1e1e25,
+    0 0 8px var(--cyan),
+    0 0 4px var(--magenta);
+}
