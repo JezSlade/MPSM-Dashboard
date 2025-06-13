@@ -242,3 +242,32 @@ body.dark-theme .customer-select:focus {
     0 0 8px var(--cyan),
     0 0 4px var(--magenta);
 }
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.device-card {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.2),
+              -6px -6px 12px rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.device-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 15px var(--cyan), 0 0 10px var(--magenta);
+}
+
+body.dark-theme .device-card {
+  background: rgba(20, 20, 20, 0.5);
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
