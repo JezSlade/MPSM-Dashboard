@@ -1,84 +1,95 @@
-// app.js — Vanilla JavaScript Dashboard Logic
+// public/app.js — Token Fetching, Header Display Control
 
+window.authToken = null;
 window.selectedCustomer = null;
 
+const header = document.querySelector('header');
+header.style.display = 'none'; // Hide header until authenticated
+
 /**
- * Fetch customers and populate dropdown.
+ * Fetch access token using OAuth 2.0 password grant.
+ */
+function getToken() {
+    const tokenUrl = window.__ENV__.TOKEN_URL;
+    const formBody = new URLSearchParams({
+        grant_type: 'password',
+        client_id: window.__ENV__.CLIENT_ID,
+        client_secret: window.__ENV__.CLIENT_SECRET,
+        username: window.__ENV__.USERNAME,
+        password: window.__ENV__.PASSWORD,
+        scope: window.__ENV__.SCOPE
+    });
+
+    return fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        },
+        body: formBody
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Failed to retrieve token');
+        return res.json();
+    })
+    .then(data => {
+        window.authToken = data.access_token;
+        console.log('Token retrieved');
+        header.style.display = 'flex'; // Show header after token
+        loadCustomers();
+    })
+    .catch(err => {
+        console.error('Auth error:', err);
+        document.getElementById('dashboard').innerHTML = '<p>Authentication failed. Check .env values.</p>';
+    });
+}
+
+/**
+ * Load customers into the dropdown.
  */
 function loadCustomers() {
     const select = document.getElementById('customerSelect');
-    fetch(`${window.__ENV__.API_BASE_URL}/customers`, {
+    fetch(`${window.__ENV__.BASE_URL}/Customer/GetCustomers`, {
+        method: 'POST',
         headers: {
-            'Authorization': `Bearer ${window.__ENV__.API_KEY}`
-        }
+            'Authorization': `Bearer ${window.authToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            DealerCode: window.__ENV__.DEALER_CODE,
+            DealerId: window.__ENV__.DEALER_ID
+        })
     })
     .then(res => res.json())
-    .then(customers => {
+    .then(response => {
+        const customers = response.Result || [];
         select.innerHTML = '<option disabled selected value="">-- Select Customer --</option>';
-        customers.forEach(customer => {
+        customers.forEach(c => {
             const option = document.createElement('option');
-            option.value = customer.id;
-            option.textContent = customer.name;
+            option.value = c.Code;
+            option.textContent = c.Description;
             select.appendChild(option);
         });
     })
     .catch(err => {
-        console.error('Failed to load customers:', err);
+        console.error('Customer fetch error:', err);
         select.innerHTML = '<option disabled>Error loading customers</option>';
     });
 }
 
 /**
- * Handle customer selection.
+ * Handle dropdown selection.
  */
 function onCustomerSelected(event) {
     window.selectedCustomer = event.target.value;
     console.log(`Selected customer: ${window.selectedCustomer}`);
-    loadDashboardForCustomer();
+    // In production, update dashboard via fetch — here static PHP renders cards
+    window.location.href = `?customer=${encodeURIComponent(window.selectedCustomer)}`;
 }
 
-/**
- * Fetch and render dashboard data.
- */
-function loadDashboardForCustomer() {
-    const dashboard = document.getElementById('dashboard');
-    dashboard.innerHTML = 'Loading dashboard...';
-
-    fetch(`${window.__ENV__.API_BASE_URL}/customers/${window.selectedCustomer}/dashboard`, {
-        headers: {
-            'Authorization': `Bearer ${window.__ENV__.API_KEY}`
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        renderDashboard(data);
-    })
-    .catch(err => {
-        console.error('Dashboard fetch error:', err);
-        dashboard.innerHTML = 'Failed to load dashboard.';
-    });
-}
-
-/**
- * Render dashboard cards from API data.
- */
-function renderDashboard(data) {
-    const dashboard = document.getElementById('dashboard');
-    dashboard.innerHTML = ''; // Clear
-
-    data.cards.forEach(card => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `
-            <h3>${card.title}</h3>
-            <p>${card.body}</p>
-        `;
-        dashboard.appendChild(div);
-    });
-}
-
-// === Init ===
+// === Initialize ===
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('customerSelect').addEventListener('change', onCustomerSelected);
-    loadCustomers();
+    getToken();
 });
