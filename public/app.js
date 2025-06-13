@@ -27,6 +27,30 @@ function updateTokenBanner(status) {
     }
 }
 
+function updateTokenBanner(status) {
+    const banner = document.getElementById('tokenStatusBanner');
+    banner.style.display = 'block';
+    banner.classList.remove('status-success', 'status-fail', 'status-pending');
+
+    if (status === 'success') {
+        banner.classList.add('status-success');
+        banner.textContent = '✅ Token retrieved successfully.';
+        setTimeout(() => banner.style.display = 'none', 3000);
+    } else if (status === 'fail') {
+        banner.classList.add('status-fail');
+        banner.textContent = '❌ Failed to retrieve token.';
+    } else {
+        banner.classList.add('status-pending');
+        banner.textContent = '⏳ Requesting token...';
+    }
+}
+
+function scheduleTokenRefresh(secondsUntilExpiry) {
+    const refreshIn = Math.max(0, (secondsUntilExpiry - 60)) * 1000;
+    console.log(`[Token] 🔁 Refresh scheduled in ${refreshIn / 1000}s`);
+    setTimeout(getToken, refreshIn);
+}
+
 function getToken() {
     window.authToken = null;
     window.tokenStatus = 'pending';
@@ -71,6 +95,9 @@ function getToken() {
         window.tokenStatus = 'success';
         updateTokenBanner('success');
 
+        const expiresIn = parseInt(json.expires_in, 10) || 3600;
+        scheduleTokenRefresh(expiresIn);
+
         console.log('[Token] ✅ Token received');
         document.querySelector('header').style.display = 'flex';
         loadCustomers();
@@ -82,6 +109,7 @@ function getToken() {
         document.getElementById('dashboard').innerHTML = `<p class="card">Token request failed: ${err.message}</p>`;
     });
 }
+
 
 
 /**
