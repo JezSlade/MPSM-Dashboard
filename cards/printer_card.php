@@ -27,7 +27,7 @@ if (!isset($data['Result']) || !is_array($data['Result'])) {
 $devices = $data['Result'];
 $allKeys = [];
 
-// gather all unique keys across all devices
+// collect all unique keys
 foreach ($devices as $device) {
     $allKeys = array_unique(array_merge($allKeys, array_keys($device)));
 }
@@ -62,7 +62,9 @@ sort($allKeys);
                 <td>
                   <?php
                     $value = $device[$key] ?? '';
-                    echo is_array($value) ? '[array]' : htmlspecialchars((string)$value);
+                    echo is_array($value)
+                        ? '[array]'
+                        : htmlspecialchars((string)$value);
                   ?>
                 </td>
               <?php endforeach; ?>
