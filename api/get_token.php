@@ -1,18 +1,11 @@
 <?php
-// api/get_token.php
+// api/get_token.php — Retrieves OAuth2 token using .env credentials
+
 header('Content-Type: application/json');
+require_once __DIR__ . '/../sanitize_env.php';
 
-$envFile = __DIR__ . '/../.env';
-$env = [];
-if (file_exists($envFile)) {
-    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        if (strpos(trim($line), '#') === 0 || !strpos($line, '=')) continue;
-        list($key, $val) = explode('=', $line, 2);
-        $env[trim($key)] = trim($val);
-    }
-}
+$env = loadEnv(__DIR__ . '/../.env');
 
-// Validate required keys
 $requiredKeys = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
 foreach ($requiredKeys as $key) {
     if (empty($env[$key])) {
@@ -22,7 +15,7 @@ foreach ($requiredKeys as $key) {
     }
 }
 
-$payload = http_build_query([
+$formData = http_build_query([
     'grant_type' => 'password',
     'client_id' => $env['CLIENT_ID'],
     'client_secret' => $env['CLIENT_SECRET'],
@@ -39,7 +32,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/x-www-form-urlencoded',
     'Accept: application/json'
 ]);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $formData);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

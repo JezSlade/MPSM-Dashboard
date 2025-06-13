@@ -1,20 +1,11 @@
 <?php
-// api/get_customers.php — Uniform Customer Request Proxy
+// api/get_customers.php — Retrieves customers via internal proxy
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/../sanitize_env.php';
 
-// === Load .env
-$envFile = __DIR__ . '/../.env';
-$env = [];
-if (file_exists($envFile)) {
-    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        if (strpos(trim($line), '#') === 0 || !strpos($line, '=')) continue;
-        list($key, $val) = explode('=', $line, 2);
-        $env[trim($key)] = trim($val);
-    }
-}
+$env = loadEnv(__DIR__ . '/../.env');
 
-// === Get token from Authorization header
 $headers = getallheaders();
 $tokenHeader = $headers['Authorization'] ?? '';
 if (!str_starts_with($tokenHeader, 'Bearer ')) {
@@ -24,12 +15,17 @@ if (!str_starts_with($tokenHeader, 'Bearer ')) {
 }
 $token = trim(substr($tokenHeader, 7));
 
-// === Prepare request
+if (empty($env['BASE_URL']) || empty($env['DEALER_CODE'])) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Missing BASE_URL or DEALER_CODE']);
+    exit;
+}
+
 $request = [
     'Url' => 'Customer/GetCustomers',
     'Method' => 'POST',
     'Request' => [
-        'DealerCode' => $env['DEALER_CODE'] ?? '',
+        'DealerCode' => $env['DEALER_CODE'],
         'Code' => null,
         'HasHpSds' => null,
         'FilterText' => null,
@@ -40,7 +36,6 @@ $request = [
     ]
 ];
 
-// === Curl POST to external API
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/GetCustomers');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
