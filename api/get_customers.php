@@ -84,12 +84,16 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 
 // No payload needed for this raw call
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-    'PageNumber'  => 100,
-    'PageRows'    => 100,
-    'SortColumn'  => 'Code',
-    'SortOrder'   => 1,
-    'DealerCode'  => $env['DEALER_CODE']
+    'DealerCode'  => $env['DEALER_CODE'],
+    'Code'        => null,
+    'HasHpSds'    => null,
+    'FilterText'  => null,
+    'PageNumber'  => 1,
+    'PageRows'    => 2147483647,
+    'SortColumn'  => 'Id',
+    'SortOrder'   => 0
 ]));
+
 
 
 $response = curl_exec($ch);
