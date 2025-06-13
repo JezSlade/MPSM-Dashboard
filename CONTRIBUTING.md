@@ -498,6 +498,22 @@ Beyond naming and structure, consistent coding style and adherence to best pract
 * **Rule:** Organize JavaScript into logical modules or functions if complexity grows.
 * **Rule:** Place `<script>` tags for application-specific JavaScript at the end of the `<body>` element (using `defer` attribute) to avoid blocking HTML rendering.
 
----
+🔒 [MANDATORY] API Response Guard Clause (Prevent JSON.parse Crash)
 
-By following these conventions rigorously, we can ensure that MPS Monitor Dashboard remains a robust, maintainable, and easily understandable codebase for everyone involved.
+For every fetch call, use the following pattern instead of calling .json() directly:
+
+    fetch(url, options)
+    .then(async (res) => {
+        const contentType = res.headers.get("content-type") || "";
+        const text = await res.text();
+
+        if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+
+        if (!contentType.includes("application/json")) {
+        throw new Error("Expected JSON response but received:\n" + text);
+        }
+
+        return JSON.parse(text);
+    })

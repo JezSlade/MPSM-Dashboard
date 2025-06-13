@@ -55,3 +55,27 @@ select {
 .card h3 {
     margin-top: 0;
 }
+.status-banner {
+    padding: 1rem;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 0.5rem;
+    margin: 1rem 2rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    display: none;
+}
+.status-success {
+    border: 2px solid limegreen;
+    color: limegreen;
+}
+.status-fail {
+    border: 2px solid red;
+    color: red;
+}
+.status-pending {
+    border: 2px solid orange;
+    color: orange;
+}

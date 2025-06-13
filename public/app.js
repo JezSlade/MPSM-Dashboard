@@ -9,7 +9,29 @@ header.style.display = 'none'; // Hide header until authenticated
 /**
  * Fetch access token using OAuth 2.0 password grant.
  */
+function updateTokenBanner(status) {
+    const banner = document.getElementById('tokenStatusBanner');
+    banner.style.display = 'block';
+
+    banner.classList.remove('status-success', 'status-fail', 'status-pending');
+
+    if (status === 'success') {
+        banner.classList.add('status-success');
+        banner.textContent = '✅ Token retrieved successfully.';
+    } else if (status === 'fail') {
+        banner.classList.add('status-fail');
+        banner.textContent = '❌ Failed to retrieve token.';
+    } else {
+        banner.classList.add('status-pending');
+        banner.textContent = '⏳ Requesting token...';
+    }
+}
+
 function getToken() {
+    window.authToken = null;
+    window.tokenStatus = 'pending';
+    updateTokenBanner('pending');
+
     const tokenUrl = window.__ENV__.TOKEN_URL;
     const formBody = new URLSearchParams({
         grant_type: 'password',
@@ -28,21 +50,39 @@ function getToken() {
         },
         body: formBody
     })
-    .then(res => {
-        if (!res.ok) throw new Error('Failed to retrieve token');
-        return res.json();
-    })
-    .then(data => {
-        window.authToken = data.access_token;
-        console.log('Token retrieved');
-        header.style.display = 'flex'; // Show header after token
+    .then(async res => {
+        const contentType = res.headers.get("content-type") || "";
+        const text = await res.text();
+
+        if (!res.ok) {
+            window.tokenStatus = 'fail';
+            updateTokenBanner('fail');
+            throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+
+        if (!contentType.includes("application/json")) {
+            window.tokenStatus = 'fail';
+            updateTokenBanner('fail');
+            throw new Error("Expected JSON but got:\n" + text);
+        }
+
+        const json = JSON.parse(text);
+        window.authToken = json.access_token;
+        window.tokenStatus = 'success';
+        updateTokenBanner('success');
+
+        console.log('[Token] ✅ Token received');
+        document.querySelector('header').style.display = 'flex';
         loadCustomers();
     })
     .catch(err => {
-        console.error('Auth error:', err);
-        document.getElementById('dashboard').innerHTML = '<p>Authentication failed. Check .env values.</p>';
+        window.tokenStatus = 'fail';
+        updateTokenBanner('fail');
+        console.error('[Token] ❌ Failed:', err);
+        document.getElementById('dashboard').innerHTML = `<p class="card">Token request failed: ${err.message}</p>`;
     });
 }
+
 
 /**
  * Load customers into the dropdown.

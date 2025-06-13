@@ -43,11 +43,13 @@ if ($customerId) {
         </select>
     </header>
 
-    <main>
-        <div id="dashboard">
-            <?= $cardHtml ?>
-        </div>
-    </main>
+<main>
+    <div id="tokenStatusBanner" class="status-banner">Checking token...</div>
+    <div id="dashboard">
+        <?= $cardHtml ?>
+    </div>
+</main>
+
 
     <script>
         // Make env variables available to JS
