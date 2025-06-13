@@ -1,17 +1,30 @@
 :root {
-  --bg-light: #e0e0e0;
-  --bg-dark: #121212;
-  --text-light: #111;
-  --text-dark: #eee;
+  /* Base colors */
+  --bg-light: #f0f0f3;
+  --bg-dark: #0e0e11;
+  --text-light: #1a1a1a;
+  --text-dark: #f5f5f5;
+
+  /* Glass panels */
   --glass-light: rgba(255, 255, 255, 0.25);
   --glass-dark: rgba(0, 0, 0, 0.25);
-  --blur: 10px;
+
+  /* CMYK Accents */
+  --cyan: #00bcd4;
+  --magenta: #e91e63;
+  --yellow: #ffeb3b;
+  --key-black: #1a1a1a;
+
+  /* Neumorphic shadow */
+  --soft-shadow-light: 6px 6px 12px #d1d9e6, -6px -6px 12px #ffffff;
+  --soft-shadow-dark: 6px 6px 12px #0b0b0e, -6px -6px 12px #15151a;
+
   --radius: 1rem;
-  --border-light: rgba(255, 255, 255, 0.3);
-  --border-dark: rgba(255, 255, 255, 0.1);
-  --transition: 0.3s ease-in-out;
+  --blur: 15px;
+  --transition: 0.3s ease;
 }
 
+/* Global */
 body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
@@ -25,72 +38,112 @@ body.dark-theme {
   color: var(--text-dark);
 }
 
+/* Wrapper */
 #wrapper {
-  max-width: 1000px;
-  margin: 0 auto;
+  max-width: 1200px;
+  margin: auto;
   padding: 1rem;
 }
 
-header, .glass-main, footer, nav {
+/* Header, Nav, Footer */
+header,
+nav,
+footer,
+.glass-main {
   background: var(--glass-light);
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));
-  border: 1px solid var(--border-light);
   border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: var(--soft-shadow-light);
   margin: 1rem 0;
-  padding: 1rem;
-  transition: background var(--transition), border var(--transition);
+  padding: 1.5rem 2rem;
+  transition: all var(--transition);
+  position: relative;
 }
 
 body.dark-theme header,
-body.dark-theme .glass-main,
+body.dark-theme nav,
 body.dark-theme footer,
-body.dark-theme nav {
+body.dark-theme .glass-main {
   background: var(--glass-dark);
-  border-color: var(--border-dark);
+  box-shadow: var(--soft-shadow-dark);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Accent glow */
+header::after,
+nav::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 5px var(--cyan),
+    0 0 8px var(--magenta),
+    0 0 12px var(--yellow);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+/* Typography + layout */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-#theme-toggle {
-  font-size: 1.2rem;
-  border: none;
-  background: transparent;
-  cursor: pointer;
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 nav ul {
   list-style: none;
-  padding: 0;
-  margin: 0;
   display: flex;
   gap: 1rem;
+  margin: 0;
+  padding: 0;
 }
 
 nav a {
   text-decoration: none;
   color: inherit;
+  font-weight: bold;
+  transition: color var(--transition);
 }
 
+nav a:hover {
+  color: var(--cyan);
+}
+
+/* Main area */
+.glass-main {
+  min-height: 300px;
+}
+
+/* Footer */
 footer {
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
-@media (max-width: 600px) {
-  header, nav, .glass-main, footer {
-    padding: 0.75rem;
-  }
-
-  nav ul {
-    flex-direction: column;
-    align-items: start;
-  }
+/* Theme Toggle */
+#theme-toggle {
+  font-size: 1.2rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  transition: transform var(--transition);
 }
+
+#theme-toggle:hover {
+  transform: rotate(20deg);
+}
+
+/* Token indicator */
 .token-indicator {
   width: 14px;
   height: 14px;
@@ -101,9 +154,50 @@ footer {
 }
 
 .status-ok {
-  background-color: #22c55e; /* Tailwind green-500 */
+  background-color: var(--cyan);
 }
 
 .status-fail {
-  background-color: #ef4444; /* Tailwind red-500 */
+  background-color: var(--magenta);
+}
+
+/* Customer dropdown */
+.customer-select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 0.9rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  backdrop-filter: blur(5px);
+  box-shadow: inset 2px 2px 5px #fff, inset -2px -2px 5px #ccc;
+}
+
+body.dark-theme .customer-select {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 2px 2px 5px #111, inset -2px -2px 5px #222;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  header,
+  nav,
+  .glass-main,
+  footer {
+    padding: 1rem;
+  }
+
+  nav ul {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #theme-toggle {
+    font-size: 1rem;
+  }
+
+  .customer-select {
+    font-size: 0.85rem;
+  }
 }
