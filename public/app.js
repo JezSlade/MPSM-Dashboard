@@ -39,7 +39,7 @@ function getToken() {
       if (!data.access_token) throw new Error('Missing token');
       window.authToken = data.access_token;
       showTokenStatus(true);
-      populateCustomerDropdown(); // ✅ Corrected from loadCustomers()
+      populateCustomerDropdown(); // Call updated loader
     })
     .catch(err => {
       showTokenStatus(false);
@@ -67,20 +67,24 @@ function populateCustomerDropdown() {
   dropdown.innerHTML = '<option disabled selected>Loading customers...</option>';
 
   fetch('/api/get_customer_list.php', {
-    method: 'POST',
+    method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Accept': 'application/json'
     }
   })
     .then(res => res.json().then(data => ({ status: res.status, data })))
     .then(({ status, data }) => {
-      if (status !== 200 || !Array.isArray(data.result)) {
+      if (
+        status !== 200 ||
+        data.status !== 'success' ||
+        !data.data ||
+        !Array.isArray(data.data.customers)
+      ) {
         throw new Error('Invalid response from server.');
       }
 
       dropdown.innerHTML = '<option value="">-- Select Customer --</option>';
-      data.result.forEach(customer => {
+      data.data.customers.forEach(customer => {
         const option = document.createElement('option');
         option.value = customer.customerId || customer.id || '';
         option.textContent = customer.customerDescription || customer.name || 'Unnamed';
