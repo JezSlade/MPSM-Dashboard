@@ -1,19 +1,17 @@
 <?php
-// api/get_customer_list.php — Retrieves customers from /Customer/List endpoint
+// api/get_customer_list.php — Flat structure for /Customer/List
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../sanitize_env.php';
 
 $env = loadEnv(__DIR__ . '/../.env');
 
-// === Validate required env
 if (empty($env['BASE_URL']) || empty($env['DEALER_CODE'])) {
     http_response_code(500);
     echo json_encode(['error' => 'Missing BASE_URL or DEALER_CODE in .env']);
     exit;
 }
 
-// === Extract Bearer token from Authorization header
 $headers = getallheaders();
 $tokenHeader = $headers['Authorization'] ?? '';
 if (!str_starts_with($tokenHeader, 'Bearer ')) {
@@ -23,26 +21,15 @@ if (!str_starts_with($tokenHeader, 'Bearer ')) {
 }
 $token = trim(substr($tokenHeader, 7));
 
-// === Construct the wrapped request body
+// === Flat payload format
 $request = [
-    'Url' => 'Customer/List',
-    'Method' => 'POST',
-    'Request' => [
-        'DealerCode' => $env['DEALER_CODE'],
-        'Code' => null,
-        'HasHpSds' => null,
-        'FilterText' => null,
-        'PageNumber' => 1,
-        'PageRows' => 2147483647,
-        'SortColumn' => 'Id',
-        'SortOrder' => 0
-    ]
+    'pageNumber' => 1,
+    'pageRows' => 100,
+    'dealerCode' => $env['DEALER_CODE']
 ];
 
-// === Debug log for inspection (disable in production)
-error_log("Customer/List request payload: " . json_encode($request));
+error_log("Flat payload to /Customer/List: " . json_encode($request));
 
-// === Execute curl request
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/List');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

@@ -115,42 +115,55 @@ function getToken() {
 /**
  * Load customers into the dropdown via local PHP proxy.
  */
-function loadCustomers() {
-    const select = document.getElementById('customerSelect');
-    const url = '/api/get_customers.php';
+/**
+ * Populate the customer dropdown using data from the API proxy.
+ */
+function populateCustomerDropdown() {
+  const dropdown = document.getElementById('customerDropdown');
+  const token = window.authToken;
+  const dealerCode = window.__ENV__?.DEALER_CODE;
 
-fetch('/api/get_customer_list.php', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${window.authToken}`,
-    'Accept': 'application/json'
+  if (!dropdown) {
+    console.error('Dropdown element with id="customerDropdown" not found.');
+    return;
   }
-})
 
-    .then(async res => {
-        const contentType = res.headers.get("content-type") || "";
-        const text = await res.text();
+  if (!token) {
+    dropdown.innerHTML = '<option value="">No API token</option>';
+    return;
+  }
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
-        if (!contentType.includes("application/json")) throw new Error("Expected JSON but got:\n" + text);
+  // Optional: clear and show loading indicator
+  dropdown.innerHTML = '<option disabled selected>Loading customers...</option>';
 
-        return JSON.parse(text);
+  fetch('/api/get_customer_list.php', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json'
+    }
+  })
+    .then(response => response.json().then(data => ({ status: response.status, data })))
+    .then(({ status, data }) => {
+      if (status !== 200 || !data.result || !Array.isArray(data.result)) {
+        throw new Error('Invalid or missing result array in response.');
+      }
+
+      dropdown.innerHTML = '<option value="">Select a customer</option>';
+
+      data.result.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.customerId || customer.id || '';
+        option.textContent = customer.customerDescription || customer.name || 'Unnamed';
+        dropdown.appendChild(option);
+      });
     })
-    .then(response => {
-        const customers = response.Result?.Items || [];
-        select.innerHTML = '<option disabled selected value="">-- Select Customer --</option>';
-        customers.forEach(c => {
-            const option = document.createElement('option');
-            option.value = c.Code;
-            option.textContent = c.Description || c.Code;
-            select.appendChild(option);
-        });
-    })
-    .catch(err => {
-        console.error('Failed to load customers:', err);
-        select.innerHTML = '<option disabled>Error loading customers</option>';
+    .catch(error => {
+      console.error('Failed to load customers:', error);
+      dropdown.innerHTML = '<option value="">Error loading customers</option>';
     });
 }
+
 
 
 
