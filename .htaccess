@@ -1,9 +1,12 @@
+# Ensure PHP index loads
 DirectoryIndex index.php
-<Files "index.php">
+
+# Allow access to PHP files
+<FilesMatch "\.php$">
     Require all granted
-</Files>
+</FilesMatch>
 
-
+# Optional: Redirect all to HTTPS
 RewriteEngine On
-RewriteCond %{HTTP:Authorization} .
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
