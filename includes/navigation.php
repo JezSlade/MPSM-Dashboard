@@ -33,9 +33,10 @@ $selected_customer = $_GET['customer'] ?? '';
     <select name="customer" id="customer" onchange="this.form.submit()" class="customer-select">
       <option value="">-- All Customers --</option>
       <?php foreach ($customers as $cust): ?>
-        <option value="<?= htmlspecialchars($cust['Code']) ?>" <?= $selected_customer === $cust['Code'] ? 'selected' : '' ?>>
-          <?= htmlspecialchars($cust['Description'] ?? $cust['Code']) ?>
-        </option>
+<option value="<?= htmlspecialchars($cust['Code']) ?>" <?= $selected_customer === $cust['Code'] ? 'selected' : '' ?>>
+  <?= htmlspecialchars($cust['Description'] ?? $cust['Code']) ?>
+</option>
+
       <?php endforeach; ?>
     </select>
   </form>
