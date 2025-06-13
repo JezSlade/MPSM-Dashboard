@@ -1,11 +1,19 @@
 <?php
-// api/get_customer_list.php — Fetches customer list from /Customer/List
+// api/get_customer_list.php — Retrieves customers from /Customer/List endpoint
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../sanitize_env.php';
 
 $env = loadEnv(__DIR__ . '/../.env');
 
+// === Validate required env
+if (empty($env['BASE_URL']) || empty($env['DEALER_CODE'])) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Missing BASE_URL or DEALER_CODE in .env']);
+    exit;
+}
+
+// === Extract Bearer token from Authorization header
 $headers = getallheaders();
 $tokenHeader = $headers['Authorization'] ?? '';
 if (!str_starts_with($tokenHeader, 'Bearer ')) {
@@ -15,19 +23,26 @@ if (!str_starts_with($tokenHeader, 'Bearer ')) {
 }
 $token = trim(substr($tokenHeader, 7));
 
-if (empty($env['BASE_URL']) || empty($env['DEALER_CODE'])) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Missing BASE_URL or DEALER_CODE']);
-    exit;
-}
-
-// Build POST payload
+// === Construct the wrapped request body
 $request = [
-    'pageNumber' => 1,
-    'pageRows' => 100,
-    'dealerCode' => $env['DEALER_CODE']
+    'Url' => 'Customer/List',
+    'Method' => 'POST',
+    'Request' => [
+        'DealerCode' => $env['DEALER_CODE'],
+        'Code' => null,
+        'HasHpSds' => null,
+        'FilterText' => null,
+        'PageNumber' => 1,
+        'PageRows' => 2147483647,
+        'SortColumn' => 'Id',
+        'SortOrder' => 0
+    ]
 ];
 
+// === Debug log for inspection (disable in production)
+error_log("Customer/List request payload: " . json_encode($request));
+
+// === Execute curl request
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/List');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
