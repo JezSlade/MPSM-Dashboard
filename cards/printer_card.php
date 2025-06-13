@@ -8,12 +8,10 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 require_once __DIR__ . '/../includes/config.php';
 
-$deviceId = $_GET['id'] ?? null;
 $customerCode = $_GET['customer'] ?? null;
-$dashboardName = $_GET['dashboard'] ?? 'default';
 
-if (!$deviceId || !$customerCode) {
-    echo "<div class='device-card error'>Missing device ID or customer code.</div>";
+if (!$customerCode) {
+    echo "<div class='device-card error'>No customer selected.</div>";
     return;
 }
 
@@ -22,43 +20,56 @@ $response = @file_get_contents($apiUrl);
 $data = json_decode($response, true);
 
 if (!isset($data['Result']) || !is_array($data['Result'])) {
-    echo "<div class='device-card error'>Unable to retrieve device list.</div>";
+    echo "<div class='device-card error'>Unable to fetch device list.</div>";
     return;
 }
 
-$device = null;
-foreach ($data['Result'] as $d) {
-    if ((string)($d['Id'] ?? '') === (string)$deviceId) {
-        $device = $d;
-        break;
-    }
-}
+$devices = $data['Result'];
+$allKeys = [];
 
-if (!$device) {
-    echo "<div class='device-card error'>Device not found.</div>";
-    return;
+// gather all unique keys across all devices
+foreach ($devices as $device) {
+    $allKeys = array_unique(array_merge($allKeys, array_keys($device)));
 }
+sort($allKeys);
 ?>
 
 <div class="device-card"
      data-card-id="printer_card"
-     data-dashboard="<?= htmlspecialchars($dashboardName) ?>"
-     data-device-id="<?= htmlspecialchars($device['Id'] ?? '') ?>"
-     data-customer-code="<?= htmlspecialchars($device['CustomerCode'] ?? '') ?>"
-     data-serial="<?= htmlspecialchars($device['SerialNumber'] ?? '') ?>"
-     data-status="<?= htmlspecialchars($device['Status'] ?? 'unknown') ?>"
-     data-model="<?= htmlspecialchars($device['Model'] ?? '') ?>">
+     data-dashboard="<?= htmlspecialchars($_GET['dashboard'] ?? 'default') ?>"
+     data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
   <header class="card-header">
-    <h3><?= htmlspecialchars($device['Model'] ?? 'Unknown Model') ?></h3>
-    <span class="status-dot <?= ($device['Status'] ?? '') === 'OK' ? 'online' : 'offline' ?>"></span>
+    <h3>All Device Data for: <?= htmlspecialchars($customerCode) ?></h3>
   </header>
 
-  <ul class="device-info">
-    <li><strong>Serial:</strong> <?= htmlspecialchars($device['SerialNumber'] ?? 'N/A') ?></li>
-    <li><strong>Asset #:</strong> <?= htmlspecialchars($device['Code'] ?? 'N/A') ?></li>
-    <li><strong>IP:</strong> <?= htmlspecialchars($device['IPAddress'] ?? 'N/A') ?></li>
-    <li><strong>Customer:</strong> <?= htmlspecialchars($device['CustomerCode'] ?? 'N/A') ?></li>
-    <li><strong>Status:</strong> <?= htmlspecialchars($device['Status'] ?? 'Unknown') ?></li>
-  </ul>
+  <?php if (empty($devices)): ?>
+    <p>No devices found for this customer.</p>
+  <?php else: ?>
+    <div class="device-table-container">
+      <table class="device-table">
+        <thead>
+          <tr>
+            <?php foreach ($allKeys as $key): ?>
+              <th><?= htmlspecialchars($key) ?></th>
+            <?php endforeach; ?>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($devices as $device): ?>
+            <tr>
+              <?php foreach ($allKeys as $key): ?>
+                <td>
+                  <?php
+                    $value = $device[$key] ?? '';
+                    echo is_array($value) ? '[array]' : htmlspecialchars((string)$value);
+                  ?>
+                </td>
+              <?php endforeach; ?>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
 </div>
