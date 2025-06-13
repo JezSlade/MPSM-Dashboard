@@ -1,0 +1,93 @@
+:root {
+  --bg-light: #e0e0e0;
+  --bg-dark: #121212;
+  --text-light: #111;
+  --text-dark: #eee;
+  --glass-light: rgba(255, 255, 255, 0.25);
+  --glass-dark: rgba(0, 0, 0, 0.25);
+  --blur: 10px;
+  --radius: 1rem;
+  --border-light: rgba(255, 255, 255, 0.3);
+  --border-dark: rgba(255, 255, 255, 0.1);
+  --transition: 0.3s ease-in-out;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: var(--bg-light);
+  color: var(--text-light);
+  transition: background var(--transition), color var(--transition);
+}
+
+body.dark-theme {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
+
+#wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header, .glass-main, footer, nav {
+  background: var(--glass-light);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  margin: 1rem 0;
+  padding: 1rem;
+  transition: background var(--transition), border var(--transition);
+}
+
+body.dark-theme header,
+body.dark-theme .glass-main,
+body.dark-theme footer,
+body.dark-theme nav {
+  background: var(--glass-dark);
+  border-color: var(--border-dark);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#theme-toggle {
+  font-size: 1.2rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1rem;
+}
+
+nav a {
+  text-decoration: none;
+  color: inherit;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  header, nav, .glass-main, footer {
+    padding: 0.75rem;
+  }
+
+  nav ul {
+    flex-direction: column;
+    align-items: start;
+  }
+}

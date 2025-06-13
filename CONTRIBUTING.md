@@ -1,3 +1,6 @@
+### `CONTRIBUTING.md`
+
+```markdown
 # Contributing Guidelines for [MPS Monitor Dashboard]
 
 This document outlines the conventions, best practices, and guidelines that **MUST** be followed when contributing to the `[MPS Monitor Dashboard]` codebase. Adhering to these guidelines is crucial for maintaining code quality, ensuring consistency, facilitating collaboration, and preventing issues like unmanaged files, incorrect naming, or lingering UI elements.
@@ -65,7 +68,6 @@ All changes, from the most minor fix to major new features, must be meticulously
     - Resolved `APP_NAME` undefined constant error by ensuring `config.php` loads .env.
     - Replaced `sanitize_url` with `urlencode`.
     - Corrected stylesheet link from `style.css` to `styles.css`.
-    - Ensured `script.js` is correctly linked.
     ```
 * **Guidelines for Entries:**
     * Each entry must describe a single, atomic change.
@@ -89,7 +91,7 @@ All changes, from the most minor fix to major new features, must be meticulously
     * **`<type>` (Mandatory):** A keyword indicating the *type* of change:
         * `feat`: A new feature.
         * `fix`: A bug fix.
-        * `build`: Changes that affect the build system or external dependencies (e.g., Composer).
+        * `build`: Changes that affect the build system or external dependencies.
         * `chore`: Routine tasks, maintenance, or minor refactors without behavioral change (e.g., updating docs, refactoring variable names).
         * `ci`: Changes to CI configuration files and scripts.
         * `docs`: Documentation-only changes.
@@ -202,7 +204,6 @@ All changes, from the most minor fix to major new features, must be meticulously
     - Resolved `APP_NAME` undefined constant error by ensuring `config.php` loads .env.
     - Replaced `sanitize_url` with `urlencode`.
     - Corrected stylesheet link from `style.css` to `styles.css`.
-    - Ensured `script.js` is correctly linked.
     ```
 * **Guidelines for Entries:**
     * Each entry must describe a single, atomic change.
@@ -226,7 +227,7 @@ All changes, from the most minor fix to major new features, must be meticulously
     * **`<type>` (Mandatory):** A keyword indicating the *type* of change:
         * `feat`: A new feature.
         * `fix`: A bug fix.
-        * `build`: Changes that affect the build system or external dependencies (e.g., Composer).
+        * `build`: Changes that affect the build system or external dependencies.
         * `chore`: Routine tasks, maintenance, or minor refactors without behavioral change (e.g., updating docs, refactoring variable names).
         * `ci`: Changes to CI configuration files and scripts.
         * `docs`: Documentation-only changes.
@@ -282,19 +283,16 @@ A well-defined file and folder structure ensures that all project assets are org
 │   │
 │   └── (optional)        # Subdirectories for specific modules or libraries if the project grows
 │       ├── db/           # Database connection and interaction logic (e.g., db_connect.php, query_builder.php)
-│       ├── auth/         # Authentication related functions/classes (e.g., auth_helpers.php)
-│       └── third-party/  # Small, self-contained third-party PHP libraries (if not using Composer for them)
+│       └── auth/         # Authentication related functions/classes (e.g., auth_helpers.php)
 │
 ├── views/                # HTML templates for different pages/sections (rendered by render_view())
 │   ├── dashboard.php     # Content for the dashboard view
 │   ├── reports.php       # Content for the reports view
 │   └── (optional)        # Subdirectories for nested or complex views (e.g., views/user-management/profile.php)
 │
-├── public/               # Publicly accessible static assets (CSS, JS, images, fonts)
+├── public/               # Publicly accessible static assets (CSS, images, fonts)
 │   ├── css/              # Stylesheets
 │   │   └── styles.css    # Main application stylesheet
-│   ├── js/               # JavaScript files
-│   │   └── script.js     # Main application JavaScript
 │   ├── img/              # Images
 │   └── fonts/            # Web fonts
 │
@@ -302,7 +300,6 @@ A well-defined file and folder structure ensures that all project assets are org
 │   └── debug.log         # Main debug log file (managed by debug_log function)
 │
 └── (optional)
-├── vendor/           # Composer dependencies (if Composer is introduced)
 ├── tests/            # Unit and integration tests (if testing framework is introduced)
 └── .git/             # Git version control metadata (managed by Git)
 #### **Guidelines for Structure:**
@@ -310,7 +307,7 @@ A well-defined file and folder structure ensures that all project assets are org
 * **Logical Grouping:** Files **must** be grouped by their logical function (e.g., all HTML templates in `views`, all core PHP functions in `includes`).
 * **Single Responsibility:** Avoid placing unrelated code in a single file (e.g., `header.php` should *only* contain header HTML and its associated PHP, not navigation or main content).
 * **Flat vs. Nested:** For smaller projects, a relatively flat structure is preferred. As complexity grows, use subdirectories within `includes/` and `views/` to organize related files (e.g., `includes/db/` for database-related files).
-* **`public/` Separation:** All static assets that the browser directly requests (CSS, JS, images) **must** reside within the `public/` directory to improve security and organization.
+* **`public/` Separation:** All static assets that the browser directly requests (CSS, images) **must** reside within the `public/` directory to improve security and organization.
 * **No Unnecessary Files:** Do not create empty directories or files that serve no purpose. If a directory is optional and not currently used, it **must not** exist in the repository.
 
 ---
@@ -328,7 +325,6 @@ Consistent naming is fundamental for code readability and maintainability. It he
     * `user-profile-view.php`
     * `includes/database-helpers/`
     * `css/main-styles.css`
-    * `js/dashboard-charts.js`
 
 ### 3.2. PHP Naming Conventions
 
@@ -366,14 +362,6 @@ Consistent naming is fundamental for code readability and maintainability. It he
 * **CSS Properties and Values:**
     * **Rule:** Standard CSS properties and values (e.g., `background-color`, `font-size`).
     * **Reasoning:** Adherence to W3C standards.
-
-### 3.4. JavaScript Naming Conventions
-
-* **Variables:** `camelCase`
-* **Functions:** `camelCase`
-* **Constants:** `UPPER_SNAKE_CASE`
-* **Classes (if introduced):** `PascalCase`
-* **Reasoning:** Common JavaScript community conventions.
 
 ---
 
@@ -427,11 +415,10 @@ Comments are vital for explaining complex logic, design choices, and assumptions
      */
     ```
 
-### 4.2. HTML/CSS/JavaScript Comments
+### 4.2. HTML/CSS Comments
 
 * **HTML:** Use `` for notes, structure explanations, or temporary disabling of content.
 * **CSS:** Use `/* Your comment here */` for explaining complex styles, sections, or temporary disabling.
-* **JavaScript:** Use `//` for single-line comments and `/* ... */` for multi-line comments. PHPDoc-like JSDoc comments are encouraged for functions/classes.
 
 ---
 
@@ -472,7 +459,6 @@ Beyond naming and structure, consistent coding style and adherence to best pract
     * **Rule:** Avoid direct file system access or redirects based on unsanitized user input.
 * **Superglobals:** Access superglobals (`$_GET`, `$_POST`, `$_SESSION`, etc.) through helper functions (if available) or by careful direct use *after* validation and sanitization.
 * **Configuration:** All sensitive data (API keys, database credentials, specific paths) **must** be stored in the `.env` file and accessed via `includes/config.php` (which loads `.env` variables). **Never hardcode sensitive information.**
-* **Dependencies:** If external PHP libraries are needed, they **must** be managed using Composer. The `vendor/` directory should be excluded from version control.
 * **Single Responsibility Principle:** Functions, classes, and even files should do one thing and do it well. Avoid "God objects" or "mega functions" that handle too many responsibilities.
 * **Loose Coupling, High Cohesion:** Design components to be independent and self-contained, but work well together.
 
@@ -489,14 +475,6 @@ Beyond naming and structure, consistent coding style and adherence to best pract
 * **Rule:** Organize CSS logically (e.g., by component, by page section, or by media queries).
 * **Rule:** Avoid `!important` unless absolutely necessary and with clear justification.
 * **Rule:** Use external CSS files (e.g., `public/css/styles.css`).
-
-### 5.7. JavaScript Guidelines
-
-* **Rule:** Keep DOM manipulation to a minimum. Use efficient methods for selecting elements.
-* **Rule:** Use `const` and `let` over `var` for variable declarations.
-* **Rule:** Prefer modern ES6+ features (e.g., arrow functions, template literals).
-* **Rule:** Organize JavaScript into logical modules or functions if complexity grows.
-* **Rule:** Place `<script>` tags for application-specific JavaScript at the end of the `<body>` element (using `defer` attribute) to avoid blocking HTML rendering.
 
 🔒 [MANDATORY] API Response Guard Clause (Prevent JSON.parse Crash)
 
