@@ -11,12 +11,11 @@
 ### Step 1: Repository Structure Analysis
 - Examine the overall project structure and organization
 - Identify main application entry points and core modules
-- Map out the data flow between components
+- Map out the data flow between components, identify orphaned components
 
 ### Step 2: Code Quality Review
 - Identify code duplication and opportunities for refactoring
 - Check for proper error handling and exception management
-- Look for memory leaks and resource management issues
 - Assess variable naming conventions and code readability
 - Check for dead code and unused imports/dependencies
 - Evaluate function and class complexity
@@ -29,35 +28,13 @@
 - Review API design and REST compliance
 - Examine database schema design and normalization
 - Check for proper configuration management
-- Assess scalability considerations
 
-### Step 4: Dependency Management
-- Check for outdated or vulnerable dependencies
-- Look for unused dependencies that can be removed
-- Assess dependency security and licensing
-- Check for circular dependencies
-- Review package lock file consistency
-
-### Step 7: Testing Coverage
+### Step 4: Testing Coverage
 - Identify areas lacking unit tests
 - Check for integration test coverage
 - Look for edge cases that aren't tested
 - Assess test quality and maintainability
 - Check for proper mocking and test isolation
-
-## WHAT TO LOOK FOR
-
-### Security Vulnerabilities
-- **Hardcoded Credentials**: API keys, passwords, tokens in source code
-- **SQL Injection**: Unparameterized queries, string concatenation in SQL
-- **XSS Vulnerabilities**: Unescaped user input in HTML output
-- **Authentication Flaws**: Weak password policies, session fixation
-- **Authorization Issues**: Missing access controls, privilege escalation
-- **CSRF Vulnerabilities**: Missing CSRF tokens or validation
-- **File Upload Issues**: Unrestricted file types, path traversal
-- **Insecure Cryptography**: Weak algorithms, hardcoded keys
-- **Information Disclosure**: Verbose error messages, debug info exposure
-- **Insecure Dependencies**: Known CVEs in third-party packages
 
 ### Code Quality Issues
 - **Code Duplication**: Repeated logic that should be extracted
@@ -70,18 +47,6 @@
 - **Commented Code**: Dead code left in comments
 - **TODO Comments**: Unfinished work or technical debt markers
 - **Complex Conditionals**: Boolean logic that could be simplified
-
-### Performance Problems
-- **N+1 Database Queries**: Queries inside loops
-- **Missing Database Indexes**: Slow queries on unindexed columns
-- **Inefficient Algorithms**: O(n²) where O(n) would work
-- **Memory Leaks**: Objects not properly disposed or cleared
-- **Synchronous Operations**: Blocking calls that could be async
-- **Large Payloads**: Oversized API responses or data transfers
-- **Missing Caching**: Repeated expensive operations
-- **Resource Waste**: Unnecessary object creation or processing
-- **Inefficient Loops**: Unnecessary work inside iterations
-- **Database Connection Issues**: Not closing connections properly
 
 ### Architecture Concerns
 - **Tight Coupling**: Components too dependent on each other
@@ -128,20 +93,6 @@ Present each finding as a numbered item with:
    - Issue: API call without try-catch
    - Impact: Unhandled exceptions crash application
    - Fix: Add proper exception handling
-
-### Performance Issues
-5. **N+1 query problem** (HIGH)
-   - File: `controllers/OrderController.php` line 67
-   - Issue: Loading users individually in loop
-   - Impact: Slow page load, database overload
-   - Fix: Use eager loading or single query with joins
-
-6. **Missing database index** (MEDIUM)
-   - Table: `orders`
-   - Issue: No index on frequently queried `user_id` column
-   - Impact: Slow query performance
-   - Fix: Add index on `user_id` column
-```
 
 ### Priority Levels
 - **CRITICAL**: Security vulnerabilities requiring immediate attention
