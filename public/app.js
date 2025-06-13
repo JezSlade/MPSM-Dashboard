@@ -2,6 +2,9 @@ window.addEventListener('DOMContentLoaded', () => {
   getToken();
 });
 
+/**
+ * Visually display token status as a temporary badge.
+ */
 function showTokenStatus(success) {
   const badge = document.createElement('div');
   badge.textContent = success ? 'Token OK' : 'Token Failed';
@@ -10,6 +13,9 @@ function showTokenStatus(success) {
   setTimeout(() => badge.remove(), 3000);
 }
 
+/**
+ * Retrieve an access token from the backend proxy.
+ */
 function getToken() {
   const payload = new URLSearchParams({
     grant_type: 'password',
@@ -38,6 +44,9 @@ function getToken() {
     });
 }
 
+/**
+ * Load customers from backend proxy and populate dropdown.
+ */
 function populateCustomerDropdown() {
   const dropdown = document.getElementById('customerSelect');
   if (!dropdown) return console.error('#customerSelect not found.');
@@ -45,34 +54,25 @@ function populateCustomerDropdown() {
   dropdown.innerHTML = '<option disabled selected>Loading customers...</option>';
 
   fetch('/api/get_customer_list.php', {
-    method: 'POST',
+    method: 'GET',
     headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      limit: 10,
-      offset: 0
-    })
+      'Accept': 'application/json'
+    }
   })
-    .then(res => res.json().then(json => ({ status: res.status, body: json })))
-    .then(({ status, body }) => {
-      console.log('API response body:', body);
+    .then(res => res.json())
+    .then(body => {
+      console.log('Customer list response:', body); // Debug line
 
-      if (
-        status !== 200 ||
-        body.status !== 'success' ||
-        !body.data ||
-        !Array.isArray(body.data.customers)
-      ) {
-        throw new Error('Invalid response');
+      const customers = body?.data?.customers;
+      if (!Array.isArray(customers)) {
+        throw new Error('Invalid response format');
       }
 
       dropdown.innerHTML = '<option value="">-- Select Customer --</option>';
-      body.data.customers.forEach(c => {
+      customers.forEach(customer => {
         const option = document.createElement('option');
-        option.value = c.customerId || c.id || '';
-        option.textContent = c.customerDescription || c.name || 'Unnamed';
+        option.value = customer.customerId || customer.id || '';
+        option.textContent = customer.customerDescription || customer.name || 'Unnamed';
         dropdown.appendChild(option);
       });
     })
