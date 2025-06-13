@@ -130,13 +130,8 @@ function loadCustomers() {
         const contentType = res.headers.get("content-type") || "";
         const text = await res.text();
 
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${text}`);
-        }
-
-        if (!contentType.includes("application/json")) {
-            throw new Error("Expected JSON response but received:\n" + text);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+        if (!contentType.includes("application/json")) throw new Error("Expected JSON but got:\n" + text);
 
         return JSON.parse(text);
     })

@@ -1,8 +1,9 @@
 <?php
-// api/get_customers.php
+// api/get_customers.php — Uniform Customer Request Proxy
 
 header('Content-Type: application/json');
 
+// === Load .env
 $envFile = __DIR__ . '/../.env';
 $env = [];
 if (file_exists($envFile)) {
@@ -13,16 +14,17 @@ if (file_exists($envFile)) {
     }
 }
 
-// === Ensure token is passed
+// === Get token from Authorization header
 $headers = getallheaders();
-if (empty($headers['Authorization'])) {
+$tokenHeader = $headers['Authorization'] ?? '';
+if (!str_starts_with($tokenHeader, 'Bearer ')) {
     http_response_code(401);
-    echo json_encode(['error' => 'Missing Authorization header']);
+    echo json_encode(['error' => 'Missing or invalid Authorization header']);
     exit;
 }
-$token = trim(str_replace('Bearer', '', $headers['Authorization']));
+$token = trim(substr($tokenHeader, 7));
 
-// === Build request payload
+// === Prepare request
 $request = [
     'Url' => 'Customer/GetCustomers',
     'Method' => 'POST',
@@ -38,15 +40,15 @@ $request = [
     ]
 ];
 
-// === Make actual API call
+// === Curl POST to external API
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $env['BASE_URL'] . '/Customer/GetCustomers');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer {$token}",
     "Content-Type: application/json",
-    "Accept: application/json",
-    "Authorization: Bearer {$token}"
+    "Accept: application/json"
 ]);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request));
 
