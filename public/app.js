@@ -113,23 +113,18 @@ function getToken() {
 
 
 /**
- * Load customers into the dropdown.
+ * Load customers into the dropdown via local PHP proxy.
  */
 function loadCustomers() {
     const select = document.getElementById('customerSelect');
-    const url = `${window.__ENV__.BASE_URL}/Customer/GetCustomers`;
+    const url = '/api/get_customers.php';
 
     fetch(url, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${window.authToken}`,
-            'Content-Type': 'application/json',
             'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            DealerCode: window.__ENV__.DEALER_CODE,
-            DealerId: window.__ENV__.DEALER_ID
-        })
+        }
     })
     .then(async res => {
         const contentType = res.headers.get("content-type") || "";
@@ -146,12 +141,12 @@ function loadCustomers() {
         return JSON.parse(text);
     })
     .then(response => {
-        const customers = response.Result || [];
+        const customers = response.Result?.Items || [];
         select.innerHTML = '<option disabled selected value="">-- Select Customer --</option>';
         customers.forEach(c => {
             const option = document.createElement('option');
             option.value = c.Code;
-            option.textContent = c.Description;
+            option.textContent = c.Description || c.Code;
             select.appendChild(option);
         });
     })
@@ -160,6 +155,7 @@ function loadCustomers() {
         select.innerHTML = '<option disabled>Error loading customers</option>';
     });
 }
+
 
 
 /**
