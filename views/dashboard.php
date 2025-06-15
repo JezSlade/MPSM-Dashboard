@@ -8,7 +8,7 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 require_once __DIR__ . '/../includes/config.php';
 
-$customerCode = $_GET['customer'] ?? null;
+$customerCode = $_GET['customer'] ?? 'W9OPXL0YDK';
 ?>
 
 <section>
@@ -21,3 +21,7 @@ $customerCode = $_GET['customer'] ?? null;
     ?>
   <?php endif; ?>
 </section>
+ExternalIdentifier
+Department
+IpAddress
+SerialNumber
