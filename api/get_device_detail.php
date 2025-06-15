@@ -8,7 +8,9 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/../includes/envloader.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
 
 $serial = $_GET['serial'] ?? null;
 if (!$serial) {
@@ -50,7 +52,7 @@ if (!$token) {
     exit;
 }
 
-// Prepare API call to Device/GetDetails
+// Call Device/GetDetails
 $apiBase = getenv('API_BASE_URL');
 $detailPayload = json_encode([
     'SerialNumber' => $serial
