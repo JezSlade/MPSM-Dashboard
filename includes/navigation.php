@@ -21,7 +21,7 @@ try {
     // Fail silently, keep customers empty
 }
 
-$selected_customer = $_GET['customer'] ?? '';
+$selected_customer = $_GET['customer'] ?? 'W9OPXL0YDK';
 ?>
 <nav class="glass-nav" style="display: flex; justify-content: space-between; align-items: center;">
   <ul style="display: flex; gap: 1rem; list-style: none; margin: 0; padding: 0;">
