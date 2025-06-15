@@ -303,3 +303,36 @@ body.dark-theme .device-table-container {
   background: rgba(20, 20, 20, 0.3);
   color: #f1f1f1;
 }
+.device-table-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+}
+
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem; /* smaller font */
+  color: inherit;
+}
+
+.device-table th,
+.device-table td {
+  padding: 0.4rem 0.6rem; /* narrower rows */
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.device-table thead {
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: bold;
+}
+
+body.dark-theme .device-table-container {
+  background: rgba(20, 20, 20, 0.3);
+  color: #f1f1f1;
+}

@@ -21,7 +21,4 @@ $customerCode = $_GET['customer'] ?? 'W9OPXL0YDK';
     ?>
   <?php endif; ?>
 </section>
-ExternalIdentifier
-Department
-IpAddress
-SerialNumber
+

@@ -8,14 +8,9 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 require_once __DIR__ . '/../includes/config.php';
 
-$customerCode = $_GET['customer'] ?? null;
+$customerCode = $_GET['customer'] ?? 'W9OPXL0YDK';
 $currentPage = max(1, intval($_GET['page'] ?? 1));
 $perPage = 15;
-
-if (!$customerCode) {
-    echo "<div class='device-card error'>No customer selected.</div>";
-    return;
-}
 
 $apiUrl = APP_BASE_URL . "api/get_devices.php?customer=" . urlencode($customerCode);
 $response = @file_get_contents($apiUrl);
@@ -32,12 +27,8 @@ $totalPages = ceil($totalDevices / $perPage);
 $offset = ($currentPage - 1) * $perPage;
 $paginatedDevices = array_slice($devices, $offset, $perPage);
 
-// collect all unique keys
-$allKeys = [];
-foreach ($devices as $device) {
-    $allKeys = array_unique(array_merge($allKeys, array_keys($device)));
-}
-sort($allKeys);
+// Define the only fields we care about
+$columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
 ?>
 
 <div class="device-card"
@@ -46,7 +37,7 @@ sort($allKeys);
      data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
   <header class="card-header">
-    <h3>All Device Data for: <?= htmlspecialchars($customerCode) ?></h3>
+    <h3>Devices for: <?= htmlspecialchars($customerCode) ?></h3>
   </header>
 
   <?php if (empty($paginatedDevices)): ?>
@@ -56,7 +47,7 @@ sort($allKeys);
       <table class="device-table">
         <thead>
           <tr>
-            <?php foreach ($allKeys as $key): ?>
+            <?php foreach ($columns as $key): ?>
               <th><?= htmlspecialchars($key) ?></th>
             <?php endforeach; ?>
           </tr>
@@ -64,15 +55,8 @@ sort($allKeys);
         <tbody>
           <?php foreach ($paginatedDevices as $device): ?>
             <tr>
-              <?php foreach ($allKeys as $key): ?>
-                <td>
-                  <?php
-                    $value = $device[$key] ?? '';
-                    echo is_array($value)
-                        ? '[array]'
-                        : htmlspecialchars((string)$value);
-                  ?>
-                </td>
+              <?php foreach ($columns as $key): ?>
+                <td><?= htmlspecialchars($device[$key] ?? '') ?></td>
               <?php endforeach; ?>
             </tr>
           <?php endforeach; ?>
