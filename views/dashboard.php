@@ -3,13 +3,13 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/logs/debug.log');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ----------------------------------------
 
 require_once __DIR__ . '/../includes/config.php';
 
 // Load card visibility preferences
-$cardsDir = __DIR__ . '/cards/';
+$cardsDir = __DIR__ . '/../cards/';
 $cardFiles = array_filter(scandir($cardsDir), fn($file) => pathinfo($file, PATHINFO_EXTENSION) === 'php');
 
 // Default: show all
@@ -24,7 +24,7 @@ $visibleCards = array_filter($visibleCards, fn($f) => $f !== 'view-preferences-c
 <head>
   <meta charset="UTF-8">
   <title><?= APP_NAME ?> — Dashboard</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="../assets/styles.css">
   <style>
     .card-grid {
       display: grid;
@@ -36,7 +36,7 @@ $visibleCards = array_filter($visibleCards, fn($f) => $f !== 'view-preferences-c
 </head>
 <body>
 
-  <?php include __DIR__ . '/cards/view-preferences-card.php'; ?>
+  <?php include $cardsDir . 'view-preferences-card.php'; ?>
 
   <main class="glass-main">
     <div class="card-grid">
