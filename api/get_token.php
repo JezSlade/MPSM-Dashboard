@@ -25,7 +25,18 @@ function load_env($path = __DIR__ . '/../.env') {
 
 header('Content-Type: application/json');
 
-$env = load_env();
+if (!function_exists('load_env')) {
+  function load_env($path = __DIR__ . '/../.env') {
+    $env = [];
+    if (!file_exists($path)) return $env;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+      if (str_starts_with(trim($line), '#')) continue;
+      [$key, $val] = explode('=', $line, 2);
+      $env[trim($key)] = trim($val);
+    }
+    return $env;
+  }
+}
 
 $required = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
 foreach ($required as $key) {

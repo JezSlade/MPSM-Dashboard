@@ -7,21 +7,19 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ----------------------------------------
 
 // Load .env manually (no includes)
-function load_env($path = __DIR__ . '/../.env') {
-    if (!file_exists($path)) {
-        http_response_code(500);
-        echo json_encode(["error" => ".env file not found"]);
-        exit;
-    }
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+if (!function_exists('load_env')) {
+  function load_env($path = __DIR__ . '/../.env') {
     $env = [];
-    foreach ($lines as $line) {
-        if (str_starts_with(trim($line), '#')) continue;
-        [$key, $val] = explode('=', $line, 2);
-        $env[trim($key)] = trim($val);
+    if (!file_exists($path)) return $env;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+      if (str_starts_with(trim($line), '#')) continue;
+      [$key, $val] = explode('=', $line, 2);
+      $env[trim($key)] = trim($val);
     }
     return $env;
+  }
 }
+
 
 function get_token($env) {
     $required = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
