@@ -1,9 +1,12 @@
 <?php
-// --- Optional Debug ---
+// --- SPA ENTRY POINT ---
+// Enable debugging during dev
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/debug.log');
 
-// --- Auto-refresh cache once per day ---
+// --- Automatic Cache Trigger: run once per day ---
 $cachePath  = __DIR__ . '/cache/data.json';
 $enginePath = __DIR__ . '/engine/cache_engine.php';
 $needsRefresh = true;
@@ -16,10 +19,22 @@ if (file_exists($cachePath)) {
 }
 
 if ($needsRefresh) {
-  // Run cache engine in its own sandboxed scope
-  (function () use ($enginePath) {
-    include $enginePath;
-  })();
+  try {
+    // Run engine in an isolated scope to avoid global redeclares
+    (function () use ($enginePath) {
+      include $enginePath;
+    })();
+  } catch (Throwable $e) {
+    error_log("[CACHE ERROR] " . $e->getMessage());
+  }
 }
 
-// ...rest of your render_view() or SPA logic here
+// --- SPA View Render Logic (Dynamic Card Loader) ---
+$view = $_GET['view'] ?? 'dashboard';
+$viewFile = __DIR__ . '/views/' . basename($view) . '.php';
+
+if (file_exists($viewFile)) {
+  include $viewFile;
+} else {
+  echo "<div class='card error'><h2>View Not Found</h2><p>The view '$view' does not exist.</p></div>";
+}
