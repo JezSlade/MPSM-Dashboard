@@ -280,3 +280,36 @@ body.dark-theme .device-table-container {
     padding: 1rem;
   }
 }
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 1rem;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.page-btn {
+  padding: 0.4rem 0.8rem;
+  background: var(--glass-light);
+  color: var(--text-light);
+  text-decoration: none;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+.page-btn:hover {
+  background: var(--cyan);
+  color: white;
+  border-color: var(--cyan);
+}
+
+body.dark-theme .page-btn {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dark);
+  border-color: rgba(255,255,255,0.1);
+}
+body.dark-theme .page-btn:hover {
+  background: var(--magenta);
+  color: white;
+}

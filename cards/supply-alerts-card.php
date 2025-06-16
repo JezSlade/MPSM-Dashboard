@@ -52,7 +52,11 @@ foreach ($alerts as $alert) {
 }
 
 // Apply pagination after grouping
-$grouped = array_slice($grouped, 0, $pageRows);
+$currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$totalDevices = count($grouped);
+$totalPages = ceil($totalDevices / $pageRows);
+$offset = ($currentPage - 1) * $pageRows;
+$grouped = array_slice($grouped, $offset, $pageRows);
 ?>
 
 <div class="device-card"
@@ -93,7 +97,20 @@ $grouped = array_slice($grouped, 0, $pageRows);
             </tr>
           <?php endforeach; ?>
         </tbody>
-      </table>
+      </table></table>
+
+<div class="pagination">
+  <?php if ($currentPage > 1): ?>
+    <a href="?customer=<?= urlencode($customerCode) ?>&page=<?= $currentPage - 1 ?>" class="page-btn">← Prev</a>
+  <?php endif; ?>
+
+  <span class="page-label">Page <?= $currentPage ?> of <?= $totalPages ?></span>
+
+  <?php if ($currentPage < $totalPages): ?>
+    <a href="?customer=<?= urlencode($customerCode) ?>&page=<?= $currentPage + 1 ?>" class="page-btn">Next →</a>
+  <?php endif; ?>
+</div>
+
     </div>
   <?php endif; ?>
 </div>
