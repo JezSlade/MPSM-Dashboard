@@ -1,34 +1,43 @@
 <?php
+// --- DEBUG ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
-$cachePath  = __DIR__ . '/cache/data.json';
-$enginePath = __DIR__ . '/engine/cache_engine.php';
-$needsRefresh = true;
+// --- CONFIG ---
+define('CACHE_DIR', __DIR__ . '/../cache/');
+define('CACHE_FILE', CACHE_DIR . 'data.json');
+define('DEFAULT_CUSTOMER', 'W9OPXL0YDK');
 
-if (file_exists($cachePath)) {
-  $last = json_decode(file_get_contents($cachePath), true);
-  $lastRun = strtotime($last['timestamp'] ?? '1970-01-01');
-  $today = strtotime(date('Y-m-d') . ' 00:00:00');
-  $needsRefresh = $lastRun < $today;
+// --- Ensure cache dir exists ---
+if (!is_dir(CACHE_DIR)) {
+  mkdir(CACHE_DIR, 0755, true);
 }
 
-if ($needsRefresh) {
-  try {
-    (function () use ($enginePath) {
-      include $enginePath;
+// --- Scoped include wrapper ---
+// Prevents load_env() or globals from conflicting across API files
+if (!function_exists('exec_api_file')) {
+  function exec_api_file(string $file, string $customer): mixed {
+    return (function () use ($file, $customer) {
+      $_GET['customer'] = $customer;
+      ob_start();
+      include __DIR__ . '/../api/' . $file;
+      return json_decode(ob_get_clean(), true);
     })();
-  } catch (Throwable $e) {
-    error_log("[CACHE ERROR] " . $e->getMessage());
   }
 }
 
-// --- Your regular SPA logic here ---
-$view = $_GET['view'] ?? 'dashboard';
-$viewFile = __DIR__ . '/views/' . basename($view) . '.php';
+// --- Build merged dataset ---
+$new = [
+  'timestamp'    => date('c'),
+  'devices'      => exec_api_file('get_devices.php', DEFAULT_CUSTOMER),
+  'alerts'       => exec_api_file('get_device_alerts.php', DEFAULT_CUSTOMER),
+  'counters'     => exec_api_file('get_device_counters.php', DEFAULT_CUSTOMER),
+  'customers'    => exec_api_file('get_customers.php', DEFAULT_CUSTOMER),
+  'contracts'    => exec_api_file('get_contracts.php', DEFAULT_CUSTOMER),
+  'device_info'  => exec_api_file('get_device_info.php', DEFAULT_CUSTOMER)
+];
 
-if (file_exists($viewFile)) {
-  include $viewFile;
-} else {
-  echo "<div class='card error'><h2>View Not Found</h2><p>The view '$view' does not exist.</p></div>";
-}
+// --- Write to cache ---
+file_put_contents(CACHE_FILE, json_encode($new, JSON_PRETTY_PRINT));
