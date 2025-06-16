@@ -1,9 +1,7 @@
 <?php
-// --- INIT DEBUG ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-// --- AUTO-RUN CACHE ENGINE IF NEEDED ---
 $cachePath  = __DIR__ . '/cache/data.json';
 $enginePath = __DIR__ . '/engine/cache_engine.php';
 $needsRefresh = true;
@@ -25,7 +23,7 @@ if ($needsRefresh) {
   }
 }
 
-// --- CONTINUE SPA RENDER ---
+// --- Your regular SPA logic here ---
 $view = $_GET['view'] ?? 'dashboard';
 $viewFile = __DIR__ . '/views/' . basename($view) . '.php';
 
