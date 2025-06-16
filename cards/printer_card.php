@@ -27,7 +27,6 @@ $totalPages = ceil($totalDevices / $perPage);
 $offset = ($currentPage - 1) * $perPage;
 $paginatedDevices = array_slice($devices, $offset, $perPage);
 
-// Define the only fields we care about
 $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
 ?>
 
@@ -56,7 +55,16 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
           <?php foreach ($paginatedDevices as $device): ?>
             <tr>
               <?php foreach ($columns as $key): ?>
-                <td><?= htmlspecialchars($device[$key] ?? '') ?></td>
+                <?php if ($key === 'ExternalIdentifier'): ?>
+                  <td>
+                    <?= htmlspecialchars($device[$key] ?? '') ?>
+                    <?php if (!empty($device['Id'])): ?>
+                      <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($device['Id']) ?>" title="View Details">🔍</button>
+                    <?php endif; ?>
+                  </td>
+                <?php else: ?>
+                  <td><?= htmlspecialchars($device[$key] ?? '') ?></td>
+                <?php endif; ?>
               <?php endforeach; ?>
             </tr>
           <?php endforeach; ?>
@@ -75,3 +83,113 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
     </div>
   <?php endif; ?>
 </div>
+
+<!-- Modal -->
+<div id="device-detail-modal" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close" onclick="hideModal()">×</button>
+    <div id="modal-body">Loading device details...</div>
+  </div>
+</div>
+
+<style>
+.device-table-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+}
+
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: inherit;
+}
+
+.device-table th,
+.device-table td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.device-table thead {
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: bold;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow: auto;
+  backdrop-filter: blur(10px);
+}
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  background: none;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+</style>
+
+<script>
+function showModal(content) {
+  document.getElementById('modal-body').innerHTML = content;
+  document.getElementById('device-detail-modal').classList.remove('hidden');
+}
+
+function hideModal() {
+  document.getElementById('device-detail-modal').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.drilldown-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-device-id');
+      if (!id) return;
+
+      showModal('Loading device details...');
+      try {
+        const res = await fetch(`api/get_device_detail.php?id=${encodeURIComponent(id)}`);
+        const json = await res.json();
+        if (json.success && json.data?.Result) {
+          const detail = json.data.Result;
+          let output = '<table>';
+          for (const [key, val] of Object.entries(detail)) {
+            output += `<tr><td><strong>${key}</strong></td><td>${Array.isArray(val) ? '[array]' : val}</td></tr>`;
+          }
+          output += '</table>';
+          showModal(output);
+        } else {
+          showModal('No device detail found.');
+        }
+      } catch (e) {
+        showModal('Error loading detail.');
+      }
+    });
+  });
+});
+</script>
