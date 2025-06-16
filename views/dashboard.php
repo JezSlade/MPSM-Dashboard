@@ -36,7 +36,7 @@ $visibleCards = array_filter($visibleCards, fn($f) => $f !== 'view-preferences-c
 </head>
 <body>
 
-  <?php include $cardsDir . 'view-preferences-card.php'; ?>
+<?php include __DIR__ . '/view-preferences-card.php'; ?>
 
   <main class="glass-main">
     <div class="card-grid">
