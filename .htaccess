@@ -17,13 +17,7 @@ DirectoryIndex index.php
   Require all granted
 </FilesMatch>
 
-# Allow access to static assets
-<FilesMatch "\.(css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|map)$">
-  Header set Content-Type "text/plain"
-  Require all granted
-</FilesMatch>
-
-# Ensure correct MIME types
+# Explicit MIME type declarations (no override)
 <IfModule mod_mime.c>
   AddType text/css .css
   AddType application/javascript .js
