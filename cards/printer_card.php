@@ -59,7 +59,9 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
                   <td>
                     <?= htmlspecialchars($device[$key] ?? '') ?>
                     <?php if (!empty($device['Id'])): ?>
-                      <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($device['Id']) ?>" title="View Details">🔍</button>
+                      <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($device['Id']) ?>" title="View Details">
+                        <span class="icon">🔍</span>
+                      </button>
                     <?php endif; ?>
                   </td>
                 <?php else: ?>
@@ -122,6 +124,41 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
   font-weight: bold;
 }
 
+.drilldown-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.4rem;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.drilldown-btn .icon {
+  font-size: 0.75rem;
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(1px);
+}
+
+.pagination-nav {
+  margin-top: 1rem;
+  text-align: center;
+}
+.page-link {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  margin: 0 0.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.4rem;
+  color: white;
+  text-decoration: none;
+  transition: background 0.3s, transform 0.2s;
+}
+.page-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -179,7 +216,17 @@ document.addEventListener('DOMContentLoaded', () => {
           const detail = json.data.Result;
           let output = '<table>';
           for (const [key, val] of Object.entries(detail)) {
-            output += `<tr><td><strong>${key}</strong></td><td>${Array.isArray(val) ? '[array]' : val}</td></tr>`;
+            const cleaned = (typeof val === 'string' ? val.trim() : val);
+            if (
+              cleaned === null ||
+              cleaned === '' ||
+              cleaned === '0' ||
+              cleaned === 0 ||
+              cleaned === 'DEFAULT' ||
+              (Array.isArray(val))
+            ) continue;
+
+            output += `<tr><td><strong>${key}</strong></td><td>${cleaned}</td></tr>`;
           }
           output += '</table>';
           showModal(output);
