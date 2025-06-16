@@ -14,7 +14,21 @@ if (!is_dir(CACHE_DIR)) {
   mkdir(CACHE_DIR, 0755, true);
 }
 
-// ✅ STEP 1: Get fresh token by executing get_token.php
+// 🧠 Inject local copy of load_env() so get_token.php works
+if (!function_exists('load_env')) {
+  function load_env($path = __DIR__ . '/../.env') {
+    $env = [];
+    if (!file_exists($path)) return $env;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+      if (str_starts_with(trim($line), '#')) continue;
+      [$key, $val] = explode('=', $line, 2);
+      $env[trim($key)] = trim($val);
+    }
+    return $env;
+  }
+}
+
+// ✅ STEP 1: Get token using existing get_token.php logic
 function fetch_token(): ?string {
   return (function () {
     ob_start();
@@ -32,12 +46,12 @@ if (!$token) {
   exit("[CACHE ENGINE ERROR] Could not get token.\n");
 }
 
-// ✅ STEP 2: Safe include wrapper with token injection
+// ✅ STEP 2: Scoped include for API files with token injection
 if (!function_exists('exec_api_file')) {
   function exec_api_file(string $file, string $customer, string $token): mixed {
     return (function () use ($file, $customer, $token) {
       $_GET['customer'] = $customer;
-      $_GET['token']    = $token; // inject token for API file to pick up
+      $_GET['token']    = $token;
       ob_start();
       include __DIR__ . '/../api/' . $file;
       return json_decode(ob_get_clean(), true);
@@ -45,7 +59,7 @@ if (!function_exists('exec_api_file')) {
   }
 }
 
-// ✅ STEP 3: Build fresh cache
+// ✅ STEP 3: Build cache
 $new = [
   'timestamp'    => date('c'),
   'devices'      => exec_api_file('get_devices.php',      DEFAULT_CUSTOMER, $token),
