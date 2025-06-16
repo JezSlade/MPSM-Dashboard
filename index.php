@@ -5,6 +5,11 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/debug.log');
 
+$cacheFile = __DIR__ . '/cache/data.json';
+if (!file_exists($cacheFile)) {
+  include __DIR__ . '/engine/cache_engine.php';
+  clearstatcache();
+}
 // ✅ Auto-refresh cache if missing or outdated
 $cachePath = __DIR__ . '/cache/data.json';
 $enginePath = __DIR__ . '/engine/cache_engine.php';
