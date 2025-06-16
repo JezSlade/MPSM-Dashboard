@@ -1,12 +1,9 @@
 <?php
-// --- SPA ENTRY POINT ---
-// Enable debugging during dev
+// --- INIT DEBUG ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/logs/debug.log');
 
-// --- Automatic Cache Trigger: run once per day ---
+// --- AUTO-RUN CACHE ENGINE IF NEEDED ---
 $cachePath  = __DIR__ . '/cache/data.json';
 $enginePath = __DIR__ . '/engine/cache_engine.php';
 $needsRefresh = true;
@@ -20,7 +17,6 @@ if (file_exists($cachePath)) {
 
 if ($needsRefresh) {
   try {
-    // Run engine in an isolated scope to avoid global redeclares
     (function () use ($enginePath) {
       include $enginePath;
     })();
@@ -29,7 +25,7 @@ if ($needsRefresh) {
   }
 }
 
-// --- SPA View Render Logic (Dynamic Card Loader) ---
+// --- CONTINUE SPA RENDER ---
 $view = $_GET['view'] ?? 'dashboard';
 $viewFile = __DIR__ . '/views/' . basename($view) . '.php';
 
