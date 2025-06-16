@@ -21,7 +21,8 @@ if (!function_exists('load_env')) {
 }
 
 
-function get_token($env) {
+if (!function_exists('get_token')) {
+  function get_token($env) {
     $required = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
     foreach ($required as $key) {
         if (empty($env[$key])) {
@@ -29,7 +30,7 @@ function get_token($env) {
             exit;
         }
     }
-
+  }
     $postFields = http_build_query([
         'grant_type'    => 'password',
         'client_id'     => $env['CLIENT_ID'],
