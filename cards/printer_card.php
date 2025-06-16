@@ -35,15 +35,15 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
      data-dashboard="<?= htmlspecialchars($_GET['dashboard'] ?? 'default') ?>"
      data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
-  <header class="card-header">
-    <h3>Devices for: <?= htmlspecialchars($customerCode) ?></h3>
-  </header>
+  <div class="card-header compact-header">
+    <input type="text" id="device-search" placeholder="Search devices..." class="search-box" />
+  </div>
 
   <?php if (empty($paginatedDevices)): ?>
     <p>No devices found for this page.</p>
   <?php else: ?>
     <div class="device-table-container">
-      <table class="device-table">
+      <table class="device-table" id="device-table">
         <thead>
           <tr>
             <?php foreach ($columns as $key): ?>
@@ -53,7 +53,7 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
         </thead>
         <tbody>
           <?php foreach ($paginatedDevices as $device): ?>
-            <tr>
+            <tr class="device-row">
               <?php foreach ($columns as $key): ?>
                 <?php if ($key === 'ExternalIdentifier'): ?>
                   <td>
@@ -95,9 +95,25 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
 </div>
 
 <style>
+.card-header.compact-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+.search-box {
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 0.9rem;
+  min-width: 250px;
+}
+
 .device-table-container {
   overflow-x: auto;
-  margin-top: 1rem;
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(8px);
@@ -197,17 +213,16 @@ function showModal(content) {
   document.getElementById('modal-body').innerHTML = content;
   document.getElementById('device-detail-modal').classList.remove('hidden');
 }
-
 function hideModal() {
   document.getElementById('device-detail-modal').classList.add('hidden');
 }
 
+// Drilldown binding
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.drilldown-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-device-id');
       if (!id) return;
-
       showModal('Loading device details...');
       try {
         const res = await fetch(`api/get_device_detail.php?id=${encodeURIComponent(id)}`);
@@ -225,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
               cleaned === 'DEFAULT' ||
               (Array.isArray(val))
             ) continue;
-
             output += `<tr><td><strong>${key}</strong></td><td>${cleaned}</td></tr>`;
           }
           output += '</table>';
@@ -238,5 +252,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // Filter table by any text
+  const searchBox = document.getElementById('device-search');
+  if (searchBox) {
+    searchBox.addEventListener('input', () => {
+      const term = searchBox.value.toLowerCase();
+      const rows = document.querySelectorAll('.device-row');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
+  }
 });
 </script>
