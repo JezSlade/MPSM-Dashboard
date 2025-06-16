@@ -17,10 +17,37 @@ DirectoryIndex index.php
   Require all granted
 </FilesMatch>
 
-# If you want to allow direct access to /api/ files
+# Allow access to static assets
+<FilesMatch "\.(css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|map)$">
+  Header set Content-Type "text/plain"
+  Require all granted
+</FilesMatch>
+
+# Ensure correct MIME types
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js
+  AddType image/x-icon .ico
+  AddType image/svg+xml .svg
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+  AddType font/ttf .ttf
+  AddType font/eot .eot
+</IfModule>
+
+# Grant access to /api/ folder explicitly
 <IfModule mod_dir.c>
   <IfModule mod_access_compat.c>
     <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/api">
+      Require all granted
+    </Directory>
+  </IfModule>
+</IfModule>
+
+# Grant access to /assets/ folder explicitly
+<IfModule mod_dir.c>
+  <IfModule mod_access_compat.c>
+    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/assets">
       Require all granted
     </Directory>
   </IfModule>
