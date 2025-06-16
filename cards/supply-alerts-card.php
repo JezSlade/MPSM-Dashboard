@@ -65,8 +65,9 @@ foreach ($deviceList as $dev) {
               <td><?= htmlspecialchars($alert['Warning'] ?? '-') ?></td>
               <td><?= htmlspecialchars($alert['SuggestedConsumable'] ?? '-') ?></td>
               <td>
-                <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($alert['DeviceId'] ?? '') ?>" title="View Details">
-                  <span class="icon">🔍</span>
+      <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($alert['DeviceId'] ?? '') ?>" title="View Details">
+        🔍
+      </button>
                 </button>
               </td>
             </tr>
