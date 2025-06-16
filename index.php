@@ -1,43 +1,52 @@
 <?php
-// --- DEBUG ---
+// --- DEBUG MODE ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
+ini_set('error_log', __DIR__ . '/logs/debug.log');
 
-// --- CONFIG ---
-define('CACHE_DIR', __DIR__ . '/../cache/');
-define('CACHE_FILE', CACHE_DIR . 'data.json');
-define('DEFAULT_CUSTOMER', 'W9OPXL0YDK');
+echo "<!-- Start index.php -->\n";
 
-// --- Ensure cache dir exists ---
-if (!is_dir(CACHE_DIR)) {
-  mkdir(CACHE_DIR, 0755, true);
+// --- CACHE ENGINE AUTO-TRIGGER ---
+$cachePath  = __DIR__ . '/cache/data.json';
+$enginePath = __DIR__ . '/engine/cache_engine.php';
+$needsRefresh = true;
+
+if (file_exists($cachePath)) {
+  $last = json_decode(file_get_contents($cachePath), true);
+  $lastRun = strtotime($last['timestamp'] ?? '1970-01-01');
+  $today = strtotime(date('Y-m-d') . ' 00:00:00');
+  $needsRefresh = $lastRun < $today;
 }
 
-// --- Scoped include wrapper ---
-// Prevents load_env() or globals from conflicting across API files
-if (!function_exists('exec_api_file')) {
-  function exec_api_file(string $file, string $customer): mixed {
-    return (function () use ($file, $customer) {
-      $_GET['customer'] = $customer;
-      ob_start();
-      include __DIR__ . '/../api/' . $file;
-      return json_decode(ob_get_clean(), true);
+echo "<!-- Cache Refresh Needed? " . ($needsRefresh ? 'YES' : 'NO') . " -->\n";
+
+if ($needsRefresh) {
+  try {
+    (function () use ($enginePath) {
+      echo "<!-- Running cache_engine.php -->\n";
+      include $enginePath;
     })();
+  } catch (Throwable $e) {
+    echo "<!-- Cache Engine Error -->\n";
+    error_log("[CACHE ENGINE FAIL] " . $e->getMessage());
   }
+} else {
+  echo "<!-- Using existing cache -->\n";
 }
 
-// --- Build merged dataset ---
-$new = [
-  'timestamp'    => date('c'),
-  'devices'      => exec_api_file('get_devices.php', DEFAULT_CUSTOMER),
-  'alerts'       => exec_api_file('get_device_alerts.php', DEFAULT_CUSTOMER),
-  'counters'     => exec_api_file('get_device_counters.php', DEFAULT_CUSTOMER),
-  'customers'    => exec_api_file('get_customers.php', DEFAULT_CUSTOMER),
-  'contracts'    => exec_api_file('get_contracts.php', DEFAULT_CUSTOMER),
-  'device_info'  => exec_api_file('get_device_info.php', DEFAULT_CUSTOMER)
-];
+// --- LOAD VIEW ---
+$view = $_GET['view'] ?? 'dashboard';
+$viewFile = __DIR__ . '/views/' . basename($view) . '.php';
 
-// --- Write to cache ---
-file_put_contents(CACHE_FILE, json_encode($new, JSON_PRETTY_PRINT));
+echo "<!-- View file: $viewFile -->\n";
+
+if (file_exists($viewFile)) {
+  include $viewFile;
+  echo "<!-- View loaded successfully -->\n";
+} else {
+  echo "<div class='card error'><h2>View Not Found</h2><p>The view '$view' does not exist.</p></div>";
+  echo "<!-- View not found fallback shown -->\n";
+}
+
+echo "<!-- End of index.php -->";
