@@ -22,13 +22,13 @@ foreach ($lines as $line) {
     putenv(trim($key) . '=' . trim($value));
 }
 
-$serial = $_GET['serial'] ?? null;
-if (!$serial) {
-    echo json_encode(['success' => false, 'error' => 'Missing serial']);
+$id = $_GET['id'] ?? null;
+if (!$id) {
+    echo json_encode(['success' => false, 'error' => 'Missing device Id']);
     exit;
 }
 
-// Generate token
+// Get token
 $tokenUrl = getenv('TOKEN_URL');
 $clientId = getenv('CLIENT_ID');
 $clientSecret = getenv('CLIENT_SECRET');
@@ -62,9 +62,11 @@ if (!$token) {
     exit;
 }
 
-// Call Device/GetDetails
+// Fetch detailed device data
 $apiBase = getenv('API_BASE_URL');
-$detailPayload = json_encode(['SerialNumber' => $serial]);
+$detailPayload = json_encode([
+    'Id' => $id
+]);
 
 $detailContext = stream_context_create([
     'http' => [
@@ -74,9 +76,9 @@ $detailContext = stream_context_create([
     ]
 ]);
 
-$detailResponse = @file_get_contents($apiBase . 'Device/GetDetails', false, $detailContext);
+$detailResponse = @file_get_contents($apiBase . 'Device/Get', false, $detailContext);
 if ($detailResponse === false) {
-    echo json_encode(['success' => false, 'error' => 'Failed to get device details']);
+    echo json_encode(['success' => false, 'error' => 'Failed to retrieve device detail']);
     exit;
 }
 
