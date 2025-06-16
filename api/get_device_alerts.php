@@ -7,14 +7,6 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 // Load .env only if needed
 if (!function_exists('load_env')) {
-  function load_env($path = __DIR__ . '/../.env') {
-    $env = [];
-    if (!file_exists($path)) return $env;
-    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-      if (str_starts_with(trim($line), '#')) continue;
-      [$key, $val] = explode('=', $line, 2);
-      $env[trim($key)] = trim($val);
-    }
     return $env;
   }
 }
@@ -29,7 +21,7 @@ if (isset($_GET['token'])) {
 
 // BEGIN API LOGIC
 
-
+<?php
 // --- DEBUG BLOCK (Always Keep at Top) ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
