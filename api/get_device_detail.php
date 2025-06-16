@@ -28,7 +28,7 @@ if (isset($_GET['token'])) {
   $customerCode = $_GET['customer'] ?? null;
 
 // BEGIN API LOGIC
-<?php
+
 // --- DEBUG BLOCK (Always Keep at Top) ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -114,6 +114,7 @@ if ($detailResponse === false) {
 
 $detailData = json_decode($detailResponse, true);
 echo json_encode(['success' => true, 'data' => $detailData]);
+
 
 // END API LOGIC
 } else {

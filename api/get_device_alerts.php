@@ -28,7 +28,8 @@ if (isset($_GET['token'])) {
   $customerCode = $_GET['customer'] ?? null;
 
 // BEGIN API LOGIC
-<?php
+
+
 // --- DEBUG BLOCK (Always Keep at Top) ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -123,6 +124,7 @@ $response = file_get_contents($apiBaseUrl . 'SupplyAlert/List', false, $context)
 // --- Output JSON ---
 header('Content-Type: application/json');
 echo $response;
+
 
 // END API LOGIC
 } else {

@@ -28,7 +28,7 @@ if (isset($_GET['token'])) {
   $customerCode = $_GET['customer'] ?? null;
 
 // BEGIN API LOGIC
-<?php
+
 // --- DEBUG BLOCK (Always Keep at Top) ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -109,6 +109,7 @@ if ($response === false) {
 
 http_response_code(200);
 echo $response;
+
 
 // END API LOGIC
 } else {
