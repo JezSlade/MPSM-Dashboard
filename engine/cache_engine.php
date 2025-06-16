@@ -1,15 +1,15 @@
 <?php
-// --- DEBUG + LOGGING ---
+// --- LOGGING + SAFETY ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// -----------------------
+// ------------------------
 
 define('CACHE_FILE', __DIR__ . '/../cache/data.json');
 define('DEFAULT_CUSTOMER', 'W9OPXL0YDK');
 
-// 🔐 Isolated API execution wrapper
+// 🔐 Execute an API PHP file in isolation and capture its JSON output
 function exec_api(string $endpoint, string $customer): mixed {
   $_GET['customer'] = $customer;
 
@@ -20,12 +20,12 @@ function exec_api(string $endpoint, string $customer): mixed {
   })();
 }
 
-// 📦 Load prior cache
+// 📦 Load previous cache if exists
 $previous = file_exists(CACHE_FILE)
   ? json_decode(file_get_contents(CACHE_FILE), true)
   : [];
 
-// 🆕 Pull fresh data from all APIs
+// 📥 Collect all structured data
 $new = [
   'timestamp'  => date('c'),
   'devices'    => exec_api('get_devices.php', DEFAULT_CUSTOMER),
@@ -34,7 +34,7 @@ $new = [
   'customers'  => exec_api('get_customers.php', DEFAULT_CUSTOMER)
 ];
 
-// 🧠 Write only if something changed
+// 🧠 Only update cache if content differs
 if (json_encode($new) !== json_encode($previous)) {
   file_put_contents(CACHE_FILE, json_encode($new, JSON_PRETTY_PRINT));
   echo "[CACHE] Updated @ " . date('Y-m-d H:i:s') . "\n";
