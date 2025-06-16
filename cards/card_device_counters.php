@@ -11,7 +11,14 @@ $apiUrl = "/api/get_device_counters.php?customer=" . urlencode($customer);
 $host = $_SERVER['HTTP_HOST'];
 $scheme = $_SERVER['REQUEST_SCHEME'] ?? 'https';
 $fullUrl = "$scheme://$host$apiUrl";
+
 $data = json_decode(file_get_contents($fullUrl), true);
+
+// Fail-safe
+if (!isset($data['Data']) || !is_array($data['Data'])) {
+  echo "<div class='card'><h2 class='card-title'>Device Counters</h2><p>No counter data available.</p></div>";
+  return;
+}
 ?>
 
 <div class="card">
@@ -28,7 +35,7 @@ $data = json_decode(file_get_contents($fullUrl), true);
         </tr>
       </thead>
       <tbody>
-        <?php foreach (($data['Data'] ?? []) as $device): ?>
+        <?php foreach ($data['Data'] as $device): ?>
           <?php
             $id       = $device['DeviceId'] ?? '';
             $external = $device['ExternalIdentifier'] ?? 'N/A';
@@ -42,7 +49,7 @@ $data = json_decode(file_get_contents($fullUrl), true);
             }
           ?>
           <tr class="hover-row" data-device-id="<?= htmlspecialchars($id) ?>">
-            <td><span class="drill-icon" title="Details" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
+            <td><span class="drill-icon" title="View Details" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
             <td><?= htmlspecialchars($external) ?></td>
             <td><?= htmlspecialchars($dept) ?></td>
             <td><?= number_format($mono) ?></td>
@@ -66,38 +73,5 @@ function openDrilldown(id) {
 }
 </script>
 
-<style>
-.card {
-  background: var(--glass-bg);
-  padding: 1rem;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  margin-bottom: 2rem;
-}
-.card-title {
-  margin-top: 0;
-  font-size: 1.5rem;
-  color: var(--text-dark);
-}
-.table-container {
-  overflow-x: auto;
-}
-.data-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-.data-table th, .data-table td {
-  padding: 0.5rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.hover-row:hover {
-  background-color: rgba(255,255,255,0.05);
-  cursor: pointer;
-}
-.drill-icon {
-  cursor: pointer;
-  font-size: 1rem;
-  display: inline-block;
-}
-</style>
+<!-- Use correct stylesheet path -->
+<link rel="stylesheet" href="/public/css/styles.css">
