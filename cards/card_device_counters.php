@@ -7,22 +7,36 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ----------------------------------------
 
 $customer = $_GET['customer'] ?? 'W9OPXL0YDK';
-$apiUrl = "/api/get_device_counters.php?customer=" . urlencode($customer);
-$host = $_SERVER['HTTP_HOST'];
-$scheme = $_SERVER['REQUEST_SCHEME'] ?? 'https';
-$fullUrl = "$scheme://$host$apiUrl";
+$page     = (int)($_GET['page'] ?? 1);
+$perPage  = 15;
 
-$data = json_decode(file_get_contents($fullUrl), true);
+// === Load Device Counters ===
+$host    = $_SERVER['HTTP_HOST'];
+$scheme  = $_SERVER['REQUEST_SCHEME'] ?? 'https';
+$countersUrl = "$scheme://$host/api/get_device_counters.php?customer=" . urlencode($customer);
+$counters = json_decode(file_get_contents($countersUrl), true);
+$results = $counters['Result'] ?? [];
 
-// Fix: Correct key is 'Result', not 'Data'
-if (!isset($data['Result']) || !is_array($data['Result'])) {
-  echo "<div class='card'><h2 class='card-title'>Device Counters</h2><p>No counter data available.</p></div>";
-  return;
+// === Load Device Lookup (for ExternalIdentifier) ===
+$deviceUrl = "$scheme://$host/api/get_devices.php?customer=" . urlencode($customer);
+$deviceList = json_decode(file_get_contents($deviceUrl), true);
+$deviceLookup = [];
+
+foreach ($deviceList['Data'] ?? [] as $dev) {
+  $deviceLookup[$dev['Id']] = $dev['ExternalIdentifier'] ?? 'N/A';
 }
+
+// === Pagination Logic ===
+$totalItems = count($results);
+$totalPages = ceil($totalItems / $perPage);
+$currentPage = max(1, min($page, $totalPages));
+$start = ($currentPage - 1) * $perPage;
+$visible = array_slice($results, $start, $perPage);
 ?>
 
 <div class="card">
   <h2 class="card-title">Device Counters</h2>
+
   <div class="table-container">
     <table class="data-table full-width">
       <thead>
@@ -34,29 +48,43 @@ if (!isset($data['Result']) || !is_array($data['Result'])) {
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($data['Result'] as $device): ?>
+        <?php foreach ($visible as $device): ?>
           <?php
-            $id         = $device['DeviceId'] ?? '';
-            $external   = $device['ExternalIdentifier'] ?? 'N/A';
-            $dept       = $device['OfficeDescription'] ?? '';
-            $rawDetails = $device['CountersDetailed'] ?? [];
+            $id     = $device['DeviceId'] ?? '';
+            $dept   = $device['OfficeDescription'] ?? '';
+            $external = $deviceLookup[$id] ?? 'N/A';
 
             $total = 0;
-            foreach ($rawDetails as $entry) {
-              $total += $entry['Total'] ?? 0;
+            foreach ($device['CountersDetailed'] ?? [] as $c) {
+              $total += $c['Total'] ?? 0;
             }
 
-            $tooltip = htmlspecialchars(json_encode($rawDetails, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            // Tooltip-style preview
+            $tooltip = '';
+            foreach ($device['CountersDetailed'] ?? [] as $entry) {
+              if (!empty($entry['Description']) && isset($entry['Total'])) {
+                $tooltip .= htmlspecialchars($entry['Description']) . ': ' . number_format($entry['Total']) . "\n";
+              }
+            }
           ?>
-          <tr class="hover-row" data-device-id="<?= htmlspecialchars($id) ?>">
-            <td><span class="drill-icon" title="Details" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
-            <td title="<?= $tooltip ?>"><?= htmlspecialchars($external) ?></td>
+          <tr class="hover-row" title="<?= trim($tooltip) ?>">
+            <td><span class="drill-icon" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
+            <td><?= htmlspecialchars($external) ?></td>
             <td><?= htmlspecialchars($dept) ?></td>
             <td><?= number_format($total) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
+  </div>
+
+  <div class="pagination">
+    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+      <a href="?view=device_counters&customer=<?= urlencode($customer) ?>&page=<?= $i ?>"
+         class="page-link<?= ($i === $currentPage) ? ' active' : '' ?>">
+         <?= $i ?>
+      </a>
+    <?php endfor; ?>
   </div>
 </div>
 
