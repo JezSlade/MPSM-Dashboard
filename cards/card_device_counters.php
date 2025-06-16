@@ -22,7 +22,7 @@ $deviceUrl = "$scheme://$host/api/get_devices.php?customer=" . urlencode($custom
 $deviceList = json_decode(file_get_contents($deviceUrl), true);
 $deviceLookup = [];
 
-foreach ($deviceList['Data'] ?? [] as $dev) {
+foreach ($deviceList['Result'] ?? [] as $dev) {
   $deviceLookup[$dev['Id']] = $dev['ExternalIdentifier'] ?? 'N/A';
 }
 
