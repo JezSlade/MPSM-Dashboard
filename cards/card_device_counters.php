@@ -8,7 +8,10 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 $customer = $_GET['customer'] ?? 'W9OPXL0YDK';
 $apiUrl = "/api/get_device_counters.php?customer=" . urlencode($customer);
-$data = json_decode(file_get_contents(__DIR__ . '/../' . ltrim($apiUrl, '/')), true);
+$host = $_SERVER['HTTP_HOST'];
+$scheme = $_SERVER['REQUEST_SCHEME'] ?? 'https';
+$fullUrl = "$scheme://$host$apiUrl";
+$data = json_decode(file_get_contents($fullUrl), true);
 ?>
 
 <div class="card">
