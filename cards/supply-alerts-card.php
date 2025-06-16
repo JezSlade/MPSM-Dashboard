@@ -17,7 +17,7 @@ $alertsJson = @file_get_contents($alertsUrl);
 $alertsData = json_decode($alertsJson, true);
 $alerts = $alertsData['Result'] ?? [];
 
-// Step 2: Get all devices for lookup
+// Step 2: Get devices for ExternalIdentifier mapping
 $devicesUrl = APP_BASE_URL . "api/get_devices.php?customer=" . urlencode($customerCode);
 $devicesJson = @file_get_contents($devicesUrl);
 $deviceData = json_decode($devicesJson, true);
@@ -30,6 +30,29 @@ foreach ($deviceList as $dev) {
     }
 }
 
+// Step 3: Consolidate alerts by DeviceId
+$grouped = [];
+foreach ($alerts as $alert) {
+    $id = $alert['DeviceId'];
+    if (!isset($grouped[$id])) {
+        $grouped[$id] = [
+            'DeviceId' => $id,
+            'ExternalIdentifier' => $deviceMap[$id] ?? '—',
+            'Department' => $alert['Department'] ?? '-',
+            'Warnings' => [],
+            'Consumables' => [],
+        ];
+    }
+    if (!empty($alert['Warning'])) {
+        $grouped[$id]['Warnings'][] = $alert['Warning'];
+    }
+    if (!empty($alert['SuggestedConsumable'])) {
+        $grouped[$id]['Consumables'][] = $alert['SuggestedConsumable'];
+    }
+}
+
+// Apply pagination after grouping
+$grouped = array_slice($grouped, 0, $pageRows);
 ?>
 
 <div class="device-card"
@@ -38,38 +61,35 @@ foreach ($deviceList as $dev) {
      data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
   <div class="card-header compact-header">
-    <h3>Device Alerts (<?= count($alerts) ?>)</h3>
+    <h3>Device Alerts (<?= count($grouped) ?>)</h3>
   </div>
 
-  <?php if (empty($alerts)): ?>
+  <?php if (empty($grouped)): ?>
     <p>No active supply alerts found for this customer.</p>
   <?php else: ?>
     <div class="device-table-container">
       <table class="device-table">
         <thead>
           <tr>
+            <th></th>
             <th>Equipment ID</th>
             <th>Department</th>
             <th>Warning</th>
             <th>Suggested Consumable</th>
-            <th></th>
           </tr>
         </thead>
         <tbody>
-          <?php foreach (array_slice($alerts, 0, $pageRows) as $alert): ?>
+          <?php foreach ($grouped as $row): ?>
             <tr>
               <td>
-                <?= htmlspecialchars($deviceMap[$alert['DeviceId']] ?? '—') ?>
-              </td>
-              <td><?= htmlspecialchars($alert['Department'] ?? '-') ?></td>
-              <td><?= htmlspecialchars($alert['Warning'] ?? '-') ?></td>
-              <td><?= htmlspecialchars($alert['SuggestedConsumable'] ?? '-') ?></td>
-              <td>
-      <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($alert['DeviceId'] ?? '') ?>" title="View Details">
-        🔍
-      </button>
+                <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($row['DeviceId']) ?>" title="View Details">
+                  🔍
                 </button>
               </td>
+              <td><?= htmlspecialchars($row['ExternalIdentifier']) ?></td>
+              <td><?= htmlspecialchars($row['Department']) ?></td>
+              <td><?= htmlspecialchars(implode(', ', array_unique($row['Warnings']))) ?></td>
+              <td><?= htmlspecialchars(implode(', ', array_unique($row['Consumables']))) ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>
