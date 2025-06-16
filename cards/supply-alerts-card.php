@@ -9,11 +9,26 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 require_once __DIR__ . '/../includes/config.php';
 
 $customerCode = $_GET['customer'] ?? 'W9OPXL0YDK';
-$apiUrl = APP_BASE_URL . "api/get_device_alerts.php?customer=" . urlencode($customerCode);
-$response = @file_get_contents($apiUrl);
-$data = json_decode($response, true);
+$pageRows = 15;
 
-$alerts = $data['Result'] ?? [];
+// Step 1: Get device alerts
+$alertsUrl = APP_BASE_URL . "api/get_device_alerts.php?customer=" . urlencode($customerCode);
+$alertsJson = @file_get_contents($alertsUrl);
+$alertsData = json_decode($alertsJson, true);
+$alerts = $alertsData['Result'] ?? [];
+
+// Step 2: Get all devices for lookup
+$devicesUrl = APP_BASE_URL . "api/get_devices.php?customer=" . urlencode($customerCode);
+$devicesJson = @file_get_contents($devicesUrl);
+$deviceData = json_decode($devicesJson, true);
+$deviceList = $deviceData['Result'] ?? [];
+
+$deviceMap = [];
+foreach ($deviceList as $dev) {
+    if (!empty($dev['Id']) && !empty($dev['ExternalIdentifier'])) {
+        $deviceMap[$dev['Id']] = $dev['ExternalIdentifier'];
+    }
+}
 
 ?>
 
@@ -41,9 +56,11 @@ $alerts = $data['Result'] ?? [];
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($alerts as $alert): ?>
+          <?php foreach (array_slice($alerts, 0, $pageRows) as $alert): ?>
             <tr>
-              <td><?= htmlspecialchars($alert['ExternalIdentifier'] ?? '-') ?></td>
+              <td>
+                <?= htmlspecialchars($deviceMap[$alert['DeviceId']] ?? '—') ?>
+              </td>
               <td><?= htmlspecialchars($alert['Department'] ?? '-') ?></td>
               <td><?= htmlspecialchars($alert['Warning'] ?? '-') ?></td>
               <td><?= htmlspecialchars($alert['SuggestedConsumable'] ?? '-') ?></td>
