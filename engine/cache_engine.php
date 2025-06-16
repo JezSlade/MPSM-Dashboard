@@ -15,12 +15,11 @@ $customer = DEFAULT_CUSTOMER;
 function exec_api($endpoint, $customer) {
   $_GET['customer'] = $customer;
 
-  // Isolate output
-  ob_start();
-  include __DIR__ . '/../api/' . $endpoint;
-  $json = ob_get_clean();
-
-  return json_decode($json, true);
+  return (function() use ($endpoint) {
+    ob_start();
+    include __DIR__ . '/../api/' . $endpoint;
+    return json_decode(ob_get_clean(), true);
+  })();
 }
 
 // Load previous cache (if exists)
