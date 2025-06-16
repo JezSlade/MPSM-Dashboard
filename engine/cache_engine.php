@@ -60,25 +60,48 @@ if (!function_exists('exec_api_file')) {
   }
 }
 
-// ✅ STEP 3: Build cache
+// ✅ STEP 3: Build cache dataset
 $new = [
   'timestamp'    => date('c'),
-  'devices'      => exec_api_file('get_devices.php',      DEFAULT_CUSTOMER, $token),
-  'alerts'       => exec_api_file('get_device_alerts.php',DEFAULT_CUSTOMER, $token),
-  'counters'     => exec_api_file('get_device_counters.php', DEFAULT_CUSTOMER, $token),
-  'customers'    => exec_api_file('get_customers.php',    DEFAULT_CUSTOMER, $token),
-  'contracts'    => exec_api_file('get_contracts.php',    DEFAULT_CUSTOMER, $token),
-  'device_info'  => exec_api_file('get_device_info.php',  DEFAULT_CUSTOMER, $token)
+  'devices'      => exec_api_file('get_devices.php',        DEFAULT_CUSTOMER, $token),
+  'alerts'       => exec_api_file('get_device_alerts.php',  DEFAULT_CUSTOMER, $token),
+  'counters'     => exec_api_file('get_device_counters.php',DEFAULT_CUSTOMER, $token),
+  'customers'    => exec_api_file('get_customers.php',      DEFAULT_CUSTOMER, $token),
+  'contracts'    => exec_api_file('get_contracts.php',      DEFAULT_CUSTOMER, $token),
+  'device_info'  => exec_api_file('get_device_info.php',    DEFAULT_CUSTOMER, $token)
 ];
 
-// ✅ STEP 4: Save if changed
+// ✅ STEP 4: Compare previous cache
 $previous = file_exists(CACHE_FILE)
   ? json_decode(file_get_contents(CACHE_FILE), true)
   : [];
 
-if (json_encode($new) !== json_encode($previous)) {
-  file_put_contents(CACHE_FILE, json_encode($new, JSON_PRETTY_PRINT));
-  echo "[CACHE] Updated @ " . date('Y-m-d H:i:s') . "\n";
-} else {
+if (json_encode($new) === json_encode($previous)) {
   echo "[CACHE] No changes. Skipped write.\n";
+  return;
 }
+
+// ✅ STEP 5: Encode + write atomically with full protection
+ob_clean();
+$jsonOutput = json_encode($new, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+
+if (json_last_error() !== JSON_ERROR_NONE) {
+  $error = json_last_error_msg();
+  error_log("[CACHE ENGINE] JSON encode failed: $error");
+  exit("[CACHE ENGINE ERROR] JSON encode failed: $error\n");
+}
+
+$tempFile = CACHE_DIR . 'data.tmp';
+$finalFile = CACHE_FILE;
+
+if (file_put_contents($tempFile, $jsonOutput) === false) {
+  error_log("[CACHE ENGINE] Failed to write temporary cache file.");
+  exit("[CACHE ENGINE ERROR] Failed to write cache file.\n");
+}
+
+if (!rename($tempFile, $finalFile)) {
+  error_log("[CACHE ENGINE] Failed to move cache file into place.");
+  exit("[CACHE ENGINE ERROR] Failed to finalize cache file.\n");
+}
+
+echo "[CACHE] Updated @ " . date('Y-m-d H:i:s') . "\n";
