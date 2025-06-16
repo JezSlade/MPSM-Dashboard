@@ -1,4 +1,5 @@
 <?php
+// --- DEBUG SETUP ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
@@ -8,31 +9,54 @@ define('CACHE_DIR', __DIR__ . '/../cache/');
 define('CACHE_FILE', CACHE_DIR . 'data.json');
 define('DEFAULT_CUSTOMER', 'W9OPXL0YDK');
 
-// 🔒 Make sure /cache directory exists
+// 🔒 Ensure /cache directory exists
 if (!is_dir(CACHE_DIR)) {
   mkdir(CACHE_DIR, 0755, true);
 }
 
-// 🔁 API include wrapped in scoped sandbox
-function exec_api_file(string $file, string $customer): mixed {
-  return (function() use ($file, $customer) {
-    $_GET['customer'] = $customer;
+// ✅ STEP 1: Get fresh token by executing get_token.php
+function fetch_token(): ?string {
+  return (function () {
     ob_start();
-    include __DIR__ . '/../api/' . $file;
-    return json_decode(ob_get_clean(), true);
+    include __DIR__ . '/../api/get_token.php';
+    $output = ob_get_clean();
+    $parsed = json_decode($output, true);
+    return $parsed['access_token'] ?? null;
   })();
 }
 
-// 🧠 Build new dataset
+$token = fetch_token();
+
+if (!$token) {
+  error_log('[CACHE ENGINE] Failed to retrieve access token.');
+  exit("[CACHE ENGINE ERROR] Could not get token.\n");
+}
+
+// ✅ STEP 2: Safe include wrapper with token injection
+if (!function_exists('exec_api_file')) {
+  function exec_api_file(string $file, string $customer, string $token): mixed {
+    return (function () use ($file, $customer, $token) {
+      $_GET['customer'] = $customer;
+      $_GET['token']    = $token; // inject token for API file to pick up
+      ob_start();
+      include __DIR__ . '/../api/' . $file;
+      return json_decode(ob_get_clean(), true);
+    })();
+  }
+}
+
+// ✅ STEP 3: Build fresh cache
 $new = [
-  'timestamp'  => date('c'),
-  'devices'    => exec_api_file('get_devices.php', DEFAULT_CUSTOMER),
-  'alerts'     => exec_api_file('get_device_alerts.php', DEFAULT_CUSTOMER),
-  'counters'   => exec_api_file('get_device_counters.php', DEFAULT_CUSTOMER),
-  'customers'  => exec_api_file('get_customers.php', DEFAULT_CUSTOMER)
+  'timestamp'    => date('c'),
+  'devices'      => exec_api_file('get_devices.php',      DEFAULT_CUSTOMER, $token),
+  'alerts'       => exec_api_file('get_device_alerts.php',DEFAULT_CUSTOMER, $token),
+  'counters'     => exec_api_file('get_device_counters.php', DEFAULT_CUSTOMER, $token),
+  'customers'    => exec_api_file('get_customers.php',    DEFAULT_CUSTOMER, $token),
+  'contracts'    => exec_api_file('get_contracts.php',    DEFAULT_CUSTOMER, $token),
+  'device_info'  => exec_api_file('get_device_info.php',  DEFAULT_CUSTOMER, $token)
 ];
 
-// 📥 Compare previous content
+// ✅ STEP 4: Save if changed
 $previous = file_exists(CACHE_FILE)
   ? json_decode(file_get_contents(CACHE_FILE), true)
   : [];
