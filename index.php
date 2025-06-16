@@ -25,6 +25,7 @@ if (file_exists($cachePath)) {
 if ($needsRefresh) {
   (function () use ($enginePath) {
     include $enginePath;
+    clearstatcache(); // 🔧 Ensure we read the fresh file after rebuild
   })();
 }
 
