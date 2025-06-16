@@ -6,7 +6,7 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/debug.log');
 // ----------------------------------------
 $cacheFile = __DIR__ . '/../cache/data.json';
-$engineFile = __DIR__ . '/../engine/cache_engine.php';
+include __DIR__ . '/engine/cache_engine.php';
 
 $needsUpdate = true;
 if (file_exists($cacheFile)) {
