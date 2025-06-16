@@ -14,8 +14,8 @@ $fullUrl = "$scheme://$host$apiUrl";
 
 $data = json_decode(file_get_contents($fullUrl), true);
 
-// Fail-safe
-if (!isset($data['Data']) || !is_array($data['Data'])) {
+// Fix: Correct key is 'Result', not 'Data'
+if (!isset($data['Result']) || !is_array($data['Result'])) {
   echo "<div class='card'><h2 class='card-title'>Device Counters</h2><p>No counter data available.</p></div>";
   return;
 }
@@ -30,30 +30,29 @@ if (!isset($data['Data']) || !is_array($data['Data'])) {
           <th></th>
           <th>External ID</th>
           <th>Department</th>
-          <th>Mono</th>
-          <th>Color</th>
+          <th>Total Count</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($data['Data'] as $device): ?>
+        <?php foreach ($data['Result'] as $device): ?>
           <?php
-            $id       = $device['DeviceId'] ?? '';
-            $external = $device['ExternalIdentifier'] ?? 'N/A';
-            $dept     = $device['OfficeDescription'] ?? '';
-            $mono     = 0;
-            $color    = 0;
+            $id         = $device['DeviceId'] ?? '';
+            $external   = $device['ExternalIdentifier'] ?? 'N/A';
+            $dept       = $device['OfficeDescription'] ?? '';
+            $rawDetails = $device['CountersDetailed'] ?? [];
 
-            foreach ($device['Counters'] ?? [] as $counter) {
-              $mono  += $counter['Mono'] ?? 0;
-              $color += $counter['Color'] ?? 0;
+            $total = 0;
+            foreach ($rawDetails as $entry) {
+              $total += $entry['Total'] ?? 0;
             }
+
+            $tooltip = htmlspecialchars(json_encode($rawDetails, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
           ?>
           <tr class="hover-row" data-device-id="<?= htmlspecialchars($id) ?>">
-            <td><span class="drill-icon" title="View Details" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
-            <td><?= htmlspecialchars($external) ?></td>
+            <td><span class="drill-icon" title="Details" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
+            <td title="<?= $tooltip ?>"><?= htmlspecialchars($external) ?></td>
             <td><?= htmlspecialchars($dept) ?></td>
-            <td><?= number_format($mono) ?></td>
-            <td><?= number_format($color) ?></td>
+            <td><?= number_format($total) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
@@ -73,5 +72,4 @@ function openDrilldown(id) {
 }
 </script>
 
-<!-- Use correct stylesheet path -->
 <link rel="stylesheet" href="/public/css/styles.css">
