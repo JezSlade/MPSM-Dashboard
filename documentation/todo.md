@@ -6,4 +6,4 @@
 - Engine is mostly stable, still ironing it out.
 - Wiring Cards up now
 - Issues with getting index.php back loading with the new cache in place.
-- 
+- KEEP WORKING IN INDEX.PHP AND MOVE BACKWARDS WORKING ALL BUGS OUT ONE AT A TIME.
