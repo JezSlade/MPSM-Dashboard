@@ -1,86 +1,19 @@
 <?php
-// --- DEBUG BLOCK (Always Keep at Top) ---
+// --- DEBUG ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ----------------------------------------
 
 header('Content-Type: application/json');
 
-// Load .env manually
-$envPath = realpath(__DIR__ . '/../.env');
-if (!file_exists($envPath)) {
-    echo json_encode(['success' => false, 'error' => 'Missing .env']);
-    exit;
+$cachePath = __DIR__ . '/../cache/data.json';
+
+if (!file_exists($cachePath)) {
+  http_response_code(500);
+  echo json_encode(["error" => "Cache file not found"]);
+  exit;
 }
 
-$lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-foreach ($lines as $line) {
-    if (strpos(trim($line), '#') === 0) continue;
-    [$key, $value] = explode('=', $line, 2);
-    putenv(trim($key) . '=' . trim($value));
-}
-
-$id = $_GET['id'] ?? null;
-if (!$id) {
-    echo json_encode(['success' => false, 'error' => 'Missing device Id']);
-    exit;
-}
-
-// Get token
-$tokenUrl = getenv('TOKEN_URL');
-$clientId = getenv('CLIENT_ID');
-$clientSecret = getenv('CLIENT_SECRET');
-$username = getenv('USERNAME');
-$password = getenv('PASSWORD');
-$scope = getenv('SCOPE');
-
-$tokenPayload = http_build_query([
-    'grant_type' => 'password',
-    'client_id' => $clientId,
-    'client_secret' => $clientSecret,
-    'username' => $username,
-    'password' => $password,
-    'scope' => $scope,
-]);
-
-$tokenContext = stream_context_create([
-    'http' => [
-        'method'  => 'POST',
-        'header'  => "Content-Type: application/x-www-form-urlencoded",
-        'content' => $tokenPayload,
-    ]
-]);
-
-$tokenResponse = @file_get_contents($tokenUrl, false, $tokenContext);
-$tokenData = json_decode($tokenResponse, true);
-$token = $tokenData['access_token'] ?? null;
-
-if (!$token) {
-    echo json_encode(['success' => false, 'error' => 'Failed to authenticate']);
-    exit;
-}
-
-// Fetch detailed device data
-$apiBase = getenv('API_BASE_URL');
-$detailPayload = json_encode([
-    'Id' => $id
-]);
-
-$detailContext = stream_context_create([
-    'http' => [
-        'method'  => 'POST',
-        'header'  => "Content-Type: application/json\r\nAuthorization: Bearer $token",
-        'content' => $detailPayload,
-    ]
-]);
-
-$detailResponse = @file_get_contents($apiBase . 'Device/Get', false, $detailContext);
-if ($detailResponse === false) {
-    echo json_encode(['success' => false, 'error' => 'Failed to retrieve device detail']);
-    exit;
-}
-
-$detailData = json_decode($detailResponse, true);
-echo json_encode(['success' => true, 'data' => $detailData]);
+$cache = json_decode(file_get_contents($cachePath), true);
+echo json_encode($cache['device_info']);
