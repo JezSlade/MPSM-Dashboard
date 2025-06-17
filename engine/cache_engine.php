@@ -27,7 +27,6 @@ echo '<!doctype html>
 function logv($msg) {
     $time = date('H:i:s');
     echo "[{$time}] {$msg}\n";
-    // Push to browser immediately
     @ob_flush();
     @flush();
 }
@@ -143,6 +142,14 @@ if (! $token) {
     exit;
 }
 
+// Correct cache directory: project-root /cache, not engine/cache
+$cacheDir = realpath(__DIR__ . '/../cache') ?: (__DIR__ . '/../cache');
+logv("Using cache directory: {$cacheDir}");
+if (! is_dir($cacheDir)) {
+    logv("Creating cache dir: {$cacheDir}");
+    mkdir($cacheDir, 0755, true);
+}
+
 $toCache = [
     'Customers'      => ['ep'=>'/Customer/GetCustomers','method'=>'POST'],
     'Devices'        => ['ep'=>'/Device/GetDevices','method'=>'GET'],
@@ -151,24 +158,16 @@ $toCache = [
     'DeviceDetail'   => ['ep'=>'/Device/GetDevice','method'=>'GET'],
 ];
 
-$cacheDir = __DIR__.'/cache';
-if (! is_dir($cacheDir)) {
-    logv("Creating cache dir: {$cacheDir}");
-    mkdir($cacheDir, 0755, true);
-}
-
 foreach ($toCache as $name => $info) {
     logv("-- Caching {$name} --");
     if ($info['method'] === 'GET') {
         $data = fetchPaged($info['ep'], $token);
     } else {
         $url = $BASE_URL . ltrim($info['ep'], '/');
-        $body = json_encode([
-            'dealerCode'=>$DEALER_CODE,
-            'pageNumber'=>1,
-            'pageRows'=>1000
-        ]);
+        $bodyArr = ['dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000];
+        $body = json_encode($bodyArr);
         logv("POST {$url}");
+        logv("  Payload: ".json_encode($bodyArr));
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -187,7 +186,7 @@ foreach ($toCache as $name => $info) {
     }
     $out = "{$cacheDir}/{$name}.json";
     file_put_contents($out, json_encode($data, JSON_PRETTY_PRINT));
-    logv("Wrote {$out}");
+    logv("Wrote {$out} (".filesize($out)." bytes)");
     sleep(1);
 }
 
