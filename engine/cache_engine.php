@@ -1,6 +1,7 @@
 <?php
 // cache_engine.php
-// Monolithic cache engine—streaming logs live and using exact api/*.php logic.
+// Monolithic cache engine—streaming live logs in browser, iterating all customers/devices,
+// and showing on-screen snapshots of each API response.
 // --------------------------------------------------------------------
 
 // Disable buffering/compression
@@ -15,10 +16,15 @@ echo '<!doctype html><html><head><meta charset="utf-8"><title>Cache Engine Log</
    .'<style>body{background:#111;color:#eee;font-family:monospace;padding:1rem}pre{margin:0}</style>'
    .'</head><body><pre>';
 
-// logger
+// simple logger
 function logv(string $msg) {
     echo '['.date('H:i:s').'] '.$msg."\n";
     @ob_flush(); @flush();
+}
+// helper to snapshot first N items
+function snapshot(array $data, int $n = 3) {
+    $items = $data['items'] ?? $data['results'] ?? $data;
+    return array_slice($items, 0, $n);
 }
 
 // 1) Load .env
@@ -74,12 +80,7 @@ function getToken() {
     curl_close($ch);
     logv("Token endpoint HTTP {$code}");
     $j = json_decode($resp, true);
-    if (isset($j['access_token'])) {
-        logv("Token acquired");
-        return $j['access_token'];
-    }
-    logv("Failed to parse token response: ".substr($resp,0,200).'…');
-    return null;
+    return $j['access_token'] ?? null;
 }
 
 // 4) POST helper
@@ -87,7 +88,7 @@ function fetchPost(string $endpoint, array $body, string $token): array {
     global $BASE_URL;
     $url = $BASE_URL . ltrim($endpoint, '/');
     logv("POST {$url}");
-    logv("  Payload: " . json_encode($body));
+    logv("  Body: " . json_encode($body));
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
@@ -110,11 +111,11 @@ function fetchPost(string $endpoint, array $body, string $token): array {
 logv("=== BEGIN CACHING ===");
 $token = getToken();
 if (! $token) {
-    logv("ERROR: Cannot obtain token, aborting.");
+    logv("ERROR: cannot obtain token, aborting");
     exit('</pre></body></html>');
 }
 
-// ensure cache dir at project root
+// ensure cache dir
 $cacheDir = dirname(__DIR__) . '/cache';
 if (! is_dir($cacheDir)) {
     mkdir($cacheDir, 0755, true);
@@ -122,82 +123,117 @@ if (! is_dir($cacheDir)) {
 }
 logv("Using cache dir: {$cacheDir}");
 
-// 6) Exact payloads from your api/*.php
-
-// Customers: get_customers.php
-$customersPayload = [
-    'DealerCode'   => $DEALER_CODE,
-    'Code'         => null,
-    'HasHpSds'     => null,
-    'FilterText'   => null,
-    'PageNumber'   => 1,
-    'PageRows'     => 2147483647,
-    'SortColumn'   => 'Id',
-    'SortOrder'    => 0,
+// 6) Customers
+$cp = [
+    'DealerCode'=> $DEALER_CODE,
+    'Code'=> null,
+    'HasHpSds'=> null,
+    'FilterText'=> null,
+    'PageNumber'=>1,
+    'PageRows'=>2147483647,
+    'SortColumn'=>'Id',
+    'SortOrder'=>0,
 ];
-$customers = fetchPost('Customer/GetCustomers', $customersPayload, $token);
+logv("-- Caching Customers --");
+$customers = fetchPost('Customer/GetCustomers', $cp, $token);
 file_put_contents("{$cacheDir}/Customers.json", json_encode($customers, JSON_PRETTY_PRINT));
 logv("Wrote Customers.json");
+logv("Snapshot Customers:");
+print_r(snapshot($customers));  // shows first 3 items
 
-// Devices: get_devices.php uses /Device/List
-$devicesPayload = [
-    'FilterDealerId'       => $DEALER_ID,
-    'FilterCustomerCodes'  => [],            // all customers
-    'ProductBrand'         => null,
-    'ProductModel'         => null,
-    'OfficeId'             => null,
-    'Status'               => 1,
-    'FilterText'           => null,
-    'PageNumber'           => 1,
-    'PageRows'             => 2147483647,
-    'SortColumn'           => 'Id',
-    'SortOrder'            => 0,
-];
-$devices = fetchPost('Device/List', $devicesPayload, $token);
-file_put_contents("{$cacheDir}/Devices.json", json_encode($devices, JSON_PRETTY_PRINT));
+// 7) Devices for all customers
+$allDevices = [];
+$custList = $customers['items'] ?? $customers['results'] ?? [];
+logv("Found ".count($custList)." customers; fetching devices");
+foreach ($custList as $cust) {
+    $code = $cust['Code'] ?? $cust['code'] ?? null;
+    if (!$code) continue;
+    logv(" - CustomerCode: {$code}");
+    $dp = [
+        'FilterDealerId'=>$DEALER_ID,
+        'FilterCustomerCodes'=>[$code],
+        'ProductBrand'=>null,
+        'ProductModel'=>null,
+        'OfficeId'=>null,
+        'Status'=>1,
+        'FilterText'=>null,
+        'PageNumber'=>1,
+        'PageRows'=>2147483647,
+        'SortColumn'=>'Id',
+        'SortOrder'=>0,
+    ];
+    $resp = fetchPost('Device/List', $dp, $token);
+    $list = $resp['items'] ?? $resp['results'] ?? [];
+    logv("   Retrieved ".count($list)." devices");
+    foreach ($list as $d) {
+        $id = $d['Id'] ?? $d['id'] ?? null;
+        if ($id) $allDevices[$id] = $d;
+    }
+    usleep(200000);
+}
+file_put_contents("{$cacheDir}/Devices.json", json_encode(array_values($allDevices), JSON_PRETTY_PRINT));
 logv("Wrote Devices.json");
+logv("Snapshot Devices:");
+print_r(array_slice(array_values($allDevices), 0, 3));
 
-// Alerts: get_device_alerts.php uses /SupplyAlert/List
-$alertsPayload = [
-    'CustomerCode' => $env['CUSTOMER_CODE'] ?? null,
-    'PageNumber'   => 1,
-    'PageRows'     => 2147483647,
-    'SortColumn'   => 'CreationDate',
-    'SortOrder'    => 1,
-];
-$alerts = fetchPost('SupplyAlert/List', $alertsPayload, $token);
-file_put_contents("{$cacheDir}/DeviceAlerts.json", json_encode($alerts, JSON_PRETTY_PRINT));
+// 8) Alerts for all customers
+$allAlerts = [];
+logv("Fetching alerts for each customer");
+foreach ($custList as $cust) {
+    $code = $cust['Code'] ?? $cust['code'] ?? null;
+    if (!$code) continue;
+    $ap = [
+        'CustomerCode'=>$code,
+        'PageNumber'=>1,
+        'PageRows'=>2147483647,
+        'SortColumn'=>'CreationDate',
+        'SortOrder'=>1,
+    ];
+    $resp = fetchPost('SupplyAlert/List', $ap, $token);
+    $list = $resp['items'] ?? $resp['results'] ?? [];
+    logv("   Customer {$code}: ".count($list)." alerts");
+    foreach ($list as $a) {
+        $key = $a['Id'] ?? $a['id'] ?? uniqid();
+        $allAlerts[$key] = $a;
+    }
+    usleep(200000);
+}
+file_put_contents("{$cacheDir}/DeviceAlerts.json", json_encode(array_values($allAlerts), JSON_PRETTY_PRINT));
 logv("Wrote DeviceAlerts.json");
+logv("Snapshot Alerts:");
+print_r(array_slice(array_values($allAlerts), 0, 3));
 
-// Counters: get_device_counters.php
-$countersPayload = [
-    'FilterDealerId'       => $DEALER_ID,
-    'FilterCustomerCodes'  => [], 
-    'PageNumber'           => 1,
-    'PageRows'             => 2147483647,
-    'SortColumn'           => 'Id',
-    'SortOrder'            => 0,
+// 9) Counters (single call)
+$cpay = [
+    'FilterDealerId'=>$DEALER_ID,
+    'FilterCustomerCodes'=>[],
+    'PageNumber'=>1,
+    'PageRows'=>2147483647,
+    'SortColumn'=>'Id',
+    'SortOrder'=>0,
 ];
-$counters = fetchPost('Counter/List', $countersPayload, $token);
+logv("-- Caching Counters --");
+$counters = fetchPost('Counter/List', $cpay, $token);
 file_put_contents("{$cacheDir}/DeviceCounters.json", json_encode($counters, JSON_PRETTY_PRINT));
 logv("Wrote DeviceCounters.json");
+logv("Snapshot Counters:");
+print_r(snapshot($counters));
 
-// 7) Per-device detail (get_device_detail.php is placeholder, so using /Device/GetDevice)
+// 10) Detail for every device
+logv("Fetching detail for ".count($allDevices)." devices");
 $detailData = [];
-$list = $devices['items'] ?? $devices['results'] ?? [];
-logv("Fetching detail for ".count($list)." devices");
-foreach ($list as $dev) {
-    $id = $dev['Id'] ?? $dev['id'] ?? $dev['externalIdentifier'] ?? null;
-    if (! $id) continue;
+foreach ($allDevices as $id => $_) {
     logv(" - Device ID: {$id}");
-    $detailPayload = ['dealerCode' => $DEALER_CODE, 'id' => $id];
-    $detail = fetchPost('Device/GetDevice', $detailPayload, $token);
+    $dpay = ['dealerCode'=>$DEALER_CODE,'id'=>$id];
+    $detail = fetchPost('Device/GetDevice', $dpay, $token);
     $detailData[$id] = $detail;
     usleep(200000);
 }
 file_put_contents("{$cacheDir}/DeviceDetail.json", json_encode($detailData, JSON_PRETTY_PRINT));
 logv("Wrote DeviceDetail.json");
+logv("Snapshot Detail of first device:");
+print_r(snapshot($detailData[array_key_first($detailData)] ?? []));
 
-// 8) Done
+// 11) Done
 logv("=== CACHE COMPLETE ===");
 echo '</pre></body></html>';
