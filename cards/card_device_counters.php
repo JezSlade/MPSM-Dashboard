@@ -3,43 +3,57 @@
 // CARD: Device Counters
 // =============================================================================
 
-// 1. Load environment and get an OAuth token exactly as in each API file.
-//    (Manual .env parsing and token acquisition must live at the top of every card.)
-$envFile = __DIR__ . '/../.env';
-$env     = parseEnvFile($envFile);            // your existing .env parser
-$token   = fetchOAuthToken($env);              // your existing token getter
+// Enable full PHP error reporting and log to your unified debug file
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
-// 2. Fetch all counters for this customer via the Device/GetCounters endpoint.
+// Load your .env values and get an OAuth token
+require_once __DIR__ . '/../includes/config.php';
+$env   = load_env(__DIR__ . '/../.env');
+$token = get_token($env);
+
+// Determine current customer and search/page inputs
 $customerCode = $_GET['customer'] ?? '';
-$allCounters  = fetchDeviceCounters($env['BASE_URL'], $token, $customerCode);
+$searchTerm   = trim($_GET['search'] ?? '');
+$currentPage  = max(1, (int)($_GET['page'] ?? 1));
 
-// 3. Handle the search box input (same ID & class as printer_card.php for consistency).
-$searchTerm = trim($_GET['search'] ?? '');
+// === Fetch raw data via your internal APIs ===
+$scheme        = $_SERVER['REQUEST_SCHEME'] ?? 'https';
+$host          = $_SERVER['HTTP_HOST'];
+// Device counters list
+$countersUrl   = "$scheme://$host/api/get_device_counters.php?customer=" . urlencode($customerCode);
+$countersResp  = json_decode(file_get_contents($countersUrl), true);
+$allCounters   = $countersResp['Result'] ?? [];
+// Device lookup for ExternalIdentifier → Equipment ID
+$deviceUrl     = "$scheme://$host/api/get_devices.php?customer=" . urlencode($customerCode);
+$devicesResp   = json_decode(file_get_contents($deviceUrl), true);
+$deviceLookup  = [];
+foreach ($devicesResp['Result'] ?? [] as $dev) {
+    $deviceLookup[$dev['Id']] = $dev['Equipment ID'] ?? 'N/A';
+}
 
-// 4. Filter devices by Equipment ID (formerly ExternalIdentifier) if a search term exists.
+// === Filter by search term on ExternalIdentifier ===
 $filtered = array_filter($allCounters, function($c) use ($searchTerm) {
-    // Search within the ExternalIdentifier field
-    return $searchTerm === '' 
+    return $searchTerm === ''
         || stripos($c['ExternalIdentifier'] ?? '', $searchTerm) !== false;
 });
 
-// 5. Pagination logic (identical defaults to printer_card.php: 15 items/page).
-$currentPage   = max(1, (int)($_GET['page'] ?? 1));
-$perPage       = 15;
-$totalItems    = count($filtered);
-$totalPages    = (int)ceil($totalItems / $perPage);
-$paginatedData = array_slice(
-    array_values($filtered),              // reindex
-    ($currentPage - 1) * $perPage,
-    $perPage
-);
+// === Pagination (15 items per page) ===
+$perPage      = 15;
+$totalItems   = count($filtered);
+$totalPages   = (int)ceil($totalItems / $perPage);
+$paginated    = array_slice(array_values($filtered), ($currentPage - 1) * $perPage, $perPage);
 
-// 6. Column definitions—**change** 'External ID' → 'Equipment ID'
+// === Column definitions ===
 $columns = [
-    'Equipment ID',   // formerly 'External ID'
-    'CounterName1',
-    'CounterName2',
-    // add your other counter columns here...
+    'Equipment ID',    // was External ID
+    'Mono',
+    'Color',
+    'MonoA3',
+    'ColorA3',
+    'Fax'
 ];
 
 ?>
@@ -48,7 +62,7 @@ $columns = [
      data-dashboard="<?= htmlspecialchars($_GET['dashboard'] ?? 'default') ?>"
      data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
-  <!-- Card header with search box (compact style) -->
+  <!-- Header + Search Box -->
   <div class="card-header compact-header">
     <input
       type="text"
@@ -59,46 +73,39 @@ $columns = [
       class="search-box" />
   </div>
 
-  <?php if (empty($paginatedData)): ?>
-    <!-- No data fallback -->
+  <?php if (empty($paginated)): ?>
     <p>No devices found for this page.</p>
   <?php else: ?>
     <div class="device-table-container">
-      <!-- Table structure matches printer_card.php exactly -->
       <table class="device-table" id="device-table">
         <thead>
           <tr>
-            <?php foreach ($columns as $colLabel): ?>
-              <th><?= htmlspecialchars($colLabel) ?></th>
+            <?php foreach ($columns as $col): ?>
+              <th><?= htmlspecialchars($col) ?></th>
             <?php endforeach; ?>
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($paginatedData as $device): ?>
+          <?php foreach ($paginated as $row): ?>
             <tr class="device-row">
-              <?php foreach ($columns as $colLabel): ?>
-                <?php if ($colLabel === 'Equipment ID'): ?>
+              <?php foreach ($columns as $col): ?>
+                <?php if ($col === 'Equipment ID'): ?>
                   <td>
                     <?php
-                      // Show the ExternalIdentifier value or 'N/A' if empty
-                      $value = $device['ExternalIdentifier'] ?? '';
-                      echo htmlspecialchars($value !== '' ? $value : 'N/A');
+                      $ext = $row['ExternalIdentifier'] ?? '';
+                      echo htmlspecialchars($ext !== '' ? $ext : 'N/A');
                     ?>
-                    <?php if (!empty($device['Id'])): ?>
-                      <!-- Drill-down button replaces the tooltip -->
+                    <?php if (!empty($row['Id'])): ?>
                       <button
                         class="drilldown-btn"
-                        data-device-id="<?= htmlspecialchars($device['Id']) ?>"
+                        data-device-id="<?= htmlspecialchars($row['Id']) ?>"
                         title="View Details">
                         <span class="icon">🔍</span>
                       </button>
                     <?php endif; ?>
                   </td>
                 <?php else: ?>
-                  <!-- All other columns rendered normally -->
-                  <td>
-                    <?= htmlspecialchars($device[$colLabel] ?? '') ?>
-                  </td>
+                  <td><?= htmlspecialchars($row[$col] ?? '') ?></td>
                 <?php endif; ?>
               <?php endforeach; ?>
             </tr>
@@ -107,21 +114,34 @@ $columns = [
       </table>
     </div>
 
-    <!-- Pagination nav (← Prev | Page X of Y | Next →) -->
+    <!-- Pagination Controls -->
     <div class="pagination-nav">
       <?php if ($currentPage > 1): ?>
-        <a
-          href="?customer=<?= urlencode($customerCode) ?>&search=<?= urlencode($searchTerm) ?>&page=<?= $currentPage - 1 ?>"
-          class="page-link">← Prev</a>
+        <a href="?customer=<?= urlencode($customerCode) ?>&search=<?= urlencode($searchTerm) ?>&page=<?= $currentPage - 1 ?>" class="page-link">← Prev</a>
       <?php endif; ?>
 
       <span>Page <?= $currentPage ?> of <?= $totalPages ?></span>
 
       <?php if ($currentPage < $totalPages): ?>
-        <a
-          href="?customer=<?= urlencode($customerCode) ?>&search=<?= urlencode($searchTerm) ?>&page=<?= $currentPage + 1 ?>"
-          class="page-link">Next →</a>
+        <a href="?customer=<?= urlencode($customerCode) ?>&search=<?= urlencode($searchTerm) ?>&page=<?= $currentPage + 1 ?>" class="page-link">Next →</a>
       <?php endif; ?>
     </div>
   <?php endif; ?>
 </div>
+
+<link rel="stylesheet" href="/public/css/styles.css">
+<script>
+  // Drill-down modal loader (reuses your shared component)
+  document.querySelectorAll('.drilldown-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-device-id');
+      fetch(`/components/drilldown-modal.php?id=${encodeURIComponent(id)}`)
+        .then(r => r.text())
+        .then(html => {
+          const modal = document.createElement('div');
+          modal.innerHTML = html;
+          document.body.appendChild(modal);
+        });
+    });
+  });
+</script>

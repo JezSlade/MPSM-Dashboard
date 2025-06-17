@@ -7,3 +7,5 @@
 - Wiring Cards up now
 - Issues with getting index.php back loading with the new cache in place.
 - KEEP WORKING IN INDEX.PHP AND MOVE BACKWARDS WORKING ALL BUGS OUT ONE AT A TIME.
+- Card that displays devices that have not reported (down or removed)
+- 
