@@ -1,4 +1,15 @@
 <?php
+require_once __DIR__ . '/../includes/redis.php';
+
+// Redis cache wrapper
+$cacheKey = 'mpsm:api:get_devices.php:' . md5(json_encode($_REQUEST));
+if ($cached = getCache($cacheKey)) {
+    echo $cached;
+    exit;
+}
+
+ob_start();
+
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
@@ -98,3 +109,8 @@ curl_close($ch);
 
 http_response_code($code);
 echo $response;
+
+
+$output = ob_get_clean();
+setCache($cacheKey, $output, 60);
+echo $output;
