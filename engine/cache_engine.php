@@ -1,7 +1,7 @@
 <?php
 // cache_engine.php
 // Monolithic cache engine—streaming live logs in browser, iterating all customers/devices,
-// and showing on-screen snapshots of each API response.
+// showing on-screen snapshots of each API response, with exact endpoint names.
 // --------------------------------------------------------------------
 
 // Disable buffering/compression
@@ -138,8 +138,7 @@ logv("-- Caching Customers --");
 $customers = fetchPost('Customer/GetCustomers', $cp, $token);
 file_put_contents("{$cacheDir}/Customers.json", json_encode($customers, JSON_PRETTY_PRINT));
 logv("Wrote Customers.json");
-logv("Snapshot Customers:");
-print_r(snapshot($customers));  // shows first 3 items
+logv("Snapshot Customers:"); print_r(snapshot($customers));
 
 // 7) Devices for all customers
 $allDevices = [];
@@ -150,19 +149,14 @@ foreach ($custList as $cust) {
     if (!$code) continue;
     logv(" - CustomerCode: {$code}");
     $dp = [
-        'FilterDealerId'=>$DEALER_ID,
-        'FilterCustomerCodes'=>[$code],
-        'ProductBrand'=>null,
-        'ProductModel'=>null,
-        'OfficeId'=>null,
-        'Status'=>1,
-        'FilterText'=>null,
-        'PageNumber'=>1,
-        'PageRows'=>2147483647,
-        'SortColumn'=>'Id',
-        'SortOrder'=>0,
+        'dealerCode'=> $DEALER_CODE,
+        'customerCode'=> $code,
+        'pageNumber'=>1,
+        'pageRows'=>2147483647,
+        'sortColumn'=>'Id',
+        'sortOrder'=>0,
     ];
-    $resp = fetchPost('Device/List', $dp, $token);
+    $resp = fetchPost('Device/GetDevices', $dp, $token);
     $list = $resp['items'] ?? $resp['results'] ?? [];
     logv("   Retrieved ".count($list)." devices");
     foreach ($list as $d) {
@@ -173,8 +167,7 @@ foreach ($custList as $cust) {
 }
 file_put_contents("{$cacheDir}/Devices.json", json_encode(array_values($allDevices), JSON_PRETTY_PRINT));
 logv("Wrote Devices.json");
-logv("Snapshot Devices:");
-print_r(array_slice(array_values($allDevices), 0, 3));
+logv("Snapshot Devices:"); print_r(array_slice(array_values($allDevices), 0, 3));
 
 // 8) Alerts for all customers
 $allAlerts = [];
@@ -183,13 +176,14 @@ foreach ($custList as $cust) {
     $code = $cust['Code'] ?? $cust['code'] ?? null;
     if (!$code) continue;
     $ap = [
-        'CustomerCode'=>$code,
-        'PageNumber'=>1,
-        'PageRows'=>2147483647,
-        'SortColumn'=>'CreationDate',
-        'SortOrder'=>1,
+        'dealerCode'=> $DEALER_CODE,
+        'customerCode'=> $code,
+        'pageNumber'=>1,
+        'pageRows'=>2147483647,
+        'sortColumn'=>'CreationDate',
+        'sortOrder'=>1,
     ];
-    $resp = fetchPost('SupplyAlert/List', $ap, $token);
+    $resp = fetchPost('Device/GetDeviceAlerts', $ap, $token);
     $list = $resp['items'] ?? $resp['results'] ?? [];
     logv("   Customer {$code}: ".count($list)." alerts");
     foreach ($list as $a) {
@@ -200,13 +194,12 @@ foreach ($custList as $cust) {
 }
 file_put_contents("{$cacheDir}/DeviceAlerts.json", json_encode(array_values($allAlerts), JSON_PRETTY_PRINT));
 logv("Wrote DeviceAlerts.json");
-logv("Snapshot Alerts:");
-print_r(array_slice(array_values($allAlerts), 0, 3));
+logv("Snapshot Alerts:"); print_r(array_slice(array_values($allAlerts), 0, 3));
 
 // 9) Counters (single call)
 $cpay = [
-    'FilterDealerId'=>$DEALER_ID,
-    'FilterCustomerCodes'=>[],
+    'FilterDealerId'=> $DEALER_ID,
+    'FilterCustomerCodes'=> [],
     'PageNumber'=>1,
     'PageRows'=>2147483647,
     'SortColumn'=>'Id',
@@ -216,8 +209,7 @@ logv("-- Caching Counters --");
 $counters = fetchPost('Counter/List', $cpay, $token);
 file_put_contents("{$cacheDir}/DeviceCounters.json", json_encode($counters, JSON_PRETTY_PRINT));
 logv("Wrote DeviceCounters.json");
-logv("Snapshot Counters:");
-print_r(snapshot($counters));
+logv("Snapshot Counters:"); print_r(snapshot($counters));
 
 // 10) Detail for every device
 logv("Fetching detail for ".count($allDevices)." devices");
@@ -231,8 +223,7 @@ foreach ($allDevices as $id => $_) {
 }
 file_put_contents("{$cacheDir}/DeviceDetail.json", json_encode($detailData, JSON_PRETTY_PRINT));
 logv("Wrote DeviceDetail.json");
-logv("Snapshot Detail of first device:");
-print_r(snapshot($detailData[array_key_first($detailData)] ?? []));
+logv("Snapshot Detail of first device:"); print_r(snapshot($detailData[array_key_first($detailData)] ?? []));
 
 // 11) Done
 logv("=== CACHE COMPLETE ===");
