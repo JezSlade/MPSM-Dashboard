@@ -1,19 +1,35 @@
 <?php
 // cache_engine.php
-// Monolithic cache engine for pre-fetching all key MPS Monitor API data, with verbose logging.
+// Monolithic cache engine for pre-fetching all key MPS Monitor API data,
+// streaming verbose logs straight to the browser window.
 // --------------------------------------------------------------------
 
-// Enable debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// Turn off output buffering and compression
+@ini_set('zlib.output_compression',    0);
+@ini_set('implicit_flush',             1);
+while (ob_get_level() > 0) { ob_end_flush(); }
+ob_implicit_flush(true);
 
-// VERBOSE FLAG (set to false to silence logging)
-$verbose = true;
+// Send page headers
+header('Content-Type: text/html; charset=UTF-8');
+echo '<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cache Engine Log</title>
+  <style>
+    body { background: #111; color: #eee; font-family: monospace; padding: 1rem; }
+    pre { margin: 0; }
+  </style>
+</head>
+<body><pre>';
+
 function logv($msg) {
-    global $verbose;
-    if ($verbose) {
-        echo '[' . date('Y-m-d H:i:s') . '] ' . $msg . "\n";
-    }
+    $time = date('H:i:s');
+    echo "[{$time}] {$msg}\n";
+    // Push to browser immediately
+    @ob_flush();
+    @flush();
 }
 
 // 1) Locate and load .env one level up
@@ -21,45 +37,43 @@ $expectedEnv = __DIR__ . '/../.env';
 logv("Looking for .env at {$expectedEnv}");
 $envPath = realpath($expectedEnv);
 if (! $envPath || ! is_readable($envPath)) {
-    exit("Fatal error: .env not found or unreadable at {$expectedEnv}\n");
+    logv("ERROR: .env not found or unreadable");
+    echo '</pre></body></html>';
+    exit;
 }
-logv(".env found at {$envPath}, loading…");
+logv(".env found, loading…");
 
 $env = [];
 foreach (file($envPath, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
     $line = trim($line);
-    if ($line === '' || $line[0] === '#') {
-        continue;
-    }
+    if ($line === '' || $line[0] === '#') continue;
     [$key, $val] = explode('=', $line, 2) + [null, null];
     if ($key !== null) {
         $envKey = trim($key);
         $envVal = trim($val);
         $env[$envKey] = $envVal;
-        logv("  Loaded env {$envKey} = " . (strlen($envVal)>40 ? substr($envVal,0,40).'…' : $envVal));
+        logv("Loaded env {$envKey}");
     }
 }
 
-// 2) Basic configuration
+// 2) Configuration
 $BASE_URL      = rtrim($env['API_BASE_URL'] ?? '', '/') . '/';
-$CLIENT_ID     = $env['CLIENT_ID']       ?? '';
-$CLIENT_SECRET = $env['CLIENT_SECRET']   ?? '';
-$USERNAME      = $env['USERNAME']        ?? '';
-$PASSWORD      = $env['PASSWORD']        ?? '';
-$DEALER_CODE   = $env['DEALER_CODE']     ?? '';
-$SCOPE         = $env['SCOPE']           ?? '';
-$TOKEN_URL     = $env['TOKEN_URL']       ?? '';
+$CLIENT_ID     = $env['CLIENT_ID']     ?? '';
+$CLIENT_SECRET = $env['CLIENT_SECRET'] ?? '';
+$USERNAME      = $env['USERNAME']      ?? '';
+$PASSWORD      = $env['PASSWORD']      ?? '';
+$DEALER_CODE   = $env['DEALER_CODE']   ?? '';
+$SCOPE         = $env['SCOPE']         ?? '';
+$TOKEN_URL     = $env['TOKEN_URL']     ?? '';
 
-logv("Configuration:");
-logv("  BASE_URL    = {$BASE_URL}");
-logv("  TOKEN_URL   = {$TOKEN_URL}");
-logv("  DEALER_CODE = {$DEALER_CODE}");
+logv("Configured BASE_URL: {$BASE_URL}");
+logv("Configured TOKEN_URL: {$TOKEN_URL}");
 
-// 3) Helper: fetch OAuth token
+// 3) Token fetch
 function getToken() {
     global $TOKEN_URL, $USERNAME, $PASSWORD, $CLIENT_ID, $CLIENT_SECRET, $SCOPE;
-    logv("Requesting access token from {$TOKEN_URL}");
-    $postFields = http_build_query([
+    logv("Requesting token…");
+    $post = http_build_query([
         'grant_type'    => 'password',
         'username'      => $USERNAME,
         'password'      => $PASSWORD,
@@ -67,46 +81,40 @@ function getToken() {
         'client_secret' => $CLIENT_SECRET,
         'scope'         => $SCOPE,
     ]);
-    logv("  POST fields: " . substr($postFields, 0, 100) . '…');
-
     $ch = curl_init($TOKEN_URL);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $postFields,
+        CURLOPT_POSTFIELDS     => $post,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
     ]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
-    logv("  HTTP {$code} from token endpoint");
-    if ($resp === false) {
-        logv("  cURL error fetching token");
-        return null;
+    logv("Token endpoint returned HTTP {$code}");
+    $json = json_decode($resp, true);
+    if (isset($json['access_token'])) {
+        logv("Token acquired");
+        return $json['access_token'];
     }
-    $data = json_decode($resp, true);
-    if (!isset($data['access_token'])) {
-        logv("  Unexpected token response: " . substr($resp, 0, 200) . '…');
-        return null;
-    }
-    logv("  Token acquired (".substr($data['access_token'],0,10)."…)");
-    return $data['access_token'];
+    logv("Failed to parse token response");
+    return null;
 }
 
-// 4) Helper: generic paged GET
-function fetchPaged($endpoint, $params = [], $token, $pageSize = 200) {
+// 4) Paged GET helper
+function fetchPaged($endpoint, $token, $pageSize = 200) {
     global $BASE_URL, $DEALER_CODE;
-    $all    = [];
-    $page   = 1;
+    $all  = [];
+    $page = 1;
     logv("Starting paged GET for {$endpoint}");
     do {
-        $params['dealerCode'] = $DEALER_CODE;
-        $params['pageNumber'] = $page;
-        $params['pageRows']   = $pageSize;
+        $params = [
+            'dealerCode' => $DEALER_CODE,
+            'pageNumber' => $page,
+            'pageRows'   => $pageSize,
+        ];
         $url = $BASE_URL . ltrim($endpoint, '/') . '?' . http_build_query($params);
-
-        logv("  Fetching page {$page}: {$url}");
+        logv("GET {$url}");
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -115,74 +123,73 @@ function fetchPaged($endpoint, $params = [], $token, $pageSize = 200) {
         $resp = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
-        logv("    HTTP {$code} from endpoint");
+        logv("  HTTP {$code}");
         $data = json_decode($resp, true);
         $items = $data['items'] ?? $data['results'] ?? [];
-        logv("    Retrieved " . count($items) . " items");
-        $all   = array_merge($all, $items);
-        $hasMore = count($items) === $pageSize;
+        logv("  Retrieved ".count($items)." items");
+        $all = array_merge($all, $items);
         $page++;
-    } while ($hasMore);
-
-    logv("Completed {$endpoint}, total items fetched: " . count($all));
+    } while (count($items) === $pageSize);
+    logv("Completed {$endpoint}: total ".count($all)." items");
     return $all;
 }
 
-// 5) Main orchestration
-logv("=== BEGIN CACHE ENGINE ===");
+// 5) Run cache
+logv("=== BEGIN CACHE ===");
 $token = getToken();
 if (! $token) {
-    exit("Fatal error: Unable to retrieve access token.\n");
+    logv("ERROR: Cannot obtain token, aborting.");
+    echo '</pre></body></html>';
+    exit;
 }
 
 $toCache = [
-    'Customers'      => ['endpoint' => '/Customer/GetCustomers',    'method' => 'POST'],
-    'Devices'        => ['endpoint' => '/Device/GetDevices',        'method' => 'GET'],
-    'DeviceAlerts'   => ['endpoint' => '/Device/GetDeviceAlerts',   'method' => 'GET'],
-    'DeviceCounters' => ['endpoint' => '/Counter/List',             'method' => 'POST'],
-    'DeviceDetail'   => ['endpoint' => '/Device/GetDevice',         'method' => 'GET'],
+    'Customers'      => ['ep'=>'/Customer/GetCustomers','method'=>'POST'],
+    'Devices'        => ['ep'=>'/Device/GetDevices','method'=>'GET'],
+    'DeviceAlerts'   => ['ep'=>'/Device/GetDeviceAlerts','method'=>'GET'],
+    'DeviceCounters' => ['ep'=>'/Counter/List','method'=>'POST'],
+    'DeviceDetail'   => ['ep'=>'/Device/GetDevice','method'=>'GET'],
 ];
 
-$cacheDir = __DIR__ . '/cache';
+$cacheDir = __DIR__.'/cache';
 if (! is_dir($cacheDir)) {
-    logv("Creating cache directory at {$cacheDir}");
+    logv("Creating cache dir: {$cacheDir}");
     mkdir($cacheDir, 0755, true);
 }
 
 foreach ($toCache as $name => $info) {
-    logv("--- Caching: {$name} ---");
+    logv("-- Caching {$name} --");
     if ($info['method'] === 'GET') {
-        $data = fetchPaged($info['endpoint'], [], $token);
+        $data = fetchPaged($info['ep'], $token);
     } else {
-        // POST-based pull
-        $url = $BASE_URL . ltrim($info['endpoint'], '/');
-        $payloadArr = ['dealerCode' => $DEALER_CODE, 'pageNumber' => 1, 'pageRows' => 1000];
-        $payload = json_encode($payloadArr);
-        logv("  POST {$url}");
-        logv("    Payload: " . json_encode($payloadArr));
+        $url = $BASE_URL . ltrim($info['ep'], '/');
+        $body = json_encode([
+            'dealerCode'=>$DEALER_CODE,
+            'pageNumber'=>1,
+            'pageRows'=>1000
+        ]);
+        logv("POST {$url}");
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_POSTFIELDS     => $body,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => [
                 "Authorization: Bearer {$token}",
-                'Content-Type: application/json'
+                "Content-Type: application/json"
             ],
         ]);
         $resp = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        logv("    HTTP {$code}, response length: " . strlen($resp));
+        logv("  HTTP {$code}, ".strlen($resp)." bytes");
         $data = json_decode($resp, true);
-        logv("    Decoded top-level keys: " . implode(', ', array_keys((array)$data)));
     }
-
-    $outFile = "{$cacheDir}/{$name}.json";
-    file_put_contents($outFile, json_encode($data, JSON_PRETTY_PRINT));
-    logv("  Wrote cache file {$outFile} (".filesize($outFile)." bytes)");
-    sleep(1); // throttle
+    $out = "{$cacheDir}/{$name}.json";
+    file_put_contents($out, json_encode($data, JSON_PRETTY_PRINT));
+    logv("Wrote {$out}");
+    sleep(1);
 }
 
-logv("=== CACHING COMPLETE ===");
+logv("=== CACHE COMPLETE ===");
+echo '</pre></body></html>';
