@@ -6,98 +6,264 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ----------------------------------------
 
-$customer = $_GET['customer'] ?? 'W9OPXL0YDK';
-$page     = (int)($_GET['page'] ?? 1);
-$perPage  = 15;
+require_once __DIR__ . '/../includes/config.php';
 
-// === Load Device Counters ===
-$host    = $_SERVER['HTTP_HOST'];
-$scheme  = $_SERVER['REQUEST_SCHEME'] ?? 'https';
-$countersUrl = "$scheme://$host/api/get_device_counters.php?customer=" . urlencode($customer);
-$counters = json_decode(file_get_contents($countersUrl), true);
-$results = $counters['Result'] ?? [];
+$customerCode = $_GET['customer'] ?? 'W9OPXL0YDK';
+$currentPage = max(1, intval($_GET['page'] ?? 1));
+$perPage = 15;
 
-// === Load Device Lookup (for ExternalIdentifier) ===
-$deviceUrl = "$scheme://$host/api/get_devices.php?customer=" . urlencode($customer);
-$deviceList = json_decode(file_get_contents($deviceUrl), true);
-$deviceLookup = [];
+$apiUrl = APP_BASE_URL . "api/get_devices.php?customer=" . urlencode($customerCode);
+$response = @file_get_contents($apiUrl);
+$data = json_decode($response, true);
 
-foreach ($deviceList['Result'] ?? [] as $dev) {
-  $deviceLookup[$dev['Id']] = $dev['ExternalIdentifier'] ?? 'N/A';
+if (!isset($data['Result']) || !is_array($data['Result'])) {
+    echo "<div class='device-card error'>Unable to fetch device list.</div>";
+    return;
 }
 
-// === Pagination Logic ===
-$totalItems = count($results);
-$totalPages = ceil($totalItems / $perPage);
-$currentPage = max(1, min($page, $totalPages));
-$start = ($currentPage - 1) * $perPage;
-$visible = array_slice($results, $start, $perPage);
+$devices = $data['Result'];
+$totalDevices = count($devices);
+$totalPages = ceil($totalDevices / $perPage);
+$offset = ($currentPage - 1) * $perPage;
+$paginatedDevices = array_slice($devices, $offset, $perPage);
+
+$columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
 ?>
 
-<div class="card">
-  <h2 class="card-title">Device Counters</h2>
+<div class="device-card"
+     data-card-id="printer_card"
+     data-dashboard="<?= htmlspecialchars($_GET['dashboard'] ?? 'default') ?>"
+     data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
-  <div class="table-container">
-    <table class="data-table full-width">
-      <thead>
-        <tr>
-          <th></th>
-          <th>External ID</th>
-          <th>Department</th>
-          <th>Total Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($visible as $device): ?>
-          <?php
-            $id     = $device['DeviceId'] ?? '';
-            $dept   = $device['OfficeDescription'] ?? '';
-            $external = $deviceLookup[$id] ?? 'N/A';
-
-            $total = 0;
-            foreach ($device['CountersDetailed'] ?? [] as $c) {
-              $total += $c['Total'] ?? 0;
-            }
-
-            // Tooltip-style preview
-            $tooltip = '';
-            foreach ($device['CountersDetailed'] ?? [] as $entry) {
-              if (!empty($entry['Description']) && isset($entry['Total'])) {
-                $tooltip .= htmlspecialchars($entry['Description']) . ': ' . number_format($entry['Total']) . "\n";
-              }
-            }
-          ?>
-          <tr class="hover-row" title="<?= trim($tooltip) ?>">
-            <td><span class="drill-icon" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
-            <td><?= htmlspecialchars($external) ?></td>
-            <td><?= htmlspecialchars($dept) ?></td>
-            <td><?= number_format($total) ?></td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+  <div class="card-header compact-header">
+    <input type="text" id="device-search" placeholder="Search devices..." class="search-box" />
   </div>
 
-  <div class="pagination">
-    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-      <a href="?view=device_counters&customer=<?= urlencode($customer) ?>&page=<?= $i ?>"
-         class="page-link<?= ($i === $currentPage) ? ' active' : '' ?>">
-         <?= $i ?>
-      </a>
-    <?php endfor; ?>
+  <?php if (empty($paginatedDevices)): ?>
+    <p>No devices found for this page.</p>
+  <?php else: ?>
+    <div class="device-table-container">
+      <table class="device-table" id="device-table">
+        <thead>
+          <tr>
+            <?php foreach ($columns as $key): ?>
+              <th><?= htmlspecialchars($key) ?></th>
+            <?php endforeach; ?>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($paginatedDevices as $device): ?>
+            <tr class="device-row">
+              <?php foreach ($columns as $key): ?>
+                <?php if ($key === 'ExternalIdentifier'): ?>
+                  <td>
+                    <?= htmlspecialchars($device[$key] ?? '') ?>
+                    <?php if (!empty($device['Id'])): ?>
+                      <button class="drilldown-btn" data-device-id="<?= htmlspecialchars($device['Id']) ?>" title="View Details">
+                        <span class="icon">🔍</span>
+                      </button>
+                    <?php endif; ?>
+                  </td>
+                <?php else: ?>
+                  <td><?= htmlspecialchars($device[$key] ?? '') ?></td>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-nav">
+      <?php if ($currentPage > 1): ?>
+        <a href="?customer=<?= urlencode($customerCode) ?>&page=<?= $currentPage - 1 ?>" class="page-link">← Prev</a>
+      <?php endif; ?>
+      <span>Page <?= $currentPage ?> of <?= $totalPages ?></span>
+      <?php if ($currentPage < $totalPages): ?>
+        <a href="?customer=<?= urlencode($customerCode) ?>&page=<?= $currentPage + 1 ?>" class="page-link">Next →</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+</div>
+
+<!-- Modal -->
+<div id="device-detail-modal" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close" onclick="hideModal()">×</button>
+    <div id="modal-body">Loading device details...</div>
   </div>
 </div>
 
-<script>
-function openDrilldown(id) {
-  fetch(`/components/drilldown-modal.php?id=${id}`)
-    .then(r => r.text())
-    .then(html => {
-      const modal = document.createElement('div');
-      modal.innerHTML = html;
-      document.body.appendChild(modal);
-    });
+<style>
+.card-header.compact-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
 }
-</script>
+.search-box {
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 0.9rem;
+  min-width: 250px;
+}
 
-<link rel="stylesheet" href="/public/css/styles.css">
+.device-table-container {
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+}
+
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: inherit;
+}
+
+.device-table th,
+.device-table td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.device-table thead {
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: bold;
+}
+
+.drilldown-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.4rem;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.drilldown-btn .icon {
+  font-size: 0.75rem;
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(1px);
+}
+
+.pagination-nav {
+  margin-top: 1rem;
+  text-align: center;
+}
+.page-link {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  margin: 0 0.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.4rem;
+  color: white;
+  text-decoration: none;
+  transition: background 0.3s, transform 0.2s;
+}
+.page-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow: auto;
+  backdrop-filter: blur(10px);
+}
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  background: none;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+</style>
+
+<script>
+function showModal(content) {
+  document.getElementById('modal-body').innerHTML = content;
+  document.getElementById('device-detail-modal').classList.remove('hidden');
+}
+function hideModal() {
+  document.getElementById('device-detail-modal').classList.add('hidden');
+}
+
+// Drilldown binding
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.drilldown-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-device-id');
+      if (!id) return;
+      showModal('Loading device details...');
+      try {
+        const res = await fetch(`api/get_device_detail.php?id=${encodeURIComponent(id)}`);
+        const json = await res.json();
+        if (json.success && json.data?.Result) {
+          const detail = json.data.Result;
+          let output = '<table>';
+          for (const [key, val] of Object.entries(detail)) {
+            const cleaned = (typeof val === 'string' ? val.trim() : val);
+            if (
+              cleaned === null ||
+              cleaned === '' ||
+              cleaned === '0' ||
+              cleaned === 0 ||
+              cleaned === 'DEFAULT' ||
+              (Array.isArray(val))
+            ) continue;
+            output += `<tr><td><strong>${key}</strong></td><td>${cleaned}</td></tr>`;
+          }
+          output += '</table>';
+          showModal(output);
+        } else {
+          showModal('No device detail found.');
+        }
+      } catch (e) {
+        showModal('Error loading detail.');
+      }
+    });
+  });
+
+  // Filter table by any text
+  const searchBox = document.getElementById('device-search');
+  if (searchBox) {
+    searchBox.addEventListener('input', () => {
+      const term = searchBox.value.toLowerCase();
+      const rows = document.querySelectorAll('.device-row');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
+  }
+});
+</script>
