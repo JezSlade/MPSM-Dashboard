@@ -9,7 +9,7 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 if (!function_exists('load_env')) {
     return $env;
   }
-}
+
 
 header('Content-Type: application/json');
 
@@ -20,8 +20,6 @@ if (isset($_GET['token'])) {
   $customerCode = $_GET['customer'] ?? null;
 
 // BEGIN API LOGIC
-
-<?php
 // --- DEBUG BLOCK (Always Keep at Top) ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
