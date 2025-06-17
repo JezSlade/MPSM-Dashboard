@@ -5,8 +5,8 @@
 // --------------------------------------------------------------------
 
 // Turn off output buffering and compression
-@ini_set('zlib.output_compression',    0);
-@ini_set('implicit_flush',             1);
+@ini_set('zlib.output_compression', 0);
+@ini_set('implicit_flush',      1);
 while (ob_get_level() > 0) { ob_end_flush(); }
 ob_implicit_flush(true);
 
@@ -19,7 +19,7 @@ echo '<!doctype html>
   <title>Cache Engine Log</title>
   <style>
     body { background: #111; color: #eee; font-family: monospace; padding: 1rem; }
-    pre { margin: 0; }
+    pre  { margin: 0; }
   </style>
 </head>
 <body><pre>';
@@ -123,13 +123,13 @@ function fetchPaged($endpoint, $token, $pageSize = 200) {
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         logv("  HTTP {$code}");
-        $data = json_decode($resp, true);
+        $data  = json_decode($resp, true);
         $items = $data['items'] ?? $data['results'] ?? [];
-        logv("  Retrieved ".count($items)." items");
-        $all = array_merge($all, $items);
+        logv("  Retrieved " . count($items) . " items");
+        $all   = array_merge($all, $items);
         $page++;
     } while (count($items) === $pageSize);
-    logv("Completed {$endpoint}: total ".count($all)." items");
+    logv("Completed {$endpoint}: total " . count($all) . " items");
     return $all;
 }
 
@@ -142,8 +142,8 @@ if (! $token) {
     exit;
 }
 
-// Correct cache directory: project-root /cache, not engine/cache!
-$cacheDir = realpath(__DIR__ . '/../cache') ?: (__DIR__ . '/../cache');
+// CORRECT CACHE DIRECTORY: project-root /cache
+$cacheDir = dirname(__DIR__) . '/cache';
 logv("Using cache directory: {$cacheDir}");
 if (! is_dir($cacheDir)) {
     logv("Creating cache dir: {$cacheDir}");
@@ -163,11 +163,11 @@ foreach ($toCache as $name => $info) {
     if ($info['method'] === 'GET') {
         $data = fetchPaged($info['ep'], $token);
     } else {
-        $url = $BASE_URL . ltrim($info['ep'], '/');
+        $url     = $BASE_URL . ltrim($info['ep'], '/');
         $bodyArr = ['dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000];
-        $body = json_encode($bodyArr);
+        $body    = json_encode($bodyArr);
         logv("POST {$url}");
-        logv("  Payload: ".json_encode($bodyArr));
+        logv("  Payload: " . json_encode($bodyArr));
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -181,12 +181,12 @@ foreach ($toCache as $name => $info) {
         $resp = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        logv("  HTTP {$code}, ".strlen($resp)." bytes");
+        logv("  HTTP {$code}, " . strlen($resp) . " bytes");
         $data = json_decode($resp, true);
     }
     $out = "{$cacheDir}/{$name}.json";
     file_put_contents($out, json_encode($data, JSON_PRETTY_PRINT));
-    logv("Wrote {$out} (".filesize($out)." bytes)");
+    logv("Wrote {$out} (" . filesize($out) . " bytes)");
     sleep(1);
 }
 
