@@ -1,103 +1,127 @@
 <?php
-// --- DEBUG BLOCK (Always Keep at Top) ---
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ----------------------------------------
+// =============================================================================
+// CARD: Device Counters
+// =============================================================================
 
-$customer = $_GET['customer'] ?? 'W9OPXL0YDK';
-$page     = (int)($_GET['page'] ?? 1);
-$perPage  = 15;
+// 1. Load environment and get an OAuth token exactly as in each API file.
+//    (Manual .env parsing and token acquisition must live at the top of every card.)
+$envFile = __DIR__ . '/../.env';
+$env     = parseEnvFile($envFile);            // your existing .env parser
+$token   = fetchOAuthToken($env);              // your existing token getter
 
-// === Load Device Counters ===
-$host    = $_SERVER['HTTP_HOST'];
-$scheme  = $_SERVER['REQUEST_SCHEME'] ?? 'https';
-$countersUrl = "$scheme://$host/api/get_device_counters.php?customer=" . urlencode($customer);
-$counters = json_decode(file_get_contents($countersUrl), true);
-$results = $counters['Result'] ?? [];
+// 2. Fetch all counters for this customer via the Device/GetCounters endpoint.
+$customerCode = $_GET['customer'] ?? '';
+$allCounters  = fetchDeviceCounters($env['BASE_URL'], $token, $customerCode);
 
-// === Load Device Lookup (for Equipment ID) ===
-$deviceUrl = "$scheme://$host/api/get_devices.php?customer=" . urlencode($customer);
-$deviceList = json_decode(file_get_contents($deviceUrl), true);
-$deviceLookup = [];
+// 3. Handle the search box input (same ID & class as printer_card.php for consistency).
+$searchTerm = trim($_GET['search'] ?? '');
 
-foreach ($deviceList['Result'] ?? [] as $dev) {
-  $deviceLookup[$dev['Id']] = $dev['Equipment ID'] ?? 'N/A';
-}
+// 4. Filter devices by Equipment ID (formerly ExternalIdentifier) if a search term exists.
+$filtered = array_filter($allCounters, function($c) use ($searchTerm) {
+    // Search within the ExternalIdentifier field
+    return $searchTerm === '' 
+        || stripos($c['ExternalIdentifier'] ?? '', $searchTerm) !== false;
+});
 
-// === Pagination Logic ===
-$totalItems = count($results);
-$totalPages = ceil($totalItems / $perPage);
-$currentPage = max(1, min($page, $totalPages));
-$start = ($currentPage - 1) * $perPage;
-$visible = array_slice($results, $start, $perPage);
+// 5. Pagination logic (identical defaults to printer_card.php: 15 items/page).
+$currentPage   = max(1, (int)($_GET['page'] ?? 1));
+$perPage       = 15;
+$totalItems    = count($filtered);
+$totalPages    = (int)ceil($totalItems / $perPage);
+$paginatedData = array_slice(
+    array_values($filtered),              // reindex
+    ($currentPage - 1) * $perPage,
+    $perPage
+);
+
+// 6. Column definitions—**change** 'External ID' → 'Equipment ID'
+$columns = [
+    'Equipment ID',   // formerly 'External ID'
+    'CounterName1',
+    'CounterName2',
+    // add your other counter columns here...
+];
+
 ?>
+<div class="device-card"
+     data-card-id="card_device_counters"
+     data-dashboard="<?= htmlspecialchars($_GET['dashboard'] ?? 'default') ?>"
+     data-customer-code="<?= htmlspecialchars($customerCode) ?>">
 
-<div class="card">
-  <h2 class="card-title">Device Counters</h2>
+  <!-- Card header with search box (compact style) -->
+  <div class="card-header compact-header">
+    <input
+      type="text"
+      id="device-search"
+      name="search"
+      value="<?= htmlspecialchars($searchTerm) ?>"
+      placeholder="Search devices..."
+      class="search-box" />
+  </div>
 
-  <div class="table-container">
-    <table class="data-table full-width">
-      <thead>
-        <tr>
-          <th></th>
-          <th>External ID</th>
-          <th>Department</th>
-          <th>Total Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($visible as $device): ?>
-          <?php
-            $id     = $device['DeviceId'] ?? '';
-            $dept   = $device['OfficeDescription'] ?? '';
-            $external = $deviceLookup[$id] ?? 'N/A';
-
-            $total = 0;
-            foreach ($device['CountersDetailed'] ?? [] as $c) {
-              $total += $c['Total'] ?? 0;
-            }
-
-            // Tooltip-style preview
-            $tooltip = '';
-            foreach ($device['CountersDetailed'] ?? [] as $entry) {
-              if (!empty($entry['Description']) && isset($entry['Total'])) {
-                $tooltip .= htmlspecialchars($entry['Description']) . ': ' . number_format($entry['Total']) . "\n";
-              }
-            }
-          ?>
-          <tr class="hover-row" title="<?= trim($tooltip) ?>">
-            <td><span class="drill-icon" onclick="openDrilldown('<?= htmlspecialchars($id) ?>')">🔍</span></td>
-            <td><?= htmlspecialchars($external) ?></td>
-            <td><?= htmlspecialchars($dept) ?></td>
-            <td><?= number_format($total) ?></td>
+  <?php if (empty($paginatedData)): ?>
+    <!-- No data fallback -->
+    <p>No devices found for this page.</p>
+  <?php else: ?>
+    <div class="device-table-container">
+      <!-- Table structure matches printer_card.php exactly -->
+      <table class="device-table" id="device-table">
+        <thead>
+          <tr>
+            <?php foreach ($columns as $colLabel): ?>
+              <th><?= htmlspecialchars($colLabel) ?></th>
+            <?php endforeach; ?>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          <?php foreach ($paginatedData as $device): ?>
+            <tr class="device-row">
+              <?php foreach ($columns as $colLabel): ?>
+                <?php if ($colLabel === 'Equipment ID'): ?>
+                  <td>
+                    <?php
+                      // Show the ExternalIdentifier value or 'N/A' if empty
+                      $value = $device['ExternalIdentifier'] ?? '';
+                      echo htmlspecialchars($value !== '' ? $value : 'N/A');
+                    ?>
+                    <?php if (!empty($device['Id'])): ?>
+                      <!-- Drill-down button replaces the tooltip -->
+                      <button
+                        class="drilldown-btn"
+                        data-device-id="<?= htmlspecialchars($device['Id']) ?>"
+                        title="View Details">
+                        <span class="icon">🔍</span>
+                      </button>
+                    <?php endif; ?>
+                  </td>
+                <?php else: ?>
+                  <!-- All other columns rendered normally -->
+                  <td>
+                    <?= htmlspecialchars($device[$colLabel] ?? '') ?>
+                  </td>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
 
-  <div class="pagination">
-    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-      <a href="?view=device_counters&customer=<?= urlencode($customer) ?>&page=<?= $i ?>"
-         class="page-link<?= ($i === $currentPage) ? ' active' : '' ?>">
-         <?= $i ?>
-      </a>
-    <?php endfor; ?>
-  </div>
+    <!-- Pagination nav (← Prev | Page X of Y | Next →) -->
+    <div class="pagination-nav">
+      <?php if ($currentPage > 1): ?>
+        <a
+          href="?customer=<?= urlencode($customerCode) ?>&search=<?= urlencode($searchTerm) ?>&page=<?= $currentPage - 1 ?>"
+          class="page-link">← Prev</a>
+      <?php endif; ?>
+
+      <span>Page <?= $currentPage ?> of <?= $totalPages ?></span>
+
+      <?php if ($currentPage < $totalPages): ?>
+        <a
+          href="?customer=<?= urlencode($customerCode) ?>&search=<?= urlencode($searchTerm) ?>&page=<?= $currentPage + 1 ?>"
+          class="page-link">Next →</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 </div>
-
-<script>
-function openDrilldown(id) {
-  fetch(`/components/drilldown-modal.php?id=${id}`)
-    .then(r => r.text())
-    .then(html => {
-      const modal = document.createElement('div');
-      modal.innerHTML = html;
-      document.body.appendChild(modal);
-    });
-}
-</script>
-
-<link rel="stylesheet" href="/public/css/styles.css">
