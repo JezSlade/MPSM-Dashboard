@@ -1,129 +1,94 @@
 <?php
-// --- DEBUG BLOCK ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
-// Load .env only if needed
 if (!function_exists('load_env')) {
-    return $env;
-  }
+    function load_env($path = __DIR__ . '/../.env') {
+        $env = [];
+        if (!file_exists($path)) return $env;
+        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if (str_starts_with(trim($line), '#')) continue;
+            [$key, $val] = explode('=', $line, 2);
+            $env[trim($key)] = trim($val);
+        }
+        return $env;
+    }
+}
+if (!function_exists('get_token')) {
+    function get_token($env) {
+        $required = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
+        foreach ($required as $key) {
+            if (empty($env[$key])) {
+                echo json_encode(["error" => "Missing $key in .env"]);
+                exit;
+            }
+        }
+
+        $postFields = http_build_query([
+            'grant_type'    => 'password',
+            'client_id'     => $env['CLIENT_ID'],
+            'client_secret' => $env['CLIENT_SECRET'],
+            'username'      => $env['USERNAME'],
+            'password'      => $env['PASSWORD'],
+            'scope'         => $env['SCOPE']
+        ]);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $env['TOKEN_URL']);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/x-www-form-urlencoded',
+            'Accept: application/json'
+        ]);
+
+        $response = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $json = json_decode($response, true);
+        if ($code !== 200 || !isset($json['access_token'])) {
+            echo json_encode(["error" => "Token request failed", "details" => $json]);
+            exit;
+        }
+
+        return $json['access_token'];
+    }
 }
 
 header('Content-Type: application/json');
+$env = load_env();
+$token = get_token($env);
 
-// 🛑 Dual-mode execution: if called from cache engine, run API logic
-if (isset($_GET['token'])) {
-  $env = load_env();
-  $token = $_GET['token'];
-  $customerCode = $_GET['customer'] ?? null;
+$customerCode = $_GET['customer'] ?? null;
 
-// BEGIN API LOGIC
-
-<?php
-// --- DEBUG BLOCK (Always Keep at Top) ---
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ----------------------------------------
-
-// Manual .env parsing
-$env = parse_ini_file(__DIR__ . '/../.env');
-$clientId = $env['CLIENT_ID'] ?? '';
-$clientSecret = $env['CLIENT_SECRET'] ?? '';
-$username = $env['USERNAME'] ?? '';
-$password = $env['PASSWORD'] ?? '';
-$scope = $env['SCOPE'] ?? '';
-$tokenUrl = $env['TOKEN_URL'] ?? '';
-$apiBaseUrl = rtrim($env['API_BASE_URL'] ?? '', '/') . '/';
-$dealerCode = $env['DEALER_CODE'] ?? '';
-$defaultCustomer = 'W9OPXL0YDK';
-
-// --- Get Auth Token ---
-$token = null;
-$tokenPayload = http_build_query([
-  'grant_type' => 'password',
-  'client_id' => $clientId,
-  'client_secret' => $clientSecret,
-  'username' => $username,
-  'password' => $password,
-  'scope' => $scope,
-]);
-
-$tokenContext = stream_context_create([
-  'http' => [
-    'method' => 'POST',
-    'header' => "Content-Type: application/x-www-form-urlencoded",
-    'content' => $tokenPayload
-  ]
-]);
-
-$tokenResponse = file_get_contents($tokenUrl, false, $tokenContext);
-$tokenData = json_decode($tokenResponse, true);
-$token = $tokenData['access_token'] ?? null;
-
-if (!$token) {
-  http_response_code(500);
-  echo json_encode(['error' => 'Unable to retrieve access token']);
-  exit;
-}
-
-// --- Prepare Payload ---
-$customerCode = $_GET['customer'] ?? $defaultCustomer;
-
-$payload = json_encode([
-  'DealerCode' => $dealerCode,
-  'CustomerCode' => $customerCode,
-  'DeviceId' => null,
-  'SerialNumber' => null,
-  'AssetNumber' => null,
-  'InitialFrom' => null,
-  'InitialTo' => null,
-  'ExhaustedFrom' => null,
-  'ExhaustedTo' => null,
-  'Brand' => null,
-  'Model' => null,
-  'OfficeDescription' => null,
-  'SupplySetDescription' => null,
-  'FilterCustomerText' => null,
-  'ManageOption' => null,
-  'InstallationOption' => null,
-  'CancelOption' => null,
-  'HiddenOption' => null,
-  'SupplyType' => null,
-  'ColorType' => null,
-  'ExcludeForStockShippedSupplies' => false,
-  'FilterText' => null,
-  'PageNumber' => 1,
-  'PageRows' => 50,
-  'SortColumn' => 'InitialDate',
-  'SortOrder' => 0
-]);
-
-// --- Perform API Call ---
-$opts = [
-  'http' => [
-    'method' => 'POST',
-    'header' => "Content-Type: application/json\r\nAuthorization: Bearer $token",
-    'content' => $payload
-  ]
+$payload = [
+    'CustomerCode' => $customerCode,
+    'PageNumber' => 1,
+    'PageRows' => 2147483647,
+    'SortColumn' => 'CreationDate',
+    'SortOrder' => 1
 ];
-$context = stream_context_create($opts);
-$response = file_get_contents($apiBaseUrl . 'SupplyAlert/List', false, $context);
 
-// --- Output JSON ---
-header('Content-Type: application/json');
+$api_url = rtrim($env['API_BASE_URL'], '/') . '/SupplyAlert/List';
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $api_url);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "Content-Type: application/json",
+    "Accept: application/json"
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+
+$response = curl_exec($ch);
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+http_response_code($code);
 echo $response;
-
-
-// END API LOGIC
-} else {
-  // 🔁 Card mode: return from cache
-  $cache = file_get_contents(__DIR__ . '/../cache/data.json');
-  $json = json_decode($cache, true);
-  echo json_encode($json['alerts'] ?? []);
-  exit;
-}
-?>
