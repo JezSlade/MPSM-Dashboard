@@ -1,194 +1,153 @@
 <?php
 // cache_engine.php
 // Monolithic cache engine for pre-fetching all key MPS Monitor API data,
-// streaming verbose logs straight to the browser window.
+// streaming verbose logs to the browser window, with proper POST usage
+// and per-device detail fetching.
 // --------------------------------------------------------------------
 
-// Turn off output buffering and compression
+// Disable buffering/compression
 @ini_set('zlib.output_compression', 0);
 @ini_set('implicit_flush',      1);
-while (ob_get_level() > 0) { ob_end_flush(); }
+while (ob_get_level() > 0) ob_end_flush();
 ob_implicit_flush(true);
 
-// Send page headers
+// HTML header
 header('Content-Type: text/html; charset=UTF-8');
-echo '<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Cache Engine Log</title>
-  <style>
-    body { background: #111; color: #eee; font-family: monospace; padding: 1rem; }
-    pre  { margin: 0; }
-  </style>
-</head>
-<body><pre>';
+echo '<!doctype html><html><head><meta charset="utf-8"><title>Cache Engine</title>
+<style>body{background:#111;color:#eee;font-family:monospace;padding:1rem}pre{margin:0}</style>
+</head><body><pre>';
 
+// logger
 function logv($msg) {
-    $time = date('H:i:s');
-    echo "[{$time}] {$msg}\n";
-    @ob_flush();
-    @flush();
+    echo '['.date('H:i:s').'] '.$msg."\n";
+    @ob_flush(); @flush();
 }
 
-// 1) Locate and load .env one level up
-$expectedEnv = __DIR__ . '/../.env';
-logv("Looking for .env at {$expectedEnv}");
-$envPath = realpath($expectedEnv);
+// 1) load .env
+$envPath = realpath(__DIR__ . '/../.env');
+logv("Loading .env from {$envPath}");
 if (! $envPath || ! is_readable($envPath)) {
-    logv("ERROR: .env not found or unreadable");
-    echo '</pre></body></html>';
-    exit;
+    logv("ERROR: .env missing");
+    exit('</pre></body></html>');
 }
-logv(".env found, loading…");
-
 $env = [];
 foreach (file($envPath, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
     $line = trim($line);
     if ($line === '' || $line[0] === '#') continue;
-    [$key, $val] = explode('=', $line, 2) + [null, null];
-    if ($key !== null) {
-        $envKey = trim($key);
-        $envVal = trim($val);
-        $env[$envKey] = $envVal;
-        logv("Loaded env {$envKey}");
-    }
+    [$k, $v] = explode('=', $line, 2) + [null,null];
+    if ($k) { $env[trim($k)] = trim($v); logv("Loaded env {$k}"); }
 }
 
-// 2) Configuration
+// 2) config
 $BASE_URL      = rtrim($env['API_BASE_URL'] ?? '', '/') . '/';
-$CLIENT_ID     = $env['CLIENT_ID']     ?? '';
-$CLIENT_SECRET = $env['CLIENT_SECRET'] ?? '';
-$USERNAME      = $env['USERNAME']      ?? '';
-$PASSWORD      = $env['PASSWORD']      ?? '';
-$DEALER_CODE   = $env['DEALER_CODE']   ?? '';
-$SCOPE         = $env['SCOPE']         ?? '';
-$TOKEN_URL     = $env['TOKEN_URL']     ?? '';
+$TOKEN_URL     = $env['TOKEN_URL']         ?? '';
+$USERNAME      = $env['USERNAME']          ?? '';
+$PASSWORD      = $env['PASSWORD']          ?? '';
+$CLIENT_ID     = $env['CLIENT_ID']         ?? '';
+$CLIENT_SECRET = $env['CLIENT_SECRET']     ?? '';
+$SCOPE         = $env['SCOPE']             ?? '';
+$DEALER_CODE   = $env['DEALER_CODE']       ?? '';
 
-logv("Configured BASE_URL: {$BASE_URL}");
-logv("Configured TOKEN_URL: {$TOKEN_URL}");
+logv("BASE_URL: {$BASE_URL}");
 
-// 3) Token fetch
+// 3) get token
 function getToken() {
     global $TOKEN_URL, $USERNAME, $PASSWORD, $CLIENT_ID, $CLIENT_SECRET, $SCOPE;
-    logv("Requesting token…");
-    $post = http_build_query([
-        'grant_type'    => 'password',
-        'username'      => $USERNAME,
-        'password'      => $PASSWORD,
-        'client_id'     => $CLIENT_ID,
-        'client_secret' => $CLIENT_SECRET,
-        'scope'         => $SCOPE,
-    ]);
+    logv("Requesting token");
     $ch = curl_init($TOKEN_URL);
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $post,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
+    curl_setopt_array($ch,[
+        CURLOPT_POST=>true,
+        CURLOPT_POSTFIELDS=>http_build_query([
+            'grant_type'=>'password','username'=>$USERNAME,
+            'password'=>$PASSWORD,'client_id'=>$CLIENT_ID,
+            'client_secret'=>$CLIENT_SECRET,'scope'=>$SCOPE
+        ]),
+        CURLOPT_RETURNTRANSFER=>true,
+        CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded'],
     ]);
-    $resp = curl_exec($ch);
+    $r = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    logv("Token endpoint returned HTTP {$code}");
-    $json = json_decode($resp, true);
-    if (isset($json['access_token'])) {
-        logv("Token acquired");
-        return $json['access_token'];
-    }
-    logv("Failed to parse token response");
-    return null;
+    logv("Token HTTP {$code}");
+    $j = json_decode($r,true);
+    return $j['access_token'] ?? null;
 }
 
-// 4) Paged GET helper
-function fetchPaged($endpoint, $token, $pageSize = 200) {
-    global $BASE_URL, $DEALER_CODE;
-    $all  = [];
-    $page = 1;
-    logv("Starting paged GET for {$endpoint}");
-    do {
-        $params = [
-            'dealerCode' => $DEALER_CODE,
-            'pageNumber' => $page,
-            'pageRows'   => $pageSize,
-        ];
-        $url = $BASE_URL . ltrim($endpoint, '/') . '?' . http_build_query($params);
-        logv("GET {$url}");
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$token}"],
-        ]);
-        $resp = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        logv("  HTTP {$code}");
-        $data  = json_decode($resp, true);
-        $items = $data['items'] ?? $data['results'] ?? [];
-        logv("  Retrieved " . count($items) . " items");
-        $all   = array_merge($all, $items);
-        $page++;
-    } while (count($items) === $pageSize);
-    logv("Completed {$endpoint}: total " . count($all) . " items");
-    return $all;
+// 4) POST helper
+function fetchPost($endpoint, $bodyArr, $token) {
+    global $BASE_URL;
+    $url = $BASE_URL . ltrim($endpoint,'/');
+    logv("POST {$url}");
+    $ch = curl_init($url);
+    curl_setopt_array($ch,[
+        CURLOPT_POST=>true,
+        CURLOPT_POSTFIELDS=>json_encode($bodyArr),
+        CURLOPT_RETURNTRANSFER=>true,
+        CURLOPT_HTTPHEADER=>[
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ],
+    ]);
+    $r = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    logv("  HTTP {$code}, ".strlen($r)." bytes");
+    return json_decode($r,true);
 }
 
-// 5) Run cache
-logv("=== BEGIN CACHE ===");
+// 5) browser-ready
+logv("=== BEGIN ===");
 $token = getToken();
-if (! $token) {
-    logv("ERROR: Cannot obtain token, aborting.");
-    echo '</pre></body></html>';
-    exit;
+if (! $token) exit(logv("ERROR: no token").'</pre></body></html>');
+
+// cache dir
+$cacheDir = dirname(__DIR__).'/cache';
+logv("Cache dir: {$cacheDir}");
+if (! is_dir($cacheDir)) mkdir($cacheDir,0755,true);
+
+// 6) cache Customers
+$customers = fetchPost('Customer/GetCustomers', [
+    'dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000
+], $token);
+file_put_contents("{$cacheDir}/Customers.json", json_encode($customers, JSON_PRETTY_PRINT));
+logv("Wrote Customers.json");
+
+// 7) cache Devices (POST)
+$devices = fetchPost('Device/GetDevices', [
+    'dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000
+], $token);
+file_put_contents("{$cacheDir}/Devices.json", json_encode($devices, JSON_PRETTY_PRINT));
+logv("Wrote Devices.json");
+
+// 8) cache Alerts (POST)
+$alerts = fetchPost('Device/GetDeviceAlerts', [
+    'dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000
+], $token);
+file_put_contents("{$cacheDir}/DeviceAlerts.json", json_encode($alerts, JSON_PRETTY_PRINT));
+logv("Wrote DeviceAlerts.json");
+
+// 9) cache Counters (POST)
+$counters = fetchPost('Counter/List', [
+    'dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000
+], $token);
+file_put_contents("{$cacheDir}/DeviceCounters.json", json_encode($counters, JSON_PRETTY_PRINT));
+logv("Wrote DeviceCounters.json");
+
+// 10) cache per-device detail
+$details = [];
+foreach (($devices['items'] ?? $devices['results'] ?? []) as $d) {
+    $id = $d['id'] ?? $d['Id'] ?? $d['externalIdentifier'] ?? null;
+    if (! $id) continue;
+    logv("Fetching detail for device {$id}");
+    $dt = fetchPost('Device/GetDevice', [
+        'dealerCode'=>$DEALER_CODE,'id'=>$id
+    ], $token);
+    $details[$id] = $dt;
+    usleep(200000);
 }
+file_put_contents("{$cacheDir}/DeviceDetail.json", json_encode($details, JSON_PRETTY_PRINT));
+logv("Wrote DeviceDetail.json");
 
-// CORRECT CACHE DIRECTORY: project-root /cache
-$cacheDir = dirname(__DIR__) . '/cache';
-logv("Using cache directory: {$cacheDir}");
-if (! is_dir($cacheDir)) {
-    logv("Creating cache dir: {$cacheDir}");
-    mkdir($cacheDir, 0755, true);
-}
-
-$toCache = [
-    'Customers'      => ['ep'=>'/Customer/GetCustomers','method'=>'POST'],
-    'Devices'        => ['ep'=>'/Device/GetDevices','method'=>'GET'],
-    'DeviceAlerts'   => ['ep'=>'/Device/GetDeviceAlerts','method'=>'GET'],
-    'DeviceCounters' => ['ep'=>'/Counter/List','method'=>'POST'],
-    'DeviceDetail'   => ['ep'=>'/Device/GetDevice','method'=>'GET'],
-];
-
-foreach ($toCache as $name => $info) {
-    logv("-- Caching {$name} --");
-    if ($info['method'] === 'GET') {
-        $data = fetchPaged($info['ep'], $token);
-    } else {
-        $url     = $BASE_URL . ltrim($info['ep'], '/');
-        $bodyArr = ['dealerCode'=>$DEALER_CODE,'pageNumber'=>1,'pageRows'=>1000];
-        $body    = json_encode($bodyArr);
-        logv("POST {$url}");
-        logv("  Payload: " . json_encode($bodyArr));
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => [
-                "Authorization: Bearer {$token}",
-                "Content-Type: application/json"
-            ],
-        ]);
-        $resp = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        logv("  HTTP {$code}, " . strlen($resp) . " bytes");
-        $data = json_decode($resp, true);
-    }
-    $out = "{$cacheDir}/{$name}.json";
-    file_put_contents($out, json_encode($data, JSON_PRETTY_PRINT));
-    logv("Wrote {$out} (" . filesize($out) . " bytes)");
-    sleep(1);
-}
-
-logv("=== CACHE COMPLETE ===");
+// done
+logv("=== COMPLETE ===");
 echo '</pre></body></html>';
