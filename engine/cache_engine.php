@@ -1,7 +1,7 @@
 <?php
 // cache_engine.php
 // Monolithic cache engine—streaming live logs in browser, iterating all customers/devices,
-// showing on-screen snapshots of each API response, with exact endpoint names.
+// showing on-screen snapshots of each API response, with correct response parsing.
 // --------------------------------------------------------------------
 
 // Disable buffering/compression
@@ -23,7 +23,8 @@ function logv(string $msg) {
 }
 // helper to snapshot first N items
 function snapshot(array $data, int $n = 3) {
-    $items = $data['items'] ?? $data['results'] ?? $data;
+    $items = $data['items']   ?? $data['results']
+           ?? $data['Result']  ?? $data;
     return array_slice($items, 0, $n);
 }
 
@@ -142,7 +143,8 @@ logv("Snapshot Customers:"); print_r(snapshot($customers));
 
 // 7) Devices for all customers
 $allDevices = [];
-$custList = $customers['items'] ?? $customers['results'] ?? [];
+// **Use Result** key here
+$custList = $customers['Result'] ?? [];
 logv("Found ".count($custList)." customers; fetching devices");
 foreach ($custList as $cust) {
     $code = $cust['Code'] ?? $cust['code'] ?? null;
@@ -157,7 +159,8 @@ foreach ($custList as $cust) {
         'sortOrder'=>0,
     ];
     $resp = fetchPost('Device/GetDevices', $dp, $token);
-    $list = $resp['items'] ?? $resp['results'] ?? [];
+    // **Use Result** here too
+    $list = $resp['Result'] ?? [];
     logv("   Retrieved ".count($list)." devices");
     foreach ($list as $d) {
         $id = $d['Id'] ?? $d['id'] ?? null;
@@ -184,7 +187,8 @@ foreach ($custList as $cust) {
         'sortOrder'=>1,
     ];
     $resp = fetchPost('Device/GetDeviceAlerts', $ap, $token);
-    $list = $resp['items'] ?? $resp['results'] ?? [];
+    // **Use Result** here as well
+    $list = $resp['Result'] ?? [];
     logv("   Customer {$code}: ".count($list)." alerts");
     foreach ($list as $a) {
         $key = $a['Id'] ?? $a['id'] ?? uniqid();
