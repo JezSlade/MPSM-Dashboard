@@ -142,7 +142,7 @@ if (! $token) {
     exit;
 }
 
-// Correct cache directory: project-root /cache, not engine/cache
+// Correct cache directory: project-root /cache, not engine/cache!
 $cacheDir = realpath(__DIR__ . '/../cache') ?: (__DIR__ . '/../cache');
 logv("Using cache directory: {$cacheDir}");
 if (! is_dir($cacheDir)) {
