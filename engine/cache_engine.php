@@ -1,103 +1,130 @@
 <?php
-// --- DEBUG SETUP ---
-ini_set('memory_limit', '1G');
+// cache_engine.php
+// Monolithic cache engine for pre-fetching all key MPS Monitor API data.
+// --------------------------------------------------------------------
+
+// Enable debugging
+ini_set('display_errors', 1);
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
-define('CACHE_DIR', __DIR__ . '/../cache/');
-define('CACHE_FILE', CACHE_DIR . 'data.json');
-define('DEFAULT_CUSTOMER', 'W9OPXL0YDK');
-
-// 🛡️ Ensure /cache exists
-if (!is_dir(CACHE_DIR)) {
-  mkdir(CACHE_DIR, 0755, true);
-  echo "[ENGINE] Created /cache directory\n";
+// 1) Parse .env manually
+$env = [];
+foreach (file(__DIR__.'/.env', FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
+    if (strpos(trim($line), '#')===0) continue;
+    list($key, $val) = explode('=', $line, 2);
+    $env[trim($key)] = trim($val);
 }
 
-// 🧠 Inject local load_env
-if (!function_exists('load_env')) {
-  function load_env($path = __DIR__ . '/../.env') {
-    $env = [];
-    if (!file_exists($path)) return $env;
-    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-      if (str_starts_with(trim($line), '#')) continue;
-      [$key, $val] = explode('=', $line, 2);
-      $env[trim($key)] = trim($val);
-    }
-    return $env;
-  }
+// 2) Basic configuration
+$BASE_URL    = rtrim($env['API_BASE_URL'] ?? $env['BASE_URL'], '/') . '/';
+$CLIENT_ID   = $env['CLIENT_ID'];
+$CLIENT_SECRET = $env['CLIENT_SECRET'];
+$USERNAME    = $env['USERNAME'];
+$PASSWORD    = $env['PASSWORD'];
+$DEALER_CODE = $env['DEALER_CODE'];
+$DEALER_ID   = $env['DEALER_ID'];
+
+// 3) Helper: fetch OAuth token
+function getToken() {
+    global $env;
+    $url = $env['TOKEN_URL'];
+    $post = http_build_query([
+        'grant_type'    => 'password',
+        'username'      => $env['USERNAME'],
+        'password'      => $env['PASSWORD'],
+        'client_id'     => $env['CLIENT_ID'],
+        'client_secret' => $env['CLIENT_SECRET'],
+        'scope'         => $env['SCOPE'],
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $post,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
+    ]);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode($resp, true);
+    return $data['access_token'] ?? null;
 }
 
-// ✅ STEP 1: Get token
-function fetch_token(): ?string {
-  echo "[ENGINE] Fetching token...\n";
-  ob_start();
-  include __DIR__ . '/../api/get_token.php';
-  $output = ob_get_clean();
-  $parsed = json_decode($output, true);
-  if (!isset($parsed['access_token'])) {
-    echo "[ENGINE] ❌ Token fetch failed:\n";
-    var_dump($parsed);
-  }
-  return $parsed['access_token'] ?? null;
+// 4) Helper: generic paged GET
+function fetchPaged($endpoint, $params = [], $token, $pageSize = 100) {
+    global $BASE_URL;
+    $all = [];
+    $page = 1;
+    do {
+        $params['dealerCode'] = $params['dealerCode'] ?? $GLOBALS['DEALER_CODE'];
+        $params['pageNumber'] = $page;
+        $params['pageRows']   = $pageSize;
+        $url = $BASE_URL . ltrim($endpoint, '/')
+             . '?' . http_build_query($params);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$token}"],
+        ]);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        $data = json_decode($resp, true);
+
+        // Assuming paged response shape: data => items, metadata => hasMore
+        $items = $data['items'] ?? $data['results'] ?? [];
+        $all   = array_merge($all, $items);
+        $hasMore = count($items) === $pageSize;
+        $page++;
+    } while ($hasMore);
+
+    return $all;
 }
 
-$token = fetch_token();
+// 5) Main orchestration
+$token = getToken();
 if (!$token) {
-  echo "[ENGINE ERROR] Could not get token\n";
-  exit;
-}
-echo "[ENGINE] ✅ Token OK\n";
-
-// ✅ STEP 2: Inline API pull
-function exec_api_file(string $file, string $customer, string $token): mixed {
-  echo "[ENGINE] → Including $file...\n";
-  return (function () use ($file, $customer, $token) {
-    $_GET['customer'] = $customer;
-    $_GET['token']    = $token;
-    ob_start();
-    include __DIR__ . '/../api/' . $file;
-    $raw = ob_get_clean();
-    $parsed = json_decode($raw, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-      echo "[ENGINE] ❌ JSON Error in $file: " . json_last_error_msg() . "\n";
-      echo "Raw output:\n$raw\n";
-      exit;
-    }
-    return $parsed;
-  })();
+    error_log("Failed to retrieve API token.");
+    exit(1);
 }
 
-// ✅ STEP 3: Build minimal dataset
-echo "[ENGINE] → Starting dataset build...\n";
-$new = [
-  'timestamp' => date('c'),
-  'devices'   => exec_api_file('get_devices.php', DEFAULT_CUSTOMER, $token)
+// Define endpoints to cache (yank logic from api/*.php)
+$toCache = [
+    'GetCustomers'      => ['endpoint' => '/Customer/GetCustomers',      'method' => 'POST'],
+    'GetDevices'        => ['endpoint' => '/Device/GetDevices',          'method' => 'GET'],
+    'GetDeviceAlerts'   => ['endpoint' => '/Device/GetDeviceAlerts',     'method' => 'GET'],
+    'GetDeviceCounters' => ['endpoint' => '/Counter/List',               'method' => 'POST'],
+    'GetDeviceDetail'   => ['endpoint' => '/Device/GetDevice',           'method' => 'GET'],
 ];
 
-echo "[ENGINE] ✅ Data collected\n";
+// Storage directory
+$cacheDir = __DIR__ . '/cache';
+if (!is_dir($cacheDir)) mkdir($cacheDir, 0755, true);
 
-// ✅ STEP 4: Save
-echo "[ENGINE] → Saving cache to disk...\n";
-$json = json_encode($new, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
-if (json_last_error() !== JSON_ERROR_NONE) {
-  echo "[ENGINE] ❌ JSON encode failed: " . json_last_error_msg() . "\n";
-  exit;
+foreach ($toCache as $name => $info) {
+    echo "Caching {$name}...\n";
+    if ($info['method'] === 'GET') {
+        $data = fetchPaged($info['endpoint'], [], $token, 200);
+    } else {
+        // For POST endpoints, do a single full pull (or implement your own paging logic)
+        $url = $BASE_URL . ltrim($info['endpoint'], '/');
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode(['dealerCode' => $DEALER_CODE, 'pageNumber'=>1,'pageRows'=>1000]),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => [
+                "Authorization: Bearer {$token}",
+                'Content-Type: application/json'
+            ],
+        ]);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        $data = json_decode($resp, true);
+    }
+    file_put_contents("{$cacheDir}/{$name}.json", json_encode($data, JSON_PRETTY_PRINT));
+    // Throttle between calls
+    sleep(1);
 }
 
-$tempFile  = CACHE_DIR . 'data.tmp';
-$finalFile = CACHE_FILE;
-
-if (file_put_contents($tempFile, $json) === false) {
-  echo "[ENGINE] ❌ Could not write temp file\n";
-  exit;
-}
-
-if (!rename($tempFile, $finalFile)) {
-  echo "[ENGINE] ❌ Could not move temp into place\n";
-  exit;
-}
-
-echo "[ENGINE] ✅ Cache saved to $finalFile\n";
+echo "Caching complete.\n";
