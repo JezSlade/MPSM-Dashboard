@@ -24,7 +24,7 @@ $visibleCards = array_filter($visibleCards, fn($f) => $f !== 'view-preferences-c
 <head>
   <meta charset="UTF-8">
   <title><?= APP_NAME ?> — Dashboard</title>
-  <link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="/public/css/styles.css">
   <style>
     .card-grid {
       display: grid;
