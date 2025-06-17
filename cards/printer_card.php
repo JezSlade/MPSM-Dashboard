@@ -27,7 +27,7 @@ $totalPages = ceil($totalDevices / $perPage);
 $offset = ($currentPage - 1) * $perPage;
 $paginatedDevices = array_slice($devices, $offset, $perPage);
 
-$columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
+$columns = ['Equipment ID', 'Department', 'IpAddress', 'SerialNumber'];
 ?>
 
 <div class="device-card"
@@ -55,7 +55,7 @@ $columns = ['ExternalIdentifier', 'Department', 'IpAddress', 'SerialNumber'];
           <?php foreach ($paginatedDevices as $device): ?>
             <tr class="device-row">
               <?php foreach ($columns as $key): ?>
-                <?php if ($key === 'ExternalIdentifier'): ?>
+                <?php if ($key === 'Equipment ID'): ?>
                   <td>
                     <?= htmlspecialchars($device[$key] ?? '') ?>
                     <?php if (!empty($device['Id'])): ?>
