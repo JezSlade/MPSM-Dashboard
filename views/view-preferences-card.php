@@ -1,40 +1,63 @@
 <?php declare(strict_types=1);
 // /views/view-preferences-card.php
 
-// scan cards directory
+// 1) Scan card files
+$files = glob(__DIR__ . '/../cards/card_*.php');
 $cards = [];
-foreach (glob(__DIR__ . '/../cards/card_*.php') as $file) {
+foreach ($files as $file) {
     $fname = basename($file);
-    // derive group prefix
-    if (preg_match('/^card_([^_]+)_/', $fname, $m)) {
-        $group = ucfirst($m[1]);
-    } else {
-        $group = 'Other';
-    }
-    // derive display name
-    $disp = str_replace(['card_','.php','_'],'',['', $fname]);
-    $disp = ucfirst(str_replace('_',' ',$fname));
-    $cards[$group][] = ['file'=>$fname,'name'=>$disp];
+    // derive display name from filename
+    $name = str_replace(['card_','.php','_'], ['','',' '], $fname);
+    $cards[] = ['file' => $fname, 'name' => ucfirst($name)];
 }
+
+// 2) Layout in a 3-column grid so scrolling is minimized
+$cols = 3;
+$chunks = array_chunk($cards, $cols);
 ?>
 <div class="modal-content">
-  <h3>View Preferences</h3>
-  <div style="max-height:400px; overflow-y:auto;">
-    <table class="preferences-table">
-      <thead><tr><th>Group</th><th>Card Name</th><th>File</th><th>Show</th></tr></thead>
-      <tbody>
-      <?php foreach($cards as $group=>$items): ?>
-        <?php foreach($items as $item): ?>
+  <h3>Select Cards to Display</h3>
+  <table class="preferences-table" style="width:100%; border-spacing:1rem;">
+    <tbody>
+      <?php foreach ($chunks as $row): ?>
         <tr>
-          <td><?=htmlspecialchars($group)?></td>
-          <td><?=htmlspecialchars($item['name'])?></td>
-          <td><?=htmlspecialchars($item['file'])?></td>
-          <td><input type="checkbox" name="cards[]" value="<?=htmlspecialchars($item['file'])?>"></td>
+          <?php foreach ($row as $item): ?>
+            <td>
+              <label style="display:block; user-select:none;">
+                <input
+                  type="checkbox"
+                  name="cards[]"
+                  value="<?= htmlspecialchars($item['file']) ?>"
+                >
+                <?= htmlspecialchars($item['name']) ?>
+              </label>
+            </td>
+          <?php endforeach; ?>
+          <?php for ($i = count($row); $i < $cols; $i++): ?>
+            <td></td>
+          <?php endfor; ?>
         </tr>
-        <?php endforeach;?>
-      <?php endforeach;?>
-      </tbody>
-    </table>
-  </div>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
   <button class="btn-save">Save Preferences</button>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 3) Load existing prefs from localStorage
+  const stored = JSON.parse(localStorage.getItem('viewPreferences') || '[]');
+  document.querySelectorAll('input[name="cards[]"]').forEach(chk => {
+    if (stored.includes(chk.value)) chk.checked = true;
+  });
+
+  // 4) Save button behavior
+  document.querySelector('.btn-save').addEventListener('click', () => {
+    const selected = Array.from(
+      document.querySelectorAll('input[name="cards[]"]:checked')
+    ).map(chk => chk.value);
+    localStorage.setItem('viewPreferences', JSON.stringify(selected));
+    location.reload();
+  });
+});
+</script>
