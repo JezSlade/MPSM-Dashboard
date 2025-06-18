@@ -1,5 +1,7 @@
 <?php
-// --- DEBUG BLOCK (Always Keep at Top) ---
+// /views/dashboard.php
+
+// --- DEBUG BLOCK (Always at Top) ---
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
@@ -8,35 +10,35 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Load card visibility preferences
-$cardsDir = __DIR__ . '/../cards/';
-$cardFiles = array_filter(scandir($cardsDir), fn($file) => pathinfo($file, PATHINFO_EXTENSION) === 'php');
+// 1) Scan card files
+$cardsDir  = __DIR__ . '/../cards/';
+$cardFiles = array_filter(
+    scandir($cardsDir),
+    fn($f) => pathinfo($f, PATHINFO_EXTENSION) === 'php'
+);
 
-// Default: show all
-$visibleCards = isset($_COOKIE['visible_cards']) ? explode(',', $_COOKIE['visible_cards']) : $cardFiles;
-
-// Exclude view-preferences card from grid (it’s always loaded separately)
-$visibleCards = array_filter($visibleCards, fn($f) => $f !== 'view-preferences-card.php');
+// 2) Load visibility from cookie or default to all
+$visibleCards = isset($_COOKIE['visible_cards'])
+    ? explode(',', $_COOKIE['visible_cards'])
+    : $cardFiles;
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title><?= APP_NAME ?> — Dashboard</title>
-<link rel="stylesheet" href="/public/css/styles.css">
-  <style>
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-      gap: 1.5rem;
-      padding: 1.5rem;
-    }
-  </style>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/public/css/styles.css">
 </head>
 <body>
 
-<?php include __DIR__ . '/view-preferences-card.php'; ?>
+  <!-- ⚙️ Gear icon for opening preferences -->
+  <button class="gear-icon" title="View Preferences">⚙️</button>
+
+  <!-- Preferences Modal Component -->
+  <?php
+    // Make $cardFiles and $visibleCards available to the component
+    include __DIR__ . '/../components/preferences-modal.php';
+  ?>
 
   <main class="glass-main">
     <div class="card-grid">
