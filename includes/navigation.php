@@ -1,25 +1,27 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// 1) Load shared API helpers and config parser
+// 1) Shared helpers + config
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 2) Prepare payload for Customer/GetCustomers – include required paging
+// 2) Build a GetCustomersRequest payload
 $payload = [
-    'CustomerCode' => $config['DEALER_CODE'] ?? '',
-    'PageNumber'   => 1,
-    'SortColumn'   => 'CustomerCode'
+    'DealerCode' => $config['DEALER_CODE'] ?? '',
+    'PageNumber' => 1,
+    'PageRows'   => 2147483647,
+    'SortColumn' => 'CustomerCode',
+    'SortOrder'  => 'Asc',
 ];
 
 try {
     // 3) Call the internal API
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
 
-    // 4) Surface any API‐level errors
+    // 4) Surface any API-level validation errors
     if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
         $first = $resp['Errors'][0];
-        throw new \Exception($first['Description'] ?? 'API returned an error');
+        throw new \Exception($first['Description'] ?? 'Unknown API error');
     }
 
     $customers = $resp['Result'] ?? [];
@@ -29,7 +31,7 @@ try {
     $error     = $e->getMessage();
 }
 
-// 5) Render the navigation
+// 5) Render either error or the nav list
 if ($error !== '') {
     echo "<div class='nav-error'>Error loading customers: "
        . htmlspecialchars($error)
