@@ -1,15 +1,25 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// 1. Pull in shared API helpers
+// 1) Load shared API helpers and config parser
 require_once __DIR__ . '/api_functions.php';
-
-// 2. Load configuration
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 3. Fetch customer list via internal call_api (no HTTP warnings)
+// 2) Prepare payload for Customer/GetCustomers
+$payload = [
+    'Code' => $config['DEALER_CODE'] ?? ''
+];
+
+// 3) Call the internal API and handle both transport and business‐logic errors
 try {
-    $resp      = call_api($config, 'POST', 'Customer/GetCustomers', []);
+    $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
+
+    // If the API itself returned a validation error, surface it
+    if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
+        $first = $resp['Errors'][0];
+        throw new \Exception($first['Description'] ?? 'API returned an error');
+    }
+
     $customers = $resp['Result'] ?? [];
     $error     = '';
 } catch (\Throwable $e) {
@@ -17,7 +27,7 @@ try {
     $error     = $e->getMessage();
 }
 
-// 4. Render navigation
+// 4) Render the navigation
 if ($error !== '') {
     echo "<div class='nav-error'>Error loading customers: "
        . htmlspecialchars($error)
