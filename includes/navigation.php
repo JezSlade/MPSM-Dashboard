@@ -5,16 +5,18 @@
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 2) Prepare payload for Customer/GetCustomers
+// 2) Prepare payload for Customer/GetCustomers – include required paging
 $payload = [
-    'Code' => $config['DEALER_CODE'] ?? ''
+    'CustomerCode' => $config['DEALER_CODE'] ?? '',
+    'PageNumber'   => 1,
+    'SortColumn'   => 'CustomerCode'
 ];
 
-// 3) Call the internal API and handle both transport and business‐logic errors
 try {
+    // 3) Call the internal API
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
 
-    // If the API itself returned a validation error, surface it
+    // 4) Surface any API‐level errors
     if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
         $first = $resp['Errors'][0];
         throw new \Exception($first['Description'] ?? 'API returned an error');
@@ -27,7 +29,7 @@ try {
     $error     = $e->getMessage();
 }
 
-// 4) Render the navigation
+// 5) Render the navigation
 if ($error !== '') {
     echo "<div class='nav-error'>Error loading customers: "
        . htmlspecialchars($error)
@@ -36,7 +38,7 @@ if ($error !== '') {
     echo "<ul class='nav-list'>";
     foreach ($customers as $cust) {
         $code = htmlspecialchars($cust['CustomerCode'] ?? '');
-        $name = htmlspecialchars($cust['Name'] ?? $code);
+        $name = htmlspecialchars($cust['Name']         ?? $code);
         echo "<li data-customer='{$code}'>{$name}</li>";
     }
     echo "</ul>";
