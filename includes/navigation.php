@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// 1) Shared helpers + config
+// 1) Shared helpers + config loader
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
@@ -10,15 +10,15 @@ $payload = [
     'DealerCode' => $config['DEALER_CODE'] ?? '',
     'PageNumber' => 1,
     'PageRows'   => 2147483647,
-    'SortColumn' => 'CustomerCode',
+    'SortColumn' => 'Description',  // sort by the customer description
     'SortOrder'  => 'Asc',
 ];
 
 try {
-    // 3) Call the internal API
+    // 3) Call the API
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
 
-    // 4) Surface any API-level validation errors
+    // 4) Handle API‐level validation errors
     if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
         $first = $resp['Errors'][0];
         throw new \Exception($first['Description'] ?? 'Unknown API error');
@@ -31,7 +31,7 @@ try {
     $error     = $e->getMessage();
 }
 
-// 5) Render either error or the nav list
+// 5) Render navigation list or error
 if ($error !== '') {
     echo "<div class='nav-error'>Error loading customers: "
        . htmlspecialchars($error)
@@ -39,8 +39,9 @@ if ($error !== '') {
 } else {
     echo "<ul class='nav-list'>";
     foreach ($customers as $cust) {
-        $code = htmlspecialchars($cust['CustomerCode'] ?? '');
-        $name = htmlspecialchars($cust['Name']         ?? $code);
+        // CustomerListDto uses 'Code' and 'Description'
+        $code = htmlspecialchars($cust['Code'] ?? '');
+        $name = htmlspecialchars($cust['Description'] ?? $code);
         echo "<li data-customer='{$code}'>{$name}</li>";
     }
     echo "</ul>";
