@@ -1,6 +1,6 @@
 <?php
 // Start output buffering immediately to capture any unintended output (like warnings or notices).
-// This prevents such output from corrupting the final JSON response.
+// This is crucial to prevent "SyntaxError: JSON.parse: unexpected character" from non-JSON output.
 ob_start();
 
 // Set PHP's execution time limit to unlimited.
@@ -13,7 +13,7 @@ set_time_limit(0);
 require_once __DIR__ . '/includes/redis.php'; 
 
 // Configure PHP error reporting and logging.
-// For production, 'display_errors' should ideally be '0' to prevent information disclosure.
+// 'display_errors' should be '0' in a production environment to prevent sensitive information disclosure.
 error_reporting(E_ALL);
 ini_set('display_errors', '1'); // Set to '0' for production environments.
 ini_set('log_errors', '1');
@@ -43,7 +43,7 @@ if (!function_exists('load_env')) {
             if (str_starts_with(trim($line), '#')) continue;
             // Split the line into a key and a value at the first '='.
             [$key, $val] = explode('=', $line, 2);
-            $env[trim($key)] = trim($val); // Store the trimmed key-value pair in the environment array.
+            $env[trim($key)] = trim($val); // Store the trimmed key-value pair.
         }
         return $env;
     }
@@ -51,7 +51,7 @@ if (!function_exists('load_env')) {
 
 /**
  * Retrieves an access token from the API's token endpoint.
- * This function incorporates caching using Redis to reduce redundant API calls.
+ * This function incorporates caching using Redis to minimize redundant API calls.
  * It's adapted from the token logic found in the provided `get_customers.php` file.
  *
  * @param array $env Associative array containing environment variables (CLIENT_ID, CLIENT_SECRET, etc.).
@@ -60,7 +60,7 @@ if (!function_exists('load_env')) {
 if (!function_exists('get_token')) {
     function get_token($env) {
         $cacheKey = 'mpsm:api:token';
-        // 1. Attempt to retrieve the token from Redis cache first.
+        // Attempt to retrieve the token from Redis cache first.
         if ($cachedToken = getCache($cacheKey)) {
             error_log("Token retrieved from cache.");
             return $cachedToken;
@@ -79,7 +79,7 @@ if (!function_exists('get_token')) {
             }
         }
 
-        // Prepare the POST fields for the OAuth 2.0 token request.
+        // Prepare the POST fields for the OAuth 2.0 token request (grant_type=password).
         $postFields = http_build_query([
             'client_id'     => $env['CLIENT_ID'],
             'client_secret' => $env['CLIENT_SECRET'],
@@ -114,7 +114,7 @@ if (!function_exists('get_token')) {
             exit;
         }
 
-        // 2. Cache the obtained token in Redis. Token TTL is 3500 seconds (just under 1 hour).
+        // Cache the obtained token in Redis. Token TTL is 3500 seconds (just under 1 hour).
         setCache($cacheKey, $json['access_token'], 3500);
         error_log("New token fetched and cached.");
         return $json['access_token'];
@@ -125,27 +125,28 @@ if (!function_exists('get_token')) {
  * Generic helper function to make API calls to the MPS Monitor API.
  * This function integrates Redis caching and is designed to be robust against
  * cURL errors, invalid JSON, and non-200 HTTP codes.
- * It ensures the response is cached before returning (due to synchronous setCache).
+ * It handles both POST (with JSON payload) and GET requests.
  *
  * @param string $url The API endpoint URL to call.
  * @param string $token The Bearer access token for authorization.
- * @param array $payload The associative array representing the request body.
- * @param string $method The HTTP method for the request (default 'POST').
+ * @param array $payload The associative array representing the request body for POST. For GET, it will be ignored.
+ * @param string $method The HTTP method for the request ('POST' or 'GET', default 'POST').
  * @param int $cacheTtl Time-to-live for the cached response in seconds (default 3600s = 1 hour).
  * Set to 0 to disable caching for a specific call.
  * @return array The decoded JSON response from the API, or a structured error array.
  */
 if (!function_exists('call_api')) {
-    function call_api($url, $token, $payload, $method = 'POST', $cacheTtl = 3600) {
-        // Generate a unique cache key based on URL, payload, and method.
-        $cacheKey = 'mpsm:api:' . md5($url . json_encode($payload) . $method);
+    function call_api($url, $token, $payload = [], $method = 'POST', $cacheTtl = 3600) {
+        // Generate a unique cache key based on URL, payload (if POST), and method.
+        $cacheData = ($method === 'POST') ? json_encode($payload) : '';
+        $cacheKey = 'mpsm:api:' . md5($url . $cacheData . $method);
 
-        // 1. Attempt to retrieve the response from Redis cache first if caching is enabled.
+        // Attempt to retrieve the response from Redis cache first if caching is enabled.
         if ($cacheTtl > 0 && ($cachedResponse = getCache($cacheKey))) {
             $decodedCache = json_decode($cachedResponse, true);
             // Validate that the cached data is a valid array.
             if (is_array($decodedCache)) {
-                error_log("API response for $url (payload hash: " . md5(json_encode($payload)) . ") retrieved from cache.");
+                error_log("API response for $url (hash: " . md5($cacheData) . ") retrieved from cache.");
                 return $decodedCache;
             } else {
                 // Log and purge corrupted cache entries to ensure fresh data fetch next time.
@@ -153,7 +154,7 @@ if (!function_exists('call_api')) {
                 purgeCache($cacheKey);
             }
         }
-        error_log("API response for $url (payload hash: " . md5(json_encode($payload)) . ") not in cache, fetching new data.");
+        error_log("API response for $url (hash: " . md5($cacheData) . ") not in cache, fetching new data.");
 
         // Initialize cURL session for the API call.
         $ch = curl_init();
@@ -161,14 +162,16 @@ if (!function_exists('call_api')) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return response as a string.
         curl_setopt($ch, CURLOPT_HTTPHEADER, [ // Set required HTTP headers.
             "Authorization: Bearer $token",
-            "Content-Type: application/json",
-            "Accept: application/json"
+            "Accept: application/json" // Always accept JSON response.
         ]);
 
-        // Configure for POST request if specified.
+        // Configure for POST or GET requests.
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array_merge(curl_getinfo($ch, CURLINFO_HEADER_OUT), ["Content-Type: application/json"]));
+        } else { // Assume GET if not POST
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET'); // Explicitly set GET method
         }
 
         $response = curl_exec($ch); // Execute the cURL request.
@@ -196,11 +199,11 @@ if (!function_exists('call_api')) {
             return ["error" => "API call failed", "url" => $url, "http_code" => $code, "details" => $json];
         }
 
-        // 2. If the API call was successful and caching is enabled, cache the response.
+        // If the API call was successful and caching is enabled, cache the response.
         // This is synchronous, so the cache operation completes before the function returns.
         if ($cacheTtl > 0) {
             setCache($cacheKey, json_encode($json), $cacheTtl);
-            error_log("API response for $url (payload hash: " . md5(json_encode($payload)) . ") cached successfully.");
+            error_log("API response for $url (hash: " . md5($cacheData) . ") cached successfully.");
         }
 
         return $json; // Return the successfully decoded JSON response array.
@@ -246,7 +249,6 @@ const REQUEST_DELAY_SECONDS = 1;    // Delay in seconds between API calls to pre
 $output = [];
 
 // --- STEP 1: Fetch Customers with Pagination ---
-// This is the first call, providing 'CustomerCode' for subsequent steps.
 error_log("Initiating fetch for Customers.");
 $customers_api_url = $apiBaseUrl . '/Customer/GetCustomers';
 $allCustomers = [];
@@ -267,14 +269,13 @@ do {
         'SortOrder'   => 0 // Ascending
     ];
 
-    $customers_response = call_api($customers_api_url, $token, $customers_payload);
-    // CRITICAL: call_api ensures caching (or cache retrieval) is done before it returns.
+    $customers_response = call_api($customers_api_url, $token, $customers_payload, 'POST');
+    // Caching is handled inside call_api before it returns.
 
-    // Check for API errors during customer fetching.
     if (isset($customers_response['error'])) {
         $output['customers_fetch_status'] = $customers_response;
         error_log("Customer fetch error: " . json_encode($customers_response));
-        ob_clean(); // Clear any buffered output (warnings/notices) and then flush the JSON error.
+        ob_clean();
         echo json_encode($output, JSON_PRETTY_PRINT);
         ob_end_flush();
         exit;
@@ -286,11 +287,10 @@ do {
     $allCustomers = array_merge($allCustomers, $currentCustomers);
     $pageNumber++;
 
-    error_log("Fetched Customer Page $pageNumber-1. Total customers so far: " . count($allCustomers) . ". Expected: " . $totalCustomersExpected);
+    error_log("Fetched Customer Page " . ($pageNumber - 1) . ". Total customers so far: " . count($allCustomers) . ". Expected: " . $totalCustomersExpected);
 
-    // Add a delay after fetching each page of customers to space out requests.
-    if (count($currentCustomers) > 0) { 
-        sleep(REQUEST_DELAY_SECONDS);
+    if (count($currentCustomers) > 0 && (count($allCustomers) < $totalCustomersExpected || $pageNumber == 2)) { 
+        sleep(REQUEST_DELAY_SECONDS); // Delay before potentially fetching the next page
     }
 
 } while (count($allCustomers) < $totalCustomersExpected && count($currentCustomers) === DEFAULT_PAGE_SIZE);
@@ -302,7 +302,7 @@ $output['customers_fetch_status'] = [
 $output['customer_data'] = [];
 error_log("Finished fetching all customers. Total: " . count($allCustomers));
 
-// --- STEP 2: Iterate through Customers and Fetch Devices ---
+// --- STEP 2: Iterate through Customers and Fetch Devices + Device Details ---
 foreach ($allCustomers as $customer) {
     if (!is_array($customer)) {
         error_log("Skipping non-array customer entry: " . json_encode($customer));
@@ -325,7 +325,8 @@ foreach ($allCustomers as $customer) {
     // Add a delay before fetching devices for this customer.
     sleep(REQUEST_DELAY_SECONDS);
 
-    // Fetch Devices for the current customer with Pagination.
+    // Fetch Devices for the current customer with Pagination. (Using /Device/List as it's for multiple devices)
+    error_log("  Fetching Devices for customer: $customerCode");
     $devices_api_url = $apiBaseUrl . '/Device/List';
     $allDevices = [];
     $pageNumber = 1;
@@ -333,12 +334,12 @@ foreach ($allCustomers as $customer) {
 
     do {
         $devices_payload = [
-            'FilterDealerId'      => $dealerId,
-            'FilterCustomerCodes' => [$customerCode],
+            'FilterDealerId'      => $dealerId,          // Uses DEALER_ID from .env.
+            'FilterCustomerCodes' => [$customerCode],     // Uses CustomerCode from current customer.
             'ProductBrand'        => null,
             'ProductModel'        => null,
             'OfficeId'            => null,
-            'Status'              => 1,
+            'Status'              => 1,                 // Filter for active devices.
             'FilterText'          => null,
             'PageNumber'          => $pageNumber,
             'PageRows'            => DEFAULT_PAGE_SIZE,
@@ -346,12 +347,12 @@ foreach ($allCustomers as $customer) {
             'SortOrder'           => 0
         ];
 
-        $devices_response = call_api($devices_api_url, $token, $devices_payload);
-        // CRITICAL: call_api ensures caching (or cache retrieval) is done before it returns.
+        $devices_response = call_api($devices_api_url, $token, $devices_payload, 'POST');
+        // Caching is handled inside call_api before it returns.
 
         if (isset($devices_response['error'])) {
             $output['customer_data'][$customerCode]['devices_fetch_error'] = $devices_response;
-            error_log("Device fetch error for customer $customerCode: " . json_encode($devices_response));
+            error_log("  Device fetch error for customer $customerCode: " . json_encode($devices_response));
             break; // Break pagination loop for this customer's devices.
         }
 
@@ -360,11 +361,10 @@ foreach ($allCustomers as $customer) {
 
         $allDevices = array_merge($allDevices, $currentDevices);
         $pageNumber++;
-        error_log("  Fetched Device Page $pageNumber-1 for customer $customerCode. Total devices so far: " . count($allDevices) . ". Expected: " . $totalDevicesExpected);
+        error_log("  Fetched Device Page " . ($pageNumber - 1) . " for customer $customerCode. Total devices so far: " . count($allDevices) . ". Expected: " . $totalDevicesExpected);
 
-        // Add a delay after fetching each page of devices.
-        if (count($currentDevices) > 0) { 
-            sleep(REQUEST_DELAY_SECONDS);
+        if (count($currentDevices) > 0 && (count($allDevices) < $totalDevicesExpected || $pageNumber == 2)) {
+            sleep(REQUEST_DELAY_SECONDS); // Delay before potentially fetching the next page
         }
 
     } while (count($allDevices) < $totalDevicesExpected && count($currentDevices) === DEFAULT_PAGE_SIZE);
@@ -372,125 +372,322 @@ foreach ($allCustomers as $customer) {
     $output['customer_data'][$customerCode]['total_devices_found'] = count($allDevices);
     error_log("  Finished fetching all devices for customer $customerCode. Total: " . count($allDevices));
     
-    // --- STEP 3: Iterate through Devices and Fetch Counters/Alerts ---
+    // --- STEP 3: Iterate through Devices and Fetch Detailed Device Data ---
     foreach ($allDevices as $device) {
         if (!is_array($device)) {
-            error_log("  Skipping non-array device entry for customer $customerCode: " . json_encode($device));
+            error_log("    Skipping non-array device entry for customer $customerCode: " . json_encode($device));
             continue;
         }
 
         $serialNumber = $device['SerialNumber'] ?? null;
         $assetNumber = $device['AssetNumber'] ?? null;
+        $deviceId = $device['Id'] ?? null; // Assume Device ID might be in the response too.
 
-        if ($serialNumber === null && $assetNumber === null) {
-            error_log("  Skipping device due to missing 'SerialNumber' and 'AssetNumber' for customer $customerCode: " . json_encode($device));
+        if ($serialNumber === null && $assetNumber === null && $deviceId === null) {
+            error_log("    Skipping device due to missing identifiers (SerialNumber, AssetNumber, Id) for customer $customerCode: " . json_encode($device));
             continue;
         }
-        $deviceKey = $serialNumber ?? $assetNumber; // Use SerialNumber or AssetNumber as unique key.
+        $deviceKey = $serialNumber ?? $assetNumber ?? $deviceId; // Use the most reliable identifier as key.
 
         $output['customer_data'][$customerCode]['devices'][$deviceKey] = [
             'description'   => $device['Description'] ?? 'N/A',
             'asset_number'  => $assetNumber,
             'serial_number' => $serialNumber,
-            'counters'      => null,
-            'alerts'        => null
+            'device_id'     => $deviceId,
+            'details'       => [] // Group all specific device details here
         ];
-        error_log("  Processing Device: $deviceKey - " . ($device['Description'] ?? 'N/A') . " for customer $customerCode.");
+        error_log("    Processing Device: $deviceKey - " . ($device['Description'] ?? 'N/A') . " for customer $customerCode.");
 
-        // Add a delay before fetching data for this specific device.
+        // Add a delay before fetching details for this specific device.
         sleep(REQUEST_DELAY_SECONDS);
 
-        // Fetch Device Counters for the current device with Pagination.
-        $device_counters_api_url = $apiBaseUrl . '/Counter/ListDetailed';
-        $allCounters = [];
-        $pageNumber = 1;
-        $totalCountersExpected = PHP_INT_MAX;
+        // Define a general payload for single device endpoints, preferring SerialNumber
+        $single_device_payload = ['SerialNumber' => $serialNumber];
+        if ($serialNumber === null) {
+            $single_device_payload = ['DeviceId' => $deviceId]; // Fallback to DeviceId if SerialNumber isn't there
+        }
+        // Also add CustomerCode to payloads where relevant (most Device endpoints accept it)
+        $single_device_payload['CustomerCode'] = $customerCode;
 
-        do {
-            $device_counters_payload = [
-                'DealerCode'         => $dealerCode,
-                'CustomerCode'       => $customerCode,
-                'SerialNumber'       => $serialNumber,
-                'AssetNumber'        => $assetNumber,
-                'CounterDetaildTags' => null,
-                'PageNumber'         => $pageNumber,
-                'PageRows'           => DEFAULT_PAGE_SIZE
-            ];
-            $counters_response = call_api($device_counters_api_url, $token, $device_counters_payload);
-            // CRITICAL: call_api ensures caching (or cache retrieval) is done before it returns.
-
-            if (isset($counters_response['error'])) {
-                $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters_fetch_error'] = $counters_response;
-                error_log("    Counters fetch error for device $deviceKey: " . json_encode($counters_response));
-                break; // Break pagination loop for this device's counters.
-            }
-            
-            $currentCounters = $counters_response['Result'] ?? [];
-            $totalCountersExpected = $counters_response['TotalRows'] ?? 0;
-            
-            $allCounters = array_merge($allCounters, $currentCounters);
-            $pageNumber++;
-            error_log("      Fetched Counter Page $pageNumber-1 for device $deviceKey. Total counters so far: " . count($allCounters) . ". Expected: " . $totalCountersExpected);
-
-            // Add a delay after fetching each page of counters.
-            if (count($currentCounters) > 0) { 
-                sleep(REQUEST_DELAY_SECONDS);
-            }
-
-        } while (count($allCounters) < $totalCountersExpected && count($currentCounters) === DEFAULT_PAGE_SIZE);
-
-        $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters'] = [
-            'total_counters' => count($allCounters),
-            'data'           => $allCounters
-        ];
-        error_log("    Finished fetching all counters for device $deviceKey. Total: " . count($allCounters));
-
-        // Add a delay before fetching alerts for the current device.
+        // --- Fetch Device Information (/Device/Get) ---
+        // This is a POST request.
+        $url = $apiBaseUrl . '/Device/Get';
+        $response = call_api($url, $token, ['SerialNumber' => $serialNumber ?? $assetNumber], 'POST');
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['info'] = isset($response['error']) ? $response : ($response['Result'] ?? []);
+        error_log("      Fetched /Device/Get for device $deviceKey.");
         sleep(REQUEST_DELAY_SECONDS);
 
-        // Fetch Device Alerts for the current customer (with pagination).
-        // The API filters alerts by CustomerCode, so we fetch all alerts for the customer.
-        $device_alerts_api_url = $apiBaseUrl . '/SupplyAlert/List';
-        $allAlerts = [];
-        $pageNumber = 1;
-        $totalAlertsExpected = PHP_INT_MAX;
+        // --- Fetch Device Dashboard (/Device/GetDeviceDashboard) ---
+        // This is a GET request. Parameters are passed as query string if needed.
+        // As per Swagger, takes CustomerCode and SerialNumber as query params.
+        $queryParams = http_build_query([
+            'CustomerCode' => $customerCode,
+            'SerialNumber' => $serialNumber ?? $assetNumber
+        ]);
+        $url = $apiBaseUrl . '/Device/GetDeviceDashboard?' . $queryParams;
+        $response = call_api($url, $token, [], 'GET'); // No payload for GET.
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['dashboard'] = isset($response['error']) ? $response : ($response['Result'] ?? []);
+        error_log("      Fetched /Device/GetDeviceDashboard for device $deviceKey.");
+        sleep(REQUEST_DELAY_SECONDS);
 
+        // --- Fetch Device Alerts (/Device/GetDeviceAlerts) ---
+        // This is a POST request, paginated.
+        $alerts_url = $apiBaseUrl . '/Device/GetDeviceAlerts';
+        $allDeviceAlerts = [];
+        $alertPage = 1;
+        $totalDeviceAlertsExpected = PHP_INT_MAX;
         do {
-            $device_alerts_payload = [
+            $alert_payload = [
                 'CustomerCode' => $customerCode,
-                'PageNumber'   => $pageNumber,
+                'SerialNumber' => $serialNumber,
+                'PageNumber'   => $alertPage,
                 'PageRows'     => DEFAULT_PAGE_SIZE,
                 'SortColumn'   => 'CreationDate',
-                'SortOrder'    => 1 // Descending (newest first)
+                'SortOrder'    => 1 // Descending
             ];
-            $alerts_response = call_api($device_alerts_api_url, $token, $device_alerts_payload);
-            // CRITICAL: call_api ensures caching (or cache retrieval) is done before it returns.
-
-            if (isset($alerts_response['error'])) {
-                $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts_fetch_error'] = $alerts_response;
-                error_log("    Alerts fetch error for customer $customerCode: " . json_encode($alerts_response));
-                break; // Break pagination loop for this customer's alerts.
+            $response = call_api($alerts_url, $token, $alert_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['alerts_error'] = $response;
+                error_log("        Device Alerts fetch error for device $deviceKey: " . json_encode($response));
+                break;
             }
-
-            $currentAlerts = $alerts_response['Result'] ?? [];
-            $totalAlertsExpected = $alerts_response['TotalRows'] ?? 0;
-            
-            $allAlerts = array_merge($allAlerts, $currentAlerts);
-            $pageNumber++;
-            error_log("      Fetched Alert Page $pageNumber-1 for customer $customerCode. Total alerts so far: " . count($allAlerts) . ". Expected: " . $totalAlertsExpected);
-
-            // Add a delay after fetching each page of alerts.
-            if (count($currentAlerts) > 0) { 
+            $currentAlerts = $response['Result'] ?? [];
+            $totalDeviceAlertsExpected = $response['TotalRows'] ?? 0;
+            $allDeviceAlerts = array_merge($allDeviceAlerts, $currentAlerts);
+            $alertPage++;
+            if (count($currentAlerts) > 0 && (count($allDeviceAlerts) < $totalDeviceAlertsExpected || $alertPage == 2)) {
                 sleep(REQUEST_DELAY_SECONDS);
             }
-
-        } while (count($allAlerts) < $totalAlertsExpected && count($currentAlerts) === DEFAULT_PAGE_SIZE);
-
-        $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts'] = [
-            'total_alerts' => count($allAlerts),
-            'data'         => $allAlerts
+        } while (count($allDeviceAlerts) < $totalDeviceAlertsExpected && count($currentAlerts) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['alerts'] = [
+            'total' => count($allDeviceAlerts), 'data' => $allDeviceAlerts
         ];
-        error_log("    Finished fetching all alerts for customer $customerCode. Total: " . count($allAlerts));
+        error_log("      Fetched /Device/GetDeviceAlerts for device $deviceKey. Total: " . count($allDeviceAlerts));
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Available Supplies (/Device/GetAvailableSupplies) ---
+        // This is a POST request.
+        $url = $apiBaseUrl . '/Device/GetAvailableSupplies';
+        $response = call_api($url, $token, $single_device_payload, 'POST');
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['available_supplies'] = isset($response['error']) ? $response : ($response['Result'] ?? []);
+        error_log("      Fetched /Device/GetAvailableSupplies for device $deviceKey.");
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Supply Alerts (/Device/GetSupplyAlerts) ---
+        // This is a POST request, paginated.
+        $supply_alerts_url = $apiBaseUrl . '/Device/GetSupplyAlerts';
+        $allSupplyAlerts = [];
+        $supplyAlertPage = 1;
+        $totalSupplyAlertsExpected = PHP_INT_MAX;
+        do {
+            $supply_alert_payload = [
+                'CustomerCode' => $customerCode,
+                'SerialNumber' => $serialNumber,
+                'PageNumber'   => $supplyAlertPage,
+                'PageRows'     => DEFAULT_PAGE_SIZE,
+                'SortColumn'   => 'CreationDate',
+                'SortOrder'    => 1 // Descending
+            ];
+            $response = call_api($supply_alerts_url, $token, $supply_alert_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['supply_alerts_error'] = $response;
+                error_log("        Supply Alerts fetch error for device $deviceKey: " . json_encode($response));
+                break;
+            }
+            $currentSupplyAlerts = $response['Result'] ?? [];
+            $totalSupplyAlertsExpected = $response['TotalRows'] ?? 0;
+            $allSupplyAlerts = array_merge($allSupplyAlerts, $currentSupplyAlerts);
+            $supplyAlertPage++;
+            if (count($currentSupplyAlerts) > 0 && (count($allSupplyAlerts) < $totalSupplyAlertsExpected || $supplyAlertPage == 2)) {
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+        } while (count($allSupplyAlerts) < $totalSupplyAlertsExpected && count($currentSupplyAlerts) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['supply_alerts'] = [
+            'total' => count($allSupplyAlerts), 'data' => $allSupplyAlerts
+        ];
+        error_log("      Fetched /Device/GetSupplyAlerts for device $deviceKey. Total: " . count($allSupplyAlerts));
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Maintenance Alerts (/Device/GetMaintenanceAlerts) ---
+        // This is a POST request, paginated.
+        $maintenance_alerts_url = $apiBaseUrl . '/Device/GetMaintenanceAlerts';
+        $allMaintenanceAlerts = [];
+        $maintenanceAlertPage = 1;
+        $totalMaintenanceAlertsExpected = PHP_INT_MAX;
+        do {
+            $maintenance_alert_payload = [
+                'CustomerCode' => $customerCode,
+                'SerialNumber' => $serialNumber,
+                'PageNumber'   => $maintenanceAlertPage,
+                'PageRows'     => DEFAULT_PAGE_SIZE,
+                'SortColumn'   => 'CreationDate',
+                'SortOrder'    => 1 // Descending
+            ];
+            $response = call_api($maintenance_alerts_url, $token, $maintenance_alert_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['maintenance_alerts_error'] = $response;
+                error_log("        Maintenance Alerts fetch error for device $deviceKey: " . json_encode($response));
+                break;
+            }
+            $currentMaintenanceAlerts = $response['Result'] ?? [];
+            $totalMaintenanceAlertsExpected = $response['TotalRows'] ?? 0;
+            $allMaintenanceAlerts = array_merge($allMaintenanceAlerts, $currentMaintenanceAlerts);
+            $maintenanceAlertPage++;
+            if (count($currentMaintenanceAlerts) > 0 && (count($allMaintenanceAlerts) < $totalMaintenanceAlertsExpected || $maintenanceAlertPage == 2)) {
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+        } while (count($allMaintenanceAlerts) < $totalMaintenanceAlertsExpected && count($currentMaintenanceAlerts) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['maintenance_alerts'] = [
+            'total' => count($allMaintenanceAlerts), 'data' => $allMaintenanceAlerts
+        ];
+        error_log("      Fetched /Device/GetMaintenanceAlerts for device $deviceKey. Total: " . count($allMaintenanceAlerts));
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Device Data History (/Device/GetDeviceDataHistory) ---
+        // This is a POST request, paginated. Needs StartDate/EndDate.
+        $data_history_url = $apiBaseUrl . '/Device/GetDeviceDataHistory';
+        $allDataHistory = [];
+        $dataHistoryPage = 1;
+        $totalDataHistoryExpected = PHP_INT_MAX;
+        // Fetch data for the last 30 days as an example
+        $endDate = date('Y-m-d');
+        $startDate = date('Y-m-d', strtotime('-30 days'));
+
+        do {
+            $data_history_payload = [
+                'CustomerCode' => $customerCode,
+                'SerialNumber' => $serialNumber,
+                'StartDate'    => $startDate,
+                'EndDate'      => $endDate,
+                'PageNumber'   => $dataHistoryPage,
+                'PageRows'     => DEFAULT_PAGE_SIZE
+            ];
+            $response = call_api($data_history_url, $token, $data_history_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['data_history_error'] = $response;
+                error_log("        Data History fetch error for device $deviceKey: " . json_encode($response));
+                break;
+            }
+            $currentDataHistory = $response['Result'] ?? [];
+            $totalDataHistoryExpected = $response['TotalRows'] ?? 0;
+            $allDataHistory = array_merge($allDataHistory, $currentDataHistory);
+            $dataHistoryPage++;
+            if (count($currentDataHistory) > 0 && (count($allDataHistory) < $totalDataHistoryExpected || $dataHistoryPage == 2)) {
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+        } while (count($allDataHistory) < $totalDataHistoryExpected && count($currentDataHistory) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['data_history'] = [
+            'total' => count($allDataHistory), 'data' => $allDataHistory
+        ];
+        error_log("      Fetched /Device/GetDeviceDataHistory for device $deviceKey. Total: " . count($allDataHistory));
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Device Chart Data (/Device/GetDeviceChart) ---
+        // This is a POST request, paginated. Needs date range.
+        $chart_url = $apiBaseUrl . '/Device/GetDeviceChart';
+        $allChartData = [];
+        $chartPage = 1;
+        $totalChartDataExpected = PHP_INT_MAX;
+        do {
+            $chart_payload = [
+                'CustomerCode' => $customerCode,
+                'SerialNumber' => $serialNumber,
+                'StartDate'    => $startDate, // Using same date range as data history
+                'EndDate'      => $endDate,
+                'PageNumber'   => $chartPage,
+                'PageRows'     => DEFAULT_PAGE_SIZE,
+                'PrinterCounterIds' => null // Fetching all available counters for simplicity
+            ];
+            $response = call_api($chart_url, $token, $chart_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['chart_data_error'] = $response;
+                error_log("        Chart Data fetch error for device $deviceKey: " . json_encode($response));
+                break;
+            }
+            $currentChartData = $response['Result'] ?? [];
+            $totalChartDataExpected = $response['TotalRows'] ?? 0;
+            $allChartData = array_merge($allChartData, $currentChartData);
+            $chartPage++;
+            if (count($currentChartData) > 0 && (count($allChartData) < $totalChartDataExpected || $chartPage == 2)) {
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+        } while (count($allChartData) < $totalChartDataExpected && count($currentChartData) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['chart_data'] = [
+            'total' => count($allChartData), 'data' => $allChartData
+        ];
+        error_log("      Fetched /Device/GetDeviceChart for device $deviceKey. Total: " . count($allChartData));
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Errors Messages Data History (/Device/GetErrorsMessagesDataHistory) ---
+        // This is a POST request, paginated. Needs date range.
+        $errors_history_url = $apiBaseUrl . '/Device/GetErrorsMessagesDataHistory';
+        $allErrorsHistory = [];
+        $errorsHistoryPage = 1;
+        $totalErrorsHistoryExpected = PHP_INT_MAX;
+        do {
+            $errors_history_payload = [
+                'CustomerCode' => $customerCode,
+                'SerialNumber' => $serialNumber,
+                'StartDate'    => $startDate,
+                'EndDate'      => $endDate,
+                'PageNumber'   => $errorsHistoryPage,
+                'PageRows'     => DEFAULT_PAGE_SIZE
+            ];
+            $response = call_api($errors_history_url, $token, $errors_history_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['errors_history_error'] = $response;
+                error_log("        Errors History fetch error for device $deviceKey: " . json_encode($response));
+                break;
+            }
+            $currentErrorsHistory = $response['Result'] ?? [];
+            $totalErrorsHistoryExpected = $response['TotalRows'] ?? 0;
+            $allErrorsHistory = array_merge($allErrorsHistory, $currentErrorsHistory);
+            $errorsHistoryPage++;
+            if (count($currentErrorsHistory) > 0 && (count($allErrorsHistory) < $totalErrorsHistoryExpected || $errorsHistoryPage == 2)) {
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+        } while (count($allErrorsHistory) < $totalErrorsHistoryExpected && count($currentErrorsHistory) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['errors_history'] = [
+            'total' => count($allErrorsHistory), 'data' => $allErrorsHistory
+        ];
+        error_log("      Fetched /Device/GetErrorsMessagesDataHistory for device $deviceKey. Total: " . count($allErrorsHistory));
+        sleep(REQUEST_DELAY_SECONDS);
+
+        // --- Fetch Attributes Data History (/Device/GetAttributesDataHistory) ---
+        // This is a POST request, paginated. Needs date range.
+        $attributes_history_url = $apiBaseUrl . '/Device/GetAttributesDataHistory';
+        $allAttributesHistory = [];
+        $attributesHistoryPage = 1;
+        $totalAttributesHistoryExpected = PHP_INT_MAX;
+        do {
+            $attributes_history_payload = [
+                'CustomerCode' => $customerCode,
+                'SerialNumber' => $serialNumber,
+                'StartDate'    => $startDate,
+                'EndDate'      => $endDate,
+                'PageNumber'   => $attributesHistoryPage,
+                'PageRows'     => DEFAULT_PAGE_SIZE,
+                'AttributeIds' => null // Fetching all available attributes for simplicity
+            ];
+            $response = call_api($attributes_history_url, $token, $attributes_history_payload, 'POST');
+            if (isset($response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['attributes_history_error'] = $response;
+                error_log("        Attributes History fetch error for device $deviceKey: " . json_encode($response));
+                break;
+            }
+            $currentAttributesHistory = $response['Result'] ?? [];
+            $totalAttributesHistoryExpected = $response['TotalRows'] ?? 0;
+            $allAttributesHistory = array_merge($allAttributesHistory, $currentAttributesHistory);
+            $attributesHistoryPage++;
+            if (count($currentAttributesHistory) > 0 && (count($allAttributesHistory) < $totalAttributesHistoryExpected || $attributesHistoryPage == 2)) {
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+        } while (count($allAttributesHistory) < $totalAttributesHistoryExpected && count($currentAttributesHistory) === DEFAULT_PAGE_SIZE);
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['details']['attributes_history'] = [
+            'total' => count($allAttributesHistory), 'data' => $allAttributesHistory
+        ];
+        error_log("      Fetched /Device/GetAttributesDataHistory for device $deviceKey. Total: " . count($allAttributesHistory));
+        sleep(REQUEST_DELAY_SECONDS);
     }
 }
 
