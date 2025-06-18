@@ -1,6 +1,7 @@
 <?php
 // api/get_device_detail.php
 // Fetch full device detail by deviceId, externalIdentifier, or serialNumber
+// Includes on-demand debug output via ?debug=1
 
 header('Content-Type: application/json');
 error_reporting(E_ALL);
@@ -65,10 +66,9 @@ $token = get_token($env);
 $raw = json_decode(file_get_contents('php://input'), true) ?: $_GET;
 $in = [];
 foreach ($raw as $k => $v) {
-    $lk = strtolower($k);
-    $in[$lk] = is_string($v) ? trim($v) : $v;
+    $in[strtolower($k)] = is_string($v) ? trim($v) : $v;
 }
-// uppercase filter values
+// uppercase identifiers
 if (isset($in['externalidentifier'])) {
     $in['externalidentifier'] = strtoupper($in['externalidentifier']);
 }
@@ -85,19 +85,36 @@ if (!$deviceId && (!empty($in['externalidentifier']) || !empty($in['serialnumber
     } elseif (!empty($in['serialnumber'])) {
         $filter['SerialNumber'] = $in['serialnumber'];
     }
-    // log filter for debugging
-    error_log('Lookup filter: '.json_encode($filter));
+    // debug injection: if debug=1, show filter and exit
+    if (!empty($in['debug'])) {
+        echo json_encode([
+            'lookupBody'     => [
+                'PageNumber'=>1,
+                'PageRows'  =>1,
+                'SortColumn'=>'Id',
+                'SortOrder' =>'Asc',
+                'Filter'    =>$filter
+            ]
+        ], JSON_PRETTY_PRINT);
+        exit;
+    }
     $base = rtrim($env['API_BASE_URL'],'/').'/Device/';
     $lookupBody = [
         'PageNumber'=>1,
-        'PageRows'=>1,
+        'PageRows'  =>1,
         'SortColumn'=>'Id',
-        'SortOrder'=>'Asc',
-        'Filter'=>$filter
+        'SortOrder' =>'Asc',
+        'Filter'    =>$filter
     ];
-    // wrap in "request" so API picks it up
     $resp = callApi('POST',$base.'GetDevices',$token,$lookupBody);
-    error_log('Lookup response: '.print_r($resp,true));
+    // debug injection: if debug=1, show full lookup response and exit
+    if (!empty($in['debug'])) {
+        echo json_encode([
+            'lookupBody'     =>$lookupBody,
+            'lookupResponse' =>$resp
+        ], JSON_PRETTY_PRINT);
+        exit;
+    }
     $first = $resp['data']['Devices'][0] ?? null;
     if (!empty($first['Id'])) {
         $deviceId = $first['Id'];
@@ -110,7 +127,7 @@ if (!$deviceId) {
     exit;
 }
 
-// 6. cURL helper (always wraps body under "request")
+// 6. cURL helper: wrap body under "request"
 function callApi(string $method,string $url,string $token,array $body=null) {
     $ch = curl_init($url);
     $hdr = ["Authorization: Bearer $token","Accept: application/json"];
@@ -123,7 +140,7 @@ function callApi(string $method,string $url,string $token,array $body=null) {
     }
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER=>true,
-        CURLOPT_HTTPHEADER    =>$hdr
+        CURLOPT_HTTPHEADER   =>$hdr
     ]);
     $rsp = curl_exec($ch);
     if (curl_errno($ch)) {
@@ -136,14 +153,14 @@ function callApi(string $method,string $url,string $token,array $body=null) {
     return ['status'=>$status,'data'=>json_decode($rsp,true)];
 }
 
-// 7. Redis caching
+// 7. Redis cache
 $cacheKey = "mpsm:device_detail:{$deviceId}";
 if ($cached = getCache($cacheKey)) {
     echo $cached;
     exit;
 }
 
-// 8. Fan‐out all /Device/* endpoints
+// 8. Fan-out all Device/* endpoints
 $base      = rtrim($env['API_BASE_URL'],'/').'/Device/';
 $endpoints = [
     'Get'                          => ['POST','Get',['Id'=>$deviceId]],
