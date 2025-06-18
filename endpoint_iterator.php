@@ -1,5 +1,9 @@
 <?php
+// Set PHP's execution time limit to unlimited.
+// NOTE: This will NOT override server-level timeouts (e.g., Apache's TimeOut, Nginx's proxy_read_timeout).
+// If you still experience timeouts, you MUST adjust your web server/proxy configuration.
 set_time_limit(0);
+
 // Start output buffering immediately to catch any unintended output (like warnings)
 ob_start();
 
@@ -228,13 +232,15 @@ if ($dealerId === null) {
 
 // Define a reasonable page size for API requests
 const DEFAULT_PAGE_SIZE = 100; // Fetch 100 items per page
+// Define the delay in seconds between API calls
+const REQUEST_DELAY_SECONDS = 1; // 1 second delay
 
 // Initialize an array to store all collected data for the final JSON output
 $output = [];
 
 // --- Endpoint 1: Get Customers with Pagination ---
 // This is the first call as it provides 'customerid' (CustomerCode) for subsequent calls.
-$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers';
+$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers'; // Use ?? '' for API_BASE_URL
 $allCustomers = [];
 $pageNumber = 1;
 $totalCustomersExpected = PHP_INT_MAX; // Initialize with a large number
@@ -270,6 +276,11 @@ do {
     $allCustomers = array_merge($allCustomers, $currentCustomers);
     $pageNumber++;
 
+    // Add a delay after fetching each page of customers
+    if (count($currentCustomers) > 0) { // Only delay if data was actually fetched
+        sleep(REQUEST_DELAY_SECONDS);
+    }
+
     // Continue loop if we haven't fetched all customers and there are more pages
 } while (count($allCustomers) < $totalCustomersExpected && count($currentCustomers) === DEFAULT_PAGE_SIZE);
 
@@ -297,6 +308,9 @@ foreach ($allCustomers as $customer) {
         'customer_name' => $customer['Description'] ?? 'N/A',
         'devices'       => []
     ];
+
+    // Add a small delay before fetching devices for the next customer
+    sleep(REQUEST_DELAY_SECONDS);
 
     // --- Endpoint 2: Get Devices for the current customer with Pagination ---
     $devices_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Device/List';
@@ -332,6 +346,11 @@ foreach ($allCustomers as $customer) {
         $allDevices = array_merge($allDevices, $currentDevices);
         $pageNumber++;
 
+        // Add a delay after fetching each page of devices
+        if (count($currentDevices) > 0) { // Only delay if data was actually fetched
+            sleep(REQUEST_DELAY_SECONDS);
+        }
+
     } while (count($allDevices) < $totalDevicesExpected && count($currentDevices) === DEFAULT_PAGE_SIZE);
 
     $output['customer_data'][$customerCode]['total_devices_found'] = count($allDevices);
@@ -359,6 +378,9 @@ foreach ($allCustomers as $customer) {
             'counters'      => null,
             'alerts'        => null
         ];
+
+        // Add a small delay before fetching data for the next device
+        sleep(REQUEST_DELAY_SECONDS);
 
         // --- Endpoint 3: Get Device Counters for the current device (with pagination) ---
         $device_counters_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Counter/ListDetailed';
@@ -389,12 +411,20 @@ foreach ($allCustomers as $customer) {
             $allCounters = array_merge($allCounters, $currentCounters);
             $pageNumber++;
 
+            // Add a delay after fetching each page of counters
+            if (count($currentCounters) > 0) { // Only delay if data was actually fetched
+                sleep(REQUEST_DELAY_SECONDS);
+            }
+
         } while (count($allCounters) < $totalCountersExpected && count($currentCounters) === DEFAULT_PAGE_SIZE);
 
         $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters'] = [
             'total_counters' => count($allCounters),
             'data'           => $allCounters
         ];
+
+        // Add a small delay before fetching alerts for the current device (or next device)
+        sleep(REQUEST_DELAY_SECONDS);
 
         // --- Endpoint 4: Get Device Alerts for the current customer (with pagination) ---
         // Note: get_device_alerts.php and Swagger indicate this endpoint primarily filters by CustomerCode,
@@ -424,6 +454,11 @@ foreach ($allCustomers as $customer) {
             
             $allAlerts = array_merge($allAlerts, $currentAlerts);
             $pageNumber++;
+
+            // Add a delay after fetching each page of alerts
+            if (count($currentAlerts) > 0) { // Only delay if data was actually fetched
+                sleep(REQUEST_DELAY_SECONDS);
+            }
 
         } while (count($allAlerts) < $totalAlertsExpected && count($currentAlerts) === DEFAULT_PAGE_SIZE);
 
