@@ -14,16 +14,18 @@ function load_env($path = __DIR__ . '/../.env') {
         $line = trim($line);
         if ($line === '' || str_starts_with($line, '#')) continue;
         [$k, $v] = explode('=', $line, 2) + [null,null];
-        if ($k) $env[trim($k)] = trim($v);
+        if ($k) {
+            $env[trim($k)] = trim($v);
+        }
     }
     return $env;
 }
 $env = load_env();
 
-// 2. Redis helper
+// 2. Redis caching helper
 require_once __DIR__ . '/../includes/redis.php';
 
-// 3. OAuth token
+// 3. Get OAuth token
 function get_token(array $env) {
     foreach (['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','SCOPE','TOKEN_URL'] as $k) {
         if (empty($env[$k])) {
@@ -61,12 +63,11 @@ function get_token(array $env) {
 }
 $token = get_token($env);
 
-// 4. Input contract & deviceId resolution
+// 4. Read input & resolve deviceId
 $in = json_decode(file_get_contents('php://input'), true) ?: $_GET;
 $deviceId = $in['deviceId'] ?? null;
 
 if (!$deviceId) {
-    // try externalIdentifier or serialNumber
     $filter = [];
     if (!empty($in['externalIdentifier'])) {
         $filter['ExternalIdentifier'] = $in['externalIdentifier'];
@@ -74,14 +75,15 @@ if (!$deviceId) {
         $filter['SerialNumber'] = $in['serialNumber'];
     }
     if ($filter) {
-        // resolve via GetDevices
         $base = rtrim($env['API_BASE_URL'], '/').'/Device/';
-        $resp = callApi(
-            'POST',
-            $base . 'GetDevices',
-            $token,
-            ['Filter'=>$filter]
-        );
+        $lookupBody = [
+            'PageNumber' => 1,
+            'PageRows'   => 1,
+            'SortColumn' => 'Id',
+            'SortOrder'  => 'Asc',
+            'Filter'     => $filter
+        ];
+        $resp = callApi('POST', $base.'GetDevices', $token, $lookupBody);
         $first = $resp['data']['Devices'][0] ?? null;
         if (!empty($first['Id'])) {
             $deviceId = $first['Id'];
@@ -89,14 +91,13 @@ if (!$deviceId) {
     }
 }
 
-// final check
 if (!$deviceId) {
     http_response_code(400);
     echo json_encode(['error'=>'Missing or invalid device identifier']);
     exit;
 }
 
-// 5. API caller
+// 5. Helper: call API
 function callApi(string $method, string $url, string $token, array $body = null) {
     $ch = curl_init($url);
     $hdr = ["Authorization: Bearer $token", "Accept: application/json"];
@@ -122,14 +123,14 @@ function callApi(string $method, string $url, string $token, array $body = null)
     return ['status'=>$status,'data'=>json_decode($rsp,true)];
 }
 
-// 6. Per-device cache key
+// 6. Check cache
 $cacheKey = "mpsm:device_detail:{$deviceId}";
 if ($cached = getCache($cacheKey)) {
     echo $cached;
     exit;
 }
 
-// 7. Gather all endpoints
+// 7. Call all Device/* endpoints
 $base = rtrim($env['API_BASE_URL'], '/').'/Device/';
 $endpoints = [
     'Get'                          => ['POST','Get',['Id'=>$deviceId]],
@@ -147,16 +148,15 @@ $endpoints = [
     'GetDeviceActionsDashboard'    => ['POST','GetDeviceActionsDashboard',['DeviceId'=>$deviceId]],
 ];
 
-// 8. Execute & aggregate
 ob_start();
-$result = ['deviceId'=>$deviceId];
-foreach ($endpoints as $name => [$method,$path,$body]) {
-    $url = ($method==='GET') ? $base.$path : $base.$path;
+$result = ['deviceId' => $deviceId];
+foreach ($endpoints as $name => [$method, $path, $body]) {
+    $url = $base . $path;
     $result[$name] = callApi($method, $url, $token, $body);
 }
 echo json_encode($result, JSON_PRETTY_PRINT);
 
-// 9. Cache & return
+// 8. Cache & output
 $output = ob_get_clean();
 setCache($cacheKey, $output, 60);
 echo $output;
