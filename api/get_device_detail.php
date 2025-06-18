@@ -1,14 +1,14 @@
 <?php
 // api/get_device_detail.php
-// POC: Fetch all Device/* details for one device by serialNumber or externalIdentifier
-// Implements wrapBody toggle for lookup, extracts PagedResultResponse.Result properly
+// Fetch full device detail for one device by serialNumber or externalIdentifier
 
+// 1. Standard headers & error settings
 header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors','1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
-// 1. Load .env
+// 2. Load .env manually (same as other APIs)
 function load_env($path = __DIR__ . '/../.env') {
     $env = [];
     foreach (@file($path, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
@@ -21,10 +21,11 @@ function load_env($path = __DIR__ . '/../.env') {
 }
 $env = load_env();
 
-// 2. Redis helper
+// 3. Shared Redis helper (unchanged)
 require_once __DIR__ . '/../includes/redis.php';
 
-// 3. Acquire OAuth token
+// 4. Token acquisition via existing get_token.php logic
+//    (mirrors the other endpoints exactly)
 function get_token(array $env) {
     foreach (['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','SCOPE','TOKEN_URL'] as $k) {
         if (empty($env[$k])) {
@@ -63,22 +64,22 @@ function get_token(array $env) {
 }
 $token = get_token($env);
 
-// 4. Read & normalize input
+// 5. Read & normalize input exactly as other files do
 $raw = json_decode(file_get_contents('php://input'), true) ?: $_GET;
-$in = [];
-foreach ($raw as $k => $v) {
+$in  = [];
+foreach ($raw as $k=>$v) {
     $in[strtolower($k)] = is_string($v) ? trim($v) : $v;
 }
 // map externalIdentifier → AssetNumber
 if (isset($in['externalidentifier'])) {
     $in['assetnumber'] = strtoupper($in['externalidentifier']);
 }
-// uppercase serial
+// uppercase serialNumber
 if (isset($in['serialnumber'])) {
     $in['serialnumber'] = strtoupper($in['serialnumber']);
 }
 
-// 5. Build lookup for /Device/GetDevices
+// 6. Build lookup for POST /Device/GetDevices (always wrap under "request")
 $lookup = [
     'PageNumber' => 1,
     'PageRows'   => 1,
@@ -95,172 +96,138 @@ if (!empty($in['serialnumber'])) {
     exit;
 }
 
-// 6. callApi helper with wrapBody toggle
-function callApi(string $method, string $url, string $token, array $body = null, bool $wrapBody = true) {
+// 7. Uniform callApi helper exactly like the other endpoints
+function callApi(string $method, string $url, string $token, array $body = null) {
     $ch = curl_init($url);
-    $hdr = ["Authorization: Bearer $token","Accept: application/json"];
+    $headers = [
+        'Content-Type: application/json',
+        'Accept: application/json',
+        "Authorization: Bearer $token"
+    ];
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     if ($body !== null) {
-        $hdr[] = "Content-Type: application/json";
-        $payload = $wrapBody
-                 ? json_encode(['request'=>$body])
-                 : json_encode($body);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($ch, CURLOPT_POST, true);
+        // Always wrap POST under {"request":…}
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['request'=>$body]));
     } elseif ($method !== 'GET') {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     }
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTPHEADER     => $hdr,
-    ]);
-    $rsp = curl_exec($ch);
-    if (curl_errno($ch)) {
-        $err = curl_error($ch);
-        curl_close($ch);
-        return ['status'=>0,'error'=>$err];
-    }
+    $resp = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    $data = json_decode($rsp, true);
-    return ['status'=>$status, 'raw'=>$rsp, 'data'=>$data];
+    return json_decode($resp, true);
 }
 
-// 7. Resolve the device via POST /Device/GetDevices (no request wrapper)
-$base      = rtrim($env['API_BASE_URL'],'/').'/Device/';
-$lookupUrl = $base.'GetDevices';
-$resp = callApi('POST', $lookupUrl, $token, $lookup, false);
-
-// debug on ?debug=1
-if (!empty($in['debug'])) {
-    echo json_encode([
-        'lookupUrl'  => $lookupUrl,
-        'lookupBody' => $lookup,
-        'lookupResp' => $resp
-    ], JSON_PRETTY_PRINT);
-    exit;
-}
-
-// extract list from PagedResultResponse.Result
-$deviceList = $resp['data']['Result'] ?? [];
+// 8. Lookup the device ID via GetDevices (per schema)
+$baseUrl = rtrim($env['API_BASE_URL'],'/').'/Device/';
+$deviceList = callApi('POST', $baseUrl.'GetDevices', $token, $lookup)['Result'] ?? [];
 if (!is_array($deviceList) || count($deviceList) === 0) {
     http_response_code(404);
-    echo json_encode([
-      'error' => 'Device not found',
-      'lookupResponse' => $resp
-    ], JSON_PRETTY_PRINT);
+    echo json_encode(['error'=>'Device not found']);
     exit;
 }
 $device = $deviceList[0];
 
-// 8. Extract identifiers & codes
-$deviceId     = $device['Id']           ?? null;
-$serialNumber = $device['SerialNumber'] ?? null;
-$assetNumber  = $device['AssetNumber']  ?? null;
+// 9. Extract identifiers & codes (just like the other endpoints do)
+$deviceId     = $device['Id'];
+$serialNumber = $device['SerialNumber'] ?? '';
+$assetNumber  = $device['AssetNumber']  ?? '';
 $dealerCode   = $device['Dealer']['Code']   ?? $env['DEALER_CODE']   ?? '';
 $customerCode = $device['Customer']['Code'] ?? $env['CUSTOMER_CODE'] ?? '';
 
-if (!$deviceId) {
-    http_response_code(500);
-    echo json_encode(['error'=>'Resolved device has no Id'], JSON_PRETTY_PRINT);
-    exit;
-}
-
-// 9. Redis cache check
+// 10. Redis cache check (same TTL, same key pattern)
 $cacheKey = "device_detail:{$deviceId}";
 if ($cached = getCache($cacheKey)) {
     echo $cached;
     exit;
 }
 
-// 10. Fan-out all Device endpoints
-$out           = ['lookup'=>$device];
-$endpoints     = [
-    // 1. /Device/Get (POST)
-    'Get' => ['POST','Get',[
-        'dealerCode'   => $dealerCode,
-        'id'           => $deviceId,
-        'CustomerCode' => $customerCode,
-        'SerialNumber' => $serialNumber,
-        'AssetNumber'  => $assetNumber
+// 11. Fan-out to all 13 Device/* endpoints using the exact same header & payload process
+$output = ['lookup' => $device];
+$endpoints = [
+    'Get'                        => ['POST','Get',[
+        'dealerCode'=>$dealerCode,'id'=>$deviceId,
+        'CustomerCode'=>$customerCode,
+        'SerialNumber'=>$serialNumber,
+        'AssetNumber'=>$assetNumber
     ]],
-    // 2. /Device/GetDeviceDashboard (GET)
-    'GetDeviceDashboard' => ['GET',
+    'GetDeviceDashboard'         => ['GET',
         "GetDeviceDashboard?dealerId={$env['DEALER_ID']}".
         "&customerId={$device['Customer']['Id']}".
         "&deviceId={$deviceId}",
         null
     ],
-    // 3. /Device/GetDevicesCount
-    'GetDevicesCount'=>['POST','GetDevicesCount',[
-        'DealerCode' => $dealerCode,
-        'CustomerCode' => $customerCode
+    'GetDevices'                 => ['POST','GetDevices',[
+        'PageNumber'=>1,'PageRows'=>100,
+        'SortColumn'=>'Id','SortOrder'=>'Asc',
+        'DealerCode'=>$dealerCode,
+        'CustomerCode'=>$customerCode,
+        'Search'=> $serialNumber  // or whatever your working endpoint uses
     ]],
-    // 4. /Device/GetDeviceAlerts
-    'GetDeviceAlerts'=>['POST','GetDeviceAlerts',[
+    'GetDeviceAlerts'            => ['POST','GetDeviceAlerts',[
         'PageNumber'=>1,'PageRows'=>100,
         'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
-    // 5. /Device/GetAvailableSupplies
-    'GetAvailableSupplies'=>['POST','GetAvailableSupplies',[
+    'GetDevicesCount'            => ['POST','GetDevicesCount',[
+        'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode
+    ]],
+    'GetAvailableSupplies'       => ['POST','GetAvailableSupplies',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
-    // 6. /Device/GetSupplyAlerts
-    'GetSupplyAlerts'=>['POST','GetSupplyAlerts',[
+    'GetSupplyAlerts'            => ['POST','GetSupplyAlerts',[
         'PageNumber'=>1,'PageRows'=>100,
         'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
-    // 7. /Device/GetMaintenanceAlerts
-    'GetMaintenanceAlerts'=>['POST','GetMaintenanceAlerts',[
+    'GetMaintenanceAlerts'       => ['POST','GetMaintenanceAlerts',[
         'PageNumber'=>1,'PageRows'=>100,
         'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
-    // 8. /Device/GetDeviceDataHistory
-    'GetDeviceDataHistory'=>['POST','GetDeviceDataHistory',[
+    'GetDeviceDataHistory'       => ['POST','GetDeviceDataHistory',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,
         'DeviceId'=>$deviceId
     ]],
-    // 9. /Device/GetDeviceChart
-    'GetDeviceChart'=>['POST','GetDeviceChart',[
+    'GetDeviceChart'             => ['POST','GetDeviceChart',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,
         'DeviceId'=>$deviceId
     ]],
-    //10. /Device/GetErrorsMessagesDataHistory
     'GetErrorsMessagesDataHistory'=>['POST','GetErrorsMessagesDataHistory',[
         'PageNumber'=>1,'PageRows'=>100,
         'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
-    //11. /Device/GetAttributesDataHistory
-    'GetAttributesDataHistory'=>['POST','GetAttributesDataHistory',[
+    'GetAttributesDataHistory'   => ['POST','GetAttributesDataHistory',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,
         'DeviceId'=>$deviceId
     ]],
-    //12. /Device/GetDeviceActionsDashboard
-    'GetDeviceActionsDashboard'=>['POST','GetDeviceActionsDashboard',[
+    'GetDeviceActionsDashboard'  => ['POST','GetDeviceActionsDashboard',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'DeviceId'=>$deviceId,'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]]
 ];
 
-foreach ($endpoints as $name => [$method,$path,$body]) {
-    $url = $base . $path;
-    // always wrap under "request"
-    $out[$name] = callApi($method, $url, $token, $body, true);
+foreach ($endpoints as $name => [$method, $path, $body]) {
+    $output[$name] = callApi(
+        $method,
+        $baseUrl . $path,
+        $token,
+        $body
+    );
 }
 
-// 11. Cache & return
-$response = json_encode($out, JSON_PRETTY_PRINT);
+// 12. Cache & return combined result
+$response = json_encode($output, JSON_PRETTY_PRINT);
 setCache($cacheKey, $response, 60);
 echo $response;
