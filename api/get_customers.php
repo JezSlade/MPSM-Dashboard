@@ -1,11 +1,8 @@
-<?php
-require_once __DIR__ . '/../includes/api_functions.php';
+<?php declare(strict_types=1);
+// /api/get_customers.php
 
-// No inputs needed
-$customers = get_customers();
-echo json_encode([
-  'Result'    => $customers,
-  'IsValid'   => true,
-  'Errors'    => [],
-  'ReturnValue' => ''
-], JSON_PRETTY_PRINT);
+$method   = 'POST';
+$path     = 'Customer/GetCustomers';
+$useCache = true;
+
+require __DIR__ . '/../includes/api_bootstrap.php';

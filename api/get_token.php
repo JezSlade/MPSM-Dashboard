@@ -1,17 +1,10 @@
-<?php
-require_once __DIR__ . '/../includes/redis.php';
+<?php declare(strict_types=1);
+// /api/get_token.php
 
-// Redis cache wrapper
-$cacheKey = 'mpsm:api:get_token.php:' . md5(json_encode($_REQUEST));
-if ($cached = getCache($cacheKey)) {
-    echo $cached;
-    exit;
-}
+require __DIR__ . '/../includes/api_functions.php';
 
-ob_start();
+$config = parse_env_file(__DIR__ . '/../.env');
+$token  = get_token($config);
 
-echo json_encode(['status' => 'placeholder']); ?>
-
-$output = ob_get_clean();
-setCache($cacheKey, $output, 60);
-echo $output;
+header('Content-Type: application/json');
+echo json_encode(['access_token' => $token]);

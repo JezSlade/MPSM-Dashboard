@@ -1,184 +1,99 @@
-<?php
-// includes/api_functions.php
-// Shared helpers for ALL api/*.php endpoints
+<?php declare(strict_types=1);
+// /includes/api_functions.php
 
-// —————————————————————————————————————————————————————
-// Basic setup & error logging
-// —————————————————————————————————————————————————————
-header('Content-Type: application/json');
-error_reporting(E_ALL);
-ini_set('display_errors',   '1');
-ini_set('log_errors',       '1');
-ini_set('error_log',        __DIR__ . '/../logs/debug.log');
-
-// —————————————————————————————————————————————————————
-// Redis cache helpers (wrap your existing redis.php)
-// —————————————————————————————————————————————————————
-require_once __DIR__ . '/redis.php';
-function get_cache(string $key)    { return getCache($key); }
-function set_cache(string $key, string $val, int $ttl) { setCache($key, $val, $ttl); }
-
-// —————————————————————————————————————————————————————
-// Load .env
-// —————————————————————————————————————————————————————
-function load_env($path = __DIR__ . '/../.env') {
+/**
+ * Parse a .env file into an associative array.
+ */
+function parse_env_file(string $path): array {
     $env = [];
-    if (!file_exists($path)) return $env;
-    foreach (@file($path, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
-        $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) continue;
-        [$k, $v] = explode('=', $line, 2) + [null,null];
-        if ($k) $env[trim($k)] = trim($v);
+    if (! file_exists($path)) {
+        return $env;
+    }
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $trim = trim($line);
+        if ($trim === '' || str_starts_with($trim, '#') || ! str_contains($trim, '=')) {
+            continue;
+        }
+        list($key, $val) = explode('=', $trim, 2);
+        $key = trim($key);
+        $val = trim($val);
+        // Strip quotes
+        if ((str_starts_with($val, '"') && str_ends_with($val, '"'))
+         || (str_starts_with($val, "'") && str_ends_with($val, "'"))) {
+            $val = substr($val, 1, -1);
+        }
+        $env[$key] = $val;
     }
     return $env;
 }
-function env(): array {
-    static $e = null;
-    return $e ?? ($e = load_env());
-}
 
-// —————————————————————————————————————————————————————
-// OAuth token (identical to your existing get_token.php)
-// —————————————————————————————————————————————————————
-function get_token(): string {
-    $e = env();
-    foreach (['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','SCOPE','TOKEN_URL'] as $k) {
-        if (empty($e[$k])) {
-            error_log("Missing $k in .env", 3, __DIR__.'/../logs/debug.log');
-            http_response_code(500);
-            echo json_encode(['error'=>"Configuration Error: Missing $k in .env"]);
-            exit;
-        }
+/**
+ * Fetch an OAuth token using password grant.
+ */
+function get_token(array $config): string {
+    if (empty($config['TOKEN_URL'])) {
+        throw new \Exception('TOKEN_URL not configured');
     }
-    $post = http_build_query([
+    $post = [
+        'client_id'     => $config['CLIENT_ID'] ?? '',
+        'client_secret' => $config['CLIENT_SECRET'] ?? '',
+        'username'      => $config['USERNAME'] ?? '',
+        'password'      => $config['PASSWORD'] ?? '',
+        'scope'         => $config['SCOPE'] ?? '',
         'grant_type'    => 'password',
-        'client_id'     => $e['CLIENT_ID'],
-        'client_secret' => $e['CLIENT_SECRET'],
-        'username'      => $e['USERNAME'],
-        'password'      => $e['PASSWORD'],
-        'scope'         => $e['SCOPE'],
-    ]);
-    $ch = curl_init($e['TOKEN_URL']);
+    ];
+    $ch = curl_init($config['TOKEN_URL']);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $post,
+        CURLOPT_POSTFIELDS     => http_build_query($post),
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/x-www-form-urlencoded',
-            'Accept: application/json'
-        ],
     ]);
-    $rsp  = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    $json = json_decode($rsp, true);
-    if ($code !== 200 || empty($json['access_token'])) {
-        http_response_code(401);
-        echo json_encode(['error'=>'Token request failed','details'=>$json]);
-        exit;
+    $resp = curl_exec($ch);
+    if ($resp === false) {
+        $err = curl_error($ch);
+        curl_close($ch);
+        throw new \Exception("Token request failed: {$err}");
     }
-    return $json['access_token'];
+    curl_close($ch);
+    $data = json_decode($resp, true);
+    if (! is_array($data) || empty($data['access_token'])) {
+        throw new \Exception('Invalid token response');
+    }
+    return $data['access_token'];
 }
 
-// —————————————————————————————————————————————————————
-// Generic callApi wrapper (matches all your working files)
-// —————————————————————————————————————————————————————
-function call_api(string $method, string $path, array $body = null) {
-    $e     = env();
-    $token = get_token();
-    $url   = rtrim($e['API_BASE_URL'], '/') . '/' . ltrim($path, '/');
+/**
+ * Generic HTTP client for your API.
+ */
+function call_api(array $config, string $method, string $path, array $body = []): array {
+    if (empty($config['API_BASE_URL'])) {
+        throw new \Exception('API_BASE_URL not configured');
+    }
+    $token = get_token($config);
+    $url   = rtrim($config['API_BASE_URL'], '/') . '/' . ltrim($path, '/');
     $ch    = curl_init($url);
-
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
+    $headers = [
+        "Authorization: Bearer {$token}",
         'Accept: application/json',
-        "Authorization: Bearer $token"
-    ]);
-
-    if (strtoupper($method) === 'POST') {
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['request'=>$body]));
-    } elseif (strtoupper($method) !== 'GET') {
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
-        if ($body !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['request'=>$body]));
-        }
+        'Content-Type: application/json',
+    ];
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+    if (! empty($body)) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
     }
-
-    $rsp    = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $resp = curl_exec($ch);
+    if ($resp === false) {
+        $err = curl_error($ch);
+        curl_close($ch);
+        throw new \Exception("API call failed: {$err}");
+    }
     curl_close($ch);
-
-    $data = json_decode($rsp, true);
-    return $data !== null ? $data : ['status'=>$status,'raw'=>$rsp];
-}
-
-// —————————————————————————————————————————————————————
-// Business-level helpers (these can call each other!)
-// —————————————————————————————————————————————————————
-
-/**
- * 1) get_customers: no inputs, returns array of CustomerBaseDto
- */
-function get_customers(): array {
-    $e = env();
-    $resp = call_api('POST', 'Customer/GetCustomers', [
-        'DealerCode' => $e['DEALER_CODE'] ?? ''
-    ]);
-    return $resp['Result'] ?? [];
-}
-
-/**
- * 2) get_devices: needs a customerCode, returns array of DeviceDto
- */
-function get_devices(string $customerCode): array {
-    $e = env();
-    $resp = call_api('POST', 'Device/GetDevices', [
-        'PageNumber'   => 1,
-        'PageRows'     => 100,
-        'SortColumn'   => 'Id',
-        'SortOrder'    => 'Asc',
-        'DealerCode'   => $e['DEALER_CODE']   ?? '',
-        'CustomerCode' => $customerCode
-    ]);
-    return $resp['Result'] ?? [];
-}
-
-/**
- * 3) get_device_counters: needs a deviceId, returns whatever your Counter/ListDetailed returns
- */
-function get_device_counters(string $deviceId): array {
-    return call_api('POST', 'Counter/ListDetailed', [
-        'DeviceIds' => [$deviceId]
-    ]);
-}
-
-/**
- * 4) get_device_by_external: two-step lookup
- */
-function get_device_by_external(string $extId): ?array {
-    // lookup via GetDevices → extract Id
-    $list = call_api('POST', 'Device/GetDevices', [
-      'PageNumber'   => 1,
-      'PageRows'     => 1,
-      'SortColumn'   => 'Id',
-      'SortOrder'    => 'Asc',
-      'DealerCode'   => env()['DEALER_CODE']   ?? '',
-      'CustomerCode' => env()['CUSTOMER_CODE'] ?? '',
-      'Search'       => strtoupper($extId)
-    ])['Result'] ?? [];
-
-    if (empty($list[0]['Id'])) return null;
-    $id = $list[0]['Id'];
-
-    // fetch full DeviceDto
-    $full = call_api('POST', 'Device/Get', [
-      'DealerCode' => env()['DEALER_CODE'] ?? '',
-      'Id'         => $id
-    ])['Result'] ?? null;
-
-    return is_array($full) ? $full : null;
+    $out = json_decode($resp, true);
+    if ($out === null && json_last_error() !== JSON_ERROR_NONE) {
+        throw new \Exception('Invalid JSON response: ' . json_last_error_msg());
+    }
+    return $out;
 }
