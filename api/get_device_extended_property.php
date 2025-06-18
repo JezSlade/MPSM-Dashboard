@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-// /api/get_device_counters.php
+// /api/get_device_extended_property.php
 
 $method         = 'POST';
-$path           = 'Device/GetDeviceCounters';
+$path           = 'Device/GetDeviceExtendedProperty';
 $useCache       = true;
-$requiredFields = ['deviceId'];
+$requiredFields = ['id', 'name'];
 
 require __DIR__ . '/../includes/api_bootstrap.php';

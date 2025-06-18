@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-// /api/get_device_counters.php
+// /api/get_device_fields.php
 
 $method         = 'POST';
-$path           = 'Device/GetDeviceCounters';
+$path           = 'Device/GetDeviceFields';
 $useCache       = true;
 $requiredFields = ['deviceId'];
 

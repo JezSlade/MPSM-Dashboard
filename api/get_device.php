@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-// /api/get_device_counters.php
+// /api/get_device.php
 
 $method         = 'POST';
-$path           = 'Device/GetDeviceCounters';
+$path           = 'Device/GetDevice';
 $useCache       = true;
-$requiredFields = ['deviceId'];
+$requiredFields = ['id'];
 
 require __DIR__ . '/../includes/api_bootstrap.php';

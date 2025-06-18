@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-// /api/get_device_counters.php
+// /api/get_customer_dashboard.php
 
 $method         = 'POST';
-$path           = 'Device/GetDeviceCounters';
+$path           = 'CustomerDashboard/Get';
 $useCache       = true;
-$requiredFields = ['deviceId'];
+$requiredFields = ['customerId'];
 
 require __DIR__ . '/../includes/api_bootstrap.php';

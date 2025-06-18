@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-// /api/get_device_counters.php
+// /api/get_device_snmp_errors.php
 
 $method         = 'POST';
-$path           = 'Device/GetDeviceCounters';
+$path           = 'Device/GetDeviceSnmpErrors';
 $useCache       = true;
 $requiredFields = ['deviceId'];
 
