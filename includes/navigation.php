@@ -1,44 +1,33 @@
-<?php
-// --- DEBUG BLOCK (Always Keep at Top) ---
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ----------------------------------------
+<?php declare(strict_types=1);
+// /includes/navigation.php
 
-require_once __DIR__ . '/config.php';
+// 1. Pull in shared API helpers
+require_once __DIR__ . '/api_functions.php';
 
-// Load customers list via internal API
-$customers = [];
+// 2. Load configuration
+$config = parse_env_file(__DIR__ . '/../.env');
+
+// 3. Fetch customer list via internal call_api (no HTTP warnings)
 try {
-    $apiUrl = APP_BASE_URL . 'api/get_customers.php';
-    $response = file_get_contents($apiUrl);
-    $json = json_decode($response, true);
-    if (isset($json['Result']) && is_array($json['Result'])) {
-        $customers = $json['Result'];
-    }
-} catch (Exception $e) {
-    // Fail silently, keep customers empty
+    $resp      = call_api($config, 'POST', 'Customer/GetCustomers', []);
+    $customers = $resp['Result'] ?? [];
+    $error     = '';
+} catch (\Throwable $e) {
+    $customers = [];
+    $error     = $e->getMessage();
 }
 
-$selected_customer = $_GET['customer'] ?? 'W9OPXL0YDK';
-?>
-<nav class="glass-nav" style="display: flex; justify-content: space-between; align-items: center;">
-  <ul style="display: flex; gap: 1rem; list-style: none; margin: 0; padding: 0;">
-    <li><a href="<?= APP_BASE_URL ?>">Home</a></li>
-    <!-- add more links here -->
-  </ul>
-  <form method="GET" action="<?= APP_BASE_URL ?>" style="display: flex; align-items: center;">
-    <label for="customer" style="margin-right: 0.5rem; font-weight: 500;">Customer:</label>
-    <select name="customer" id="customer" onchange="this.form.submit()" class="customer-select">
-      <option value="">-- All Customers --</option>
-      <?php foreach ($customers as $cust): ?>
-<option value="<?= htmlspecialchars($cust['Code']) ?>" <?= $selected_customer === $cust['Code'] ? 'selected' : '' ?>>
-  <?= htmlspecialchars($cust['Description'] ?? $cust['Code']) ?>
-</option>
-
-      <?php endforeach; ?>
-    </select>
-  </form>
-</nav>
-<main class="glass-main">
+// 4. Render navigation
+if ($error !== '') {
+    echo "<div class='nav-error'>Error loading customers: "
+       . htmlspecialchars($error)
+       . "</div>";
+} else {
+    echo "<ul class='nav-list'>";
+    foreach ($customers as $cust) {
+        $code = htmlspecialchars($cust['CustomerCode'] ?? '');
+        $name = htmlspecialchars($cust['Name'] ?? $code);
+        echo "<li data-customer='{$code}'>{$name}</li>";
+    }
+    echo "</ul>";
+}
