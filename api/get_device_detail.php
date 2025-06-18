@@ -54,7 +54,7 @@ function get_token(array $env) {
     $rsp  = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    $json = json_decode($rsp, true);
+    $json = json_decode($rsp,true);
     if ($code !== 200 || empty($json['access_token'])) {
         echo json_encode(['error'=>'Token request failed','details'=>$json]);
         exit;
@@ -66,7 +66,7 @@ $token = get_token($env);
 // 5. Read & normalize input (identical to other files)
 $raw = json_decode(file_get_contents('php://input'), true) ?: $_GET;
 $in  = [];
-foreach ($raw as $k=>$v) {
+foreach ($raw as $k => $v) {
     $in[strtolower($k)] = is_string($v) ? trim($v) : $v;
 }
 // map externalIdentifier → AssetNumber
@@ -78,24 +78,7 @@ if (isset($in['serialnumber'])) {
     $in['serialnumber'] = strtoupper($in['serialnumber']);
 }
 
-// 6. Build lookup for /Device/GetDevices
-$lookup = [
-    'PageNumber' => 1,
-    'PageRows'   => 1,
-    'SortColumn' => 'Id',
-    'SortOrder'  => 'Asc',
-];
-if (!empty($in['serialnumber'])) {
-    $lookup['SerialNumber'] = $in['serialnumber'];
-} elseif (!empty($in['assetnumber'])) {
-    $lookup['AssetNumber'] = $in['assetnumber'];
-} else {
-    http_response_code(400);
-    echo json_encode(['error'=>'Missing serialNumber or externalIdentifier']);
-    exit;
-}
-
-// 7. Uniform callApi helper (payload sent at root, not wrapped)
+// 6. callApi helper (payload sent at root, not wrapped)
 function callApi(string $method, string $url, string $token, array $body = null) {
     $ch = curl_init($url);
     $headers = [
@@ -108,61 +91,78 @@ function callApi(string $method, string $url, string $token, array $body = null)
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     if ($body !== null) {
         curl_setopt($ch, CURLOPT_POST, true);
-        // **SEND PAYLOAD DIRECTLY** per other APIs:
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  // direct root payload
     } elseif ($method !== 'GET') {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     }
     $rsp = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    return json_decode($rsp, true) ?? ['status'=>$status];
+    // return decoded JSON or raw status on parse failure
+    $data = json_decode($rsp, true);
+    return $data !== null ? $data : ['status'=>$status,'raw'=>$rsp];
 }
 
-// 8. Lookup the device via POST /Device/GetDevices
-$baseUrl    = rtrim($env['API_BASE_URL'],'/').'/Device/';
-$deviceResp = callApi('POST', $baseUrl.'GetDevices', $token, $lookup);
-$deviceList = $deviceResp['Result'] ?? [];
-if (!is_array($deviceList) || count($deviceList) === 0) {
-    http_response_code(404);
-    echo json_encode(['error'=>'Device not found','lookupResponse'=>$deviceResp]);
+// 7. Resolve the device via POST /Device/Get
+$baseUrl  = rtrim($env['API_BASE_URL'],'/').'/Device/';
+$lookupBody = [
+    'dealerCode'   => $env['DEALER_CODE']   ?? '',
+    'CustomerCode' => $env['CUSTOMER_CODE'] ?? ''
+];
+if (!empty($in['serialnumber'])) {
+    $lookupBody['SerialNumber'] = $in['serialnumber'];
+} elseif (!empty($in['assetnumber'])) {
+    $lookupBody['AssetNumber']  = $in['assetnumber'];
+} else {
+    http_response_code(400);
+    echo json_encode(['error'=>'Missing serialNumber or externalIdentifier']);
     exit;
 }
-$device = $deviceList[0];
 
-// 9. Extract identifiers & codes
+// debug flag to inspect lookup
+if (!empty($in['debug'])) {
+    echo json_encode([
+        'lookupUrl'  => $baseUrl.'Get',
+        'lookupBody' => $lookupBody,
+        'response'   => callApi('POST',$baseUrl.'Get',$token,$lookupBody)
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
+// call /Device/Get
+$respGet = callApi('POST', $baseUrl.'Get', $token, $lookupBody);
+if (empty($respGet['Result']) || !is_array($respGet['Result'])) {
+    http_response_code(404);
+    echo json_encode(['error'=>'Device not found','lookupResponse'=>$respGet], JSON_PRETTY_PRINT);
+    exit;
+}
+$device = $respGet['Result'];
+
+// 8. Extract IDs & codes
 $deviceId     = $device['Id'];
 $serialNumber = $device['SerialNumber'] ?? '';
 $assetNumber  = $device['AssetNumber']  ?? '';
 $dealerCode   = $device['Dealer']['Code']   ?? $env['DEALER_CODE']   ?? '';
 $customerCode = $device['Customer']['Code'] ?? $env['CUSTOMER_CODE'] ?? '';
 
-// 10. Redis cache check
+// 9. Redis cache check
 $cacheKey = "device_detail:{$deviceId}";
 if ($cached = getCache($cacheKey)) {
     echo $cached;
     exit;
 }
 
-// 11. Fan-out to all Device/* endpoints (13 total)
-$output   = ['lookup' => $device];
-$endpoints= [
-    'Get'                        => ['POST','Get',[
-        'dealerCode'   => $dealerCode,
-        'id'           => $deviceId,
-        'CustomerCode' => $customerCode,
-        'SerialNumber' => $serialNumber,
-        'AssetNumber'  => $assetNumber
+// 10. Fan-out to all Device/* endpoints
+$output = ['device'=>$device];
+$endpoints = [
+    'GetDeviceDashboard'         => ['GET',"GetDeviceDashboard?dealerId={$env['DEALER_ID']}&customerId={$device['Customer']['Id']}&deviceId={$deviceId}",null],
+    'GetDevices'                 => ['POST','GetDevices',[
+        'PageNumber'=>1,'PageRows'=>100,'SortColumn'=>'Id','SortOrder'=>'Asc',
+        'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
+        'Search'=>$serialNumber
     ]],
-    'GetDeviceDashboard'         => ['GET',
-        "GetDeviceDashboard?dealerId={$env['DEALER_ID']}".
-        "&customerId={$device['Customer']['Id']}".
-        "&deviceId={$deviceId}",
-        null
-    ],
     'GetDeviceAlerts'            => ['POST','GetDeviceAlerts',[
-        'PageNumber'=>1,'PageRows'=>100,
-        'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
+        'PageNumber'=>1,'PageRows'=>100,'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
@@ -174,49 +174,43 @@ $endpoints= [
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
     'GetSupplyAlerts'            => ['POST','GetSupplyAlerts',[
-        'PageNumber'=>1,'PageRows'=>100,
-        'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
+        'PageNumber'=>1,'PageRows'=>100,'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
     'GetMaintenanceAlerts'       => ['POST','GetMaintenanceAlerts',[
-        'PageNumber'=>1,'PageRows'=>100,
-        'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
+        'PageNumber'=>1,'PageRows'=>100,'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
     'GetDeviceDataHistory'       => ['POST','GetDeviceDataHistory',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
-        'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,
-        'DeviceId'=>$deviceId
+        'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,'DeviceId'=>$deviceId
     ]],
     'GetDeviceChart'             => ['POST','GetDeviceChart',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
-        'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,
-        'DeviceId'=>$deviceId
+        'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,'DeviceId'=>$deviceId
     ]],
-    'GetErrorsMessagesDataHistory'=> ['POST','GetErrorsMessagesDataHistory',[
-        'PageNumber'=>1,'PageRows'=>100,
-        'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
+    'GetErrorsMessagesDataHistory'=>['POST','GetErrorsMessagesDataHistory',[
+        'PageNumber'=>1,'PageRows'=>100,'SortColumn'=>'InitialDate','SortOrder'=>'Desc',
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]],
-    'GetAttributesDataHistory'   => ['POST','GetAttributesDataHistory',[
+    'GetAttributesDataHistory'   =>['POST','GetAttributesDataHistory',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
-        'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,
-        'DeviceId'=>$deviceId
+        'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber,'DeviceId'=>$deviceId
     ]],
-    'GetDeviceActionsDashboard'  => ['POST','GetDeviceActionsDashboard',[
+    'GetDeviceActionsDashboard'  =>['POST','GetDeviceActionsDashboard',[
         'DealerCode'=>$dealerCode,'CustomerCode'=>$customerCode,
         'DeviceId'=>$deviceId,'SerialNumber'=>$serialNumber,'AssetNumber'=>$assetNumber
     ]]
 ];
 
-foreach ($endpoints as $name => [$method,$path,$body]) {
-    $output[$name] = callApi($method, $baseUrl.$path, $token, $body);
+foreach ($endpoints as $name=>[$method,$path,$body]) {
+    $output[$name] = callApi($method,$baseUrl.$path,$token,$body);
 }
 
-// 12. Cache & return
+// 11. Cache & return combined
 $response = json_encode($output, JSON_PRETTY_PRINT);
-setCache($cacheKey, $response, 60);
+setCache($cacheKey,$response,60);
 echo $response;
