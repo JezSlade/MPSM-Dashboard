@@ -1,4 +1,5 @@
 <?php
+set_time_limit(0);
 // Start output buffering immediately to catch any unintended output (like warnings)
 ob_start();
 
