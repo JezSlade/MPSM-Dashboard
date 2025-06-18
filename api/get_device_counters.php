@@ -1,7 +1,7 @@
 <?php
 // api/get_device_detail.php
 // Fetch full device detail for one device by serialNumber or externalIdentifier
-// (Hard-coded externalIdentifier “DM060” for debugging—remove before production)
+// (Debug hack: externalIdentifier “DM060” – remove before production)
 
 header('Content-Type: application/json');
 error_reporting(E_ALL);
@@ -12,7 +12,7 @@ ini_set('error_log',        __DIR__ . '/../logs/debug.log');
 // 1. Redis helper
 require_once __DIR__ . '/../includes/redis.php';
 
-// 2. Load environment variables (same as your other APIs)
+// 2. Load environment variables
 function load_env($path = __DIR__ . '/../.env') {
     $env = [];
     if (!file_exists($path)) return $env;
@@ -26,20 +26,46 @@ function load_env($path = __DIR__ . '/../.env') {
 }
 $env = load_env();
 
-// 3. Acquire OAuth token via shared helper
-$tokenFile = __DIR__ . '/get_token.php';
-if (!file_exists($tokenFile)) {
-    error_log("Missing authentication helper: {$tokenFile}", 3, __DIR__.'/../logs/debug.log');
-    http_response_code(500);
-    echo json_encode(['error'=>'Internal error: missing get_token.php']);
-    exit;
-}
-require_once $tokenFile;
-if (!function_exists('get_token')) {
-    error_log("get_token() not defined in {$tokenFile}", 3, __DIR__.'/../logs/debug.log');
-    http_response_code(500);
-    echo json_encode(['error'=>'Internal error: get_token() unavailable']);
-    exit;
+// 3. Inline token helper (matching shared get_token.php)
+function get_token(array $env) {
+    foreach (['CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD','SCOPE','TOKEN_URL'] as $k) {
+        if (empty($env[$k])) {
+            error_log("Missing $k in .env", 3, __DIR__.'/../logs/debug.log');
+            http_response_code(500);
+            echo json_encode(['error'=>"Configuration Error: Missing $k in .env"]);
+            exit;
+        }
+    }
+    $post = http_build_query([
+        'grant_type'    => 'password',
+        'client_id'     => $env['CLIENT_ID'],
+        'client_secret' => $env['CLIENT_SECRET'],
+        'username'      => $env['USERNAME'],
+        'password'      => $env['PASSWORD'],
+        'scope'         => $env['SCOPE'],
+    ]);
+    $ch = curl_init($env['TOKEN_URL']);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $post,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/x-www-form-urlencoded',
+            'Accept: application/json'
+        ],
+    ]);
+    $rsp  = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $json = json_decode($rsp, true);
+    if ($code !== 200 || empty($json['access_token'])) {
+        error_log("Token request failed ($code): ".print_r($json,true),3,__DIR__.'/../logs/debug.log');
+        http_response_code(401);
+        echo json_encode(['error'=>'Token request failed','details'=>$json]);
+        exit;
+    }
+    return $json['access_token'];
 }
 $token = get_token($env);
 
@@ -52,11 +78,11 @@ foreach ($in as $k => $v) {
 }
 $in = $normalized;
 
-// DEBUG HACK: force DM060
+// DEBUG hack: force DM060
 $in['externalidentifier'] = 'DM060';
 $in['assetnumber']       = 'DM060';
 
-// Map to schema fields
+// map to schema fields
 if (isset($in['externalidentifier'])) {
     $in['assetnumber'] = strtoupper($in['externalidentifier']);
 }
@@ -71,7 +97,7 @@ if ($cached = getCache($cacheKey)) {
     exit;
 }
 
-// 6. cURL helper (identical pattern to other APIs)
+// 6. cURL helper (consistent with other api/*.php)
 function callApi(string $method, string $url, string $token, array $body = null) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -128,17 +154,16 @@ $dealerCode   = $device['Dealer']['Code']   ?? $env['DEALER_CODE']   ?? '';
 $customerCode = $device['Customer']['Code'] ?? $env['CUSTOMER_CODE'] ?? '';
 $dealerId     = $device['Dealer']['Id']     ?? $env['DEALER_ID']     ?? null;
 
-// 9. Fan-out to all endpoints
-
+// 9. Fan-out all endpoints
 $output = ['device'=>$device];
 
 // GET /Device/GetDeviceDashboard
 $output['GetDeviceDashboard'] = callApi(
     'GET',
     $deviceBase
-      . "GetDeviceDashboard?dealerId={$dealerId}"
-      . "&customerId={$device['Customer']['Id']}"
-      . "&deviceId={$deviceId}",
+      ."GetDeviceDashboard?dealerId={$dealerId}"
+      ."&customerId={$device['Customer']['Id']}"
+      ."&deviceId={$deviceId}",
     $token,
     null
 );
@@ -260,7 +285,7 @@ $output['GetAttributesDataHistory'] = callApi(
 $actionBase = rtrim($env['API_BASE_URL'], '/') . '/SdsAction/';
 $output['GetDeviceActionsDashboard'] = callApi(
     'GET',
-    $actionBase . "GetDeviceActionsDashboard?deviceId={$deviceId}&dealerId={$dealerId}",
+    $actionBase."GetDeviceActionsDashboard?deviceId={$deviceId}&dealerId={$dealerId}",
     $token,
     null
 );
