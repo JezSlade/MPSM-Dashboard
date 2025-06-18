@@ -1,5 +1,6 @@
 <?php
-// Removed `require_once __DIR__ . '/../includes/redis.php';` as redis.php content was not provided in the prompt.
+// Include the Redis cache helper functions
+require_once __DIR__ . '/includes/redis.php'; // Adjusted path: assuming redis.php is in an 'includes' folder relative to this script
 
 // Enable detailed error reporting for debugging purposes
 error_reporting(E_ALL);
@@ -40,12 +41,19 @@ if (!function_exists('load_env')) {
  * This function is extracted and adapted from `get_customers.php`.
  * It requires CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD, SCOPE, and TOKEN_URL
  * to be defined in the .env file.
+ * The token is cached to reduce API calls.
  *
  * @param array $env Associative array of environment variables.
  * @return string The access token.
  */
 if (!function_exists('get_token')) {
     function get_token($env) {
+        $cacheKey = 'mpsm:api:token';
+        // Try to get token from cache first
+        if ($cachedToken = getCache($cacheKey)) {
+            return $cachedToken;
+        }
+
         // Define required environment variables for token request
         $required = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
         foreach ($required as $key) {
@@ -89,22 +97,32 @@ if (!function_exists('get_token')) {
             exit;
         }
 
+        // Cache the token for 3500 seconds (slightly less than typical 1 hour expiry)
+        setCache($cacheKey, $json['access_token'], 3500);
         return $json['access_token']; // Return the access token
     }
 }
 
 /**
- * Helper function to make generic API calls.
+ * Helper function to make generic API calls with caching.
  * This function is designed for POST requests with JSON payloads and Bearer token authentication.
  *
  * @param string $url The API endpoint URL.
  * @param string $token The Bearer access token.
  * @param array $payload The request body as an associative array, which will be JSON encoded.
  * @param string $method The HTTP method (default 'POST').
+ * @param int $cacheTtl Time-to-live for cache in seconds (default 300s = 5 mins). Set to 0 to disable caching.
  * @return array The decoded JSON response from the API, or an error array.
  */
 if (!function_exists('call_api')) {
-    function call_api($url, $token, $payload, $method = 'POST') {
+    function call_api($url, $token, $payload, $method = 'POST', $cacheTtl = 300) {
+        $cacheKey = 'mpsm:api:' . md5($url . json_encode($payload) . $method);
+
+        // Try to get response from cache first
+        if ($cacheTtl > 0 && ($cachedResponse = getCache($cacheKey))) {
+            return json_decode($cachedResponse, true);
+        }
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url); // Set the API endpoint URL
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return the response as a string
@@ -118,9 +136,6 @@ if (!function_exists('call_api')) {
             curl_setopt($ch, CURLOPT_POST, true); // Set request method to POST
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload)); // Set JSON encoded payload
         }
-        // Note: This function is primarily set up for POST with body.
-        // For GET requests, payload would typically be query parameters.
-        // If GET requests with a body are needed (less common), this function would need adjustment.
 
         $response = curl_exec($ch); // Execute cURL request
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Get HTTP status code
@@ -128,10 +143,15 @@ if (!function_exists('call_api')) {
 
         $json = json_decode($response, true); // Decode JSON response
 
-        // Check for non-200 HTTP status codes
+        // Check for non-200 HTTP status codes or invalid JSON
         if ($code !== 200) {
             error_log("API Call Failed to $url with code $code: " . json_encode($json));
             return ["error" => "API call failed", "url" => $url, "code" => $code, "details" => $json];
+        }
+
+        // Cache the response if successful and caching is enabled
+        if ($cacheTtl > 0) {
+            setCache($cacheKey, json_encode($json), $cacheTtl);
         }
 
         return $json; // Return the decoded JSON response
@@ -150,9 +170,20 @@ $env = load_env();
 $token = get_token($env);
 
 // Retrieve hardcoded DEALER_CODE and DEALER_ID from environment variables
-// These are assumed to be present in the .env file as per user's description.
-$dealerCode = $env['DEALER_CODE'];
-$dealerId = $env['DEALER_ID'];
+// Use null coalescing operator (??) to prevent undefined key errors if variables are missing
+$dealerCode = $env['DEALER_CODE'] ?? null;
+$dealerId = $env['DEALER_ID'] ?? null;
+
+// Validate essential environment variables
+if ($dealerCode === null) {
+    echo json_encode(["error" => "DEALER_CODE is not defined in .env"]);
+    exit;
+}
+if ($dealerId === null) {
+    echo json_encode(["error" => "DEALER_ID is not defined in .env"]);
+    exit;
+}
+
 
 // Initialize an array to store all collected data for the final JSON output
 $output = [];
@@ -160,7 +191,7 @@ $output = [];
 // --- Endpoint 1: Get Customers ---
 // This is the first call as it provides 'customerid' (CustomerCode) for subsequent calls.
 // Reference: get_customers.php
-$customers_api_url = rtrim($env['API_BASE_URL'], '/') . '/Customer/GetCustomers';
+$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers';
 $customers_payload = [
     'DealerCode'  => $dealerCode, // Requires hardcoded dealerCode
     'Code'        => null,
@@ -175,30 +206,36 @@ $customers_payload = [
 $output['customers_fetch_status'] = ['message' => 'Attempting to fetch customers...'];
 $customers_response = call_api($customers_api_url, $token, $customers_payload);
 
-// Check if customer fetching failed
+// Check if customer fetching failed or if 'Result' key is missing
 if (isset($customers_response['error'])) {
     $output['customers_fetch_status'] = $customers_response;
     echo json_encode($output, JSON_PRETTY_PRINT); // Output current status and exit
     exit;
 }
 
-// Store customer fetch success details and data
-$output['customers_fetch_status'] = ['message' => 'Successfully fetched customers', 'total_customers_found' => $customers_response['TotalRows']];
-$customers = $customers_response['Result'];
+$customers = $customers_response['Result'] ?? []; // Use null coalescing to safely get 'Result'
+$output['customers_fetch_status'] = ['message' => 'Successfully fetched customers', 'total_customers_found' => ($customers_response['TotalRows'] ?? 0)];
 $output['customer_data'] = []; // Initialize array to hold detailed customer data
 
 // Iterate through each customer to fetch their devices, counters, and alerts
 foreach ($customers as $customer) {
-    $customerCode = $customer['Code'];
+    $customerCode = $customer['Code'] ?? null;
+
+    if ($customerCode === null) {
+        // Skip this customer if Code is missing, log an error
+        error_log("Skipping customer due to missing 'Code' in response: " . json_encode($customer));
+        continue;
+    }
+
     $output['customer_data'][$customerCode] = [
-        'customer_name' => $customer['Description'],
+        'customer_name' => $customer['Description'] ?? 'N/A', // Safely get Description
         'devices'       => [] // Initialize array for devices under this customer
     ];
 
     // --- Endpoint 2: Get Devices for the current customer ---
     // Requires 'customerid' (CustomerCode) from the previous customers response.
     // Reference: get_devices.php
-    $devices_api_url = rtrim($env['API_BASE_URL'], '/') . '/Device/List';
+    $devices_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Device/List';
     $devices_payload = [
         'FilterDealerId'      => $dealerId, // Requires hardcoded DEALER_ID
         'FilterCustomerCodes' => [$customerCode], // Uses customerCode from current iteration
@@ -215,24 +252,32 @@ foreach ($customers as $customer) {
 
     $devices_response = call_api($devices_api_url, $token, $devices_payload);
 
-    // Check if device fetching failed for this customer
+    // Check if device fetching failed for this customer or if 'Result' is missing
     if (isset($devices_response['error'])) {
         $output['customer_data'][$customerCode]['devices_fetch_error'] = $devices_response;
         continue; // Skip to the next customer if devices fetch fails
     }
 
-    // Store device fetch success details and data
-    $output['customer_data'][$customerCode]['total_devices_found'] = $devices_response['TotalRows'];
-    $devices = $devices_response['Result'];
+    $devices = $devices_response['Result'] ?? []; // Safely get 'Result'
+    $output['customer_data'][$customerCode]['total_devices_found'] = ($devices_response['TotalRows'] ?? 0);
 
     // Iterate through each device to fetch its counters and alerts
     foreach ($devices as $device) {
-        $serialNumber = $device['SerialNumber'];
-        $assetNumber = $device['AssetNumber']; // AssetNumber can be an alternative identifier
+        $serialNumber = $device['SerialNumber'] ?? null;
+        $assetNumber = $device['AssetNumber'] ?? null; // AssetNumber can be an alternative identifier
 
-        $output['customer_data'][$customerCode]['devices'][$serialNumber] = [
-            'description'  => $device['Description'],
+        if ($serialNumber === null && $assetNumber === null) {
+            // Skip this device if both SerialNumber and AssetNumber are missing
+            error_log("Skipping device due to missing 'SerialNumber' and 'AssetNumber' in response: " . json_encode($device));
+            continue;
+        }
+        // Use SerialNumber as the primary key for the device output, fallback to AssetNumber if SerialNumber is null
+        $deviceKey = $serialNumber ?? $assetNumber;
+
+        $output['customer_data'][$customerCode]['devices'][$deviceKey] = [
+            'description'  => $device['Description'] ?? 'N/A', // Safely get Description
             'asset_number' => $assetNumber,
+            'serial_number' => $serialNumber,
             'counters'     => null, // Placeholder for counters data
             'alerts'       => null  // Placeholder for alerts data
         ];
@@ -240,7 +285,7 @@ foreach ($customers as $customer) {
         // --- Endpoint 3: Get Device Counters for the current device ---
         // Requires 'customerid' (CustomerCode) and 'deviceid' (SerialNumber/AssetNumber) from previous responses.
         // Reference: get_device_counters.php
-        $device_counters_api_url = rtrim($env['API_BASE_URL'], '/') . '/Counter/ListDetailed';
+        $device_counters_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Counter/ListDetailed';
         $device_counters_payload = [
             'DealerCode'         => $dealerCode,
             'CustomerCode'       => $customerCode,
@@ -252,18 +297,18 @@ foreach ($customers as $customer) {
 
         // Store counters data or error
         if (isset($counters_response['error'])) {
-            $output['customer_data'][$customerCode]['devices'][$serialNumber]['counters_fetch_error'] = $counters_response;
+            $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters_fetch_error'] = $counters_response;
         } else {
-            $output['customer_data'][$customerCode]['devices'][$serialNumber]['counters'] = [
-                'total_counters' => $counters_response['TotalRows'],
-                'data'           => $counters_response['Result']
+            $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters'] = [
+                'total_counters' => ($counters_response['TotalRows'] ?? 0),
+                'data'           => $counters_response['Result'] ?? []
             ];
         }
 
         // --- Endpoint 4: Get Device Alerts for the current customer/device ---
         // Requires 'customerid' (CustomerCode). Note that get_device_alerts.php uses CustomerCode in its payload.
         // Reference: get_device_alerts.php, Swagger Pretty.json (for SupplyAlert/List)
-        $device_alerts_api_url = rtrim($env['API_BASE_URL'], '/') . '/SupplyAlert/List';
+        $device_alerts_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/SupplyAlert/List';
         $device_alerts_payload = [
             'CustomerCode' => $customerCode, // Uses customerCode from current iteration
             'PageNumber'   => 1,
@@ -275,11 +320,11 @@ foreach ($customers as $customer) {
 
         // Store alerts data or error
         if (isset($alerts_response['error'])) {
-            $output['customer_data'][$customerCode]['devices'][$serialNumber]['alerts_fetch_error'] = $alerts_response;
+            $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts_fetch_error'] = $alerts_response;
         } else {
-            $output['customer_data'][$customerCode]['devices'][$serialNumber]['alerts'] = [
-                'total_alerts' => $alerts_response['TotalRows'],
-                'data'         => $alerts_response['Result']
+            $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts'] = [
+                'total_alerts' => ($alerts_response['TotalRows'] ?? 0),
+                'data'         => $alerts_response['Result'] ?? []
             ];
         }
     }
