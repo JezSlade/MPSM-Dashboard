@@ -1,10 +1,17 @@
 <?php
+// Start output buffering immediately to catch any unintended output (like warnings)
+ob_start();
+
 // Include the Redis cache helper functions
-require_once __DIR__ . '/includes/redis.php'; // Adjusted path: assuming redis.php is in an 'includes' folder relative to this script
+// Adjusted path: assuming redis.php is in an 'includes' folder relative to this script
+require_once __DIR__ . '/includes/redis.php'; 
 
 // Enable detailed error reporting for debugging purposes
+// display_errors should ideally be 'Off' in a production environment
+// and errors logged to a file. For debugging, 'On' is fine but will break JSON output.
+// With ob_start, warnings will be buffered, then we can decide to discard them or not.
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
+ini_set('display_errors', '1'); // Keep this '1' for debugging to see if warnings occur
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/debug.log'); // Logs errors to a file in the same directory as this script
 
@@ -20,8 +27,11 @@ if (!function_exists('load_env')) {
     function load_env($path = __DIR__ . '/.env') {
         $env = [];
         if (!file_exists($path)) {
-            // If .env file is not found, output an error and terminate
+            // If .env file is not found, output an error JSON and terminate
+            // This error will now be captured by ob_start
+            header('Content-Type: application/json');
             echo json_encode(["error" => ".env file not found at " . $path]);
+            ob_end_flush(); // Send buffered output and turn off buffering
             exit;
         }
         // Read the .env file line by line
@@ -58,8 +68,11 @@ if (!function_exists('get_token')) {
         $required = ['CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE', 'TOKEN_URL'];
         foreach ($required as $key) {
             if (empty($env[$key])) {
-                // If any required key is missing, output error and terminate
+                // If any required key is missing, output error JSON and terminate
+                // This error will now be captured by ob_start
+                header('Content-Type: application/json');
                 echo json_encode(["error" => "Missing $key in .env"]);
+                ob_end_flush(); // Send buffered output and turn off buffering
                 exit;
             }
         }
@@ -93,7 +106,10 @@ if (!function_exists('get_token')) {
 
         // Check for successful token acquisition
         if ($code !== 200 || !isset($json['access_token'])) {
+            // Output error JSON and terminate
+            header('Content-Type: application/json');
             echo json_encode(["error" => "Token request failed", "details" => $json]);
+            ob_end_flush(); // Send buffered output and turn off buffering
             exit;
         }
 
@@ -200,10 +216,12 @@ $dealerId = $env['DEALER_ID'] ?? null;
 // Validate essential environment variables immediately
 if ($dealerCode === null) {
     echo json_encode(["error" => "DEALER_CODE is not defined in .env"]);
+    ob_end_flush();
     exit;
 }
 if ($dealerId === null) {
     echo json_encode(["error" => "DEALER_ID is not defined in .env"]);
+    ob_end_flush();
     exit;
 }
 
@@ -232,7 +250,10 @@ $customers_response = call_api($customers_api_url, $token, $customers_payload);
 // Check if customer fetching failed or if 'Result' key is missing after call_api (which always returns array)
 if (isset($customers_response['error'])) {
     $output['customers_fetch_status'] = $customers_response;
-    echo json_encode($output, JSON_PRETTY_PRINT); // Output current status and exit
+    // Clear any output already buffered from warnings/notices, then flush the JSON error
+    ob_clean(); // Clear the buffer
+    echo json_encode($output, JSON_PRETTY_PRINT);
+    ob_end_flush(); // Send buffered output and turn off buffering
     exit;
 }
 
@@ -369,6 +390,11 @@ foreach ($customers as $customer) {
     }
 }
 
+// Clear any buffered output (warnings, notices, etc.) before echoing the final JSON
+ob_clean();
 // Output the final collected data as a pretty-printed JSON response
 echo json_encode($output, JSON_PRETTY_PRINT);
+
+// End output buffering and send the content to the browser
+ob_end_flush();
 ?>
