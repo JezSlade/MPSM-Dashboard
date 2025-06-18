@@ -16,10 +16,9 @@ $customerCode = $_GET['customer']
               ?? $config['DEALER_CODE'] 
               ?? '';
 
-// 3) Look up that customer’s human‐friendly name
+// 3) Look up that customer’s human-friendly name
 $customerName = 'All Customers';
 try {
-    // Build a GetCustomersRequest payload that returns everyone
     $custPayload = [
         'DealerCode' => $config['DEALER_CODE'] ?? '',
         'PageNumber' => 1,
@@ -30,14 +29,12 @@ try {
     $custResp = call_api($config, 'POST', 'Customer/GetCustomers', $custPayload);
     $list     = $custResp['Result'] ?? [];
     foreach ($list as $c) {
-        // The API returns 'Code' and 'Description'
-        if (!empty($customerCode) && ($c['Code'] ?? '') === $customerCode) {
+        if ($customerCode && ($c['Code'] ?? '') === $customerCode) {
             $customerName = $c['Description'] ?? $c['Name'] ?? $customerCode;
             break;
         }
     }
 } catch (\Throwable $e) {
-    // On error, just show code or default
     if ($customerCode) {
         $customerName = $customerCode;
     }
@@ -45,7 +42,7 @@ try {
 
 // 4) Scan all card files in /cards/
 $cardsDir  = __DIR__ . '/../cards/';
-$allCards  = array_filter(
+$cardFiles = array_filter(
     scandir($cardsDir),
     fn($f) => pathinfo($f, PATHINFO_EXTENSION) === 'php'
 );
@@ -54,10 +51,10 @@ $allCards  = array_filter(
 if (!empty($_COOKIE['visible_cards'])) {
     $visibleCards = array_intersect(
         explode(',', $_COOKIE['visible_cards']),
-        $allCards
+        $cardFiles
     );
 } else {
-    $visibleCards = $allCards;
+    $visibleCards = $cardFiles;
 }
 ?>
 <!DOCTYPE html>
@@ -69,7 +66,7 @@ if (!empty($_COOKIE['visible_cards'])) {
 </head>
 <body>
 
-  <!-- Header with dynamic customer name -->
+  <!-- Header with dynamic customer name and gear icon -->
   <header class="dashboard-header">
     <h1>Dashboard for <?= htmlspecialchars($customerName) ?></h1>
     <button class="gear-icon" title="View Preferences">⚙️</button>
