@@ -106,13 +106,14 @@ if (!function_exists('get_token')) {
 /**
  * Helper function to make generic API calls with caching.
  * This function is designed for POST requests with JSON payloads and Bearer token authentication.
+ * It's enhanced to ensure it always returns an array, even on cURL errors or invalid JSON.
  *
  * @param string $url The API endpoint URL.
  * @param string $token The Bearer access token.
  * @param array $payload The request body as an associative array, which will be JSON encoded.
  * @param string $method The HTTP method (default 'POST').
  * @param int $cacheTtl Time-to-live for cache in seconds (default 300s = 5 mins). Set to 0 to disable caching.
- * @return array The decoded JSON response from the API, or an error array.
+ * @return array The decoded JSON response from the API, or an error array. Returns an empty array if API returns no data.
  */
 if (!function_exists('call_api')) {
     function call_api($url, $token, $payload, $method = 'POST', $cacheTtl = 300) {
@@ -120,7 +121,15 @@ if (!function_exists('call_api')) {
 
         // Try to get response from cache first
         if ($cacheTtl > 0 && ($cachedResponse = getCache($cacheKey))) {
-            return json_decode($cachedResponse, true);
+            $decodedCache = json_decode($cachedResponse, true);
+            // Ensure cached data is a valid array before returning
+            if (is_array($decodedCache)) {
+                return $decodedCache;
+            } else {
+                // Log corrupted cache entry and purge it to prevent future issues
+                error_log("Corrupted cached data for key: $cacheKey. Purging and fetching new data.");
+                purgeCache($cacheKey);
+            }
         }
 
         $ch = curl_init();
@@ -138,14 +147,28 @@ if (!function_exists('call_api')) {
         }
 
         $response = curl_exec($ch); // Execute cURL request
+        $curlError = curl_error($ch); // Get any cURL error message
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Get HTTP status code
         curl_close($ch); // Close cURL session
 
+        // Handle cURL errors (e.g., network issues, DNS problems)
+        if ($curlError) {
+             error_log("cURL error on $url: " . $curlError);
+             return ["error" => "cURL error", "url" => $url, "details" => $curlError];
+        }
+
         $json = json_decode($response, true); // Decode JSON response
 
-        // Check for non-200 HTTP status codes or invalid JSON
+        // If json_decode fails (e.g., non-JSON response, empty response), $json will be null or false.
+        // Also explicitly check if the response is an empty string for robustness.
+        if (!is_array($json) || empty($response)) {
+            error_log("API Call Failed to $url: Invalid JSON response or empty body (HTTP Code: $code). Raw Response: " . (empty($response) ? "[EMPTY RESPONSE]" : $response));
+            return ["error" => "API call failed: Invalid or empty response format", "url" => $url, "code" => $code, "raw_response" => $response];
+        }
+
+        // Check for non-200 HTTP status codes, even if JSON is valid
         if ($code !== 200) {
-            error_log("API Call Failed to $url with code $code: " . json_encode($json));
+            error_log("API Call Failed to $url with non-200 HTTP code $code: " . json_encode($json));
             return ["error" => "API call failed", "url" => $url, "code" => $code, "details" => $json];
         }
 
@@ -174,7 +197,7 @@ $token = get_token($env);
 $dealerCode = $env['DEALER_CODE'] ?? null;
 $dealerId = $env['DEALER_ID'] ?? null;
 
-// Validate essential environment variables
+// Validate essential environment variables immediately
 if ($dealerCode === null) {
     echo json_encode(["error" => "DEALER_CODE is not defined in .env"]);
     exit;
@@ -191,7 +214,7 @@ $output = [];
 // --- Endpoint 1: Get Customers ---
 // This is the first call as it provides 'customerid' (CustomerCode) for subsequent calls.
 // Reference: get_customers.php
-$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers';
+$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers'; // Use ?? '' for API_BASE_URL
 $customers_payload = [
     'DealerCode'  => $dealerCode, // Requires hardcoded dealerCode
     'Code'        => null,
@@ -206,19 +229,29 @@ $customers_payload = [
 $output['customers_fetch_status'] = ['message' => 'Attempting to fetch customers...'];
 $customers_response = call_api($customers_api_url, $token, $customers_payload);
 
-// Check if customer fetching failed or if 'Result' key is missing
+// Check if customer fetching failed or if 'Result' key is missing after call_api (which always returns array)
 if (isset($customers_response['error'])) {
     $output['customers_fetch_status'] = $customers_response;
     echo json_encode($output, JSON_PRETTY_PRINT); // Output current status and exit
     exit;
 }
 
-$customers = $customers_response['Result'] ?? []; // Use null coalescing to safely get 'Result'
-$output['customers_fetch_status'] = ['message' => 'Successfully fetched customers', 'total_customers_found' => ($customers_response['TotalRows'] ?? 0)];
+// Safely get 'Result' and 'TotalRows' from the response, ensuring they are arrays/numbers
+$customers = $customers_response['Result'] ?? [];
+$output['customers_fetch_status'] = [
+    'message'           => 'Successfully fetched customers',
+    'total_customers_found' => ($customers_response['TotalRows'] ?? 0)
+];
 $output['customer_data'] = []; // Initialize array to hold detailed customer data
 
 // Iterate through each customer to fetch their devices, counters, and alerts
 foreach ($customers as $customer) {
+    // Crucial: Ensure $customer is an array before accessing its keys
+    if (!is_array($customer)) {
+        error_log("Skipping non-array customer entry encountered: " . json_encode($customer));
+        continue;
+    }
+
     $customerCode = $customer['Code'] ?? null;
 
     if ($customerCode === null) {
@@ -263,23 +296,29 @@ foreach ($customers as $customer) {
 
     // Iterate through each device to fetch its counters and alerts
     foreach ($devices as $device) {
+        // Crucial: Ensure $device is an array before accessing its keys
+        if (!is_array($device)) {
+            error_log("Skipping non-array device entry for customer $customerCode: " . json_encode($device));
+            continue;
+        }
+
         $serialNumber = $device['SerialNumber'] ?? null;
         $assetNumber = $device['AssetNumber'] ?? null; // AssetNumber can be an alternative identifier
 
         if ($serialNumber === null && $assetNumber === null) {
-            // Skip this device if both SerialNumber and AssetNumber are missing
-            error_log("Skipping device due to missing 'SerialNumber' and 'AssetNumber' in response: " . json_encode($device));
+            // Skip this device if both SerialNumber and AssetNumber are missing, log an error
+            error_log("Skipping device due to missing 'SerialNumber' and 'AssetNumber' in response for customer $customerCode: " . json_encode($device));
             continue;
         }
         // Use SerialNumber as the primary key for the device output, fallback to AssetNumber if SerialNumber is null
         $deviceKey = $serialNumber ?? $assetNumber;
 
         $output['customer_data'][$customerCode]['devices'][$deviceKey] = [
-            'description'  => $device['Description'] ?? 'N/A', // Safely get Description
-            'asset_number' => $assetNumber,
+            'description'   => $device['Description'] ?? 'N/A', // Safely get Description
+            'asset_number'  => $assetNumber,
             'serial_number' => $serialNumber,
-            'counters'     => null, // Placeholder for counters data
-            'alerts'       => null  // Placeholder for alerts data
+            'counters'      => null, // Placeholder for counters data
+            'alerts'        => null  // Placeholder for alerts data
         ];
 
         // --- Endpoint 3: Get Device Counters for the current device ---
