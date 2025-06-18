@@ -128,11 +128,11 @@ if (!function_exists('get_token')) {
  * @param string $token The Bearer access token.
  * @param array $payload The request body as an associative array, which will be JSON encoded.
  * @param string $method The HTTP method (default 'POST').
- * @param int $cacheTtl Time-to-live for cache in seconds (default 300s = 5 mins). Set to 0 to disable caching.
+ * @param int $cacheTtl Time-to-live for cache in seconds (default 3600s = 1 hour). Set to 0 to disable caching.
  * @return array The decoded JSON response from the API, or an error array. Returns an empty array if API returns no data.
  */
 if (!function_exists('call_api')) {
-    function call_api($url, $token, $payload, $method = 'POST', $cacheTtl = 300) {
+    function call_api($url, $token, $payload, $method = 'POST', $cacheTtl = 3600) { // Increased default cache TTL
         $cacheKey = 'mpsm:api:' . md5($url . json_encode($payload) . $method);
 
         // Try to get response from cache first
@@ -225,49 +225,61 @@ if ($dealerId === null) {
     exit;
 }
 
+// Define a reasonable page size for API requests
+const DEFAULT_PAGE_SIZE = 100; // Fetch 100 items per page
 
 // Initialize an array to store all collected data for the final JSON output
 $output = [];
 
-// --- Endpoint 1: Get Customers ---
+// --- Endpoint 1: Get Customers with Pagination ---
 // This is the first call as it provides 'customerid' (CustomerCode) for subsequent calls.
-// Reference: get_customers.php
-$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers'; // Use ?? '' for API_BASE_URL
-$customers_payload = [
-    'DealerCode'  => $dealerCode, // Requires hardcoded dealerCode
-    'Code'        => null,
-    'HasHpSds'    => null,
-    'FilterText'  => null,
-    'PageNumber'  => 1,
-    'PageRows'    => 2147483647, // Set to max value to fetch all customers
-    'SortColumn'  => 'Id',
-    'SortOrder'   => 0 // 0 for ascending, 1 for descending
-];
+$customers_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Customer/GetCustomers';
+$allCustomers = [];
+$pageNumber = 1;
+$totalCustomersExpected = PHP_INT_MAX; // Initialize with a large number
 
-$output['customers_fetch_status'] = ['message' => 'Attempting to fetch customers...'];
-$customers_response = call_api($customers_api_url, $token, $customers_payload);
+$output['customers_fetch_status'] = ['message' => 'Attempting to fetch customers with pagination...'];
 
-// Check if customer fetching failed or if 'Result' key is missing after call_api (which always returns array)
-if (isset($customers_response['error'])) {
-    $output['customers_fetch_status'] = $customers_response;
-    // Clear any output already buffered from warnings/notices, then flush the JSON error
-    ob_clean(); // Clear the buffer
-    echo json_encode($output, JSON_PRETTY_PRINT);
-    ob_end_flush(); // Send buffered output and turn off buffering
-    exit;
-}
+do {
+    $customers_payload = [
+        'DealerCode'  => $dealerCode,
+        'Code'        => null,
+        'HasHpSds'    => null,
+        'FilterText'  => null,
+        'PageNumber'  => $pageNumber,
+        'PageRows'    => DEFAULT_PAGE_SIZE,
+        'SortColumn'  => 'Id',
+        'SortOrder'   => 0
+    ];
 
-// Safely get 'Result' and 'TotalRows' from the response, ensuring they are arrays/numbers
-$customers = $customers_response['Result'] ?? [];
+    $customers_response = call_api($customers_api_url, $token, $customers_payload);
+
+    if (isset($customers_response['error'])) {
+        $output['customers_fetch_status'] = $customers_response;
+        // Clear any output already buffered from warnings/notices, then flush the JSON error
+        ob_clean();
+        echo json_encode($output, JSON_PRETTY_PRINT);
+        ob_end_flush();
+        exit;
+    }
+
+    $currentCustomers = $customers_response['Result'] ?? [];
+    $totalCustomersExpected = $customers_response['TotalRows'] ?? 0;
+
+    $allCustomers = array_merge($allCustomers, $currentCustomers);
+    $pageNumber++;
+
+    // Continue loop if we haven't fetched all customers and there are more pages
+} while (count($allCustomers) < $totalCustomersExpected && count($currentCustomers) === DEFAULT_PAGE_SIZE);
+
 $output['customers_fetch_status'] = [
     'message'           => 'Successfully fetched customers',
-    'total_customers_found' => ($customers_response['TotalRows'] ?? 0)
+    'total_customers_found' => count($allCustomers)
 ];
-$output['customer_data'] = []; // Initialize array to hold detailed customer data
+$output['customer_data'] = [];
 
 // Iterate through each customer to fetch their devices, counters, and alerts
-foreach ($customers as $customer) {
-    // Crucial: Ensure $customer is an array before accessing its keys
+foreach ($allCustomers as $customer) {
     if (!is_array($customer)) {
         error_log("Skipping non-array customer entry encountered: " . json_encode($customer));
         continue;
@@ -276,117 +288,148 @@ foreach ($customers as $customer) {
     $customerCode = $customer['Code'] ?? null;
 
     if ($customerCode === null) {
-        // Skip this customer if Code is missing, log an error
         error_log("Skipping customer due to missing 'Code' in response: " . json_encode($customer));
         continue;
     }
 
     $output['customer_data'][$customerCode] = [
-        'customer_name' => $customer['Description'] ?? 'N/A', // Safely get Description
-        'devices'       => [] // Initialize array for devices under this customer
+        'customer_name' => $customer['Description'] ?? 'N/A',
+        'devices'       => []
     ];
 
-    // --- Endpoint 2: Get Devices for the current customer ---
-    // Requires 'customerid' (CustomerCode) from the previous customers response.
-    // Reference: get_devices.php
+    // --- Endpoint 2: Get Devices for the current customer with Pagination ---
     $devices_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Device/List';
-    $devices_payload = [
-        'FilterDealerId'      => $dealerId, // Requires hardcoded DEALER_ID
-        'FilterCustomerCodes' => [$customerCode], // Uses customerCode from current iteration
-        'ProductBrand'        => null,
-        'ProductModel'        => null,
-        'OfficeId'            => null,
-        'Status'              => 1, // Filter for active devices (Status 1)
-        'FilterText'          => null,
-        'PageNumber'          => 1,
-        'PageRows'            => 2147483647, // Set to max value to fetch all devices for this customer
-        'SortColumn'          => 'Id',
-        'SortOrder'           => 0
-    ];
+    $allDevices = [];
+    $pageNumber = 1;
+    $totalDevicesExpected = PHP_INT_MAX;
 
-    $devices_response = call_api($devices_api_url, $token, $devices_payload);
+    do {
+        $devices_payload = [
+            'FilterDealerId'      => $dealerId,
+            'FilterCustomerCodes' => [$customerCode],
+            'ProductBrand'        => null,
+            'ProductModel'        => null,
+            'OfficeId'            => null,
+            'Status'              => 1,
+            'FilterText'          => null,
+            'PageNumber'          => $pageNumber,
+            'PageRows'            => DEFAULT_PAGE_SIZE,
+            'SortColumn'          => 'Id',
+            'SortOrder'           => 0
+        ];
 
-    // Check if device fetching failed for this customer or if 'Result' is missing
-    if (isset($devices_response['error'])) {
-        $output['customer_data'][$customerCode]['devices_fetch_error'] = $devices_response;
-        continue; // Skip to the next customer if devices fetch fails
-    }
+        $devices_response = call_api($devices_api_url, $token, $devices_payload);
 
-    $devices = $devices_response['Result'] ?? []; // Safely get 'Result'
-    $output['customer_data'][$customerCode]['total_devices_found'] = ($devices_response['TotalRows'] ?? 0);
+        if (isset($devices_response['error'])) {
+            $output['customer_data'][$customerCode]['devices_fetch_error'] = $devices_response;
+            break; // Break pagination loop for this customer's devices
+        }
 
+        $currentDevices = $devices_response['Result'] ?? [];
+        $totalDevicesExpected = $devices_response['TotalRows'] ?? 0;
+
+        $allDevices = array_merge($allDevices, $currentDevices);
+        $pageNumber++;
+
+    } while (count($allDevices) < $totalDevicesExpected && count($currentDevices) === DEFAULT_PAGE_SIZE);
+
+    $output['customer_data'][$customerCode]['total_devices_found'] = count($allDevices);
+    
     // Iterate through each device to fetch its counters and alerts
-    foreach ($devices as $device) {
-        // Crucial: Ensure $device is an array before accessing its keys
+    foreach ($allDevices as $device) {
         if (!is_array($device)) {
             error_log("Skipping non-array device entry for customer $customerCode: " . json_encode($device));
             continue;
         }
 
         $serialNumber = $device['SerialNumber'] ?? null;
-        $assetNumber = $device['AssetNumber'] ?? null; // AssetNumber can be an alternative identifier
+        $assetNumber = $device['AssetNumber'] ?? null;
 
         if ($serialNumber === null && $assetNumber === null) {
-            // Skip this device if both SerialNumber and AssetNumber are missing, log an error
             error_log("Skipping device due to missing 'SerialNumber' and 'AssetNumber' in response for customer $customerCode: " . json_encode($device));
             continue;
         }
-        // Use SerialNumber as the primary key for the device output, fallback to AssetNumber if SerialNumber is null
         $deviceKey = $serialNumber ?? $assetNumber;
 
         $output['customer_data'][$customerCode]['devices'][$deviceKey] = [
-            'description'   => $device['Description'] ?? 'N/A', // Safely get Description
+            'description'   => $device['Description'] ?? 'N/A',
             'asset_number'  => $assetNumber,
             'serial_number' => $serialNumber,
-            'counters'      => null, // Placeholder for counters data
-            'alerts'        => null  // Placeholder for alerts data
+            'counters'      => null,
+            'alerts'        => null
         ];
 
-        // --- Endpoint 3: Get Device Counters for the current device ---
-        // Requires 'customerid' (CustomerCode) and 'deviceid' (SerialNumber/AssetNumber) from previous responses.
-        // Reference: get_device_counters.php
+        // --- Endpoint 3: Get Device Counters for the current device (with pagination) ---
         $device_counters_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/Counter/ListDetailed';
-        $device_counters_payload = [
-            'DealerCode'         => $dealerCode,
-            'CustomerCode'       => $customerCode,
-            'SerialNumber'       => $serialNumber, // Uses serialNumber from current device iteration
-            'AssetNumber'        => $assetNumber,  // Also pass assetNumber if available
-            'CounterDetaildTags' => null // No specific tags for this iteration
-        ];
-        $counters_response = call_api($device_counters_api_url, $token, $device_counters_payload);
+        $allCounters = [];
+        $pageNumber = 1;
+        $totalCountersExpected = PHP_INT_MAX;
 
-        // Store counters data or error
-        if (isset($counters_response['error'])) {
-            $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters_fetch_error'] = $counters_response;
-        } else {
-            $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters'] = [
-                'total_counters' => ($counters_response['TotalRows'] ?? 0),
-                'data'           => $counters_response['Result'] ?? []
+        do {
+            $device_counters_payload = [
+                'DealerCode'         => $dealerCode,
+                'CustomerCode'       => $customerCode,
+                'SerialNumber'       => $serialNumber,
+                'AssetNumber'        => $assetNumber,
+                'CounterDetaildTags' => null,
+                'PageNumber'         => $pageNumber,
+                'PageRows'           => DEFAULT_PAGE_SIZE
             ];
-        }
+            $counters_response = call_api($device_counters_api_url, $token, $device_counters_payload);
 
-        // --- Endpoint 4: Get Device Alerts for the current customer/device ---
-        // Requires 'customerid' (CustomerCode). Note that get_device_alerts.php uses CustomerCode in its payload.
-        // Reference: get_device_alerts.php, Swagger Pretty.json (for SupplyAlert/List)
+            if (isset($counters_response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters_fetch_error'] = $counters_response;
+                break; // Break pagination loop for this device's counters
+            }
+            
+            $currentCounters = $counters_response['Result'] ?? [];
+            $totalCountersExpected = $counters_response['TotalRows'] ?? 0;
+            
+            $allCounters = array_merge($allCounters, $currentCounters);
+            $pageNumber++;
+
+        } while (count($allCounters) < $totalCountersExpected && count($currentCounters) === DEFAULT_PAGE_SIZE);
+
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['counters'] = [
+            'total_counters' => count($allCounters),
+            'data'           => $allCounters
+        ];
+
+        // --- Endpoint 4: Get Device Alerts for the current customer (with pagination) ---
+        // Note: get_device_alerts.php and Swagger indicate this endpoint primarily filters by CustomerCode,
+        // so we fetch all alerts for the customer and include them under each of their devices.
         $device_alerts_api_url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/SupplyAlert/List';
-        $device_alerts_payload = [
-            'CustomerCode' => $customerCode, // Uses customerCode from current iteration
-            'PageNumber'   => 1,
-            'PageRows'     => 2147483647,
-            'SortColumn'   => 'CreationDate',
-            'SortOrder'    => 1 // 1 for descending (newest first)
-        ];
-        $alerts_response = call_api($device_alerts_api_url, $token, $device_alerts_payload);
+        $allAlerts = [];
+        $pageNumber = 1;
+        $totalAlertsExpected = PHP_INT_MAX;
 
-        // Store alerts data or error
-        if (isset($alerts_response['error'])) {
-            $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts_fetch_error'] = $alerts_response;
-        } else {
-            $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts'] = [
-                'total_alerts' => ($alerts_response['TotalRows'] ?? 0),
-                'data'         => $alerts_response['Result'] ?? []
+        do {
+            $device_alerts_payload = [
+                'CustomerCode' => $customerCode,
+                'PageNumber'   => $pageNumber,
+                'PageRows'     => DEFAULT_PAGE_SIZE,
+                'SortColumn'   => 'CreationDate',
+                'SortOrder'    => 1
             ];
-        }
+            $alerts_response = call_api($device_alerts_api_url, $token, $device_alerts_payload);
+
+            if (isset($alerts_response['error'])) {
+                $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts_fetch_error'] = $alerts_response;
+                break; // Break pagination loop for this customer's alerts
+            }
+
+            $currentAlerts = $alerts_response['Result'] ?? [];
+            $totalAlertsExpected = $alerts_response['TotalRows'] ?? 0;
+            
+            $allAlerts = array_merge($allAlerts, $currentAlerts);
+            $pageNumber++;
+
+        } while (count($allAlerts) < $totalAlertsExpected && count($currentAlerts) === DEFAULT_PAGE_SIZE);
+
+        $output['customer_data'][$customerCode]['devices'][$deviceKey]['alerts'] = [
+            'total_alerts' => count($allAlerts),
+            'data'         => $allAlerts
+        ];
     }
 }
 

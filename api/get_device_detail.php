@@ -14,9 +14,9 @@ foreach ($in as $k => $v) {
 $in = $normalized;
 
 // 2. Prepare identifiers
-$deviceId  = $in['deviceid']            ?? '';
-$extId      = strtoupper($in['externalidentifier'] ?? '');
-$serialNum  = strtoupper($in['serialnumber']      ?? '');
+$deviceId = $in['deviceid'] ?? '';
+$extId    = isset($in['externalidentifier']) ? strtoupper($in['externalidentifier']) : '';
+$serial   = isset($in['serialnumber'])       ? strtoupper($in['serialnumber'])       : '';
 
 // 3. Cache key & check
 $cacheKey = 'mpsm:api:get_device_detail:' . md5(json_encode($in));
@@ -31,52 +31,76 @@ $device = null;
 if ($deviceId !== '') {
     // Direct lookup by ID
     $resp = call_api('POST', 'Device/Get', [
-        'DealerCode' => env()['DEALER_CODE'] ?? '',
-        'Id'         => $deviceId
+      'DealerCode' => env()['DEALER_CODE'] ?? '',
+      'Id'         => $deviceId
     ]);
     $device = $resp['Result'] ?? null;
 
 } elseif ($extId !== '') {
-    // Two-step lookup by externalIdentifier
-    $device = get_device_by_external($extId);
+    // Two‐step lookup by externalIdentifier via Filter
+    $lookup = call_api('POST', 'Device/GetDevices', [
+      'PageNumber'   => 1,
+      'PageRows'     => 1,
+      'SortColumn'   => 'Id',
+      'SortOrder'    => 'Asc',
+      'DealerCode'   => env()['DEALER_CODE']   ?? '',
+      'CustomerCode' => env()['CUSTOMER_CODE'] ?? '',
+      'Filter'       => ['ExternalIdentifier' => $extId]
+    ]);
 
-} elseif ($serialNum !== '') {
+    $found = $lookup['Result'][0] ?? null;
+    if (empty($found['Id'])) {
+        http_response_code(404);
+        echo json_encode([
+            'error'  => 'Device not found by externalIdentifier',
+            'lookup' => $lookup
+        ], JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // Now fetch full details by Id
+    $resp2  = call_api('POST', 'Device/Get', [
+      'DealerCode' => env()['DEALER_CODE'] ?? '',
+      'Id'         => $found['Id']
+    ]);
+    $device = $resp2['Result'] ?? null;
+
+} elseif ($serial !== '') {
     // Direct lookup by serialNumber
     $resp = call_api('POST', 'Device/Get', [
-        'DealerCode'   => env()['DEALER_CODE'] ?? '',
-        'SerialNumber' => $serialNum
+      'DealerCode'   => env()['DEALER_CODE']   ?? '',
+      'SerialNumber' => $serial
     ]);
     $device = $resp['Result'] ?? null;
 
 } else {
     http_response_code(400);
-    echo json_encode(
-      ['error' => 'Missing deviceId, externalIdentifier, or serialNumber'],
-      JSON_PRETTY_PRINT
-    );
+    echo json_encode([
+      'error' => 'Missing deviceId, externalIdentifier, or serialNumber'
+    ], JSON_PRETTY_PRINT);
     exit;
 }
 
 // 5. Validate lookup result
 if (!is_array($device) || empty($device['Id'])) {
     http_response_code(404);
-    echo json_encode(
-      ['error' => 'Device not found', 'lookup' => $device],
-      JSON_PRETTY_PRINT
-    );
+    echo json_encode([
+      'error'  => 'Device not found',
+      'lookup' => $device
+    ], JSON_PRETTY_PRINT);
     exit;
 }
 
-// 6. Extract codes from DeviceDto
+// 6. Extract fields
 $deviceId     = $device['Id'];
-$serialNumber = $device['SerialNumber'] ?? $serialNum;
+$serialNumber = $device['SerialNumber'] ?? $serial;
 $assetNumber  = $device['AssetNumber']  ?? '';
 $dealerCode   = $device['Dealer']['Code']   ?? env()['DEALER_CODE']   ?? '';
 $customerCode = $device['Customer']['Code'] ?? env()['CUSTOMER_CODE'] ?? '';
 $dealerId     = $device['Dealer']['Id']     ?? env()['DEALER_ID']     ?? null;
 $customerId   = $device['Customer']['Id']   ?? null;
 
-// 7. Fan-out all related endpoints
+// 7. Fan‐out all related endpoints
 $output = ['device' => $device];
 
 // GET /Device/GetDeviceDashboard
