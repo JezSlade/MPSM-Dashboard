@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 // /includes/header.php
 
-// Start output buffering so any setcookie() calls later won’t fail
+// Start buffering so setcookie() calls won’t break
 ob_start();
 ?><!DOCTYPE html>
-<html lang="en" class="h-full dark">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <title><?= htmlspecialchars($pageTitle ?? APP_NAME) ?></title>
@@ -19,7 +19,7 @@ ob_start();
 <body class="flex flex-col h-full bg-gray-900 text-gray-100">
 
 <header class="app-header relative flex items-center justify-end space-x-8 px-6 py-4 bg-gray-800 bg-opacity-75 backdrop-blur-md shadow-lg">
-  <!-- Neon CMYK glow overlay -->
+  <!-- CMYK neon glow overlay -->
   <div class="absolute inset-0 pointer-events-none" style="
        box-shadow:
          0 0 8px var(--cyan),
@@ -36,22 +36,22 @@ ob_start();
       <i data-feather="sun" class="h-8 w-8 text-cyan-400"></i>
     </button>
 
-    <!-- Debug Log -->
-    <button onclick="openDebugLog()"
+    <!-- Open Debug Log -->
+    <button id="debug-toggle"
             class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-magenta-400"
             title="Open Debug Log">
       <i data-feather="terminal" class="h-8 w-8 text-magenta-400"></i>
     </button>
 
     <!-- Clear Session Cookies -->
-    <button onclick="clearSessionCookies()"
+    <button id="clear-cookies"
             class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
             title="Clear Session Cookies">
       <i data-feather="trash-2" class="h-8 w-8 text-yellow-400"></i>
     </button>
 
     <!-- Hard Refresh -->
-    <button onclick="hardRefresh()"
+    <button id="hard-refresh"
             class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-black"
             title="Hard Refresh">
       <i data-feather="refresh-cw" class="h-8 w-8 text-black"></i>
@@ -62,7 +62,8 @@ ob_start();
 <script>
 // Utility functions
 function openDebugLog() {
-  window.open('/components/debug-log.php','DebugLog','width=800,height=600');
+  const url = window.location.origin + '<?= APP_BASE_URL ?>components/debug-log.php';
+  window.open(url, 'DebugLog', 'width=800,height=600');
 }
 
 function clearSessionCookies() {
@@ -76,16 +77,34 @@ function hardRefresh() {
   window.location.reload(true);
 }
 
-// On DOM ready: render Feather icons and wire up theme toggle
 document.addEventListener('DOMContentLoaded', () => {
+  const root = document.documentElement;
+  // Initialize theme from localStorage or system preference
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+
+  // Replace icons
   if (window.feather) feather.replace();
 
+  // Theme toggle
   const themeBtn = document.getElementById('theme-toggle');
   themeBtn.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.toggle('dark');
-    const icon   = themeBtn.querySelector('i');
-    icon.setAttribute('data-feather', isDark ? 'moon' : 'sun');
+    const isNowDark = root.classList.toggle('dark');
+    localStorage.setItem('theme', isNowDark ? 'dark' : 'light');
+    const icon = themeBtn.querySelector('i');
+    icon.setAttribute('data-feather', isNowDark ? 'moon' : 'sun');
     if (window.feather) feather.replace();
   });
+
+  // Debug log
+  document.getElementById('debug-toggle').addEventListener('click', openDebugLog);
+  // Clear cookies
+  document.getElementById('clear-cookies').addEventListener('click', clearSessionCookies);
+  // Hard refresh
+  document.getElementById('hard-refresh').addEventListener('click', hardRefresh);
 });
 </script>
