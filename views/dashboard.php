@@ -11,8 +11,48 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 require_once __DIR__ . '/../includes/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// … existing customer lookup and card scanning …
+// 1) Determine selected customer code
+$customerCode = $_GET['customer'] 
+              ?? $_COOKIE['customer'] 
+              ?? $config['DEALER_CODE'] 
+              ?? '';
 
+// 2) Resolve human-friendly customer name
+$customerName = $customerCode ?: 'All Customers';
+try {
+    $custResp = call_api($config, 'POST', 'Customer/GetCustomers', [
+        'DealerCode' => $config['DEALER_CODE'] ?? '',
+        'PageNumber' => 1,
+        'PageRows'   => 2147483647,
+        'SortColumn' => 'Description',
+        'SortOrder'  => 'Asc',
+    ]);
+    foreach ($custResp['Result'] ?? [] as $c) {
+        if (($c['Code'] ?? '') === $customerCode) {
+            $customerName = $c['Description'] ?? $c['Name'] ?? $customerCode;
+            break;
+        }
+    }
+} catch (\Throwable $e) {
+    // fallback to code
+}
+
+// 3) Scan cards directory
+$cardsDir  = __DIR__ . '/../cards/';
+$cardFiles = array_filter(
+    scandir($cardsDir),
+    fn($f) => pathinfo($f, PATHINFO_EXTENSION) === 'php'
+);
+
+// 4) Determine visible cards (cookie or all)
+if (!empty($_COOKIE['visible_cards'])) {
+    $visibleCards = array_intersect(
+        explode(',', $_COOKIE['visible_cards']),
+        $cardFiles
+    );
+} else {
+    $visibleCards = $cardFiles;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,7 +70,7 @@ $config = parse_env_file(__DIR__ . '/../.env');
     <button
       class="btn-icon"
       onclick="clearSessionCookies()"
-      title="Clear all session cookies"
+      title="Clear session cookies"
     >🧹</button>
 
     <!-- Hard refresh the page -->
@@ -67,24 +107,20 @@ $config = parse_env_file(__DIR__ . '/../.env');
   </main>
 
   <script>
-    // remove all cookies for the current path
     function clearSessionCookies() {
       document.cookie.split(";").forEach(function(c) {
-        document.cookie = c.trim().replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/");
+        document.cookie = c.trim().replace(/=.*/, "=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/");
       });
-      alert("All session cookies cleared.");
+      alert("Session cookies cleared.");
     }
 
-    // force reload from server (bypass cache)
     function hardRefresh() {
       window.location.reload(true);
     }
 
-    // open debug log in a new popup window
     function openDebugLog() {
-      const url = '/logs/debug.log';
       window.open(
-        url,
+        '/logs/debug.log',
         'DebugLogWindow',
         'width=800,height=600,menubar=no,toolbar=no,location=no,status=no'
       );
