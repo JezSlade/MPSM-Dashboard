@@ -44,13 +44,20 @@ $cardFiles = array_filter(
     fn($f) => pathinfo($f, PATHINFO_EXTENSION) === 'php'
 );
 
-// 4) Determine visible cards (cookie or all)
-if (!empty($_COOKIE['visible_cards'])) {
-    $visibleCards = array_intersect(
-        explode(',', $_COOKIE['visible_cards']),
-        $cardFiles
-    );
+// 4) Determine visible cards (cookie-set but allow empty = no cards)
+$cardsDir  = __DIR__ . '/../cards/';
+$cardFiles = array_filter(
+  scandir($cardsDir),
+  fn($f)=> pathinfo($f, PATHINFO_EXTENSION)==='php'
+);
+
+if (isset($_COOKIE['visible_cards'])) {
+    // explode and drop any empty strings
+    $sel = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
+    // intersect with existing files
+    $visibleCards = array_values(array_intersect($sel, $cardFiles));
 } else {
+    // no cookie = show all
     $visibleCards = $cardFiles;
 }
 ?>
