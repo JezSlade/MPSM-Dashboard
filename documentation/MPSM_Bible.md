@@ -1,44 +1,38 @@
 # MPSM_Bible.md
 
-## Project Doctrine
+## Core Philosophies
+- **One patch per reply**, functionally cohesive.
+- **Full inline code** in every change—no partial snippets.
+- **Templating system** for endpoints and cards:
+  - API: `$method/$path` + `requires api_bootstrap.php`.
+  - Cards: `requires card_bootstrap.php`.
+- **Manual `.env` parsing** only in bootstraps; no hidden dependencies.
+- **Relative paths** exclusively via `__DIR__`.
+- **No external PHP libraries**; lightweight, self-contained PHP.
 
-### Core Philosophies
-- One patch per reply
-- Fully modular design
-- Cards = standalone UI modules
-- API = standalone PHP files (env + token + curl + JSON)
-- Views = grid renderers for cards
-- CSS = minimal, responsive, global styling
+## Folder Doctrine
+```
+/api/        → Endpoint stubs using template
+/public/css/ → Global styling
+/cards/      → UI modules (card_*.php)
+/components/ → Shared UI widgets & modals
+/includes/   → Bootstraps & helpers
+/views/      → Layout templates
+/engine/     → Caching logic
+/cron/       → Scheduled tasks
+/logs/       → Debug logs
+```
 
-### Required Behaviors
-- Use `Cape Fear Valley Med Ctr (W9OPXL0YDK)` as default if none provided
-- Display compact tables and cards
-- Always include PHP debugging at top of file
-- Use full horizontal space — no hard margins
-- Only include usable data in drilldowns (no `null`, `[]`, `0`, or `DEFAULT`)
-
-### Feature Summary
-
-#### ✅ Device Alerts
-- Consolidate all supply alerts by `DeviceId`
-- Merge `Warning` and `SuggestedConsumable` into comma-separated lists
-- Paginate by **device**, not raw alerts
-- Sort by ExternalIdentifier (Equipment ID)
-
-#### ✅ Device Details
-- Accessed via 🔍 drilldown icon
-- Calls `Device/Get` API with `Id`
-- Displays non-empty values only
-
-#### ✅ Global Layout
-- Responsive card grid
-- Sidebar, header, and main layout with neumorphic styling
-- Supports light/dark themes
-- Drilldown modal in `/components/drilldown-modal.php`
-
-### Enforcement Summary
-- `.env` loading is mandatory inside each API file
-- Relative path enforcement: always use `__DIR__`
-- No placeholder content allowed
-- No JS frameworks or external dependencies
-- No combining patches unless they are functionally related
+## Required Behaviors
+1. **Customer Context**:
+   - Default `CustomerCode` from `.env` → cookie → GET.
+   - Persist selection in cookie.
+2. **Visibility Preferences**:
+   - Cookie `visible_cards` controls which `card_*.php` render.
+   - Defaults to all cards if cookie not set.
+3. **Cache Warming**:
+   - Cron warms Redis cache via `cache_engine.php`.
+4. **Debug Logging**:
+   - All errors write to `/logs/debug.log`.
+5. **Complete Code Delivery**:
+   - Every change shipped with full-file context.

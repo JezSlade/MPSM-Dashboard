@@ -1,46 +1,44 @@
 # CONTRIBUTING.md
 
-## Ground Rules
-- ⛔️ **One patch per reply.**
-- ✅ **All PHP includes must use `__DIR__` for safe relative pathing.**
-- ❌ **No Composer, autoloaders, or root-relative paths.**
-- ✅ **`.env` must be parsed manually inside every API file.**
-- ✅ All code must run in isolation on a basic PHP server (e.g., cPanel with PHP 8.4+)
+Thank you for contributing! Please follow these conventions to keep the codebase consistent.
 
-## File Standards
+## File Structure & Naming
+- **API Endpoints** (`/api/*.php`):  
+  - Must set `$method`, `$path`, and optional `$useCache`, then `require __DIR__ . '/../includes/api_bootstrap.php';`.
+- **Cards** (`/cards/card_*.php`):  
+  - Must start with `require __DIR__ . '/../includes/card_bootstrap.php';`.
+- **Views** (`/views/*.php`):  
+  - Pure layout files. Loop through `card_*.php` files only.  
+- **Shared**:  
+  - `/components/` for modal & UI components.  
+  - `/includes/` for `api_bootstrap.php`, `card_bootstrap.php`, and utility helpers.  
+  - `/public/css/styles.css` for all CSS.  
+  - `/engine/` for caching logic.  
+  - `/cron/` for scheduled tasks.  
+  - `/logs/` for debug logs.  
 
-### Cards
-- Belong in `/cards/`
-- Must pull their own data
-- Must be reusable across multiple views
-- Support view-level preferences (pagination, visibility)
+## Coding Standards
+- **PHP 8.4+**: Strict types enabled (`declare(strict_types=1)`).
+- **No Composer/Autoloaders**: Manual `.env` parsing in includes.
+- **Relative Includes**: Always use `__DIR__`.
+- **Error Handling**:
+  - API endpoints emit HTTP codes and JSON errors.
+  - Cards catch exceptions silently but log to `/logs/debug.log`.
 
-### API Files
-- Belong in `/api/`
-- Fully self-contained
-- Perform token handling, env loading, and API request internally
+## Styling & Frontend
+- Use **Tailwind CSS** classes for all styles.
+- Components must support **light/dark** modes.
+- No external JS frameworks—vanilla JS only.
+- Full-width, responsive grid layouts; no hard margins.
 
-### Views
-- Reside in `/views/`
-- Use dynamic card discovery and rendering
-- Include a gear icon to manage card visibility via preferences panel
+## Patch Workflow
+1. **Branch** from `main`.
+2. Make **one functional change per PR**.
+3. **Validate** against existing code locally.
+4. Provide a **full, complete code listing** in PR description (no snippets).
+5. After review, merge and delete branch.
 
-### Components
-- Reside in `/components/`
-- Used for shared UI like modals
-
-## Styling
-- Neumorphic + Glassmorphic + CMYK aesthetic
-- All layout containers must use full-width with internal padding
-- Tables are compact with minimal whitespace
-
-## UX Patterns
-- Drilldown modal component reused across cards
-- Default customer: Cape Fear Valley Med Ctr (`W9OPXL0YDK`)
-- Default rows per page = 15
-- Default theme: Dark
-
-## Patch Behavior
-- Do not combine unrelated patches.
-- Only consolidate features if they are functionally tied together.
-- Check file path safety (`__DIR__`) before finalizing patch.
+## Testing & CI/CD
+- Lint PHP (`php -l`).
+- Ensure `/public/css/styles.css` is referenced (no `/assets/`).
+- Deploy pipeline defined in `.github/workflows/deploy.yml`.
