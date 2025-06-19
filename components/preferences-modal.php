@@ -1,58 +1,60 @@
 <?php declare(strict_types=1);
 // /components/preferences-modal.php
 
-// 1) Grab every card_*.php in /cards/
-$cards = glob(__DIR__ . '/../cards/card_*.php') ?: [];
-$cards = array_map('basename', $cards);
+// 1) Gather all card_*.php files
+$files = glob(__DIR__ . '/../cards/card_*.php') ?: [];
+$cards = array_map('basename', $files);
 
-// 2) Load current cookie selections
+// 2) Read current selections
 $visible = [];
 if (isset($_COOKIE['visible_cards'])) {
     $visible = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
 }
 ?>
-<!-- Modal backdrop + panel -->
+<!-- Preferences Modal -->
 <div id="preferences-modal" class="modal-backdrop hidden">
-  <div class="modal-content">
-    <h2 class="text-xl font-semibold mb-4 text-white">Select Cards to Display</h2>
+  <div class="modal-content max-w-lg mx-auto">
+    <h2 class="text-lg font-semibold mb-3 text-white">Select Cards to Display</h2>
     <form id="preferences-form">
-      <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <?php if (empty($cards)): ?>
-          <p class="col-span-3 text-center text-gray-400">No cards found.</p>
+          <p class="col-span-2 sm:col-span-3 text-center text-gray-400 text-sm">No cards found.</p>
         <?php else: ?>
           <?php foreach ($cards as $card):
-              // "card_device_counters.php" → "Device Counters"
               $label = pathinfo($card, PATHINFO_FILENAME);
               $label = substr($label, strlen('card_'));
               $label = str_replace(['_', '-'], ' ', $label);
               $label = ucwords($label);
               $checked = in_array($card, $visible) ? 'checked' : '';
           ?>
-            <label class="flex items-center space-x-2 text-white">
+            <label class="flex items-center space-x-2 text-white text-sm">
               <input
                 type="checkbox"
                 name="cards[]"
                 value="<?= htmlspecialchars($card) ?>"
                 <?= $checked ?>
-                class="form-checkbox h-5 w-5 text-cyan-500"
+                class="form-checkbox h-4 w-4 text-cyan-500"
               />
               <span><?= htmlspecialchars($label) ?></span>
             </label>
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
-
-      <div class="flex justify-end space-x-4">
-        <button type="button" id="select-all" class="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white">
+      <div class="flex justify-end space-x-2">
+        <button type="button" id="select-all"
+                class="px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600">
           Select All
         </button>
-        <button type="button" id="deselect-all" class="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white">
+        <button type="button" id="deselect-all"
+                class="px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600">
           Deselect All
         </button>
-        <button type="button" id="save-preferences" class="px-4 py-2 rounded-md bg-cyan-500 hover:bg-cyan-400 text-black">
+        <button type="button" id="save-preferences"
+                class="px-3 py-1 text-sm rounded-md bg-cyan-500 hover:bg-cyan-400 text-black">
           Save
         </button>
-        <button type="button" id="cancel-preferences" class="px-4 py-2 rounded-md bg-red-600 hover:bg-red-500 text-white">
+        <button type="button" id="cancel-preferences"
+                class="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-500">
           Cancel
         </button>
       </div>
@@ -62,34 +64,27 @@ if (isset($_COOKIE['visible_cards'])) {
 
 <script>
 /**
- * Toggle the preferences modal open/closed.
- * If show===true, ensure it's visible; if false, hide.
- * If omitted, toggles state.
+ * Shows/hides the modal.
+ * @param {boolean=} show if omitted, toggles current state
  */
 function togglePreferencesModal(show) {
-  const modal = document.getElementById('preferences-modal');
-  if (!modal) return;
-  if (typeof show === 'boolean') {
-    modal.classList.toggle('hidden', !show);
-  } else {
-    modal.classList.toggle('hidden');
-  }
+  const m = document.getElementById('preferences-modal');
+  if (!m) return;
+  if (typeof show === 'boolean') m.classList.toggle('hidden', !show);
+  else m.classList.toggle('hidden');
 }
 
-// Wire up the Select/Deselect/Save/Cancel buttons
 (function(){
   const modal   = document.getElementById('preferences-modal');
-  const form    = document.getElementById('preferences-form');
-  const cbs     = modal.querySelectorAll('input[type="checkbox"]');
-
+  const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
   document.getElementById('select-all').addEventListener('click', () =>
-    cbs.forEach(cb => cb.checked = true)
+    checkboxes.forEach(cb => cb.checked = true)
   );
   document.getElementById('deselect-all').addEventListener('click', () =>
-    cbs.forEach(cb => cb.checked = false)
+    checkboxes.forEach(cb => cb.checked = false)
   );
   document.getElementById('save-preferences').addEventListener('click', () => {
-    const sel = Array.from(cbs)
+    const sel = Array.from(checkboxes)
                      .filter(cb => cb.checked)
                      .map(cb => cb.value);
     document.cookie = `visible_cards=${encodeURIComponent(sel.join(','))};path=/;max-age=${60*60*24*365}`;
