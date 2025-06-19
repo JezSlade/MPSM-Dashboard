@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
 // /includes/header.php
 
-// Start output buffering so any setcookie() calls later won’t fail
+// Start output buffering so any setcookie() calls later won’t error
 ob_start();
 
-// Ensure PHP errors go to our debug log
+// Send PHP errors to our debug log
+ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
-
 ?><!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -67,9 +67,8 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 <script>
 // Utility functions
 function openDebugLog() {
-  // Build the full URL including APP_BASE_URL
-  const url = `${window.location.origin}<?= APP_BASE_URL ?>components/debug-log.php`;
-  window.open(url, 'DebugLog', 'width=800,height=600');
+  // Absolute URL to the debug-log.php viewer
+  window.open('https://mpsm.resolutionsbydesign.us/components/debug-log.php', 'DebugLog', 'width=800,height=600');
 }
 
 function clearSessionCookies() {
@@ -106,9 +105,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.feather) feather.replace();
   });
 
-  // Other buttons
+  // Debug log button
   document.getElementById('debug-toggle').addEventListener('click', openDebugLog);
+  // Clear cookies button
   document.getElementById('clear-cookies').addEventListener('click', clearSessionCookies);
+  // Hard refresh button
   document.getElementById('hard-refresh').addEventListener('click', hardRefresh);
 });
 </script>
