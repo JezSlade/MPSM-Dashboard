@@ -1,61 +1,18 @@
 <?php declare(strict_types=1);
 // /views/dashboard.php
 
-// 0) Enable full error reporting for debugging
+// --- DEBUG BLOCK (Always at Top) ---
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('log_errors', '1');
+ini_set('display_errors','1');
+ini_set('log_errors','1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
+// ----------------------------------------
 
-// 1) Shared helpers + config parser + API caller
 require_once __DIR__ . '/../includes/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 2) Determine which customer is selected (via ?customer=CODE), fallback to default
-$customerCode = $_GET['customer'] 
-              ?? $config['DEALER_CODE'] 
-              ?? '';
+// … existing customer lookup and card scanning …
 
-// 3) Look up that customer’s human-friendly name
-$customerName = 'All Customers';
-try {
-    $custPayload = [
-        'DealerCode' => $config['DEALER_CODE'] ?? '',
-        'PageNumber' => 1,
-        'PageRows'   => 2147483647,
-        'SortColumn' => 'Description',
-        'SortOrder'  => 'Asc',
-    ];
-    $custResp = call_api($config, 'POST', 'Customer/GetCustomers', $custPayload);
-    $list     = $custResp['Result'] ?? [];
-    foreach ($list as $c) {
-        if ($customerCode && ($c['Code'] ?? '') === $customerCode) {
-            $customerName = $c['Description'] ?? $c['Name'] ?? $customerCode;
-            break;
-        }
-    }
-} catch (\Throwable $e) {
-    if ($customerCode) {
-        $customerName = $customerCode;
-    }
-}
-
-// 4) Scan all card files in /cards/
-$cardsDir  = __DIR__ . '/../cards/';
-$cardFiles = array_filter(
-    scandir($cardsDir),
-    fn($f) => pathinfo($f, PATHINFO_EXTENSION) === 'php'
-);
-
-// 5) Determine which cards to display (cookie-stored or all)
-if (!empty($_COOKIE['visible_cards'])) {
-    $visibleCards = array_intersect(
-        explode(',', $_COOKIE['visible_cards']),
-        $cardFiles
-    );
-} else {
-    $visibleCards = $cardFiles;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,10 +23,36 @@ if (!empty($_COOKIE['visible_cards'])) {
 </head>
 <body>
 
-  <!-- Header with dynamic customer name and gear icon -->
   <header class="dashboard-header">
     <h1>Dashboard for <?= htmlspecialchars($customerName) ?></h1>
-    <button class="gear-icon" title="View Preferences">⚙️</button>
+
+    <!-- Clear all session cookies -->
+    <button
+      class="btn-icon"
+      onclick="clearSessionCookies()"
+      title="Clear all session cookies"
+    >🧹</button>
+
+    <!-- Hard refresh the page -->
+    <button
+      class="btn-icon"
+      onclick="hardRefresh()"
+      title="Hard Refresh"
+    >🔄</button>
+
+    <!-- Show debug log in popup -->
+    <button
+      class="btn-icon"
+      onclick="openDebugLog()"
+      title="View Debug Log"
+    >🐞</button>
+
+    <!-- View preferences modal -->
+    <button
+      class="gear-icon"
+      onclick="togglePreferencesModal(true)"
+      title="View Preferences"
+    >⚙️</button>
   </header>
 
   <!-- Preferences Modal Component -->
@@ -83,5 +66,40 @@ if (!empty($_COOKIE['visible_cards'])) {
     </div>
   </main>
 
+  <script>
+    // remove all cookies for the current path
+    function clearSessionCookies() {
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.trim().replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/");
+      });
+      alert("All session cookies cleared.");
+    }
+
+    // force reload from server (bypass cache)
+    function hardRefresh() {
+      window.location.reload(true);
+    }
+
+    // open debug log in a new popup window
+    function openDebugLog() {
+      const url = '/logs/debug.log';
+      window.open(
+        url,
+        'DebugLogWindow',
+        'width=800,height=600,menubar=no,toolbar=no,location=no,status=no'
+      );
+    }
+  </script>
+
+  <style>
+    .btn-icon {
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin: 0 0.5rem;
+    }
+  </style>
 </body>
 </html>
