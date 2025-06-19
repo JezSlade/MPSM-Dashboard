@@ -1,9 +1,11 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// 0) ⛔ Bail out immediately if this is an API/card sub‐request
-if (strpos($_SERVER['REQUEST_URI'],'/api/') === 0
- || basename($_SERVER['SCRIPT_NAME']) !== 'index.php') {
+// 0) Bail out immediately for API or internal sub‐requests
+if (
+    strpos($_SERVER['REQUEST_URI'], '/api/') === 0
+    || basename($_SERVER['SCRIPT_NAME']) !== 'index.php'
+) {
     return;
 }
 
@@ -23,12 +25,10 @@ $payload = [
 try {
     // 3) Fetch the list
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
-
     if (!empty($resp['Errors'])) {
         throw new \Exception($resp['Errors'][0]['Description'] ?? 'Error');
     }
     $customers = $resp['Result'] ?? [];
-
 } catch (\Throwable $e) {
     $customers = [];
     $error     = $e->getMessage();
@@ -47,7 +47,7 @@ try {
     >
     <select id="nav-customer-select" class="customer-dropdown">
       <option value="" disabled selected>— choose a customer —</option>
-      <?php foreach ($customers as $cust): 
+      <?php foreach ($customers as $cust):
         $code = htmlspecialchars($cust['Code'] ?? '');
         $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
       ?>
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function(){
   input.addEventListener('input', function(){
     const q = this.value.toLowerCase();
     Array.from(select.options).forEach(opt => {
-      if (!opt.value) return; // skip placeholder
+      if (!opt.value) return;
       opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
     });
   });
