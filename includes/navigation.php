@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// 0) Bail out immediately for API or internal sub‐requests
+// Bail out on API or non-index.php requests
 if (
     strpos($_SERVER['REQUEST_URI'], '/api/') === 0
     || basename($_SERVER['SCRIPT_NAME']) !== 'index.php'
@@ -9,11 +9,10 @@ if (
     return;
 }
 
-// 1) Shared API helpers + config loader
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 2) Build GetCustomersRequest payload
+// Fetch customers via API
 $payload = [
     'DealerCode' => $config['DEALER_CODE'] ?? '',
     'PageNumber' => 1,
@@ -21,56 +20,65 @@ $payload = [
     'SortColumn' => 'Description',
     'SortOrder'  => 'Asc',
 ];
-
 try {
-    // 3) Fetch the list
-    $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
-    if (!empty($resp['Errors'])) {
-        throw new \Exception($resp['Errors'][0]['Description'] ?? 'Error');
-    }
+    $resp      = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
     $customers = $resp['Result'] ?? [];
 } catch (\Throwable $e) {
     $customers = [];
-    $error     = $e->getMessage();
+}
+
+// Determine current customer code & name
+$currentCode = $_GET['customer'] ?? $_COOKIE['customer'] ?? '';
+$currentName = '';
+foreach ($customers as $cust) {
+    if (($cust['Code'] ?? '') === $currentCode) {
+        $currentName = $cust['Description'] ?? $cust['Name'] ?? '';
+        break;
+    }
 }
 ?>
-<div class="nav-dropdown-container">
-  <?php if (!empty($error)): ?>
-    <div class="nav-error"><?= htmlspecialchars($error) ?></div>
-  <?php else: ?>
-    <input
-      type="text"
-      id="nav-customer-search"
-      class="customer-search-input"
-      placeholder="Type to filter…"
-      autocomplete="off"
-    >
-    <select id="nav-customer-select" class="customer-dropdown">
-      <option value="" disabled selected>— choose a customer —</option>
-      <?php foreach ($customers as $cust):
+<div class="nav-dropdown-container relative max-w-xs">
+  <label for="nav-customer-combobox" class="sr-only">Select Customer</label>
+  <input
+    list="nav-customer-list"
+    id="nav-customer-combobox"
+    class="w-full text-xs bg-gray-800 dark:bg-gray-700 text-gray-200 border border-gray-600 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+    placeholder="— choose a customer —"
+    value="<?= htmlspecialchars($currentName) ?>"
+  />
+  <datalist id="nav-customer-list">
+    <?php foreach ($customers as $cust):
         $code = htmlspecialchars($cust['Code'] ?? '');
         $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
-      ?>
-        <option value="<?= $code ?>"><?= $name ?></option>
-      <?php endforeach; ?>
-    </select>
-  <?php endif; ?>
+    ?>
+      <option data-code="<?= $code ?>" value="<?= $name ?>"></option>
+    <?php endforeach; ?>
+  </datalist>
 </div>
 
 <script>
-// filter the <select> based on the text input
+// Wire up the searchable combobox
 document.addEventListener('DOMContentLoaded', function(){
-  const input  = document.getElementById('nav-customer-search');
-  const select = document.getElementById('nav-customer-select');
+  const input = document.getElementById('nav-customer-combobox');
+  const list  = document.getElementById('nav-customer-list').options;
+
   input.addEventListener('input', function(){
-    const q = this.value.toLowerCase();
-    Array.from(select.options).forEach(opt => {
-      if (!opt.value) return;
-      opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
-    });
+    // No-op: datalist handles showing matches
   });
-  select.addEventListener('change', function(){
-    window.location.search = '?customer=' + encodeURIComponent(this.value);
+
+  input.addEventListener('change', function(){
+    const val = this.value;
+    let code = '';
+    for (let opt of list) {
+      if (opt.value === val) {
+        code = opt.getAttribute('data-code');
+        break;
+      }
+    }
+    if (code) {
+      document.cookie = `customer=${encodeURIComponent(code)};path=/;max-age=${60*60*24*365}`;
+      window.location.search = '?customer=' + encodeURIComponent(code);
+    }
   });
 });
 </script>
