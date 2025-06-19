@@ -6,6 +6,7 @@ require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
 // 2) Determine selected customer (URL → cookie → default)
+//    MUST happen before any output
 if (isset($_GET['customer'])) {
     $customerCode = $_GET['customer'];
     setcookie('customer', $customerCode, time()+31536000, '/');
@@ -34,6 +35,7 @@ $missing = [];
 foreach ($requiredFields ?? [] as $field) {
     if (!empty($_GET[$field])) {
         $payload[$field] = $_GET[$field];
+        // save for future cards
         setcookie($field, $_GET[$field], time()+31536000, '/');
     } elseif (empty($payload[$field]) && !empty($_COOKIE[$field])) {
         $payload[$field] = $_COOKIE[$field];
