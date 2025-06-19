@@ -37,12 +37,3 @@ DirectoryIndex index.php
     </Directory>
   </IfModule>
 </IfModule>
-
-# Grant access to /assets/ folder explicitly
-<IfModule mod_dir.c>
-  <IfModule mod_access_compat.c>
-    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/assets">
-      Require all granted
-    </Directory>
-  </IfModule>
-</IfModule>
