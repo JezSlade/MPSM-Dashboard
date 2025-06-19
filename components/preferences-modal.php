@@ -1,24 +1,19 @@
 <?php declare(strict_types=1);
 // /components/preferences-modal.php
 
-// 0) Only render on dashboard (index.php), never during API calls
+// 0) Don’t render for API or non-index page
 if (
-    strpos($_SERVER['REQUEST_URI'], '/api/') === 0
-    || basename($_SERVER['SCRIPT_NAME']) !== 'index.php'
+    strpos($_SERVER['REQUEST_URI'], '/api/') === 0 ||
+    basename($_SERVER['SCRIPT_NAME']) !== 'index.php'
 ) {
     return;
 }
 
 // 1) Gather exactly the cards your dashboard view passed in
 $cardFiles    = $cardFiles    ?? [];
-// 2) Load current visibility (allow empty = none selected)
-$visibleCards = [];
-if (isset($_COOKIE['visible_cards'])) {
-    $raw = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
-    $visibleCards = array_values(array_intersect($raw, $cardFiles));
-}
+$visibleCards = $visibleCards ?? [];
 
-// 3) Humanize each filename
+// 2) Flatten & humanize names
 $list = [];
 foreach ($cardFiles as $file) {
     $key = preg_replace(['/^card_/', '/\.php$/'], '', $file);
@@ -31,9 +26,11 @@ foreach ($cardFiles as $file) {
     ];
 }
 
-// 4) Split into 3 columns
+// 3) Split into 3 columns (avoid zero-length chunk)
 $total   = count($list);
-$perCol  = (int) ceil($total / 3);
+$perCol  = $total > 0
+    ? (int) ceil($total / 3)
+    : 1;
 $columns = array_chunk($list, $perCol);
 ?>
 <div id="preferences-modal" class="modal hidden">
@@ -82,31 +79,23 @@ function togglePreferencesModal(show) {
           .classList.toggle('hidden', !show);
 }
 document.addEventListener('DOMContentLoaded', () => {
-  // open modal
   document.querySelector('.gear-icon')
           .addEventListener('click', () => togglePreferencesModal(true));
-  // cancel/close
   document.getElementById('cancel-modal')
           .addEventListener('click', () => togglePreferencesModal(false));
 
-  // helpers
-  const getCheckboxes = () => Array.from(
+  const cbs = () => Array.from(
     document.querySelectorAll('#preferences-modal input[name="cards[]"]')
   );
-
   document.getElementById('select-all')
-          .addEventListener('click', () => getCheckboxes().forEach(cb => cb.checked = true));
+          .addEventListener('click', () => cbs().forEach(cb => cb.checked = true));
   document.getElementById('clear-all')
-          .addEventListener('click', () => getCheckboxes().forEach(cb => cb.checked = false));
+          .addEventListener('click', () => cbs().forEach(cb => cb.checked = false));
 
   document.getElementById('save-modal')
           .addEventListener('click', () => {
-    const sel = getCheckboxes()
-                  .filter(cb => cb.checked)
-                  .map(cb => cb.value);
-    // always write cookie, even if empty
-    document.cookie = 'visible_cards=' + sel.join(',') +
-                      '; path=/; max-age=31536000';
+    const sel = cbs().filter(cb => cb.checked).map(cb => cb.value);
+    document.cookie = 'visible_cards=' + sel.join(',') + '; path=/; max-age=31536000';
     togglePreferencesModal(false);
     location.reload();
   });

@@ -2,7 +2,7 @@
 // /views/dashboard.php
 
 // ——————————————————————————————————————————————————————————————
-// DEBUG BLOCK (Always at Top)
+// DEBUG BLOCK (Always Keep at Top)
 // ——————————————————————————————————————————————————————————————
 error_reporting(E_ALL);
 ini_set('display_errors','1');
@@ -62,8 +62,7 @@ if (isset($_COOKIE['visible_cards'])) {
 <head>
   <meta charset="UTF-8">
   <title>Dashboard – <?= htmlspecialchars($customerName) ?></title>
-  <!-- If not already loaded globally -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS already loaded globally in header.php -->
 </head>
 <body class="flex flex-col h-full bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
 
@@ -75,13 +74,12 @@ if (isset($_COOKIE['visible_cards'])) {
       onclick="togglePreferencesModal(true)"
       title="View Preferences"
     >
-      <!-- Gear Icon -->
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400" fill="none"
            viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M12 6V4m0 16v-2m8-8h2M4 12H2m15.364
-                 6.364l1.414-1.414M6.343 6.343l1.414-1.414
-                 m0 12.728l-1.414-1.414M17.657
+                 6.364l1.414-1.414M6.343 6.343l1.414-1.414m0
+                 12.728l-1.414-1.414M17.657
                  6.343l1.414 1.414"/>
       </svg>
     </button>
@@ -101,19 +99,6 @@ if (isset($_COOKIE['visible_cards'])) {
 
   <!-- SCRIPTS -->
   <script>
-    // Keep debug-log, clearCookies, refresh functions
-    function clearSessionCookies() {
-      document.cookie.split(";").forEach(c => {
-        document.cookie = c.trim().replace(/=.*/, "=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/");
-      });
-      alert("Session cookies cleared.");
-    }
-    function hardRefresh() {
-      window.location.reload(true);
-    }
-    function openDebugLog() {
-      window.open('/components/debug-log.php','DebugLog','width=800,height=600');
-    }
     function togglePreferencesModal(show) {
       document.getElementById('preferences-modal')
               .classList.toggle('hidden', !show);
