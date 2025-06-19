@@ -1,15 +1,16 @@
 <?php declare(strict_types=1);
 // /components/preferences-modal.php
 
-// Discover all card_*.php files
-$cardsDir = __DIR__ . '/../cards/';
-$allFiles = scandir($cardsDir);
-$cards = array_filter($allFiles, fn($f) =>
-    pathinfo($f, PATHINFO_EXTENSION) === 'php'
-    && str_starts_with($f, 'card_')
-);
+// 1) Find all card_*.php files via glob()
+$cardsDir = realpath(__DIR__ . '/../cards');
+$cards = [];
+if ($cardsDir && is_dir($cardsDir)) {
+    foreach (glob($cardsDir . '/card_*.php') as $filePath) {
+        $cards[] = basename($filePath);
+    }
+}
 
-// Current selections from cookie
+// 2) Read current selections from cookie
 $visible = [];
 if (isset($_COOKIE['visible_cards'])) {
     $visible = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
@@ -21,20 +22,26 @@ if (isset($_COOKIE['visible_cards'])) {
     <h2 class="text-xl font-semibold mb-4 text-white">Select Cards to Display</h2>
     <form id="preferences-form">
       <div class="grid grid-cols-3 gap-4 mb-6">
-        <?php foreach ($cards as $card):
-            $label = ucwords(str_replace(['card_','.php','_'], ['','',' '], $card));
-            $checked = in_array($card, $visible) ? 'checked' : '';
-        ?>
-          <label class="flex items-center space-x-2 text-white">
-            <input type="checkbox"
-                   name="cards[]"
-                   value="<?= htmlspecialchars($card) ?>"
-                   <?= $checked ?>
-                   class="form-checkbox h-5 w-5 text-cyan-500">
-            <span><?= htmlspecialchars($label) ?></span>
-          </label>
-        <?php endforeach; ?>
+        <?php if (empty($cards)): ?>
+          <p class="col-span-3 text-center text-gray-400">No cards found.</p>
+        <?php else: ?>
+          <?php foreach ($cards as $card): 
+              // e.g. 'card_device_counters.php' → 'Device Counters'
+              $label = ucwords(str_replace(['card_','.php','_'], ['','',' '], $card));
+              $checked = in_array($card, $visible) ? 'checked' : '';
+          ?>
+            <label class="flex items-center space-x-2 text-white">
+              <input type="checkbox"
+                     name="cards[]"
+                     value="<?= htmlspecialchars($card) ?>"
+                     <?= $checked ?>
+                     class="form-checkbox h-5 w-5 text-cyan-500">
+              <span><?= htmlspecialchars($label) ?></span>
+            </label>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
+
       <div class="flex justify-end space-x-4">
         <button type="button" id="select-all"
                 class="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white">
