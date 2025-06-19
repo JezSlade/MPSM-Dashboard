@@ -66,41 +66,76 @@ if (isset($_COOKIE['visible_cards'])) {
 <head>
   <meta charset="UTF-8">
   <title>Dashboard – <?= htmlspecialchars($customerName) ?></title>
-  <link rel="stylesheet" href="/public/css/styles.css">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Heroicons (outline) -->
+  <script src="https://unpkg.com/heroicons@2.0.13/dist/heroicons.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-900 text-gray-100">
 
-  <header class="dashboard-header">
-    <h1>Dashboard for <?= htmlspecialchars($customerName) ?></h1>
+  <!-- PAGE HEADER -->
+  <header class="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg">
+    <div class="flex items-center space-x-4">
+      <h1 class="text-2xl font-semibold">MPS Monitor Dashboard</h1>
+      <!-- Status light -->
+      <span class="h-3 w-3 rounded-full bg-green-400"></span>
+    </div>
 
-    <!-- Clear all session cookies -->
-    <button
-      class="btn-icon"
-      onclick="clearSessionCookies()"
-      title="Clear session cookies"
-    >🧹</button>
+    <div class="flex items-center space-x-3">
+      <!-- Clear Cookies -->
+      <button
+        onclick="clearSessionCookies()"
+        class="p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+        title="Clear Session Cookies"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </button>
 
-    <!-- Hard refresh the page -->
-    <button
-      class="btn-icon"
-      onclick="hardRefresh()"
-      title="Hard Refresh"
-    >🔄</button>
+      <!-- Hard Refresh -->
+      <button
+        onclick="hardRefresh()"
+        class="p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        title="Hard Refresh"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582M20 20v-5h-.581M5.64 19.364A9 9 0 1119.364 5.64" />
+        </svg>
+      </button>
 
-    <!-- Show debug log in popup -->
-    <button
-      class="btn-icon"
-      onclick="openDebugLog()"
-      title="View Debug Log"
-    >🐞</button>
+      <!-- View Debug Log -->
+      <button
+        onclick="openDebugLog()"
+        class="p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+        title="View Debug Log"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.963a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.363 1.118l1.286 3.963c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.784.57-1.84-.197-1.54-1.118l1.286-3.963a1 1 0 00-.362-1.118L2.963 9.39c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.285-3.963z"/>
+        </svg>
+      </button>
 
-    <!-- View preferences modal -->
-    <button
-      class="gear-icon"
-      onclick="togglePreferencesModal(true)"
-      title="View Preferences"
-    >⚙️</button>
+      <!-- Preferences Gear -->
+      <button
+        class="p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 gear-icon"
+        onclick="togglePreferencesModal(true)"
+        title="View Preferences"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.963a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.363 1.118l1.286 3.963c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.784.57-1.84-.197-1.54-1.118l1.286-3.963a1 1 0 00-.362-1.118L2.963 9.39c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.285-3.963z"/>
+        </svg>
+      </button>
+
+      <!-- Theme Toggle -->
+      <button class="p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <!-- assume you already have your theme toggle icon here -->
+        <svg class="h-6 w-6 text-indigo-300" /*...*/></svg>
+      </button>
+    </div>
   </header>
+
 
   <!-- Preferences Modal Component -->
   <?php include __DIR__ . '/../components/preferences-modal.php'; ?>
