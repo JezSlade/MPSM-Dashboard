@@ -127,7 +127,7 @@ if (isset($_COOKIE['visible_cards'])) {
 
     function openDebugLog() {
       window.open(
-        '/logs/debug.log',
+        '/components/debug-log.php',
         'DebugLogWindow',
         'width=800,height=600,menubar=no,toolbar=no,location=no,status=no'
       );

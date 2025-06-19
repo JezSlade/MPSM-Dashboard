@@ -313,3 +313,17 @@ body.dark-theme .page-btn:hover {
   background: var(--magenta);
   color: white;
 }
+/* === MODAL TEXT COLOR OVERRIDES === */
+#preferences-modal,
+#preferences-modal .modal-dialog,
+#preferences-modal .modal-header h3,
+#preferences-modal .modal-column label,
+#preferences-modal .btn,
+#preferences-modal .btn.small {
+  color: var(--text-dark) !important;
+}
+
+/* ensure checkboxes remain visible */
+#preferences-modal input[type="checkbox"] {
+  accent-color: var(--cyan);
+}
