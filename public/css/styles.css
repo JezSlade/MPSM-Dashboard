@@ -327,3 +327,25 @@ body.dark-theme .page-btn:hover {
 #preferences-modal input[type="checkbox"] {
   accent-color: var(--cyan);
 }
+/* FORCE WHITE TEXT IN THE PREFERENCES MODAL */
+#preferences-modal,
+#preferences-modal * {
+  color: #ffffff !important;
+}
+
+/* Make sure the title is visible */
+#preferences-modal .modal-header h3 {
+  color: #ffffff !important;
+}
+
+/* And buttons, labels, list items too */
+#preferences-modal label,
+#preferences-modal button,
+#preferences-modal .modal-column li {
+  color: #ffffff !important;
+}
+
+/* Checkbox accent for visibility */
+#preferences-modal input[type="checkbox"] {
+  accent-color: #0ff !important; /* bright cyan */
+}
