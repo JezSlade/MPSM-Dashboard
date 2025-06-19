@@ -1,6 +1,14 @@
 <?php declare(strict_types=1);
 // /includes/card_bootstrap.php
 
+// —————————————————————————————————————————————————————————
+// 0) Enable debug logging
+// —————————————————————————————————————————————————————————
+ini_set('display_errors', '0');
+ini_set('log_errors',   '1');
+ini_set('error_log',    __DIR__ . '/../logs/debug.log');
+error_reporting(E_ALL);
+
 // Start output buffering so we can set cookies/headers safely
 ob_start();
 
@@ -51,125 +59,58 @@ foreach ($requiredFields ?? [] as $field) {
     }
 }
 
-// 5) If any required fields still missing, render prompt with searchable dropdown for customerId
+// 5) If any required fields still missing, render prompt...
 if (!empty($missing)) {
-    echo "<div class='card'>";
-    echo   "<div class='card-header'><h3>" . htmlspecialchars($cardTitle) . "</h3></div>";
-    echo   "<div class='card-body'>";
-    echo     "<form method='GET'>";
-    // preserve existing params
-    foreach ($_GET as $gk => $gv) {
-        echo "<input type='hidden' name='" . htmlspecialchars($gk)
-             . "' value='" . htmlspecialchars($gv) . "'>";
+    echo "<form class='card form-card'>";
+    echo "<h3>{$cardTitle}</h3>";
+    foreach ($missing as $f) {
+        echo "<label for='{$f}'>{$f}</label>";
+        echo "<input type='text' id='{$f}' name='{$f}' />";
     }
-    echo     "<p>Please enter:</p>";
-    foreach ($missing as $field) {
-        echo "<label for='{$field}'>" . htmlspecialchars($field) . ":</label><br>";
-        if ($field === 'customerId') {
-            // load customer list for dropdown
-            $custResp = call_api($config, 'POST', 'Customer/GetCustomers', [
-                'DealerCode' => $customerCode,
-                'PageNumber' => 1,
-                'PageRows'   => 2147483647,
-                'SortColumn' => 'Description',
-                'SortOrder'  => 'Asc',
-            ]);
-            $options = $custResp['Result'] ?? [];
-            echo "<input type='text' id='{$field}-search' class='searchable-input' "
-               . "placeholder='Search customers…'><br>";
-            echo "<select id='{$field}' name='{$field}' class='searchable-select'>"
-               . "<option value='' disabled selected>— choose —</option>";
-            foreach ($options as $c) {
-                $code = htmlspecialchars($c['Code'] ?? '');
-                $name = htmlspecialchars($c['Description'] ?? $c['Name'] ?? $code);
-                echo "<option value='{$code}'>{$name}</option>";
-            }
-            echo "</select><br><br>";
-        } else {
-            echo "<input type='text' id='{$field}' name='{$field}'><br><br>";
-        }
-    }
-    echo     "<button type='submit' class='btn'>Load “"
-             . htmlspecialchars($cardTitle)
-             . "”</button>";
-    echo   "</form>";
-    echo "</div></div>";
-    ?>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var input  = document.getElementById('customerId-search');
-      var select = document.getElementById('customerId');
-      if (input && select) {
-        input.addEventListener('input', function() {
-          var filter = this.value.toLowerCase();
-          Array.from(select.options).forEach(function(opt) {
-            if (!opt.value) return;
-            opt.style.display = opt.text.toLowerCase().includes(filter) ? '' : 'none';
-          });
-        });
-      }
-    });
-    </script>
-    <?php
+    echo "<button type='submit'>Submit</button>";
+    echo "</form>";
     ob_end_flush();
     return;
 }
 
 // 6) Fetch data
 try {
-    $method = $method ?? 'POST';
-    $resp   = call_api($config, $method, $path, $payload);
-
-    // handle API errors
-    if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
-        $first = $resp['Errors'][0];
-        throw new \Exception($first['Description'] ?? 'API error');
-    }
-    $data = $resp['Result'] ?? [];
-
+    $data = call_api($config, $method ?? 'POST', $path, $payload);
 } catch (\Throwable $e) {
-    echo "<p class='error'>Error fetching data: "
-         . htmlspecialchars($e->getMessage())
-         . "</p>";
+    echo "<p class='error'>Error fetching data: " . htmlspecialchars($e->getMessage()) . "</p>";
     ob_end_flush();
     return;
 }
 
-// 7) Render the card
+// 7) Render card
 echo "<div class='card'>";
-echo   "<div class='card-header'><h3>"
-     . htmlspecialchars($cardTitle)
-     . "</h3></div>";
-
-// 8) Search box
-if (!empty($enableSearch)) {
-    echo "<div class='card-search'><input type='text' class='search-input' "
-         . "placeholder='Search…' onkeyup='filterCard(this)'></div>";
+echo "<h3>{$cardTitle}</h3>";
+if (!empty($description)) {
+    echo "<p class='description'>{$description}</p>";
 }
-
-// 9) Table
-echo "<div class='card-table-container'>";
-echo   "<table class='card-table' data-page-size='"
-     . ($pageSize ?? 15)
-     . "'><thead><tr>";
-foreach ($columns as $key => $label) {
-    echo "<th>" . htmlspecialchars($label) . "</th>";
+echo "<table>";
+// Header
+echo "<thead><tr>";
+foreach ($columns as $col) {
+    echo "<th>{$col}</th>";
 }
-echo   "</tr></thead><tbody>";
+echo "</tr></thead>";
+// Body
+echo "<tbody>";
 foreach ($data as $row) {
     echo "<tr>";
-    foreach ($columns as $key => $_) {
-        echo "<td>" . htmlspecialchars($row[$key] ?? '') . "</td>";
+    foreach ($columns as $colKey => $colTitle) {
+        $val = $row[$colKey] ?? '';
+        echo "<td>" . htmlspecialchars((string)$val) . "</td>";
     }
     echo "</tr>";
 }
-echo   "</tbody></table></div>";
-
-// 10) Pagination
-if (!empty($enablePagination)) {
-    echo "<div class='card-pagination'></div>";
+echo "</tbody>";
+echo "</table>";
+// Pagination (if applicable)
+if (!empty($data['_pagination'])) {
+    echo "<div class='pagination'>{$data['_pagination']}</div>";
 }
-
 echo "</div>";
 
 // Flush the buffer now that all setcookie calls are done
