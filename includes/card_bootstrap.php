@@ -1,15 +1,19 @@
 <?php declare(strict_types=1);
 // /includes/card_bootstrap.php
 
+// Start output buffering so we can set cookies/headers safely
+ob_start();
+
 // 1) Load shared API helpers & config
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
 // 2) Determine selected customer (URL → cookie → default)
-//    MUST happen before any output
 if (isset($_GET['customer'])) {
     $customerCode = $_GET['customer'];
-    setcookie('customer', $customerCode, time()+31536000, '/');
+    if (!headers_sent()) {
+        setcookie('customer', $customerCode, time() + 31536000, '/');
+    }
 } elseif (!empty($_COOKIE['customer'])) {
     $customerCode = $_COOKIE['customer'];
 } else {
@@ -19,6 +23,7 @@ if (isset($_GET['customer'])) {
 // 3) Validate card metadata
 if (empty($path) || empty($cardTitle) || !is_array($columns)) {
     echo "<p class='error'>Card not configured properly.</p>";
+    ob_end_flush();
     return;
 }
 
@@ -35,8 +40,9 @@ $missing = [];
 foreach ($requiredFields ?? [] as $field) {
     if (!empty($_GET[$field])) {
         $payload[$field] = $_GET[$field];
-        // save for future cards
-        setcookie($field, $_GET[$field], time()+31536000, '/');
+        if (!headers_sent()) {
+            setcookie($field, $_GET[$field], time() + 31536000, '/');
+        }
     } elseif (empty($payload[$field]) && !empty($_COOKIE[$field])) {
         $payload[$field] = $_COOKIE[$field];
     }
@@ -105,6 +111,7 @@ if (!empty($missing)) {
     });
     </script>
     <?php
+    ob_end_flush();
     return;
 }
 
@@ -124,6 +131,7 @@ try {
     echo "<p class='error'>Error fetching data: "
          . htmlspecialchars($e->getMessage())
          . "</p>";
+    ob_end_flush();
     return;
 }
 
@@ -163,6 +171,9 @@ if (!empty($enablePagination)) {
 }
 
 echo "</div>";
+
+// Flush the buffer now that all setcookie calls are done
+ob_end_flush();
 ?>
 
 <script>
