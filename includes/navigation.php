@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// Prevent this navigation logic from running during API calls
+// 0) Skip rendering during API calls to prevent header/output conflicts
 if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
     return;
 }
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function(){
   input.addEventListener('input', function(){
     const q = this.value.toLowerCase();
     Array.from(select.options).forEach(opt => {
-      if (!opt.value) return;
+      if (!opt.value) return; // skip placeholder
       opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
     });
   });
