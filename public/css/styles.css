@@ -261,3 +261,47 @@ nav.sidebar {
 .neon-button:hover {
   transform: translateY(-2px);
 }
+/*---------------------------------------------
+  Data Table Styles
+----------------------------------------------*/
+.data-table-container {
+  position: relative;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow:
+    inset 2px 2px 4px var(--shadow-dark),
+    inset -2px -2px 4px var(--shadow-light),
+           2px 2px 8px var(--shadow-dark);
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.data-table th {
+  background: var(--panel);
+  font-weight: 600;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.table-pagination button {
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+
+.table-pagination button:focus {
+  outline: none;
+}
