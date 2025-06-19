@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-// /cards/card_device_counters.php
+// /cards/card_device_readings.php
 
-$path             = 'Device/GetDeviceCounters';
+$path             = 'Device/GetDeviceReadings';
 $payload          = ['deviceId'=>''];
 $requiredFields   = ['deviceId'];
-$cardTitle        = 'Device Counters';
-$columns          = ['CounterName'=>'Name','CounterValue'=>'Value'];
+$cardTitle        = 'Device Readings';
+$columns          = ['ReadingTime'=>'Time','ReadingValue'=>'Value'];
 $enableSearch     = false;
 $enablePagination = true;
 $pageSize         = 15;

@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-// /cards/card_device_counters.php
+// /cards/card_device_alerts.php
 
-$path             = 'Device/GetDeviceCounters';
+$path             = 'Device/GetDeviceAlerts';
 $payload          = ['deviceId'=>''];
 $requiredFields   = ['deviceId'];
-$cardTitle        = 'Device Counters';
-$columns          = ['CounterName'=>'Name','CounterValue'=>'Value'];
+$cardTitle        = 'Device Alerts';
+$columns          = ['AlertType'=>'Type','AlertCount'=>'Count'];
 $enableSearch     = false;
 $enablePagination = true;
 $pageSize         = 15;

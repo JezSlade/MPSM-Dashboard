@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-// /cards/card_device_counters.php
+// /cards/card_device_consumables.php
 
-$path             = 'Device/GetDeviceCounters';
+$path             = 'Device/GetDeviceConsumables';
 $payload          = ['deviceId'=>''];
 $requiredFields   = ['deviceId'];
-$cardTitle        = 'Device Counters';
-$columns          = ['CounterName'=>'Name','CounterValue'=>'Value'];
+$cardTitle        = 'Device Consumables';
+$columns          = ['SupplyName'=>'Supply','Remaining'=>'Remaining'];
 $enableSearch     = false;
 $enablePagination = true;
 $pageSize         = 15;
