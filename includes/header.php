@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // /includes/header.php
 
-// Start buffering so setcookie() calls won’t break
+// Start output buffering so setcookie() calls won’t break
 ob_start();
 ?><!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -62,7 +62,8 @@ ob_start();
 <script>
 // Utility functions
 function openDebugLog() {
-  const url = window.location.origin + '<?= APP_BASE_URL ?>components/debug-log.php';
+  // Use window.location.origin to build correct absolute URL
+  const url = `${window.location.origin}/components/debug-log.php`;
   window.open(url, 'DebugLog', 'width=800,height=600');
 }
 
@@ -79,6 +80,7 @@ function hardRefresh() {
 
 document.addEventListener('DOMContentLoaded', () => {
   const root = document.documentElement;
+
   // Initialize theme from localStorage or system preference
   const saved = localStorage.getItem('theme');
   if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -87,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     root.classList.remove('dark');
   }
 
-  // Replace icons
+  // Render Feather icons
   if (window.feather) feather.replace();
 
   // Theme toggle
