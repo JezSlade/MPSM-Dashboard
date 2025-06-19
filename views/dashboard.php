@@ -7,22 +7,22 @@ ini_set('display_errors','1');
 ini_set('log_errors','1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
 
-// Bootstrap & config
+// Helpers + config
 require_once __DIR__ . '/../includes/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 1) Determine customer code
+// 1) Determine current customer code
 $customerCode = $_GET['customer'] 
     ?? $_COOKIE['customer'] 
     ?? $config['DEALER_CODE'] 
     ?? '';
 
-// 2) Persist selection in a cookie
+// 2) Persist selection in cookie
 if (isset($_GET['customer'])) {
     setcookie('customer', $customerCode, time() + 31536000, '/');
 }
 
-// 3) Look up the human‐readable company name
+// 3) Lookup human-readable company name
 $customerName = 'All Customers';
 try {
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', [
@@ -41,16 +41,25 @@ try {
         }
     }
 } catch (\Throwable $e) {
-    // ignore failures, leave "All Customers"
+    // Silence on error; default to "All Customers"
 }
 
-// Cards visibility
+// 4) Determine which cards to show
 $cardsDir   = __DIR__ . '/../cards/';
 $allFiles   = glob($cardsDir . 'card_*.php') ?: [];
 $allCards   = array_map('basename', $allFiles);
+
 if (isset($_COOKIE['visible_cards'])) {
-    $sel           = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
-    $visibleCards  = array_values(array_intersect($sel, $allCards));
+    $sel = array_filter(
+        array_map('trim', explode(',', $_COOKIE['visible_cards'])),
+        'strlen'
+    );
+    if (count($sel) > 0) {
+        $visibleCards = array_values(array_intersect($sel, $allCards));
+    } else {
+        // Empty selection → show all
+        $visibleCards = $allCards;
+    }
 } else {
     $visibleCards = $allCards;
 }
@@ -58,32 +67,34 @@ if (isset($_COOKIE['visible_cards'])) {
 <!DOCTYPE html>
 <html lang="en" class="h-full dark">
 <head>
-  <meta charset="UTF-8" />
-  <title>Dashboard – <?= htmlspecialchars($customerName) ?></title>
-  <link rel="stylesheet" href="/public/css/styles.css" />
+    <meta charset="UTF-8" />
+    <title>Dashboard – <?= htmlspecialchars($customerName) ?></title>
+    <link rel="stylesheet" href="/public/css/styles.css" />
 </head>
 <body class="flex flex-col h-full bg-gray-900 text-gray-100">
 
-  <!-- Preferences Modal -->
-  <?php include __DIR__ . '/../components/preferences-modal.php'; ?>
+    <!-- Preferences Modal -->
+    <?php include __DIR__ . '/../components/preferences-modal.php'; ?>
 
-  <header class="dashboard-header flex items-center justify-between px-6 py-3 bg-gray-800 bg-opacity-50 backdrop-blur-sm">
-    <h1 class="text-xl font-semibold"><?= htmlspecialchars($customerName) ?></h1>
-    <button id="preferences-toggle"
-            onclick="togglePreferencesModal(true)"
-            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
-            title="Preferences">
-      <i data-feather="settings" class="h-8 w-8 text-purple-400"></i>
-    </button>
-  </header>
+    <!-- Dashboard Header -->
+    <header class="dashboard-header flex items-center justify-between px-6 py-3 bg-gray-800 bg-opacity-50 backdrop-blur-sm">
+        <h1 class="text-xl font-semibold"><?= htmlspecialchars($customerName) ?></h1>
+        <button id="preferences-toggle"
+                onclick="togglePreferencesModal(true)"
+                class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                title="Preferences">
+            <i data-feather="settings" class="h-8 w-8 text-purple-400"></i>
+        </button>
+    </header>
 
-  <main class="flex-1 overflow-auto p-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <?php foreach ($visibleCards as $card): ?>
-        <?php include $cardsDir . $card; ?>
-      <?php endforeach; ?>
-    </div>
-  </main>
+    <!-- Main Content: Cards Grid -->
+    <main class="flex-1 overflow-auto p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <?php foreach ($visibleCards as $card): ?>
+                <?php include $cardsDir . $card; ?>
+            <?php endforeach; ?>
+        </div>
+    </main>
 
 </body>
 </html>
