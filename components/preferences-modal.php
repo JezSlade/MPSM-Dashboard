@@ -1,6 +1,12 @@
 <?php declare(strict_types=1);
 // /components/preferences-modal.php
 
+// ⛔ Skip rendering when this isn’t the dashboard page
+if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0
+ || basename($_SERVER['SCRIPT_NAME']) !== 'index.php') {
+    return;
+}
+
 // 🛑 Prevent modal HTML from loading during API calls
 if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
     return;

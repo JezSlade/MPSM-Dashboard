@@ -1,8 +1,9 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// 0) Skip rendering during API calls to prevent header/output conflicts
-if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
+// 0) ⛔ Bail out immediately if this is an API/card sub‐request
+if (strpos($_SERVER['REQUEST_URI'],'/api/') === 0
+ || basename($_SERVER['SCRIPT_NAME']) !== 'index.php') {
     return;
 }
 

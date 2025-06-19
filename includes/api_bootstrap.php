@@ -1,6 +1,13 @@
 <?php declare(strict_types=1);
 // /includes/api_bootstrap.php
 
+// Detect true API endpoints vs. internal includes
+$isApi = strpos($_SERVER['REQUEST_URI'], '/api/') === 0;
+
+if ($isApi) {
+    header('Content-Type: application/json');
+}
+
 // Start: Load shared API helpers (defines parse_env_file, call_api, etc.)
 require_once __DIR__ . '/api_functions.php';
 
