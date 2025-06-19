@@ -17,11 +17,14 @@ $payload = [
     'SortColumn' => 'Description',
     'SortOrder'  => 'Asc',
 ];
+
 try {
     $resp      = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
     $customers = $resp['Result'] ?? [];
 } catch (\Throwable $e) {
     $customers = [];
+    // Log the navigation failure
+    error_log("Navigation error: " . $e->getMessage());
 }
 
 // Determine current selection
@@ -29,9 +32,9 @@ $currentCode = $_GET['customer'] ?? $_COOKIE['customer'] ?? '';
 $currentName = '';
 foreach ($customers as $cust) {
     if (($cust['Code'] ?? '') === $currentCode) {
-        $currentName = $cust['Description'] 
-                     ?? $cust['Name'] 
-                     ?? $currentCode;
+        $currentName = $cust['Description']
+                      ?? $cust['Name']
+                      ?? $currentCode;
         break;
     }
 }
@@ -44,38 +47,50 @@ foreach ($customers as $cust) {
     <input
       list="nav-customer-list"
       id="nav-customer-combobox"
-      class="h-8 w-full text-sm bg-gray-800 dark:bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+      class="h-8 w-full text-sm bg-gray-800 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
       placeholder="— choose a customer —"
       value="<?= htmlspecialchars($currentName) ?>"
     />
     <datalist id="nav-customer-list">
-      <?php foreach ($customers as $cust):
-          $code = htmlspecialchars($cust['Code'] ?? '');
-          $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
+      <?php foreach ($customers as $cust): 
+            $code = htmlspecialchars($cust['Code'] ?? '');
+            $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
       ?>
         <option data-code="<?= $code ?>" value="<?= $name ?>"></option>
       <?php endforeach; ?>
     </datalist>
   </div>
 
-  <!-- (Keep any other nav buttons or links here if needed) -->
+  <!-- Debug, Cookie & Refresh Controls -->
+  <button id="debug-toggle" title="Debug Log" class="p-2 hover:bg-gray-700 rounded">
+    <i data-feather="terminal"></i>
+  </button>
+  <button id="clear-cookies" title="Clear Cookies" class="p-2 hover:bg-gray-700 rounded">
+    <i data-feather="trash-2"></i>
+  </button>
+  <button id="hard-refresh" title="Hard Refresh" class="p-2 hover:bg-gray-700 rounded">
+    <i data-feather="refresh-cw"></i>
+  </button>
 </div>
 
 <script>
-// Wire up the customer combobox
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('nav-customer-combobox');
-  const options = document.getElementById('nav-customer-list').options;
+  // (existing customer‐dropdown + control JS goes here; unchanged)
+  document.addEventListener('DOMContentLoaded', () => {
+    const input   = document.getElementById('nav-customer-combobox');
+    const options = document.getElementById('nav-customer-list').options;
 
-  input.addEventListener('change', () => {
-    const chosen = Array.from(options)
-                        .find(o => o.value === input.value);
-    const code = chosen ? chosen.dataset.code : '';
-    if (code) {
-      document.cookie = `customer=${encodeURIComponent(code)};path=/;max-age=${60*60*24*365}`;
-      // Reload preserving any other query params if desired
-      window.location.href = `${window.location.pathname}?customer=${encodeURIComponent(code)}`;
-    }
+    input.addEventListener('change', () => {
+      const chosen = Array.from(options)
+                          .find(o => o.value === input.value);
+      const code = chosen ? chosen.dataset.code : '';
+      if (code) {
+        document.cookie = `customer=${encodeURIComponent(code)};path=/;max-age=${60*60*24*365}`;
+        window.location.href = `${window.location.pathname}?customer=${encodeURIComponent(code)}`;
+      }
+    });
+
+    document.getElementById('debug-toggle').addEventListener('click', openDebugLog);
+    document.getElementById('clear-cookies').addEventListener('click', clearSessionCookies);
+    document.getElementById('hard-refresh').addEventListener('click', hardRefresh);
   });
-});
 </script>
