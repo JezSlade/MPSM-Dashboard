@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 // /includes/header.php
 
-// Buffer start so setcookie() won’t error out later
 ob_start();
 ?><!DOCTYPE html>
 <html lang="en" class="h-full dark">
@@ -18,43 +17,38 @@ ob_start();
 </head>
 <body class="flex flex-col h-full bg-gray-900 text-gray-100">
 
-<header class="app-header relative flex items-center justify-end space-x-8 px-6 py-4 bg-gray-800 bg-opacity-75 backdrop-blur-md shadow-lg">
-  <!-- Neon CMYK glow overlay -->
+<header class="app-header relative flex items-center justify-between px-4 py-2 bg-gray-800 bg-opacity-75 backdrop-blur-md shadow-lg">
+  <!-- CMYK neon glow -->
   <div class="absolute inset-0 pointer-events-none" style="
-       box-shadow:
-         0 0 8px var(--cyan),
-         0 0 12px var(--magenta),
-         0 0 16px var(--yellow);
-       opacity: 0.15;
+       box-shadow: 0 0 6px var(--cyan), 0 0 8px var(--magenta), 0 0 10px var(--yellow);
+       opacity: 0.1;
      "></div>
 
-  <div class="relative z-10 flex items-center space-x-8">
-    <!-- Light/Dark Toggle (sun/moon) -->
-    <button id="theme-toggle"
-            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-            title="Toggle Light/Dark">
-      <i data-feather="sun" class="h-8 w-8 text-cyan-400"></i>
-    </button>
+  <!-- Left: Searchable customer combobox -->
+  <div class="relative z-10 flex-1 max-w-xs">
+    <label for="customer-search" class="sr-only">Customer</label>
+    <input
+      id="customer-search"
+      list="customer-list"
+      placeholder="— choose a customer —"
+      class="w-full text-sm bg-gray-800 text-white border border-gray-700 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:border-cyan-400"
+    />
+    <datalist id="customer-list" class="hidden"></datalist>
+  </div>
 
-    <!-- Debug Log (terminal) -->
-    <button onclick="openDebugLog()"
-            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-magenta-400"
-            title="Open Debug Log">
-      <i data-feather="terminal" class="h-8 w-8 text-magenta-400"></i>
+  <!-- Right: Utility icons -->
+  <div class="relative z-10 flex items-center space-x-6">
+    <button id="theme-toggle" class="p-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-400" title="Toggle Light/Dark">
+      <i data-feather="sun" class="h-5 w-5 text-cyan-400"></i>
     </button>
-
-    <!-- Clear Session Cookies (trash) -->
-    <button onclick="clearSessionCookies()"
-            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            title="Clear Session Cookies">
-      <i data-feather="trash-2" class="h-8 w-8 text-yellow-400"></i>
+    <button onclick="openDebugLog()" class="p-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-magenta-400" title="Open Debug Log">
+      <i data-feather="terminal" class="h-5 w-5 text-magenta-400"></i>
     </button>
-
-    <!-- Hard Refresh (refresh-cw) -->
-    <button onclick="hardRefresh()"
-            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-black"
-            title="Hard Refresh">
-      <i data-feather="refresh-cw" class="h-8 w-8 text-black"></i>
+    <button onclick="clearSessionCookies()" class="p-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400" title="Clear Session Cookies">
+      <i data-feather="trash-2" class="h-5 w-5 text-yellow-400"></i>
+    </button>
+    <button onclick="hardRefresh()" class="p-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-black" title="Hard Refresh">
+      <i data-feather="refresh-cw" class="h-5 w-5 text-black"></i>
     </button>
   </div>
 </header>
@@ -64,29 +58,67 @@ ob_start();
 function openDebugLog() {
   window.open('/components/debug-log.php','DebugLog','width=800,height=600');
 }
-
 function clearSessionCookies() {
   document.cookie.split(';').forEach(c =>
     document.cookie = c.trim().replace(/=.*/, '=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/')
   );
   alert('Session cookies cleared.');
 }
-
 function hardRefresh() {
   window.location.reload(true);
 }
 
-// On DOM ready: replace all feather icons + wire up theme toggle
+// On DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  // Render icons
+  // Render Feather icons
   if (window.feather) feather.replace();
 
-  // Theme toggle logic
+  // --- Customer combobox setup ---
+  const datalist = document.getElementById('customer-list');
+  const input    = document.getElementById('customer-search');
+  // Get current cookie
+  const cookieMatch = document.cookie.match(/(?:^|; )customer=([^;]+)/);
+  const currentCode = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
+
+  // Fetch customers
+  fetch('/api/get_customers.php')
+    .then(res => res.json())
+    .then(customers => {
+      // Populate datalist
+      datalist.innerHTML = '';
+      customers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value       = `${c.Description || c.Name}`;
+        opt.dataset.code= c.Code;
+        datalist.appendChild(opt);
+      });
+      // Pre-fill input if we have a cookie match
+      if (currentCode) {
+        const match = Array.from(datalist.options)
+                           .find(o => o.dataset.code === currentCode);
+        if (match) input.value = match.value;
+      }
+    })
+    .catch(err => {
+      console.error('Error loading customers:', err);
+    });
+
+  // On selection, set cookie & reload
+  input.addEventListener('change', () => {
+    const match = Array.from(datalist.options)
+                       .find(o => o.value === input.value);
+    const code  = match ? match.dataset.code : '';
+    if (code) {
+      document.cookie = `customer=${encodeURIComponent(code)};path=/;max-age=${60*60*24*365}`;
+      window.location.reload();
+    }
+  });
+
+  // --- Theme toggle logic ---
   const themeBtn = document.getElementById('theme-toggle');
   themeBtn.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
-    // Swap icon between sun and moon
-    const icon = themeBtn.querySelector('i');
+    const icon   = themeBtn.querySelector('i');
     icon.setAttribute('data-feather', isDark ? 'moon' : 'sun');
     if (window.feather) feather.replace();
   });
