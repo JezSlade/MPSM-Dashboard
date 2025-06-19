@@ -1,6 +1,11 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
+// Prevent this navigation logic from running during API calls
+if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
+    return;
+}
+
 // 1) Shared API helpers + config loader
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
@@ -15,71 +20,56 @@ $payload = [
 ];
 
 try {
-    // 3) Call the internal API
+    // 3) Fetch the list
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
 
-    // 4) Handle API‐level validation errors
-    if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
-        $first = $resp['Errors'][0];
-        throw new \Exception($first['Description'] ?? 'Unknown API error');
+    if (!empty($resp['Errors'])) {
+        throw new \Exception($resp['Errors'][0]['Description'] ?? 'Error');
     }
-
     $customers = $resp['Result'] ?? [];
-    $error     = '';
+
 } catch (\Throwable $e) {
     $customers = [];
     $error     = $e->getMessage();
 }
 ?>
-<div class="nav-dropdown-card">
-  <?php if ($error !== ''): ?>
-    <div class="nav-error">
-      Error loading customers: <?= htmlspecialchars($error) ?>
-    </div>
+<div class="nav-dropdown-container">
+  <?php if (!empty($error)): ?>
+    <div class="nav-error"><?= htmlspecialchars($error) ?></div>
   <?php else: ?>
-    <div class="nav-select-container" style="display:flex; gap:0.5rem; align-items:center;">
-      <input
-        type="text"
-        id="nav-customer-search"
-        class="customer-select"
-        style="flex:1;"
-        placeholder="Type to filter…"
-        autocomplete="off"
-      >
-      <select
-        id="nav-customer-select"
-        class="customer-select"
-        style="flex:2;"
-      >
-        <option value="" disabled selected>— choose a customer —</option>
-        <?php foreach ($customers as $cust): 
-          $code = htmlspecialchars($cust['Code'] ?? '');
-          $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
-        ?>
-          <option value="<?= $code ?>"><?= $name ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
+    <input
+      type="text"
+      id="nav-customer-search"
+      class="customer-search-input"
+      placeholder="Type to filter…"
+      autocomplete="off"
+    >
+    <select id="nav-customer-select" class="customer-dropdown">
+      <option value="" disabled selected>— choose a customer —</option>
+      <?php foreach ($customers as $cust): 
+        $code = htmlspecialchars($cust['Code'] ?? '');
+        $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
+      ?>
+        <option value="<?= $code ?>"><?= $name ?></option>
+      <?php endforeach; ?>
+    </select>
   <?php endif; ?>
 </div>
 
 <script>
-// 5) Filter the dropdown as the user types
-(function() {
+// filter the <select> based on the text input
+document.addEventListener('DOMContentLoaded', function(){
   const input  = document.getElementById('nav-customer-search');
   const select = document.getElementById('nav-customer-select');
-  input.addEventListener('input', function() {
-    const filter = this.value.toLowerCase();
+  input.addEventListener('input', function(){
+    const q = this.value.toLowerCase();
     Array.from(select.options).forEach(opt => {
-      if (!opt.value) return; // placeholder
-      const text = opt.text.toLowerCase();
-      opt.style.display = text.includes(filter) ? '' : 'none';
+      if (!opt.value) return;
+      opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
     });
   });
-
-  // 6) When selection changes, reload with ?customer=
-  select.addEventListener('change', function() {
+  select.addEventListener('change', function(){
     window.location.search = '?customer=' + encodeURIComponent(this.value);
   });
-})();
+});
 </script>
