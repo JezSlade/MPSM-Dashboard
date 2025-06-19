@@ -1,44 +1,19 @@
-<?php
-// includes/redis.php
-// Simple Redis cache helper with extension check and failover handling
-
-function getRedisClient() {
-    static $redis = null;
-    if ($redis === null) {
-        if (!class_exists('Redis')) {
-            throw new Exception('The Redis extension is not installed or enabled.');
+<?php declare(strict_types=1);
+// /includes/redis.php
+if (!class_exists('RedisClient')) {
+    class RedisClient {
+        private Redis $client;
+        public function __construct(array $config) {
+            $host = $config['REDIS_HOST'] ?? '127.0.0.1';
+            $port = $config['REDIS_PORT'] ?? 6379;
+            \$this->client = new Redis();
+            \$this->client->connect(\$host, \$port);
         }
-        $redis = new Redis();
-        $redis->connect('127.0.0.1', 6379);
-    }
-    return $redis;
-}
-
-function getCache($key) {
-    try {
-        return getRedisClient()->get($key);
-    } catch (Exception $e) {
-        // Treat as cache miss on failure
-        return false;
-    }
-}
-
-function setCache($key, $value, $ttl = 60) {
-    try {
-        getRedisClient()->set($key, $value, $ttl);
-    } catch (Exception $e) {
-        // Ignore cache write failures
-    }
-}
-
-function purgeCache($pattern) {
-    try {
-        $r = getRedisClient();
-        $keys = $r->keys($pattern);
-        foreach ($keys as $key) {
-            $r->del($key);
+        public function get(string \$key): ?string {
+            return \$this->client->get(\$key) ?: null;
         }
-    } catch (Exception $e) {
-        // Ignore purge failures
+        public function set(string \$key, string \$value, int \$ttl): bool {
+            return \$this->client->setex(\$key, \$ttl, \$value);
+        }
     }
 }
