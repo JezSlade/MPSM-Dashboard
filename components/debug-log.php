@@ -1,13 +1,25 @@
 <?php declare(strict_types=1);
 // /components/debug-log.php
 
-// Always serve HTML
+// Always return HTML
 header('Content-Type: text/html; charset=utf-8');
 
-// Locate the debug log
-$logFile = __DIR__ . '/../logs/debug.log';
-if (!file_exists($logFile)) {
-    $content = "Debug log not found at {$logFile}";
+// Look for debug.log in the project’s /logs folder (one level up)
+// and as a fallback two levels up if your structure differs.
+$possible = [
+    __DIR__ . '/../logs/debug.log',
+    __DIR__ . '/../../logs/debug.log',
+];
+$logFile = '';
+foreach ($possible as $path) {
+    if (is_readable($path)) {
+        $logFile = $path;
+        break;
+    }
+}
+
+if (!$logFile) {
+    $content = 'Debug log not found at any of: ' . implode(', ', $possible);
 } else {
     // Read last 500 lines for performance
     $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -21,7 +33,7 @@ if (!file_exists($logFile)) {
   <title>Debug Log</title>
   <style>
     body { background: #111; color: #eee; font-family: monospace; padding: 1em; }
-    pre  { white-space: pre-wrap; word-wrap: break-word; }
+    pre  { white-space: pre-wrap; word-break: break-word; }
   </style>
 </head>
 <body>

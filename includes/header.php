@@ -1,8 +1,13 @@
 <?php declare(strict_types=1);
 // /includes/header.php
 
-// Start output buffering so setcookie() calls won’t break
+// Start output buffering so any setcookie() calls later won’t fail
 ob_start();
+
+// Ensure PHP errors go to our debug log
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
+
 ?><!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -62,8 +67,8 @@ ob_start();
 <script>
 // Utility functions
 function openDebugLog() {
-  // Use window.location.origin to build correct absolute URL
-  const url = `${window.location.origin}/components/debug-log.php`;
+  // Build the full URL including APP_BASE_URL
+  const url = `${window.location.origin}<?= APP_BASE_URL ?>components/debug-log.php`;
   window.open(url, 'DebugLog', 'width=800,height=600');
 }
 
@@ -93,20 +98,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.feather) feather.replace();
 
   // Theme toggle
-  const themeBtn = document.getElementById('theme-toggle');
-  themeBtn.addEventListener('click', () => {
+  document.getElementById('theme-toggle').addEventListener('click', () => {
     const isNowDark = root.classList.toggle('dark');
     localStorage.setItem('theme', isNowDark ? 'dark' : 'light');
-    const icon = themeBtn.querySelector('i');
+    const icon = document.querySelector('#theme-toggle i');
     icon.setAttribute('data-feather', isNowDark ? 'moon' : 'sun');
     if (window.feather) feather.replace();
   });
 
-  // Debug log
+  // Other buttons
   document.getElementById('debug-toggle').addEventListener('click', openDebugLog);
-  // Clear cookies
   document.getElementById('clear-cookies').addEventListener('click', clearSessionCookies);
-  // Hard refresh
   document.getElementById('hard-refresh').addEventListener('click', hardRefresh);
 });
 </script>
