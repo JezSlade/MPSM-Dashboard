@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // /components/preferences-modal.php
 
-// Don’t render on API or any non-index page
+// 0) Don’t render on API or non‐index page
 if (
     strpos($_SERVER['REQUEST_URI'], '/api/') === 0 ||
     basename($_SERVER['SCRIPT_NAME']) !== 'index.php'
@@ -9,22 +9,24 @@ if (
     return;
 }
 
-// Use the passed-in $cardFiles (dashboard view) to avoid stray files
+// 1) Use only the dashboard’s $cardFiles
 $cardFiles    = $cardFiles    ?? [];
 $visibleCards = $visibleCards ?? [];
 
-// Humanize names
+// 2) Humanize card names
 $list = [];
 foreach ($cardFiles as $file) {
     $key = preg_replace(['/^card_/', '/\.php$/'], '', $file);
     if (str_starts_with($key, 'get_')) {
         $key = substr($key, 4);
     }
-    $name = ucfirst(str_replace('_', ' ', $key));
-    $list[] = ['file'=>$file, 'name'=>$name];
+    $list[] = [
+        'file' => $file,
+        'name' => ucfirst(str_replace('_', ' ', $key))
+    ];
 }
 
-// Split into 3 columns
+// 3) Split into 3 columns
 $total   = count($list);
 $perCol  = (int) ceil($total / 3);
 $columns = array_chunk($list, $perCol);
@@ -33,10 +35,12 @@ $columns = array_chunk($list, $perCol);
   <div class="modal-backdrop" onclick="togglePreferencesModal(false)"></div>
   <div class="modal-dialog glass-card">
 
+    <!-- HEADER -->
     <header class="modal-header">
       <h3>Select Cards to Display</h3>
     </header>
 
+    <!-- GRID -->
     <div class="modal-grid-multi">
       <?php foreach ($columns as $col): ?>
         <ul class="modal-column">
@@ -57,6 +61,7 @@ $columns = array_chunk($list, $perCol);
       <?php endforeach; ?>
     </div>
 
+    <!-- FOOTER ACTIONS -->
     <footer class="modal-actions">
       <button id="select-all" class="btn small">Select All</button>
       <button id="clear-all"  class="btn small">Clear All</button>
@@ -80,12 +85,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const cbs = ()=>Array.from(
     document.querySelectorAll('#preferences-modal input[name="cards[]"]')
   );
-
   document.getElementById('select-all')
           .addEventListener('click', ()=>cbs().forEach(cb=>cb.checked=true));
   document.getElementById('clear-all')
           .addEventListener('click', ()=>cbs().forEach(cb=>cb.checked=false));
-
   document.getElementById('save-modal')
           .addEventListener('click', ()=>{
     const sel = cbs().filter(cb=>cb.checked).map(cb=>cb.value);
@@ -103,7 +106,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   display: flex; align-items: center; justify-content: center;
   z-index: 10000;
 }
-.modal.hidden { display: none; }
+.modal.hidden { display:none; }
 
 .modal-backdrop {
   position: absolute; inset: 0;
@@ -111,7 +114,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 }
 
 .modal-dialog {
-  background: rgba(30,30,30,0.75);
+  background: rgba(30,30,30,0.85);
   backdrop-filter: blur(12px);
   border-radius: 10px;
   width: auto; max-width: 70%;
@@ -121,13 +124,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
   display: flex; flex-direction: column;
 }
 
-/* Header */
+/* HEADER STYLES */
+.modal-header {
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
 .modal-header h3 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   color: var(--text-light);
+  font-size: 1.25rem;
 }
 
-/* Three‐column grid */
+/* GRID */
 .modal-grid-multi {
   display: flex; gap: 1rem;
   margin-bottom: 1rem;
@@ -143,7 +152,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   cursor: pointer;
 }
 
-/* Footer actions */
+/* FOOTER ACTIONS */
 .modal-actions {
   display: flex; gap: 0.5rem;
   justify-content: flex-end;
