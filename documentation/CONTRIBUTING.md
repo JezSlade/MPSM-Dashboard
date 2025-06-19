@@ -1,44 +1,31 @@
-# CONTRIBUTING.md
+# Contributing
 
-Thank you for contributing! Please follow these conventions to keep the codebase consistent.
+Follow these guidelines to ensure consistency:
 
-## File Structure & Naming
-- **API Endpoints** (`/api/*.php`):  
-  - Must set `$method`, `$path`, and optional `$useCache`, then `require __DIR__ . '/../includes/api_bootstrap.php';`.
-- **Cards** (`/cards/card_*.php`):  
-  - Must start with `require __DIR__ . '/../includes/card_bootstrap.php';`.
-- **Views** (`/views/*.php`):  
-  - Pure layout files. Loop through `card_*.php` files only.  
-- **Shared**:  
-  - `/components/` for modal & UI components.  
-  - `/includes/` for `api_bootstrap.php`, `card_bootstrap.php`, and utility helpers.  
-  - `/public/css/styles.css` for all CSS.  
-  - `/engine/` for caching logic.  
-  - `/cron/` for scheduled tasks.  
-  - `/logs/` for debug logs.  
+## Code Structure
+- **API Stubs**: set `$method`, `$path`, `$useCache` then include `api_bootstrap.php`.
+- **Cards**: use `card_bootstrap.php`.
+- **Views**: include header, navigation, preferences modal, and loop cards.
 
-## Coding Standards
-- **PHP 8.4+**: Strict types enabled (`declare(strict_types=1)`).
-- **No Composer/Autoloaders**: Manual `.env` parsing in includes.
-- **Relative Includes**: Always use `__DIR__`.
-- **Error Handling**:
-  - API endpoints emit HTTP codes and JSON errors.
-  - Cards catch exceptions silently but log to `/logs/debug.log`.
+## Helpers
+- `/includes/searchable_dropdown.php`
+- `/includes/table_helper.php`
 
-## Styling & Frontend
-- Use **Tailwind CSS** classes for all styles.
-- Components must support **light/dark** modes.
-- No external JS frameworks—vanilla JS only.
-- Full-width, responsive grid layouts; no hard margins.
+## Standards
+- PHP 8.4+ with `strict_types=1`.
+- **Full inline code**: deliver entire files.
+- No external libraries; use Feather Icons CDN.
+- Relative paths via `__DIR__`.
 
-## Patch Workflow
-1. **Branch** from `main`.
-2. Make **one functional change per PR**.
-3. **Validate** against existing code locally.
-4. Provide a **full, complete code listing** in PR description (no snippets).
-5. After review, merge and delete branch.
+## Documentation
+- Keep MD files in `/documentation/` updated:
+  - Architecture.md
+  - CONTRIBUTING.md
+  - MPSM_Bible.md
+  - Handoff_Summary.md
 
-## Testing & CI/CD
-- Lint PHP (`php -l`).
-- Ensure `/public/css/styles.css` is referenced (no `/assets/`).
-- Deploy pipeline defined in `.github/workflows/deploy.yml`.
+## Workflow
+1. One functional change per PR.
+2. Validate with `php -l`.
+3. Merge with full code listing.
+
