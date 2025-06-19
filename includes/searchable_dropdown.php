@@ -2,11 +2,11 @@
 // /includes/searchable_dropdown.php
 
 /**
- * Renders a compact, Tailwind-styled searchable dropdown.
+ * Render a compact, Tailwind‐styled searchable dropdown.
  *
  * @param string $id            ID for the <input> element
  * @param string $datalistId    ID for the <datalist> element
- * @param string $apiEndpoint   URL to fetch options (expects array of {Code,Name,Description})
+ * @param string $apiEndpoint   URL to fetch options (expects array at resp.customers or resp.Result or resp)
  * @param string $cookieName    Cookie key to store the selected Code
  * @param string $placeholder   Placeholder text
  * @param string $cssClasses    Tailwind classes for the <input>
@@ -20,7 +20,7 @@ function renderSearchableDropdown(
     string $cssClasses = 'w-full text-xs bg-gray-800 text-white border border-gray-600 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500'
 ): void {
     // Read current code from cookie
-    $currentCode = $_COOKIE[$cookieName] ?? '';
+    $currCode = $_COOKIE[$cookieName] ?? '';
     echo <<<HTML
 <div class="relative z-10 flex-1 max-w-xs">
   <label for="{$id}" class="sr-only">{$placeholder}</label>
@@ -40,31 +40,32 @@ function renderSearchableDropdown(
   const cookieName = '{$cookieName}';
   const apiUrl     = '{$apiEndpoint}';
   // Grab current code from cookie
-  const match      = document.cookie.match(new RegExp('(?:^|; )' + cookieName + '=([^;]+)'));
-  const current    = match ? decodeURIComponent(match[1]) : '';
+  const m = document.cookie.match(new RegExp('(?:^|; )' + cookieName + '=([^;]+)'));
+  const current   = m ? decodeURIComponent(m[1]) : '';
 
-  // Fetch and populate
   fetch(apiUrl)
     .then(res => res.json())
-    .then(list => {
+    .then(resp => {
+      // Try multiple shapes
+      const list = resp.customers || resp.Result || resp || [];
       datalist.innerHTML = '';
       list.forEach(item => {
         const opt = document.createElement('option');
-        // Display either Description or Name
-        opt.value = item.Description || item.Name || item.Code;
-        opt.dataset.code = item.Code;
+        opt.value       = item.Description || item.Name || item.Code || '';
+        opt.dataset.code= item.Code || '';
         datalist.appendChild(opt);
       });
-      // Preselect if cookie matches
+      // Preselect
       if (current) {
         const found = Array.from(datalist.options)
                            .find(o => o.dataset.code === current);
         if (found) input.value = found.value;
       }
     })
-    .catch(err => console.error('Searchable dropdown load error:', err));
+    .catch(err => {
+      console.error('Searchable dropdown load error:', err);
+    });
 
-  // On change, store cookie & reload
   input.addEventListener('change', () => {
     const sel = Array.from(datalist.options)
                      .find(o => o.value === input.value);
