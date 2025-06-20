@@ -6,7 +6,7 @@
  *
  * @param string $id            ID for the <input> element
  * @param string $datalistId    ID for the <datalist> element
- * @param string $apiEndpoint   URL to fetch options (expects array at resp.customers or resp.Result or resp)
+ * @param string $apiEndpoint   URL to fetch options
  * @param string $cookieName    Cookie key to store the selected Code
  * @param string $placeholder   Placeholder text
  * @param string $cssClasses    Tailwind classes for the <input>
@@ -21,6 +21,7 @@ function renderSearchableDropdown(
 ): void {
     // Read current code from cookie
     $currCode = $_COOKIE[$cookieName] ?? '';
+
     echo <<<HTML
 <div class="relative z-10 flex-1 max-w-xs">
   <label for="{$id}" class="sr-only">{$placeholder}</label>
@@ -39,9 +40,10 @@ function renderSearchableDropdown(
   const datalist   = document.getElementById('{$datalistId}');
   const cookieName = '{$cookieName}';
   const apiUrl     = '{$apiEndpoint}';
+
   // Grab current code from cookie
   const m = document.cookie.match(new RegExp('(?:^|; )' + cookieName + '=([^;]+)'));
-  const current   = m ? decodeURIComponent(m[1]) : '';
+  const current = m ? decodeURIComponent(m[1]) : '';
 
   fetch(apiUrl)
     .then(res => res.json())
@@ -51,15 +53,17 @@ function renderSearchableDropdown(
       datalist.innerHTML = '';
       list.forEach(item => {
         const opt = document.createElement('option');
-        opt.value       = item.Description || item.Name || item.Code || '';
-        opt.dataset.code= item.Code || '';
+        opt.value = item.Description || item.Name || item.Code || '';
+        opt.dataset.code = item.Code || '';
         datalist.appendChild(opt);
       });
-      // Preselect
+      // Preselect if found
       if (current) {
         const found = Array.from(datalist.options)
                            .find(o => o.dataset.code === current);
-        if (found) input.value = found.value;
+        if (found) {
+          input.value = found.value;
+        }
       }
     })
     .catch(err => {

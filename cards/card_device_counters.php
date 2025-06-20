@@ -1,8 +1,3 @@
-<?php declare(strict_types=1);
-// /api/get_device_counters.php
-
-$path           = 'Device/GetDeviceCounters';
-$requiredFields = ['id'];
-$useCache       = true;
-
-require __DIR__ . '/../includes/api_bootstrap.php';
+<?php
+// /cards/card_device_counters.php
+echo "<div class='panel'><h3>Device Counters</h3><p>Placeholder device counters data.</p></div>";

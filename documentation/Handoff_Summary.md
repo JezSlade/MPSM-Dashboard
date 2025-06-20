@@ -1,2 +1,2 @@
-# Architecture
+# Handoff Summary
 ... (updated docs from session)
