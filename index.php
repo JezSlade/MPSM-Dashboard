@@ -1,29 +1,16 @@
-<?php declare(strict_types=1);
-// /index.php — root entry point
+<?php
+// --- DEBUG BLOCK (Always Keep at Top) ---
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/debug.log');
+// ----------------------------------------
 
-// 0) Ensure debug.log exists
-$logFile = __DIR__ . '/logs/debug.log';
-if (!file_exists($logFile)) {
-    touch($logFile);
-    chmod($logFile, 0664);
-}
-
-// 1) Load global config
 require_once __DIR__ . '/includes/config.php';
-
-// 2) Header
 require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/navigation.php';
 
-// 3) Navigation (with error-catch)
-try {
-    require_once __DIR__ . '/includes/navigation.php';
-} catch (\Throwable $e) {
-    error_log("Navigation error: " . $e->getMessage());
-    echo "<p class='error'>Failed to load navigation.</p>";
-}
+render_view('views/dashboard.php');
 
-// 4) Main view
-render_view(__DIR__ . '/views/dashboard.php');
-
-// 5) Footer
 require_once __DIR__ . '/includes/footer.php';
+?>

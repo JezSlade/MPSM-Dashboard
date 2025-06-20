@@ -1,214 +1,188 @@
 <?php declare(strict_types=1);
 // /includes/card_bootstrap.php
 
-// —————————————————————————————————————————————————————————
-// 0) Enable debug logging + display to both file and page
-// —————————————————————————————————————————————————————————
-ini_set('display_errors', '1');
-ini_set('log_errors',     '1');
-ini_set('error_log',      __DIR__ . '/../logs/debug.log');
-error_reporting(E_ALL);
-
-// —————————————————————————————————————————————————————————
-// 1) Start output buffering so we can set headers/cookies
-// —————————————————————————————————————————————————————————
+// Start output buffering so we can set cookies/headers safely
 ob_start();
 
-// —————————————————————————————————————————————————————————
-// 2) Inject live-debug container into footer (and enlarge it)
-// —————————————————————————————————————————————————————————
-echo <<<HTML
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  var footer = document.querySelector('footer');
-  if (footer) {
-    footer.style.minHeight = '300px';
-    var dbg = document.createElement('pre');
-    dbg.id = 'live-debug';
-    dbg.style.cssText = [
-      'background: rgba(0,0,0,0.8)',
-      'color: #0f0',
-      'padding: 10px',
-      'margin: 0',
-      'overflow: auto',
-      'height: 100%',
-      'font-family: monospace',
-      'font-size: 12px'
-    ].join(';');
-    footer.appendChild(dbg);
-  }
-});
-// JS helper to append messages
-function appendDebug(msg){
-  var dbg = document.getElementById('live-debug');
-  if (dbg) {
-    dbg.textContent += msg + "\\n";
-    dbg.scrollTop = dbg.scrollHeight;
-  }
-}
-</script>
-HTML;
-flush();
-
-// —————————————————————————————————————————————————————————
-// 3) Trace start
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('BOOTSTRAP ▶ Starting card_bootstrap.php');</script>";
-flush();
-
-// —————————————————————————————————————————————————————————
-// 4) Load API helpers & parse .env
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('╸ Loading api_functions.php');</script>";
-flush();
+// 1) Load shared API helpers & config
 require_once __DIR__ . '/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
-echo "<script>appendDebug('✔ Parsed .env into \$config');</script>";
-flush();
 
-// —————————————————————————————————————————————————————————
-// 5) Determine selected customer
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('╸ Determining customerCode');</script>";
-flush();
+// 2) Determine selected customer (URL → cookie → default)
 if (isset($_GET['customer'])) {
-  $customerCode = $_GET['customer'];
-  if (!headers_sent()) {
-    setcookie('customer', $customerCode, time()+31536000, '/');
-    echo "<script>appendDebug('→ Cookie set: customer={$customerCode}');</script>";
-  }
-  echo "<script>appendDebug('→ From GET: {$customerCode}');</script>";
+    $customerCode = $_GET['customer'];
+    if (!headers_sent()) {
+        setcookie('customer', $customerCode, time() + 31536000, '/');
+    }
 } elseif (!empty($_COOKIE['customer'])) {
-  $customerCode = $_COOKIE['customer'];
-  echo "<script>appendDebug('→ From COOKIE: {$customerCode}');</script>";
+    $customerCode = $_COOKIE['customer'];
 } else {
-  $customerCode = $config['DEALER_CODE'] ?? '';
-  echo "<script>appendDebug('→ Default DEALER_CODE: {$customerCode}');</script>";
+    $customerCode = $config['DEALER_CODE'] ?? '';
 }
-flush();
 
-// —————————————————————————————————————————————————————————
-// 6) Validate card metadata
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('╸ Validating card metadata (path, cardTitle, columns)');</script>";
-flush();
+// 3) Validate card metadata
 if (empty($path) || empty($cardTitle) || !is_array($columns)) {
-  echo "<script>appendDebug('✖ ERROR: Missing path/cardTitle/columns');</script>";
-  echo "<p class='error'>Card not configured properly.</p>";
-  ob_end_flush();
-  return;
+    echo "<p class='error'>Card not configured properly.</p>";
+    ob_end_flush();
+    return;
 }
-echo "<script>appendDebug('✔ Metadata OK');</script>";
-flush();
 
-// —————————————————————————————————————————————————————————
-// 7) Prepare payload
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('╸ Preparing payload');</script>";
-flush();
+// 4) Ensure payload exists
 $payload = $payload ?? [];
-echo "<script>appendDebug('→ Initial payload: ' + " . json_encode(json_encode($payload)) . ");</script>";
-flush();
-// Inject customer if expected
+
+// 4a) Inject customerCode if needed
 if (array_key_exists('CustomerCode', $payload) && !$payload['CustomerCode']) {
-  $payload['CustomerCode'] = $customerCode;
-  echo "<script>appendDebug('→ Injected CustomerCode: {$customerCode}');</script>";
-  flush();
+    $payload['CustomerCode'] = $customerCode;
 }
 
-// —————————————————————————————————————————————————————————
-// 8) Handle requiredFields
-// —————————————————————————————————————————————————————————
+// 4b) Populate any requiredFields from GET → cookie
 $missing = [];
 foreach ($requiredFields ?? [] as $field) {
-  echo "<script>appendDebug('╸ Checking required field: {$field}');</script>";
-  flush();
-  if (!empty($_GET[$field])) {
-    $payload[$field] = $_GET[$field];
-    echo "<script>appendDebug('→ From GET: {$field}={$_GET[$field]}');</script>";
-    if (!headers_sent()) {
-      setcookie($field, $_GET[$field], time()+31536000, '/');
-      echo "<script>appendDebug('→ Cookie set: {$field}={$_GET[$field]}');</script>";
+    if (!empty($_GET[$field])) {
+        $payload[$field] = $_GET[$field];
+        if (!headers_sent()) {
+            setcookie($field, $_GET[$field], time() + 31536000, '/');
+        }
+    } elseif (empty($payload[$field]) && !empty($_COOKIE[$field])) {
+        $payload[$field] = $_COOKIE[$field];
     }
-  } elseif (empty($payload[$field]) && !empty($_COOKIE[$field])) {
-    $payload[$field] = $_COOKIE[$field];
-    echo "<script>appendDebug('→ From COOKIE: {$field}={$_COOKIE[$field]}');</script>";
-  }
-  if (empty($payload[$field])) {
-    $missing[] = $field;
-    echo "<script>appendDebug('→ Missing: {$field}');</script>";
-  }
-  flush();
+    if (empty($payload[$field])) {
+        $missing[] = $field;
+    }
 }
-echo "<script>appendDebug('→ Missing fields: " . json_encode($missing) . "');</script>";
-flush();
 
+// 5) If any required fields still missing, render prompt with searchable dropdown for customerId
 if (!empty($missing)) {
-  echo "<script>appendDebug('✚ Rendering prompt for missing fields');</script>";
-  flush();
-  echo "<form class='card form-card'>";
-  echo "<h3>" . htmlspecialchars($cardTitle) . "</h3>";
-  foreach ($missing as $f) {
-    echo "<label for='{$f}'>{$f}</label>";
-    echo "<input type='text' id='{$f}' name='{$f}' />";
-  }
-  echo "<button type='submit'>Submit</button>";
-  echo "</form>";
-  ob_end_flush();
-  return;
+    echo "<div class='card'>";
+    echo   "<div class='card-header'><h3>" . htmlspecialchars($cardTitle) . "</h3></div>";
+    echo   "<div class='card-body'>";
+    echo     "<form method='GET'>";
+    // preserve existing params
+    foreach ($_GET as $gk => $gv) {
+        echo "<input type='hidden' name='" . htmlspecialchars($gk)
+             . "' value='" . htmlspecialchars($gv) . "'>";
+    }
+    echo     "<p>Please enter:</p>";
+    foreach ($missing as $field) {
+        echo "<label for='{$field}'>" . htmlspecialchars($field) . ":</label><br>";
+        if ($field === 'customerId') {
+            // load customer list for dropdown
+            $custResp = call_api($config, 'POST', 'Customer/GetCustomers', [
+                'DealerCode' => $customerCode,
+                'PageNumber' => 1,
+                'PageRows'   => 2147483647,
+                'SortColumn' => 'Description',
+                'SortOrder'  => 'Asc',
+            ]);
+            $options = $custResp['Result'] ?? [];
+            echo "<input type='text' id='{$field}-search' class='searchable-input' "
+               . "placeholder='Search customers…'><br>";
+            echo "<select id='{$field}' name='{$field}' class='searchable-select'>"
+               . "<option value='' disabled selected>— choose —</option>";
+            foreach ($options as $c) {
+                $code = htmlspecialchars($c['Code'] ?? '');
+                $name = htmlspecialchars($c['Description'] ?? $c['Name'] ?? $code);
+                echo "<option value='{$code}'>{$name}</option>";
+            }
+            echo "</select><br><br>";
+        } else {
+            echo "<input type='text' id='{$field}' name='{$field}'><br><br>";
+        }
+    }
+    echo     "<button type='submit' class='btn'>Load “"
+             . htmlspecialchars($cardTitle)
+             . "”</button>";
+    echo   "</form>";
+    echo "</div></div>";
+    ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var input  = document.getElementById('customerId-search');
+      var select = document.getElementById('customerId');
+      if (input && select) {
+        input.addEventListener('input', function() {
+          var filter = this.value.toLowerCase();
+          Array.from(select.options).forEach(function(opt) {
+            if (!opt.value) return;
+            opt.style.display = opt.text.toLowerCase().includes(filter) ? '' : 'none';
+          });
+        });
+      }
+    });
+    </script>
+    <?php
+    ob_end_flush();
+    return;
 }
 
-// —————————————————————————————————————————————————————————
-// 9) Fetch data from API
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('╸ Calling API (method=".($method ?? 'POST').", path={$path})');</script>";
-flush();
+// 6) Fetch data
 try {
-  $data = call_api($config, $method ?? 'POST', $path, $payload);
-  echo "<script>appendDebug('✔ API call success, data received');</script>";
-  flush();
+    $method = $method ?? 'POST';
+    $resp   = call_api($config, $method, $path, $payload);
+
+    // handle API errors
+    if (!empty($resp['Errors']) && is_array($resp['Errors'])) {
+        $first = $resp['Errors'][0];
+        throw new \Exception($first['Description'] ?? 'API error');
+    }
+    $data = $resp['Result'] ?? [];
+
 } catch (\Throwable $e) {
-  echo "<script>appendDebug('✖ API call FAILED: " . $e->getMessage() . "');</script>";
-  echo "<p class='error'>Error fetching data: " . htmlspecialchars($e->getMessage()) . "</p>";
-  ob_end_flush();
-  return;
+    echo "<p class='error'>Error fetching data: "
+         . htmlspecialchars($e->getMessage())
+         . "</p>";
+    ob_end_flush();
+    return;
 }
 
-// —————————————————————————————————————————————————————————
-// 10) Render card HTML
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('╸ Rendering card HTML');</script>";
-flush();
+// 7) Render the card
 echo "<div class='card'>";
-echo "<h3>" . htmlspecialchars($cardTitle) . "</h3>";
-if (!empty($description)) {
-  echo "<p class='description'>" . htmlspecialchars($description) . "</p>";
-}
-echo "<table><thead><tr>";
-foreach ($columns as $colKey => $colTitle) {
-  echo "<th>" . htmlspecialchars($colTitle) . "</th>";
-}
-echo "</tr></thead><tbody>";
-foreach ($data as $row) {
-  echo "<tr>";
-  foreach ($columns as $colKey => $colTitle) {
-    $val = $row[$colKey] ?? '';
-    echo "<td>" . htmlspecialchars((string)$val) . "</td>";
-  }
-  echo "</tr>";
-}
-echo "</tbody></table>";
-if (!empty($data['_pagination'])) {
-  echo "<div class='pagination'>{$data['_pagination']}</div>";
-}
-echo "</div>";
-echo "<script>appendDebug('✔ Card rendered');</script>";
-flush();
+echo   "<div class='card-header'><h3>"
+     . htmlspecialchars($cardTitle)
+     . "</h3></div>";
 
-// —————————————————————————————————————————————————————————
-// 11) End of bootstrap
-// —————————————————————————————————————————————————————————
-echo "<script>appendDebug('► End of card_bootstrap.php');</script>";
-flush();
+// 8) Search box
+if (!empty($enableSearch)) {
+    echo "<div class='card-search'><input type='text' class='search-input' "
+         . "placeholder='Search…' onkeyup='filterCard(this)'></div>";
+}
+
+// 9) Table
+echo "<div class='card-table-container'>";
+echo   "<table class='card-table' data-page-size='"
+     . ($pageSize ?? 15)
+     . "'><thead><tr>";
+foreach ($columns as $key => $label) {
+    echo "<th>" . htmlspecialchars($label) . "</th>";
+}
+echo   "</tr></thead><tbody>";
+foreach ($data as $row) {
+    echo "<tr>";
+    foreach ($columns as $key => $_) {
+        echo "<td>" . htmlspecialchars($row[$key] ?? '') . "</td>";
+    }
+    echo "</tr>";
+}
+echo   "</tbody></table></div>";
+
+// 10) Pagination
+if (!empty($enablePagination)) {
+    echo "<div class='card-pagination'></div>";
+}
+
+echo "</div>";
+
+// Flush the buffer now that all setcookie calls are done
 ob_end_flush();
 ?>
+
+<script>
+// client-side search
+function filterCard(input) {
+    var filter = input.value.toLowerCase();
+    var rows   = input.closest('.card').querySelectorAll('tbody tr');
+    rows.forEach(function(r) {
+        r.style.display = r.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+}
+</script>

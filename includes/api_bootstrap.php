@@ -1,78 +1,81 @@
 <?php declare(strict_types=1);
 // /includes/api_bootstrap.php
 
-// 0) Ensure debug.log exists for PHP error_log()
-$logFile = __DIR__ . '/../logs/debug.log';
-if (!file_exists($logFile)) {
-    touch($logFile);
-    chmod($logFile, 0664);
-}
-
-// 1) Turn on error logging (but don’t display to users)
-ini_set('display_errors', '0');
-ini_set('log_errors',     '1');
-ini_set('error_log',      $logFile);
-error_reporting(E_ALL);
-
-// 2) Buffer output so headers can still be sent
+// 0) Buffer all output so we can send headers later
 ob_start();
 
-// 3) Load helpers and env
+// 1) Load shared API helpers (defines parse_env_file, call_api, etc.)
 require_once __DIR__ . '/api_functions.php';
+
+// 2) Parse .env into $config
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 4) Detect if this is an API call
+// 3) Optional: initialize Redis (fail-soft)
+try {
+    require_once __DIR__ . '/redis.php';
+    $cache = new RedisClient($config);
+} catch (\Throwable $e) {
+    $cache = null;
+}
+
+// 4) Detect true API endpoints
 $isApi = strpos($_SERVER['REQUEST_URI'], '/api/') === 0;
+
+// 5) Send JSON header if API
 if ($isApi) {
     header('Content-Type: application/json');
 }
 
-// 5) Read raw JSON input
-$inputRaw = file_get_contents('php://input');
-$input    = json_decode($inputRaw, true) ?: [];
+// 6) Read raw input
+$input = json_decode(file_get_contents('php://input'), true) ?: [];
 
-// 6) Validate required fields (if set)
+// 7) Enforce requiredFields if declared
 if (!empty($requiredFields) && is_array($requiredFields)) {
     foreach ($requiredFields as $f) {
         if (empty($input[$f])) {
-            http_response_code(400);
-            echo json_encode(['error'=>"Missing required field: {$f}"]);
+            if ($isApi) {
+                http_response_code(400);
+                echo json_encode(['error'=>"Missing required field: {$f}"]);
+            }
             ob_end_flush();
             exit;
         }
     }
 }
 
-// 7) Prepare cache (optional)
-$method   = $method   ?? 'POST';
-$useCache = $useCache ?? false;
-$cacheKey = ($useCache && isset($cache))
+// 8) Dispatch API call & cache
+$method   = isset($method) ? $method : 'POST';
+$useCache = isset($useCache) ? $useCache : false;
+$cacheKey = ($useCache && $cache)
     ? "{$path}:" . md5(serialize($input))
     : null;
 
-// 8) Return cached response if available
-if ($cacheKey && isset($cache) && ($cached = $cache->get($cacheKey))) {
-    echo $cached;
-    ob_end_flush();
-    exit;
+if ($cacheKey && $cache) {
+    $cached = $cache->get($cacheKey);
+    if ($cached) {
+        echo $cached;
+        ob_end_flush();
+        exit;
+    }
 }
 
-// 9) Call the remote API
 try {
     $resp = call_api($config, $method, $path, $input);
     $json = json_encode($resp, JSON_THROW_ON_ERROR);
 } catch (\Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['error'=>$e->getMessage()]);
+    if ($isApi) {
+        http_response_code(500);
+        echo json_encode(['error'=>$e->getMessage()]);
+    }
     ob_end_flush();
     exit;
 }
 
-// 10) Cache & output
-if ($cacheKey && isset($cache)) {
+// 9) Cache and output
+if ($cacheKey && $cache) {
     $cache->set($cacheKey, $json, $config['CACHE_TTL'] ?? 300);
 }
 echo $json;
 
-// 11) Flush everything
+// 10) Flush buffer
 ob_end_flush();
