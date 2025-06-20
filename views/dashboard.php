@@ -1,25 +1,53 @@
 <?php declare(strict_types=1);
-require_once __DIR__.'/../includes/header.php';           // top bar, icons
-require_once __DIR__.'/../includes/card_loader.php';      // NEW sandbox
 
-/* ─── Gather card list & user prefs ────────────────────── */
+/*
+ * Dashboard main view
+ * ───────────────────
+ * • Shows header, nav icons, customer pill
+ * • Renders each selected card through the sandbox loader
+ * • Footer always prints, even if a card explodes
+ */
 
-$cardsDir   = __DIR__ . '/../cards/';
-$allCards   = array_map('basename', glob($cardsDir . 'card_*.php'));   // every card file
+require_once __DIR__ . '/../includes/header.php';          // top bar
 
-// Helper that merges cookie/localStorage prefs with full list
-require_once __DIR__.'/../includes/preferences.php';     // contains getVisibleCards()
+/* –– NEW: load sandbox & preference helpers –––––––––––––– */
+require_once __DIR__ . '/../includes/card_loader.php';
+require_once __DIR__ . '/../includes/preferences.php';
+
+/* –– Discover cards on disk –––––––––––––––––––––––––––––– */
+$cardsDir = __DIR__ . '/../cards/';
+$allCards = array_map('basename', glob($cardsDir . 'card_*.php'));
+
+/* –– Merge with user prefs stored in cookie –––––––––––––– */
 $visibleCards = getVisibleCards($allCards);
 
-/* ─── Render main area ─────────────────────────────────── */
-
+/* –– Main viewport –––––––––––––––––––––––––––––––––––––– */
 echo '<main id="dashboard-view" class="dashboard-grid">';
 
-foreach ($visibleCards as $card) {
-    // Every card is now sandboxed ➜ any warning becomes a red box
-    echo render_card($cardsDir . $card);
+if ($visibleCards === []) {
+    echo '<p style="
+            color:var(--text-dark);
+            opacity:.7;
+            margin:2rem auto;
+            font-style:italic;
+            text-align:center;
+         ">
+            No cards selected.<br>
+            Click the purple gear to choose some.
+         </p>';
+} else {
+    foreach ($visibleCards as $card) {
+        /*  Every card runs inside the sandbox:
+         *  – warnings/notices → Throwable
+         *  – logger writes to /logs/debug.log
+         *  – red ⚠ placeholder returned here
+         *  The footer below ALWAYS prints.
+         */
+        echo render_card($cardsDir . $card);
+    }
 }
 
 echo '</main>';
 
-require_once __DIR__.'/../includes/footer.php';          // footer text
+/* –– Sticky footer ––––––––––––––––––––––––––––––––––––––– */
+require_once __DIR__ . '/../includes/footer.php';
