@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-// /config/cards.php
+// config/cards.php
 return [
     'device_counters'   => 'Device Counters',
     'alert_summary'     => 'Alert Summary',

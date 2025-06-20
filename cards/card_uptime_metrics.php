@@ -1,3 +1,3 @@
 <?php
-// /cards/card_uptime_metrics.php
-echo "<div class='panel'><h3>Uptime Metrics</h3><p>Placeholder uptime metrics data.</p></div>";
+// cards/card_uptime_metrics.php
+echo "<div class='panel tooltip' title='Uptime metrics over time'><h3>Uptime Metrics</h3><p>99.9% uptime.</p></div>";
