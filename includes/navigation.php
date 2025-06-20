@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
-// Skip on API requests
+// Skip execution inside API endpoints
 if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
     return;
 }
@@ -19,7 +19,6 @@ try {
     $customers = [];
 }
 
-// Render
 echo '<nav class="main-nav"><ul>';
 if (!$customers) {
     echo '<li><em>No customers found</em></li>';
