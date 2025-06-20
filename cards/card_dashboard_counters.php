@@ -2,37 +2,44 @@
 /**
  * /cards/card_dashboard_counters.php
  *
- * Dashboard-level summary counters.
- * Hits  MPS Monitor  endpoint  Dashboard/GetCounters
- * and renders a two-column table via  card_bootstrap.php.
+ * Dashboard-level “counters” summary.
+ * Calls  Dashboard/GetCounters  and renders the result through the
+ * glass-morphic helper   /includes/card_bootstrap.php.
  *
  * ─────────────────────────────────────────────────────────────
- * CHANGELOG  (2025-06-20  –  counter card patch #2)
- * • Added  $useCache            (true)  → lets bootstrap decide
- * • Added  $enableCacheRefresh  (false) → no auto-refresh yet
- * • No other logic changes
+ * CHANGELOG (2025-06-20 – counter card patch #3)
+ * • Inject CustomerCode into payload (pulled from cookie fallback .env)
+ * • Added CustomerCode to $requiredFields so bootstrap will call API
  * ─────────────────────────────────────────────────────────────
  */
 
-$path           = 'Dashboard/GetCounters';   // API route
-$requiredFields = [];                        // none for this endpoint
-$payload        = [];                        // bootstrap will inject CustomerCode
-$useCache       = true;                      // read/write JSON cache
-$enableCacheRefresh = false;                 // disable auto timer
+/* ─── Resolve customer context ────────────────────────────── */
+
+$customerCode = $_COOKIE['selectedCustomerCode']
+             ?? getenv('DEFAULT_CUSTOMER_CODE')       // .env line
+             ?? null;                                 // final fallback
+
+/* ─── API definition ─────────────────────────────────────── */
+
+$path           = 'Dashboard/GetCounters';
+$requiredFields = ['CustomerCode'];            // bootstrap validates this
+$payload        = ['CustomerCode' => $customerCode];
+
+$useCache            = true;
+$enableCacheRefresh  = false;
 
 /* ─── UI metadata ─────────────────────────────────────────── */
 
 $cardTitle = 'Dashboard Counters';
 
-/* Column map:  API field ➜ Pretty label */
 $columns = [
     'Name'  => 'Counter',
     'Count' => 'Value',
 ];
 
-$enableSearch     = false;   // usually only 5-10 rows
+$enableSearch     = false;
 $enablePagination = false;
-$pageSize         = 15;      // safety default
+$pageSize         = 15;
 
 /* ─── Kick it all off ─────────────────────────────────────── */
 
