@@ -1,91 +1,126 @@
 <?php declare(strict_types=1);
 // /includes/api_bootstrap.php
 
-// —————————————————————————————————————————————————————————
-// 0) Enable debug logging
-// —————————————————————————————————————————————————————————
-ini_set('display_errors', '0');                                // don’t show errors to users
-ini_set('log_errors',   '1');                                // enable error logging
-ini_set('error_log',    __DIR__ . '/../logs/debug.log');    // point at your debug file
-error_reporting(E_ALL);                                      // report everything
-
-// —————————————————————————————————————————————————————————
-// 1) Buffer all output so we can send headers later
-// —————————————————————————————————————————————————————————
-ob_start();
-
-// 2) Load shared API helpers (defines parse_env_file, call_api, etc.)
-require_once __DIR__ . '/api_functions.php';
-
-// 3) Parse .env into $config
-$config = parse_env_file(__DIR__ . '/../.env');
-
-// 4) Optional: initialize Redis (fail-soft)
-try {
-    require_once __DIR__ . '/redis.php';
-    $cache = new RedisClient($config);
-} catch (\Throwable $e) {
-    $cache = null;
+// 0) Ensure debug.log exists
+$logFile = __DIR__ . '/../logs/debug.log';
+if (!file_exists($logFile)) {
+    touch($logFile);
+    chmod($logFile, 0664);
 }
 
-// 5) Detect true API endpoints
-$isApi = strpos($_SERVER['REQUEST_URI'], '/api/') === 0;
+// 1) Enable error logging & live-debug injection
+ini_set('display_errors', '1');
+ini_set('log_errors',     '1');
+ini_set('error_log',      $logFile);
+error_reporting(E_ALL);
 
-// 6) Send JSON header if API
+// 2) Buffer output
+ob_start();
+
+// 3) Inject live-debug HTML+JS
+if (php_sapi_name() !== 'cli') {
+    echo <<<HTML
+<style>
+#debug-console {
+  background: rgba(0,0,0,0.8);
+  color: #0f0;
+  padding: 5px;
+  font-family: monospace;
+  font-size: 11px;
+  height: 150px;
+  overflow-y: auto;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
+  border-top: 1px solid #444;
+}
+</style>
+<div id="debug-console"></div>
+<script>
+function appendDebug(msg){
+  var c = document.getElementById('debug-console');
+  if(c){ c.innerHTML += msg + '<br>'; c.scrollTop = c.scrollHeight; }
+}
+appendDebug('▶ api_bootstrap loaded');
+</script>
+HTML;
+}
+
+// 4) Log start
+error_log("api_bootstrap ▶ start");
+
+// 5) Load core functions
+require_once __DIR__ . '/api_functions.php';
+error_log("api_bootstrap ▶ api_functions loaded");
+
+// 6) Load .env
+$config = parse_env_file(__DIR__ . '/../.env');
+error_log("api_bootstrap ▶ .env parsed");
+
+// 7) Detect API & set JSON header
+$isApi = strpos($_SERVER['REQUEST_URI'], '/api/') === 0;
 if ($isApi) {
     header('Content-Type: application/json');
 }
+error_log("api_bootstrap ▶ isApi = " . ($isApi ? 'true' : 'false'));
 
-// 7) Read raw input
-$input = json_decode(file_get_contents('php://input'), true) ?: [];
+// 8) Read raw input
+$inputRaw = file_get_contents('php://input');
+$input    = json_decode($inputRaw, true) ?: [];
+error_log("api_bootstrap ▶ input = " . $inputRaw);
 
-// 8) Enforce requiredFields if declared
+// 9) Validate requiredFields
 if (!empty($requiredFields) && is_array($requiredFields)) {
-    foreach ($requiredFields as $f) {
-        if (empty($input[$f])) {
-            if ($isApi) {
-                http_response_code(400);
-                echo json_encode(['error'=>"Missing required field: {$f}"]);
-            }
-            ob_end_flush();
-            exit;
-        }
+  foreach ($requiredFields as $f) {
+    if (empty($input[$f])) {
+      http_response_code(400);
+      echo json_encode(['error'=>"Missing required field: {$f}"]);
+      error_log("api_bootstrap ▶ missing field: {$f}");
+      ob_end_flush();
+      exit;
     }
+  }
 }
 
-// 9) Dispatch API call & cache
-$method   = isset($method) ? $method : 'POST';
-$useCache = isset($useCache) ? $useCache : false;
-$cacheKey = ($useCache && $cache)
+// 10) Prepare caching
+$method   = $method   ?? 'POST';
+$useCache = $useCache ?? false;
+$cacheKey = ($useCache && isset($cache))
     ? "{$path}:" . md5(serialize($input))
     : null;
 
-if ($cacheKey && $cache) {
-    $cached = $cache->get($cacheKey);
-    if ($cached) {
+// 11) Return cached if found
+if ($cacheKey && isset($cache)) {
+    if ($cached = $cache->get($cacheKey)) {
         echo $cached;
+        error_log("api_bootstrap ▶ returned cached");
         ob_end_flush();
         exit;
     }
 }
 
+// 12) Call remote API
 try {
+    error_log("api_bootstrap ▶ calling API: {$path}");
     $resp = call_api($config, $method, $path, $input);
     $json = json_encode($resp, JSON_THROW_ON_ERROR);
+    error_log("api_bootstrap ▶ API success");
 } catch (\Throwable $e) {
-    if ($isApi) {
-        http_response_code(500);
-        echo json_encode(['error'=>$e->getMessage()]);
-    }
+    http_response_code(500);
+    $err = $e->getMessage();
+    echo json_encode(['error'=>$err]);
+    error_log("api_bootstrap ▶ API ERROR: {$err}");
     ob_end_flush();
     exit;
 }
 
-// 10) Cache and output
-if ($cacheKey && $cache) {
+// 13) Cache & output
+if ($cacheKey && isset($cache)) {
     $cache->set($cacheKey, $json, $config['CACHE_TTL'] ?? 300);
+    error_log("api_bootstrap ▶ cached response");
 }
 echo $json;
-
-// 11) Flush buffer
+error_log("api_bootstrap ▶ output and flush");
 ob_end_flush();
