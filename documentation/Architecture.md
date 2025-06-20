@@ -1,37 +1,88 @@
-# Architecture
+# Architecture.md
 
 ## Overview
-MPS Monitor Dashboard is a modular PHP SPA with glassmorphic/neumorphic UI. It uses a lightweight templating approach:
+This project is a modular, glassmorphic Single Page Application (SPA) built in PHP. It follows a lightweight templating system:
 
-- **Front Controller** (`index.php`) routes to views or API stubs.
-- **API Stubs** (`/api/*.php`) define `$method`, `$path`, optional `$useCache`, then include `api_bootstrap.php`.
-- **Cards** (`/cards/card_*.php`) include `card_bootstrap.php` to fetch data and render HTML.
-- **Views** combine header, navigation, preferences modal, and card includes.
+- **API Endpoints** (`/api/*.php`) set:
+  ```php
+  <?php
+  $method   = 'POST';
+  $path     = 'Device/Get';
+  $useCache = true;
+  require __DIR__ . '/../includes/api_bootstrap.php';
+  ```
+  All request logic (env parsing, OAuth, cURL, caching, JSON header) lives in `includes/api_bootstrap.php`.
+
+- **Cards** (`/cards/card_*.php`) begin with:
+  ```php
+  <?php
+  require __DIR__ . '/../includes/card_bootstrap.php';
+  ```
+  Card bootstrap handles payload assembly (cookies/GET), `call_api()`, and provides `$data` for rendering.
+
+- **Views** (`/views/*.php`) are pure layout files that:
+  1. Include helpers (`api_functions.php`).
+  2. Determine customer context.
+  3. Scan `/cards/` for files named `card_*.php`.
+  4. Loop to include each card module inside a responsive grid.
 
 ## Folder Structure
 ```
-/api/                   # API endpoint stubs
-/cards/                 # UI card modules
-/components/            # Shared UI (preferences-modal.php, debug-log.php)
-/includes/              # Helpers & bootstraps (api_bootstrap.php, card_bootstrap.php, api_functions.php, searchable_dropdown.php, table_helper.php)
-/views/                 # Page templates (dashboard.php)
-/public/css/            # Stylesheet (styles.css)
-/logs/                  # Debug log (debug.log)
-/documentation/         # Markdown docs (Architecture.md, CONTRIBUTING.md, MPSM_Bible.md, Handoff_Summary.md)
-.env                    # Environment config
+/api/                   # Stub endpoints using api_bootstrap.php
+/public/css/            # Global CSS (styles.css)
+/cards/                 # Card modules (card_*.php) with card_bootstrap.php
+/components/            # Shared UI (preferences-modal, drilldown-modal, debug-log)
+/includes/              # Bootstraps & helpers (api_bootstrap.php, card_bootstrap.php, api_functions.php)
+/views/                 # Page views (dashboard.php)
+/engine/                # Cache engine (cache_engine.php)
+/cron/                  # Scheduled tasks (cache.daily.php)
+/logs/                  # Debug logs (cache_debug.log)
+/documentation/         # This docset: Architecture.md, CONTRIBUTING.md, MPSM_Bible.md
+/.env                   # Environment variables (CLIENT_ID, DEALER_CODE, etc.)
 ```
 
-## New Helpers
-- **Searchable Dropdown**: `/includes/searchable_dropdown.php`
-- **Data Table Helper**: `/includes/table_helper.php`
+## Rendering Flow
+1. **index.php**
+   - Loads `includes/header.php` (HTML head, theme toggle, nav).
+   - Calls `render_view('dashboard')`.
 
-## Key Components
-- **Preferences Modal**: `/components/preferences-modal.php`
-- **Debug Log**: `/components/debug-log.php`
-- **Theme Toggle**: in `/includes/header.php` using Feather Icons and localStorage
+2. **dashboard.php**
+   - Parses `.env` via `api_functions.php`.
+   - Determines active customer (`$_GET['customer']` or cookie).
+   - Fetches list of all customers to resolve display name.
+   - Scans `/cards/` for `card_*.php` files.
+   - Applies visibility preferences (cookie `visible_cards`).
+   - Includes each selected card inside a Tailwind grid.
 
-## Style & Theming
-- Tailwind CSS for utility-first styling.
-- Dark mode default, toggleable.
-- Neumorphic panels, glass blur effects.
+3. **Card Modules**
+   - Bootstrapped by `includes/card_bootstrap.php`.
+   - Pull payload fields (e.g. `CustomerCode`) from GET/cookie.
+   - Calls `call_api($config, $method, $path, $payload)`.
+   - Renders HTML table or widget with glassmorphic classes.
 
+4. **API Bootstrapping**
+   - `includes/api_bootstrap.php` handles:
+     - Manual `.env` loading.
+     - OAuth token request.
+     - Request/response caching via Redis (`engine/cache_engine.php`).
+     - cURL call to `$baseUrl . $path`.
+     - Emits JSON with `header('Content-Type: application/json')`.
+
+5. **Utilities**
+   - **Cron Job** (`cron/cache.daily.php`): warms cache nightly.
+   - **Components**:
+     - Preferences modal (`components/preferences-modal.php`).
+     - Drilldown modal (`components/drilldown-modal.php`).
+     - Debug-log popup (`components/debug-log.php`).
+
+## Styling & Theming
+- Glassmorphic/neumorphic design via Tailwind CSS (CDN) + custom props.
+- Dark mode by default (`<html class="dark">`).
+- All global styles in `/public/css/styles.css`.
+
+## Guardrails
+- **One patch per reply**, functionally cohesive.
+- **Always provide full inline code**; no snippets only.
+- **Relative paths only**: use `__DIR__`.
+- **No external libraries**: manual `.env` parsing in bootstraps.
+- **Consistency**: CSS under `/public/css`, remove any `/assets/` references.
