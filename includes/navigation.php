@@ -28,5 +28,6 @@ foreach ($customers as $cust) {
 }
 echo '</ul></nav>';
 
-// let the live-debug console know we made it here
-echo "<script>appendDebug('▶ Navigation rendered ({count($customers)} customers)');</script>";
+// send actual count to the live-debug console
+$navCount = count($customers);
+echo "<script>appendDebug('▶ Navigation rendered ({$navCount} customers)');</script>";
