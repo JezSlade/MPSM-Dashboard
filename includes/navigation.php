@@ -1,12 +1,13 @@
 <?php declare(strict_types=1);
 // /includes/navigation.php
 
+// Skip inside API responses
 if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
-    return;                         // skip inside API endpoints
+    return;
 }
 
 require_once __DIR__ . '/api_functions.php';
-require_once __DIR__ . '/debug.php';   // PHP-side logging only
+require_once __DIR__ . '/debug.php';
 
 $config = parse_env_file(__DIR__ . '/../.env');
 
@@ -29,3 +30,5 @@ if (!$customers) {
     }
 }
 echo '</ul></nav>';
+
+appendDebug('Navigation rendered (' . count($customers) . ' customers)');
