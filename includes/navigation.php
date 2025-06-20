@@ -19,6 +19,7 @@ try {
     $customers = [];
 }
 
+// render nav
 echo '<nav class="main-nav"><ul>';
 foreach ($customers as $cust) {
     $code = htmlspecialchars($cust['CustomerCode'], ENT_QUOTES);
@@ -26,3 +27,6 @@ foreach ($customers as $cust) {
     echo "<li><a href=\"?customer={$code}\">{$name}</a></li>";
 }
 echo '</ul></nav>';
+
+// let the live-debug console know we made it here
+echo "<script>appendDebug('▶ Navigation rendered ({count($customers)} customers)');</script>";
