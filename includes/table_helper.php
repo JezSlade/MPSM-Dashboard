@@ -18,23 +18,22 @@ function renderDataTable(array $data, array $options = []): void {
         return;
     }
 
-    // Determine columns
-    $first = (array)$data[0];
-    $columns = $options['columns']
-        ?? array_combine(array_keys($first), array_keys($first));
-    $colKeys     = array_keys($columns);
-    $defaultSort = $options['defaultSort'] ?? $colKeys[0];
-    $rowsPerPage = (int)($options['rowsPerPage'] ?? 10);
-    $searchable  = $options['searchable']  ?? true;
+    // Columns setup
+    $first      = (array)$data[0];
+    $columns    = $options['columns'] ?? array_combine(array_keys($first), array_keys($first));
+    $colKeys    = array_keys($columns);
+    $defaultSort= $options['defaultSort'] ?? $colKeys[0];
+    $rowsPerPage= (int)($options['rowsPerPage'] ?? 10);
+    $searchable = $options['searchable']  ?? true;
 
-    // Unique IDs
+    // Unique IDs for this table instance
     $uid        = uniqid('dt_');
     $wrapperId  = $uid . '_wrapper';
     $searchId   = $uid . '_search';
     $colsId     = $uid . '_cols';
     $pagerId    = $uid . '_pager';
 
-    // Prepare JSON-safe data
+    // Prepare JSON data for JS
     $jsData = array_map(function($row) {
         return array_map(function($cell) {
             return is_array($cell) ? json_encode($cell) : $cell;
@@ -43,6 +42,7 @@ function renderDataTable(array $data, array $options = []): void {
     $json = json_encode($jsData, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT);
     ?>
 
+<!-- Data Table Container -->
 <div id="<?= $wrapperId ?>" class="data-table-container mb-4">
   <?php if ($searchable): ?>
     <input
@@ -53,8 +53,8 @@ function renderDataTable(array $data, array $options = []): void {
     />
   <?php endif; ?>
 
+  <!-- Column Visibility Toggles -->
   <div id="<?= $colsId ?>" class="mb-2 text-sm">
-    <!-- Column visibility -->
     <?php foreach ($columns as $key => $label): ?>
       <label class="inline-flex items-center mr-4">
         <input
@@ -68,6 +68,7 @@ function renderDataTable(array $data, array $options = []): void {
     <?php endforeach; ?>
   </div>
 
+  <!-- Table -->
   <table class="data-table w-full">
     <thead>
       <tr>
@@ -85,12 +86,14 @@ function renderDataTable(array $data, array $options = []): void {
     <tbody></tbody>
   </table>
 
+  <!-- Pagination -->
   <div id="<?= $pagerId ?>" class="table-pagination mt-2 flex flex-wrap gap-1 text-sm"></div>
 </div>
 
+<!-- Table Helper JavaScript -->
 <script>
 (function(){
-  // Configuration
+  // Data & configuration
   const data      = <?= $json ?>;
   const columns   = <?= json_encode($colKeys) ?>;
   let filtered    = [...data];
@@ -107,7 +110,7 @@ function renderDataTable(array $data, array $options = []): void {
   const searchBox = document.getElementById('<?= $searchId ?>');
   const toggles   = wrapper.querySelectorAll('input[data-dt-col]');
 
-  // Render table and pager
+  // Render the table rows & pagination
   function renderTable() {
     // Sort
     filtered.sort((a,b) => {
@@ -127,6 +130,7 @@ function renderDataTable(array $data, array $options = []): void {
     renderPager();
   }
 
+  // Build pagination buttons
   function renderPager() {
     const total = Math.ceil(filtered.length / rpp) || 1;
     let html = '';
@@ -145,7 +149,15 @@ function renderDataTable(array $data, array $options = []): void {
     );
   }
 
-  // Sort event
+  // Sort event on headers
+  function updateSortIndicators() {
+    ths.forEach(th => {
+      const indi = th.querySelector('.dt-sort-indicator');
+      indi.textContent = (th.dataset.dtKey === sortKey)
+        ? (sortDir === 1 ? ' ▲' : ' ▼')
+        : '';
+    });
+  }
   ths.forEach(th =>
     th.addEventListener('click', () => {
       const key = th.dataset.dtKey;
@@ -156,16 +168,7 @@ function renderDataTable(array $data, array $options = []): void {
     })
   );
 
-  function updateSortIndicators() {
-    ths.forEach(th => {
-      const indi = th.querySelector('.dt-sort-indicator');
-      indi.textContent = (th.dataset.dtKey === sortKey)
-        ? (sortDir === 1 ? ' ▲' : ' ▼')
-        : '';
-    });
-  }
-
-  // Search event
+  // Search filter
   if (searchBox) {
     searchBox.addEventListener('input', () => {
       const q = searchBox.value.toLowerCase();
@@ -177,7 +180,7 @@ function renderDataTable(array $data, array $options = []): void {
     });
   }
 
-  // Column toggles
+  // Column show/hide toggles
   toggles.forEach(cb =>
     cb.addEventListener('change', () => {
       const idx = columns.indexOf(cb.dataset.dtCol) + 1;
@@ -193,3 +196,6 @@ function renderDataTable(array $data, array $options = []): void {
   renderTable();
 })();
 </script>
+
+<?php
+} // end function renderDataTable
