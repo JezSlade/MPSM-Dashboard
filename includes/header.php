@@ -1,7 +1,14 @@
 <?php declare(strict_types=1);
 // /includes/header.php
 
-// 0) Debug-console CSS + container + JS logger (loads first)
+// 0) Ensure debug.log exists (so PHP error_log() calls always work)
+$logFile = __DIR__ . '/../logs/debug.log';
+if (!file_exists($logFile)) {
+    touch($logFile);
+    chmod($logFile, 0664);
+}
+
+// 1) Emit the live-debug panel and JS helper immediately
 echo <<<'HTML'
 <style>
   #debug-console {
@@ -24,7 +31,7 @@ echo <<<'HTML'
 <script>
   window.appendDebug = function(msg) {
     var c = document.getElementById('debug-console');
-    if(!c) return;
+    if (!c) return;
     var e = document.createElement('div');
     e.textContent = msg;
     c.appendChild(e);
@@ -34,15 +41,18 @@ echo <<<'HTML'
 </script>
 HTML;
 
-// 1) Your existing doctype/head
+// 2) Now output the normal document head
+require_once __DIR__ . '/config.php';  // if you have global config parsing here
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title><?= htmlspecialchars($config['APP_NAME'] ?? 'MPSM') ?></title>
+  <title><?= htmlspecialchars($config['APP_NAME'] ?? 'MPSM Monitor Dashboard', ENT_QUOTES) ?></title>
   <link rel="stylesheet" href="/public/css/styles.css">
-  <!-- etc. -->
+  <!-- any other <meta> / <link> tags -->
 </head>
-<body data-theme="<?= ($_COOKIE['theme'] ?? 'light') ?>">
-<?php appendDebug('▶ Header.php loaded'); ?>
+<body data-theme="<?= htmlspecialchars($_COOKIE['theme'] ?? 'light', ENT_QUOTES) ?>">
+
+<!-- Immediately log in the JS console that the header is done -->
+<script>appendDebug('▶ Header loaded');</script>
