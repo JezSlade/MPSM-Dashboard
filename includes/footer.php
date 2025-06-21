@@ -1,11 +1,16 @@
-<?php declare(strict_types=1); ?>
-<?php // components/preferences-modal loaded in views if needed ?>
+<?php declare(strict_types=1);
+// includes/footer.php
+?>
+<footer class="p-4 text-center text-sm neon-glass-footer">
+  &copy; <?= date('Y') ?> MPS Monitor Dashboard
+</footer>
+
 <script>
-// Close preferences modal on Escape
+// Close modals on Escape
 document.addEventListener('keydown', e => {
-  if(e.key==='Escape'){
-    const m = document.getElementById('preferences-modal');
-    if(m && !m.classList.contains('hidden')) m.classList.add('hidden');
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-backdrop:not(.hidden)')
+      .forEach(m => m.classList.add('hidden'));
   }
 });
 </script>

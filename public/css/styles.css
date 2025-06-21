@@ -1,23 +1,50 @@
 /* public/css/styles.css */
-:root {
-  --cyan: #00ffff;
-  --magenta: #ff00ff;
-  --yellow: #ffff00;
+
+body {
+  background: linear-gradient(135deg, #020024, #090979, #00d4ff);
 }
-html.dark { --bg: #111; --fg: #eee; }
-html { --bg: #fafafa; --fg: #111; }
-body { margin:0; background:var(--bg); color:var(--fg); font-family:sans-serif; }
-.glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow:
-    0 0 10px var(--cyan), 0 0 20px var(--magenta), 0 0 30px var(--yellow); }
-.dark .glass { background: rgba(0,0,0,0.3); }
-.panel { padding:1rem; border-radius:0.5rem; background:rgba(255,255,255,0.05); margin-bottom:1rem; position:relative; }
-.dark .panel { background:rgba(0,0,0,0.5); }
-.tooltip { position:relative; cursor:help; }
+
+/* Glass containers */
+.neon-glass-header,
+.neon-glass-nav,
+.neon-glass-viewport,
+.neon-glass-footer {
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0.75rem;
+}
+
+/* Neon buttons */
+.neon-btn {
+  @apply p-2 rounded-lg transition-transform duration-200;
+}
+.neon-btn:hover { transform: scale(1.1); }
+.neon-cyan    { box-shadow: 0 0 8px #00FFFF, 0 0 16px #00FFFF; }
+.neon-magenta { box-shadow: 0 0 8px #FF00FF, 0 0 16px #FF00FF; }
+.neon-yellow  { box-shadow: 0 0 8px #FFFF00, 0 0 16px #FFFF00; }
+
+/* Card panels */
+.panel {
+  @apply relative p-4 rounded-xl bg-black bg-opacity-30;
+  box-shadow:
+    inset  2px  2px  6px rgba(0,0,0,0.5),
+    inset -2px -2px  6px rgba(255,255,255,0.1);
+}
+
+/* Tooltip */
 .tooltip[title]:hover::after {
   content: attr(title);
-  position:absolute; top:-1.5rem; left:50%; transform:translateX(-50%);
-  background:var(--fg); color:var(--bg); padding:0.25rem 0.5rem; border-radius:0.25rem;
-  white-space:nowrap; z-index:10;
+  @apply absolute text-sm px-2 py-1 rounded bg-black bg-opacity-80 text-white;
+  top: -2rem; left: 50%; transform: translateX(-50%);
+  white-space: nowrap; z-index: 50;
 }
-.modal-backdrop { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; }
-.modal-content { background:var(--bg); padding:1rem; border-radius:0.5rem; max-height:90vh; overflow:auto; }
+
+/* Dark theme */
+html[data-theme="dark"] .neon-glass-header,
+html[data-theme="dark"] .neon-glass-nav,
+html[data-theme="dark"] .neon-glass-viewport,
+html[data-theme="dark"] .neon-glass-footer {
+  background: rgba(0,0,0,0.6);
+  border-color: rgba(255,255,255,0.2);
+}

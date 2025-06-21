@@ -1,2 +1,5 @@
 # MPSM Bible
-... (updated docs from session)
+
+- **Modular**: APIs vs UI strictly separated.
+- **Full Inline Code** for all changes.
+- **Glassmorphic/Neumorphic** UI optional.
