@@ -26,13 +26,9 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');   // ← fixed path// ----
 
 
 
-// ------------------------------------------------------------------
 // 1. List of active cards for the current sandbox session.
-//    Comment/uncomment as needed:
 $activeCards = [
-    'card_devices.php',
-    'card_dashboard_device_counters.php'
-    // 'card_device_alerts.php',
+    'card_devices_snapshot.php',   // ← new snapshot card
 ];
 
 // ------------------------------------------------------------------
