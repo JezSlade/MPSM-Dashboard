@@ -71,7 +71,7 @@ foreach ($devices as $d) {
 <div class="card customer-devices">
   <header>
     <h2 style="margin:0;font-size:1.25rem;font-weight:700">
-      render_table <span class="badge"><?= $total; ?></span>
+      Device Snapshot <span class="badge"><?= $total; ?></span>
     </h2>
   </header>
 
