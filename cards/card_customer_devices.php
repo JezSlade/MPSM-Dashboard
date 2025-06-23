@@ -1,56 +1,78 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../includes/debug.php';
 
-/* 0) SESSION & CUSTOMER */
-if (session_status() === PHP_SESSION_NONE) session_start();
-$customer = $_SESSION['selectedCustomer'] ?? '';
-if ($customer === '') {
+// ─── Debug helper ────────────────────────────────────────────
+require_once __DIR__ . '/../includes/debug.php';
+require_once __DIR__ . '/../includes/api_functions.php';
+
+// ─── 1) SESSION + CUSTOMER ───────────────────────────────────
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$code = $_SESSION['selectedCustomer'] ?? '';
+if ($code === '') {
     echo '<p class="error">No customer selected.</p>';
     return;
 }
 
-/* 1) FETCH via GET /api/customer_dashboard.php?code=… */
-$apiUrl = (isset($_SERVER['HTTPS'])?'https://':'http://')
-        . $_SERVER['HTTP_HOST']
-        . '/api/customer_dashboard.php?code='
-        . urlencode($customer);
+// ─── 2) BUILD REQUEST BODY ──────────────────────────────────
+$page    = isset($_GET['page'])    ? (int)$_GET['page']    : 1;
+$perPage = isset($_GET['perPage']) ? (int)$_GET['perPage'] : 15;
 
-error_log("[devices] Fetching $apiUrl");
-$ch    = curl_init($apiUrl);
+$body = [
+    'request' => [
+        'Code'            => $code,
+        'PageNumber'      => $page,
+        'PageRows'        => $perPage,
+        'SortColumn'      => 'ExternalIdentifier',
+        'SortOrder'       => 'Asc',
+    ]
+];
+error_log('[cust_devices] Request: ' . json_encode($body));
+
+// ─── 3) CALL PROXY FOR /CustomerDashboard/Devices ───────────
+$apiUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://')
+        . $_SERVER['HTTP_HOST']
+        . '/api/customer_dashboard_devices.php';
+
+$ch = curl_init($apiUrl);
 curl_setopt_array($ch, [
+    CURLOPT_POST           => true,
+    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+    CURLOPT_POSTFIELDS     => json_encode($body),
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 10,
 ]);
-$raw   = curl_exec($ch);
+$raw = curl_exec($ch);
 curl_close($ch);
-error_log('[devices] Response: '.($raw??'NULL'));
+error_log('[cust_devices] Raw response: ' . ($raw ?? 'NULL'));
 
-$data    = $raw ? json_decode($raw, true) : [];
-$valid   = !empty($data['IsValid']);
-$devices = $valid && isset($data['Result']['Devices'])
-         ? $data['Result']['Devices'] : [];
-$total   = is_array($devices) ? count($devices) : 0;
+// ─── 4) DECODE & EXTRACT ────────────────────────────────────
+$data    = $raw ? json_decode($raw, true) : null;
+$valid   = isset($data['IsValid']) && $data['IsValid'] === true;
+$total   = $valid ? (int)($data['Result']['TotalCount'] ?? 0) : 0;
+$devices = $valid ? ($data['Result']['Devices'] ?? []) : [];
 
-/* 2) NORMALISE ROWS */
+// ─── 5) NORMALIZE ROWS ──────────────────────────────────────
 $rows = [];
 foreach ($devices as $d) {
-    $asset = trim((string)($d['AssetNumber'] ?? ''));
+    $asset = trim((string)($d['AssetNumber']        ?? ''));
     $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
     $id    = $asset !== '' ? $asset : $ext;
+
     $rows[] = [
         'Identifier' => $id,
         'Department' => $d['Department'] ?? $d['OfficeId'] ?? '',
-        'Note'       => $d['Notes']      ?? $d['Note'] ?? '',
+        'Note'       => $d['Note']       ?? $d['Notes']    ?? '',
     ];
 }
 
-/* 3) RENDER CARD */
+// ─── 6) RENDER CARD ─────────────────────────────────────────
 ?>
 <div class="card customer-devices">
   <header>
     <h2 style="margin:0;font-size:1.25rem;font-weight:700">
-      Devices Online <span class="badge"><?= $total; ?></span>
+      Customer Devices <span class="badge"><?= $total ?></span>
     </h2>
   </header>
 
@@ -67,39 +89,63 @@ foreach ($devices as $d) {
         <tr><td colspan="3">No data</td></tr>
       <?php else: foreach ($rows as $r): ?>
         <tr>
-          <td><?= htmlspecialchars($r['Identifier']); ?></td>
-          <td><?= htmlspecialchars($r['Department']); ?></td>
-          <td><?= htmlspecialchars($r['Note']); ?></td>
+          <td><?= htmlspecialchars($r['Identifier']) ?></td>
+          <td><?= htmlspecialchars($r['Department']) ?></td>
+          <td><?= htmlspecialchars($r['Note']) ?></td>
         </tr>
       <?php endforeach; endif; ?>
     </tbody>
   </table>
+
+  <?php if ($total > $perPage): 
+      $last = (int)ceil($total / $perPage);
+  ?>
+  <nav class="pagination">
+    <?php for ($i = 1; $i <= $last; $i++): ?>
+      <a href="?customer=<?= urlencode($code) ?>&page=<?= $i ?>&perPage=<?= $perPage ?>"
+         class="<?= $i === $page ? 'active' : '' ?>">
+        <?= $i ?>
+      </a>
+    <?php endfor; ?>
+  </nav>
+  <?php endif; ?>
 </div>
 
 <style>
 .card.customer-devices {
-    padding:1.2rem;border-radius:12px;
+    padding:1.2rem; border-radius:12px;
     backdrop-filter:blur(10px);
     background:var(--bg-card,rgba(255,255,255,.08));
     color:var(--text-dark,#f5f5f5);
     margin-bottom:1rem;
 }
 .badge {
-    display:inline-block;min-width:44px;text-align:center;
-    padding:.2rem .5rem;border-radius:9999px;
-    background:var(--bg-light,#2d8cff);color:#fff;font-weight:600;
-    font-size:0.85rem;
+    display:inline-block; min-width:44px; text-align:center;
+    padding:.2rem .5rem; border-radius:9999px;
+    background:var(--bg-light,#2d8cff); color:#fff;
+    font-weight:600; font-size:0.85rem;
 }
 .snap {
-    font-size:0.85rem;width:100%;border-collapse:collapse;margin-top:.75rem;
+    font-size:0.85rem; width:100%; border-collapse:collapse; margin-top:.75rem;
 }
-.snap th, .snap td {
-    padding:.4rem .6rem;text-align:left;
+.snap th, .snap td { padding:.4rem .6rem; text-align:left; }
+.snap thead tr { background:rgba(255,255,255,.1); font-weight:600; }
+.snap tbody tr:nth-child(even) { background:rgba(255,255,255,.05); }
+
+.pagination {
+    margin-top:1rem; text-align:center;
 }
-.snap thead tr {
-    background:rgba(255,255,255,.1);font-weight:600;
+.pagination a {
+    display:inline-block;
+    margin:0 .25rem;
+    padding:.25rem .5rem;
+    border-radius:4px;
+    background:rgba(255,255,255,.1);
+    text-decoration:none;
+    color:inherit;
 }
-.snap tbody tr:nth-child(even) {
-    background:rgba(255,255,255,.05);
+.pagination a.active {
+    background:rgba(255,255,255,.2);
+    font-weight:600;
 }
 </style>
