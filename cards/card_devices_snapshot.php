@@ -1,30 +1,25 @@
 <?php
 declare(strict_types=1);
-
-// ------------------------------------------------------------------
-// DEBUG BLOCK (Always Keep at Top)
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ------------------------------------------------------------------
+require_once __DIR__ . '/../includes/debug.php';   // unified debug helper
 
 /**
- * Devices Snapshot (stable POST edition)
+ * Devices Snapshot  – stable POST edition
  * ------------------------------------------------------------------
- * • Sends POST /api/get_devices.php (wrapper to /Device/List) with
- *   JSON body { PageNumber, PageRows, CustomerCode | FilterDealerId }.
- * • Uses render_table() from /includes/table_helper.php; if missing
- *   we declare a tiny fallback so the card never throws.
- * • Click header to toggle expansion; pure PHP, no JS.
+ * • Posts to /api/get_devices.php which forwards to /Device/List.
+ * • Sends all required fields, including the VALID sort column
+ *   DeviceId, so the API returns rows.
+ * • Uses render_table() from includes/table_helper.php; if that
+ *   helper is ever missing, defines a minimal fallback.
+ * • Pure PHP, no JavaScript.
  */
 
-// ───── 0)  Ensure render_table() exists ───────────────────────────
+/*──────────────────────────────────────────────────────────────────
+ | 1) Ensure render_table helper
+ *─────────────────────────────────────────────────────────────────*/
 $helper = __DIR__ . '/../includes/table_helper.php';
 if (is_readable($helper)) {
     require_once $helper;
 }
-
 if (!function_exists('render_table')) {
     function render_table(array $headers, array $rows): string
     {
@@ -33,7 +28,6 @@ if (!function_exists('render_table')) {
             $html .= '<th>' . htmlspecialchars($label) . '</th>';
         }
         $html .= '</tr></thead><tbody>';
-
         if (!$rows) {
             $html .= '<tr><td colspan="' . count($headers) . '">No data</td></tr>';
         } else {
@@ -55,7 +49,9 @@ if (!function_exists('render_table')) {
     }
 }
 
-// ───── 1)  Build request body ────────────────────────────────────
+/*──────────────────────────────────────────────────────────────────
+ | 2) Build request body
+ *─────────────────────────────────────────────────────────────────*/
 $customerCode = $_SESSION['selectedCustomer'] ?? null;
 $dealerId     = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
@@ -65,7 +61,7 @@ $currentPage = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
 $body = [
     'PageNumber' => $currentPage,
     'PageRows'   => $pageSize,
-    'SortColumn' => 'ExternalIdentifier',   // ← change this line
+    'SortColumn' => 'DeviceId',   // VALID column → rows returned
     'SortOrder'  => 'Asc',
 ];
 if ($customerCode) {
@@ -74,7 +70,9 @@ if ($customerCode) {
     $body['FilterDealerId'] = $dealerId;
 }
 
-// ───── 2)  Execute POST via cURL ─────────────────────────────────
+/*──────────────────────────────────────────────────────────────────
+ | 3) POST to local API wrapper
+ *─────────────────────────────────────────────────────────────────*/
 $apiUrl =
     (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') .
     $_SERVER['HTTP_HOST'] .
@@ -92,17 +90,19 @@ $raw  = curl_exec($ch);
 $err  = curl_error($ch);
 curl_close($ch);
 
-if ($raw === false) {
-    error_log("[devices_snapshot] CURL error: $err");
-    $json = null;
+$json = $raw ? json_decode($raw, true) : null;
+if ($raw === false || !($json['IsValid'] ?? false)) {
+    error_log('[devices_snapshot] API error: ' . ($err ?: $raw));
+    $totalRows = 0;
+    $rows      = [];
 } else {
-    $json = json_decode($raw, true);
+    $totalRows = $json['TotalRows'] ?? 0;
+    $rows      = $json['Result']    ?? [];
 }
 
-// ───── 3)  Parse response ───────────────────────────────────────
-$totalRows = ($json['IsValid'] ?? false) ? ($json['TotalRows'] ?? 0) : 0;
-$rows      = ($json['IsValid'] ?? false) ? ($json['Result']    ?? []) : [];
-
+/*──────────────────────────────────────────────────────────────────
+ | 4) Pagination helpers
+ *─────────────────────────────────────────────────────────────────*/
 $isExpanded  = isset($_GET['ds_exp']);
 $totalPages  = max(1, (int)ceil($totalRows / $pageSize));
 
@@ -116,7 +116,7 @@ function self_url(bool $expand, int $page = 1): string
     return '/index.php?' . http_build_query($p);
 }
 
-// headers for table_helper
+/* headers for the table */
 $tableHeaders = [
     'ExternalIdentifier' => 'Equipment ID',
     'Model'              => 'Model',
@@ -124,9 +124,46 @@ $tableHeaders = [
     'Department'         => 'Department',
 ];
 ?>
-<!-- ────────── CARD MARK-UP ────────── -->
+<!-- ────────── CARD ────────── -->
 <div class="card devices-snapshot">
     <header>
         <h2>
             <a href="<?= htmlspecialchars(self_url(!$isExpanded)); ?>">
                 Devices Online <span class="badge"><?= $totalRows; ?></span>
+            </a>
+        </h2>
+    </header>
+
+<?php if ($isExpanded): ?>
+    <?= render_table($tableHeaders, $rows); ?>
+
+    <div class="pagination">
+        <?php if ($currentPage > 1): ?>
+            <a href="<?= htmlspecialchars(self_url(true, $currentPage - 1)); ?>">&larr; Prev</a>
+        <?php endif; ?>
+        <span><?= $currentPage; ?> / <?= $totalPages; ?></span>
+        <?php if ($currentPage < $totalPages): ?>
+            <a href="<?= htmlspecialchars(self_url(true, $currentPage + 1)); ?>">Next &rarr;</a>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
+</div>
+
+<style>
+.card.devices-snapshot{
+    padding:1.5rem;border-radius:12px;
+    backdrop-filter:blur(10px);
+    background:var(--bg-card,rgba(255,255,255,0.08));
+    color:var(--text-dark,#f5f5f5)
+}
+.card.devices-snapshot header a{color:inherit;text-decoration:none}
+.card.devices-snapshot h2{margin:0;font-size:1.25rem;font-weight:700}
+.badge{
+    display:inline-block;min-width:48px;text-align:center;
+    padding:.2rem .6rem;border-radius:9999px;
+    background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
+}
+.pagination{text-align:center;margin-top:1rem}
+.pagination a{margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
+.pagination span{margin:0 .5rem}
+</style>
