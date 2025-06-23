@@ -1,32 +1,37 @@
 <?php
 declare(strict_types=1);
 
-// ─── DEBUG BLOCK ─────────────────────────────────────────────
+// ─── DEBUG BLOCK (Always Keep at Top) ────────────────────────
 $logDir = __DIR__ . '/../logs';
 if (!is_dir($logDir)) mkdir($logDir, 0755, true);
 ini_set('error_log', "$logDir/debug.log");
 error_reporting(E_ALL);
 ini_set('display_errors','1');
 ini_set('log_errors','1');
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
 
 /**
  * POST /api/customer_dashboard_devices.php
- * Body: { "Code": "<CustomerCode>" }
+ * Body: { "request": { "Code": "XYZ", ... } }
  * Proxies to upstream /CustomerDashboard/Devices
  */
 
-// 1) parse input
+// 1) parse input (now handles nested "request")
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
-$code  = trim($input['Code'] ?? '');
+$code  = '';
+if (!empty($input['request']['Code'])) {
+    $code = trim($input['request']['Code']);
+} elseif (!empty($input['Code'])) {
+    $code = trim($input['Code']);
+}
 
 error_log("[cust_devices_proxy] received Code: $code");
 
 if ($code === '') {
     http_response_code(400);
     echo json_encode([
-        'IsValid'=>false,
-        'Errors'=>[['Code'=>'Missing','Description'=>'Customer Code required']]
+        'IsValid' => false,
+        'Errors'  => [['Code'=>'Missing','Description'=>'Customer Code required']]
     ]);
     exit;
 }
@@ -77,21 +82,21 @@ if (!$token) {
     exit;
 }
 
-// 4) forward to upstream with plain { Code }
+// 4) forward to upstream, passing through the original body
 $url     = rtrim($env['API_BASE_URL'] ?? '', '/') . '/CustomerDashboard/Devices';
-$payload = json_encode(['Code'=>$code]);
+$payload = file_get_contents('php://input');
 error_log('[cust_devices_proxy] forwarding to upstream: ' . $payload);
 
 $ch = curl_init($url);
 curl_setopt_array($ch, [
-    CURLOPT_POST=>true,
-    CURLOPT_HTTPHEADER=>[
+    CURLOPT_POST           => true,
+    CURLOPT_HTTPHEADER     => [
         'Content-Type: application/json',
         'Authorization: Bearer '.$token
     ],
-    CURLOPT_POSTFIELDS=> $payload,
-    CURLOPT_RETURNTRANSFER=>true,
-    CURLOPT_TIMEOUT=>15
+    CURLOPT_POSTFIELDS     => $payload,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT        => 15
 ]);
 $up = curl_exec($ch);
 $err = curl_error($ch);
