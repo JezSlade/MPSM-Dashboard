@@ -2,18 +2,21 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';
 
-/*── 0) SESSION & CUSTOMER ──────────────────────────────────*/
+/*── 0) SESSION + CUSTOMER ──────────────────────────────────*/
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$customer = $_SESSION['selectedCustomer'] ?? '';   // e.g. "W9OPXL0YDK"
+$customer = $_SESSION['selectedCustomer'] ?? '';
 
-/*── 1) FETCH CUSTOMER DASHBOARD DEVICES ───────────────────*/
-$body = ['Code' => $customer];
-$api  = (isset($_SERVER['HTTPS'])?'https://':'http://')
-      . $_SERVER['HTTP_HOST']
-      . '/api/customer_dashboard_devices.php';
+/*── 1) BUILD & LOG REQUEST ──────────────────────────────────*/
+$body = ['request'=>['Code'=>$customer]];
+error_log('[cust_devices_card] Request: ' . json_encode($body));
 
+$api = (isset($_SERVER['HTTPS'])?'https://':'http://')
+     . $_SERVER['HTTP_HOST']
+     . '/api/customer_dashboard_devices.php';
+
+/*── 2) CALL API ────────────────────────────────────────────*/
 $ch = curl_init($api);
 curl_setopt_array($ch, [
     CURLOPT_POST           => true,
@@ -22,32 +25,32 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 10,
 ]);
-$resp = curl_exec($ch);
+$raw = curl_exec($ch);
 curl_close($ch);
+error_log('[cust_devices_card] Response: ' . ($raw ?? 'NULL'));
 
-$data      = $resp ? json_decode($resp, true) : null;
-$total     = ($data['IsValid'] ?? false)
-           ? ($data['Result']['TotalCount'] ?? 0)
-           : 0;
-$rawRows   = ($data['IsValid'] ?? false)
-           ? ($data['Result']['Devices']   ?? [])
-           : [];
+$data    = $raw ? json_decode($raw,true) : null;
+$total   = ($data['IsValid'] ?? false)
+         ? ($data['Result']['TotalCount'] ?? 0)
+         : 0;
+$devices = ($data['IsValid'] ?? false)
+         ? ($data['Result']['Devices']    ?? [])
+         : [];
 
-/*── 2) NORMALISE ROWS ─────────────────────────────────────*/
+/*── 3) NORMALISE ROWS ─────────────────────────────────────*/
 $rows = [];
-foreach ($rawRows as $r) {
-    $asset = trim((string)($r['AssetNumber']         ?? ''));
-    $ext   = trim((string)($r['ExternalIdentifier']  ?? ''));
+foreach ($devices as $d) {
+    $asset = trim((string)($d['AssetNumber']        ?? ''));
+    $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
     $id    = $asset !== '' ? $asset : $ext;
-
     $rows[] = [
-        'Identifier' => $id,
-        'Department' => $r['Department'] ?? '',
-        'Note'       => $r['Note']       ?? $r['Notes'] ?? '',
+        'Identifier'=> $id,
+        'Department'=> $d['Department'] ?? '',
+        'Note'      => $d['Note']       ?? $d['Notes'] ?? '',
     ];
 }
 
-/*── 3) RENDER CARD ─────────────────────────────────────────*/
+/*── 4) RENDER CARD ─────────────────────────────────────────*/
 ?>
 <div class="card customer-devices">
   <header>
@@ -67,7 +70,7 @@ foreach ($rawRows as $r) {
     <tbody>
       <?php if (empty($rows)): ?>
         <tr><td colspan="3">No data</td></tr>
-      <?php else: foreach($rows as $r): ?>
+      <?php else: foreach ($rows as $r): ?>
         <tr>
           <td><?= htmlspecialchars($r['Identifier']); ?></td>
           <td><?= htmlspecialchars($r['Department']); ?></td>
