@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * Sandbox View
  * ------------------------------------------------------------------
@@ -24,7 +25,7 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/debug.log');
 // ------------------------------------------------------------------
 
-declare(strict_types=1);
+
 
 // ------------------------------------------------------------------
 // 1. List of active cards for the current sandbox session.
