@@ -112,7 +112,7 @@ function renderDataTable(array $data, array $options = []): void {
   const toggles   = wrapper.querySelectorAll('input[data-dt-col]');
 
   // Renderers
-  function renderTable() {
+  function render_table() {
     // Sort
     filtered.sort((a,b) => {
       const v1 = (a[sortKey]||'').toString().toLowerCase();
@@ -145,7 +145,7 @@ function renderDataTable(array $data, array $options = []): void {
     pager.querySelectorAll('button').forEach(btn =>
       btn.addEventListener('click', () => {
         currentPage = Number(btn.dataset.page);
-        renderTable();
+        render_table();
       })
     );
   }
@@ -157,7 +157,7 @@ function renderDataTable(array $data, array $options = []): void {
       if (sortKey === key) sortDir = -sortDir;
       else { sortKey = key; sortDir = 1; }
       updateSortIndicators();
-      renderTable();
+      render_table();
     });
   });
 
@@ -180,7 +180,7 @@ function renderDataTable(array $data, array $options = []): void {
         JSON.stringify(row).toLowerCase().includes(q)
       );
       currentPage = 1;
-      renderTable();
+      render_table();
     });
   }
 
@@ -197,7 +197,7 @@ function renderDataTable(array $data, array $options = []): void {
 
   // Initial render
   updateSortIndicators();
-  renderTable();
+  render_table();
 })();
 </script>
 <?php
