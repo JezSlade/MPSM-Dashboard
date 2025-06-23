@@ -1,59 +1,111 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../includes/api_client.php';
 
-// 1) Load env & session
+// ─── Bootstrap & API Client ───────────────────────────────────
+require_once __DIR__ . '/../includes/api_client.php';
 $env = load_env(__DIR__ . '/../.env');
-if (session_status() === PHP_SESSION_NONE) session_start();
-$code = $_SESSION['selectedCustomer'] ?? '';
-if ($code === '') {
+
+// ─── 1) SESSION & CUSTOMER ───────────────────────────────────
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$customerCode = $_SESSION['selectedCustomer'] ?? '';
+if ($customerCode === '') {
     echo '<p class="error">No customer selected.</p>';
     return;
 }
 
-// 2) Fetch devices
+// ─── 2) PAGINATION PARAMETERS ────────────────────────────────
+$page    = isset($_GET['page'])    ? max(1, (int)$_GET['page'])    : 1;
+$perPage = isset($_GET['perPage']) ? max(1, (int)$_GET['perPage']) : 15;
+
+// ─── 3) CALL /Device/List ────────────────────────────────────
+$requestBody = [
+    'request' => [
+        'DealerCode'   => $env['DEALER_CODE']   ?? '',
+        'CustomerCode' => $customerCode,
+        'PageNumber'   => $page,
+        'PageRows'     => $perPage,
+        'SortColumn'   => 'ExternalIdentifier',
+        'SortOrder'    => 'Asc',
+        // you can add 'DeviceType'=>'Printer' here if needed
+    ]
+];
+error_log('[cust_devices] Device/List Request: '.json_encode($requestBody));
+
 $resp = api_call(
     $env,
     'POST',
-    '/CustomerDashboard/Devices',
-    ['request'=>[
-        'Code'=>$code,
-        'PageNumber'=>$_GET['page']    ?? 1,
-        'PageRows'  =>$_GET['perPage'] ?? 15,
-        'SortColumn'=>'ExternalIdentifier',
-        'SortOrder'=>'Asc'
-    ]]
+    '/Device/List',
+    $requestBody
 );
 
-// 3) Extract
-$total   = $resp['IsValid'] ? (int)($resp['Result']['TotalCount'] ?? 0) : 0;
-$devices = $resp['IsValid'] ? ($resp['Result']['Devices'] ?? []) : [];
+// ─── 4) EXTRACT RESULTS ──────────────────────────────────────
+$total   = (!empty($resp['IsValid'])) 
+         ? (int)($resp['Result']['TotalCount'] ?? 0) 
+         : 0;
 
-// 4) Normalize & render (same as before)…
+$devices = (!empty($resp['IsValid'])) 
+         ? ($resp['Result']['Items'] ?? []) 
+         : [];
+
+// ─── 5) NORMALIZE ROWS ──────────────────────────────────────
+$rows = [];
+foreach ($devices as $d) {
+    $asset = trim((string)($d['AssetNumber']        ?? ''));
+    $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
+    $id    = $asset !== '' ? $asset : $ext;
+    $dept  = $d['Department'] ?? $d['OfficeId'] ?? '';
+    $note  = $d['Note']       ?? $d['Notes']    ?? '';
+    $rows[] = [
+        'Identifier' => $id,
+        'Department' => $dept,
+        'Note'       => $note,
+    ];
+}
+
+// ─── 6) RENDER CARD ─────────────────────────────────────────
 ?>
 <div class="card customer-devices">
   <header>
-    <h2>Devices Online <span class="badge"><?= $total ?></span></h2>
+    <h2 style="margin:0;font-size:1.25rem;font-weight:700">
+      Customer Devices <span class="badge"><?= $total ?></span>
+    </h2>
   </header>
+
   <table class="snap">
-    <thead><tr>
-      <th>Asset/Ext ID</th><th>Department</th><th>Note</th>
-    </tr></thead>
+    <thead>
+      <tr>
+        <th>Asset&nbsp;/&nbsp;Ext&nbsp;ID</th>
+        <th>Department</th>
+        <th>Note</th>
+      </tr>
+    </thead>
     <tbody>
-      <?php if (!$devices): ?>
+      <?php if (empty($rows)): ?>
         <tr><td colspan="3">No data</td></tr>
-      <?php else: foreach ($devices as $d):
-        $id = $d['AssetNumber'] ?: $d['ExternalIdentifier'] ?? '';
-      ?>
+      <?php else: foreach ($rows as $r): ?>
         <tr>
-          <td><?=htmlspecialchars($id)?></td>
-          <td><?=htmlspecialchars($d['Department']??'')?></td>
-          <td><?=htmlspecialchars($d['Note']??$d['Notes']??'')?></td>
+          <td><?= htmlspecialchars($r['Identifier']) ?></td>
+          <td><?= htmlspecialchars($r['Department']) ?></td>
+          <td><?= htmlspecialchars($r['Note']) ?></td>
         </tr>
       <?php endforeach; endif; ?>
     </tbody>
   </table>
-  <!-- pagination as before -->
+
+  <?php if ($total > $perPage): 
+      $last = (int)ceil($total / $perPage);
+  ?>
+  <nav class="pagination">
+    <?php for ($i = 1; $i <= $last; $i++): ?>
+      <a href="?customer=<?= urlencode($customerCode) ?>&page=<?= $i ?>&perPage=<?= $perPage ?>"
+         class="<?= $i === $page ? 'active' : '' ?>">
+        <?= $i ?>
+      </a>
+    <?php endfor; ?>
+  </nav>
+  <?php endif; ?>
 </div>
 
 <style>
@@ -71,7 +123,8 @@ $devices = $resp['IsValid'] ? ($resp['Result']['Devices'] ?? []) : [];
     font-weight:600; font-size:0.85rem;
 }
 .snap {
-    font-size:0.85rem; width:100%; border-collapse:collapse; margin-top:.75rem;
+    font-size:0.85rem; width:100%; border-collapse:collapse;
+    margin-top:.75rem;
 }
 .snap th, .snap td { padding:.4rem .6rem; text-align:left; }
 .snap thead tr { background:rgba(255,255,255,.1); font-weight:600; }
@@ -81,16 +134,11 @@ $devices = $resp['IsValid'] ? ($resp['Result']['Devices'] ?? []) : [];
     margin-top:1rem; text-align:center;
 }
 .pagination a {
-    display:inline-block;
-    margin:0 .25rem;
-    padding:.25rem .5rem;
-    border-radius:4px;
-    background:rgba(255,255,255,.1);
-    text-decoration:none;
-    color:inherit;
+    display:inline-block; margin:0 .25rem; padding:.25rem .5rem;
+    border-radius:4px; background:rgba(255,255,255,.1);
+    text-decoration:none; color:inherit;
 }
 .pagination a.active {
-    background:rgba(255,255,255,.2);
-    font-weight:600;
+    background:rgba(255,255,255,.2); font-weight:600;
 }
 </style>
