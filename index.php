@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);  // must precede all other statements
+
 // ------------------------------------------------------------------
 // DEBUG BLOCK (Always Keep at Top)
 error_reporting(E_ALL);
@@ -6,8 +8,6 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/debug.log');
 // ------------------------------------------------------------------
-
-declare(strict_types=1);
 
 // 0) Bootstrap & layout
 require_once __DIR__ . '/includes/config.php';
@@ -25,7 +25,7 @@ $viewFile = ($requestedView === 'sandbox')
     ? 'views/sandbox.php'
     : 'views/dashboard.php';
 
-// 2) Render the chosen view (helper lives in /includes/header.php)
+// 2) Render the chosen view
 render_view($viewFile);
 
 // 3) Footer

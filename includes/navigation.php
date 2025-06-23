@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);  // must come first
+
 // ------------------------------------------------------------------
 // DEBUG BLOCK (Always Keep at Top)
 error_reporting(E_ALL);
@@ -14,8 +16,6 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
  *   • Uses query-string routing (?view=dashboard|sandbox)
  *   • Follows MPSM CODE AUDIT PROTOCOL (no external libs, __DIR__ safety)
  */
-
-declare(strict_types=1);
 
 // Which tab is active?
 $currentView = $_GET['view'] ?? 'dashboard';
