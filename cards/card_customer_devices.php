@@ -2,50 +2,50 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';
 
-/* 1) Determine current customer */
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-$code = $_SESSION['selectedCustomer'] ?? '';
-if ($code === '') {
+/* 0) SESSION & CUSTOMER */
+if (session_status() === PHP_SESSION_NONE) session_start();
+$customer = $_SESSION['selectedCustomer'] ?? '';
+if ($customer === '') {
     echo '<p class="error">No customer selected.</p>';
     return;
 }
 
-/* 2) Fetch dashboard via our proxy */
-$apiUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://')
+/* 1) FETCH via GET /api/customer_dashboard.php?code=… */
+$apiUrl = (isset($_SERVER['HTTPS'])?'https://':'http://')
         . $_SERVER['HTTP_HOST']
         . '/api/customer_dashboard.php?code='
-        . urlencode($code);
+        . urlencode($customer);
 
-error_log("[cust_devices_card] Fetching $apiUrl");
-$ch = curl_init($apiUrl);
+error_log("[devices] Fetching $apiUrl");
+$ch    = curl_init($apiUrl);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 10
+    CURLOPT_TIMEOUT        => 10,
 ]);
-$raw = curl_exec($ch);
+$raw   = curl_exec($ch);
 curl_close($ch);
-error_log('[cust_devices_card] Response: '.($raw??'NULL'));
+error_log('[devices] Response: '.($raw??'NULL'));
 
-$data    = $raw ? json_decode($raw, true) : null;
-$valid   = is_array($data) && !empty($data['IsValid']);
+$data    = $raw ? json_decode($raw, true) : [];
+$valid   = !empty($data['IsValid']);
 $devices = $valid && isset($data['Result']['Devices'])
          ? $data['Result']['Devices'] : [];
 $total   = is_array($devices) ? count($devices) : 0;
 
-/* 3) Normalize into rows */
+/* 2) NORMALISE ROWS */
 $rows = [];
 foreach ($devices as $d) {
-    $id = trim((string)($d['AssetNumber'] ?? $d['ExternalIdentifier'] ?? ''));
+    $asset = trim((string)($d['AssetNumber'] ?? ''));
+    $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
+    $id    = $asset !== '' ? $asset : $ext;
     $rows[] = [
-        'Identifier'=> $id,
-        'Department'=> $d['Department'] ?? $d['OfficeId'] ?? '',
-        'Note'      => $d['Notes']      ?? $d['Note'] ?? '',
+        'Identifier' => $id,
+        'Department' => $d['Department'] ?? $d['OfficeId'] ?? '',
+        'Note'       => $d['Notes']      ?? $d['Note'] ?? '',
     ];
 }
 
-/* 4) Render card */
+/* 3) RENDER CARD */
 ?>
 <div class="card customer-devices">
   <header>
@@ -71,7 +71,7 @@ foreach ($devices as $d) {
           <td><?= htmlspecialchars($r['Department']); ?></td>
           <td><?= htmlspecialchars($r['Note']); ?></td>
         </tr>
-      <?php endforeach; endif;?>
+      <?php endforeach; endif; ?>
     </tbody>
   </table>
 </div>

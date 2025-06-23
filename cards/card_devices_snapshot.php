@@ -2,71 +2,50 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';
 
-/*───────────────────────────────────────────────────────────
- | 0) SESSION & CUSTOMER
- *───────────────────────────────────────────────────────────*/
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+/* 0) SESSION & CUSTOMER */
+if (session_status() === PHP_SESSION_NONE) session_start();
 $customer = $_SESSION['selectedCustomer'] ?? '';
+if ($customer === '') {
+    echo '<p class="error">No customer selected.</p>';
+    return;
+}
 
-/*───────────────────────────────────────────────────────────
- | 1) BUILD & LOG REQUEST (wrapped under “request”)
- *───────────────────────────────────────────────────────────*/
-$body = [
-    'request' => [
-        'Code' => $customer,
-        // you can add 'CustomerTimeZone' => date_default_timezone_get() if needed
-    ]
-];
-error_log('[cust_devices] Request: ' . json_encode($body));
-
-$api = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://')
+/* 1) FETCH via GET /api/customer_dashboard.php?code=… */
+$api = (isset($_SERVER['HTTPS'])?'https://':'http://')
      . $_SERVER['HTTP_HOST']
-     . '/api/customer_dashboard_devices.php';
+     . '/api/customer_dashboard.php?code='
+     . urlencode($customer);
 
-/*───────────────────────────────────────────────────────────
- | 2) CALL API & PARSE
- *───────────────────────────────────────────────────────────*/
-$ch = curl_init($api);
+error_log("[snapshot] Fetching $api");
+$ch   = curl_init($api);
 curl_setopt_array($ch, [
-    CURLOPT_POST           => true,
-    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-    CURLOPT_POSTFIELDS     => json_encode($body),
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 10,
 ]);
 $raw  = curl_exec($ch);
 curl_close($ch);
-error_log('[cust_devices] Raw response: ' . ($raw ?? 'NULL'));
+error_log('[snapshot] Response: '.($raw??'NULL'));
 
-$data    = $raw ? json_decode($raw, true) : null;
-$total   = ($data['IsValid'] ?? false)
-         ? ($data['Result']['TotalCount'] ?? 0)
-         : 0;
-$devices = ($data['IsValid'] ?? false)
-         ? ($data['Result']['Devices']    ?? [])
-         : [];
+$data    = $raw ? json_decode($raw, true) : [];
+$valid   = !empty($data['IsValid']);
+$devices = $valid && isset($data['Result']['Devices'])
+         ? $data['Result']['Devices'] : [];
+$total   = is_array($devices) ? count($devices) : 0;
 
-/*───────────────────────────────────────────────────────────
- | 3) NORMALISE ROWS
- *───────────────────────────────────────────────────────────*/
+/* 2) NORMALISE ROWS */
 $rows = [];
 foreach ($devices as $d) {
-    $asset = trim((string)($d['AssetNumber']        ?? ''));
+    $asset = trim((string)($d['AssetNumber'] ?? ''));
     $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
     $id    = $asset !== '' ? $asset : $ext;
-
     $rows[] = [
         'Identifier' => $id,
-        'Department' => $d['Department'] ?? '',
-        'Note'       => $d['Note']       ?? $d['Notes'] ?? '',
+        'Department' => $d['Department'] ?? $d['OfficeId'] ?? '',
+        'Note'       => $d['Notes']      ?? $d['Note'] ?? '',
     ];
 }
 
-/*───────────────────────────────────────────────────────────
- | 4) RENDER CARD
- *───────────────────────────────────────────────────────────*/
+/* 3) RENDER CARD */
 ?>
 <div class="card customer-devices">
   <header>
@@ -92,7 +71,7 @@ foreach ($devices as $d) {
           <td><?= htmlspecialchars($r['Department']); ?></td>
           <td><?= htmlspecialchars($r['Note']); ?></td>
         </tr>
-      <?php endforeach; endif;?>
+      <?php endforeach; endif; ?>
     </tbody>
   </table>
 </div>
