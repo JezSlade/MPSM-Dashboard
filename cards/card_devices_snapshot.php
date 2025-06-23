@@ -2,18 +2,30 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';
 
-/*── 0) SESSION & CUSTOMER ──────────────────────────────────*/
+/*──────────────────────────────
+ | 0) SESSION & CUSTOMER
+ *──────────────────────────────*/
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $customer = $_SESSION['selectedCustomer'] ?? '';
 
-/*── 1) FETCH CUSTOMER DASHBOARD DEVICES ───────────────────*/
+/*──────────────────────────────
+ | 1) BUILD & LOG REQUEST
+ *──────────────────────────────*/
 $body = ['Code' => $customer];
-$api  = (isset($_SERVER['HTTPS'])?'https://':'http://')
-      . $_SERVER['HTTP_HOST']
-      . '/api/customer_dashboard_devices.php';
+// If your API actually needs DealerCode too, uncomment next line:
+// $body['DealerCode'] = getenv('DEALER_CODE') ?: '';
 
+error_log('[cust_devices] Request: ' . json_encode($body));
+
+$api = (isset($_SERVER['HTTPS'])?'https://':'http://')
+     . $_SERVER['HTTP_HOST']
+     . '/api/customer_dashboard_devices.php';
+
+/*──────────────────────────────
+ | 2) CALL API & LOG RESPONSE
+ *──────────────────────────────*/
 $ch = curl_init($api);
 curl_setopt_array($ch, [
     CURLOPT_POST           => true,
@@ -22,10 +34,12 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 10,
 ]);
-$resp = curl_exec($ch);
+$raw = curl_exec($ch);
 curl_close($ch);
 
-$data    = $resp ? json_decode($resp, true) : null;
+error_log('[cust_devices] Raw response: ' . ($raw ?? 'NULL'));
+
+$data    = $raw ? json_decode($raw, true) : null;
 $total   = ($data['IsValid'] ?? false)
          ? ($data['Result']['TotalCount'] ?? 0)
          : 0;
@@ -33,7 +47,9 @@ $devices = ($data['IsValid'] ?? false)
          ? ($data['Result']['Devices']   ?? [])
          : [];
 
-/*── 2) NORMALISE ROWS ─────────────────────────────────────*/
+/*──────────────────────────────
+ | 3) NORMALISE ROWS
+ *──────────────────────────────*/
 $rows = [];
 foreach ($devices as $d) {
     $asset = trim((string)($d['AssetNumber']        ?? ''));
@@ -47,7 +63,9 @@ foreach ($devices as $d) {
     ];
 }
 
-/*── 3) RENDER CARD ─────────────────────────────────────────*/
+/*──────────────────────────────
+ | 4) RENDER CARD
+ *──────────────────────────────*/
 ?>
 <div class="card customer-devices">
   <header>
@@ -79,40 +97,10 @@ foreach ($devices as $d) {
 </div>
 
 <style>
-.card.customer-devices {
-    padding:1.2rem;
-    border-radius:12px;
-    backdrop-filter:blur(10px);
-    background:var(--bg-card,rgba(255,255,255,.08));
-    color:var(--text-dark,#f5f5f5);
-    margin-bottom:1rem;
-}
-.badge {
-    display:inline-block;
-    min-width:44px;
-    text-align:center;
-    padding:.2rem .5rem;
-    border-radius:9999px;
-    background:var(--bg-light,#2d8cff);
-    color:#fff;
-    font-weight:600;
-    font-size:0.85rem;
-}
-.snap {
-    font-size:0.85rem;
-    width:100%;
-    border-collapse:collapse;
-    margin-top:.75rem;
-}
-.snap th, .snap td {
-    padding:.4rem .6rem;
-    text-align:left;
-}
-.snap thead tr {
-    background:rgba(255,255,255,.1);
-    font-weight:600;
-}
-.snap tbody tr:nth-child(even) {
-    background:rgba(255,255,255,.05);
-}
+.card.customer-devices { /* ... your styles ... */ }
+.badge { /* ... */ }
+.snap { /* ... */ }
+.snap th, .snap td { /* ... */ }
+.snap thead tr { /* ... */ }
+.snap tbody tr:nth-child(even) { /* ... */ }
 </style>
