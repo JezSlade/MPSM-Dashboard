@@ -28,32 +28,49 @@ try {
     );
 } catch (\Throwable $e) {
     error_log("[card_customer_devices] API error: " . $e->getMessage());
-    $resp = ['IsValid' => false];
+    $resp = [];
 }
 
-// ─── 3) Extract total and device list ────────────────────────
-$total   = $resp['IsValid']
-         ? count($resp['Result']['Devices'] ?? [])
-         : 0;
-$devices = $resp['IsValid']
-         ? ($resp['Result']['Devices'] ?? [])
-         : [];
+// ─── 3) Safely extract devices ───────────────────────────────
+$valid    = is_array($resp) && !empty($resp['IsValid']);
+$devices  = $valid && isset($resp['Result']['Devices'])
+          ? $resp['Result']['Devices']
+          : [];
 
-// ─── 4) Normalize each device into row data ─────────────────
+// ─── 4) Normalize rows ──────────────────────────────────────
 $rows = [];
 foreach ($devices as $d) {
     $asset = trim((string)($d['AssetNumber']        ?? ''));
     $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
     $id    = $asset !== '' ? $asset : $ext;
 
+    // some fields can be arrays; leave them as-is
+    $dept = $d['Department'] ?? '';
+    $note = $d['Notes']      ?? $d['Note'] ?? '';
+
     $rows[] = [
         'Identifier' => $id,
-        'Department' => $d['Department'] ?? '',
-        'Note'       => $d['Notes']      ?? $d['Note'] ?? '',
+        'Department' => $dept,
+        'Note'       => $note,
     ];
 }
 
-// ─── 5) Render the card ──────────────────────────────────────
+// ─── 5) Cell formatter ───────────────────────────────────────
+function cell_html($v): string
+{
+    if (is_array($v)) {
+        $html = '<table class="nested"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
+        foreach ($v as $k => $val) {
+            $scalar = is_scalar($val) ? htmlspecialchars((string)$val) : htmlspecialchars(json_encode($val));
+            $html .= '<tr><td>'.htmlspecialchars((string)$k).'</td><td>'.$scalar.'</td></tr>';
+        }
+        return $html . '</tbody></table>';
+    }
+    return htmlspecialchars((string)$v);
+}
+
+// ─── 6) Render the card ──────────────────────────────────────
+$total = count($rows);
 ?>
 <div class="card customer-devices">
   <header>
@@ -75,9 +92,9 @@ foreach ($devices as $d) {
         <tr><td colspan="3">No data</td></tr>
       <?php else: foreach ($rows as $r): ?>
         <tr>
-          <td><?= htmlspecialchars($r['Identifier']); ?></td>
-          <td><?= htmlspecialchars($r['Department']); ?></td>
-          <td><?= htmlspecialchars($r['Note']); ?></td>
+          <td><?= cell_html($r['Identifier']); ?></td>
+          <td><?= cell_html($r['Department']); ?></td>
+          <td><?= cell_html($r['Note']); ?></td>
         </tr>
       <?php endforeach; endif; ?>
     </tbody>
@@ -113,6 +130,7 @@ foreach ($devices as $d) {
 .snap th, .snap td {
     padding:.4rem .6rem;
     text-align:left;
+    vertical-align:top;
 }
 .snap thead tr {
     background:rgba(255,255,255,.1);
@@ -120,5 +138,21 @@ foreach ($devices as $d) {
 }
 .snap tbody tr:nth-child(even) {
     background:rgba(255,255,255,.05);
+}
+/* nested array table */
+.nested {
+    width:100%;
+    border-collapse:collapse;
+    margin:0.25rem 0;
+    font-size:0.8rem;
+}
+.nested th, .nested td {
+    padding:0.2rem 0.4rem;
+    border:1px solid rgba(255,255,255,0.2);
+    text-align:left;
+}
+.nested thead th {
+    background:rgba(255,255,255,0.1);
+    font-weight:600;
 }
 </style>
