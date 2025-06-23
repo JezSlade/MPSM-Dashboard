@@ -15,11 +15,11 @@ if ($customerCode === '') {
     return;
 }
 
-// ─── 2) PAGINATION PARAMETERS ────────────────────────────────
-$page    = isset($_GET['page'])    ? max(1, (int)$_GET['page'])    : 1;
-$perPage = isset($_GET['perPage']) ? max(1, (int)$_GET['perPage']) : 15;
+// ─── 2) Pagination ────────────────────────────────────────────
+$page    = max(1, (int)($_GET['page']    ?? 1));
+$perPage = max(1, (int)($_GET['perPage'] ?? 15));
 
-// ─── 3) CALL /Device/List ────────────────────────────────────
+// ─── 3) Build & log request body ─────────────────────────────
 $requestBody = [
     'request' => [
         'DealerCode'   => $env['DEALER_CODE']   ?? '',
@@ -28,11 +28,11 @@ $requestBody = [
         'PageRows'     => $perPage,
         'SortColumn'   => 'ExternalIdentifier',
         'SortOrder'    => 'Asc',
-        // you can add 'DeviceType'=>'Printer' here if needed
     ]
 ];
-error_log('[cust_devices] Device/List Request: '.json_encode($requestBody));
+error_log('[cust_devices] Device/List Request: ' . json_encode($requestBody));
 
+// ─── 4) Call /Device/List and log raw response ──────────────
 $resp = api_call(
     $env,
     'POST',
@@ -40,16 +40,24 @@ $resp = api_call(
     $requestBody
 );
 
-// ─── 4) EXTRACT RESULTS ──────────────────────────────────────
-$total   = (!empty($resp['IsValid'])) 
-         ? (int)($resp['Result']['TotalCount'] ?? 0) 
-         : 0;
+// Dump raw response to error log for debugging
+error_log('[cust_devices] Raw Device/List Response: ' . json_encode($resp));
 
-$devices = (!empty($resp['IsValid'])) 
-         ? ($resp['Result']['Items'] ?? []) 
+// ─── 5) Handle errors if any ─────────────────────────────────
+if (empty($resp['IsValid'])) {
+    $errs = $resp['Errors'] ?? [];
+    error_log('[cust_devices] Errors: ' . json_encode($errs));
+}
+
+// ─── 6) Extract totals & items ──────────────────────────────
+$total   = !empty($resp['IsValid'])
+         ? (int)($resp['Result']['TotalCount'] ?? 0)
+         : 0;
+$devices = !empty($resp['IsValid'])
+         ? ($resp['Result']['Items'] ?? [])
          : [];
 
-// ─── 5) NORMALIZE ROWS ──────────────────────────────────────
+// ─── 7) Normalize rows ──────────────────────────────────────
 $rows = [];
 foreach ($devices as $d) {
     $asset = trim((string)($d['AssetNumber']        ?? ''));
@@ -57,14 +65,10 @@ foreach ($devices as $d) {
     $id    = $asset !== '' ? $asset : $ext;
     $dept  = $d['Department'] ?? $d['OfficeId'] ?? '';
     $note  = $d['Note']       ?? $d['Notes']    ?? '';
-    $rows[] = [
-        'Identifier' => $id,
-        'Department' => $dept,
-        'Note'       => $note,
-    ];
+    $rows[] = ['Identifier'=>$id,'Department'=>$dept,'Note'=>$note];
 }
 
-// ─── 6) RENDER CARD ─────────────────────────────────────────
+// ─── 8) Render card ─────────────────────────────────────────
 ?>
 <div class="card customer-devices">
   <header>
@@ -72,6 +76,10 @@ foreach ($devices as $d) {
       Customer Devices <span class="badge"><?= $total ?></span>
     </h2>
   </header>
+
+  <!-- Debug dump of response for quick in-page inspection
+  <?php /* echo '<pre>'.htmlspecialchars(json_encode($resp, JSON_PRETTY_PRINT)).'</pre>'; */ ?>
+  -->
 
   <table class="snap">
     <thead>
@@ -83,7 +91,9 @@ foreach ($devices as $d) {
     </thead>
     <tbody>
       <?php if (empty($rows)): ?>
-        <tr><td colspan="3">No data</td></tr>
+        <tr>
+          <td colspan="3">No data</td>
+        </tr>
       <?php else: foreach ($rows as $r): ?>
         <tr>
           <td><?= htmlspecialchars($r['Identifier']) ?></td>
@@ -94,7 +104,7 @@ foreach ($devices as $d) {
     </tbody>
   </table>
 
-  <?php if ($total > $perPage): 
+  <?php if ($total > $perPage):
       $last = (int)ceil($total / $perPage);
   ?>
   <nav class="pagination">
@@ -110,11 +120,9 @@ foreach ($devices as $d) {
 
 <style>
 .card.customer-devices {
-    padding:1.2rem; border-radius:12px;
-    backdrop-filter:blur(10px);
+    padding:1.2rem; border-radius:12px; backdrop-filter:blur(10px);
     background:var(--bg-card,rgba(255,255,255,.08));
-    color:var(--text-dark,#f5f5f5);
-    margin-bottom:1rem;
+    color:var(--text-dark,#f5f5f5); margin-bottom:1rem;
 }
 .badge {
     display:inline-block; min-width:44px; text-align:center;
