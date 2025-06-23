@@ -3,19 +3,18 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';   // unified debug helper
 
 /**
- * Devices Snapshot  – stable POST edition
+ * Card ▸ Devices Snapshot
  * ------------------------------------------------------------------
- * • Posts to /api/get_devices.php which forwards to /Device/List.
- * • Sends all required fields, including the VALID sort column
- *   DeviceId, so the API returns rows.
- * • Uses render_table() from includes/table_helper.php; if that
- *   helper is ever missing, defines a minimal fallback.
- * • Pure PHP, no JavaScript.
+ * • Pure-PHP: no JS.
+ * • “Devices Online (n)” badge – click toggles table.
+ * • Posts to /api/get_devices.php (wrapper for /Device/List).
+ * • Uses render_table() from includes/table_helper.php; defines a
+ *   fallback if the helper is ever missing.
  */
 
-/*──────────────────────────────────────────────────────────────────
- | 1) Ensure render_table helper
- *─────────────────────────────────────────────────────────────────*/
+/*───────────────────────────────────────────────────────────
+ | 1  Ensure render_table() exists
+ *───────────────────────────────────────────────────────────*/
 $helper = __DIR__ . '/../includes/table_helper.php';
 if (is_readable($helper)) {
     require_once $helper;
@@ -23,56 +22,50 @@ if (is_readable($helper)) {
 if (!function_exists('render_table')) {
     function render_table(array $headers, array $rows): string
     {
-        $html  = '<table class="ds-fallback"><thead><tr>';
+        $h = '<table class="ds-fallback"><thead><tr>';
         foreach ($headers as $label) {
-            $html .= '<th>' . htmlspecialchars($label) . '</th>';
+            $h .= '<th>' . htmlspecialchars($label) . '</th>';
         }
-        $html .= '</tr></thead><tbody>';
+        $h .= '</tr></thead><tbody>';
         if (!$rows) {
-            $html .= '<tr><td colspan="' . count($headers) . '">No data</td></tr>';
+            $h .= '<tr><td colspan="' . count($headers) . '">No data</td></tr>';
         } else {
             foreach ($rows as $row) {
-                $html .= '<tr>';
+                $h .= '<tr>';
                 foreach ($headers as $field => $_) {
-                    $html .= '<td>' . htmlspecialchars((string)($row[$field] ?? '')) . '</td>';
+                    $h .= '<td>' . htmlspecialchars((string)($row[$field] ?? '')) . '</td>';
                 }
-                $html .= '</tr>';
+                $h .= '</tr>';
             }
         }
-        $html .= '</tbody></table><style>
-.ds-fallback{width:100%;border-collapse:collapse;margin-top:1rem}
-.ds-fallback th,.ds-fallback td{padding:.5rem .75rem;text-align:left}
-.ds-fallback thead tr{background:rgba(255,255,255,.1);font-weight:600}
-.ds-fallback tbody tr:nth-child(even){background:rgba(255,255,255,.05)}
-</style>';
-        return $html;
+        return $h . '</tbody></table>';
     }
 }
 
-/*──────────────────────────────────────────────────────────────────
- | 2) Build request body
- *─────────────────────────────────────────────────────────────────*/
-$customerCode = $_SESSION['selectedCustomer'] ?? null;
-$dealerId     = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
+/*───────────────────────────────────────────────────────────
+ | 2  Build API request body
+ *───────────────────────────────────────────────────────────*/
+$customer = $_SESSION['selectedCustomer'] ?? null;
+$dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
-$pageSize    = 15;
-$currentPage = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
+$pageSize = 15;
+$page     = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
 
 $body = [
-    'PageNumber' => $currentPage,
+    'PageNumber' => $page,
     'PageRows'   => $pageSize,
-    'SortColumn' => 'DeviceId',   // VALID column → rows returned
+    'SortColumn' => 'ExternalIdentifier',   // ✔ valid column
     'SortOrder'  => 'Asc',
 ];
-if ($customerCode) {
-    $body['CustomerCode'] = $customerCode;
+if ($customer) {
+    $body['CustomerCode'] = $customer;
 } else {
     $body['FilterDealerId'] = $dealerId;
 }
 
-/*──────────────────────────────────────────────────────────────────
- | 3) POST to local API wrapper
- *─────────────────────────────────────────────────────────────────*/
+/*───────────────────────────────────────────────────────────
+ | 3  POST to local API wrapper
+ *───────────────────────────────────────────────────────────*/
 $apiUrl =
     (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') .
     $_SERVER['HTTP_HOST'] .
@@ -86,64 +79,56 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 10,
 ]);
-$raw  = curl_exec($ch);
-$err  = curl_error($ch);
+$response = curl_exec($ch);
 curl_close($ch);
 
-$json = $raw ? json_decode($raw, true) : null;
-if ($raw === false || !($json['IsValid'] ?? false)) {
-    error_log('[devices_snapshot] API error: ' . ($err ?: $raw));
-    $totalRows = 0;
-    $rows      = [];
-} else {
-    $totalRows = $json['TotalRows'] ?? 0;
-    $rows      = $json['Result']    ?? [];
-}
+$data = $response ? json_decode($response, true) : null;
+$total = ($data['IsValid'] ?? false) ? ($data['TotalRows'] ?? 0) : 0;
+$rows  = ($data['IsValid'] ?? false) ? ($data['Result']    ?? []) : [];
 
-/*──────────────────────────────────────────────────────────────────
- | 4) Pagination helpers
- *─────────────────────────────────────────────────────────────────*/
-$isExpanded  = isset($_GET['ds_exp']);
-$totalPages  = max(1, (int)ceil($totalRows / $pageSize));
+/*───────────────────────────────────────────────────────────
+ | 4  Pagination + helpers
+ *───────────────────────────────────────────────────────────*/
+$expanded   = isset($_GET['ds_exp']);
+$totalPages = max(1, (int)ceil($total / $pageSize));
 
-function self_url(bool $expand, int $page = 1): string
+function self_url(bool $exp, int $p = 1): string
 {
-    $p = ['view' => 'sandbox'];
-    if ($expand) {
-        $p['ds_exp']  = '1';
-        $p['ds_page'] = $page;
+    $q = ['view' => 'sandbox'];
+    if ($exp) {
+        $q['ds_exp']  = 1;
+        $q['ds_page'] = $p;
     }
-    return '/index.php?' . http_build_query($p);
+    return '/index.php?' . http_build_query($q);
 }
 
-/* headers for the table */
-$tableHeaders = [
+/* column headers */
+$headers = [
     'ExternalIdentifier' => 'Equipment ID',
     'Model'              => 'Model',
     'IpAddress'          => 'IP Address',
     'Department'         => 'Department',
 ];
 ?>
-<!-- ────────── CARD ────────── -->
+<!-- ─────────── Card Mark-up ─────────── -->
 <div class="card devices-snapshot">
-    <header>
-        <h2>
-            <a href="<?= htmlspecialchars(self_url(!$isExpanded)); ?>">
-                Devices Online <span class="badge"><?= $totalRows; ?></span>
-            </a>
-        </h2>
-    </header>
+    <h2 style="margin:0;font-size:1.25rem;font-weight:700">
+        <a href="<?= htmlspecialchars(self_url(!$expanded)); ?>"
+           style="text-decoration:none;color:inherit">
+            Devices Online <span class="badge"><?= $total; ?></span>
+        </a>
+    </h2>
 
-<?php if ($isExpanded): ?>
-    <?= render_table($tableHeaders, $rows); ?>
+<?php if ($expanded): ?>
+    <?= render_table($headers, $rows); ?>
 
-    <div class="pagination">
-        <?php if ($currentPage > 1): ?>
-            <a href="<?= htmlspecialchars(self_url(true, $currentPage - 1)); ?>">&larr; Prev</a>
+    <div class="pagination" style="text-align:center;margin-top:1rem">
+        <?php if ($page > 1): ?>
+            <a href="<?= htmlspecialchars(self_url(true, $page - 1)); ?>">&larr; Prev</a>
         <?php endif; ?>
-        <span><?= $currentPage; ?> / <?= $totalPages; ?></span>
-        <?php if ($currentPage < $totalPages): ?>
-            <a href="<?= htmlspecialchars(self_url(true, $currentPage + 1)); ?>">Next &rarr;</a>
+        <span><?= $page; ?> / <?= $totalPages; ?></span>
+        <?php if ($page < $totalPages): ?>
+            <a href="<?= htmlspecialchars(self_url(true, $page + 1)); ?>">Next &rarr;</a>
         <?php endif; ?>
     </div>
 <?php endif; ?>
@@ -153,17 +138,13 @@ $tableHeaders = [
 .card.devices-snapshot{
     padding:1.5rem;border-radius:12px;
     backdrop-filter:blur(10px);
-    background:var(--bg-card,rgba(255,255,255,0.08));
+    background:var(--bg-card,rgba(255,255,255,.08));
     color:var(--text-dark,#f5f5f5)
 }
-.card.devices-snapshot header a{color:inherit;text-decoration:none}
-.card.devices-snapshot h2{margin:0;font-size:1.25rem;font-weight:700}
 .badge{
     display:inline-block;min-width:48px;text-align:center;
     padding:.2rem .6rem;border-radius:9999px;
     background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
 }
-.pagination{text-align:center;margin-top:1rem}
 .pagination a{margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
-.pagination span{margin:0 .5rem}
 </style>
