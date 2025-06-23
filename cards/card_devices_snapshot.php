@@ -1,34 +1,77 @@
 <?php
 declare(strict_types=1);
 
-// ------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
 // DEBUG BLOCK (Always Keep at Top)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
 
 /**
- * Devices Snapshot  – uses shared render_table helper
- * ------------------------------------------------------------------
- * • Calls /api/get_devices.php with the single required filter
- *   (CustomerCode or FilterDealerId).
- * • Renders count + paginated table via includes/table_helper.php
- *   so all cards share identical styling.
- * • Pure PHP, no JS.
+ * Devices Snapshot  – resilient edition
+ * ----------------------------------------------------------------
+ * • Loads render_table() from /includes/table_helper.php.
+ * • If that file is missing *or* the function isn’t declared inside
+ *   it, we autodefine a lightweight fallback so the card never throws
+ *   “undefined function” again.
  */
 
-// 0 › bring in the shared helper  (correct path = /includes/)
-$tableHelperPath = __DIR__ . '/../includes/table_helper.php';
-if (is_readable($tableHelperPath)) {
-    require_once $tableHelperPath;   // provides render_table()
+// 0 › attempt to load shared helper (correct path)
+$helperPath = __DIR__ . '/../includes/table_helper.php';
+if (is_readable($helperPath)) {
+    require_once $helperPath;
+    // optional trace
+    if (!function_exists('render_table')) {
+        error_log('[devices_snapshot] Helper loaded but function missing.');
+    }
 } else {
-    echo '<p class="error">includes/table_helper.php not found.</p>';
-    return;
+    error_log('[devices_snapshot] Helper file not readable: ' . $helperPath);
 }
 
-// 1 › determine filter param
+// 0b › guarantee the symbol exists
+if (!function_exists('render_table')) {
+    /**
+     * Fallback table renderer – minimal but functional.
+     * Accepts same signature as the shared helper.
+     */
+    function render_table(array $headers, array $rows): string
+    {
+        $html  = '<table class="ds-fallback"><thead><tr>';
+        foreach ($headers as $label) {
+            $html .= '<th>' . htmlspecialchars($label) . '</th>';
+        }
+        $html .= '</tr></thead><tbody>';
+
+        if (!$rows) {
+            $html .= '<tr><td colspan="' . count($headers) . '">No data</td></tr>';
+        } else {
+            foreach ($rows as $row) {
+                $html .= '<tr>';
+                foreach ($headers as $field => $_) {
+                    $html .= '<td>' . htmlspecialchars((string)($row[$field] ?? '')) . '</td>';
+                }
+                $html .= '</tr>';
+            }
+        }
+        $html .= '</tbody></table>';
+
+        // simple style so it blends in
+        $html .= <<<CSS
+<style>
+.ds-fallback{width:100%;border-collapse:collapse;margin-top:1rem}
+.ds-fallback th,.ds-fallback td{padding:.5rem .75rem;text-align:left}
+.ds-fallback thead tr{background:rgba(255,255,255,.1);font-weight:600}
+.ds-fallback tbody tr:nth-child(even){background:rgba(255,255,255,.05)}
+</style>
+CSS;
+        return $html;
+    }
+}
+
+// ────────────────────────────────────────────────────────────────
+// 1 › build filter
 $customerCode = $_SESSION['selectedCustomer'] ?? null;
 $dealerId     = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
@@ -41,20 +84,20 @@ if ($customerCode) {
     $params['FilterDealerId'] = $dealerId;
 }
 
-// 2 › fetch data
+// 2 › call API
 $apiUrl =
     (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') .
     $_SERVER['HTTP_HOST'] .
     '/api/get_devices.php?' .
     http_build_query($params);
 
-$raw  = file_get_contents($apiUrl);
+$raw  = @file_get_contents($apiUrl);
 $json = $raw ? json_decode($raw, true) : null;
 
 $totalRows = ($json['IsValid'] ?? false) ? ($json['TotalRows'] ?? 0) : 0;
 $rows      = ($json['IsValid'] ?? false) ? ($json['Result'] ?? [])   : [];
 
-// 3 › pagination maths
+// 3 › pagination
 $pageSize    = 15;
 $currentPage = $params['PageNumber'];
 $totalPages  = max(1, (int)ceil($totalRows / $pageSize));
@@ -70,7 +113,7 @@ function self_url(bool $expand, int $page = 1): string
     return '/index.php?' . http_build_query($p);
 }
 
-// 4 › headers config for helper
+// 4 › table headers
 $tableHeaders = [
     'ExternalIdentifier' => 'Equipment ID',
     'Model'              => 'Model',
@@ -117,7 +160,6 @@ $tableHeaders = [
     padding:.2rem .6rem;border-radius:9999px;
     background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
 }
-/* Pagination (helper already styles table) */
 .pagination{text-align:center;margin-top:1rem}
 .pagination a{margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
 .pagination span{margin:0 .5rem}
