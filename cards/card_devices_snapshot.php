@@ -12,7 +12,7 @@ $customer = $_SESSION['selectedCustomer'] ?? '';
 $dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
 /*───────────────────────────────────────────────────────────
- | 1) BUILD & LOG REQUEST
+ | 1) BUILD & LOG REQUEST BODY  (SortOrder → Desc)
  *───────────────────────────────────────────────────────────*/
 $pageSize = 15;
 $page     = max(1, (int)($_GET['ds_page'] ?? 1));
@@ -21,13 +21,13 @@ $body = [
     'PageNumber'        => $page,
     'PageRows'          => $pageSize,
     'SortColumn'        => 'ExternalIdentifier',
-    'SortOrder'         => 'Asc',
+    'SortOrder'         => 'Desc',           // ↘ Now descending
     'FilterDealerId'    => $dealerId,
     'DeviceType'        => 'Printer',
 ];
 
 if ($customer !== '') {
-    $body['FilterCustomerCodes'] = [ $customer ];
+    $body['FilterCustomerCodes'] = [$customer];
 }
 
 error_log('[devices_snapshot] Request body: ' . json_encode($body));
@@ -55,13 +55,13 @@ $total = ($data['IsValid'] ?? false) ? ($data['TotalRows'] ?? 0) : 0;
 $raw   = ($data['IsValid'] ?? false) ? ($data['Result']    ?? []) : [];
 
 /*───────────────────────────────────────────────────────────
- | 3) NORMALISE ROWS (ID merge stays the same)
+ | 3) NORMALISE ROWS (ID merge unchanged)
  *───────────────────────────────────────────────────────────*/
 $rows = [];
 foreach ($raw as $r) {
     $asset = trim((string)($r['AssetNumber'] ?? ''));
     $ext   = trim((string)($r['ExternalIdentifier'] ?? ''));
-    $id    = $asset !== '' ? $asset : $ext;   // show only one
+    $id    = $asset !== '' ? $asset : $ext;
 
     $rows[] = [
         'Drill'      => $r['DeviceId'] ?? $r['Id'] ?? '',
@@ -88,7 +88,7 @@ function self_url(bool $exp, int $p = 1): string
 }
 
 /*───────────────────────────────────────────────────────────
- | 5) RENDER CARD (with smaller font in the table)
+ | 5) RENDER CARD
  *───────────────────────────────────────────────────────────*/
 ?>
 <div class="card devices-snapshot">
@@ -139,45 +139,18 @@ function self_url(bool $exp, int $p = 1): string
 
 <style>
 .card.devices-snapshot {
-    padding:1.2rem;
-    border-radius:12px;
-    backdrop-filter:blur(10px);
-    background:var(--bg-card,rgba(255,255,255,.08));
-    color:var(--text-dark,#f5f5f5);
-}
-/* decreased font size for a more compact table */
-.snap {
-    width:100%;
-    border-collapse:collapse;
-    margin-top:1rem;
-    font-size:0.85rem;
-}
-.snap th, .snap td {
-    padding:.4rem .6rem;
-    text-align:left;
-}
-.snap thead tr {
-    background:rgba(255,255,255,.1);
-    font-weight:600;
-}
-.snap tbody tr:nth-child(even) {
-    background:rgba(255,255,255,.05);
+    padding:1.2rem;border-radius:12px;backdrop-filter:blur(10px);
+    background:var(--bg-card,rgba(255,255,255,.08));color:var(--text-dark,#f5f5f5);
 }
 .badge {
-    display:inline-block;
-    min-width:44px;
-    text-align:center;
-    padding:.2rem .5rem;
-    border-radius:9999px;
-    background:var(--bg-light,#2d8cff);
-    color:#fff;
-    font-weight:600;
-    font-size:0.85rem;
+    display:inline-block;min-width:44px;text-align:center;padding:.2rem .5rem;
+    border-radius:9999px;background:var(--bg-light,#2d8cff);
+    color:#fff;font-weight:600;font-size:0.85rem;
 }
-.pagination a {
-    margin:0 .4rem;
-    color:var(--text-dark,#aaddff);
-    text-decoration:none;
-    font-size:0.85rem;
-}
+/* keep compact table styling */
+.snap {font-size:0.85rem;width:100%;border-collapse:collapse;margin-top:1rem}
+.snap th, .snap td {padding:.4rem .6rem;text-align:left}
+.snap thead tr {background:rgba(255,255,255,.1);font-weight:600}
+.snap tbody tr:nth-child(even) {background:rgba(255,255,255,.05)}
+.pagination a {margin:0 .4rem;color:var(--text-dark,#aaddff);text-decoration:none;font-size:0.85rem}
 </style>
