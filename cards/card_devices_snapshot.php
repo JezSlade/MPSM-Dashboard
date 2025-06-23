@@ -65,6 +65,8 @@ $currentPage = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
 $body = [
     'PageNumber' => $currentPage,
     'PageRows'   => $pageSize,
+    'SortColumn' => 'ExternalIdentifier',   // ← change this line
+    'SortOrder'  => 'Asc',
 ];
 if ($customerCode) {
     $body['CustomerCode'] = $customerCode;
