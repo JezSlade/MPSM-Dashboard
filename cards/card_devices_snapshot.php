@@ -10,79 +10,93 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ------------------------------------------------------------------
 
 /**
- * Card ▸ Devices Snapshot  (PHP-only)
- * ---------------------------------------------------------------
+ * Card ▸ Devices Snapshot  (pure-PHP, POST-based)
+ * ------------------------------------------------------------------
  * • Compact view shows “Devices Online (n)”.
- * • Clicking header reloads page with ?ds_exp=1 to reveal a paginated
- *   table (15 rows per page).
- * • No JavaScript needed.
- *
- * Filtering logic
- * ---------------------------------------------------------------
- *   1. If the session already has `selectedCustomer`, we pass that
- *      value as  CustomerCode=<code>  to /api/get_devices.php.
- *   2. Otherwise we fall back to a dealer-wide list by sending
- *      FilterDealerId=<DEALER_ID from .env>.
- *   3. A red ⚠️ badge appears whenever the fallback is in effect so
- *      you know you’re not scoped to a user-chosen customer.
+ * • Clicking header reloads with ?ds_exp=1 to reveal a paginated table.
+ * • Uses POST /Device/List (spec-compliant) with either:
+ *       CustomerCode      – when the user selected a customer
+ *       FilterDealerId    – fallback to dealer-wide view
+ * • No JavaScript.
  */
 
-// ------------------------------------------------------------------
-// 1) Resolve customer or dealer scope
+// ──────────────────────────────────────────────────────────────────
+// 1) Determine scope
 $selectedCustomer   = $_SESSION['selectedCustomer'] ?? null;
 $usingDefaultTenant = $selectedCustomer === null;
 
-// Dealer ID from .env (parse_env_file runs in includes/config.php)
-$dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2'; // safe fallback
+// Dealer + DealerCode pulled from .env (already parsed in config.php)
+$dealerId   = getenv('DEALER_ID')   ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
+$dealerCode = getenv('DEALER_CODE') ?: 'NY06AGDWUQ'; // kept for future use
 
-// ------------------------------------------------------------------
+// ──────────────────────────────────────────────────────────────────
 // 2) Pagination / expansion flags (query-string)
 $isExpanded  = isset($_GET['ds_exp']);
 $currentPage = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
-$pageSize    = 15;
+$pageSize    = 15;   // API default; keep for clarity
 
-// ------------------------------------------------------------------
-// 3) Helper → fetch devices page from API
+// ──────────────────────────────────────────────────────────────────
+// 3) Helper → call /Device/List via POST
 function fetch_devices(int $page, ?string $customer, string $dealerId): ?array
 {
-    $params = ['PageNumber' => $page];
-
+    // Build body according to AllEndpoints.json
+    $body = [
+        'PageNumber' => $page,
+        'PageRows'   => 15,
+    ];
     if ($customer) {
-        $params['CustomerCode']   = $customer;
+        $body['CustomerCode']   = $customer;
     } else {
-        $params['FilterDealerId'] = $dealerId;
+        $body['FilterDealerId'] = $dealerId;
     }
 
     $url =
         (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') .
         $_SERVER['HTTP_HOST'] .
-        '/api/get_devices.php?' .
-        http_build_query($params);
+        '/api/get_devices.php';   // wrapper that forwards to /Device/List
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS     => json_encode($body),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 10,
     ]);
     $raw = curl_exec($ch);
+    $err = curl_error($ch);
     curl_close($ch);
 
-    return $raw ? json_decode($raw, true) : null;
+    if ($raw === false) {
+        error_log("Device snapshot CURL error: $err");
+        return null;
+    }
+    return json_decode($raw, true) ?: null;
 }
 
-// ------------------------------------------------------------------
+// ──────────────────────────────────────────────────────────────────
 // 4) Retrieve data
 $firstPageData = fetch_devices(1, $selectedCustomer, $dealerId);
-$totalRows     = $firstPageData['TotalRows'] ?? 0;
-$totalPages    = max(1, (int)ceil($totalRows / $pageSize));
 
-$pageData = ($isExpanded && $currentPage > 1)
-    ? fetch_devices($currentPage, $selectedCustomer, $dealerId)
-    : $firstPageData;
+if (!$firstPageData || !($firstPageData['IsValid'] ?? false)) {
+    // API failure – log and show count 0
+    $apiErrorMsg = $firstPageData['Errors'][0]['Description'] ?? 'Unknown API error';
+    error_log("Device snapshot API error: $apiErrorMsg");
+    $totalRows  = 0;
+    $totalPages = 1;
+    $rows       = [];
+} else {
+    $totalRows  = $firstPageData['TotalRows'] ?? 0;
+    $totalPages = max(1, (int)ceil($totalRows / $pageSize));
 
-$rows = $pageData['Result'] ?? [];
+    $pageData = ($isExpanded && $currentPage > 1)
+        ? fetch_devices($currentPage, $selectedCustomer, $dealerId)
+        : $firstPageData;
 
-// ------------------------------------------------------------------
+    $rows = ($pageData['IsValid'] ?? false) ? ($pageData['Result'] ?? []) : [];
+}
+
+// ──────────────────────────────────────────────────────────────────
 // 5) URL helper for self-navigation
 function build_url(bool $expand, int $page = 1): string
 {
@@ -99,9 +113,9 @@ function build_url(bool $expand, int $page = 1): string
 <div class="card devices-snapshot">
     <header>
         <h2>
-            <a href="<?php echo htmlspecialchars(build_url(!$isExpanded)); ?>">
+            <a href="<?= htmlspecialchars(build_url(!$isExpanded)); ?>">
                 Devices Online
-                <span class="badge"><?php echo $totalRows; ?></span>
+                <span class="badge"><?= $totalRows; ?></span>
                 <?php if ($usingDefaultTenant): ?>
                     <span class="badge warn" title="Using dealer-wide fallback">⚠️</span>
                 <?php endif; ?>
@@ -123,10 +137,10 @@ function build_url(bool $expand, int $page = 1): string
             <tbody>
             <?php foreach ($rows as $dev): ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($dev['ExternalIdentifier'] ?? ''); ?></td>
-                    <td><?php echo htmlspecialchars($dev['Model'] ?? ''); ?></td>
-                    <td><?php echo htmlspecialchars($dev['IpAddress'] ?? ''); ?></td>
-                    <td><?php echo htmlspecialchars($dev['Department'] ?? ''); ?></td>
+                    <td><?= htmlspecialchars($dev['ExternalIdentifier'] ?? ''); ?></td>
+                    <td><?= htmlspecialchars($dev['Model'] ?? ''); ?></td>
+                    <td><?= htmlspecialchars($dev['IpAddress'] ?? ''); ?></td>
+                    <td><?= htmlspecialchars($dev['Department'] ?? ''); ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -134,13 +148,13 @@ function build_url(bool $expand, int $page = 1): string
 
         <div class="pagination">
             <?php if ($currentPage > 1): ?>
-                <a href="<?php echo htmlspecialchars(build_url(true, $currentPage - 1)); ?>">&larr; Prev</a>
+                <a href="<?= htmlspecialchars(build_url(true, $currentPage - 1)); ?>">&larr; Prev</a>
             <?php endif; ?>
 
-            <span><?php echo $currentPage; ?> / <?php echo $totalPages; ?></span>
+            <span><?= $currentPage; ?> / <?= $totalPages; ?></span>
 
             <?php if ($currentPage < $totalPages): ?>
-                <a href="<?php echo htmlspecialchars(build_url(true, $currentPage + 1)); ?>">Next &rarr;</a>
+                <a href="<?= htmlspecialchars(build_url(true, $currentPage + 1)); ?>">Next &rarr;</a>
             <?php endif; ?>
         </div>
     </section>
@@ -148,38 +162,32 @@ function build_url(bool $expand, int $page = 1): string
 </div>
 
 <style>
-/* ─────────── Card Shell ─────────── */
+/* Card shell */
 .card.devices-snapshot{
-    padding:1.5rem;
-    border-radius:12px;
+    padding:1.5rem;border-radius:12px;
     backdrop-filter:blur(10px);
     background:var(--bg-card,rgba(255,255,255,0.08));
     color:var(--text-dark,#f5f5f5)
 }
-.card.devices-snapshot header a{
-    color:inherit;text-decoration:none
-}
-.card.devices-snapshot h2{
-    margin:0;font-size:1.25rem;font-weight:700
-}
-/* ─────────── Badges ─────────── */
+.card.devices-snapshot header a{color:inherit;text-decoration:none}
+.card.devices-snapshot h2{margin:0;font-size:1.25rem;font-weight:700}
+
+/* Badges */
 .badge{
     display:inline-block;min-width:48px;text-align:center;
     padding:.2rem .6rem;border-radius:9999px;
     background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
 }
 .badge.warn{background:#d9534f}
-/* ─────────── Table ─────────── */
+
+/* Table */
 table{width:100%;border-collapse:collapse;margin-top:1rem}
 th,td{padding:.5rem .75rem;text-align:left}
 thead tr{background:rgba(255,255,255,.1);font-weight:600}
 tbody tr:nth-child(even){background:rgba(255,255,255,.05)}
-/* ─────────── Pagination ─────────── */
+
+/* Pagination */
 .pagination{text-align:center;margin-top:1rem}
-.pagination a{
-    margin:0 .5rem;
-    color:var(--text-dark,#aaddff);
-    text-decoration:none
-}
+.pagination a{margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
 .pagination span{margin:0 .5rem}
 </style>
