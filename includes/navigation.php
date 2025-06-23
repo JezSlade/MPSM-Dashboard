@@ -1,81 +1,59 @@
-<?php declare(strict_types=1);
-// /includes/navigation.php
+<?php
+/**
+ * Main Navigation
+ * ------------------------------------------------------------------
+ * Two-tab switcher between Dashboard and Sandbox views.
+ * Uses simple query-string routing so no rewrite rules are needed.
+ */
 
-// Don’t render on API calls
-if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
-    return;
-}
+declare(strict_types=1);
 
-require_once __DIR__ . '/api_functions.php';
-$config = parse_env_file(__DIR__ . '/../.env');
+// Determine which tab is “active”
+$currentView = $_GET['view'] ?? 'dashboard';
 
-// Fetch all customers
-$payload = [
-    'DealerCode' => $config['DEALER_CODE'] ?? '',
-    'PageNumber' => 1,
-    'PageRows'   => 2147483647,
-    'SortColumn' => 'Description',
-    'SortOrder'  => 'Asc',
-];
-try {
-    $resp      = call_api($config, 'POST', 'Customer/GetCustomers', $payload);
-    $customers = $resp['Result'] ?? [];
-} catch (\Throwable $e) {
-    $customers = [];
-}
+// Tiny helper to build <li> links safely
+function nav_link(string $label, string $view, string $current): string
+{
+    $isActive = ($view === $current) ? 'active' : '';
+    $href = '/index.php?view=' . urlencode($view);
 
-// Determine current selection
-$currentCode = $_GET['customer'] ?? $_COOKIE['customer'] ?? '';
-$currentName = '';
-foreach ($customers as $cust) {
-    if (($cust['Code'] ?? '') === $currentCode) {
-        $currentName = $cust['Description'] 
-                     ?? $cust['Name'] 
-                     ?? $currentCode;
-        break;
-    }
+    return '<li class="' . $isActive . '"><a href="' . $href . '">' . htmlspecialchars($label) . '</a></li>';
 }
 ?>
-<!-- NAV BAR (rendered under header.php) -->
-<div class="flex items-center px-4 py-2 bg-gray-800 bg-opacity-50 backdrop-blur-sm space-x-4">
-  <!-- Fixed-width searchable dropdown -->
-  <div class="w-64 flex-shrink-0">
-    <label for="nav-customer-combobox" class="sr-only">Choose Customer</label>
-    <input
-      list="nav-customer-list"
-      id="nav-customer-combobox"
-      class="h-8 w-full text-sm bg-gray-800 dark:bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-      placeholder="— choose a customer —"
-      value="<?= htmlspecialchars($currentName) ?>"
-    />
-    <datalist id="nav-customer-list">
-      <?php foreach ($customers as $cust):
-          $code = htmlspecialchars($cust['Code'] ?? '');
-          $name = htmlspecialchars($cust['Description'] ?? $cust['Name'] ?? $code);
-      ?>
-        <option data-code="<?= $code ?>" value="<?= $name ?>"></option>
-      <?php endforeach; ?>
-    </datalist>
-  </div>
 
-  <!-- (Keep any other nav buttons or links here if needed) -->
-</div>
+<nav class="main-nav">
+    <ul>
+        <?= nav_link('Dashboard', 'dashboard', $currentView) ?>
+        <?= nav_link('Sandbox',   'sandbox',   $currentView) ?>
+    </ul>
+</nav>
 
-<script>
-// Wire up the customer combobox
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('nav-customer-combobox');
-  const options = document.getElementById('nav-customer-list').options;
+<style>
+/* Glass / neumorphic navigation styling */
+.main-nav {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    backdrop-filter: blur(10px);
+    background: var(--bg-card, rgba(255,255,255,0.06));
+    width: 100%;
+}
 
-  input.addEventListener('change', () => {
-    const chosen = Array.from(options)
-                        .find(o => o.value === input.value);
-    const code = chosen ? chosen.dataset.code : '';
-    if (code) {
-      document.cookie = `customer=${encodeURIComponent(code)};path=/;max-age=${60*60*24*365}`;
-      // Reload preserving any other query params if desired
-      window.location.href = `${window.location.pathname}?customer=${encodeURIComponent(code)}`;
-    }
-  });
-});
-</script>
+.main-nav ul {
+    margin: 0;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+}
+
+.main-nav li a {
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--text-dark, #f5f5f5);
+}
+
+.main-nav li.active a {
+    text-decoration: underline;
+}
+</style>
