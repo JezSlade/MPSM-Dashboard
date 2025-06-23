@@ -1,52 +1,45 @@
 <?php
 declare(strict_types=1);
 
-// Always-on debug
+// ─── Debug helper ─────────────────────────────────────────────
 require_once __DIR__ . '/../includes/debug.php';
 
-// Shared API functions
+// ─── API helper ──────────────────────────────────────────────
 require_once __DIR__ . '/../includes/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-/*────────────────────────────────────
-│ 1) Determine which customer
-└────────────────────────────────────*/
+// ─── 1) Determine current customer ───────────────────────────
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $customerCode = $_SESSION['selectedCustomer'] ?? '';
 if ($customerCode === '') {
-    // nothing to do
     echo '<p class="error">No customer selected.</p>';
     return;
 }
 
-/*────────────────────────────────────
-│ 2) Call the “CustomerDashboard/Devices” endpoint
-│    Expects body { request: { Code: "…" } }
-└────────────────────────────────────*/
+// ─── 2) Call GET /CustomerDashboard?code=… ───────────────────
 try {
     $resp = call_api(
         $config,
-        'POST',
-        'CustomerDashboard/Devices',
-        ['request' => ['Code' => $customerCode]]
+        'GET',
+        'CustomerDashboard',
+        ['code' => $customerCode]
     );
 } catch (\Throwable $e) {
     error_log("[card_customer_devices] API error: " . $e->getMessage());
     $resp = ['IsValid' => false];
 }
 
-$total   = $resp['IsValid'] 
-         ? ($resp['Result']['TotalCount']   ?? 0) 
+// ─── 3) Extract total and device list ────────────────────────
+$total   = $resp['IsValid']
+         ? count($resp['Result']['Devices'] ?? [])
          : 0;
-$devices = $resp['IsValid'] 
-         ? ($resp['Result']['Devices']      ?? []) 
+$devices = $resp['IsValid']
+         ? ($resp['Result']['Devices'] ?? [])
          : [];
 
-/*────────────────────────────────────
-│ 3) Normalize into rows
-└────────────────────────────────────*/
+// ─── 4) Normalize each device into row data ─────────────────
 $rows = [];
 foreach ($devices as $d) {
     $asset = trim((string)($d['AssetNumber']        ?? ''));
@@ -56,13 +49,11 @@ foreach ($devices as $d) {
     $rows[] = [
         'Identifier' => $id,
         'Department' => $d['Department'] ?? '',
-        'Note'       => $d['Note']       ?? $d['Notes'] ?? '',
+        'Note'       => $d['Notes']      ?? $d['Note'] ?? '',
     ];
 }
 
-/*────────────────────────────────────
-│ 4) Render the card
-└────────────────────────────────────*/
+// ─── 5) Render the card ──────────────────────────────────────
 ?>
 <div class="card customer-devices">
   <header>
