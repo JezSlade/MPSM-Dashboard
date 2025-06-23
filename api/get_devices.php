@@ -1,13 +1,19 @@
 <?php
 declare(strict_types=1);
 
-// ───────────────────────────────────────────────
+// ------------------------------------------------------------------
 // DEBUG BLOCK (Always Keep at Top)
+$logDir = __DIR__ . '/../logs';
+if (!is_dir($logDir)) {
+    mkdir($logDir, 0755, true);          // auto-create directory tree
+}
+$logFile = $logDir . '/debug.log';
+
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
-// ───────────────────────────────────────────────
+ini_set('error_log', $logFile);
+// ------------------------------------------------------------------
 
 /**
  * get_devices.php  (SELF-CONTAINED)
