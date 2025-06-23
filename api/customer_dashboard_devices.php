@@ -12,20 +12,13 @@ ini_set('log_errors','1');
 
 /**
  * POST /api/customer_dashboard_devices.php
- * Body: { "request": { "Code": "XYZ" } }
- * or:   { "Code": "XYZ" }
+ * Body: { "Code": "<CustomerCode>" }
  * Proxies to upstream /CustomerDashboard/Devices
  */
 
 // 1) parse input
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
-// accept either top-level Code or nested under request
-$code  = '';
-if (!empty($input['request']['Code'])) {
-    $code = trim($input['request']['Code']);
-} elseif (!empty($input['Code'])) {
-    $code = trim($input['Code']);
-}
+$code  = trim($input['Code'] ?? '');
 
 error_log("[cust_devices_proxy] received Code: $code");
 
@@ -52,7 +45,7 @@ function parse_env(string $path): array {
 }
 $env = parse_env(__DIR__ . '/../.env');
 
-// 3) fetch token
+// 3) fetch OAuth token
 function get_token(array $env): string {
     $body = http_build_query([
         'grant_type'=>'password',
@@ -84,9 +77,9 @@ if (!$token) {
     exit;
 }
 
-// 4) forward to upstream
-$url = rtrim($env['API_BASE_URL'] ?? '', '/') . '/CustomerDashboard/Devices';
-$payload = json_encode(['request'=>['Code'=>$code]]);
+// 4) forward to upstream with plain { Code }
+$url     = rtrim($env['API_BASE_URL'] ?? '', '/') . '/CustomerDashboard/Devices';
+$payload = json_encode(['Code'=>$code]);
 error_log('[cust_devices_proxy] forwarding to upstream: ' . $payload);
 
 $ch = curl_init($url);

@@ -2,21 +2,21 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';
 
-/*── 0) SESSION + CUSTOMER ──────────────────────────────────*/
+/*── 0) SESSION & CUSTOMER ──────────────────────────────────*/
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $customer = $_SESSION['selectedCustomer'] ?? '';
 
 /*── 1) BUILD & LOG REQUEST ──────────────────────────────────*/
-$body = ['request'=>['Code'=>$customer]];
+$body = ['Code' => $customer];
 error_log('[cust_devices_card] Request: ' . json_encode($body));
 
 $api = (isset($_SERVER['HTTPS'])?'https://':'http://')
      . $_SERVER['HTTP_HOST']
      . '/api/customer_dashboard_devices.php';
 
-/*── 2) CALL API ────────────────────────────────────────────*/
+/*── 2) CALL API & PARSE RESPONSE ────────────────────────────*/
 $ch = curl_init($api);
 curl_setopt_array($ch, [
     CURLOPT_POST           => true,
