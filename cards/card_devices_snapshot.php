@@ -3,19 +3,19 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/debug.php';
 
 /*───────────────────────────────────────────────────────────
- | 0) SESSION + FILTER VARS (must be defined before use)
+ | 0) SESSION + FILTER VARS
  *───────────────────────────────────────────────────────────*/
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$customer = $_SESSION['selectedCustomer'] ?? '';            // '' = no specific customer
-$dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2'; // fallback dealer-wide
+$customer = $_SESSION['selectedCustomer'] ?? '';          // e.g. "W9OPXL0YDK"
+$dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
 /*───────────────────────────────────────────────────────────
- | 1) FETCH DEVICES via POST /api/get_devices.php
+ | 1) BUILD & LOG REQUEST BODY
  *───────────────────────────────────────────────────────────*/
 $pageSize = 15;
-$page     = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
+$page     = max(1, (int)($_GET['ds_page'] ?? 1));
 
 $body = [
     'PageNumber'     => $page,
@@ -25,10 +25,17 @@ $body = [
     'FilterDealerId' => $dealerId,
     'DeviceType'     => 'Printer',
 ];
+
 if ($customer !== '') {
     $body['CustomerCode'] = $customer;
 }
 
+// ** LOG the request body **
+error_log('[devices_snapshot] Request body: ' . json_encode($body));
+
+/*───────────────────────────────────────────────────────────
+ | 2) POST to API WRAPPER
+ *───────────────────────────────────────────────────────────*/
 $apiUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://')
         . $_SERVER['HTTP_HOST']
         . '/api/get_devices.php';
@@ -49,14 +56,13 @@ $total = ($data['IsValid'] ?? false) ? ($data['TotalRows'] ?? 0) : 0;
 $raw   = ($data['IsValid'] ?? false) ? ($data['Result']    ?? []) : [];
 
 /*───────────────────────────────────────────────────────────
- | 2) NORMALISE TABLE ROWS
+ | 3) NORMALISE ROWS
  *───────────────────────────────────────────────────────────*/
 $rows = [];
 foreach ($raw as $r) {
     $asset = trim((string)($r['AssetNumber'] ?? ''));
     $ext   = trim((string)($r['ExternalIdentifier'] ?? ''));
-    // show only one identifier when both exist
-    $id = $asset !== '' ? $asset : $ext;
+    $id    = $asset !== '' ? $asset : $ext;
 
     $rows[] = [
         'Drill'      => $r['DeviceId'] ?? $r['Id'] ?? '',
@@ -67,7 +73,7 @@ foreach ($raw as $r) {
 }
 
 /*───────────────────────────────────────────────────────────
- | 3) PAGINATION / URL HELPER
+ | 4) PAGINATION HELPERS
  *───────────────────────────────────────────────────────────*/
 $expanded   = isset($_GET['ds_exp']);
 $totalPages = max(1, (int)ceil($total / $pageSize));
@@ -83,7 +89,7 @@ function self_url(bool $exp, int $p = 1): string
 }
 
 /*───────────────────────────────────────────────────────────
- | 4) RENDER CARD
+ | 5) RENDER CARD
  *───────────────────────────────────────────────────────────*/
 ?>
 <div class="card devices-snapshot">
@@ -134,41 +140,17 @@ function self_url(bool $exp, int $p = 1): string
 
 <style>
 .card.devices-snapshot {
-    padding:1.5rem;
-    border-radius:12px;
-    backdrop-filter:blur(10px);
-    background:var(--bg-card,rgba(255,255,255,.08));
-    color:var(--text-dark,#f5f5f5);
+    padding:1.5rem;border-radius:12px;backdrop-filter:blur(10px);
+    background:var(--bg-card,rgba(255,255,255,.08));color:var(--text-dark,#f5f5f5)
 }
 .badge {
-    display:inline-block;
-    min-width:48px;
-    text-align:center;
-    padding:.2rem .6rem;
-    border-radius:9999px;
-    background:var(--bg-light,#2d8cff);
-    color:#fff;
-    font-weight:600;
+    display:inline-block;min-width:48px;text-align:center;
+    padding:.2rem .6rem;border-radius:9999px;
+    background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
 }
-.snap {
-    width:100%;
-    border-collapse:collapse;
-    margin-top:1rem;
-}
-.snap th, .snap td {
-    padding:.5rem .75rem;
-    text-align:left;
-}
-.snap thead tr {
-    background:rgba(255,255,255,.1);
-    font-weight:600;
-}
-.snap tbody tr:nth-child(even) {
-    background:rgba(255,255,255,.05);
-}
-.pagination a {
-    margin:0 .5rem;
-    color:var(--text-dark,#aaddff);
-    text-decoration:none;
-}
+.snap {width:100%;border-collapse:collapse;margin-top:1rem}
+.snap th,.snap td {padding:.5rem .75rem;text-align:left}
+.snap thead tr {background:rgba(255,255,255,.1);font-weight:600}
+.snap tbody tr:nth-child(even) {background:rgba(255,255,255,.05)}
+.pagination a {margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
 </style>
