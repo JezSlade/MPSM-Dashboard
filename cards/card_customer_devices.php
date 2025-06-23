@@ -6,7 +6,7 @@ require_once __DIR__ . '/../includes/debug.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$customer = $_SESSION['selectedCustomer'] ?? '';
+$customer = $_SESSION['selectedCustomer'] ?? '';   // e.g. "W9OPXL0YDK"
 
 /*── 1) FETCH CUSTOMER DASHBOARD DEVICES ───────────────────*/
 $body = ['Code' => $customer];
@@ -25,25 +25,25 @@ curl_setopt_array($ch, [
 $resp = curl_exec($ch);
 curl_close($ch);
 
-$data    = $resp ? json_decode($resp, true) : null;
-$total   = ($data['IsValid'] ?? false)
-         ? ($data['Result']['TotalCount'] ?? 0)
-         : 0;
-$devices = ($data['IsValid'] ?? false)
-         ? ($data['Result']['Devices']   ?? [])
-         : [];
+$data      = $resp ? json_decode($resp, true) : null;
+$total     = ($data['IsValid'] ?? false)
+           ? ($data['Result']['TotalCount'] ?? 0)
+           : 0;
+$rawRows   = ($data['IsValid'] ?? false)
+           ? ($data['Result']['Devices']   ?? [])
+           : [];
 
 /*── 2) NORMALISE ROWS ─────────────────────────────────────*/
 $rows = [];
-foreach ($devices as $d) {
-    $asset = trim((string)($d['AssetNumber']        ?? ''));
-    $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
+foreach ($rawRows as $r) {
+    $asset = trim((string)($r['AssetNumber']         ?? ''));
+    $ext   = trim((string)($r['ExternalIdentifier']  ?? ''));
     $id    = $asset !== '' ? $asset : $ext;
 
     $rows[] = [
         'Identifier' => $id,
-        'Department' => $d['Department'] ?? '',
-        'Note'       => $d['Note']       ?? $d['Notes'] ?? '',
+        'Department' => $r['Department'] ?? '',
+        'Note'       => $r['Note']       ?? $r['Notes'] ?? '',
     ];
 }
 
@@ -67,7 +67,7 @@ foreach ($devices as $d) {
     <tbody>
       <?php if (empty($rows)): ?>
         <tr><td colspan="3">No data</td></tr>
-      <?php else: foreach ($rows as $r): ?>
+      <?php else: foreach($rows as $r): ?>
         <tr>
           <td><?= htmlspecialchars($r['Identifier']); ?></td>
           <td><?= htmlspecialchars($r['Department']); ?></td>
@@ -80,37 +80,26 @@ foreach ($devices as $d) {
 
 <style>
 .card.customer-devices {
-    padding:1.2rem;
-    border-radius:12px;
+    padding:1.2rem;border-radius:12px;
     backdrop-filter:blur(10px);
     background:var(--bg-card,rgba(255,255,255,.08));
     color:var(--text-dark,#f5f5f5);
     margin-bottom:1rem;
 }
 .badge {
-    display:inline-block;
-    min-width:44px;
-    text-align:center;
-    padding:.2rem .5rem;
-    border-radius:9999px;
-    background:var(--bg-light,#2d8cff);
-    color:#fff;
-    font-weight:600;
+    display:inline-block;min-width:44px;text-align:center;
+    padding:.2rem .5rem;border-radius:9999px;
+    background:var(--bg-light,#2d8cff);color:#fff;font-weight:600;
     font-size:0.85rem;
 }
 .snap {
-    font-size:0.85rem;
-    width:100%;
-    border-collapse:collapse;
-    margin-top:.75rem;
+    font-size:0.85rem;width:100%;border-collapse:collapse;margin-top:.75rem;
 }
 .snap th, .snap td {
-    padding:.4rem .6rem;
-    text-align:left;
+    padding:.4rem .6rem;text-align:left;
 }
 .snap thead tr {
-    background:rgba(255,255,255,.1);
-    font-weight:600;
+    background:rgba(255,255,255,.1);font-weight:600;
 }
 .snap tbody tr:nth-child(even) {
     background:rgba(255,255,255,.05);
