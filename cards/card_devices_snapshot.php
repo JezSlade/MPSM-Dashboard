@@ -12,25 +12,25 @@ $customer = $_SESSION['selectedCustomer'] ?? '';          // e.g. "W9OPXL0YDK"
 $dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
 /*───────────────────────────────────────────────────────────
- | 1) BUILD & LOG REQUEST BODY
+ | 1) BUILD & LOG REQUEST BODY (with FilterCustomerCodes)
  *───────────────────────────────────────────────────────────*/
 $pageSize = 15;
 $page     = max(1, (int)($_GET['ds_page'] ?? 1));
 
 $body = [
-    'PageNumber'     => $page,
-    'PageRows'       => $pageSize,
-    'SortColumn'     => 'ExternalIdentifier',
-    'SortOrder'      => 'Asc',
-    'FilterDealerId' => $dealerId,
-    'DeviceType'     => 'Printer',
+    'PageNumber'        => $page,
+    'PageRows'          => $pageSize,
+    'SortColumn'        => 'ExternalIdentifier',
+    'SortOrder'         => 'Asc',
+    'FilterDealerId'    => $dealerId,
+    'DeviceType'        => 'Printer',
 ];
 
 if ($customer !== '') {
-    $body['CustomerCode'] = $customer;
+    // Correct per spec: array of customer codes
+    $body['FilterCustomerCodes'] = [ $customer ];
 }
 
-// ** LOG the request body **
 error_log('[devices_snapshot] Request body: ' . json_encode($body));
 
 /*───────────────────────────────────────────────────────────
@@ -140,17 +140,41 @@ function self_url(bool $exp, int $p = 1): string
 
 <style>
 .card.devices-snapshot {
-    padding:1.5rem;border-radius:12px;backdrop-filter:blur(10px);
-    background:var(--bg-card,rgba(255,255,255,.08));color:var(--text-dark,#f5f5f5)
+    padding:1.5rem;
+    border-radius:12px;
+    backdrop-filter:blur(10px);
+    background:var(--bg-card,rgba(255,255,255,.08));
+    color:var(--text-dark,#f5f5f5);
 }
 .badge {
-    display:inline-block;min-width:48px;text-align:center;
-    padding:.2rem .6rem;border-radius:9999px;
-    background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
+    display:inline-block;
+    min-width:48px;
+    text-align:center;
+    padding:.2rem .6rem;
+    border-radius:9999px;
+    background:var(--bg-light,#2d8cff);
+    color:#fff;
+    font-weight:600;
 }
-.snap {width:100%;border-collapse:collapse;margin-top:1rem}
-.snap th,.snap td {padding:.5rem .75rem;text-align:left}
-.snap thead tr {background:rgba(255,255,255,.1);font-weight:600}
-.snap tbody tr:nth-child(even) {background:rgba(255,255,255,.05)}
-.pagination a {margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
+.snap {
+    width:100%;
+    border-collapse:collapse;
+    margin-top:1rem;
+}
+.snap th, .snap td {
+    padding:.5rem .75rem;
+    text-align:left;
+}
+.snap thead tr {
+    background:rgba(255,255,255,.1);
+    font-weight:600;
+}
+.snap tbody tr:nth-child(even) {
+    background:rgba(255,255,255,.05);
+}
+.pagination a {
+    margin:0 .5rem;
+    color:var(--text-dark,#aaddff);
+    text-decoration:none;
+}
 </style>
