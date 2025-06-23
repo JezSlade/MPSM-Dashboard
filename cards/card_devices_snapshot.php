@@ -8,11 +8,11 @@ require_once __DIR__ . '/../includes/debug.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$customer = $_SESSION['selectedCustomer'] ?? '';          // e.g. "W9OPXL0YDK"
+$customer = $_SESSION['selectedCustomer'] ?? '';
 $dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
 
 /*───────────────────────────────────────────────────────────
- | 1) BUILD & LOG REQUEST BODY (with FilterCustomerCodes)
+ | 1) BUILD & LOG REQUEST
  *───────────────────────────────────────────────────────────*/
 $pageSize = 15;
 $page     = max(1, (int)($_GET['ds_page'] ?? 1));
@@ -27,7 +27,6 @@ $body = [
 ];
 
 if ($customer !== '') {
-    // Correct per spec: array of customer codes
     $body['FilterCustomerCodes'] = [ $customer ];
 }
 
@@ -56,13 +55,13 @@ $total = ($data['IsValid'] ?? false) ? ($data['TotalRows'] ?? 0) : 0;
 $raw   = ($data['IsValid'] ?? false) ? ($data['Result']    ?? []) : [];
 
 /*───────────────────────────────────────────────────────────
- | 3) NORMALISE ROWS
+ | 3) NORMALISE ROWS (ID merge stays the same)
  *───────────────────────────────────────────────────────────*/
 $rows = [];
 foreach ($raw as $r) {
     $asset = trim((string)($r['AssetNumber'] ?? ''));
     $ext   = trim((string)($r['ExternalIdentifier'] ?? ''));
-    $id    = $asset !== '' ? $asset : $ext;
+    $id    = $asset !== '' ? $asset : $ext;   // show only one
 
     $rows[] = [
         'Drill'      => $r['DeviceId'] ?? $r['Id'] ?? '',
@@ -80,7 +79,7 @@ $totalPages = max(1, (int)ceil($total / $pageSize));
 
 function self_url(bool $exp, int $p = 1): string
 {
-    $q = ['view' => 'dashboard'];
+    $q = ['view'=>'dashboard'];
     if ($exp) {
         $q['ds_exp']  = 1;
         $q['ds_page'] = $p;
@@ -89,7 +88,7 @@ function self_url(bool $exp, int $p = 1): string
 }
 
 /*───────────────────────────────────────────────────────────
- | 5) RENDER CARD
+ | 5) RENDER CARD (with smaller font in the table)
  *───────────────────────────────────────────────────────────*/
 ?>
 <div class="card devices-snapshot">
@@ -113,7 +112,7 @@ function self_url(bool $exp, int $p = 1): string
             <tbody>
             <?php if (empty($rows)): ?>
                 <tr><td colspan="4">No data</td></tr>
-            <?php else: foreach ($rows as $r): 
+            <?php else: foreach ($rows as $r):
                 $link = '/index.php?view=device_detail&id=' . urlencode($r['Drill']);
             ?>
                 <tr>
@@ -140,29 +139,21 @@ function self_url(bool $exp, int $p = 1): string
 
 <style>
 .card.devices-snapshot {
-    padding:1.5rem;
+    padding:1.2rem;
     border-radius:12px;
     backdrop-filter:blur(10px);
     background:var(--bg-card,rgba(255,255,255,.08));
     color:var(--text-dark,#f5f5f5);
 }
-.badge {
-    display:inline-block;
-    min-width:48px;
-    text-align:center;
-    padding:.2rem .6rem;
-    border-radius:9999px;
-    background:var(--bg-light,#2d8cff);
-    color:#fff;
-    font-weight:600;
-}
+/* decreased font size for a more compact table */
 .snap {
     width:100%;
     border-collapse:collapse;
     margin-top:1rem;
+    font-size:0.85rem;
 }
 .snap th, .snap td {
-    padding:.5rem .75rem;
+    padding:.4rem .6rem;
     text-align:left;
 }
 .snap thead tr {
@@ -172,9 +163,21 @@ function self_url(bool $exp, int $p = 1): string
 .snap tbody tr:nth-child(even) {
     background:rgba(255,255,255,.05);
 }
+.badge {
+    display:inline-block;
+    min-width:44px;
+    text-align:center;
+    padding:.2rem .5rem;
+    border-radius:9999px;
+    background:var(--bg-light,#2d8cff);
+    color:#fff;
+    font-weight:600;
+    font-size:0.85rem;
+}
 .pagination a {
-    margin:0 .5rem;
+    margin:0 .4rem;
     color:var(--text-dark,#aaddff);
     text-decoration:none;
+    font-size:0.85rem;
 }
 </style>
