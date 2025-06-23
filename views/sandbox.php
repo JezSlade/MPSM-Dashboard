@@ -16,6 +16,13 @@
  *   • Manual path safety with __DIR__
  *   • Strict types, PHP 8.4+ compatible
  */
+// ------------------------------------------------------------------
+// DEBUG BLOCK (Always Keep at Top)
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/debug.log');
+// ------------------------------------------------------------------
 
 declare(strict_types=1);
 
