@@ -12,40 +12,52 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 /**
  * Card ▸ Devices Snapshot  (PHP-only)
  * ---------------------------------------------------------------
- * • Shows total devices online for the active customer.
- * • Click header to expand a paginated table (15 / page).
- * • Pure PHP, no JavaScript.
+ * • Compact view shows “Devices Online (n)”.
+ * • Clicking header reloads page with ?ds_exp=1 to reveal a paginated
+ *   table (15 rows per page).
+ * • No JavaScript needed.
  *
- * Fallback logic:
- *   – If $_SESSION['selectedCustomer'] is not set, we default to the
- *     project’s mandatory tenant “W9OPXL0YDK” and display a ⚠ badge
- *     to remind you this is NOT the user-selected customer.
+ * Filtering logic
+ * ---------------------------------------------------------------
+ *   1. If the session already has `selectedCustomer`, we pass that
+ *      value as  CustomerCode=<code>  to /api/get_devices.php.
+ *   2. Otherwise we fall back to a dealer-wide list by sending
+ *      FilterDealerId=<DEALER_ID from .env>.
+ *   3. A red ⚠️ badge appears whenever the fallback is in effect so
+ *      you know you’re not scoped to a user-chosen customer.
  */
 
-// --------------------------------------------------
-// Grab customer (with fallback)
-$selectedCustomer   = $_SESSION['selectedCustomer'] ?? 'W9OPXL0YDK';
-$usingDefaultTenant = !isset($_SESSION['selectedCustomer']);
+// ------------------------------------------------------------------
+// 1) Resolve customer or dealer scope
+$selectedCustomer   = $_SESSION['selectedCustomer'] ?? null;
+$usingDefaultTenant = $selectedCustomer === null;
 
-// Query-string flags
+// Dealer ID from .env (parse_env_file runs in includes/config.php)
+$dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2'; // safe fallback
+
+// ------------------------------------------------------------------
+// 2) Pagination / expansion flags (query-string)
 $isExpanded  = isset($_GET['ds_exp']);
 $currentPage = isset($_GET['ds_page']) ? max(1, (int)$_GET['ds_page']) : 1;
 $pageSize    = 15;
 
-// --------------------------------------------------
-// Helper → call API safely
-function fetch_devices(int $page, string $customer): ?array
+// ------------------------------------------------------------------
+// 3) Helper → fetch devices page from API
+function fetch_devices(int $page, ?string $customer, string $dealerId): ?array
 {
-    // Build params
     $params = ['PageNumber' => $page];
-    if ($customer !== '') {
-        $params['CustomerCode'] = $customer;
-    }
-    $qs  = http_build_query($params);
 
-    $url = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') .
-           $_SERVER['HTTP_HOST'] .
-           '/api/get_devices.php?' . $qs;
+    if ($customer) {
+        $params['CustomerCode']   = $customer;
+    } else {
+        $params['FilterDealerId'] = $dealerId;
+    }
+
+    $url =
+        (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') .
+        $_SERVER['HTTP_HOST'] .
+        '/api/get_devices.php?' .
+        http_build_query($params);
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -55,24 +67,23 @@ function fetch_devices(int $page, string $customer): ?array
     $raw = curl_exec($ch);
     curl_close($ch);
 
-    $json = $raw ? json_decode($raw, true) : null;
-    return $json ?: null;
+    return $raw ? json_decode($raw, true) : null;
 }
 
-// Fetch first page to get totals
-$firstPageData = fetch_devices(1, $selectedCustomer);
+// ------------------------------------------------------------------
+// 4) Retrieve data
+$firstPageData = fetch_devices(1, $selectedCustomer, $dealerId);
 $totalRows     = $firstPageData['TotalRows'] ?? 0;
 $totalPages    = max(1, (int)ceil($totalRows / $pageSize));
 
-// Fetch current page rows (may be page 1 again)
 $pageData = ($isExpanded && $currentPage > 1)
-    ? fetch_devices($currentPage, $selectedCustomer)
+    ? fetch_devices($currentPage, $selectedCustomer, $dealerId)
     : $firstPageData;
 
 $rows = $pageData['Result'] ?? [];
 
-// --------------------------------------------------
-// URL helper
+// ------------------------------------------------------------------
+// 5) URL helper for self-navigation
 function build_url(bool $expand, int $page = 1): string
 {
     $params = ['view' => 'sandbox'];
@@ -92,7 +103,7 @@ function build_url(bool $expand, int $page = 1): string
                 Devices Online
                 <span class="badge"><?php echo $totalRows; ?></span>
                 <?php if ($usingDefaultTenant): ?>
-                    <span class="badge warn" title="Default customer in use">⚠️</span>
+                    <span class="badge warn" title="Using dealer-wide fallback">⚠️</span>
                 <?php endif; ?>
             </a>
         </h2>
@@ -137,25 +148,38 @@ function build_url(bool $expand, int $page = 1): string
 </div>
 
 <style>
+/* ─────────── Card Shell ─────────── */
 .card.devices-snapshot{
-    padding:1.5rem;border-radius:12px;
+    padding:1.5rem;
+    border-radius:12px;
     backdrop-filter:blur(10px);
     background:var(--bg-card,rgba(255,255,255,0.08));
     color:var(--text-dark,#f5f5f5)
 }
-.card.devices-snapshot header a{color:inherit;text-decoration:none}
-.card.devices-snapshot h2{margin:0;font-size:1.25rem;font-weight:700}
+.card.devices-snapshot header a{
+    color:inherit;text-decoration:none
+}
+.card.devices-snapshot h2{
+    margin:0;font-size:1.25rem;font-weight:700
+}
+/* ─────────── Badges ─────────── */
 .badge{
     display:inline-block;min-width:48px;text-align:center;
     padding:.2rem .6rem;border-radius:9999px;
     background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
 }
 .badge.warn{background:#d9534f}
+/* ─────────── Table ─────────── */
 table{width:100%;border-collapse:collapse;margin-top:1rem}
 th,td{padding:.5rem .75rem;text-align:left}
 thead tr{background:rgba(255,255,255,.1);font-weight:600}
 tbody tr:nth-child(even){background:rgba(255,255,255,.05)}
+/* ─────────── Pagination ─────────── */
 .pagination{text-align:center;margin-top:1rem}
-.pagination a{margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
+.pagination a{
+    margin:0 .5rem;
+    color:var(--text-dark,#aaddff);
+    text-decoration:none
+}
 .pagination span{margin:0 .5rem}
 </style>
