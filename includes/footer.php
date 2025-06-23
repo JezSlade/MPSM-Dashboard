@@ -1,13 +1,16 @@
-<?php declare(strict_types=1); ?>
-<?php // components/preferences-modal loaded in views if needed ?>
-<script>
-// Close preferences modal on Escape
-document.addEventListener('keydown', e => {
-  if(e.key==='Escape'){
-    const m = document.getElementById('preferences-modal');
-    if(m && !m.classList.contains('hidden')) m.classList.add('hidden');
-  }
-});
-</script>
+<?php
+// --- DEBUG BLOCK (Always Keep at Top) ---
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
+// ----------------------------------------
+?>
+</main>
+<footer class="glass-footer">
+  <small>&copy; <?= date('Y') ?> <?= APP_NAME ?> v<?= APP_VERSION ?></small>
+</footer>
+</div>
+<script src="<?= APP_BASE_URL ?>public/js/theme.js"></script>
 </body>
 </html>

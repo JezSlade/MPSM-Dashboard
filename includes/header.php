@@ -1,66 +1,91 @@
 <?php declare(strict_types=1);
+// /includes/header.php
+
+// Start output buffering so any setcookie() calls later won’t fail
 ob_start();
-ini_set('display_errors','0');
-ini_set('log_errors','1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
 ?><!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full dark">
 <head>
-  <meta charset="UTF-8"/>
-  <title><?=htmlspecialchars($pageTitle ?? 'MPS Monitor Dashboard')?></title>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <title><?= htmlspecialchars($pageTitle ?? APP_NAME) ?></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Feather Icons -->
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-  <link rel="stylesheet" href="/public/css/styles.css"/>
+  <!-- Global Stylesheet -->
+  <link rel="stylesheet" href="<?= APP_BASE_URL ?>public/css/styles.css" />
 </head>
 <body class="flex flex-col h-full bg-gray-900 text-gray-100">
 
-<header class="relative flex justify-end items-center p-4 glass glass-cmyk space-x-4" role="banner">
-  <button id="theme-toggle" class="tooltip p-2 rounded" title="Toggle Light/Dark Theme">
-    <i data-feather="sun" class="h-6 w-6"></i>
-  </button>
-  <button id="debug-toggle" class="tooltip p-2 rounded" title="Open Debug Log">
-    <i data-feather="terminal" class="h-6 w-6"></i>
-  </button>
-  <button id="clear-cookies" class="tooltip p-2 rounded" title="Clear Session Cookies">
-    <i data-feather="trash-2" class="h-6 w-6"></i>
-  </button>
-  <button id="hard-refresh" class="tooltip p-2 rounded" title="Hard Refresh">
-    <i data-feather="refresh-cw" class="h-6 w-6"></i>
-  </button>
+<header class="app-header relative flex items-center justify-end space-x-8 px-6 py-4 bg-gray-800 bg-opacity-75 backdrop-blur-md shadow-lg">
+  <!-- Neon CMYK glow overlay -->
+  <div class="absolute inset-0 pointer-events-none" style="
+       box-shadow:
+         0 0 8px var(--cyan),
+         0 0 12px var(--magenta),
+         0 0 16px var(--yellow);
+       opacity: 0.15;
+     "></div>
+
+  <div class="relative z-10 flex items-center space-x-8">
+    <!-- Light/Dark Toggle -->
+    <button id="theme-toggle"
+            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            title="Toggle Light/Dark">
+      <i data-feather="sun" class="h-8 w-8 text-cyan-400"></i>
+    </button>
+
+    <!-- Debug Log -->
+    <button onclick="openDebugLog()"
+            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-magenta-400"
+            title="Open Debug Log">
+      <i data-feather="terminal" class="h-8 w-8 text-magenta-400"></i>
+    </button>
+
+    <!-- Clear Session Cookies -->
+    <button onclick="clearSessionCookies()"
+            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            title="Clear Session Cookies">
+      <i data-feather="trash-2" class="h-8 w-8 text-yellow-400"></i>
+    </button>
+
+    <!-- Hard Refresh -->
+    <button onclick="hardRefresh()"
+            class="p-3 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-black"
+            title="Hard Refresh">
+      <i data-feather="refresh-cw" class="h-8 w-8 text-black"></i>
+    </button>
+  </div>
 </header>
 
 <script>
-// Theme toggling with glassmorphic CMYK neon effect
-const root = document.documentElement;
-const themeBtn = document.getElementById('theme-toggle');
-function applyTheme(theme) {
-  root.classList.toggle('dark', theme==='dark');
-  root.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
-  const icon = themeBtn.querySelector('i');
-  icon.setAttribute('data-feather', theme==='dark' ? 'moon' : 'sun');
-  feather.replace();
+// Utility functions
+function openDebugLog() {
+  window.open('/components/debug-log.php','DebugLog','width=800,height=600');
 }
+
+function clearSessionCookies() {
+  document.cookie.split(';').forEach(c =>
+    document.cookie = c.trim().replace(/=.*/, '=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/')
+  );
+  alert('Session cookies cleared.');
+}
+
+function hardRefresh() {
+  window.location.reload(true);
+}
+
+// On DOM ready: render Feather icons and wire up theme toggle
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('theme') 
-    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  applyTheme(saved);
+  if (window.feather) feather.replace();
+
+  const themeBtn = document.getElementById('theme-toggle');
   themeBtn.addEventListener('click', () => {
-    applyTheme(root.classList.contains('dark') ? 'light' : 'dark');
-  });
-  feather.replace();
-  document.getElementById('debug-toggle').addEventListener('click', () => {
-    window.open('https://mpsm.resolutionsbydesign.us/components/debug-log.php','DebugLog','width=800,height=600');
-  });
-  document.getElementById('clear-cookies').addEventListener('click', () => {
-    document.cookie.split(';').forEach(c => {
-      document.cookie = c.trim().replace(/=.*/, '=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/');
-    });
-    alert('Session cookies cleared.');
-  });
-  document.getElementById('hard-refresh').addEventListener('click', () => {
-    location.reload(true);
+    const isDark = document.documentElement.classList.toggle('dark');
+    const icon   = themeBtn.querySelector('i');
+    icon.setAttribute('data-feather', isDark ? 'moon' : 'sun');
+    if (window.feather) feather.replace();
   });
 });
 </script>
