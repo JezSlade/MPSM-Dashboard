@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
 // /views/dashboard.php
 
-// ─── Bootstrap & debug ────────────────────────────────────────
+// ─── Centralized Debug ───────────────────────────────────────
 require_once __DIR__ . '/../includes/debug.php';
 require_once __DIR__ . '/../includes/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// ─── 1) SESSION + Determine customer code ─────────────────────
+// ─── 1) SESSION + Customer Code ──────────────────────────────
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -14,16 +14,16 @@ if (isset($_GET['customer']) && $_GET['customer'] !== '') {
     $_SESSION['selectedCustomer'] = trim($_GET['customer']);
 }
 $customerCode = $_SESSION['selectedCustomer']
-    ?? $config['DEALER_CODE']
+    ?? ($config['DEALER_CODE'] ?? '')
     ?? '';
 
-// ─── 2) Look up human‐readable customer name ─────────────────
+// ─── 2) Look up human‐readable name ──────────────────────────
 $customerName = 'All Customers';
 try {
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', [
         'DealerCode' => $config['DEALER_CODE'] ?? '',
         'PageNumber' => 1,
-        'PageRows'   => 2147483647,
+        'PageRows'   => PHP_INT_MAX,
         'SortColumn' => 'Description',
         'SortOrder'  => 'Asc',
     ]);
@@ -36,13 +36,13 @@ try {
         }
     }
 } catch (\Throwable $e) {
-    // ignore failures
+    // leave default
 }
 
-// ─── 3) Define exactly which cards to show ──────────────────
-// only our new customer-devices card
-$visibleCards = ['card_customer_devices.php'];
-$cardsDir     = __DIR__ . '/../cards/';
+// ─── 3) Gather all card files ────────────────────────────────
+$cardsDir = __DIR__ . '/../cards/';
+$allFiles = glob($cardsDir . 'card_*.php') ?: [];
+$cards    = array_map('basename', $allFiles);
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full dark">
@@ -68,7 +68,7 @@ $cardsDir     = __DIR__ . '/../cards/';
 
   <main class="flex-1 overflow-auto p-6">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <?php foreach ($visibleCards as $card): ?>
+      <?php foreach ($cards as $card): ?>
         <?php include $cardsDir . $card; ?>
       <?php endforeach; ?>
     </div>

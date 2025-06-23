@@ -1,53 +1,51 @@
 <?php
 declare(strict_types=1);
-
-// 0) Debug & API helpers
 require_once __DIR__ . '/../includes/debug.php';
-require_once __DIR__ . '/../includes/api_functions.php';
-$config = parse_env_file(__DIR__ . '/../.env');
 
-// 1) Determine current customer
-if (session_status() === PHP_SESSION_NONE) session_start();
+/* 1) Determine current customer */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 $code = $_SESSION['selectedCustomer'] ?? '';
 if ($code === '') {
     echo '<p class="error">No customer selected.</p>';
     return;
 }
 
-// 2) Call GET /CustomerDashboard?code=…
-try {
-    $resp = call_api(
-        $config,
-        'GET',
-        'CustomerDashboard',
-        ['code' => $code]
-    );
-} catch (\Throwable $e) {
-    error_log("CustomerDashboard error: ".$e->getMessage());
-    $resp = [];
-}
+/* 2) Fetch dashboard via our proxy */
+$apiUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://')
+        . $_SERVER['HTTP_HOST']
+        . '/api/customer_dashboard.php?code='
+        . urlencode($code);
 
-// 3) Safely pull out the devices array
-$devices = [];
-if (!empty($resp['IsValid']) && isset($resp['Result']['Devices'])) {
-    $devices = $resp['Result']['Devices'];
-}
-$total = is_array($devices) ? count($devices) : 0;
+error_log("[cust_devices_card] Fetching $apiUrl");
+$ch = curl_init($apiUrl);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT        => 10
+]);
+$raw = curl_exec($ch);
+curl_close($ch);
+error_log('[cust_devices_card] Response: '.($raw??'NULL'));
 
-// 4) Normalize rows (merge AssetNumber/ExternalIdentifier)
+$data    = $raw ? json_decode($raw, true) : null;
+$valid   = is_array($data) && !empty($data['IsValid']);
+$devices = $valid && isset($data['Result']['Devices'])
+         ? $data['Result']['Devices'] : [];
+$total   = is_array($devices) ? count($devices) : 0;
+
+/* 3) Normalize into rows */
 $rows = [];
 foreach ($devices as $d) {
-    $asset = trim((string)($d['AssetNumber']        ?? ''));
-    $ext   = trim((string)($d['ExternalIdentifier'] ?? ''));
-    $id    = $asset !== '' ? $asset : $ext;
+    $id = trim((string)($d['AssetNumber'] ?? $d['ExternalIdentifier'] ?? ''));
     $rows[] = [
-        'Identifier' => $id,
-        'Department' => $d['OfficeId']   ?? $d['Department'] ?? '',
-        'Note'       => $d['Contact']    ?? $d['Notes']      ?? '',
+        'Identifier'=> $id,
+        'Department'=> $d['Department'] ?? $d['OfficeId'] ?? '',
+        'Note'      => $d['Notes']      ?? $d['Note'] ?? '',
     ];
 }
 
-// 5) Render
+/* 4) Render card */
 ?>
 <div class="card customer-devices">
   <header>
@@ -55,6 +53,7 @@ foreach ($devices as $d) {
       Devices Online <span class="badge"><?= $total; ?></span>
     </h2>
   </header>
+
   <table class="snap">
     <thead>
       <tr>
@@ -72,26 +71,35 @@ foreach ($devices as $d) {
           <td><?= htmlspecialchars($r['Department']); ?></td>
           <td><?= htmlspecialchars($r['Note']); ?></td>
         </tr>
-      <?php endforeach; endif; ?>
+      <?php endforeach; endif;?>
     </tbody>
   </table>
 </div>
 
 <style>
 .card.customer-devices {
-  padding:1.2rem;border-radius:12px;backdrop-filter:blur(10px);
-  background:var(--bg-card,rgba(255,255,255,.08));color:var(--text-dark,#f5f5f5);
-  margin-bottom:1rem;
+    padding:1.2rem;border-radius:12px;
+    backdrop-filter:blur(10px);
+    background:var(--bg-card,rgba(255,255,255,.08));
+    color:var(--text-dark,#f5f5f5);
+    margin-bottom:1rem;
 }
 .badge {
-  display:inline-block;min-width:44px;text-align:center;padding:.2rem .5rem;
-  border-radius:9999px;background:var(--bg-light,#2d8cff);
-  color:#fff;font-weight:600;font-size:0.85rem;
+    display:inline-block;min-width:44px;text-align:center;
+    padding:.2rem .5rem;border-radius:9999px;
+    background:var(--bg-light,#2d8cff);color:#fff;font-weight:600;
+    font-size:0.85rem;
 }
 .snap {
-  font-size:0.85rem;width:100%;border-collapse:collapse;margin-top:.75rem;
+    font-size:0.85rem;width:100%;border-collapse:collapse;margin-top:.75rem;
 }
-.snap th,.snap td {padding:.4rem .6rem;text-align:left;}
-.snap thead tr {background:rgba(255,255,255,.1);font-weight:600;}
-.snap tbody tr:nth-child(even){background:rgba(255,255,255,.05);}
+.snap th, .snap td {
+    padding:.4rem .6rem;text-align:left;
+}
+.snap thead tr {
+    background:rgba(255,255,255,.1);font-weight:600;
+}
+.snap tbody tr:nth-child(even) {
+    background:rgba(255,255,255,.05);
+}
 </style>
