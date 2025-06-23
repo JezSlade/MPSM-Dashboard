@@ -10,21 +10,21 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
 // ------------------------------------------------------------------
 
 /**
- * Devices Snapshot  – now rendered via /components/table_helper.php
+ * Devices Snapshot  – uses shared render_table helper
  * ------------------------------------------------------------------
- * • Uses helper ->render_table() for uniform styling + future reuse
- * • Passes correct filter (CustomerCode | FilterDealerId) to
- *   /api/get_devices.php   via simple GET.
- * • Pure PHP – no JS.
+ * • Calls /api/get_devices.php with the single required filter
+ *   (CustomerCode or FilterDealerId).
+ * • Renders count + paginated table via includes/table_helper.php
+ *   so all cards share identical styling.
+ * • Pure PHP, no JS.
  */
 
-// 0 › bring in the shared helper
-$tableHelperPath = __DIR__ . '/../components/table_helper.php';
+// 0 › bring in the shared helper  (correct path = /includes/)
+$tableHelperPath = __DIR__ . '/../includes/table_helper.php';
 if (is_readable($tableHelperPath)) {
-    require_once $tableHelperPath;   // provides render_table([...])
+    require_once $tableHelperPath;   // provides render_table()
 } else {
-    // Hard-fail early so we don’t proceed with a missing dependency
-    echo '<p class="error">table_helper.php not found.</p>';
+    echo '<p class="error">includes/table_helper.php not found.</p>';
     return;
 }
 
@@ -70,14 +70,13 @@ function self_url(bool $expand, int $page = 1): string
     return '/index.php?' . http_build_query($p);
 }
 
-// 4 › headers config for table_helper
+// 4 › headers config for helper
 $tableHeaders = [
     'ExternalIdentifier' => 'Equipment ID',
     'Model'              => 'Model',
     'IpAddress'          => 'IP Address',
     'Department'         => 'Department',
 ];
-
 ?>
 <!-- ────────── CARD ────────── -->
 <div class="card devices-snapshot">
@@ -118,6 +117,7 @@ $tableHeaders = [
     padding:.2rem .6rem;border-radius:9999px;
     background:var(--bg-light,#2d8cff);color:#fff;font-weight:600
 }
+/* Pagination (helper already styles table) */
 .pagination{text-align:center;margin-top:1rem}
 .pagination a{margin:0 .5rem;color:var(--text-dark,#aaddff);text-decoration:none}
 .pagination span{margin:0 .5rem}
