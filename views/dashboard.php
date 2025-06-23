@@ -10,7 +10,6 @@ $config = parse_env_file(__DIR__ . '/../.env');
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-// If someone just submitted via GET, save into session:
 if (isset($_GET['customer']) && $_GET['customer'] !== '') {
     $_SESSION['selectedCustomer'] = trim($_GET['customer']);
 }
@@ -40,18 +39,10 @@ try {
     // ignore failures
 }
 
-// ─── 3) Cards visibility ───────────────────────────────────────
-$cardsDir   = __DIR__ . '/../cards/';
-$allFiles   = glob($cardsDir . 'card_*.php') ?: [];
-$allCards   = array_map('basename', $allFiles);
-if (isset($_COOKIE['visible_cards'])) {
-    $sel           = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
-    $visibleCards  = array_values(array_intersect($sel, $allCards));
-} else {
-    // always include our new customer‐devices card
-    $visibleCards = $allCards;
-}
-
+// ─── 3) Define exactly which cards to show ──────────────────
+// only our new customer-devices card
+$visibleCards = ['card_customer_devices.php'];
+$cardsDir     = __DIR__ . '/../cards/';
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full dark">
