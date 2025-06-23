@@ -1,12 +1,11 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/../includes/debug.php';
+require_once __DIR__ . '/../includes/debug.php';
 
-/* 1. SESSION / default customer ---------------------------------- */
-session_start();
-$customer = $_SESSION['selectedCustomer'] ?? '';           // '' means none
-$dealerId = getenv('DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2';
-
+/* start session only when not already active */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 /* 2. Build request body ------------------------------------------ */
 $size = 15;
 $page = max(1, (int)($_GET['ds_page'] ?? 1));
