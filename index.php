@@ -1,17 +1,16 @@
-<?php declare(strict_types=1);
-// index.php — Front Controller
+<?php
+// --- DEBUG BLOCK (Always Keep at Top) ---
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/debug.log');
+// ----------------------------------------
 
-// 1) Global header (styles, scripts, theme toggle, debug, etc.)
-require __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/navigation.php';
 
-// 2) Navigation bar (customer dropdown)
-require __DIR__ . '/includes/navigation.php';
+render_view('views/dashboard.php');
 
-// 3) Preferences modal toggle & markup
-require __DIR__ . '/components/preferences-modal.php';
-
-// 4) Main dashboard view, which pulls in each card
-require __DIR__ . '/views/dashboard.php';
-
-// 5) Global footer (modals close, end body/html)
-require __DIR__ . '/includes/footer.php';
+require_once __DIR__ . '/includes/footer.php';
+?>

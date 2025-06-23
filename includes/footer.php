@@ -1,18 +1,16 @@
-<?php declare(strict_types=1);
-// includes/footer.php
+<?php
+// --- DEBUG BLOCK (Always Keep at Top) ---
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
+// ----------------------------------------
 ?>
-<footer class="p-4 text-center text-sm neon-glass-footer">
-  &copy; <?= date('Y') ?> MPS Monitor Dashboard
+</main>
+<footer class="glass-footer">
+  <small>&copy; <?= date('Y') ?> <?= APP_NAME ?> v<?= APP_VERSION ?></small>
 </footer>
-
-<script>
-// Close modals on Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-backdrop:not(.hidden)')
-      .forEach(m => m.classList.add('hidden'));
-  }
-});
-</script>
+</div>
+<script src="<?= APP_BASE_URL ?>public/js/theme.js"></script>
 </body>
 </html>

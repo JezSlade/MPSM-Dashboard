@@ -4,125 +4,116 @@
 /**
  * Parse a .env file into an associative array.
  */
-function parse_env_file(string $path): array {
-    $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $env   = [];
-    if ($lines) {
+if (!function_exists('parse_env_file')) {
+    function parse_env_file(string $path): array {
+        $env = [];
+        if (!file_exists($path)) {
+            return $env;
+        }
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || $line[0] === '#') continue;
-            if (strpos($line, '=') === false) continue;
-            list($key, $val) = explode('=', $line, 2);
-            $env[trim($key)] = trim($val);
+            $trim = trim($line);
+            if ($trim === '' || str_starts_with($trim, '#') || !str_contains($trim, '=')) {
+                continue;
+            }
+            list($key, $val) = explode('=', $trim, 2);
+            $key = trim($key);
+            $val = trim($val);
+            // Strip quotes
+            if ((str_starts_with($val, '"') && str_ends_with($val, '"'))
+             || (str_starts_with($val, "'") && str_ends_with($val, "'"))) {
+                $val = substr($val, 1, -1);
+            }
+            $env[$key] = $val;
         }
+        return $env;
     }
-    return $env;
 }
 
 /**
- * Obtain an OAuth bearer token, with simple file-based caching.
+ * Fetch an OAuth token using password grant.
  */
-function get_oauth_token(array $config): string {
-    $cacheFile = __DIR__ . '/../logs/token_cache.json';
-    $now       = time();
-
-    if (is_readable($cacheFile)) {
-        $data = json_decode(file_get_contents($cacheFile), true);
-        if (!empty($data['token']) && !empty($data['expires_at']) && $data['expires_at'] > $now + 30) {
-            return $data['token'];
+if (!function_exists('get_token')) {
+    function get_token(array $config): string {
+        if (empty($config['TOKEN_URL'])) {
+            throw new \Exception('TOKEN_URL not configured');
         }
-    }
-
-    $post = http_build_query([
-        'grant_type'    => 'password',
-        'client_id'     => $config['CLIENT_ID'],
-        'client_secret' => $config['CLIENT_SECRET'],
-        'username'      => $config['USERNAME'],
-        'password'      => $config['PASSWORD'],
-        'scope'         => $config['SCOPE'],
-    ]);
-
-    $ch = curl_init($config['TOKEN_URL']);
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $post,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
-    ]);
-    $resp = curl_exec($ch);
-    if ($resp === false) {
-        throw new Exception('Token request failed: ' . curl_error($ch));
-    }
-    curl_close($ch);
-
-    $obj = json_decode($resp, true);
-    if (empty($obj['access_token']) || empty($obj['expires_in'])) {
-        throw new Exception('Invalid token response: ' . $resp);
-    }
-
-    $token     = $obj['access_token'];
-    $expiresAt = $now + (int)$obj['expires_in'];
-
-    @file_put_contents($cacheFile, json_encode([
-        'token'      => $token,
-        'expires_at' => $expiresAt,
-    ]));
-
-    return $token;
-}
-
-/**
- * Perform an API request.
- */
-function call_api(array $config, string $method, string $endpoint, array $payload = []): array {
-    if (empty($config['API_BASE_URL'])) {
-        throw new Exception('API_BASE_URL not set in .env');
-    }
-    $url = rtrim($config['API_BASE_URL'], '/') . '/' . ltrim($endpoint, '/');
-
-    $token = get_oauth_token($config);
-
-    $ch = curl_init();
-    $headers = [
-        'Authorization: Bearer ' . $token,
-        'Accept: application/json',
-        'Content-Type: application/json',
-    ];
-
-    $opts = [
-        CURLOPT_URL            => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => $headers,
-    ];
-
-    if (strtoupper($method) === 'GET' && !empty($payload)) {
-        $url = $opts[CURLOPT_URL] . '?' . http_build_query($payload);
-        $opts[CURLOPT_URL] = $url;
-    } else {
-        $opts[CURLOPT_CUSTOMREQUEST] = strtoupper($method);
-        if (!empty($payload)) {
-            $opts[CURLOPT_POSTFIELDS] = json_encode($payload);
+        $post = [
+            'client_id'     => $config['CLIENT_ID'] ?? '',
+            'client_secret' => $config['CLIENT_SECRET'] ?? '',
+            'username'      => $config['USERNAME'] ?? '',
+            'password'      => $config['PASSWORD'] ?? '',
+            'scope'         => $config['SCOPE'] ?? '',
+            'grant_type'    => 'password',
+        ];
+        $ch = curl_init($config['TOKEN_URL']);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => http_build_query($post),
+            CURLOPT_RETURNTRANSFER => true,
+        ]);
+        $resp = curl_exec($ch);
+        if ($resp === false) {
+            $err = curl_error($ch);
+            curl_close($ch);
+            throw new \Exception("Token request failed: {$err}");
         }
-    }
-
-    curl_setopt_array($ch, $opts);
-    $resp = curl_exec($ch);
-    if ($resp === false) {
-        $err = curl_error($ch);
         curl_close($ch);
-        throw new Exception("cURL error fetching {$endpoint}: {$err}");
+        $data = json_decode($resp, true);
+        if (!is_array($data) || empty($data['access_token'])) {
+            throw new \Exception('Invalid token response');
+        }
+        return $data['access_token'];
     }
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+}
 
-    $data = json_decode($resp, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception("Invalid JSON response ({$httpCode}): {$resp}");
-    }
-    if ($httpCode < 200 || $httpCode >= 300) {
-        $msg = $data['error_description'] ?? ($data['message'] ?? 'Unknown API error');
-        throw new Exception("API error ({$httpCode}): {$msg}");
-    }
+/**
+ * Generic HTTP client for your API.
+ * Now returns an ['error'=>...] array instead of throwing on JSON syntax errors.
+ */
+if (!function_exists('call_api')) {
+    function call_api(array $config, string $method, string $path, array $body = []): array {
+        if (empty($config['API_BASE_URL'])) {
+            return ['error' => 'API_BASE_URL not configured'];
+        }
+        // Get token
+        try {
+            $token = get_token($config);
+        } catch (\Throwable $e) {
+            return ['error' => 'Auth error: ' . $e->getMessage()];
+        }
+        // Build URL
+        $url = rtrim($config['API_BASE_URL'], '/') . '/' . ltrim($path, '/');
+        $ch = curl_init($url);
+        $headers = [
+            "Authorization: Bearer {$token}",
+            'Accept: application/json',
+            'Content-Type: application/json',
+        ];
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        if (!empty($body)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+        }
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $resp = curl_exec($ch);
+        if ($resp === false) {
+            $err = curl_error($ch);
+            curl_close($ch);
+            return ['error' => "HTTP request failed: {$err}"];
+        }
+        curl_close($ch);
 
-    return $data;
+        // Decode JSON, but don’t throw on syntax errors
+        $out = json_decode($resp, true);
+        if ($out === null && json_last_error() !== JSON_ERROR_NONE) {
+            // return raw response for debugging
+            return [
+                'error'      => 'Invalid JSON response: ' . json_last_error_msg(),
+                'raw'        => $resp,
+                'statusCode' => null
+            ];
+        }
+        return is_array($out) ? $out : ['error' => 'Unexpected API response format'];
+    }
 }
