@@ -1,28 +1,24 @@
 <?php declare(strict_types=1);
 // /views/dashboard.php
 
-// — DEBUG —
-error_reporting(E_ALL);
-ini_set('display_errors','1');
-ini_set('log_errors','1');
-ini_set('error_log', __DIR__ . '/../logs/debug.log');
-
-// Bootstrap & config
+// ─── Bootstrap & debug ────────────────────────────────────────
+require_once __DIR__ . '/../includes/debug.php';
 require_once __DIR__ . '/../includes/api_functions.php';
 $config = parse_env_file(__DIR__ . '/../.env');
 
-// 1) Determine customer code
-$customerCode = $_GET['customer'] 
-    ?? $_COOKIE['customer'] 
-    ?? $config['DEALER_CODE'] 
+// ─── 1) SESSION + Determine customer code ─────────────────────
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// If someone just submitted via GET, save into session:
+if (isset($_GET['customer']) && $_GET['customer'] !== '') {
+    $_SESSION['selectedCustomer'] = trim($_GET['customer']);
+}
+$customerCode = $_SESSION['selectedCustomer']
+    ?? $config['DEALER_CODE']
     ?? '';
 
-// 2) Persist selection in a cookie
-if (isset($_GET['customer'])) {
-    setcookie('customer', $customerCode, time() + 31536000, '/');
-}
-
-// 3) Look up the human‐readable company name
+// ─── 2) Look up human‐readable customer name ─────────────────
 $customerName = 'All Customers';
 try {
     $resp = call_api($config, 'POST', 'Customer/GetCustomers', [
@@ -36,15 +32,15 @@ try {
         if (($c['Code'] ?? '') === $customerCode) {
             $customerName = $c['Description'] 
                           ?? $c['Name'] 
-                          ?? 'All Customers';
+                          ?? $customerName;
             break;
         }
     }
 } catch (\Throwable $e) {
-    // ignore failures, leave "All Customers"
+    // ignore failures
 }
 
-// Cards visibility
+// ─── 3) Cards visibility ───────────────────────────────────────
 $cardsDir   = __DIR__ . '/../cards/';
 $allFiles   = glob($cardsDir . 'card_*.php') ?: [];
 $allCards   = array_map('basename', $allFiles);
@@ -52,8 +48,10 @@ if (isset($_COOKIE['visible_cards'])) {
     $sel           = array_filter(explode(',', $_COOKIE['visible_cards']), 'strlen');
     $visibleCards  = array_values(array_intersect($sel, $allCards));
 } else {
+    // always include our new customer‐devices card
     $visibleCards = $allCards;
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full dark">
