@@ -70,13 +70,13 @@ html, body {
   padding: 1.5rem;
 }
 
-/* CustomerCard footer reposition fix */
+/* Card-footer alignment fix */
 .card-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-/* Table and pager styles (unchanged) */
+/* Table and pager styles */
 table {
   width: 100%;
   border-collapse: separate;
@@ -106,4 +106,12 @@ td {
   display: flex;
   justify-content: space-between;
   margin-top: 1rem;
+}
+
+.pager button {
+  min-width: 80px;
+}
+
+.pager span {
+  font-size: 0.9rem;
 }

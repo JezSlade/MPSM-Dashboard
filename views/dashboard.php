@@ -1,7 +1,7 @@
 <?php
 // views/dashboard.php
 // -------------------------------------------------------------------
-// Single SPA view: only one navigation include, then cards.
+// Single-Page App layout: header, scrolling main display, fixed footer
 // -------------------------------------------------------------------
 ?>
 <!DOCTYPE html>
@@ -17,18 +17,18 @@
 
   <div id="app" class="app-container">
     
-    <!-- 1. Only one navigation dropdown -->
+    <!-- Header: only one navigation dropdown -->
     <?php include __DIR__ . '/../includes/navigation.php'; ?>
 
-    <!-- 2. Main scrollable content: cards only -->
+    <!-- Main scrolling area: cards only -->
     <main class="main-display">
       <?php include __DIR__ . '/../cards/CustomersCard.php'; ?>
-      <!-- future cards here -->
+      <!-- future cards go here -->
     </main>
     
-    <!-- 3. Fixed footer -->
+    <!-- Footer fixed at bottom -->
     <footer class="app-footer">
-      &copy; <?= date('Y') ?> Resolutions by Design
+      &copy; <?= date('Y') ?> Resolutions by Design — All rights reserved.
     </footer>
     
   </div>
