@@ -1,117 +1,76 @@
-/* public/css/styles.css */
-/* -------------------------------------------------------------------
-   Global SPA layout: header, scrollable main, fixed footer
-   Glassmorphic + neon CMYK theme
-   ------------------------------------------------------------------- */
+/* Global SPA + neon‐glow theme */
+/* ------------------------------------------------------------------- */
 
 html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0c0f19;
-  color: #eef0f5;
-  overflow: hidden;            /* prevent body scroll */
+  margin:0; padding:0; height:100%;
+  background: #0c0f19; color:#eef0f5;
+  font-family:'Segoe UI', sans-serif;
 }
 
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;               /* full viewport height */
+.global-header {
+  display:flex; justify-content:space-between;
+  align-items:center; padding:1rem 2rem;
+  background: rgba(20,25,40,0.8);
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.header-left {
+  display:flex; align-items:center;
+}
+
+.logo {
+  height:2rem; margin-right:1rem;
+}
+
+.app-title {
+  font-size:1.5rem; text-shadow:0 0 8px rgba(255,255,255,0.3);
+}
+
+.icon-btn {
+  background:transparent; border:none; font-size:1.2rem;
+  margin-left:0.75rem; cursor:pointer;
+  transition:0.2s;
+}
+
+.icon-btn:hover {
+  text-shadow:
+    0 0 6px cyan,
+    0 0 10px magenta,
+    0 0 12px yellow;
+}
+
+.main-nav {
+  display:flex; align-items:center; padding:0.75rem 2rem;
+  background: rgba(20,25,40,0.6);
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.nav-label {
+  margin-right:0.5rem; font-weight:600;
+}
+
+.nav-select {
+  padding:0.5rem 1rem; border-radius:4px;
+  border:1px solid rgba(0,255,255,0.6);
+  background: rgba(20,25,40,0.4); color:#eef0f5;
+  outline:none; transition:0.2s;
+}
+
+.nav-select:hover,
+.nav-select:focus {
+  border-color: magenta;
+  box-shadow:
+    0 0 6px cyan,
+    0 0 8px magenta;
 }
 
 .main-display {
-  flex: 1;                     /* fill available space */
-  overflow-y: auto;            /* scroll inside this area */
-  padding: 1rem;
+  padding:1rem; overflow-y:auto; height:calc(100vh - 8rem);
+  background: #121426;
 }
 
 .app-footer {
-  flex-shrink: 0;
-  background: rgba(20,25,40,0.6);
-  color: #ccc;
-  text-align: center;
-  padding: 0.75rem;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  font-size: 0.85rem;
-}
-
-/* Re-use existing card styles */
-.card-wrapper {
-  padding: 1rem 0;
-  display: flex;
-  justify-content: center;
-}
-
-.card {
-  position: relative;
-  width: 100%;
-  max-width: 800px;
-  background: rgba(20, 25, 40, 0.3);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px) saturate(180%);
-  box-shadow:
-    0 0 20px rgba(0, 255, 255, 0.4),
-    0 0 30px rgba(255, 0, 255, 0.3),
-    0 0 40px rgba(255, 255, 0, 0.2);
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-
-/* Header, body, footer within cards */
-.card-header,
-.card-footer {
-  padding: 1rem 1.5rem;
-  background: rgba(20, 25, 40, 0.6);
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-/* Card-footer alignment fix */
-.card-footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* Table and pager styles */
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-th, td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-}
-
-th {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #d0d2da;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  background: rgba(20, 25, 40, 0.5);
-}
-
-td {
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  background: rgba(20, 25, 40, 0.3);
-  color: #eef0f5;
-}
-
-.pager {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-
-.pager button {
-  min-width: 80px;
-}
-
-.pager span {
-  font-size: 0.9rem;
+  text-align:center; padding:0.75rem; font-size:0.85rem;
+  background: rgba(20,25,40,0.8);
+  border-top:1px solid rgba(255,255,255,0.1);
 }

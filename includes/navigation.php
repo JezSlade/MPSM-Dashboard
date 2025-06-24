@@ -1,8 +1,7 @@
 <?php
 // includes/navigation.php
 // -------------------------------------------------------------------
-// Renders exactly one customer dropdown for the SPA.
-// Safely handles null or missing values to avoid htmlspecialchars() errors.
+// Customer dropdown with etched glassmorphic + neon CMYK accents.
 // -------------------------------------------------------------------
 declare(strict_types=1);
 
@@ -26,20 +25,23 @@ try {
     $customers = [];
 }
 ?>
-<nav class="main-nav">
-  <label for="customer-select">Customer:</label>
-  <select id="customer-select" name="CustomerCode">
+<nav class="flex items-center p-4
+             bg-white bg-opacity-10 backdrop-blur-md
+             border-b border-white border-opacity-20">
+  <label for="customer-select" class="text-white font-medium mr-3">Customer:</label>
+  <select id="customer-select" name="CustomerCode"
+    class="flex-1 p-2 rounded-md
+           bg-white bg-opacity-20 text-white
+           focus:outline-none focus:ring-2 focus:ring-cyan-400
+           hover:bg-opacity-30 transition">
     <?php foreach ($customers as $cust):
-        // Cast to string and skip invalid entries
         $code = isset($cust['CustomerCode']) ? (string)$cust['CustomerCode'] : '';
-        $desc = isset($cust['Description'])  ? (string)$cust['Description']  : '';
-        if ($code === '' && $desc === '') {
-            continue;
-        }
-        // Use description if present, else fallback to code
+        $desc = isset($cust['Description'])   ? (string)$cust['Description']   : '';
+        if ($code === '' && $desc === '') continue;
         $label = $desc !== '' ? $desc : $code;
     ?>
-      <option value="<?= htmlspecialchars($code, ENT_QUOTES) ?>">
+      <option value="<?= htmlspecialchars($code, ENT_QUOTES) ?>"
+        class="bg-gray-800 text-white hover:bg-gray-700">
         <?= htmlspecialchars($label, ENT_QUOTES) ?>
       </option>
     <?php endforeach; ?>
