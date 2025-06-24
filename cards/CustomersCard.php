@@ -1,5 +1,5 @@
 <?php
-// cards/CustomersCard.php — Adds a snapshot view when minimized
+// cards/CustomersCard.php — Snapshot now reflects global “Customer:” dropdown selection
 require_once __DIR__ . '/../includes/card_base.php';
 require_once __DIR__ . '/../includes/env_parser.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -9,13 +9,13 @@ require_once __DIR__ . '/../includes/table_helper.php';
 // Card identifier
 $cardKey = 'CustomersCard';
 
-// Read settings
+// Read card settings from cookies (or defaults)
 $cacheEnabledFlag     = isset($_COOKIE["{$cardKey}_cache_enabled"])     ? (bool)$_COOKIE["{$cardKey}_cache_enabled"]     : true;
 $indicatorDisplayFlag = isset($_COOKIE["{$cardKey}_indicator_display"]) ? (bool)$_COOKIE["{$cardKey}_indicator_display"] : true;
 $ttlMinutes           = isset($_COOKIE["{$cardKey}_ttl_minutes"])       ? max(1,(int)$_COOKIE["{$cardKey}_ttl_minutes"]) : 5;
 $cacheTTL             = $ttlMinutes * 60;
 
-// Prepare cache path
+// Build cache file path
 $path      = 'Customer/GetCustomers';
 $body      = [
   'DealerCode' => DEALER_CODE,
@@ -27,10 +27,12 @@ $body      = [
 $keySource = $path . '|' . json_encode($body);
 $cacheFile = __DIR__ . '/../cache/' . sha1($keySource) . '.json';
 
+// If caching disabled, remove any existing cache
 if (!$cacheEnabledFlag && file_exists($cacheFile)) {
   @unlink($cacheFile);
 }
 
+// Determine cache status
 $cacheExists = $cacheEnabledFlag && file_exists($cacheFile);
 $cacheAge    = $cacheExists ? (time() - filemtime($cacheFile)) : null;
 $cacheRem    = $cacheExists ? max(0, $cacheTTL - $cacheAge)           : 0;
@@ -47,10 +49,8 @@ try {
   $error = $e->getMessage();
 }
 
-// Snapshot values
-$selected = $_GET['CustomerCode'] ?? ($rows[0]['CustomerCode'] ?? '—');
-$count    = count($rows);
-
+// Snapshot: count only; name will be set via JS from global dropdown
+$count = count($rows);
 ?>
 
 <div id="<?= $cardKey ?>" class="bg-gray-800/60 backdrop-blur-md border border-gray-600 rounded-lg shadow-lg overflow-hidden mx-auto max-w-4xl">
@@ -85,11 +85,11 @@ $count    = count($rows);
     <div id="<?= $cardKey ?>_settings_panel" class="hidden absolute right-6 top-16 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-4 z-20 pointer-events-auto">
       <h3 class="text-white font-semibold mb-3">Card Settings</h3>
       <label class="flex items-center text-gray-200 mb-3">
-        <input type="checkbox" id="<?= $cardKey ?>_toggle_cache" class="mr-2 form-checkbox h-4 w-4 text-cyan-500" <?= $cacheEnabledFlag?'checked':''?> />
+        <input type="checkbox" id="<?= $cardKey ?>_toggle_cache" class="mr-2 form-checkbox h-4 w-4 text-cyan-500" <?= $cacheEnabledFlag ? 'checked' : '' ?> />
         Enable caching
       </label>
       <label class="flex items-center text-gray-200 mb-3">
-        <input type="checkbox" id="<?= $cardKey ?>_toggle_indicator" class="mr-2 form-checkbox h-4 w-4 text-cyan-500" <?= $indicatorDisplayFlag?'checked':''?> />
+        <input type="checkbox" id="<?= $cardKey ?>_toggle_indicator" class="mr-2 form-checkbox h-4 w-4 text-cyan-500" <?= $indicatorDisplayFlag ? 'checked' : '' ?> />
         Show cache indicator
       </label>
       <div class="mb-3">
@@ -103,6 +103,7 @@ $count    = count($rows);
     <?php if ($error): ?>
       <div class="text-red-400 mb-4">Failed to load: <?= htmlspecialchars($error, ENT_QUOTES) ?></div>
     <?php endif; ?>
+
     <?php
     renderDataTable($rows, [
       'defaultVisibleColumns' => ['Description'],
@@ -113,11 +114,11 @@ $count    = count($rows);
     ?>
   </div>
 
-  <!-- Snapshot view (shown when minimized) -->
+  <!-- Snapshot view -->
   <div id="<?= $cardKey ?>_snapshot" class="hidden p-6 flex items-center space-x-4 cursor-pointer bg-gray-700">
     <i data-feather="users" class="h-12 w-12 text-cyan-400"></i>
     <div>
-      <div class="text-lg font-semibold text-white"><?= htmlspecialchars($selected) ?></div>
+      <div id="<?= $cardKey ?>_snapshot_name" class="text-lg font-semibold text-white">—</div>
       <div class="text-sm text-gray-300">Total: <?= $count ?></div>
     </div>
   </div>
@@ -135,7 +136,8 @@ if (window.feather) feather.replace();
   const remLbl  = document.getElementById('<?= $cardKey ?>_cache_rem');
   function updateBar(){
     if (remaining <= 0){
-      bar.style.width='0%'; bar.className='h-full bg-red-500';
+      bar.style.width = '0%';
+      bar.className = 'h-full bg-red-500';
       const expiredBy = Math.abs(remaining);
       ageLbl.textContent = `Cache expired ${expiredBy}s ago`;
       remLbl.textContent = '';
@@ -162,6 +164,14 @@ if (window.feather) feather.replace();
     const icon = minBtn.querySelector('i');
     icon.setAttribute('data-feather', minimized ? 'chevron-down' : 'chevron-up');
     feather.replace();
+
+    // Update snapshot name from global dropdown
+    const dropdown = document.getElementById('customer-select');
+    const nameEl   = document.getElementById('<?= $cardKey ?>_snapshot_name');
+    if (dropdown) {
+      const text = dropdown.options[dropdown.selectedIndex].text;
+      nameEl.textContent = text;
+    }
   });
 
   // Settings panel toggle & click-away
