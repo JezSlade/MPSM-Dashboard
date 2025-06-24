@@ -1,7 +1,7 @@
 <?php
 // cards/CustomersCard.php
 // -------------------------------------------------------------------
-// This is the full, corrected Customers card—no snippets, all inline.
+// Full, self-contained Customers card with enhanced result handling.
 // -------------------------------------------------------------------
 
 require_once __DIR__ . '/../includes/card_base.php';
@@ -13,7 +13,7 @@ require_once __DIR__ . '/../includes/card_base.php';
   </header>
 
   <div class="card-body" id="customers-container">
-    <!-- content injected by JavaScript -->
+    <!-- injected by JS -->
   </div>
 
   <footer class="card-footer">
@@ -22,28 +22,38 @@ require_once __DIR__ . '/../includes/card_base.php';
 </div>
 
 <script type="module">
-// js logic for CustomersCard, full inline
+// -------------------------------------------------------------------
+// Full inline JavaScript for CustomersCard
+// -------------------------------------------------------------------
 
-import { fetchJson } from '/js/api.js';         // shared wrapper
+import { fetchJson } from '/js/api.js';          // shared fetch wrapper
 import { renderTable } from '/js/ui_helpers.js'; // shared UI helper
 
 const container = document.getElementById('customers-container');
 const PAGE_SIZE = 15;
 
 /**
- * Load a page of customers and render the table or an empty state.
- * @param {number} page – 1-based page index
+ * Loads customers and renders table or empty/error states.
+ * Handles both uppercase and lowercase Result keys.
  */
 async function loadCustomers(page = 1) {
   try {
     const url = `/api/get_customers.php?PageNumber=${page}&PageRows=${PAGE_SIZE}`;
     const data = await fetchJson(url);
 
-    // Debug: inspect raw payload if results are missing
-    console.debug('get_customers response:', data);
+    // Inspect full payload
+    console.debug('get_customers payload:', data);
 
-    // If no array or zero-length, show friendly empty state
-    if (!Array.isArray(data.Result) || data.Result.length === 0) {
+    // Normalize rows array from possible 'Result' or 'result' key
+    let rows = [];
+    if (Array.isArray(data.Result)) {
+      rows = data.Result;
+    } else if (Array.isArray(data.result)) {
+      rows = data.result;
+    }
+
+    // If still no rows, show empty-state
+    if (rows.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
           No customers found.
@@ -52,33 +62,37 @@ async function loadCustomers(page = 1) {
       return;
     }
 
-    // Otherwise render the paginated table
-    const totalPages = Math.ceil((data.TotalRows || 0) / PAGE_SIZE);
+    // Compute total rows & pages (fallback if missing)
+    const totalRows = typeof data.TotalRows === 'number'
+      ? data.TotalRows
+      : rows.length;
+    const totalPages = Math.ceil(totalRows / PAGE_SIZE) || 1;
+
+    // Render table with paging
     container.innerHTML = renderTable({
-      columns:    ['CustomerCode', 'Description'],
-      rows:       data.Result,
+      columns:      ['CustomerCode', 'Description'],
+      rows,
       page,
       totalPages,
       onPageChange: loadCustomers
     });
 
   } catch (err) {
-    // On error, show a message and log details
+    // On error, show friendly message
     container.innerHTML = `
       <div class="error">
         Failed to load customers.
       </div>
     `;
-    console.error('Error in loadCustomers():', err);
+    console.error('loadCustomers() error:', err);
   }
 }
 
-// Wire up the Refresh button
+// Wire up “Refresh” button
 document
   .querySelector('.customers-card [data-action="refresh"]')
   .addEventListener('click', () => loadCustomers());
 
-// Initial load
+// Initial invocation
 loadCustomers();
-
 </script>
