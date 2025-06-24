@@ -91,7 +91,7 @@ function renderDataTable(array $data, array $options = []): void {
     <tbody class="bg-gray-800 divide-y divide-gray-700"></tbody>
   </table>
 
-  <div id="<?= $tableId ?>_pager" class="mt-3 flex flex-wrap gap-1"></div>
+  <div id="<?= $tableId ?>_pager" class="mt-3 flex justify-center flex-wrap gap-1"></div>
 </div>
 
 <script>
@@ -188,7 +188,7 @@ function renderDataTable(array $data, array $options = []): void {
       const cells = columns.map(key => {
         const show = visibleCols.includes(key);
         const style = show ? '' : 'style="display:none;"';
-        return `<td ${style} class="px-4 py-2 text-gray-100">${row[key]||''}</td>`;
+        return `<td ${style} class="px-4 py-1 text-gray-100">${row[key]||''}</td>`;
       });
       return `<tr class="${cls}">${cells.join('')}</tr>`;
     }).join('') || `<tr><td colspan="${columns.length}" class="px-4 py-2 text-center text-gray-300">No data</td></tr>`;
