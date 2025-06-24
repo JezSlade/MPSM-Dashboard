@@ -2,7 +2,7 @@
 // includes/table_helper.php
 // -------------------------------------------------------------------
 // Renders a searchable, sortable, pageable data table with Tailwind.
-// Per-table settings (columns & rows-per-page) + optional row selection.
+// Per‐table settings (columns & rows‐per‐page) + optional row selection.
 // Clicking a row with `rowSelectKey` reloads page with ?<param>=<value>.
 // -------------------------------------------------------------------
 
@@ -13,25 +13,24 @@ function renderDataTable(array $data, array $options = []): void {
     }
 
     // 1. Columns & labels
-    $first            = (array)$data[0];
-    $columns          = $options['columns'] 
-                      ?? array_combine(array_keys($first), array_keys($first));
-    $colKeys          = array_keys($columns);
+    $first           = (array)$data[0];
+    $columns         = $options['columns']
+                     ?? array_combine(array_keys($first), array_keys($first));
+    $colKeys         = array_keys($columns);
 
-    // 2. Row-selection config
-    $selectKey        = $options['rowSelectKey']   ?? null;
-    $selectParam      = $options['rowSelectParam'] 
-                      ?? ($selectKey ? strtolower($selectKey) : null);
+    // 2. Row‐selection config
+    $selectKey       = $options['rowSelectKey']   ?? null;
+    $selectParam     = $options['rowSelectParam']
+                     ?? ($selectKey ? strtolower($selectKey) : null);
 
     // 3. Defaults & IDs
-    $defaultVisibles  = $options['defaultVisibleColumns'] ?? $colKeys;
-    $defaultSort      = $options['defaultSort']           ?? $colKeys[0];
-    $rowsPerPage      = (int)($options['rowsPerPage']     ?? 10);
-    $searchable       = $options['searchable']            ?? true;
-    $tableId          = uniqid('dt_');
-    $settingsKey      = "{$tableId}_settings";
+    $defaultVisibles = $options['defaultVisibleColumns'] ?? $colKeys;
+    $defaultSort     = $options['defaultSort']           ?? $colKeys[0];
+    $rowsPerPage     = (int)($options['rowsPerPage']     ?? 10);
+    $searchable      = $options['searchable']            ?? true;
+    $tableId         = uniqid('dt_');
 
-    // 4. JSON-encode data
+    // 4. JSON‐encode data
     $jsData = array_map(fn($r) => array_map(
       fn($c) => is_array($c) ? json_encode($c) : $c,
       (array)$r
@@ -80,10 +79,11 @@ function renderDataTable(array $data, array $options = []): void {
       <thead class="bg-gray-700">
         <tr>
           <?php foreach ($colKeys as $key):
-              $hide = in_array($key, $defaultVisibles, true) ? '' : 'hidden';
+              // initial hide/show based on defaultVisibles
+              $hideClass = in_array($key, $defaultVisibles, true) ? '' : 'hidden';
           ?>
             <th data-key="<?= htmlspecialchars($key) ?>"
-                class="<?= $hide ?> px-4 py-2 text-left text-sm font-semibold text-white cursor-pointer">
+                class="<?= $hideClass ?> px-4 py-2 text-left text-sm font-semibold text-white cursor-pointer">
               <?= htmlspecialchars($columns[$key]) ?>
               <span class="ml-1 text-xs dt-sort-indicator"></span>
             </th>
@@ -110,10 +110,13 @@ function renderDataTable(array $data, array $options = []): void {
   let sortDir       = 1;
   let rpp           = <?= $rowsPerPage ?>;
 
-  const searchBox   = document.getElementById('<?= $tableId ?>_search');
-  const tblBody     = wrapper.querySelector('tbody');
-  const ths         = wrapper.querySelectorAll('th[data-key]');
-  const pager       = document.getElementById('<?= $tableId ?>_pager');
+  // Maintain a visibleCols array that starts as defaultVisibles
+  let visibleCols = <?= json_encode($defaultVisibles) ?>;
+
+  const searchBox     = document.getElementById('<?= $tableId ?>_search');
+  const tblBody       = wrapper.querySelector('tbody');
+  const ths           = wrapper.querySelectorAll('th[data-key]');
+  const pager         = document.getElementById('<?= $tableId ?>_pager');
   const settingsBtn   = document.getElementById('<?= $tableId ?>_settings_btn');
   const settingsPanel = document.getElementById('<?= $tableId ?>_settings_panel');
   const rowsInput     = document.getElementById('<?= $tableId ?>_rows_input');
@@ -136,23 +139,23 @@ function renderDataTable(array $data, array $options = []): void {
   function applySettings(){
     rpp = Math.max(1, parseInt(rowsInput.value)||<?= $rowsPerPage ?>);
     pageIdx = 1;
-    const visibleCols = [];
+
+    // Recompute visibleCols & update DOM classes
+    visibleCols = [];
     colCheckboxes.forEach(cb=>{
-      const key = cb.dataset.colKey;
-      const idx = columns.indexOf(key);
-      const show = cb.checked;
-      document.querySelectorAll(
+      const key = cb.dataset.colKey, idx = columns.indexOf(key), show = cb.checked;
+      wrapper.querySelectorAll(
         `#<?= $tableId ?> th:nth-child(${idx+1}), #<?= $tableId ?> td:nth-child(${idx+1})`
       ).forEach(el=>el.classList.toggle('hidden', !show));
-      if(show) visibleCols.push(key);
+      if (show) visibleCols.push(key);
     });
     render();
   }
   rowsInput.addEventListener('change', applySettings);
   colCheckboxes.forEach(cb=>cb.addEventListener('change', applySettings));
 
-  // Search filter
-  if(searchBox){
+  // Search filtering
+  if (searchBox){
     searchBox.addEventListener('input', ()=>{
       const q = searchBox.value.toLowerCase();
       filtered = data.filter(r=> JSON.stringify(r).toLowerCase().includes(q) );
@@ -173,15 +176,17 @@ function renderDataTable(array $data, array $options = []): void {
     const start = (pageIdx-1)*rpp;
     const slice = filtered.slice(start, start+rpp);
 
+    // Render rows
     tblBody.innerHTML = slice.map((row,i)=>{
-      const bg = i%2? 'bg-gray-700':'bg-gray-800';
-      const hov= selectKey? ' hover:bg-gray-600 cursor-pointer':'';
-      const attr = selectKey && row[selectKey]!=null
+      const bg  = i%2? 'bg-gray-700':'bg-gray-800';
+      const hov = selectKey? ' hover:bg-gray-600 cursor-pointer':'';
+      const attr= selectKey && row[selectKey]!=null
         ? ` data-select-value="${encodeURIComponent(row[selectKey])}"`
         : '';
-      const tds = columns.map(key=>
-        `<td class="px-4 py-2 text-gray-100"${attr}>${row[key]||''}</td>`
-      ).join('');
+      const tds = columns.map(key=>{
+        const hide = visibleCols.includes(key) ? '' : 'hidden';
+        return `<td class="${hide} px-4 py-2 text-gray-100"${attr}>${row[key]||''}</td>`;
+      }).join('');
       return `<tr class="${bg+hov}"${attr}>${tds}</tr>`;
     }).join('') || `<tr><td colspan="${columns.length}" class="px-4 py-2 text-center text-gray-400">No data</td></tr>`;
 
@@ -192,7 +197,7 @@ function renderDataTable(array $data, array $options = []): void {
 
   // Attach row click handlers
   function attachClicks(){
-    if(!selectKey||!selectParam) return;
+    if (!selectKey || !selectParam) return;
     wrapper.querySelectorAll('tr[data-select-value]').forEach(tr=>{
       tr.onclick = ()=>{
         const v = decodeURIComponent(tr.getAttribute('data-select-value'));
@@ -207,14 +212,13 @@ function renderDataTable(array $data, array $options = []): void {
   function renderPager(){
     const total = Math.max(1, Math.ceil(filtered.length/rpp));
     pager.innerHTML = Array.from({length:total}, (_,i)=>
-      `<button data-page="${i+1}"
-               class="px-2 py-1 rounded ${
-                 i+1===pageIdx?'bg-cyan-500 text-black':'bg-gray-700 hover:bg-gray-600 text-white'
-               }">${i+1}</button>`
+      `<button data-page="${i+1}" class="px-2 py-1 rounded ${
+        i+1===pageIdx?'bg-cyan-500 text-black':'bg-gray-700 hover:bg-gray-600 text-white'
+      }">${i+1}</button>`
     ).join('');
-    pager.querySelectorAll('button').forEach(btn=>
-      btn.onclick = ()=>{ pageIdx = +btn.dataset.page; render(); }
-    );
+    pager.querySelectorAll('button').forEach(b=>b.onclick = ()=>{
+      pageIdx = +b.dataset.page; render();
+    });
   }
 
   // Sort indicators
@@ -230,8 +234,7 @@ function renderDataTable(array $data, array $options = []): void {
   // Column header click → sort
   ths.forEach(th=> th.onclick = ()=>{
     const k = th.dataset.key;
-    if(sortKey===k) sortDir=-sortDir;
-    else { sortKey=k; sortDir=1; }
+    if (sortKey===k) sortDir=-sortDir; else { sortKey=k; sortDir=1; }
     render();
   });
 
