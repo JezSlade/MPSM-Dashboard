@@ -1,7 +1,7 @@
 <?php
 // includes/navigation.php
 // -------------------------------------------------------------------
-// Customer dropdown with etched glassmorphic + neon CMYK accents.
+// Customer dropdown: shrunk width + neon‐accent styling via Tailwind
 // -------------------------------------------------------------------
 declare(strict_types=1);
 
@@ -30,7 +30,7 @@ try {
              border-b border-white border-opacity-20">
   <label for="customer-select" class="text-white font-medium mr-3">Customer:</label>
   <select id="customer-select" name="CustomerCode"
-    class="flex-1 p-2 rounded-md
+    class="w-48 p-2 rounded-md
            bg-white bg-opacity-20 text-white
            focus:outline-none focus:ring-2 focus:ring-cyan-400
            hover:bg-opacity-30 transition">
