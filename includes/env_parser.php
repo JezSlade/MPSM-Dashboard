@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 // includes/env_parser.php
 // -------------------------------------------------------------------
-// Loads .env into PHP constants, after pulling in constants.php stubs.
-// Throws if any required key is still undefined or empty.
+// Loads .env into constants, overriding any empty stubs.
+// Throws if any required key is still missing or empty.
 // -------------------------------------------------------------------
 
 require_once __DIR__ . '/constants.php';
@@ -12,7 +12,7 @@ if (!file_exists($envFile)) {
     throw new RuntimeException('.env file not found at ' . $envFile);
 }
 
-$defined = [];
+$definedNow = [];
 $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 foreach ($lines as $line) {
     $line = trim($line);
@@ -22,11 +22,11 @@ foreach ($lines as $line) {
     if (strpos($line, '=') === false) {
         continue;
     }
-    list($key, $val) = explode('=', $line, 2);
+    list($key, $rawVal) = explode('=', $line, 2);
     $key = trim($key);
-    $val = trim($val);
+    $val = trim($rawVal);
 
-    // Strip quotes
+    // Strip surrounding quotes
     if (
         (substr($val, 0, 1) === '"' && substr($val, -1) === '"') ||
         (substr($val, 0, 1) === "'" && substr($val, -1) === "'")
@@ -34,23 +34,27 @@ foreach ($lines as $line) {
         $val = substr($val, 1, -1);
     }
 
-    if (!defined($key)) {
+    // Override stub if it’s empty, or define if missing
+    if (!defined($key) || constant($key) === '') {
         define($key, $val);
     }
-    $defined[] = $key;
+    $definedNow[] = $key;
 }
 
-// Required list
+// Enforce required keys
 $required = [
     'CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD',
-    'SCOPE','TOKEN_URL','API_BASE_URL','DEALER_CODE'
-    // 'PLUGIN_BEARER_TOKEN' if using plugin auth
+    'SCOPE','TOKEN_URL','API_BASE_URL','DEALER_CODE',
+    // 'PLUGIN_BEARER_TOKEN' if you’re using plugin auth
 ];
 
-$missing = array_diff($required, $defined);
+$missing = array_filter($required, function($k){
+    return !defined($k) || constant($k) === '';
+});
+
 if (!empty($missing)) {
     throw new RuntimeException('Missing .env keys: ' . implode(', ', $missing));
 }
 
 // Optional debug
-// error_log('Loaded .env keys: ' . implode(', ', $defined));
+// error_log('Loaded .env keys: ' . implode(', ', $definedNow));
