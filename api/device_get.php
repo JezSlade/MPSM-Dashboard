@@ -6,14 +6,18 @@ require_once __DIR__ . '/../includes/cors.php'; send_cors_headers();
 require_once __DIR__ . '/../includes/logger.php'; log_request();
 require_once __DIR__ . '/../includes/api_client.php';
 
-$page  = max(1, (int)($_GET['PageNumber'] ?? 1));
-$rows  = max(1, (int)($_GET['PageRows']   ?? 15));
+$input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+if (empty($input['Id'])) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Missing Id']);
+    exit;
+}
 
 try {
-    $result = api_request('Customer/GetCustomers', [
+    $result = api_request('Device/Get', [
         'DealerCode' => DEALER_CODE,
-        'PageNumber' => $page,
-        'PageRows'   => $rows,
+        'Id'         => $input['Id'],
     ]);
     echo json_encode($result);
 } catch (RuntimeException $e) {
