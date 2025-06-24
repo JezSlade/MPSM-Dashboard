@@ -1,63 +1,86 @@
 <?php
 // cards/CustomersCard.php
 // -------------------------------------------------------------------
-// Customers card: glassmorphic Tailwind + neon‐CMYK glow + compact layout
+// PHP‐only Customers card using the existing renderDataTable helper.
+// Fetches via api_request() and renders a searchable, sortable, pageable table.
 // -------------------------------------------------------------------
+
+declare(strict_types=1);
+
+// Card wrapper (glassmorphic container, no nav/header logic)
 require_once __DIR__ . '/../includes/card_base.php';
+
+// Core API guardrails
+require_once __DIR__ . '/../includes/env_parser.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/cors.php';    send_cors_headers();
+require_once __DIR__ . '/../includes/logger.php';  log_request();
+require_once __DIR__ . '/../includes/api_client.php';
+
+// Table helper
+require_once __DIR__ . '/../includes/table_helper.php';
+
+// Fetch all customers server-side
+try {
+    $response = api_request('Customer/GetCustomers', [
+        'DealerCode' => DEALER_CODE,
+        'PageNumber' => 1,
+        'PageRows'   => 9999,
+        'SortColumn' => 'Description',
+        'SortOrder'  => 'Asc',
+    ]);
+    $rows  = is_array($response['Result'] ?? null) ? $response['Result'] : [];
+    $error = null;
+} catch (RuntimeException $e) {
+    $rows  = [];
+    $error = $e->getMessage();
+}
+
+// Define which columns to show and their headers
+$columns = [
+    'CustomerCode' => 'Customer Code',
+    'Description'  => 'Description',
+];
 ?>
-<div class="max-w-2xl mx-auto 
-            bg-white bg-opacity-10 backdrop-blur-md 
-            border border-white border-opacity-20 
-            rounded-lg shadow-[0_0_10px_rgba(0,255,255,0.4),0_0_20px_rgba(255,0,255,0.3),0_0_30px_rgba(255,255,0,0.2)]
-            mb-6 overflow-hidden">
-  <header class="flex justify-between items-center px-4 py-2 
-                 bg-white bg-opacity-20 border-b border-white border-opacity-10">
-    <h2 class="text-lg font-semibold text-white">Customers</h2>
-    <button data-action="refresh"
-      class="p-1 rounded-md bg-white bg-opacity-20 hover:bg-opacity-30 transition">
-      <i data-feather="refresh-ccw" class="text-magenta-400"></i>
-    </button>
+
+<div class="card customers-card max-w-4xl mx-auto mb-6">
+  <header class="card-header flex justify-between items-center px-4 py-2">
+    <h2 class="text-xl font-semibold text-white">Customers</h2>
+    <form method="get" action="">
+      <button type="submit"
+        class="p-2 rounded-md bg-white bg-opacity-20 hover:bg-opacity-30 transition"
+        title="Refresh Customers">
+        <i data-feather="refresh-ccw" class="text-magenta-400"></i>
+      </button>
+    </form>
   </header>
-  <div class="p-4" id="customers-container">
-    <!-- injected by JS -->
+
+  <div class="card-body p-4">
+    <?php if ($error): ?>
+      <div class="text-center text-red-400 mb-4">
+        Failed to load customers: <?= htmlspecialchars($error, ENT_QUOTES) ?>
+      </div>
+    <?php endif; ?>
+
+    <?php
+    // Render the data table with search/sort/pagination
+    // We load all rows at once; searchable = true, rowsPerPage = 15
+    renderDataTable(
+        $rows,
+        [
+          'columns'     => $columns,
+          'defaultSort' => 'Description',
+          'rowsPerPage' => 15,
+          'searchable'  => true,
+        ]
+    );
+    ?>
   </div>
 </div>
 
-<script type="module">
-import { fetchJson }   from '/js/api.js';
-import { renderTable } from '/js/ui_helpers.js';
-
-const container = document.getElementById('customers-container');
-const PAGE_SIZE = 15;
-
-async function loadCustomers(page = 1) {
-  try {
-    const url = `/api/get_customers.php?PageNumber=${page}&PageRows=${PAGE_SIZE}&SortColumn=Description&SortOrder=Asc`;
-    const data = await fetchJson(url);
-    const rows = Array.isArray(data.Result) ? data.Result : [];
-
-    if (rows.length === 0) {
-      container.innerHTML = `<div class="text-center text-white">No customers found.</div>`;
-      return;
-    }
-
-    const totalRows  = typeof data.TotalRows === 'number' ? data.TotalRows : rows.length;
-    const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
-
-    container.innerHTML = renderTable({
-      columns:      ['Description'],
-      rows,
-      page,
-      totalPages,
-      onPageChange: loadCustomers
-    });
-
-  } catch (err) {
-    container.innerHTML = `<div class="text-center text-red-400">Failed to load customers.</div>`;
-    console.error(err);
+<script>
+  // Re-initialize Feather icons
+  if (window.feather) {
+    feather.replace({ 'stroke-width': 2, width: '1em', height: '1em' });
   }
-}
-
-document.querySelector('[data-action="refresh"]').addEventListener('click', () => loadCustomers());
-loadCustomers();
 </script>
