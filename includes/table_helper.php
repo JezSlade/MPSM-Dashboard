@@ -1,26 +1,56 @@
 <?php declare(strict_types=1);
 // includes/table_helper.php
+// -------------------------------------------------------------------
+// Renders a searchable, sortable, pageable data table with Tailwind.
+// Per-table settings icon to choose visible columns & page size.
+// Default visible columns can be set via options['defaultVisibleColumns'].
+// -------------------------------------------------------------------
+
+/**
+ * @param array $data
+ *   Array of associative arrays (rows).
+ * @param array $options [
+ *   'defaultVisibleColumns' => array of keys to show initially (default ['Description']),
+ *   'defaultSort'           => key to sort by initially,
+ *   'rowsPerPage'           => int,
+ *   'searchable'            => bool,
+ * ]
+ */
 function renderDataTable(array $data, array $options = []): void {
     if (empty($data)) {
         echo '<p class="text-gray-400">No data to display.</p>';
         return;
     }
 
+    // 1) Discover all columns from first row
     $allKeys = array_keys((array)$data[0]);
-    $tableId     = uniqid('dt_');
-    $settingsKey = "{$tableId}_settings";
-    $defaultSort = $options['defaultSort'] ?? $allKeys[0];
-    $defaultRows = (int)($options['rowsPerPage'] ?? 10);
-    $searchable  = $options['searchable'] ?? true;
 
-    $jsData = array_map(fn($row)=> array_map(fn($c)=> is_array($c)? json_encode($c): $c, (array)$row), $data);
+    // 2) Determine default visible columns
+    $defaultVisibles = $options['defaultVisibleColumns']
+                     ?? ['Description'];
+    // Filter to valid keys
+    $defaultVisibles = array_values(array_intersect($defaultVisibles, $allKeys));
+
+    // 3) Settings + unique IDs
+    $tableId       = uniqid('dt_');
+    $settingsKey   = "{$tableId}_settings";
+    $defaultSort   = $options['defaultSort']   ?? $defaultVisibles[0] ?? $allKeys[0];
+    $defaultRows   = (int)($options['rowsPerPage'] ?? 10);
+    $searchable    = $options['searchable']    ?? true;
+
+    // 4) JSON-encode data for JS
+    $jsData = array_map(fn($row) => array_map(
+        fn($c) => is_array($c) ? json_encode($c) : $c,
+        (array)$row
+    ), $data);
     $jsonData = json_encode($jsData, JSON_HEX_TAG|JSON_HEX_APOS);
 
     ?>
 <div id="<?= $tableId ?>_wrapper" class="data-table-container mb-8 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
   <div class="flex justify-between items-center mb-2">
     <?php if ($searchable): ?>
-      <input type="text" id="<?= $tableId ?>_search" placeholder="Search…" class="w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+      <input type="text" id="<?= $tableId ?>_search" placeholder="Search…"
+             class="w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
     <?php endif; ?>
 
     <div class="relative">
@@ -31,12 +61,16 @@ function renderDataTable(array $data, array $options = []): void {
         <h3 class="text-white font-semibold mb-2">Table Settings</h3>
         <div class="mb-2">
           <label class="block text-gray-300 mb-1">Rows per page:</label>
-          <input type="number" id="<?= $tableId ?>_rows_input" min="1" class="w-full text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-2" value="<?= $defaultRows ?>" />
+          <input type="number" id="<?= $tableId ?>_rows_input" min="1"
+                 class="w-full text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-2"
+                 value="<?= $defaultRows ?>" />
         </div>
         <div class="max-h-48 overflow-y-auto">
           <?php foreach ($allKeys as $key): ?>
             <label class="flex items-center text-gray-200 mb-1">
-              <input type="checkbox" data-col-key="<?= htmlspecialchars($key) ?>" class="mr-2 form-checkbox h-4 w-4 text-cyan-500" />
+              <input type="checkbox" data-col-key="<?= htmlspecialchars($key) ?>"
+                     class="mr-2 form-checkbox h-4 w-4 text-cyan-500"
+                     <?= in_array($key, $defaultVisibles, true) ? 'checked' : '' ?> />
               <?= htmlspecialchars($key) ?>
             </label>
           <?php endforeach; ?>
@@ -49,8 +83,10 @@ function renderDataTable(array $data, array $options = []): void {
     <thead class="bg-gray-700">
       <tr>
         <?php foreach ($allKeys as $key): ?>
-          <th data-key="<?= htmlspecialchars($key) ?>" class="cursor-pointer select-none px-4 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">
-            <?= htmlspecialchars($key) ?><span class="sort-indicator">&nbsp;</span>
+          <th data-key="<?= htmlspecialchars($key) ?>"
+              class="cursor-pointer select-none px-4 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">
+            <?= htmlspecialchars($key) ?>
+            <span class="sort-indicator">&nbsp;</span>
           </th>
         <?php endforeach; ?>
       </tr>
@@ -72,27 +108,32 @@ function renderDataTable(array $data, array $options = []): void {
   let sortDir     = 1;
   let rpp         = <?= $defaultRows ?>;
 
+  // Settings elements
   const settingsBtn   = document.getElementById('<?= $tableId ?>_settings_btn');
   const settingsPanel = document.getElementById('<?= $tableId ?>_settings_panel');
   const rowsInput     = document.getElementById('<?= $tableId ?>_rows_input');
   const colCheckboxes = settingsPanel.querySelectorAll('input[type=checkbox][data-col-key]');
 
-  // Initialize checkboxes: only Description checked by default, unless saved
-  let initialCols = ['Description'];
+  // Load saved or initial settings
+  let initSettings = {};
   try {
-    const s = JSON.parse(localStorage.getItem('<?= $settingsKey ?>')||'{}');
-    if (Array.isArray(s.visibleCols)) initialCols = s.visibleCols;
-    if (s.rpp) rpp = s.rpp;
+    initSettings = JSON.parse(localStorage.getItem('<?= $settingsKey ?>')) || {};
   } catch {}
+  rpp = initSettings.rpp || rpp;
   rowsInput.value = rpp;
+
   colCheckboxes.forEach(cb => {
-    cb.checked = initialCols.includes(cb.dataset.colKey);
+    const key = cb.dataset.colKey;
+    const savedVisible = Array.isArray(initSettings.visibleCols)
+      ? initSettings.visibleCols.includes(key)
+      : <?= json_encode($defaultVisibles) ?>.includes(key);
+    cb.checked = savedVisible;
   });
 
   settingsBtn.addEventListener('click', ()=> settingsPanel.classList.toggle('hidden'));
 
   function applySettings() {
-    rpp = Math.max(1, parseInt(rowsInput.value)||<?= $defaultRows ?>);
+    rpp = Math.max(1, parseInt(rowsInput.value) || <?= $defaultRows ?>);
     const visible = [];
     colCheckboxes.forEach(cb => {
       const idx = columns.indexOf(cb.dataset.colKey);
