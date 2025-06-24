@@ -1,7 +1,7 @@
 <?php
 // views/dashboard.php
 // -------------------------------------------------------------------
-// Single-Page App layout: header, scrolling main display, fixed footer
+// SPA layout ensuring only a single customer dropdown (navigation).
 // -------------------------------------------------------------------
 ?>
 <!DOCTYPE html>
@@ -17,11 +17,12 @@
 
   <div id="app" class="app-container">
     
-    <!-- Header / Navigation -->
+    <!-- Header / Navigation: only one customer select -->
     <?php include __DIR__ . '/../includes/navigation.php'; ?>
-    
-    <!-- Main scrolling area -->
+
+    <!-- Main scrolling area: cards only, no dropdowns here -->
     <main class="main-display">
+      <!-- Customers card: contains only table and refresh -->
       <?php include __DIR__ . '/../cards/CustomersCard.php'; ?>
       <!-- future cards go here -->
     </main>
