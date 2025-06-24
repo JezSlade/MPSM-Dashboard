@@ -1,9 +1,8 @@
 <?php
-// File: includes/env_parser.php
+// includes/env_parser.php
 // -------------------------------------------------------------------
-// Robust .env parser that defines each KEY as a PHP constant.
-// Skips comments and empty lines, trims quotes.
-// Throws if a required key is missing.
+// Robust .env loader that logs each key as it’s defined and
+// throws if any required constant (including DEALER_CODE) is missing.
 // -------------------------------------------------------------------
 
 $envFile = __DIR__ . '/../.env';
@@ -11,33 +10,36 @@ if (!file_exists($envFile)) {
     throw new RuntimeException('.env file not found at ' . $envFile);
 }
 
+$defined = [];
 $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
 foreach ($lines as $line) {
     $line = trim($line);
-    // skip comments
-    if (strlen($line) === 0 || $line[0] === '#') {
+    if ($line === '' || $line[0] === '#') {
         continue;
     }
-    // parse KEY=VALUE
     if (strpos($line, '=') === false) {
         continue;
     }
-    [$key, $value] = explode('=', $line, 2);
-    $key   = trim($key);
+    list($key, $value) = explode('=', $line, 2);
+    $key = trim($key);
     $value = trim($value);
 
-    // remove surrounding quotes if present
-    if (($value[0] === '"' && substr($value, -1) === '"')
-     || ($value[0] === "'" && substr($value, -1) === "'")) {
+    // Strip optional surrounding quotes
+    if (
+        (substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+        (substr($value, 0, 1) === "'" && substr($value, -1) === "'")
+    ) {
         $value = substr($value, 1, -1);
     }
 
     if (!defined($key)) {
         define($key, $value);
+        $defined[] = $key;
     }
 }
 
-// List all required .env keys here:
+// Required keys
 $required = [
     'CLIENT_ID',
     'CLIENT_SECRET',
@@ -46,13 +48,14 @@ $required = [
     'SCOPE',
     'TOKEN_URL',
     'API_BASE_URL',
-    'DEALER_CODE',
-    // if you added plugin token earlier:
-    // 'PLUGIN_BEARER_TOKEN',
+    'DEALER_CODE',            // ensure this is present
+    // 'PLUGIN_BEARER_TOKEN',  // if used
 ];
 
-foreach ($required as $const) {
-    if (!defined($const) || constant($const) === '') {
-        throw new RuntimeException("Missing required .env key: {$const}");
-    }
+$missing = array_diff($required, $defined);
+if (!empty($missing)) {
+    throw new RuntimeException('Missing .env keys: ' . implode(', ', $missing));
 }
+
+// Debug: log which keys were loaded (can remove in production)
+error_log('Loaded .env keys: ' . implode(', ', $defined));
