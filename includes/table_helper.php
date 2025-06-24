@@ -1,9 +1,10 @@
 <?php declare(strict_types=1);
 // includes/table_helper.php
 // -------------------------------------------------------------------
-// Renders a data table with Tailwind styling, searchable dropdown,
-// column visibility settings (only Description visible by default),
-// and row-click selection that sets the global “customer” cookie.
+// Renders a searchable, sortable, pageable data table with Tailwind.
+// Replaces the top search input with renderSearchableDropdown().
+// Only “Description” column visible by default.
+// Clicking a row sets the global “customer” cookie and reloads.
 // -------------------------------------------------------------------
 
 require_once __DIR__ . '/searchable_dropdown.php';
@@ -15,7 +16,7 @@ function renderDataTable(array $data, array $options = []): void
         return;
     }
 
-    // 1) Determine columns and labels from the first row
+    // 1) Columns & labels from first row
     $first   = (array)$data[0];
     $columns = array_keys($first);
     $labels  = $options['labels'] ?? array_combine($columns, $columns);
@@ -28,16 +29,16 @@ function renderDataTable(array $data, array $options = []): void
     $rowSelectParam = $options['rowSelectParam'] ?? $rowSelectKey;
 
     // 3) Unique IDs
-    $tableId       = 'tbl_' . preg_replace('/[^a-z0-9_]/i','', uniqid());
-    $wrapperId     = $tableId . '_wrapper';
-    $settingsBtnId = $tableId . '_settings_btn';
-    $settingsPanel = $tableId . '_settings_panel';
-    $searchInputId = $tableId . '_search';
-    $datalistId    = $tableId . '_datalist';
+    $uid            = preg_replace('/[^a-z0-9_]/i','', uniqid());
+    $wrapperId      = "tbl_{$uid}_wrapper";
+    $settingsBtnId  = "tbl_{$uid}_settings_btn";
+    $settingsPanel  = "tbl_{$uid}_settings_panel";
+    $searchInputId  = "tbl_{$uid}_search";
+    $datalistId     = "tbl_{$uid}_datalist";
 
     // 4) Prepare JSON
     $jsRows = array_map(
-        fn($row) => (object) array_intersect_key((array)$row, array_flip($columns)),
+        fn($r) => (object) array_intersect_key((array)$r, array_flip($columns)),
         $data
     );
     $jsMeta = (object)[
@@ -49,23 +50,21 @@ function renderDataTable(array $data, array $options = []): void
         'rowSelectKey'   => $rowSelectKey,
         'rowSelectParam' => $rowSelectParam,
     ];
-    $jsonData = json_encode((object)[
-        'rows' => $jsRows,
-        'meta' => $jsMeta
-    ], JSON_HEX_TAG|JSON_HEX_APOS);
+    $jsonData = json_encode((object)[ 'rows'=>$jsRows,'meta'=>$jsMeta ], JSON_HEX_TAG|JSON_HEX_APOS);
     ?>
 
 <div id="<?= $wrapperId ?>" class="mb-6 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
   <div class="flex justify-between items-center mb-2">
     <?php if ($searchable): ?>
       <?php
+        // ← REPLACE search input with searchable dropdown helper
         renderSearchableDropdown(
-          $searchInputId,
-          $datalistId,
-          '/api/get_customers.php',
-          'customer',
-          'Filter…',
-          'w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500'
+          $searchInputId,          // input ID
+          $datalistId,             // datalist ID
+          '/api/get_customers.php',// API endpoint for dropdown options
+          'customer',              // cookie name to set
+          'Filter…',               // placeholder
+          'w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500' // CSS
         );
       ?>
     <?php endif; ?>
@@ -94,10 +93,10 @@ function renderDataTable(array $data, array $options = []): void
     </div>
   </div>
 
-  <div id="<?= $tableId ?>" class="overflow-auto">
+  <div class="overflow-auto">
     <table class="min-w-full divide-y divide-gray-700 text-sm">
-      <thead><tr><!-- JS will populate headers --></tr></thead>
-      <tbody class="bg-gray-800 divide-y divide-gray-600"><!-- JS will populate rows --></tbody>
+      <thead><tr><!-- populated by JS --></tr></thead>
+      <tbody class="bg-gray-800 divide-y divide-gray-600"><!-- populated by JS --></tbody>
     </table>
   </div>
 </div>
@@ -106,91 +105,76 @@ function renderDataTable(array $data, array $options = []): void
 (function(){
   const wrapper = document.getElementById('<?= $wrapperId ?>');
   const data    = <?= $jsonData ?>;
+  let sortKey   = data.meta.sortable ? data.meta.columns[0] : null;
+  let sortDir   = 1;
+  let currentPage = 1;
   const cookieName = data.meta.rowSelectParam;
 
-  let sortKey     = data.meta.sortable ? data.meta.columns[0] : null;
-  let sortDir     = 1;
-  let currentPage = 1;
+  // Helpers
+  const Cookie = { set(n,v){ document.cookie=`${n}=${encodeURIComponent(v)};path=/`; } };
 
-  const Cookie = {
-    set(name, value) {
-      document.cookie = `${name}=${encodeURIComponent(value)};path=/`;
-    }
-  };
-
-  function renderHeader(visibleCols) {
-    const theadRow = wrapper.querySelector('thead tr');
-    theadRow.innerHTML = visibleCols.map(col =>
+  function renderHeader(visibleCols){
+    const head = wrapper.querySelector('thead tr');
+    head.innerHTML = visibleCols.map(col=>
       `<th data-key="${col}" class="px-4 py-2 text-left ${data.meta.sortable?'cursor-pointer hover:text-cyan-400':''}">
          ${data.meta.labels[col]}
        </th>`
     ).join('');
-    // attach sort handlers
-    wrapper.querySelectorAll('th[data-key]').forEach(th =>
-      th.addEventListener('click', () => {
-        const col = th.dataset.key;
-        if (sortKey === col) sortDir = -sortDir;
-        else { sortKey = col; sortDir = 1; }
+    head.querySelectorAll('th[data-key]').forEach(th=>
+      th.addEventListener('click',()=>{
+        const c=th.dataset.key;
+        sortKey===c?sortDir=-sortDir:(sortKey=c,sortDir=1);
         render();
       })
     );
   }
 
-  function render() {
-    // determine visible columns
-    const visibleCols = Array.from(
-      document.querySelectorAll('#<?= $settingsPanel ?> input[type="checkbox"]:checked')
-    ).map(cb => cb.dataset.col);
+  function render(){
+    // Columns selected
+    const visible = Array.from(
+      document.querySelectorAll('#<?= $settingsPanel ?> input:checked')
+    ).map(cb=>cb.dataset.col);
 
-    renderHeader(visibleCols);
+    renderHeader(visible);
 
-    let rows = [...data.rows];
+    // Sort rows
+    let rows=[...data.rows];
+    if(data.meta.sortable&&sortKey) rows.sort((a,b)=>
+      ((a[sortKey]>b[sortKey])?1:(a[sortKey]<b[sortKey])?-1:0)*sortDir
+    );
 
-    // sort
-    if (data.meta.sortable && sortKey) {
-      rows.sort((a,b) => {
-        const va = a[sortKey], vb = b[sortKey];
-        return ((va>vb)?1:(va<vb)?-1:0)*sortDir;
-      });
-    }
+    // Paginate
+    const total=Math.ceil(rows.length/data.meta.pageRows)||1;
+    if(currentPage>total) currentPage=total;
+    const page=rows.slice((currentPage-1)*data.meta.pageRows,currentPage*data.meta.pageRows);
 
-    // paginate
-    const total = Math.ceil(rows.length/data.meta.pageRows);
-    if (currentPage>total) currentPage= total||1;
-    const start = (currentPage-1)*data.meta.pageRows;
-    const page  = rows.slice(start, start+data.meta.pageRows);
-
-    // render body
-    const tbody = wrapper.querySelector('tbody');
-    tbody.innerHTML = page.map(r => {
-      const cells = visibleCols.map(col =>
-        `<td class="px-4 py-2">${String(r[col]||'')}</td>`
-      ).join('');
-      const code = r[data.meta.rowSelectKey] || '';
+    // Body
+    const body=wrapper.querySelector('tbody');
+    body.innerHTML=page.map(r=>{
+      const cells=visible.map(col=>`<td class="px-4 py-2">${r[col]||''}</td>`).join('');
+      const code=r[data.meta.rowSelectKey]||'';
       return `<tr class="cursor-pointer" data-customer="${code}">${cells}</tr>`;
     }).join('');
   }
 
-  // toggle settings panel
+  // Toggle settings
   document.getElementById('<?= $settingsBtnId ?>')
-    .addEventListener('click', ()=>document.getElementById('<?= $settingsPanel ?>').classList.toggle('hidden'));
+    .addEventListener('click',()=>wrapper.querySelector('#<?= $settingsPanel ?>').classList.toggle('hidden'));
 
-  // re-render on column toggle
-  document.querySelectorAll('#<?= $settingsPanel ?> input[type="checkbox"]')
-    .forEach(cb=>cb.addEventListener('change', render));
+  // Column toggle
+  wrapper.querySelectorAll('#<?= $settingsPanel ?> input[type="checkbox"]')
+    .forEach(cb=>cb.addEventListener('change',render));
 
-  // row click
+  // Row-click: set cookie + reload
   wrapper.querySelector('tbody')
-    .addEventListener('click', e=>{
-      const row=e.target.closest('tr[data-customer]');
-      if(!row) return;
-      const code = row.dataset.customer;
-      if(!code) return;
-      Cookie.set(cookieName, code);
+    .addEventListener('click',e=>{
+      const tr=e.target.closest('tr[data-customer]');
+      if(!tr)return;
+      Cookie.set(cookieName,tr.dataset.customer);
       window.location.reload();
     });
 
-  // initial render
+  // Initial draw
   render();
 })();
 </script>
