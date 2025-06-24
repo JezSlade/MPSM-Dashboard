@@ -2,25 +2,20 @@
 // cards/CustomersCard.php — Customers list with global selection
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/env_parser.php';
-parse_env_file(__DIR__ . '/../.env');
-
+require_once __DIR__ . '/../includes/card_base.php';   // loads .env, defines DEALER_CODE, etc.
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/api_client.php';
 require_once __DIR__ . '/../includes/table_helper.php';
 
-// 1) Read selection from cookie → query
-$selected = $_COOKIE['customer'] 
-          ?? ($_GET['customer'] ?? '');
+// 1) Read selection from cookie → querystring
+$selected = $_COOKIE['customer'] ?? ($_GET['customer'] ?? '');
 
 // 2) Card settings
-$cardKey             = 'CustomersCard';
-$cacheEnabledFlag    = isset($_COOKIE["{$cardKey}_cache_enabled"])
-    ? (bool)$_COOKIE["{$cardKey}_cache_enabled"] : true;
-$indicatorDisplayFlag = isset($_COOKIE["{$cardKey}_indicator_display"])
-    ? (bool)$_COOKIE["{$cardKey}_indicator_display"] : true;
-$ttlMinutes          = isset($_COOKIE["{$cardKey}_ttl_minutes"])
-    ? max(1,(int)$_COOKIE["{$cardKey}_ttl_minutes"]) : 5;
+$cardKey              = 'CustomersCard';
+$cacheEnabledFlag     = isset($_COOKIE["{$cardKey}_cache_enabled"])     ? (bool)$_COOKIE["{$cardKey}_cache_enabled"]     : true;
+$indicatorDisplayFlag = isset($_COOKIE["{$cardKey}_indicator_display"]) ? (bool)$_COOKIE["{$cardKey}_indicator_display"] : true;
+$ttlMinutes           = isset($_COOKIE["{$cardKey}_ttl_minutes"])       ? max(1,(int)$_COOKIE["{$cardKey}_ttl_minutes"]) : 5;
+$cacheTTL             = $ttlMinutes * 60;
 
 // 3) Fetch customers
 try {
@@ -49,19 +44,15 @@ $rows = array_map(fn($c) => [
   class="glass-card p-4 rounded-lg bg-white/20 backdrop-blur-md border border-gray-600"
   data-card-key="<?= $cardKey ?>"
 >
-  <!-- HEADER -->
   <header class="mb-3 flex items-center justify-between">
     <h2 class="text-xl font-semibold">Customers</h2>
     <?php if ($indicatorDisplayFlag): ?>
       <span class="text-sm text-gray-400">
-        <?= $cacheEnabledFlag
-              ? "{$ttlMinutes} min cache"
-              : 'No cache' ?>
+        <?= $cacheEnabledFlag ? "{$ttlMinutes} min cache" : 'No cache' ?>
       </span>
     <?php endif; ?>
   </header>
 
-  <!-- BODY -->
   <?php
     renderDataTable(
       $rows,
@@ -78,7 +69,6 @@ $rows = array_map(fn($c) => [
     );
   ?>
 
-  <!-- FOOTER -->
   <?php if ($cacheEnabledFlag): ?>
     <footer class="mt-4 text-right text-xs text-gray-500">
       Updated <?= date('Y-m-d H:i') ?>
