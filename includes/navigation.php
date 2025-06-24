@@ -2,15 +2,18 @@
 // includes/navigation.php
 // -------------------------------------------------------------------
 // Renders exactly one customer dropdown for the SPA.
-// This is a server-side view include—no CORS or header modifications here.
+// Baseline: server-side only, correct include paths, no headers/CORS.
 // -------------------------------------------------------------------
 declare(strict_types=1);
 
-// 1) Environment and API client (no CORS or header functions)
-require_once __DIR__ . '/env_parser.php';
-require_once __DIR__ . '/../api_client.php';    // assumes auth.php already loaded in index
+// 1) Load environment & downstream auth
+require_once __DIR__   . '/env_parser.php';
+require_once __DIR__   . '/auth.php';
 
-// 2) Fetch customer list
+// 2) Shared HTTP client (api_request) lives in includes/api_client.php
+require_once __DIR__   . '/api_client.php';
+
+// 3) Fetch customer list
 try {
     $resp = api_request('Customer/GetCustomers', [
         'DealerCode' => DEALER_CODE,
