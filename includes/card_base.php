@@ -1,9 +1,10 @@
 <?php
 // includes/card_base.php
-// Wraps every card in the shared glassmorphic container
+// -------------------------------------------------------------------
+// Wraps individual cards in a glassmorphic container.
+// Must NOT render navigation or headers.
+// -------------------------------------------------------------------
 ?>
-
 <div class="card-wrapper">
-  <!-- shared controls (theme toggle, debug badge, etc.) could go here -->
 <?php
-// After this include, each card file echoes its own <div class="card">…</div>
+// Card file’s own <div class="card">…</div> follows immediately.

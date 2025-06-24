@@ -1,7 +1,7 @@
 <?php
 // views/dashboard.php
 // -------------------------------------------------------------------
-// SPA layout ensuring only a single customer dropdown (navigation).
+// Single SPA view: only one navigation include, then cards.
 // -------------------------------------------------------------------
 ?>
 <!DOCTYPE html>
@@ -17,19 +17,18 @@
 
   <div id="app" class="app-container">
     
-    <!-- Header / Navigation: only one customer select -->
+    <!-- 1. Only one navigation dropdown -->
     <?php include __DIR__ . '/../includes/navigation.php'; ?>
 
-    <!-- Main scrolling area: cards only, no dropdowns here -->
+    <!-- 2. Main scrollable content: cards only -->
     <main class="main-display">
-      <!-- Customers card: contains only table and refresh -->
       <?php include __DIR__ . '/../cards/CustomersCard.php'; ?>
-      <!-- future cards go here -->
+      <!-- future cards here -->
     </main>
     
-    <!-- Footer fixed at bottom -->
+    <!-- 3. Fixed footer -->
     <footer class="app-footer">
-      &copy; <?= date('Y') ?> Resolutions by Design — All rights reserved.
+      &copy; <?= date('Y') ?> Resolutions by Design
     </footer>
     
   </div>
