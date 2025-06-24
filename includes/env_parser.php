@@ -1,18 +1,15 @@
 <?php declare(strict_types=1);
 // includes/env_parser.php
 // -------------------------------------------------------------------
-// Loads .env into constants, overriding any empty stubs.
-// Throws if any required key is still missing or empty.
+// Simple .env loader: defines each KEY only once, throws if missing.
 // -------------------------------------------------------------------
-
-require_once __DIR__ . '/constants.php';
 
 $envFile = __DIR__ . '/../.env';
 if (!file_exists($envFile)) {
     throw new RuntimeException('.env file not found at ' . $envFile);
 }
 
-$definedNow = [];
+$defined = [];
 $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 foreach ($lines as $line) {
     $line = trim($line);
@@ -23,32 +20,38 @@ foreach ($lines as $line) {
         continue;
     }
     list($key, $rawVal) = explode('=', $line, 2);
-    $key = trim($key);
-    $val = trim($rawVal);
+    $key    = trim($key);
+    $value  = trim($rawVal, " \t\n\r\0\x0B"); // trim whitespace only
 
-    // Strip surrounding quotes
+    // Strip optional surrounding quotes
     if (
-        (substr($val, 0, 1) === '"' && substr($val, -1) === '"') ||
-        (substr($val, 0, 1) === "'" && substr($val, -1) === "'")
+        (substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+        (substr($value, 0, 1) === "'" && substr($value, -1) === "'")
     ) {
-        $val = substr($val, 1, -1);
+        $value = substr($value, 1, -1);
     }
 
-    // Override stub if it’s empty, or define if missing
-    if (!defined($key) || constant($key) === '') {
-        define($key, $val);
+    // Define if not already defined
+    if (!defined($key)) {
+        define($key, $value);
+        $defined[] = $key;
     }
-    $definedNow[] = $key;
 }
 
-// Enforce required keys
+// Required keys from AllEndpoints.json and plugin auth
 $required = [
-    'CLIENT_ID','CLIENT_SECRET','USERNAME','PASSWORD',
-    'SCOPE','TOKEN_URL','API_BASE_URL','DEALER_CODE',
-    // 'PLUGIN_BEARER_TOKEN' if you’re using plugin auth
+    'CLIENT_ID',
+    'CLIENT_SECRET',
+    'USERNAME',
+    'PASSWORD',
+    'SCOPE',
+    'TOKEN_URL',
+    'API_BASE_URL',
+    'DEALER_CODE',
+    // 'PLUGIN_BEARER_TOKEN', // include if you use plugin_auth
 ];
 
-$missing = array_filter($required, function($k){
+$missing = array_filter($required, function($k) {
     return !defined($k) || constant($k) === '';
 });
 
@@ -56,5 +59,5 @@ if (!empty($missing)) {
     throw new RuntimeException('Missing .env keys: ' . implode(', ', $missing));
 }
 
-// Optional debug
-// error_log('Loaded .env keys: ' . implode(', ', $definedNow));
+// Optional: log loaded keys for debugging
+// error_log('Loaded .env keys: ' . implode(', ', $defined));
