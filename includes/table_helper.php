@@ -79,20 +79,27 @@ function renderDataTable(array $data, array $options = []): void {
     </div>
   </div>
 
-  <table id="<?= $tableId ?>" class="min-w-full divide-y divide-gray-600">
-    <thead class="bg-gray-700">
-      <tr>
-        <?php foreach ($allKeys as $key): ?>
-          <th data-key="<?= htmlspecialchars($key) ?>"
-              class="cursor-pointer select-none px-4 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">
-            <?= htmlspecialchars($key) ?>
-            <span class="sort-indicator">&nbsp;</span>
-          </th>
-        <?php endforeach; ?>
-      </tr>
-    </thead>
-    <tbody class="bg-gray-800 divide-y divide-gray-700"></tbody>
-  </table>
+    <table id="<?= $tableId ?>" class="min-w-full divide-y divide-gray-600">
+      <thead class="bg-gray-700">
+        <tr>
+          <?php foreach ($allKeys as $key): 
+            // Determine if this column is visible by default
+            $isVisible = in_array($key, $defaultVisibles, true);
+            $style     = $isVisible ? '' : 'display:none;';
+          ?>
+            <th 
+              data-key="<?= htmlspecialchars($key) ?>"
+              style="<?= $style ?>"
+              class="cursor-pointer select-none px-4 py-2 text-left text-sm font-medium text-white uppercase tracking-wider"
+            >
+              <?= htmlspecialchars($key) ?>
+              <span class="sort-indicator">&nbsp;</span>
+            </th>
+          <?php endforeach; ?>
+        </tr>
+      </thead>
+      <tbody class="bg-gray-800 divide-y divide-gray-700"></tbody>
+    </table>
 
   <div id="<?= $tableId ?>_pager" class="mt-3 flex flex-wrap gap-1"></div>
 </div>
