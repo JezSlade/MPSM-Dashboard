@@ -73,3 +73,39 @@ body { margin: 0; }
 .table-pagination button.bg-cyan-500 {
   @apply bg-cyan-500 text-black;
 }
+/* Slide-out panel (globals) */
+.slideout-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 400px;
+  height: 100%;
+  background: rgba(255,255,255,0.95);
+  box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+.slideout-panel.open {
+  right: 0;
+}
+.slideout-header {
+  padding: 1rem;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.slideout-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.slideout-content {
+  padding: 1rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}

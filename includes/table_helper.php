@@ -14,59 +14,79 @@ function renderDataTable(array $data, array $options = []): void {
 
     // 1. Columns & labels
     $first           = (array)$data[0];
-    $columns         = $options['columns']
-                     ?? array_combine(array_keys($first), array_keys($first));
-    $colKeys         = array_keys($columns);
+    $columns         = $options['columns']      ?? array_keys($first);
+    $labels          = $options['labels']       ?? array_combine($columns, $columns);
+    $sortable        = $options['sortable']     ?? true;
+    $searchable      = $options['searchable']   ?? true;
+    $pageRows        = $options['rowsPerPage']  ?? 15;
+    $rowSelectKey    = $options['rowSelectKey'] ?? null; // e.g. 'CustomerCode'
+    $rowSelectParam  = $options['rowSelectParam'] ?? $rowSelectKey;
 
-    // 2. Row‐selection config
-    $selectKey       = $options['rowSelectKey']   ?? null;
-    $selectParam     = $options['rowSelectParam']
-                     ?? ($selectKey ? strtolower($selectKey) : null);
+    // 2. Unique IDs
+    $tableId       = 'tbl_' . preg_replace('/[^a-z0-9_]/i','', uniqid());
+    $wrapperId     = $tableId . '_wrapper';
+    $settingsBtnId = $tableId . '_settings_btn';
+    $settingsPanel = $tableId . '_settings_panel';
+    $rowsInputId   = $tableId . '_rows_input';
 
-    // 3. Defaults & IDs
-    $defaultVisibles = $options['defaultVisibleColumns'] ?? $colKeys;
-    $defaultSort     = $options['defaultSort']           ?? $colKeys[0];
-    $rowsPerPage     = (int)($options['rowsPerPage']     ?? 10);
-    $searchable      = $options['searchable']            ?? true;
-    $tableId         = uniqid('dt_');
-
-    // 4. JSON‐encode data
-    $jsData = array_map(fn($r) => array_map(
-      fn($c) => is_array($c) ? json_encode($c) : $c,
-      (array)$r
-    ), $data);
-    $jsonData = json_encode($jsData, JSON_HEX_TAG|JSON_HEX_APOS);
+    // 3. Prepare JSON for client‐side render() function
+    $jsData = array_map(fn($r) => (object)array_intersect_key((array)$r, array_flip($columns)), $data);
+    $jsMeta = (object)[
+        'columns'      => $columns,
+        'labels'       => $labels,
+        'sortable'     => (bool)$sortable,
+        'searchable'   => (bool)$searchable,
+        'pageRows'     => (int)$pageRows,
+        'rowSelectKey' => $rowSelectKey,
+        'rowSelectParam' => $rowSelectParam,
+    ];
+    $jsonData = json_encode((object)[
+        'rows' => $jsData,
+        'meta' => $jsMeta
+    ], JSON_HEX_TAG|JSON_HEX_APOS);
     ?>
-<div id="<?= $tableId ?>_wrapper" class="mb-6 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
+
+<div id="<?= $wrapperId ?>" class="mb-6 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
   <div class="flex justify-between items-center mb-2">
     <?php if ($searchable): ?>
-      <input id="<?= $tableId ?>_search" type="text" placeholder="Search…"
-             class="w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"/>
+      <?php
+      // Render searchable dropdown instead of plain text input
+      // Parameters: input ID, datalist ID, API endpoint, cookie name, placeholder, CSS classes
+      renderSearchableDropdown(
+        id:           $tableId . '_search',
+        datalistId:   $tableId . '_datalist',
+        apiEndpoint:  '/api/get_customers.php',
+        cookieName:   'customer',
+        placeholder:  'Search…',
+        cssClasses:   'w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500'
+      );
+      ?>
     <?php endif; ?>
 
     <!-- Table Settings Button & Panel -->
     <div class="relative inline-block">
-      <button id="<?= $tableId ?>_settings_btn"
+      <button id="<?= $settingsBtnId ?>"
               class="p-1 ml-2 rounded-md bg-gray-700 hover:bg-gray-600 transition"
               aria-label="Table settings">
         <i data-feather="settings" class="text-yellow-400 h-4 w-4"></i>
       </button>
-      <div id="<?= $tableId ?>_settings_panel"
+      <div id="<?= $settingsPanel ?>"
            class="hidden absolute right-0 mt-1 w-56 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-3 z-20 pointer-events-auto">
         <h3 class="text-white font-semibold mb-2">Columns &amp; Rows</h3>
         <div class="mb-2">
-          <label class="block text-gray-300 mb-1">Rows per page:</label>
-          <input type="number" id="<?= $tableId ?>_rows_input" min="1"
+          <label for="<?= $rowsInputId ?>" class="block text-gray-300 mb-1">Rows per page:</label>
+          <input type="number" id="<?= $rowsInputId ?>" min="1"
                  class="w-full text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-2"
-                 value="<?= $rowsPerPage ?>" />
+                 value="<?= $pageRows ?>"/>
         </div>
         <div class="max-h-40 overflow-y-auto">
-          <?php foreach ($colKeys as $key): ?>
+          <?php foreach ($columns as $col): ?>
             <label class="flex items-center text-gray-200 mb-1">
-              <input type="checkbox" data-col-key="<?= htmlspecialchars($key) ?>"
-                     class="mr-2 form-checkbox h-4 w-4 text-cyan-500"
-                     <?= in_array($key, $defaultVisibles, true) ? 'checked' : '' ?> />
-              <?= htmlspecialchars($columns[$key]) ?>
+              <input type="checkbox"
+                     data-col="<?= $col ?>"
+                     checked
+                     class="mr-2 form-checkbox h-4 w-4 text-cyan-500">
+              <?= htmlspecialchars($labels[$col] ?? $col) ?>
             </label>
           <?php endforeach; ?>
         </div>
@@ -74,172 +94,126 @@ function renderDataTable(array $data, array $options = []): void {
     </div>
   </div>
 
-  <div class="overflow-x-auto">
-    <table id="<?= $tableId ?>" class="min-w-full divide-y divide-gray-600">
-      <thead class="bg-gray-700">
+  <!-- Table container -->
+  <div id="<?= $tableId ?>" class="overflow-auto">
+    <table class="min-w-full divide-y divide-gray-700 text-sm">
+      <thead>
         <tr>
-          <?php foreach ($colKeys as $key):
-              // initial hide/show based on defaultVisibles
-              $hideClass = in_array($key, $defaultVisibles, true) ? '' : 'hidden';
-          ?>
-            <th data-key="<?= htmlspecialchars($key) ?>"
-                class="<?= $hideClass ?> px-4 py-2 text-left text-sm font-semibold text-white cursor-pointer">
-              <?= htmlspecialchars($columns[$key]) ?>
-              <span class="ml-1 text-xs dt-sort-indicator"></span>
+          <?php foreach ($columns as $col): ?>
+            <th
+              data-key="<?= $col ?>"
+              class="px-4 py-2 text-left <?= $sortable ? 'cursor-pointer hover:text-cyan-400' : '' ?>"
+            >
+              <?= htmlspecialchars($labels[$col] ?? $col) ?>
             </th>
           <?php endforeach; ?>
         </tr>
       </thead>
-      <tbody class="bg-gray-800"></tbody>
+      <tbody class="bg-gray-800 divide-y divide-gray-600">
+        <!-- Rows will be rendered by client‐side JS -->
+      </tbody>
     </table>
   </div>
-
-  <div id="<?= $tableId ?>_pager" class="mt-3 flex justify-center gap-1 text-sm"></div>
 </div>
 
 <script>
 (function(){
-  const wrapper     = document.getElementById('<?= $tableId ?>_wrapper');
-  const data        = <?= $jsonData ?>;
-  const columns     = <?= json_encode($colKeys) ?>;
-  const selectKey   = <?= json_encode($selectKey) ?>;
-  const selectParam = <?= json_encode($selectParam) ?>;
-  let filtered      = [...data];
-  let pageIdx       = 1;
-  let sortKey       = <?= json_encode($defaultSort) ?>;
-  let sortDir       = 1;
-  let rpp           = <?= $rowsPerPage ?>;
+  const wrapper = document.getElementById('<?= $wrapperId ?>');
+  const data    = <?= $jsonData ?>;
+  let sortKey   = data.meta.sortable ? data.meta.columns[0] : null;
+  let sortDir   = 1; // 1=asc, -1=desc
+  let currentPage = 1;
 
-  // Maintain a visibleCols array that starts as defaultVisibles
-  let visibleCols = <?= json_encode($defaultVisibles) ?>;
-
-  const searchBox     = document.getElementById('<?= $tableId ?>_search');
-  const tblBody       = wrapper.querySelector('tbody');
-  const ths           = wrapper.querySelectorAll('th[data-key]');
-  const pager         = document.getElementById('<?= $tableId ?>_pager');
-  const settingsBtn   = document.getElementById('<?= $tableId ?>_settings_btn');
-  const settingsPanel = document.getElementById('<?= $tableId ?>_settings_panel');
-  const rowsInput     = document.getElementById('<?= $tableId ?>_rows_input');
-  const colCheckboxes = settingsPanel.querySelectorAll('input[type=checkbox][data-col-key]');
-
-  // Show/hide settings panel
-  settingsBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    settingsPanel.classList.toggle('hidden');
-  });
-  document.addEventListener('click', e => {
-    if (!settingsPanel.classList.contains('hidden') &&
-        !settingsPanel.contains(e.target) &&
-        !settingsBtn.contains(e.target)) {
-      settingsPanel.classList.add('hidden');
+  // Utility to read/set cookie for row selection or search
+  const Cookie = {
+    get(name) {
+      return document.cookie.split('; ').reduce((r, c) => {
+        const [k, v] = c.split('=');
+        return k===name ? decodeURIComponent(v) : r;
+      }, null);
+    },
+    set(name, value) {
+      document.cookie = `${name}=${encodeURIComponent(value)};path=/`;
     }
-  });
+  };
 
-  // Apply settings (rows & columns)
-  function applySettings(){
-    rpp = Math.max(1, parseInt(rowsInput.value)||<?= $rowsPerPage ?>);
-    pageIdx = 1;
+  function render() {
+    let rows = [...data.rows];
 
-    // Recompute visibleCols & update DOM classes
-    visibleCols = [];
-    colCheckboxes.forEach(cb=>{
-      const key = cb.dataset.colKey, idx = columns.indexOf(key), show = cb.checked;
-      wrapper.querySelectorAll(
-        `#<?= $tableId ?> th:nth-child(${idx+1}), #<?= $tableId ?> td:nth-child(${idx+1})`
-      ).forEach(el=>el.classList.toggle('hidden', !show));
-      if (show) visibleCols.push(key);
-    });
-    render();
-  }
-  rowsInput.addEventListener('change', applySettings);
-  colCheckboxes.forEach(cb=>cb.addEventListener('change', applySettings));
+    // Apply search filter if searchable
+    const searchInput = document.getElementById('<?= $tableId ?>_search');
+    if (data.meta.searchable && searchInput?.value) {
+      const term = searchInput.value.toLowerCase();
+      rows = rows.filter(r =>
+        data.meta.columns.some(k => String(r[k]).toLowerCase().includes(term))
+      );
+      Cookie.set('<?= $rowSelectParam ?>', searchInput.value);
+    }
 
-  // Search filtering
-  if (searchBox){
-    searchBox.addEventListener('input', ()=>{
-      const q = searchBox.value.toLowerCase();
-      filtered = data.filter(r=> JSON.stringify(r).toLowerCase().includes(q) );
-      pageIdx = 1;
-      render();
-    });
-  }
+    // Sorting
+    if (data.meta.sortable && sortKey) {
+      rows.sort((a,b) => {
+        const va = a[sortKey], vb = b[sortKey];
+        return (va > vb ? 1 : va < vb ? -1 : 0) * sortDir;
+      });
+    }
 
-  // Build table rows
-  function render(){
-    // Sort
-    filtered.sort((a,b)=>{
-      const v1=(a[sortKey]||'').toString().toLowerCase();
-      const v2=(b[sortKey]||'').toString().toLowerCase();
-      return v1>v2?sortDir:v1<v2?-sortDir:0;
-    });
-    // Paginate
-    const start = (pageIdx-1)*rpp;
-    const slice = filtered.slice(start, start+rpp);
+    // Pagination
+    const totalPages = Math.ceil(rows.length / data.meta.pageRows);
+    if (currentPage > totalPages) currentPage = totalPages || 1;
+    const start = (currentPage-1)*data.meta.pageRows;
+    const paged = rows.slice(start, start + data.meta.pageRows);
 
-    // Render rows
-    tblBody.innerHTML = slice.map((row,i)=>{
-      const bg  = i%2? 'bg-gray-700':'bg-gray-800';
-      const hov = selectKey? ' hover:bg-gray-600 cursor-pointer':'';
-      const attr= selectKey && row[selectKey]!=null
-        ? ` data-select-value="${encodeURIComponent(row[selectKey])}"`
-        : '';
-      const tds = columns.map(key=>{
-        const hide = visibleCols.includes(key) ? '' : 'hidden';
-        return `<td class="${hide} px-4 py-2 text-gray-100"${attr}>${row[key]||''}</td>`;
-      }).join('');
-      return `<tr class="${bg+hov}"${attr}>${tds}</tr>`;
-    }).join('') || `<tr><td colspan="${columns.length}" class="px-4 py-2 text-center text-gray-400">No data</td></tr>`;
+    // Build HTML
+    const tbody = wrapper.querySelector('tbody');
+    tbody.innerHTML = paged.map(r => {
+      const cells = data.meta.columns.map(k =>
+        `<td class="px-4 py-2">${String(r[k])}</td>`
+      ).join('');
+      return `<tr ${data.meta.rowSelectKey ? `data-${data.meta.rowSelectParam}="${r[data.meta.rowSelectKey]}"` : ''}>${cells}</tr>`;
+    }).join('');
 
-    attachClicks();
-    renderPager();
-    updateSortIndicators();
-  }
-
-  // Attach row click handlers
-  function attachClicks(){
-    if (!selectKey || !selectParam) return;
-    wrapper.querySelectorAll('tr[data-select-value]').forEach(tr=>{
-      tr.onclick = ()=>{
-        const v = decodeURIComponent(tr.getAttribute('data-select-value'));
-        const url = new URL(window.location.href);
-        url.searchParams.set(selectParam, v);
-        window.location.href = url;
-      };
-    });
-  }
-
-  // Pagination
-  function renderPager(){
-    const total = Math.max(1, Math.ceil(filtered.length/rpp));
-    pager.innerHTML = Array.from({length:total}, (_,i)=>
-      `<button data-page="${i+1}" class="px-2 py-1 rounded ${
-        i+1===pageIdx?'bg-cyan-500 text-black':'bg-gray-700 hover:bg-gray-600 text-white'
-      }">${i+1}</button>`
-    ).join('');
-    pager.querySelectorAll('button').forEach(b=>b.onclick = ()=>{
-      pageIdx = +b.dataset.page; render();
-    });
-  }
-
-  // Sort indicators
-  function updateSortIndicators(){
-    ths.forEach(th=>{
-      const ind = th.querySelector('.dt-sort-indicator');
-      ind.textContent = th.dataset.key===sortKey
-        ? (sortDir===1?' ▲':' ▼')
-        : '';
-    });
+    // (Reattach row‐click listener for selection outside this function if needed)
   }
 
   // Column header click → sort
-  ths.forEach(th=> th.onclick = ()=>{
-    const k = th.dataset.key;
-    if (sortKey===k) sortDir=-sortDir; else { sortKey=k; sortDir=1; }
+  wrapper.querySelectorAll('th[data-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.key;
+      if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+      render();
+    });
+  });
+
+  // Settings panel toggle
+  document.getElementById('<?= $settingsBtnId ?>').addEventListener('click', () => {
+    document.getElementById('<?= $settingsPanel ?>').classList.toggle('hidden');
+  });
+
+  // Rows-per-page change
+  document.getElementById('<?= $rowsInputId ?>').addEventListener('input', e => {
+    data.meta.pageRows = parseInt(e.target.value) || data.meta.pageRows;
     render();
+  });
+
+  // Checkbox column toggle
+  document.querySelectorAll('#<?= $settingsPanel ?> input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const col = e.target.dataset.col;
+      const idx = data.meta.columns.indexOf(col);
+      if (idx === -1) return;
+      if (e.target.checked === false) {
+        data.meta.columns.splice(idx,1);
+      } else {
+        data.meta.columns.splice(idx,0,col);
+      }
+      render();
+    });
   });
 
   // Initial render
   render();
 })();
 </script>
+
 <?php } // end renderDataTable() ?>

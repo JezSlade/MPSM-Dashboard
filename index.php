@@ -14,6 +14,8 @@ ini_set('display_errors','1');
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
+  <!-- Global CSS (glassmorphic, slide-out panel, etc.) -->
+  <link rel="stylesheet" href="/public/css/styles.css">
 </head>
 <body class="h-full flex flex-col">
 
@@ -23,6 +25,9 @@ ini_set('display_errors','1');
   <main class="flex-1 overflow-y-auto p-4 space-y-6">
     <?php include __DIR__ . '/cards/CustomersCard.php'; ?>
   </main>
+
+  <!-- Reusable Slide-Out Panel for any table‐row drilldown -->
+  <?php include __DIR__ . '/components/SlideOutPanel.php'; ?>
 
   <?php include __DIR__ . '/includes/footer.php'; ?>
 
@@ -54,5 +59,8 @@ ini_set('display_errors','1');
       });
     })();
   </script>
+
+  <!-- Global card & table interactions (sorting, expand, drilldown, slide-out) -->
+  <script src="/public/js/card-interactions.js"></script>
 </body>
 </html>
