@@ -1,5 +1,5 @@
 <?php
-// cards/CustomersCard.php — Adds “Refresh interval” setting alongside caching toggles
+// cards/CustomersCard.php — Fixed settings panel click‐through and click‐away close
 require_once __DIR__ . '/../includes/card_base.php';
 require_once __DIR__ . '/../includes/env_parser.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -86,7 +86,8 @@ try {
     <?php endif; ?>
 
     <!-- Card Settings Panel -->
-    <div id="<?= $cardKey ?>_settings_panel" class="hidden absolute right-6 top-16 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-4 z-20">
+    <div id="<?= $cardKey ?>_settings_panel"
+         class="hidden absolute right-6 top-16 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-4 z-20 pointer-events-auto">
       <h3 class="text-white font-semibold mb-3">Card Settings</h3>
 
       <label class="flex items-center text-gray-200 mb-3">
@@ -101,7 +102,7 @@ try {
         Show cache indicator
       </label>
 
-      <div>
+      <div class="mb-3">
         <label for="<?= $cardKey ?>_ttl_input" class="block text-gray-300 mb-1">Refresh interval (minutes):</label>
         <input
           type="number"
@@ -148,7 +149,8 @@ if (window.feather) feather.replace();
     if (remaining <= 0){
       bar.style.width = '0%';
       bar.className = 'h-full bg-red-500';
-      ageLbl.textContent = remaining < 0 ? `Stale by ${-remaining}s` : 'No cache';
+      const expiredBy = Math.abs(remaining);
+      ageLbl.textContent = `Cache expired ${expiredBy}s ago`;
       remLbl.textContent = '';
       return;
     }
@@ -177,7 +179,19 @@ if (window.feather) feather.replace();
   // Settings panel toggle
   const setBtn   = document.getElementById('<?= $cardKey ?>_settings_btn');
   const setPanel = document.getElementById('<?= $cardKey ?>_settings_panel');
-  setBtn.addEventListener('click', () => setPanel.classList.toggle('hidden'));
+  setBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setPanel.classList.toggle('hidden');
+  });
+
+  // Close on click-away
+  document.addEventListener('click', (e) => {
+    if (!setPanel.classList.contains('hidden') &&
+        !setPanel.contains(e.target) &&
+        !setBtn.contains(e.target)) {
+      setPanel.classList.add('hidden');
+    }
+  });
 
   // Settings controls
   document.getElementById('<?= $cardKey ?>_toggle_cache').addEventListener('change', function(){
