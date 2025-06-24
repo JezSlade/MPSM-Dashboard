@@ -1,6 +1,4 @@
 <?php declare(strict_types=1);
-// includes/navigation.php — Pure view, no headers/CORS
-
 require_once __DIR__ . '/env_parser.php';
 require_once __DIR__ . '/api_client.php';
 
@@ -20,9 +18,10 @@ try {
   $list = [];
 }
 ?>
-<nav class="main-nav">
-  <label for="customer-select" class="nav-label">Customer:</label>
-  <select id="customer-select" name="CustomerCode" class="nav-select">
+<nav class="flex items-center p-4 bg-white/10 backdrop-blur-md border-b border-white/20">
+  <label for="customer-select" class="text-white font-medium mr-3">Customer:</label>
+  <select id="customer-select" name="CustomerCode"
+    class="w-48 p-2 rounded-md bg-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 hover:bg-white/30 transition">
     <?php foreach ($list as $cust):
       $code = (string)($cust['CustomerCode'] ?? '');
       $desc = (string)($cust['Description']  ?? '');
