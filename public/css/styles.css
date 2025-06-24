@@ -1,1 +1,136 @@
-body{margin:0;padding:0;font-family:sans-serif;background:#f0f0f0;} .card-wrapper{padding:1rem;} .card{background:rgba(255,255,255,0.8);border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);margin:1rem auto;max-width:800px;} .card-header, .card-footer{padding:0.5rem 1rem;} .card-body{padding:1rem;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:0.5rem;text-align:left;} .pager{display:flex;justify-content:space-between;padding:0.5rem;}
+/* public/css/styles.css */
+/* -------------------------------------------------------------------
+   Global styles with etched glassmorphic cards and neon CMYK accents
+   ------------------------------------------------------------------- */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0c0f19;
+  color: #eef0f5;
+}
+
+.card-wrapper {
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - 4rem);
+}
+
+.card {
+  position: relative;
+  width: 90%;
+  max-width: 800px;
+  background: rgba(20, 25, 40, 0.3);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(180%);
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.4),   /* cyan glow */
+    0 0 30px rgba(255, 0, 255, 0.3),    /* magenta glow */
+    0 0 40px rgba(255, 255, 0, 0.2);    /* yellow glow */
+  overflow: hidden;
+}
+
+.card-header,
+.card-footer {
+  padding: 1rem 1.5rem;
+  background: rgba(20, 25, 40, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: none;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #f0f0f5;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.3),
+               0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  color: #eef0f5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: cyan;
+  box-shadow: 0 0 8px cyan;
+}
+
+.empty-state,
+.error {
+  text-align: center;
+  font-size: 1rem;
+  padding: 1rem;
+  color: #f0f0f5;
+}
+
+.debug-info,
+.debug-error {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+  color: #ccc;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+th {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #d0d2da;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: rgba(20, 25, 40, 0.5);
+}
+
+td {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(20, 25, 40, 0.3);
+  color: #eef0f5;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.pager button {
+  min-width: 80px;
+}
+
+.pager span {
+  font-size: 0.9rem;
+}
