@@ -1,7 +1,7 @@
 <?php
 // includes/header.php
 // -------------------------------------------------------------------
-// Global header: logo, title, theme toggle
+// Logo + theme toggle only—no CSS link here.
 // -------------------------------------------------------------------
 ?>
 <header class="global-header">

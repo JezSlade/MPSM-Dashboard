@@ -1,7 +1,7 @@
 <?php
 // includes/footer.php
 // -------------------------------------------------------------------
-// Global footer: fixed bar at bottom
+// Footer only—no CSS here.
 // -------------------------------------------------------------------
 ?>
 <footer class="app-footer">
