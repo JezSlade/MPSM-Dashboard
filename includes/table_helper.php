@@ -2,8 +2,7 @@
 // includes/table_helper.php
 // -------------------------------------------------------------------
 // Renders a searchable, sortable, pageable data table with Tailwind.
-// Per-table settings icon to choose visible columns & page size.
-// Hides both <th> and <td> via inline styles for unselected columns.
+// Adds optional row selection: clicking a row sets ?customer=<selectKeyValue>.
 // -------------------------------------------------------------------
 
 function renderDataTable(array $data, array $options = []): void {
@@ -18,6 +17,9 @@ function renderDataTable(array $data, array $options = []): void {
     // Default visible columns
     $defaultVisibles = $options['defaultVisibleColumns'] ?? ['Description'];
     $defaultVisibles = array_values(array_intersect($defaultVisibles, $allKeys));
+
+    // Optional: which field to use for row selection
+    $selectKey = $options['rowSelectKey'] ?? null;
 
     // Unique IDs & defaults
     $tableId     = uniqid('dt_');
@@ -71,8 +73,7 @@ function renderDataTable(array $data, array $options = []): void {
         <?php foreach ($allKeys as $key):
             $thStyle = in_array($key, $defaultVisibles, true) ? '' : 'display:none;';
         ?>
-          <th data-key="<?= htmlspecialchars($key) ?>"
-              style="<?= $thStyle ?>"
+          <th data-key="<?= htmlspecialchars($key) ?>" style="<?= $thStyle ?>"
               class="cursor-pointer select-none px-4 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">
             <?= htmlspecialchars($key) ?><span class="sort-indicator">&nbsp;</span>
           </th>
@@ -90,6 +91,7 @@ function renderDataTable(array $data, array $options = []): void {
   const wrapper   = document.getElementById('<?= $tableId ?>_wrapper');
   const data      = <?= $jsonData ?>;
   const columns   = <?= json_encode($allKeys) ?>;
+  const selectKey = <?= json_encode($selectKey) ?>;
   let filtered    = [...data];
   let currentPage = 1;
   let sortKey     = '<?= $defaultSort ?>';
@@ -151,18 +153,35 @@ function renderDataTable(array $data, array $options = []): void {
     });
     const start = (currentPage-1)*rpp;
     const rows  = filtered.slice(start, start+rpp);
+
     tblBody.innerHTML = rows.map((row,i)=>{
-      const cls = i%2===0?'bg-gray-800 hover:bg-gray-700':'bg-gray-700 hover:bg-gray-600';
+      const rowClass = i%2===0?'bg-gray-800 hover:bg-gray-700':'bg-gray-700 hover:bg-gray-600';
+      const selectVal = selectKey ? row[selectKey] : null;
+      const trAttrs = selectKey && selectVal!=null
+        ? ` data-select-value="${selectVal}" class="${rowClass} cursor-pointer"`
+        : ` class="${rowClass}"`;
       const cells = columns.map(key=>{
         const show = visibleCols.includes(key);
         return `<td ${show?'':'style="display:none;"'} class="px-4 py-1 text-gray-100">${row[key]||''}</td>`;
       });
-      return `<tr class="${cls}">${cells.join('')}</tr>`;
+      return `<tr${trAttrs}>${cells.join('')}</tr>`;
     }).join('') || `<tr><td colspan="${columns.length}" class="px-4 py-1 text-center text-gray-300">No data</td></tr>`;
     renderPager(); updateSortIndicators();
+
+    // Attach row click for selection
+    if (selectKey) {
+      wrapper.querySelectorAll('tr[data-select-value]').forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          const cust = tr.getAttribute('data-select-value');
+          const url = new URL(window.location.href);
+          url.searchParams.set('customer', cust);
+          window.location.href = url.toString();
+        });
+      });
+    }
   }
 
-  function renderPager() {
+  function renderPager(){
     const total = Math.max(1, Math.ceil(filtered.length/rpp));
     pager.innerHTML = Array.from({length: total}, (_, i) =>
       `<button data-page="${i+1}" class="px-2 py-1 rounded ${
