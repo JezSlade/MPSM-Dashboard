@@ -12,45 +12,38 @@ function renderDataTable(array $data, array $options = []): void {
         return;
     }
 
-    // 1) Discover all columns from first row
+    // Discover all columns from first row
     $allKeys = array_keys((array)$data[0]);
 
-    // 2) Determine default visible columns (PHP side)
+    // Default visible columns
     $defaultVisibles = $options['defaultVisibleColumns'] ?? ['Description'];
-    // Keep only valid keys
     $defaultVisibles = array_values(array_intersect($defaultVisibles, $allKeys));
 
-    // 3) IDs and defaults
-    $tableId       = uniqid('dt_');
-    $settingsKey   = "{$tableId}_settings";
-    $defaultSort   = $options['defaultSort']   ?? ($defaultVisibles[0] ?? $allKeys[0]);
-    $defaultRows   = (int)($options['rowsPerPage'] ?? 10);
-    $searchable    = $options['searchable']    ?? true;
+    // Unique IDs & defaults
+    $tableId     = uniqid('dt_');
+    $settingsKey = "{$tableId}_settings";
+    $defaultSort = $options['defaultSort'] ?? ($defaultVisibles[0] ?? $allKeys[0]);
+    $defaultRows = (int)($options['rowsPerPage'] ?? 10);
+    $searchable  = $options['searchable'] ?? true;
 
-    // 4) JSON data for JS
+    // JSON-encode data for JS
     $jsData = array_map(fn($row) => array_map(
         fn($c) => is_array($c) ? json_encode($c) : $c,
         (array)$row
     ), $data);
     $jsonData = json_encode($jsData, JSON_HEX_TAG|JSON_HEX_APOS);
-
     ?>
-<div id="<?= $tableId ?>_wrapper"
-     class="data-table-container mb-8 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
+<div id="<?= $tableId ?>_wrapper" class="data-table-container mb-8 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
   <div class="flex justify-between items-center mb-2">
     <?php if ($searchable): ?>
       <input type="text" id="<?= $tableId ?>_search" placeholder="Search…"
              class="w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
     <?php endif; ?>
-
     <div class="relative">
-      <button id="<?= $tableId ?>_settings_btn"
-              class="p-1 rounded-md bg-gray-700 hover:bg-gray-600 transition"
-              aria-label="Table settings">
+      <button id="<?= $tableId ?>_settings_btn" class="p-1 rounded-md bg-gray-700 hover:bg-gray-600 transition" aria-label="Table settings">
         <i data-feather="settings" class="text-yellow-400 h-4 w-4"></i>
       </button>
-      <div id="<?= $tableId ?>_settings_panel"
-           class="hidden absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-3 z-10">
+      <div id="<?= $tableId ?>_settings_panel" class="hidden absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-3 z-10">
         <h3 class="text-white font-semibold mb-2">Table Settings</h3>
         <div class="mb-2">
           <label class="block text-gray-300 mb-1">Rows per page:</label>
@@ -76,14 +69,12 @@ function renderDataTable(array $data, array $options = []): void {
     <thead class="bg-gray-700">
       <tr>
         <?php foreach ($allKeys as $key):
-            // Hide headers for non-default-visible columns
             $thStyle = in_array($key, $defaultVisibles, true) ? '' : 'display:none;';
         ?>
           <th data-key="<?= htmlspecialchars($key) ?>"
               style="<?= $thStyle ?>"
               class="cursor-pointer select-none px-4 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">
-            <?= htmlspecialchars($key) ?>
-            <span class="sort-indicator">&nbsp;</span>
+            <?= htmlspecialchars($key) ?><span class="sort-indicator">&nbsp;</span>
           </th>
         <?php endforeach; ?>
       </tr>
@@ -105,96 +96,70 @@ function renderDataTable(array $data, array $options = []): void {
   let sortDir     = 1;
   let rpp         = <?= $defaultRows ?>;
 
-  // Settings elements
   const settingsBtn   = document.getElementById('<?= $tableId ?>_settings_btn');
   const settingsPanel = document.getElementById('<?= $tableId ?>_settings_panel');
   const rowsInput     = document.getElementById('<?= $tableId ?>_rows_input');
   const colCheckboxes = settingsPanel.querySelectorAll('input[type=checkbox][data-col-key]');
 
-  // Load saved settings or fall back to PHP defaults
   let saved = {};
-  try {
-    saved = JSON.parse(localStorage.getItem('<?= $settingsKey ?>')) || {};
-  } catch {}
+  try { saved = JSON.parse(localStorage.getItem('<?= $settingsKey ?>'))||{}; } catch {}
   rpp = saved.rpp || rpp;
   rowsInput.value = rpp;
 
-  // Track visible columns in JS
-  let visibleCols = saved.visibleCols
-      ? saved.visibleCols
-      : <?= json_encode($defaultVisibles) ?>;
+  let visibleCols = saved.visibleCols || <?= json_encode($defaultVisibles) ?>;
 
-  // Initialize checkboxes and hide initial non-visible columns
-  colCheckboxes.forEach(cb => {
+  colCheckboxes.forEach(cb=>{
     const key = cb.dataset.colKey;
-    const isVisible = visibleCols.includes(key);
-    cb.checked = isVisible;
-    // also hide any corresponding <th>
+    const show = visibleCols.includes(key);
+    cb.checked = show;
     const idx = columns.indexOf(key);
-    wrapper.querySelector(`th:nth-child(${idx+1})`).style.display = isVisible ? '' : 'none';
+    wrapper.querySelector(`th:nth-child(${idx+1})`).style.display = show?'':'none';
   });
 
-  settingsBtn.addEventListener('click', () => settingsPanel.classList.toggle('hidden'));
+  settingsBtn.addEventListener('click', ()=> settingsPanel.classList.toggle('hidden'));
 
   function applySettings() {
-    rpp = Math.max(1, parseInt(rowsInput.value) || <?= $defaultRows ?>);
-
+    rpp = Math.max(1, parseInt(rowsInput.value)||<?= $defaultRows ?>);
     visibleCols = [];
-    colCheckboxes.forEach(cb => {
-      const key = cb.dataset.colKey;
-      const idx = columns.indexOf(key);
-      const show = cb.checked;
-      wrapper.querySelectorAll(
-        `th:nth-child(${idx+1}), td:nth-child(${idx+1})`
-      ).forEach(el => el.style.display = show ? '' : 'none');
+    colCheckboxes.forEach(cb=>{
+      const key = cb.dataset.colKey, idx = columns.indexOf(key), show = cb.checked;
+      wrapper.querySelectorAll(`th:nth-child(${idx+1}), td:nth-child(${idx+1})`)
+             .forEach(el=>el.style.display = show?'':'none');
       if (show) visibleCols.push(key);
     });
-
     localStorage.setItem('<?= $settingsKey ?>', JSON.stringify({rpp, visibleCols}));
-    currentPage = 1;
-    renderTable();
+    currentPage = 1; renderTable();
   }
-
   rowsInput.addEventListener('change', applySettings);
-  colCheckboxes.forEach(cb => cb.addEventListener('change', applySettings));
+  colCheckboxes.forEach(cb=>cb.addEventListener('change', applySettings));
 
-  // Search
   const searchBox = document.getElementById('<?= $tableId ?>_search');
-  if (searchBox) {
-    searchBox.addEventListener('input', () => {
-      const q = searchBox.value.toLowerCase();
-      filtered = data.filter(r => JSON.stringify(r).toLowerCase().includes(q));
-      currentPage = 1; renderTable();
-    });
-  }
+  if (searchBox) searchBox.addEventListener('input', ()=>{
+    const q = searchBox.value.toLowerCase();
+    filtered = data.filter(r=>JSON.stringify(r).toLowerCase().includes(q));
+    currentPage = 1; renderTable();
+  });
 
   const tblBody = wrapper.querySelector('tbody');
   const ths     = wrapper.querySelectorAll('th[data-key]');
   const pager   = document.getElementById('<?= $tableId ?>_pager');
 
   function renderTable() {
-    // Sort & paginate
-    filtered.sort((a,b) => {
-      const v1 = (a[sortKey]||'').toLowerCase();
-      const v2 = (b[sortKey]||'').toLowerCase();
-      return v1>v2? sortDir: v1<v2? -sortDir: 0;
+    filtered.sort((a,b)=>{
+      const v1=(a[sortKey]||'').toLowerCase(), v2=(b[sortKey]||'').toLowerCase();
+      return v1>v2? sortDir: v1<v2? -sortDir:0;
     });
     const start = (currentPage-1)*rpp;
-    const pageRows = filtered.slice(start, start+rpp);
-
-    // Build rows
-    tblBody.innerHTML = pageRows.map((row,i) => {
-      const cls = i%2===0? 'bg-gray-800 hover:bg-gray-700':'bg-gray-700 hover:bg-gray-600';
-      const cells = columns.map(key => {
+    const rows  = filtered.slice(start, start+rpp);
+    tblBody.innerHTML = rows.map((row,i)=>{
+      const cls = i%2===0?'bg-gray-800 hover:bg-gray-700':'bg-gray-700 hover:bg-gray-600';
+      const cells = columns.map(key=>{
         const show = visibleCols.includes(key);
-        const style = show ? '' : 'style="display:none;"';
-        return `<td ${style} class="px-4 py-1 text-gray-100">${row[key]||''}</td>`;
+        return `<td ${show?'':'style="display:none;"'} class="px-4 py-1 text-gray-100">${row[key]||''}</td>`;
       });
       return `<tr class="${cls}">${cells.join('')}</tr>`;
-    }).join('') || `<tr><td colspan="${columns.length}" class="px-4 py-2 text-center text-gray-300">No data</td></tr>`;
-
-    renderPager();
-    updateSortIndicators();
+    }).join('') || `<tr><td colspan="${columns.length}" class="px-4 py-1 text-center text-gray-300">No data</td></tr>`;
+    renderPager(); updateSortIndicators();
   }
 
   function renderPager() {
@@ -204,27 +169,21 @@ function renderDataTable(array $data, array $options = []): void {
         i+1===currentPage?'bg-cyan-500 text-black':'bg-gray-700 hover:bg-gray-600 text-white'
       }">${i+1}</button>`
     ).join('');
-    pager.querySelectorAll('button').forEach(btn =>
-      btn.addEventListener('click', () => {
-        currentPage = +btn.dataset.page;
-        renderTable();
-      })
+    pager.querySelectorAll('button').forEach(btn=>
+      btn.addEventListener('click', ()=>{ currentPage=+btn.dataset.page; renderTable(); })
     );
   }
 
   function updateSortIndicators() {
-    ths.forEach(th => {
+    ths.forEach(th=>{
       const ind = th.querySelector('.sort-indicator');
-      ind.textContent = th.dataset.key === sortKey
-        ? (sortDir===1 ? ' ▲' : ' ▼')
-        : '';
+      ind.textContent = th.dataset.key===sortKey ? (sortDir===1?' ▲':' ▼') : '';
     });
   }
 
-  ths.forEach(th => th.addEventListener('click', () => {
+  ths.forEach(th=>th.addEventListener('click', ()=>{
     const k = th.dataset.key;
-    if (sortKey === k) sortDir = -sortDir;
-    else { sortKey = k; sortDir = 1; }
+    if (sortKey===k) sortDir=-sortDir; else { sortKey=k; sortDir=1; }
     renderTable();
   }));
 
