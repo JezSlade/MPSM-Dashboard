@@ -1,12 +1,12 @@
 <?php
-// cards/CustomersCard.php — Preserve ?customer on refresh so selection sticks
+// cards/CustomersCard.php — Preserve customer selection and keep all functionality
 require_once __DIR__ . '/../includes/card_base.php';
 require_once __DIR__ . '/../includes/env_parser.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/api_client.php';
 require_once __DIR__ . '/../includes/table_helper.php';
 
-// 1) Read the current selection up front
+// 1) Read the current selection up-front
 $selected = htmlspecialchars($_GET['customer'] ?? '', ENT_QUOTES);
 
 // Card identifier
@@ -54,14 +54,15 @@ try {
 }
 
 // Count for snapshot
-$count    = count($rows);
+$count = count($rows);
 ?>
 
 <div id="<?= $cardKey ?>" class="bg-gray-800/60 backdrop-blur-md border border-gray-600 rounded-lg shadow-lg overflow-hidden mx-auto max-w-4xl">
+
   <header class="relative px-6 py-3 bg-gray-700 border-b border-gray-600 flex justify-between items-center">
     <h2 class="text-xl font-semibold text-white">Customers</h2>
     <div class="flex items-center space-x-2">
-      <!-- Card Settings -->
+      <!-- Settings -->
       <button id="<?= $cardKey ?>_settings_btn" class="p-2 rounded-md bg-gray-700 hover:bg-gray-600">
         <i data-feather="sliders" class="text-yellow-400 h-5 w-5"></i>
       </button>
@@ -91,7 +92,8 @@ $count    = count($rows);
   </div>
   <?php endif; ?>
 
-  <div class="p-6">
+  <!-- restored id for JS toggle -->
+  <div id="<?= $cardKey ?>_body" class="p-6">
     <?php if ($error): ?>
       <div class="text-red-400 mb-4">Failed to load: <?= htmlspecialchars($error, ENT_QUOTES) ?></div>
     <?php endif; ?>
@@ -128,19 +130,25 @@ $count    = count($rows);
 if (window.feather) feather.replace();
 
 (function(){
-  // Cache bar animation
-  const ttl = <?= $cacheTTL ?>, ageLbl = document.getElementById('<?= $cardKey ?>_cache_age'), remLbl = document.getElementById('<?= $cardKey ?>_cache_rem'), bar = document.getElementById('<?= $cardKey ?>_cache_bar');
-  let rem = <?= $cacheRem ?>;
+  // Cache‐bar animation
+  const ttl    = <?= $cacheTTL ?>;
+  let rem      = <?= $cacheRem ?>;
+  const bar    = document.getElementById('<?= $cardKey ?>_cache_bar');
+  const ageLbl = document.getElementById('<?= $cardKey ?>_cache_age');
+  const remLbl = document.getElementById('<?= $cardKey ?>_cache_rem');
   (function tick(){
     if (rem <= 0) {
-      bar.style.width='0%'; bar.className='h-full bg-red-500';
-      ageLbl.textContent = `Expired ${-rem}s ago`; remLbl.textContent='';
+      bar.style.width = '0%';
+      bar.className   = 'h-full bg-red-500';
+      ageLbl.textContent = `Expired ${-rem}s ago`;
+      remLbl.textContent = '';
       return;
     }
     const pct = rem/ttl*100;
     bar.style.width = pct + '%';
-    bar.className = 'h-full ' + (pct>50?'bg-green-400':pct>20?'bg-yellow-400':'bg-red-500');
-    ageLbl.textContent = `${ttl-rem}s ago`; remLbl.textContent = `Refresh in ${rem}s`;
+    bar.className   = 'h-full ' + (pct>50?'bg-green-400':pct>20?'bg-yellow-400':'bg-red-500');
+    ageLbl.textContent = `${ttl-rem}s ago`;
+    remLbl.textContent = `Refresh in ${rem}s`;
     rem--; setTimeout(tick,1000);
   })();
 
@@ -148,21 +156,21 @@ if (window.feather) feather.replace();
   const minBtn = document.getElementById('<?= $cardKey ?>_minimize_btn'),
         body   = document.getElementById('<?= $cardKey ?>_body'),
         snap   = document.getElementById('<?= $cardKey ?>_snapshot');
-  let mined = false;
+  let minimized = false;
   minBtn.addEventListener('click', ()=>{
-    mined = !mined;
-    body.style.display = mined? 'none':'';
-    snap.style.display = mined? 'flex':'none';
-    const ico = minBtn.querySelector('i');
-    ico.setAttribute('data-feather', mined?'chevron-down':'chevron-up');
+    minimized = !minimized;
+    body.style.display = minimized ? 'none':'';
+    snap.style.display = minimized ? 'flex':'none';
+    const ic = minBtn.querySelector('i');
+    ic.setAttribute('data-feather', minimized?'chevron-down':'chevron-up');
     feather.replace();
   });
 
   // Settings panel toggle
-  const setBtn = document.getElementById('<?= $cardKey ?>_settings_btn'),
+  const setBtn   = document.getElementById('<?= $cardKey ?>_settings_btn'),
         setPanel = document.getElementById('<?= $cardKey ?>_settings_panel');
-  setBtn.addEventListener('click', e=>{ e.stopPropagation(); setPanel.classList.toggle('hidden'); });
-  document.addEventListener('click', e=>{
+  setBtn.addEventListener('click', e => { e.stopPropagation(); setPanel.classList.toggle('hidden'); });
+  document.addEventListener('click', e => {
     if (!setPanel.classList.contains('hidden') &&
         !setPanel.contains(e.target) &&
         !setBtn.contains(e.target)) {
@@ -170,7 +178,6 @@ if (window.feather) feather.replace();
     }
   });
 
-  // Preserve settings toggles (omitted for brevity)...
-
+  // (Your existing settings‐checkbox handlers here...)
 })();
 </script>
