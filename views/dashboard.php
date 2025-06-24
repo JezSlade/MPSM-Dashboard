@@ -1,10 +1,12 @@
 <?php
 // /views/dashboard.php
-// Dashboard View: renders all cards in a responsive grid
+// Dashboard View: renders all cards in a responsive grid, auto‐discovering cards
+
+declare(strict_types=1);
 
 // (Header, navigation, and debug setup are handled in index.php)
 
-// Capture any selected customer from query string
+// Capture any selected customer from query string (optional; cards read from cookie anyway)
 $selectedCustomer = $_GET['customer'] ?? null;
 ?>
 <main>
@@ -19,12 +21,21 @@ $selectedCustomer = $_GET['customer'] ?? null;
       padding: 20px;
     "
   >
-    <!-- Customer selector card (table rows inside this will be clickable) -->
-    <?php include __DIR__ . '/../cards/CustomersCard.php'; ?>
-
-    <!-- Example of other cards; add or remove as needed -->
-    <?php include __DIR__ . '/../cards/DeviceCountersCard.php'; ?>
-    <?php include __DIR__ . '/../cards/SupplyAlertsCard.php'; ?>
+    <?php
+    // Auto‐include every PHP file in /cards/, except Base helpers or non‐cards
+    $cardsDir = __DIR__ . '/../cards/';
+    foreach (scandir($cardsDir, SCANDIR_SORT_ASCENDING) as $file) {
+        if (
+            $file === '.' ||
+            $file === '..' ||
+            pathinfo($file, PATHINFO_EXTENSION) !== 'php' ||
+            preg_match('/Base\.php$/i', $file) // skip any *Base.php helpers
+        ) {
+            continue;
+        }
+        include $cardsDir . $file;
+    }
+    ?>
   </div>
 </main>
 
