@@ -2,9 +2,12 @@
 // cards/CustomersCard.php — Customers list with global selection
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/card_base.php';   // loads .env, defines DEALER_CODE, etc.
+require_once __DIR__ . '/../includes/env_parser.php';        // ← ADDED
+parse_env_file(__DIR__ . '/../.env');                        // ← ADDED
+
+require_once __DIR__ . '/../includes/card_base.php';         // now has access to DEALER_CODE
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/api_client.php';  // defines api_request()
+require_once __DIR__ . '/../includes/api_client.php';
 require_once __DIR__ . '/../includes/table_helper.php';
 
 // 1) Read selection from cookie → querystring
