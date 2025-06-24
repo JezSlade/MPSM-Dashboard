@@ -1,14 +1,5 @@
 // /public/js/card-interactions.js
-// -------------------------------------------------------------------
-// Global card & table interactions:
-//  • Sorting & expand/collapse of cards
-//  • Drilldown buttons inside cards
-//  • Slide-out panel drilldowns
-//  • **New:** Global table‐row click → set customer cookie & reload
-// -------------------------------------------------------------------
-
 console.log('🃏 card-interactions.js loaded');
-
 try {
   document.addEventListener('DOMContentLoaded', () => {
     const grid     = document.getElementById('cardGrid');
@@ -16,17 +7,13 @@ try {
     const btnDate  = document.getElementById('sortDate');
     let   expanded = null;
 
-    // Safety
-    if (!grid) {
-      console.warn('card-interactions: #cardGrid not found');
-    } else {
-
+    if (grid) {
       // 1) Sorting
       function sortCards(key) {
         const cards = Array.from(grid.children);
         cards.sort((a, b) => {
-          const va = (a.dataset[key] || '').toLowerCase();
-          const vb = (b.dataset[key] || '').toLowerCase();
+          const va = (a.dataset[key]||'').toLowerCase();
+          const vb = (b.dataset[key]||'').toLowerCase();
           if (key === 'date') return new Date(vb) - new Date(va);
           return va.localeCompare(vb);
         });
@@ -59,34 +46,22 @@ try {
       });
     }
 
-    // 4) Slide-out panel drill-downs (any <tr> click)
+    // 4) Slide-out panel drill-downs on any table row
     document.body.addEventListener('click', e => {
       const row = e.target.closest('tr[data-customer]');
       if (!row) return;
-      const code     = row.dataset.customer;
-      const panel    = document.getElementById('slideOutPanel');
-      const titleEl  = document.getElementById('slideoutTitle');
-      const content  = document.getElementById('slideoutContent');
+      const code    = row.dataset.customer;
+      const panel   = document.getElementById('slideOutPanel');
+      const titleEl = document.getElementById('slideoutTitle');
+      const content = document.getElementById('slideoutContent');
       titleEl.textContent = `Details for ${code}`;
-      content.innerHTML    = `<p>🔍 Drill-down for <strong>${code}</strong> (dummy content).</p>`;
+      content.innerHTML    = `<p>🔍 Drill-down for <strong>${code}</strong>.</p>`;
       panel.classList.add('open');
     });
 
     // 5) Close slide-out panel
     document.getElementById('slideoutClose')?.addEventListener('click', () => {
       document.getElementById('slideOutPanel')?.classList.remove('open');
-    });
-
-    // 6) **NEW**: Global table‐row click → set customer + reload
-    document.body.addEventListener('click', e => {
-      const row = e.target.closest('tr[data-customer]');
-      if (!row) return;
-      const cust = row.dataset.customer;
-      if (!cust) return;
-      // Set cookie
-      document.cookie = `customer=${encodeURIComponent(cust)};path=/`;
-      // Reload page so PHP picks up $_COOKIE['customer']
-      window.location.reload();
     });
   });
 } catch (err) {
