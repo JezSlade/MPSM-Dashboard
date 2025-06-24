@@ -3,7 +3,6 @@
 // → Load check
 console.log('🃏 card-interactions.js loaded');
 
-// → Wrap everything to catch runtime errors
 try {
   document.addEventListener('DOMContentLoaded', () => {
     const grid     = document.getElementById('cardGrid');
@@ -14,9 +13,6 @@ try {
     if (!grid) {
       console.warn('card-interactions: #cardGrid not found');
       return;
-    }
-    if (!btnTitle || !btnDate) {
-      console.warn('card-interactions: sort buttons missing');
     }
 
     // Sort cards by data-title or data-date
@@ -67,6 +63,34 @@ try {
         .then(r => r.text())
         .then(html => area.innerHTML = html)
         .catch(err => console.error('Drilldown fetch error:', err));
+    });
+
+    // → NEW: Customer‐row click selection in the CustomersCard
+    grid.addEventListener('click', e => {
+      // only fire if click inside the CustomersCard table
+      const row = e.target.closest('#CustomersCard table tbody tr');
+      if (!row) return;
+
+      // assume first <td> holds the ExternalIdentifier / CustomerCode
+      const codeCell = row.cells[0];
+      if (!codeCell) return;
+
+      const customerCode = codeCell.textContent.trim();
+      console.log('Selecting customer:', customerCode);
+
+      // helper to set or update the ?customer= query param
+      function updateQS(uri, key, val) {
+        const re = new RegExp('([?&])' + key + '=.*?(&|$)', 'i');
+        const sep = uri.indexOf('?') !== -1 ? '&' : '?';
+        if (uri.match(re)) {
+          return uri.replace(re, '$1' + key + '=' + val + '$2');
+        } else {
+          return uri + sep + key + '=' + val;
+        }
+      }
+
+      // reload page with new customer param
+      window.location.href = updateQS(window.location.href, 'customer', encodeURIComponent(customerCode));
     });
   });
 } catch (err) {
