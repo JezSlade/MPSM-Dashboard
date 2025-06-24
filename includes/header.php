@@ -1,14 +1,10 @@
 <?php
-// includes/header.php — Global header with neon‐accent icon buttons
+// includes/header.php — Logo + neon icons
 ?>
-<header class="flex items-center justify-between p-4
-               bg-white bg-opacity-10 backdrop-blur-md
-               border-b border-white border-opacity-20">
+<header class="global-header">
   <div class="flex items-center">
-    <img src="/public/images/logo.png" alt="MPSM Logo" class="h-10 mr-3">
-    <h1 class="text-2xl font-semibold text-white drop-shadow-lg">
-      MPSM Dashboard
-    </h1>
+    <img src="/public/images/logo.png" alt="MPSM Logo" class="logo">
+    <h1 class="app-title">MPSM Dashboard</h1>
   </div>
   <div class="flex items-center space-x-4">
     <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme">
