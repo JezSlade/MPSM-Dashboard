@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/card_base.php';   // loads .env, defines DEALER_CODE, etc.
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/api_client.php';
+require_once __DIR__ . '/../includes/api_client.php';  // defines api_request()
 require_once __DIR__ . '/../includes/table_helper.php';
 
 // 1) Read selection from cookie → querystring
 $selected = $_COOKIE['customer'] ?? ($_GET['customer'] ?? '');
 
 // 2) Card settings
-$cardKey              = 'CustomersCard';
-$cacheEnabledFlag     = isset($_COOKIE["{$cardKey}_cache_enabled"])     ? (bool)$_COOKIE["{$cardKey}_cache_enabled"]     : true;
-$indicatorDisplayFlag = isset($_COOKIE["{$cardKey}_indicator_display"]) ? (bool)$_COOKIE["{$cardKey}_indicator_display"] : true;
-$ttlMinutes           = isset($_COOKIE["{$cardKey}_ttl_minutes"])       ? max(1,(int)$_COOKIE["{$cardKey}_ttl_minutes"]) : 5;
-$cacheTTL             = $ttlMinutes * 60;
+$cardKey               = 'CustomersCard';
+$cacheEnabledFlag      = isset($_COOKIE["{$cardKey}_cache_enabled"])     ? (bool)$_COOKIE["{$cardKey}_cache_enabled"]     : true;
+$indicatorDisplayFlag  = isset($_COOKIE["{$cardKey}_indicator_display"]) ? (bool)$_COOKIE["{$cardKey}_indicator_display"] : true;
+$ttlMinutes            = isset($_COOKIE["{$cardKey}_ttl_minutes"])       ? max(1,(int)$_COOKIE["{$cardKey}_ttl_minutes"]) : 5;
+$cacheTTL              = $ttlMinutes * 60;
 
-// 3) Fetch customers
+// 3) Fetch customers via API
 try {
     $resp = api_request('Customer/GetCustomers', [
         'DealerCode' => DEALER_CODE,
@@ -30,9 +30,10 @@ try {
 } catch (RuntimeException $e) {
     $data = [];
 }
+
 $customers = $data['items'] ?? $data['Result'] ?? $data;
 
-// 4) Map to rows
+// 4) Prepare rows for renderDataTable
 $rows = array_map(fn($c) => [
     'CustomerCode' => $c['CustomerCode'] ?? '',
     'Description'  => $c['Description']  ?? '',
