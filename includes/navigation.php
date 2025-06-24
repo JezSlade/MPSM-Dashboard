@@ -1,20 +1,22 @@
-<?php
-declare(strict_types=1);
-if (session_status() === PHP_SESSION_NONE) session_start();
+<?php declare(strict_types=1);
+// /includes/navigation.php
+// Expects $customers (array of ['Code'=>…,'Description'=>…]) and $customerCode
 ?>
-<nav class="px-6 py-4 bg-gray-800 bg-opacity-50 backdrop-blur-sm flex items-center">
-  <form method="get" action="">
-    <label for="customer" class="sr-only">Customer</label>
-    <select id="customer" name="customer"
-            onchange="this.form.submit()"
-            class="bg-gray-700 text-gray-100 p-2 rounded">
-      <option value="">All Customers</option>
-      <?php foreach ($customers as $c): ?>
-        <option value="<?= htmlspecialchars($c['Code']) ?>"
-          <?= ($c['Code'] ?? '') === $customerCode ? 'selected' : '' ?>>
-          <?= htmlspecialchars($c['Description'] ?? $c['Name']) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
-  </form>
-</nav>
+<form method="get" action="" class="flex items-center">
+  <label for="customer-select" class="sr-only">Select Customer</label>
+  <select id="customer-select"
+          name="customer"
+          onchange="this.form.submit()"
+          class="bg-gray-700 text-gray-100 px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400">
+    <option value="">All Customers</option>
+    <?php foreach ($customers as $c): 
+      $code = $c['Code'] ?? '';
+      $label = $c['Description'] ?? $c['Name'] ?? $code;
+    ?>
+      <option value="<?= htmlspecialchars($code) ?>"
+        <?= $code === ($customerCode ?? '') ? 'selected' : '' ?>>
+        <?= htmlspecialchars($label) ?>
+      </option>
+    <?php endforeach; ?>
+  </select>
+</form>
