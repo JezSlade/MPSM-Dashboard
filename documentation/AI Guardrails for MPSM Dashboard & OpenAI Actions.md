@@ -139,3 +139,111 @@ If any new rule conflicts with this document or previous addenda:
 ---
 
 By following this consolidated, up-to-date guide, we ensure our **modular cards**, **self-contained APIs**, and **ChatGPT plugin actions** remain rock-solid, maintainable, and future-proof.
+# Addendum: After-Action Report & Lessons Learned
+
+This addendum captures the pitfalls we encountered, the hard-won fixes, and updated guardrails to keep future development smooth and aligned with our MPSM Dashboard, Custom GPT Actions, and glassmorphic/neon styling mandates.
+
+---
+
+## 1. Environment Loading & Constants
+
+**Issue:**
+– Over-eager stubbing of all `.env` keys in `constants.php` prevented real values from loading (empty defaults never overridden).
+– Duplicate-definition warnings when reloading constants.
+
+**Fix & Lesson:**
+– **Remove** the constants stub.
+– Load `.env` exactly once in `env_parser.php`, defining each constant only if not already defined.
+– Throw early if any required key is missing or empty.
+
+> **Guardrail:** Every API file must `require_once 'env_parser.php'` at top; no other constant definitions anywhere.
+
+---
+
+## 2. Auth & Token URL Sanitation
+
+**Issue:**
+– Malformed `TOKEN_URL` (extra quotes/spaces) caused cURL failures.
+– Unhelpful “URL rejected” exceptions lacking context.
+
+**Fix & Lesson:**
+– Trim whitespace/quotes from `TOKEN_URL` before validation.
+– Validate with `filter_var(..., FILTER_VALIDATE_URL)` and echo the raw input on error.
+
+> **Guardrail:** `get_bearer_token()` must sanitize and validate all upstream URLs.
+
+---
+
+## 3. CORS & Header Emissions
+
+**Issue:**
+– Views and navigation includes inadvertently triggered output before `cors.php`, leading to “headers already sent” warnings.
+
+**Fix & Lesson:**
+– **Isolate** CORS headers to **API endpoints only** (`/api/*.php`).
+– Ensure all view includes (e.g. `navigation.php`, `header.php`) are pure HTML/PHP templates, with no header or HTTP-status calls.
+
+> **Guardrail:** Only files under `/api/` may `require_once 'cors.php'` and call `send_cors_headers()`.
+
+---
+
+## 4. Styling Pipeline
+
+**Issue:**
+– Attempted to use Tailwind’s `@apply` in plain CSS led to unprocessed rules.
+– Charted incremental CSS patches got out of sync with markup, causing visual regressions.
+
+**Fix & Lesson:**
+– Switch to **Tailwind CDN** and apply utilities directly in markup.
+– Consolidate all theme definitions (glassmorphic/backdrop-blur, neon CMYK accents, card shadows) in inline HTML classes.
+
+> **Guardrail:** No build step for Tailwind—always use CDN and utility classes in markup.
+
+---
+
+## 5. Table Helper & Card Logic
+
+**Issue:**
+– Pivoting cards to JavaScript introduced duplication and mismatched logic.
+– Default columns (only “Description”) failed to hide others on first paint, causing flicker.
+– Extending tables with settings panel grew unwieldy without proper inline-style guards.
+
+**Fix & Lesson:**
+– Reverted all cards to server-rendered PHP, using a single `renderDataTable()` helper.
+– Refactored `table_helper.php` to:
+
+1. Dynamically discover **all** API-returned columns.
+2. Accept a PHP option `defaultVisibleColumns` (defaults to `['Description']`).
+3. Emit inline `style="display:none;"` on both `<th>` and `<td>` for hidden columns—no flash of unstyled content.
+4. Append a small settings icon to each table for per-table configuration (rows-per-page, column toggles), saved in `localStorage`.
+5. Center pagination and tighten row padding via two minimal edits.
+
+> **Guardrail:** **All** table-rendering logic must live in `includes/table_helper.php`. Card files only wrap tables, never reimplement search/sort/pagination.
+
+---
+
+## 6. Custom GPT Actions Alignment
+
+**Issue:**
+– Initial API files contained assumptions about `SortColumn`/`SortOrder` defaults not aligned with `AllEndpoints.json`.
+– Mismatch between nav dropdown logic and card-table logic meant inconsistent data loads.
+
+**Fix & Lesson:**
+– Every API endpoint now pulls parameter definitions directly from `AllEndpoints.json` (method names, payload shapes, default values).
+– Shared `api_request()` function unifies error handling, respect of `DealerCode`, and response wrapping.
+– Navigation and card both call the same `/api/get_customers.php` with identical query parameters, ensuring data consistency.
+
+> **Guardrail:** Before merging any API change, validate method, URL, and payload against `AllEndpoints.json`. Nav and cards must share the same underlying call.
+
+---
+
+### Next Steps
+
+1. **Document** this addendum in `Documentation/Addendum.md`.
+2. **Lock down** `table_helper.php` and `env_parser.php` as core libraries—no more bespoke overrides.
+3. **Automate** a CI check that parses `AllEndpoints.json` and verifies each `/api/*.php` file includes every required parameter.
+4. **Expand** card settings to persist theme preferences and table columns globally via Custom GPT Actions in future sprints.
+
+---
+
+*By codifying these lessons, our codebase will remain modular, thematically consistent, and seamlessly callable as Custom GPT Actions.*
