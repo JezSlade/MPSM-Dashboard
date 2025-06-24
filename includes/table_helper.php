@@ -3,36 +3,57 @@
 // -------------------------------------------------------------------
 // Renders a searchable, sortable, pageable data table with Tailwind.
 // Uses renderSearchableDropdown() when $searchable is true.
+// Supports associative columns=>labels, defaultVisibleColumns, and defaultSort.
 // -------------------------------------------------------------------
 
-// Include the searchable dropdown helper so renderSearchableDropdown() exists
+// 0) Load the searchable dropdown helper so renderSearchableDropdown() is defined
 require_once __DIR__ . '/searchable_dropdown.php';
 
 function renderDataTable(array $data, array $options = []): void
 {
+    // If no data, show a placeholder
     if (empty($data)) {
         echo '<p class="text-gray-400">No data to display.</p>';
         return;
     }
 
-    // 1. Extract options or defaults
-    $first           = (array) $data[0];
-    $columns         = $options['columns']      ?? array_keys($first);
-    $labels          = $options['labels']       ?? array_combine($columns, $columns);
-    $sortable        = $options['sortable']     ?? true;
-    $searchable      = $options['searchable']   ?? true;
-    $pageRows        = $options['rowsPerPage']  ?? 15;
-    $rowSelectKey    = $options['rowSelectKey'] ?? null;
-    $rowSelectParam  = $options['rowSelectParam'] ?? $rowSelectKey;
+    // 1) Columns & labels
+    $first   = (array) $data[0];
+    $rawCols = $options['columns'] ?? array_keys($first);
 
-    // 2. Generate unique IDs
+    // Detect associative [key=>label,...] vs. indexed list
+    if (array_keys($rawCols) !== array_keys(array_values($rawCols))) {
+        // associative: keys are column names, values are labels
+        $columns = array_keys($rawCols);
+        $labels  = $rawCols;
+    } else {
+        // indexed: column names only
+        $columns = $rawCols;
+        $labels  = $options['labels'] ?? array_combine($columns, $columns);
+    }
+
+    // Optionally restrict to a default visible subset
+    if (!empty($options['defaultVisibleColumns'])) {
+        $columns = array_values(
+            array_intersect($options['defaultVisibleColumns'], $columns)
+        );
+    }
+
+    $sortable       = $options['sortable']     ?? true;
+    $searchable     = $options['searchable']   ?? true;
+    $pageRows       = $options['rowsPerPage']  ?? 15;
+    $rowSelectKey   = $options['rowSelectKey'] ?? null;
+    $rowSelectParam = $options['rowSelectParam'] ?? $rowSelectKey;
+    $defaultSort    = $options['defaultSort'] ?? null;
+
+    // 2) Unique IDs for DOM elements
     $tableId       = 'tbl_' . preg_replace('/[^a-z0-9_]/i', '', uniqid());
     $wrapperId     = $tableId . '_wrapper';
     $settingsBtnId = $tableId . '_settings_btn';
     $settingsPanel = $tableId . '_settings_panel';
     $rowsInputId   = $tableId . '_rows_input';
 
-    // 3. Prepare JSON payload for client-side
+    // 3) Prepare JSON payload for client-side rendering
     $jsRows = array_map(
         fn($row) => (object) array_intersect_key((array) $row, array_flip($columns)),
         $data
@@ -45,26 +66,27 @@ function renderDataTable(array $data, array $options = []): void
         'pageRows'       => (int) $pageRows,
         'rowSelectKey'   => $rowSelectKey,
         'rowSelectParam' => $rowSelectParam,
+        'defaultSort'    => $defaultSort,
     ];
-    $jsonData = json_encode((object) [
+    $jsonData = json_encode((object)[
         'rows' => $jsRows,
-        'meta' => $jsMeta,
+        'meta' => $jsMeta
     ], JSON_HEX_TAG | JSON_HEX_APOS);
 
-    // 4. Render HTML
+    // 4) Render HTML
     ?>
     <div id="<?= $wrapperId ?>" class="mb-6 bg-gray-800/50 p-4 rounded-lg border border-gray-600 backdrop-blur-md">
       <div class="flex justify-between items-center mb-2">
         <?php if ($searchable): ?>
           <?php
-            // Replace plain text search with your searchable dropdown
+            // Replace plain text search with searchable dropdown
             renderSearchableDropdown(
               $tableId . '_search',      // input ID
               $tableId . '_datalist',    // datalist ID
-              '/api/get_customers.php',  // endpoint for options
+              '/api/get_customers.php',  // endpoint URL
               'customer',                // cookie name
-              'Search…',                 // placeholder
-              'w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500' // CSS
+              'Search…',                 // placeholder text
+              'w-1/2 text-sm bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500' // CSS classes
             );
           ?>
         <?php endif; ?>
@@ -78,7 +100,7 @@ function renderDataTable(array $data, array $options = []): void
           </button>
           <div id="<?= $settingsPanel ?>"
                class="hidden absolute right-0 mt-1 w-56 bg-gray-800 border border-gray-600 rounded-md shadow-lg p-3 z-20">
-            <h3 class="text-white font-semibold mb-2">Columns & Rows</h3>
+            <h3 class="text-white font-semibold mb-2">Columns &amp; Rows</h3>
             <div class="mb-2">
               <label for="<?= $rowsInputId ?>" class="block text-gray-300 mb-1">Rows per page:</label>
               <input type="number" id="<?= $rowsInputId ?>" min="1"
@@ -111,7 +133,7 @@ function renderDataTable(array $data, array $options = []): void
             </tr>
           </thead>
           <tbody class="bg-gray-800 divide-y divide-gray-600">
-            <!-- JS will populate rows -->
+            <!-- Rows will be populated by JavaScript -->
           </tbody>
         </table>
       </div>
@@ -120,17 +142,20 @@ function renderDataTable(array $data, array $options = []): void
     <script>
     (function(){
       const wrapper = document.getElementById('<?= $wrapperId ?>');
-      const data = <?= $jsonData ?>;
-      let sortKey = data.meta.sortable ? data.meta.columns[0] : null;
-      let sortDir = 1;
+      const data    = <?= $jsonData ?>;
+      // Use defaultSort if provided, otherwise first column
+      let sortKey = data.meta.sortable
+        ? (data.meta.defaultSort || data.meta.columns[0])
+        : null;
+      let sortDir     = 1;
       let currentPage = 1;
 
-      // Cookie helpers
+      // Cookie utilities
       const Cookie = {
         get(name) {
-          return document.cookie.split('; ').reduce((r,c) => {
-            const [k,v] = c.split('=');
-            return k===name ? decodeURIComponent(v) : r;
+          return document.cookie.split('; ').reduce((res, cookie) => {
+            const [k, v] = cookie.split('=');
+            return k === name ? decodeURIComponent(v) : res;
           }, null);
         },
         set(name, value) {
@@ -138,16 +163,16 @@ function renderDataTable(array $data, array $options = []): void
         }
       };
 
-      function render(){
+      function render() {
         let rows = [...data.rows];
 
-        // Search filter
+        // Apply search filter
         const searchInput = document.getElementById('<?= $tableId ?>_search');
         if (data.meta.searchable && searchInput?.value) {
           const term = searchInput.value.toLowerCase();
           rows = rows.filter(r =>
-            data.meta.columns.some(k =>
-              String(r[k]).toLowerCase().includes(term)
+            data.meta.columns.some(col =>
+              String(r[col]).toLowerCase().includes(term)
             )
           );
           Cookie.set(data.meta.rowSelectParam, searchInput.value);
@@ -155,23 +180,23 @@ function renderDataTable(array $data, array $options = []): void
 
         // Sort
         if (data.meta.sortable && sortKey) {
-          rows.sort((a,b) => {
+          rows.sort((a, b) => {
             const va = a[sortKey], vb = b[sortKey];
-            return ((va>vb)?1:va<vb?-1:0) * sortDir;
+            return ((va > vb) ? 1 : (va < vb) ? -1 : 0) * sortDir;
           });
         }
 
         // Paginate
         const totalPages = Math.ceil(rows.length / data.meta.pageRows);
         if (currentPage > totalPages) currentPage = totalPages || 1;
-        const start = (currentPage-1)*data.meta.pageRows;
-        rows = rows.slice(start, start + data.meta.pageRows);
+        const start = (currentPage - 1) * data.meta.pageRows;
+        const page  = rows.slice(start, start + data.meta.pageRows);
 
         // Render rows
         const tbody = wrapper.querySelector('tbody');
-        tbody.innerHTML = rows.map(r => {
-          const cells = data.meta.columns.map(k =>
-            `<td class="px-4 py-2">${String(r[k])}</td>`
+        tbody.innerHTML = page.map(r => {
+          const cells = data.meta.columns.map(col =>
+            `<td class="px-4 py-2">${String(r[col])}</td>`
           ).join('');
           const attr = data.meta.rowSelectKey
             ? ` data-${data.meta.rowSelectParam}="${r[data.meta.rowSelectKey]}"`
@@ -180,41 +205,41 @@ function renderDataTable(array $data, array $options = []): void
         }).join('');
       }
 
-      // Header clicks for sort
-      wrapper.querySelectorAll('th[data-key]').forEach(th =>
+      // Column header clicks → sort
+      wrapper.querySelectorAll('th[data-key]').forEach(th => {
         th.addEventListener('click', () => {
-          const k = th.dataset.key;
-          if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+          const col = th.dataset.key;
+          if (sortKey === col) sortDir = -sortDir;
+          else { sortKey = col; sortDir = 1; }
           render();
-        })
-      );
+        });
+      });
 
-      // Settings toggle
+      // Settings panel toggle
       document.getElementById('<?= $settingsBtnId ?>')
         .addEventListener('click', () =>
           document.getElementById('<?= $settingsPanel ?>').classList.toggle('hidden')
         );
 
-      // Rows-per-page
+      // Rows-per-page change
       document.getElementById('<?= $rowsInputId ?>')
         .addEventListener('input', e => {
           data.meta.pageRows = parseInt(e.target.value) || data.meta.pageRows;
           render();
         });
 
-      // Column toggle
-      document.querySelectorAll('#<?= $settingsPanel ?> input[type="checkbox"]').forEach(cb =>
-        cb.addEventListener('change', e => {
+      // Column visibility toggle
+      document.querySelectorAll('#<?= $settingsPanel ?> input[type="checkbox"]')
+        .forEach(cb => cb.addEventListener('change', e => {
           const col = e.target.dataset.col;
           const idx = data.meta.columns.indexOf(col);
           if (idx === -1) return;
-          if (!e.target.checked) data.meta.columns.splice(idx,1);
-          else data.meta.columns.splice(idx,0,col);
+          if (!e.target.checked) data.meta.columns.splice(idx, 1);
+          else data.meta.columns.splice(idx, 0, col);
           render();
-        })
-      );
+        }));
 
-      // Initial draw
+      // Initial render
       render();
 
     })();
