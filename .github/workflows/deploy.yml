@@ -36,8 +36,8 @@ jobs:
           # Deploy to the root directory of the FTP server
           server-dir: /
 
-          # CAUTION: This will delete EVERYTHING on the server-dir before uploading!
-          dangerous-clean-slate: true
+          # Removed dangerous-clean-slate to avoid deleting server files
+          # Default behavior uploads new/changed files without deleting existing ones
 
           exclude: |
             .git/

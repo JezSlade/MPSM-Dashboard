@@ -2,8 +2,6 @@
 // cards/CustomersCard.php — Customers list with global selection
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/env_parser.php';        // ← ADDED
-parse_env_file(__DIR__ . '/../.env');                        // ← ADDED
 
 require_once __DIR__ . '/../includes/card_base.php';         // now has access to DEALER_CODE
 require_once __DIR__ . '/../includes/auth.php';
