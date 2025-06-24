@@ -1,15 +1,18 @@
 <?php
-// cards/CustomersCard.php — PHP-rendered customer table with global selection
+// cards/CustomersCard.php
 declare(strict_types=1);
 
-// 1) Bootstrap env and API client
-require_once __DIR__ . '/../includes/card_base.php';    // loads .env, defines DEALER_CODE, etc.
-require_once __DIR__ . '/../includes/api_client.php';  // defines api_request()
+// 1) Bootstrap card UI, env, auth & API client
+require_once __DIR__ . '/../includes/card_base.php';
+require_once __DIR__ . '/../includes/api_client.php';
 
-// 2) Read current selection from cookie (for highlighting)
-$selectedCustomer = $_COOKIE['customer'] ?? '';
+// 2) Open card wrapper & header (with settings button)
+card_base_start('CustomersCard', 'Customers');
 
-// 3) Fetch all customers via API
+// 3) Read selected customer for row highlighting
+$selected = $_COOKIE['customer'] ?? '';
+
+// 4) Fetch customer list
 try {
     $resp = api_request('Customer/GetCustomers', [
         'DealerCode' => DEALER_CODE,
@@ -20,57 +23,48 @@ try {
     ]);
     $data = $resp['data'] ?? $resp;
 } catch (RuntimeException $e) {
-    $data = [];
+    echo '<p class="text-red-400">Error loading customers.</p>';
+    card_base_end('CustomersCard');
+    return;
 }
 
-// Normalize the list
+// 5) Normalize payload
 $customers = $data['items'] ?? $data['Result'] ?? $data;
-?>
-<div
-  id="CustomersCard"
-  class="glass-card p-4 rounded-lg bg-white/20 backdrop-blur-md border border-gray-600"
->
-  <header class="mb-3 flex items-center justify-between">
-    <h2 class="text-xl font-semibold">Customers</h2>
-  </header>
 
-  <div class="overflow-auto">
-    <table class="min-w-full divide-y divide-gray-700 text-sm">
-      <thead class="bg-gray-800 text-white">
-        <tr>
-          <th class="px-4 py-2 text-left">Customer Code</th>
-          <th class="px-4 py-2 text-left">Description</th>
-        </tr>
-      </thead>
-      <tbody class="bg-gray-700 divide-y divide-gray-600">
-        <?php foreach ($customers as $c): 
-          $code = htmlspecialchars($c['CustomerCode'] ?? '', ENT_QUOTES);
-          $desc = htmlspecialchars($c['Description']  ?? '', ENT_QUOTES);
-          $isSelected = ($code === $selectedCustomer);
-          $rowClass = $isSelected 
-            ? 'bg-cyan-700 text-white' 
-            : 'hover:bg-gray-600 text-gray-200';
-        ?>
-        <tr data-customer="<?= $code ?>" class="<?= $rowClass ?> cursor-pointer">
-          <td class="px-4 py-2"><?= $code ?></td>
-          <td class="px-4 py-2"><?= $desc ?></td>
-        </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
+// 6) Render table
+echo '<div class="overflow-auto">';
+echo '<table class="min-w-full divide-y divide-gray-700 text-sm">';
+echo '<thead class="bg-gray-800 text-white"><tr>'
+   . '<th class="px-4 py-2 text-left">Customer Code</th>'
+   . '<th class="px-4 py-2 text-left">Description</th>'
+   . '</tr></thead>';
+echo '<tbody class="bg-gray-700 divide-y divide-gray-600">';
+foreach ($customers as $c) {
+    $code = htmlspecialchars($c['CustomerCode'] ?? '', ENT_QUOTES);
+    $desc = htmlspecialchars($c['Description']  ?? '', ENT_QUOTES);
+    $cls  = $code === $selected
+          ? 'bg-cyan-700 text-white'
+          : 'hover:bg-gray-600 text-gray-200';
+    echo "<tr data-customer=\"{$code}\" class=\"{$cls} cursor-pointer\">";
+    echo "<td class=\"px-4 py-2\">{$code}</td>";
+    echo "<td class=\"px-4 py-2\">{$desc}</td>";
+    echo "</tr>";
+}
+echo '</tbody></table></div>';
 
+// 7) Inject row-click script
+echo <<<JS
 <script>
-// Attach click handlers to set the customer cookie and reload
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', ()=> {
   document.querySelectorAll('#CustomersCard tbody tr').forEach(row => {
-    row.addEventListener('click', () => {
-      const code = row.dataset.customer;
-      if (!code) return;
-      document.cookie = 'customer=' + encodeURIComponent(code) + ';path=/';
+    row.addEventListener('click', ()=> {
+      document.cookie = 'customer=' + encodeURIComponent(row.dataset.customer) + ';path=/';
       window.location.reload();
     });
   });
 });
 </script>
+JS;
+
+// 8) Close card wrapper & footer
+card_base_end('CustomersCard');
