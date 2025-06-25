@@ -1,6 +1,7 @@
 <?php
 /**
- * index.php — Single-page entrypoint with OS detection, card-settings modal, and corrected button behavior
+ * index.php — Single-page entrypoint with OS detection, card-settings modal,
+ * corrected modal toggling, and click-outside to close
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -70,25 +71,23 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
   <!-- Initialize icons & behaviors -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // OS detection: add class based on userAgent
-      const ua = navigator.userAgent;
-      document.documentElement.classList.add(/Mobi|Android|iPhone/.test(ua) ? 'is-mobile' : 'is-desktop');
+      const html = document.documentElement;
 
-      // Render all Feather icons
+      // OS detection
+      html.classList.add(/Mobi|Android|iPhone/.test(navigator.userAgent) ? 'is-mobile' : 'is-desktop');
+
+      // Feather icons
       feather.replace();
 
       // Theme toggle
       document.getElementById('theme-toggle').addEventListener('click', () => {
-        const html = document.documentElement;
         html.setAttribute('data-theme',
           html.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
         );
       });
 
       // Hard refresh
-      document.getElementById('refresh-all').addEventListener('click', () => {
-        location.reload(true);
-      });
+      document.getElementById('refresh-all').addEventListener('click', () => location.reload(true));
 
       // Clear session
       document.getElementById('clear-session').addEventListener('click', () => {
@@ -103,22 +102,38 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         window.open('/logs/debug.log', '_blank');
       });
 
-      // Card-settings modal controls
+      // Modal controls
       const modal = document.getElementById('cardSettingsModal');
-      document.getElementById('card-settings').addEventListener('click', () => {
+      const openBtn = document.getElementById('card-settings');
+      const saveBtn = document.getElementById('cardSettingsSave');
+      const cancelBtn = document.getElementById('cardSettingsCancel');
+
+      function showModal() {
         modal.classList.remove('hidden');
-      });
-      document.getElementById('cardSettingsCancel').addEventListener('click', (e) => {
-        e.preventDefault();
+        modal.classList.add('flex');
+      }
+      function hideModal() {
+        modal.classList.remove('flex');
         modal.classList.add('hidden');
-      });
-      document.getElementById('cardSettingsSave').addEventListener('click', (e) => {
+      }
+
+      // Open modal
+      openBtn.addEventListener('click', showModal);
+      // Close on Save/Cancel
+      cancelBtn.addEventListener('click', (e) => { e.preventDefault(); hideModal(); });
+      saveBtn.addEventListener('click', (e) => {
         e.preventDefault();
         const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
                              .map(i => i.value);
         localStorage.setItem('visibleCards', JSON.stringify(checked));
         applyCardVisibility();
-        modal.classList.add('hidden');
+        hideModal();
+      });
+      // Close when clicking outside the inner modal
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          hideModal();
+        }
       });
 
       function applyCardVisibility() {
