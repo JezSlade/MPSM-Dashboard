@@ -5,12 +5,20 @@
 // provide card_base_start() / card_base_end() for uniform card UI.
 // -------------------------------------------------------------------
 
-// 1) Load environment and API/auth
+// 1) Load environment (env_parser.php reads and defines your .env constants)
 require_once __DIR__ . '/env_parser.php';
-parse_env_file(__DIR__ . '/../.env');
+
+// 2) Load auth & API client
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/api_client.php';
 
+/**
+ * Renders the opening HTML for a card, including header, cache indicator,
+ * settings button & panel. Also injects the settings‐panel JS once on first call.
+ *
+ * @param string $cardKey Unique identifier for this card (used in IDs & cookies)
+ * @param string $title   Card title to display
+ */
 function card_base_start(string $cardKey, string $title): void
 {
     static $jsInjected = false;
@@ -81,6 +89,11 @@ HTML;
 HTML;
 }
 
+/**
+ * Renders the footer timestamp (if cache is enabled) and closes the card wrapper.
+ *
+ * @param string $cardKey Unique identifier used to read cache setting
+ */
 function card_base_end(string $cardKey): void
 {
     $cacheOn = isset($_COOKIE["{$cardKey}_cache_enabled"]) && $_COOKIE["{$cardKey}_cache_enabled"] === '1';
