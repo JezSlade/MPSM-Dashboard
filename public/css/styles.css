@@ -1,75 +1,37 @@
-/* Glassmorphic + neon-CMYK theme with Tailwind resets */
-/* Base reset */
-* { box-sizing: border-box; }
-body { margin: 0; }
-
-/* Header */
-.global-header {
-  @apply flex items-center justify-between p-4
-         bg-white bg-opacity-10 backdrop-blur-md
-         border-b border-white border-opacity-20;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f0f2f5;
+  transition: background .3s;
 }
-.logo { @apply h-10 mr-3; }
-.app-title {
-  @apply text-2xl font-semibold text-white drop-shadow-lg;
+body.dark { background: #2e2e2e; color: #ddd; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
 }
-.icon-btn {
-  @apply p-2 rounded-md bg-white bg-opacity-20 hover:bg-opacity-30 transition;
+#cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 16px;
 }
-
-/* Navigation */
-.main-nav {
-  @apply flex items-center p-4
-         bg-white bg-opacity-10 backdrop-blur-md
-         border-b border-white border-opacity-20;
-}
-.nav-label { @apply text-white font-medium mr-3; }
-.nav-select {
-  @apply w-48 p-2 rounded-md bg-white bg-opacity-20 text-white
-         focus:outline-none focus:ring-2 focus:ring-cyan-400
-         hover:bg-opacity-30 transition;
-}
-
-/* Card wrapper */
-.card-wrapper {
-  @apply p-4 flex justify-center;
-}
-
-/* Card */
 .card {
-  @apply w-full max-w-4xl
-         bg-white bg-opacity-10 backdrop-blur-md
-         border border-white border-opacity-20 rounded-lg
-         shadow-[0_0_10px_rgba(0,255,255,0.4),0_0_20px_rgba(255,0,255,0.3),0_0_30px_rgba(255,255,0,0.2)]
-         overflow-hidden mb-6;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+  transition: transform .2s;
 }
-.card-header {
-  @apply flex justify-between items-center px-4 py-2
-         bg-white bg-opacity-20 border-b border-white border-opacity-10;
+.card:hover { transform: translateY(-2px); }
+.card header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
 }
-.card-body {
-  @apply p-4;
-}
-
-/* Table helper styles override */
-.data-table-container input {
-  @apply mb-2 w-full text-sm bg-gray-800 text-white border border-gray-700 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500;
-}
-.data-table-container label input {
-  @apply form-checkbox h-4 w-4 text-cyan-500;
-}
-.data-table {
-  @apply min-w-full bg-transparent;
-}
-.data-table th {
-  @apply cursor-pointer select-none px-2 py-1 text-left text-gray-200 bg-gray-800;
-}
-.data-table td {
-  @apply px-2 py-1 text-white;
-}
-.table-pagination button {
-  @apply px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm;
-}
-.table-pagination button.bg-cyan-500 {
-  @apply bg-cyan-500 text-black;
-}
+.card .expanded, .card .drilldown { padding: 8px 16px; }
+body.dark .card { background: rgba(30,30,30,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.5); }

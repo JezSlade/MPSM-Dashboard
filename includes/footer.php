@@ -1,9 +1,6 @@
-<?php
-// includes/footer.php
-// -------------------------------------------------------------------
-// Footer only—no CSS here.
-// -------------------------------------------------------------------
-?>
-<footer class="app-footer">
-  &copy; <?= date('Y') ?> Resolutions by Design — All rights reserved.
-</footer>
+  </main>
+  <footer>
+    <p>&copy; <?= date('Y') ?> <?= getenv('COMPANY_NAME') ?: 'My Company' ?></p>
+  </footer>
+</body>
+</html>
