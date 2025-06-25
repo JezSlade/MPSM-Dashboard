@@ -1,6 +1,6 @@
 <?php
 /**
- * index.php — Single-page entrypoint with OS detection and card-settings modal
+ * index.php — Single-page entrypoint with OS detection, card-settings modal, and corrected button behavior
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -8,7 +8,6 @@ ini_set('display_errors','1');
 
 // Define placeholder constant
 define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
-
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full mobile-first" data-theme="light">
@@ -57,13 +56,13 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         ?>
         <label class="flex items-center space-x-2">
           <input type="checkbox" name="cards" value="<?php echo $file; ?>" checked>
-          <span><?php echo $id; ?></span>
+          <span><?php echo htmlspecialchars($id, ENT_QUOTES, 'UTF-8'); ?></span>
         </label>
         <?php endforeach; ?>
       </form>
       <div class="flex justify-end space-x-2 mt-4">
-        <button id="cardSettingsSave" class="neu-btn">Save</button>
-        <button id="cardSettingsCancel" class="neu-btn">Cancel</button>
+        <button id="cardSettingsSave" type="button" class="neu-btn">Save</button>
+        <button id="cardSettingsCancel" type="button" class="neu-btn">Cancel</button>
       </div>
     </div>
   </div>
@@ -73,13 +72,9 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
     document.addEventListener('DOMContentLoaded', () => {
       // OS detection: add class based on userAgent
       const ua = navigator.userAgent;
-      if (/Mobi|Android|iPhone/.test(ua)) {
-        document.documentElement.classList.add('is-mobile');
-      } else {
-        document.documentElement.classList.add('is-desktop');
-      }
+      document.documentElement.classList.add(/Mobi|Android|iPhone/.test(ua) ? 'is-mobile' : 'is-desktop');
 
-      // Feather icons
+      // Render all Feather icons
       feather.replace();
 
       // Theme toggle
@@ -103,16 +98,22 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         location.reload();
       });
 
-      // Debug log
+      // View debug log
       document.getElementById('view-error-log').addEventListener('click', () => {
         window.open('/logs/debug.log', '_blank');
       });
 
-      // Card-settings modal
+      // Card-settings modal controls
       const modal = document.getElementById('cardSettingsModal');
-      document.getElementById('card-settings').addEventListener('click', () => modal.classList.remove('hidden'));
-      document.getElementById('cardSettingsCancel').addEventListener('click', () => modal.classList.add('hidden'));
-      document.getElementById('cardSettingsSave').addEventListener('click', () => {
+      document.getElementById('card-settings').addEventListener('click', () => {
+        modal.classList.remove('hidden');
+      });
+      document.getElementById('cardSettingsCancel').addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.classList.add('hidden');
+      });
+      document.getElementById('cardSettingsSave').addEventListener('click', (e) => {
+        e.preventDefault();
         const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
                              .map(i => i.value);
         localStorage.setItem('visibleCards', JSON.stringify(checked));
@@ -123,8 +124,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       function applyCardVisibility() {
         const visible = JSON.parse(localStorage.getItem('visibleCards') || '[]');
         document.querySelectorAll('.card-wrapper').forEach(card => {
-          const file = card.getAttribute('data-file');
-          card.style.display = visible.includes(file) ? '' : 'none';
+          card.style.display = visible.includes(card.dataset.file) ? '' : 'none';
         });
       }
       applyCardVisibility();
