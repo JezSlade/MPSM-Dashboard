@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/api.php';
 
-// Fetch live data
+// Pull the live list
 $customers = api_get_customers();
 ?>
 <div id="CustomersCard" class="card" data-mode="min">
@@ -13,13 +13,13 @@ $customers = api_get_customers();
   <div class="expanded" hidden>
     <table>
       <thead>
-        <tr><th>ID</th><th>Name</th></tr>
+        <tr><th>Code</th><th>Name</th></tr>
       </thead>
       <tbody>
         <?php foreach ($customers as $c): ?>
         <tr>
-          <td><?= htmlspecialchars($c['Id']) ?></td>
-          <td><?= htmlspecialchars($c['Name']) ?></td>
+          <td><?= htmlspecialchars($c['CustomerCode'] ?? $c['Code']) ?></td>
+          <td><?= htmlspecialchars($c['Name']     ?? $c['Description']) ?></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
@@ -28,12 +28,12 @@ $customers = api_get_customers();
   </div>
 
   <div class="drilldown" hidden>
-    <p>Drilldown details go here.</p>
+    <p>No further details configured yet.</p>
   </div>
 </div>
 
 <script>
-// Handle expand/drill toggles
+// Three‐state toggle: snapshot ↔ expanded ↔ drilldown
 document.querySelector('#CustomersCard').addEventListener('click', e => {
   const card = e.currentTarget;
 
