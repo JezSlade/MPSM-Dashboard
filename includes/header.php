@@ -1,34 +1,53 @@
 <?php
-// includes/header.php — Logo + three action buttons
+// --- DEBUG BLOCK (Always Keep at Top) ---
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/debug.log');
+// ----------------------------------------
 ?>
-<header class="flex items-center justify-between p-4
-               bg-white/10 backdrop-blur-md border-b border-white/20">
-  <div class="flex items-center">
-    <img src="/public/images/logo.png" alt="" class="h-10 mr-3">
-    <h1 class="text-2xl font-semibold text-white drop-shadow-lg">
-      MPSM Dashboard
-    </h1>
-  </div>
-  <div class="flex items-center space-x-4">
-    <!-- Theme toggle -->
-    <button id="theme-toggle"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="Toggle light/dark mode">
-      <i data-feather="moon" class="text-cyan-400"></i>
-    </button>
 
-    <!-- Clear session cookies -->
-    <button id="clear-session"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="Clear session cookies">
-      <i data-feather="trash-2" class="text-yellow-400"></i>
-    </button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><?= getenv('APP_NAME') ?: 'MPS Monitor Dashboard' ?></title>
+  <link rel="stylesheet" href="/public/css/styles.css" />
 
-    <!-- Hard refresh -->
-    <button id="refresh-all"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="Reload page">
-      <i data-feather="refresh-cw" class="text-magenta-400"></i>
-    </button>
-  </div>
-</header>
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+
+      setTimeout(() => {
+        const settingsBtn = document.getElementById('settings-btn');
+        if (settingsBtn) {
+          settingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modal = document.getElementById('settingsModal');
+            if (modal) {
+              modal.classList.add('open');
+            }
+          });
+        }
+      }, 100);
+    });
+  </script>
+</head>
+
+<body class="theme-dark">
+  <header class="app-header">
+    <div class="left">
+      <h1 class="logo"><?= getenv('APP_NAME') ?: 'MPS Monitor Dashboard' ?></h1>
+    </div>
+    <div class="right">
+      <button id="settings-btn" type="button" class="icon-button" title="Settings">
+        <i data-feather="settings"></i>
+      </button>
+    </div>
+  </header>
