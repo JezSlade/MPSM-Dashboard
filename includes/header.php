@@ -1,37 +1,26 @@
 <?php
-// includes/header.php — Logo + three action buttons
+// /includes/header.php — Shared header for all views
 ?>
-<header class="flex items-center justify-between p-4
-               bg-white/10 backdrop-blur-md border-b border-white/20">
-  <div class="flex items-center">
-    <img src="/public/images/logo.png" alt="" class="h-10 mr-3">
-    <h1 class="text-2xl font-semibold text-white drop-shadow-lg">
-      MPSM Dashboard
-    </h1>
-  </div>
-  <div class="flex items-center space-x-4">
-    <button id="theme-toggle"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="Toggle light/dark mode">
-      <i data-feather="moon" class="text-cyan-400"></i>
-    </button>
-
-    <button id="debug-logs"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="View error logs">
-      <i data-feather="terminal" class="text-red-400"></i>
-    </button>
-
-    <button id="clear-session"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="Clear session cookies">
-      <i data-feather="trash-2" class="text-yellow-400"></i>
-    </button>
-
-    <button id="refresh-all"
-      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
-      aria-label="Reload page">
-      <i data-feather="refresh-cw" class="text-magenta-400"></i>
-    </button>
-  </div>
-</header>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><?= APP_NAME ?></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/public/css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <h1><?= APP_NAME ?></h1>
+    </div>
+    <div class="header-right">
+      <!-- Feather icon buttons -->
+      <button class="icon-button" data-action="open-settings" title="Settings">
+        <i data-feather="settings"></i>
+      </button>
+      <button class="icon-button" data-action="refresh-page" title="Refresh">
+        <i data-feather="refresh-cw"></i>
+      </button>
+    </div>
+  </header>

@@ -31,5 +31,22 @@ declare(strict_types=1);
   </div>
 </main>
 
-<!-- Client-side behavior for sorting, expand/collapse, drilldowns, and slide-out -->
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Dashboard Settings</h2>
+    <p>You can configure card preferences here.</p>
+    <button class="icon-button close-settings" title="Close">
+      <i data-feather="x"></i> Close
+    </button>
+  </div>
+</div>
+
+<!-- Client-side behavior -->
 <script src="/public/js/card-interactions.js"></script>
+<script>
+  // Redundant fallback in case card JS loads before UI init
+  if (typeof initializeGlobalUI === 'function') {
+    initializeGlobalUI();
+  }
+</script>
