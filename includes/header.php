@@ -10,21 +10,24 @@
     </h1>
   </div>
   <div class="flex items-center space-x-4">
-    <!-- Theme toggle -->
     <button id="theme-toggle"
       class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
       aria-label="Toggle light/dark mode">
       <i data-feather="moon" class="text-cyan-400"></i>
     </button>
 
-    <!-- Clear session cookies -->
+    <button id="debug-logs"
+      class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
+      aria-label="View error logs">
+      <i data-feather="terminal" class="text-red-400"></i>
+    </button>
+
     <button id="clear-session"
       class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
       aria-label="Clear session cookies">
       <i data-feather="trash-2" class="text-yellow-400"></i>
     </button>
 
-    <!-- Hard refresh -->
     <button id="refresh-all"
       class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition"
       aria-label="Reload page">
