@@ -3,11 +3,12 @@
 // -------------------------------------------------------------------
 // Base bootstrap for all cards: load .env, auth, API client, and
 // provide card_base_start() / card_base_end() for uniform card UI
-// with cache indicator, settings panel, refresh button, and countdown.
+// with Feather icons, Tailwind styling, refresh, cache indicator,
+// countdown, and settings panel.
 // -------------------------------------------------------------------
 
 // 1) Load environment and API/auth
-require_once __DIR__ . '/env_parser.php';  // defines .env constants on include
+require_once __DIR__ . '/env_parser.php';     // defines .env constants
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/api_client.php';
 
@@ -25,7 +26,7 @@ function card_base_start(string $cardKey, string $title): void
     $cacheChecked     = $cacheOn       ? ' checked' : '';
     $indicatorChecked = $showIndicator ? ' checked' : '';
 
-    // Inject card-level JS once
+    // Inject card‐level JS once
     if (!$jsInjected) {
         echo <<<JS
 <script>
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(key + '_ttlInput')
       .addEventListener('change', e => { setCookie(key + '_ttl_minutes', Math.max(1, e.target.value)); location.reload(); });
 
-    // Manual refresh button
+    // Manual refresh
     document.getElementById(key + '_refreshBtn')
       .addEventListener('click', () => location.reload());
 
@@ -65,56 +66,53 @@ JS;
         $jsInjected = true;
     }
 
-    // Render opening wrapper and header
+    // Render wrapper, header, refresh, indicator, countdown, settings
     echo <<<HTML
 <div id="{$cardKey}" class="glass-card p-4 rounded-lg bg-white/20 backdrop-blur-md border border-gray-600" data-card-key="{$cardKey}">
-  <header class="mb-3 flex items-center justify-between">
-    <h2 class="text-xl font-semibold">{$title}</h2>
+  <header class="mb-4 flex items-center justify-between">
+    <h2 class="text-xl font-semibold text-gray-100">{$title}</h2>
     <div class="flex items-center space-x-3">
-      <!-- Manual refresh -->
-      <button id="{$cardKey}_refreshBtn" class="p-1 rounded-md bg-gray-700 hover:bg-gray-600 text-gray-200" aria-label="Refresh">
-        🔄
+      <!-- Refresh button -->
+      <button id="{$cardKey}_refreshBtn" class="p-2 bg-gray-700 hover:bg-gray-600 rounded-md focus:outline-none" aria-label="Refresh">
+        <i data-feather="refresh-cw" class="w-4 h-4 text-gray-200"></i>
       </button>
 HTML;
-    // Cache indicator and countdown
     if ($showIndicator) {
-        echo "<span class=\"text-sm text-gray-400\">"
-           . ($cacheOn ? "{$ttlMinutes} min cache" : "No cache")
-           . "</span>";
-        echo "<span id=\"{$cardKey}_countdown\" data-seconds=\"{$ttlSeconds}\" class=\"text-sm text-gray-400\">{$ttlSeconds}s</span>";
+        echo <<<HTML
+      <span class="text-sm text-gray-400">{$ttlMinutes}&nbsp;min cache</span>
+      <span id="{$cardKey}_countdown" data-seconds="{$ttlSeconds}" class="text-sm text-gray-400">{$ttlSeconds}s</span>
+HTML;
     }
     echo <<<HTML
-      <!-- Settings toggle -->
-      <button id="{$cardKey}_settingsBtn" class="p-1 rounded-md bg-gray-700 hover:bg-gray-600 text-gray-200" aria-label="Settings">
-        <i data-feather="settings"></i>
+      <!-- Settings button -->
+      <button id="{$cardKey}_settingsBtn" class="p-2 bg-gray-700 hover:bg-gray-600 rounded-md focus:outline-none" aria-label="Settings">
+        <i data-feather="settings" class="w-4 h-4 text-gray-200"></i>
       </button>
     </div>
   </header>
 
   <!-- Settings panel -->
-  <div id="{$cardKey}_settingsPanel" class="hidden bg-gray-800 border border-gray-600 rounded-md p-3 mb-3">
-    <h3 class="text-gray-200 font-semibold mb-2">Settings</h3>
-    <label class="flex items-center text-gray-200 mb-2">
-      <input type="checkbox" id="{$cardKey}_cacheToggle" class="mr-2"{$cacheChecked}/> Enable Cache
-    </label>
-    <label class="flex items-center text-gray-200 mb-2">
-      <input type="checkbox" id="{$cardKey}_indicatorToggle" class="mr-2"{$indicatorChecked}/> Show Indicator
-    </label>
-    <div class="flex items-center text-gray-200">
-      <label for="{$cardKey}_ttlInput" class="mr-2">TTL (min):</label>
-      <input type="number" id="{$cardKey}_ttlInput" min="1" value="{$ttlMinutes}" class="w-16 bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-2"/>
+  <div id="{$cardKey}_settingsPanel" class="hidden bg-gray-800 border border-gray-600 rounded-md p-4 mb-4">
+    <h3 class="text-gray-200 font-semibold mb-3">Settings</h3>
+    <div class="space-y-2">
+      <label class="flex items-center text-gray-200">
+        <input type="checkbox" id="{$cardKey}_cacheToggle" class="mr-2 form-checkbox"{$cacheChecked}/>
+        Enable Cache
+      </label>
+      <label class="flex items-center text-gray-200">
+        <input type="checkbox" id="{$cardKey}_indicatorToggle" class="mr-2 form-checkbox"{$indicatorChecked}/>
+        Show Indicator
+      </label>
+      <div class="flex items-center text-gray-200">
+        <label for="{$cardKey}_ttlInput" class="mr-2">TTL (min):</label>
+        <input type="number" id="{$cardKey}_ttlInput" min="1" value="{$ttlMinutes}" class="w-16 bg-gray-700 text-white border border-gray-600 rounded-md py-1 px-2 focus:outline-none"/>
+      </div>
     </div>
   </div>
 HTML;
 }
 
-function card_base_end(string $cardKey): void
+function card_base_end(string \$cardKey): void
 {
-    // Footer timestamp if cache enabled
-    if (isset($_COOKIE["{$cardKey}_cache_enabled"]) && $_COOKIE["{$cardKey}_cache_enabled"] === '1') {
-        echo '<footer class="mt-4 text-right text-xs text-gray-500">';
-        echo 'Updated ' . date('Y-m-d H:i');
-        echo '</footer>';
-    }
-    echo '</div>'; // close wrapper
+    echo '</div>'; // close card wrapper
 }
