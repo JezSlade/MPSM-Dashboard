@@ -1,7 +1,7 @@
 <?php
 /**
  * index.php — Single-page entrypoint with OS detection, card-settings modal,
- * corrected modal toggling, and click-outside to close
+ * corrected modal toggling, click-outside-to-close, and inner-click stopPropagation
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -49,7 +49,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 
   <!-- Card-settings modal -->
   <div id="cardSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-light dark:bg-dark neumorphic p-4 rounded w-11/12 md:w-1/3 max-h-[80vh] overflow-auto">
+    <div id="cardSettingsContent" class="bg-light dark:bg-dark neumorphic p-4 rounded w-11/12 md:w-1/3 max-h-[80vh] overflow-auto">
       <h2 class="text-lg font-semibold mb-2">Select Cards to Display</h2>
       <form id="cardSettingsForm" class="space-y-2">
         <?php foreach ($files as $file):
@@ -104,6 +104,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 
       // Modal controls
       const modal = document.getElementById('cardSettingsModal');
+      const content = document.getElementById('cardSettingsContent');
       const openBtn = document.getElementById('card-settings');
       const saveBtn = document.getElementById('cardSettingsSave');
       const cancelBtn = document.getElementById('cardSettingsCancel');
@@ -117,11 +118,12 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         modal.classList.add('hidden');
       }
 
-      // Open modal
+      // Prevent clicks inside content from closing
+      content.addEventListener('click', e => e.stopPropagation());
+
       openBtn.addEventListener('click', showModal);
-      // Close on Save/Cancel
-      cancelBtn.addEventListener('click', (e) => { e.preventDefault(); hideModal(); });
-      saveBtn.addEventListener('click', (e) => {
+      cancelBtn.addEventListener('click', e => { e.preventDefault(); hideModal(); });
+      saveBtn.addEventListener('click', e => {
         e.preventDefault();
         const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
                              .map(i => i.value);
@@ -129,12 +131,8 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         applyCardVisibility();
         hideModal();
       });
-      // Close when clicking outside the inner modal
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          hideModal();
-        }
-      });
+      // Close when clicking outside the inner modal content
+      modal.addEventListener('click', hideModal);
 
       function applyCardVisibility() {
         const visible = JSON.parse(localStorage.getItem('visibleCards') || '[]');
@@ -145,5 +143,14 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       applyCardVisibility();
     });
   </script>
+
+  <!--
+  Changelog:
+  - Added id="cardSettingsContent" to inner modal div.
+  - Added stopPropagation on inner content to prevent overlay click from firing when clicking inside.
+  - Simplified overlay click listener to hideModal directly.
+  - Verified Save/Cancel buttons have type="button" and hide modal on click.
+  - Logged all changes for future reference.
+  -->
 </body>
 </html>
