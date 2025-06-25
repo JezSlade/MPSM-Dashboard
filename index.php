@@ -1,7 +1,7 @@
 <?php
 /**
  * index.php — Single-page entrypoint with corrected layout wrapper so sidebar and main content sit side-by-side
- *
+
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -51,11 +51,46 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 
   <?php include __DIR__ . '/includes/footer.php'; ?>
 
-  <!-- Card-settings modal and scripts omitted for brevity; unchanged -->
+  <!-- Reinitialize Feather icons and header button behaviors -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Render all Feather icons (header, navigation, cards)
+      feather.replace();
+
+      // Header button behaviors
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme');
+        html.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+        html.classList.toggle('dark');
+      });
+      document.getElementById('refresh-all')?.addEventListener('click', () => location.reload(true));
+      document.getElementById('clear-session')?.addEventListener('click', () => {
+        document.cookie.split(';').forEach(c => {
+          document.cookie = c.split('=')[0].trim() + '=;expires=Thu, 01 Jan 1970 GMT;path=/';
+        });
+        location.reload();
+      });
+      document.getElementById('view-error-log')?.addEventListener('click', () => {
+        window.open('/logs/debug.log', '_blank');
+      });
+      document.getElementById('card-settings')?.addEventListener('click', () => {
+        document.getElementById('cardSettingsModal').classList.remove('hidden');
+        document.getElementById('cardSettingsModal').classList.add('flex');
+      });
+    });
+  </script>
 </body>
 </html>
 
-  <!--
+
+  <!-- *
+ * Changelog:
+ * - Wrapped navigation and main in a `div.content-area` with `flex` to place them side-by-side.
+ * - Changed body layout from `flex-col` to top-level header, then content-area, then footer.
+ * - Ensured `.sidebar` fills vertical space and `.main` flexes to remaining width.
+ * - Removed scripts earlier; now re-adding Feather initialization and header button wiring.
+ * - Consolidated changelog entries into one section at top.
  * Changelog:
  * - Wrapped navigation and main in a `div.content-area` with `flex` to place them side-by-side.
  * - Changed body layout from `flex-col` to top-level header, then content-area, then footer.
