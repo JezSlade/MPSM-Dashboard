@@ -1,7 +1,8 @@
 <?php
 /**
  * index.php — Single-page entrypoint with OS detection, card-settings modal,
- * corrected modal toggling, click-outside-to-close, and inner-click stopPropagation
+ * corrected modal toggling, click-outside-to-close, inner-click stopPropagation,
+ * and dark-mode by default.
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -11,7 +12,8 @@ ini_set('display_errors','1');
 define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full mobile-first" data-theme="light">
+<!-- Set dark mode by default with both class and data-theme -->
+<html lang="en" class="h-full mobile-first dark" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <title>Dashboard for <?php echo htmlspecialchars(DEALER_CODE, ENT_QUOTES, 'UTF-8'); ?></title>
@@ -47,7 +49,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 
   <?php include __DIR__ . '/includes/footer.php'; ?>
 
-  <!-- Card-settings modal -->
+  <!-- Card-settings modal (hidden by default) -->
   <div id="cardSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
     <div id="cardSettingsContent" class="bg-light dark:bg-dark neumorphic p-4 rounded w-11/12 md:w-1/3 max-h-[80vh] overflow-auto">
       <h2 class="text-lg font-semibold mb-2">Select Cards to Display</h2>
@@ -80,17 +82,17 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       feather.replace();
 
       // Theme toggle
-      document.getElementById('theme-toggle').addEventListener('click', () => {
-        html.setAttribute('data-theme',
-          html.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
-        );
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        html.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+        html.classList.toggle('dark');
       });
 
       // Hard refresh
-      document.getElementById('refresh-all').addEventListener('click', () => location.reload(true));
+      document.getElementById('refresh-all')?.addEventListener('click', () => location.reload(true));
 
       // Clear session
-      document.getElementById('clear-session').addEventListener('click', () => {
+      document.getElementById('clear-session')?.addEventListener('click', () => {
         document.cookie.split(';').forEach(c => {
           document.cookie = c.split('=')[0].trim() + '=;expires=Thu, 01 Jan 1970 GMT;path=/';
         });
@@ -98,7 +100,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       });
 
       // View debug log
-      document.getElementById('view-error-log').addEventListener('click', () => {
+      document.getElementById('view-error-log')?.addEventListener('click', () => {
         window.open('/logs/debug.log', '_blank');
       });
 
@@ -121,9 +123,10 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       // Prevent clicks inside content from closing
       content.addEventListener('click', e => e.stopPropagation());
 
-      openBtn.addEventListener('click', showModal);
-      cancelBtn.addEventListener('click', e => { e.preventDefault(); hideModal(); });
-      saveBtn.addEventListener('click', e => {
+      // Bind open only if button exists
+      if (openBtn) openBtn.addEventListener('click', showModal);
+      if (cancelBtn) cancelBtn.addEventListener('click', e => { e.preventDefault(); hideModal(); });
+      if (saveBtn) saveBtn.addEventListener('click', e => {
         e.preventDefault();
         const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
                              .map(i => i.value);
@@ -143,7 +146,15 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       applyCardVisibility();
     });
   </script>
-
+</script>
+  <!--
+  Changelog:
+  - Changed <html> tag to default dark mode: added class="dark" and data-theme="dark".
+  - Wrapped event listener attachments in null-safe checks (using `?.`) and conditional bindings to prevent JS errors.
+  - Ensured modal remains hidden by default (`class="hidden"`).
+  - Verified click-outside and inner-stopPropagation logic works reliably.
+  - Appended detailed changelog entries for future reference.
+  -->
   <!--
   Changelog:
   - Added id="cardSettingsContent" to inner modal div.
