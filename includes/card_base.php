@@ -7,7 +7,7 @@
 // countdown, and settings panel.
 // -------------------------------------------------------------------
 
-require_once __DIR__ . '/env_parser.php';   // defines your .env constants
+require_once __DIR__ . '/env_parser.php';   // defines .env constants
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/api_client.php';
 
@@ -26,48 +26,61 @@ function card_base_start(string $cardKey, string $title): void
     $indicatorChecked = $showIndicator ? ' checked' : '';
 
     // Inject card‐level JS once
-    if (! $jsInjected) {
+    if (!$jsInjected) {
         echo <<<JS
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('[id\$="_settingsBtn"]').forEach(btn => {
-    const key = btn.id.replace('_settingsBtn','');
-    const panel = document.getElementById(key + '_settingsPanel');
-    btn.addEventListener('click', () => panel.classList.toggle('hidden'));
-
-    const setCookie = (n,v) => document.cookie = \`\${n}=\${v};path=/\`;
-
-    document.getElementById(key + '_cacheToggle')
-      .addEventListener('change', e => { 
-        setCookie(key + '_cache_enabled', e.target.checked ? '1' : '0'); 
-        location.reload(); 
-      });
-    document.getElementById(key + '_indicatorToggle')
-      .addEventListener('change', e => { 
-        setCookie(key + '_indicator_display', e.target.checked ? '1' : '0'); 
-        location.reload(); 
-      });
-    document.getElementById(key + '_ttlInput')
-      .addEventListener('change', e => { 
-        setCookie(key + '_ttl_minutes', Math.max(1, e.target.value)); 
-        location.reload(); 
+  // First, render feather icons
+  if (typeof feather !== 'undefined') {
+    feather.replace();
+  }
+  // Delay listener attachment until after icons rendered
+  setTimeout(() => {
+    document.querySelectorAll('[id\$="_settingsBtn"]').forEach(btn => {
+      const key = btn.id.replace('_settingsBtn','');
+      const panel = document.getElementById(key + '_settingsPanel');
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        panel.classList.toggle('hidden');
       });
 
-    // Manual refresh
-    document.getElementById(key + '_refreshBtn')
-      .addEventListener('click', () => location.reload());
+      const setCookie = (n,v) => document.cookie = \`\${n}=\${v};path=/\`;
 
-    // Auto-refresh countdown
-    const countdownEl = document.getElementById(key + '_countdown');
-    if (countdownEl) {
-      let seconds = parseInt(countdownEl.dataset.seconds, 10);
-      setInterval(() => {
-        seconds--;
-        if (seconds <= 0) return location.reload();
-        countdownEl.textContent = seconds + 's';
-      }, 1000);
-    }
-  });
+      document.getElementById(key + '_cacheToggle')
+        .addEventListener('change', e => {
+          setCookie(key + '_cache_enabled', e.target.checked ? '1' : '0');
+          location.reload();
+        });
+      document.getElementById(key + '_indicatorToggle')
+        .addEventListener('change', e => {
+          setCookie(key + '_indicator_display', e.target.checked ? '1' : '0');
+          location.reload();
+        });
+      document.getElementById(key + '_ttlInput')
+        .addEventListener('change', e => {
+          setCookie(key + '_ttl_minutes', Math.max(1, e.target.value));
+          location.reload();
+        });
+
+      // Manual refresh
+      document.getElementById(key + '_refreshBtn')
+        .addEventListener('click', e => {
+          e.preventDefault();
+          location.reload();
+        });
+
+      // Auto-refresh countdown
+      const countdownEl = document.getElementById(key + '_countdown');
+      if (countdownEl) {
+        let seconds = parseInt(countdownEl.dataset.seconds, 10);
+        setInterval(() => {
+          seconds--;
+          if (seconds <= 0) return location.reload();
+          countdownEl.textContent = seconds + 's';
+        }, 1000);
+      }
+    });
+  }, 50);
 });
 </script>
 JS;
