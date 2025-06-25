@@ -1,0 +1,47 @@
+--- dream_dashboard/includes/api.php
++++ dream_dashboard/includes/api.php
+@@
+-    $url = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . \$_SERVER['HTTP_HOST'] . '/api/get_customers.php';
+-    \$ch = curl_init(\$url);
++    $url = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/api/get_customers.php';
++    $ch = curl_init($url);
+@@
+-    \$response = curl_exec(\$ch);
++    $response = curl_exec($ch);
+@@
+-    \$json = json_decode(\$response, true);
+-    return \$json['data'] ?? [];
++    $json = json_decode($response, true);
++    return $json['data'] ?? [];
+
+--- dream_dashboard/views/dashboard.php
++++ dream_dashboard/views/dashboard.php
+@@
+-foreach (scandir(__DIR__ . '/../cards/') as \$file) {
+-    if (preg_match('/Card\.php$/', \$file)) {
+-        include __DIR__ . '/../cards/' . \$file;
++foreach (scandir(__DIR__ . '/../cards/') as $file) {
++    if (preg_match('/Card\.php$/', $file)) {
++        include __DIR__ . '/../cards/' . $file;
+
+--- dream_dashboard/cards/CustomersCard.php
++++ dream_dashboard/cards/CustomersCard.php
+@@
+-require_once __DIR__ . '/../includes/api.php';
+-\$customers = api_get_customers();
++require_once __DIR__ . '/../includes/api.php';
++$customers = api_get_customers();
+@@
+-<div id="CustomersCard" class="card" data-mode="min">
+-  <header>
+-    <h2>Customers (<?= count(\$customers) ?>)</h2>
++<div id="CustomersCard" class="card" data-mode="min">
++  <header>
++    <h2>Customers (<?= count($customers) ?>)</h2>
+@@
+-        <?php foreach (\$customers as \$c): ?>
+-        <tr><td><?= htmlspecialchars(\$c['Id']) ?></td><td><?= htmlspecialchars(\$c['Name']) ?></td></tr>
+-        <?php endforeach; ?>
++        <?php foreach ($customers as $c): ?>
++        <tr><td><?= htmlspecialchars($c['Id']) ?></td><td><?= htmlspecialchars($c['Name']) ?></td></tr>
++        <?php endforeach; ?>
