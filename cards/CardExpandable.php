@@ -2,8 +2,9 @@
 /**
  * cards/CardExpandable.php — Dummy card demonstrating expand/collapse functionality
  *
- * This card starts in “minimized” state (only header), and expands to show body content
- * when the toggle button is clicked. Clicking again collapses it.
+ * Changelog:
+ * - Guarded icon swap with null-check to avoid `btn.querySelector(...) is null` errors.
+ * - Consolidated `feather.replace()` after safe attribute update.
  */
 ?>
 <div id="cardExpandable" class="neumorphic p-4 transition-all duration-200 overflow-hidden" 
@@ -35,17 +36,16 @@
       btn.addEventListener('click', () => {
         expanded = !expanded;
         if (expanded) {
-          // expand: grow height and fade in body
           card.style.maxHeight = '20rem';
           body.style.opacity   = '1';
-          btn.querySelector('i').setAttribute('data-feather', 'chevron-up');
         } else {
-          // collapse: shrink height and fade out body
           card.style.maxHeight = '3rem';
           body.style.opacity   = '0';
-          btn.querySelector('i').setAttribute('data-feather', 'chevron-down');
         }
-        // re-render the icon
+        const icon = btn.querySelector('i');
+        if (icon) {
+          icon.setAttribute('data-feather', expanded ? 'chevron-up' : 'chevron-down');
+        }
         feather.replace();
       });
     });
