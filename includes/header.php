@@ -18,15 +18,24 @@ session_start();
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard for <?php echo htmlspecialchars(DEALER_CODE, ENT_QUOTES, 'UTF-8'); ?></title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Global styles -->
   <link rel="stylesheet" href="/public/css/styles.css">
+
+  <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // Render all feather icons
       feather.replace();
 
       // Theme toggle
-      document.getElementById('themeToggle').addEventListener('click', () => {
+      const themeToggle = document.getElementById('themeToggle');
+      themeToggle.addEventListener('click', () => {
         const html = document.documentElement;
         const current = html.getAttribute('data-theme') || 'light';
         html.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
@@ -51,24 +60,25 @@ session_start();
   </script>
 </head>
 <body class="flex h-screen bg-bg-light text-text-light">
-  <header class="flex items-center justify-between p-4 bg-bg-dark text-text-dark shadow">
+  <header class="flex items-center justify-between p-4 bg-bg-dark text-text-dark shadow-md">
     <div class="flex items-center space-x-4">
-      <span class="text-xl font-semibold">
+      <h1 class="text-2xl font-bold">
         Dashboard for <?php echo htmlspecialchars(DEALER_CODE, ENT_QUOTES, 'UTF-8'); ?>
-      </span>
+      </h1>
     </div>
     <div class="flex items-center space-x-3">
-      <button id="themeToggle"   aria-label="Toggle theme">
+      <button id="themeToggle" aria-label="Toggle theme" class="p-2 rounded hover:bg-bg-light/10">
         <i data-feather="sun"></i>
       </button>
-      <button id="hardRefresh"   aria-label="Hard refresh">
+      <button id="hardRefresh" aria-label="Hard refresh" class="p-2 rounded hover:bg-bg-light/10">
         <i data-feather="refresh-cw"></i>
       </button>
-      <button id="clearSession"  aria-label="Delete session">
+      <button id="clearSession" aria-label="Delete session" class="p-2 rounded hover:bg-bg-light/10">
         <i data-feather="trash-2"></i>
       </button>
-      <button id="viewErrorLog"  aria-label="Error log">
+      <button id="viewErrorLog" aria-label="Error log" class="p-2 rounded hover:bg-bg-light/10">
         <i data-feather="file-text"></i>
       </button>
     </div>
   </header>
+  <!-- main content will be injected by the view -->
