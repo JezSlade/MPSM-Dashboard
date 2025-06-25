@@ -12,16 +12,12 @@
 
 <!-- JS libraries -->
 <script src="https://unpkg.com/feather-icons"></script>
+<script src="/public/js/ui.js"></script>
 
-<!-- Main JS -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    // Ensure all <i data-feather="..."> tags are replaced by SVGs
-    if (window.feather) {
-      feather.replace();
-    }
+    initializeGlobalUI(); // ← handles feather.replace() and more
   });
 </script>
-
 </body>
 </html>
