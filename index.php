@@ -1,58 +1,31 @@
 <?php
-// index.php — Entrypoint for the SPA
 declare(strict_types=1);
-error_reporting(E_ALL);
-ini_set('display_errors','1');
+// /includes/header.php
+// This file now only emits the <header> element; the <head> and <body> wrappers live in index.php
 ?>
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-900">
-<head>
-  <meta charset="UTF-8">
-  <title>MPSM Dashboard</title>
+<header class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+    Dashboard for <?php echo htmlspecialchars(DEALER_CODE, ENT_QUOTES, 'UTF-8'); ?>
+  </h1>
+  <div class="flex items-center space-x-3">
+    <!-- Theme toggle -->
+    <button id="theme-toggle" aria-label="Toggle theme" class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+      <i data-feather="sun"></i>
+    </button>
 
-  <!-- Tailwind via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Feather Icons -->
-  <script src="https://unpkg.com/feather-icons"></script>
-</head>
-<body class="h-full flex flex-col">
+    <!-- Hard refresh -->
+    <button id="refresh-all" aria-label="Hard refresh" class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+      <i data-feather="refresh-cw"></i>
+    </button>
 
-  <?php include __DIR__ . '/includes/header.php'; ?>
-  <?php include __DIR__ . '/includes/navigation.php'; ?>
+    <!-- Clear session -->
+    <button id="clear-session" aria-label="Clear session" class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+      <i data-feather="trash-2"></i>
+    </button>
 
-  <main class="flex-1 overflow-y-auto p-4 space-y-6">
-    <?php include __DIR__ . '/cards/CustomersCard.php'; ?>
-  </main>
-
-  <?php include __DIR__ . '/includes/footer.php'; ?>
-
-  <!-- Activate Feather icons -->
-  <script>feather.replace();</script>
-
-  <!-- Button behaviors -->
-  <script>
-    (function(){
-      const htmlEl = document.documentElement;
-
-      // Theme toggle
-      document.getElementById('theme-toggle').addEventListener('click', () => {
-        htmlEl.classList.toggle('dark');
-      });
-
-      // Clear session cookies
-      document.getElementById('clear-session').addEventListener('click', () => {
-        document.cookie.split(';').forEach(c => {
-          const name = c.split('=')[0].trim();
-          document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-        });
-        location.reload();
-      });
-
-      // Hard refresh (bypass cache)
-      document.getElementById('refresh-all').addEventListener('click', () => {
-        location.reload();
-      });
-    })();
-  </script>
-</body>
-</html>
+    <!-- View error log -->
+    <button id="view-error-log" aria-label="View error log" class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+      <i data-feather="file-text"></i>
+    </button>
+  </div>
+</header>
