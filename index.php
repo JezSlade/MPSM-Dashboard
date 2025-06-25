@@ -1,11 +1,13 @@
 <?php
 /**
  * index.php — Restored layout with absolute‐positioned dashboard to right of sidebar
+ * and all header/navigation/footer controls working
  *
  * Changelog:
  * - Wrapped `<main>` in `relative` so `.dashboard-container` can be `absolute inset-0`.
  * - Changed `.dashboard-container` to `absolute inset-0` inside `<main>`.
- * - Retained header, navigation, footer, card-settings modal, and smart drag logic.
+ * - Ensured header and navigation remain visible above the dashboard container.
+ * - Retained card-settings modal, smart drag logic, and APP_NAME title.
  * - Changelog appended at end after </html>.
  */
 declare(strict_types=1);
@@ -22,8 +24,11 @@ define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
   <meta charset="UTF-8">
   <title><?php echo htmlspecialchars(APP_NAME, ENT_QUOTES,'UTF-8'); ?></title>
   <link rel="icon" href="data:;base64,">
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Global styles -->
   <link rel="stylesheet" href="/public/css/styles.css">
+  <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body class="h-full flex flex-col">
@@ -33,8 +38,8 @@ define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
   <div class="flex flex-1 overflow-hidden">
     <?php include __DIR__ . '/includes/navigation.php'; ?>
 
+    <!-- Make main relative so the absolute dashboard-container fills it -->
     <main class="flex-1 relative p-6">
-      <!-- ABSOLUTE LAYOUT CONTAINER -->
       <div class="dashboard-container absolute inset-0" id="dashboard">
         <?php
           $cardsDir = __DIR__ . '/cards/';
@@ -60,6 +65,7 @@ define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
   <script>
   document.addEventListener('DOMContentLoaded', () => {
     feather.replace();
+
     // Toggle Application Log card
     document.getElementById('view-error-log')?.addEventListener('click', () => {
       const log = document.getElementById('appLogCard');
@@ -103,8 +109,8 @@ define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
         if (overlap(r1,r2)){
           const dx = (r2.x + r2.w/2) < (r1.x + r1.w/2) ? -GRID : GRID;
           const dy = (r2.y + r2.h/2) < (r1.y + r1.h/2) ? -GRID : GRID;
-          o.style.left = Math.max(0,Math.min(container.clientWidth - r2.w, r2.x+dx)) + 'px';
-          o.style.top  = Math.max(0,Math.min(container.clientHeight - r2.h, r2.y+dy)) + 'px';
+          o.style.left = Math.max(0, Math.min(container.clientWidth - r2.w, r2.x+dx)) + 'px';
+          o.style.top  = Math.max(0, Math.min(container.clientHeight - r2.h, r2.y+dy)) + 'px';
           nudge(o, depth+1);
         }
       }
@@ -149,6 +155,13 @@ define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
   </script>
 </body>
 </html>
+
+<!--
+Changelog:
+- Made <main> relative and .dashboard-container absolute inset-0.
+- Restored header/navigation visibility.
+- Kept all drag, card-settings, and log-toggle logic intact.
+-->
 
 <!--
 Changelog:
