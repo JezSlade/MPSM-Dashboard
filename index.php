@@ -1,12 +1,7 @@
 <?php
 /**
- * index.php — Enhanced entrypoint with responsive grid, drag-and-drop reordering, and deferred SortableJS loading
- *
- * Changelog:
- * - Moved SortableJS `<script>` load to just before initialization in footer.
- * - Added console logs and error checks to verify SortableJS and `#cardGrid` existence.
- * - Deferred initialization until after SortableJS is loaded.
- * - Consolidated all scripts in one block for clarity.
+ * index.php — Enhanced entrypoint with responsive grid, drag-and-drop reordering,
+ * error handling, deferred SortableJS loading, and improved CSS for draggable cards.
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -26,19 +21,31 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
   <!-- Global custom styles -->
   <link rel="stylesheet" href="/public/css/styles.css">
 
-  <!-- Inline override to ensure grid spreads out -->
+  <!-- Inline overrides -->
   <style>
+    /* Responsive grid */
     .card-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 12px;
     }
-    /* ensure modal.hidden truly hides the modal */
+    /* Ensure modal.hidden truly hides the modal */
     #cardSettingsModal.hidden { display: none !important; }
+    /* Draggable card styling */
+    .card-wrapper {
+      cursor: grab;
+      user-select: none;
+      -webkit-user-drag: element;
+    }
+    .card-wrapper:active {
+      cursor: grabbing;
+    }
   </style>
 
   <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
+  <!-- SortableJS for drag-and-drop, loaded with defer -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
 </head>
 <body class="h-full flex flex-col">
 
@@ -88,12 +95,12 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
     </div>
   </div>
 
-  <!-- Core Scripts: Feather initialization, header buttons, modal behavior -->
+  <!-- Core Scripts: Feather init, header buttons, modal behavior -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const html = document.documentElement;
 
-      // Feather icons
+      // Initialize Feather icons
       feather.replace();
 
       // Header controls
@@ -157,20 +164,21 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
     });
   </script>
 
-  <!-- Load SortableJS and initialize drag-and-drop -->
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- Initialize SortableJS once it's loaded -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('SortableJS:', typeof Sortable);
+    function initializeSortable() {
+      console.log('Initializing Sortable...');
       const grid = document.getElementById('cardGrid');
       if (!grid) {
         console.error('cardGrid not found!');
         return;
       }
-      if (typeof Sortable !== 'function') {
+      if (typeof Sortable === 'undefined') {
         console.error('Sortable is not loaded!');
         return;
       }
+      console.log('Sortable version:', Sortable.version || 'unknown');
+
       // Restore saved order
       const saved = JSON.parse(localStorage.getItem('cardOrder') || '[]');
       if (saved.length) {
@@ -179,19 +187,34 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
           if (el) grid.appendChild(el);
         });
       }
+
       new Sortable(grid, {
         animation: 150,
         ghostClass: 'opacity-50',
+        onStart: () => console.log('Drag started'),
         onEnd: () => {
           const order = Array.from(grid.children).map(c => c.dataset.file);
           localStorage.setItem('cardOrder', JSON.stringify(order));
           console.log('Saved order:', order);
         }
       });
-    });
+
+      console.log('Sortable initialized successfully');
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeSortable);
+    window.addEventListener('load', initializeSortable);
   </script>
 </body>
 </html>
+
+<!--
+Changelog:
+- Added error handling, console logs, and dual event listeners in `initializeSortable()` to ensure SortableJS initializes correctly.
+- Deferred SortableJS load with `defer` attribute.
+- Enhanced CSS for `.card-wrapper` to support dragging (`cursor: grab`, `user-select: none`).
+- Kept changelog at very end of file after </html> tag.
+-->
 
 <!--
 Changelog:
