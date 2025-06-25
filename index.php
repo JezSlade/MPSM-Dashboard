@@ -1,6 +1,6 @@
 <?php
 /**
- * index.php — Enhanced with smart nudging drag-and-drop system
+ * index.php — Fixed drag-and-drop with ungrouped cards and dark background
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -29,11 +29,11 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       position: relative;
       width: 100%;
       height: 700px;
-      background: white;
+      background: #1f2937; /* Dark gray background */
       border-radius: 8px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid #374151;
       overflow: hidden;
-      background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+      background-image: radial-gradient(circle, #4b5563 1px, transparent 1px);
       background-size: 20px 20px;
     }
     
@@ -41,25 +41,28 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       position: absolute;
       cursor: grab;
       user-select: none;
-      transition: all 0.15s ease;
+      transition: box-shadow 0.15s ease;
+      /* Remove any grouping or flex properties */
+      display: block;
     }
     
     .card-wrapper:hover {
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
     }
     
     .card-wrapper.dragging {
       z-index: 1000;
       transform: scale(1.05);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      cursor: grabbing;
     }
     
     .card-wrapper.dragging.valid {
-      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     
     .card-wrapper.dragging.invalid {
-      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     
     .card-wrapper.will-nudge {
@@ -67,13 +70,21 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       z-index: 100;
     }
     
-    .card-wrapper:active {
-      cursor: grabbing;
+    .card-size-small { 
+      width: 240px; 
+      height: 140px; 
+      border: 2px solid #bfdbfe; 
     }
-    
-    .card-size-small { width: 240px; height: 140px; border-color: #bfdbfe; }
-    .card-size-medium { width: 300px; height: 180px; border-color: #93c5fd; }
-    .card-size-large { width: 380px; height: 220px; border-color: #60a5fa; }
+    .card-size-medium { 
+      width: 300px; 
+      height: 180px; 
+      border: 2px solid #93c5fd; 
+    }
+    .card-size-large { 
+      width: 380px; 
+      height: 220px; 
+      border: 2px solid #60a5fa; 
+    }
     
     .drag-info {
       position: absolute;
@@ -91,6 +102,7 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       font-size: 12px;
       padding: 4px 8px;
       border-radius: 4px;
+      white-space: nowrap;
     }
     
     .drag-info-badge.valid { background: #16a34a; }
@@ -107,15 +119,25 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       padding: 2px 6px;
       border-radius: 4px;
       pointer-events: none;
+      white-space: nowrap;
     }
     
     #cardSettingsModal.hidden { display: none !important; }
+    
+    /* Ensure cards don't group together */
+    .card-wrapper * {
+      pointer-events: none;
+    }
+    
+    .card-wrapper {
+      pointer-events: auto;
+    }
   </style>
 
   <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
-<body class="h-full flex flex-col">
+<body class="h-full flex flex-col bg-gray-900">
 
   <?php include __DIR__ . '/includes/header.php'; ?>
 
@@ -124,9 +146,9 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
 
     <main class="flex-1 overflow-y-auto p-6">
       <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900">Smart Nudging Dashboard</h1>
-        <p class="text-gray-600 mt-2">Cards gently nudge others out of the way when needed</p>
-        <div class="flex gap-4 mt-2 text-sm text-gray-500">
+        <h1 class="text-3xl font-bold text-white">Smart Nudging Dashboard</h1>
+        <p class="text-gray-300 mt-2">Cards gently nudge others out of the way when needed</p>
+        <div class="flex gap-4 mt-2 text-sm text-gray-400">
           <span class="flex items-center gap-1">
             <div class="w-3 h-2 bg-blue-200 rounded"></div>
             Small (240×140)
@@ -150,7 +172,7 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
           pathinfo($f, PATHINFO_EXTENSION) === 'php'
         );
         
-        // Define initial positions and sizes for cards
+        // Define initial positions and sizes for cards - spread them out more
         $cardConfigs = [
           'revenue.php' => ['size' => 'large', 'x' => 20, 'y' => 20],
           'users.php' => ['size' => 'medium', 'x' => 420, 'y' => 20],
@@ -163,20 +185,25 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
         ];
         
         foreach ($files as $index => $file):
-          $config = $cardConfigs[$file] ?? ['size' => 'medium', 'x' => ($index % 3) * 320 + 20, 'y' => floor($index / 3) * 200 + 20];
+          $config = $cardConfigs[$file] ?? [
+            'size' => 'medium', 
+            'x' => ($index % 3) * 340 + 20, 
+            'y' => floor($index / 3) * 220 + 20
+          ];
         ?>
         <div class="card-wrapper card-size-<?php echo $config['size']; ?>" 
              data-file="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>"
              data-size="<?php echo $config['size']; ?>"
              data-x="<?php echo $config['x']; ?>"
              data-y="<?php echo $config['y']; ?>"
+             data-card-id="card-<?php echo $index; ?>"
              style="left: <?php echo $config['x']; ?>px; top: <?php echo $config['y']; ?>px;">
           <?php include $cardsDir . $file; ?>
         </div>
         <?php endforeach; ?>
       </div>
 
-      <div class="mt-4 text-sm text-gray-500 space-y-1">
+      <div class="mt-4 text-sm text-gray-400 space-y-1">
         <p>• Cards gently nudge others out of the way (max 60px distance)</p>
         <p>• Yellow ring = card will be nudged, Green = valid position, Red = invalid</p>
         <p>• Smaller cards are preferred for nudging over larger ones</p>
@@ -193,7 +220,7 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
     
     // Constants
     const GRID_SIZE = 20;
-    const MAX_NUDGE_DISTANCE = 60; // 3 * GRID_SIZE
+    const MAX_NUDGE_DISTANCE = 60;
     const CARD_SIZES = {
       small: { width: 240, height: 140 },
       medium: { width: 300, height: 180 },
@@ -219,6 +246,8 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
     const container = document.getElementById('dashboardContainer');
     const cards = Array.from(document.querySelectorAll('.card-wrapper'));
     
+    console.log('Found cards:', cards.length);
+    
     // Utility functions
     function snapToGrid(value) {
       return Math.round(value / GRID_SIZE) * GRID_SIZE;
@@ -242,9 +271,9 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
     
     function getCardPosition(card) {
       return {
-        x: parseInt(card.dataset.x),
-        y: parseInt(card.dataset.y),
-        size: card.dataset.size
+        x: parseInt(card.dataset.x) || 0,
+        y: parseInt(card.dataset.y) || 0,
+        size: card.dataset.size || 'medium'
       };
     }
     
@@ -389,7 +418,6 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
         card.appendChild(dragInfo);
       }
       
-      const pos = getCardPosition(card);
       const snappedX = snapToGrid(dragState.currentX);
       const snappedY = snapToGrid(dragState.currentY);
       
@@ -422,12 +450,19 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       localStorage.setItem('cardPositions', JSON.stringify(positions));
     }
     
-    // Event handlers
+    // Event handlers - Fixed to prevent grouping
     function handleMouseDown(e) {
-      const card = e.target.closest('.card-wrapper');
-      if (!card) return;
+      // Only trigger on the card wrapper itself, not child elements
+      if (!e.target.classList.contains('card-wrapper')) {
+        const card = e.target.closest('.card-wrapper');
+        if (!card) return;
+        e.target = card; // Reassign to the card wrapper
+      }
       
+      const card = e.target;
       const pos = getCardPosition(card);
+      
+      console.log('Mouse down on card:', card.dataset.file, 'at position:', pos);
       
       dragState = {
         isDragging: true,
@@ -444,10 +479,14 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       
       card.classList.add('dragging');
       nudgePreviews = [];
+      
+      // Prevent default to avoid any browser drag behavior
+      e.preventDefault();
+      e.stopPropagation();
     }
     
     function handleMouseMove(e) {
-      if (!dragState.isDragging) return;
+      if (!dragState.isDragging || !dragState.draggedElement) return;
       
       const deltaX = e.clientX - dragState.startX;
       const deltaY = e.clientY - dragState.startY;
@@ -455,7 +494,7 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
       dragState.currentX = dragState.startCardX + deltaX;
       dragState.currentY = dragState.startCardY + deltaY;
       
-      // Update visual position
+      // Update visual position immediately
       dragState.draggedElement.style.left = dragState.currentX + 'px';
       dragState.draggedElement.style.top = dragState.currentY + 'px';
       
@@ -479,22 +518,27 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
         updateNudgePreviews([]);
         updateDragInfo(dragState.draggedElement, false, 0);
       }
+      
+      e.preventDefault();
     }
     
     function handleMouseUp(e) {
-      if (!dragState.isDragging) return;
+      if (!dragState.isDragging || !dragState.draggedElement) return;
+      
+      console.log('Mouse up, finalizing position');
       
       const snappedX = snapToGrid(dragState.currentX);
       const snappedY = snapToGrid(dragState.currentY);
       const pos = getCardPosition(dragState.draggedElement);
       
       if (!isWithinBounds(snappedX, snappedY, pos.size)) {
-        // Return to original position
+        console.log('Out of bounds, returning to original position');
         setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
       } else {
         const nudgePlan = calculateNudgePlan(dragState.draggedElement, snappedX, snappedY);
         
         if (nudgePlan.canPlace) {
+          console.log('Can place, applying nudges:', nudgePlan.nudges.length);
           // Apply nudges
           nudgePlan.nudges.forEach(nudge => {
             setCardPosition(nudge.card, nudge.toX, nudge.toY);
@@ -504,7 +548,7 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
           setCardPosition(dragState.draggedElement, snappedX, snappedY);
           savePositions();
         } else {
-          // Return to original position
+          console.log('Cannot place, returning to original position');
           setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
         }
       }
@@ -528,20 +572,23 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
         originalX: 0,
         originalY: 0
       };
+      
+      e.preventDefault();
     }
     
     // Initialize
     loadPositions();
     
-    // Add event listeners
-    container.addEventListener('mousedown', handleMouseDown);
+    // Add event listeners - Fixed to prevent grouping
+    cards.forEach(card => {
+      card.addEventListener('mousedown', handleMouseDown);
+      // Prevent any default drag behavior
+      card.addEventListener('dragstart', e => e.preventDefault());
+      card.addEventListener('selectstart', e => e.preventDefault());
+    });
+    
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    
-    // Prevent default drag behavior
-    cards.forEach(card => {
-      card.addEventListener('dragstart', e => e.preventDefault());
-    });
     
     // Other functionality
     document.getElementById('view-error-log')?.addEventListener('click', () => {
@@ -550,6 +597,8 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
         logCard.style.display = logCard.style.display === 'none' ? '' : 'none';
       }
     });
+    
+    console.log('Drag system initialized with', cards.length, 'cards');
   });
   </script>
 </body>
