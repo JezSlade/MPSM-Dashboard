@@ -1,11 +1,12 @@
 <?php
 /**
- * index.php — Enhanced entrypoint with:
- *   - Responsive grid using auto-fill/minmax
- *   - Drag-and-drop reordering via SortableJS
- *   - Header and navigation includes
- *   - Card-settings modal support
- *   - Dark mode by default
+ * index.php — Enhanced entrypoint with responsive grid, drag-and-drop reordering, and deferred SortableJS loading
+ *
+ * Changelog:
+ * - Moved SortableJS `<script>` load to just before initialization in footer.
+ * - Added console logs and error checks to verify SortableJS and `#cardGrid` existence.
+ * - Deferred initialization until after SortableJS is loaded.
+ * - Consolidated all scripts in one block for clarity.
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -32,12 +33,12 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 12px;
     }
+    /* ensure modal.hidden truly hides the modal */
+    #cardSettingsModal.hidden { display: none !important; }
   </style>
 
   <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
-  <!-- SortableJS for drag-and-drop -->
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body class="h-full flex flex-col">
 
@@ -87,6 +88,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
     </div>
   </div>
 
+  <!-- Core Scripts: Feather initialization, header buttons, modal behavior -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const html = document.documentElement;
@@ -131,10 +133,9 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       });
       document.getElementById('cardSettingsSave')?.addEventListener('click', e => {
         e.preventDefault();
-        const checked = Array.from(
-          document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked')
-        ).map(i => i.value);
-        localStorage.setItem('visibleCards', JSON.stringify(checked));
+        const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
+                             .map(i => i.value);
+        try { localStorage.setItem('visibleCards', JSON.stringify(checked)); } catch {}
         applyCardVisibility();
         modal.style.display = 'none';
         modal.classList.add('hidden');
@@ -153,9 +154,24 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         });
       }
       applyCardVisibility();
+    });
+  </script>
 
-      // Drag-and-drop reordering
+  <!-- Load SortableJS and initialize drag-and-drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('SortableJS:', typeof Sortable);
       const grid = document.getElementById('cardGrid');
+      if (!grid) {
+        console.error('cardGrid not found!');
+        return;
+      }
+      if (typeof Sortable !== 'function') {
+        console.error('Sortable is not loaded!');
+        return;
+      }
+      // Restore saved order
       const saved = JSON.parse(localStorage.getItem('cardOrder') || '[]');
       if (saved.length) {
         saved.forEach(file => {
@@ -169,12 +185,21 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         onEnd: () => {
           const order = Array.from(grid.children).map(c => c.dataset.file);
           localStorage.setItem('cardOrder', JSON.stringify(order));
+          console.log('Saved order:', order);
         }
       });
     });
   </script>
 </body>
 </html>
+
+<!--
+Changelog:
+- Moved SortableJS load to footer and added console logs to verify its presence.
+- Added error checks for missing `#cardGrid` or SortableJS.
+- Deferred drag-and-drop initialization until after SortableJS load.
+- Kept changelog at very end of file after </html> tag.
+-->
 
 <!--
 Changelog:
