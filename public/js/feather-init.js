@@ -1,16 +1,19 @@
 // /public/js/feather-init.js
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof feather !== 'undefined') {
+  // 1) Replace all <i data-feather="…"> with SVGs
+  if (window.feather) {
     feather.replace();
   }
 
-  setTimeout(() => {
-    const settingsBtn = document.getElementById('settings-btn');
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('settingsModal')?.classList.add('open');
-      });
-    }
-  }, 100); // delay lets icons render before events attach
+  // 2) Wire up the settings button once icons exist
+  const settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', e => {
+      e.preventDefault();
+      const modal = document.getElementById('settingsModal');
+      if (modal) {
+        modal.classList.add('open');
+      }
+    });
+  }
 });

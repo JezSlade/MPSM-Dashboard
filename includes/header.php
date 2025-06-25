@@ -15,8 +15,10 @@ ini_set('error_log', __DIR__ . '/../logs/debug.log');
   <title><?= getenv('APP_NAME') ?: 'MPS Monitor Dashboard' ?></title>
   <link rel="stylesheet" href="/public/css/styles.css" />
 
-  <!-- Feather Icons -->
+  <!-- Feather Icons library -->
   <script src="https://unpkg.com/feather-icons"></script>
+  <!-- Centralized initialization -->
+  <script src="/public/js/feather-init.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
