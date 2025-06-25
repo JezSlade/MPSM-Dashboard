@@ -62,3 +62,7 @@ html.is-mobile body { font-size: 14px; }
   display: none;
 }
 #cardSettingsModal.items-center { display: flex; }
+/* ensure our modal.hidden is always display:none */
+#cardSettingsModal.hidden {
+  display: none !important;
+}

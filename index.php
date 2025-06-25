@@ -3,6 +3,7 @@
  * index.php — Single-page entrypoint with OS detection, card-settings modal,
  * corrected modal toggling, click-outside-to-close, inner-click stopPropagation,
  * and dark-mode by default.
+ *
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -112,13 +113,16 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       const cancelBtn = document.getElementById('cardSettingsCancel');
 
       function showModal() {
+        modal.style.display = 'flex';
         modal.classList.remove('hidden');
-        modal.classList.add('flex');
       }
       function hideModal() {
-        modal.classList.remove('flex');
+        modal.style.display = 'none';
         modal.classList.add('hidden');
       }
+
+      // Ensure modal hidden on load
+      hideModal();
 
       // Prevent clicks inside content from closing
       content.addEventListener('click', e => e.stopPropagation());
@@ -130,15 +134,29 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         e.preventDefault();
         const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
                              .map(i => i.value);
-        localStorage.setItem('visibleCards', JSON.stringify(checked));
+        try {
+          localStorage.setItem('visibleCards', JSON.stringify(checked));
+        } catch {}
         applyCardVisibility();
         hideModal();
       });
+
       // Close when clicking outside the inner modal content
       modal.addEventListener('click', hideModal);
 
+      // ESC key support
+      document.addEventListener('keyup', e => {
+        if (e.key === 'Escape') hideModal();
+      });
+
       function applyCardVisibility() {
-        const visible = JSON.parse(localStorage.getItem('visibleCards') || '[]');
+        let visible;
+        try {
+          visible = JSON.parse(localStorage.getItem('visibleCards') || '[]');
+        } catch {
+          visible = [];
+          localStorage.removeItem('visibleCards');
+        }
         document.querySelectorAll('.card-wrapper').forEach(card => {
           card.style.display = visible.includes(card.dataset.file) ? '' : 'none';
         });
@@ -146,8 +164,14 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
       applyCardVisibility();
     });
   </script>
-</script>
+</body>
+</html>
+
   <!--
+  * Changelog:
+  * - Fixed stray closing </script> tag.
+  * - Ensured modal is explicitly hidden on load via hideModal() before other actions.
+  * - Consolidated changelog entries into one section at end.
   Changelog:
   - Changed <html> tag to default dark mode: added class="dark" and data-theme="dark".
   - Wrapped event listener attachments in null-safe checks (using `?.`) and conditional bindings to prevent JS errors.
