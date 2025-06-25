@@ -1,11 +1,6 @@
 <?php
 /**
- * index.php — Entrypoint with application-log toggle, manual drag-and-drop, and corrected title
- *
- * Changelog:
- * - Added APP_NAME constant from APP_NAME env var (fallback “MPS Monitor Dashboard”).
- * - Updated <title> to use APP_NAME instead of undefined DEALER_CODE.
- * - Changelog appended at end after </html>.
+ * index.php — Enhanced with smart nudging drag-and-drop system
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -30,24 +25,91 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
   <link rel="stylesheet" href="/public/css/styles.css">
 
   <style>
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 12px;
+    .dashboard-container {
+      position: relative;
+      width: 100%;
+      height: 700px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+      background-size: 20px 20px;
     }
-    #cardSettingsModal.hidden { display: none !important; }
+    
     .card-wrapper {
+      position: absolute;
       cursor: grab;
       user-select: none;
-      pointer-events: auto;
+      transition: all 0.15s ease;
     }
+    
+    .card-wrapper:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
     .card-wrapper.dragging {
-      opacity: 0.6;
-      transform: scale(1.02);
-      z-index: 50;
+      z-index: 1000;
+      transform: scale(1.05);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
-    /* Ensure app log card spans two columns */
-    #appLogCard { grid-column: span 2; }
+    
+    .card-wrapper.dragging.valid {
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .card-wrapper.dragging.invalid {
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .card-wrapper.will-nudge {
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
+      z-index: 100;
+    }
+    
+    .card-wrapper:active {
+      cursor: grabbing;
+    }
+    
+    .card-size-small { width: 240px; height: 140px; border-color: #bfdbfe; }
+    .card-size-medium { width: 300px; height: 180px; border-color: #93c5fd; }
+    .card-size-large { width: 380px; height: 220px; border-color: #60a5fa; }
+    
+    .drag-info {
+      position: absolute;
+      top: -32px;
+      left: 0;
+      display: flex;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 1001;
+    }
+    
+    .drag-info-badge {
+      background: #2563eb;
+      color: white;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .drag-info-badge.valid { background: #16a34a; }
+    .drag-info-badge.invalid { background: #dc2626; }
+    .drag-info-badge.nudging { background: #d97706; }
+    
+    .nudge-indicator {
+      position: absolute;
+      top: -24px;
+      left: 0;
+      background: #d97706;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    
+    #cardSettingsModal.hidden { display: none !important; }
   </style>
 
   <!-- Feather Icons -->
@@ -61,96 +123,437 @@ define('APP_NAME', getenv('APP_NAME') ?: 'MPS Monitor Dashboard');
     <?php include __DIR__ . '/includes/navigation.php'; ?>
 
     <main class="flex-1 overflow-y-auto p-6">
-      <div class="card-grid" id="cardGrid">
+      <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Smart Nudging Dashboard</h1>
+        <p class="text-gray-600 mt-2">Cards gently nudge others out of the way when needed</p>
+        <div class="flex gap-4 mt-2 text-sm text-gray-500">
+          <span class="flex items-center gap-1">
+            <div class="w-3 h-2 bg-blue-200 rounded"></div>
+            Small (240×140)
+          </span>
+          <span class="flex items-center gap-1">
+            <div class="w-4 h-3 bg-blue-300 rounded"></div>
+            Medium (300×180)
+          </span>
+          <span class="flex items-center gap-1">
+            <div class="w-5 h-3 bg-blue-400 rounded"></div>
+            Large (380×220)
+          </span>
+        </div>
+      </div>
+
+      <div class="dashboard-container" id="dashboardContainer">
         <?php
         // Auto-discover all cards in /cards/
         $cardsDir = __DIR__ . '/cards/';
         $files = array_filter(scandir($cardsDir, SCANDIR_SORT_ASCENDING), fn($f) =>
           pathinfo($f, PATHINFO_EXTENSION) === 'php'
         );
-        foreach ($files as $file):
+        
+        // Define initial positions and sizes for cards
+        $cardConfigs = [
+          'revenue.php' => ['size' => 'large', 'x' => 20, 'y' => 20],
+          'users.php' => ['size' => 'medium', 'x' => 420, 'y' => 20],
+          'orders.php' => ['size' => 'small', 'x' => 740, 'y' => 20],
+          'errors.php' => ['size' => 'small', 'x' => 20, 'y' => 260],
+          'analytics.php' => ['size' => 'large', 'x' => 280, 'y' => 260],
+          'performance.php' => ['size' => 'medium', 'x' => 680, 'y' => 220],
+          'conversion.php' => ['size' => 'small', 'x' => 20, 'y' => 420],
+          'pageviews.php' => ['size' => 'medium', 'x' => 280, 'y' => 500],
+        ];
+        
+        foreach ($files as $index => $file):
+          $config = $cardConfigs[$file] ?? ['size' => 'medium', 'x' => ($index % 3) * 320 + 20, 'y' => floor($index / 3) * 200 + 20];
         ?>
-        <div class="card-wrapper glow" draggable="true" data-file="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>">
+        <div class="card-wrapper card-size-<?php echo $config['size']; ?>" 
+             data-file="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>"
+             data-size="<?php echo $config['size']; ?>"
+             data-x="<?php echo $config['x']; ?>"
+             data-y="<?php echo $config['y']; ?>"
+             style="left: <?php echo $config['x']; ?>px; top: <?php echo $config['y']; ?>px;">
           <?php include $cardsDir . $file; ?>
         </div>
         <?php endforeach; ?>
+      </div>
+
+      <div class="mt-4 text-sm text-gray-500 space-y-1">
+        <p>• Cards gently nudge others out of the way (max 60px distance)</p>
+        <p>• Yellow ring = card will be nudged, Green = valid position, Red = invalid</p>
+        <p>• Smaller cards are preferred for nudging over larger ones</p>
+        <p>• If nudging isn't possible, card returns to original position</p>
       </div>
     </main>
   </div>
 
   <?php include __DIR__ . '/includes/footer.php'; ?>
 
-  <!-- Card-settings modal omitted for brevity -->
-
   <script>
   document.addEventListener('DOMContentLoaded', () => {
     feather.replace();
-    // Toggle Application Log card
-    document.getElementById('view-error-log')?.addEventListener('click', () => {
-      const logCard = document.getElementById('appLogCard');
-      if (!logCard) return console.error('Application Log card not found!');
-      logCard.style.display = logCard.style.display === 'none' ? '' : 'none';
-    });
-
-    // Apply visibility from card-settings
-    (function applyVisibility() {
-      let visible = [];
-      try { visible = JSON.parse(localStorage.getItem('visibleCards') || '[]'); }
-      catch { visible = []; localStorage.removeItem('visibleCards'); }
-      document.querySelectorAll('.card-wrapper').forEach(card => {
-        card.style.display = visible.includes(card.dataset.file) ? '' : 'none';
+    
+    // Constants
+    const GRID_SIZE = 20;
+    const MAX_NUDGE_DISTANCE = 60; // 3 * GRID_SIZE
+    const CARD_SIZES = {
+      small: { width: 240, height: 140 },
+      medium: { width: 300, height: 180 },
+      large: { width: 380, height: 220 }
+    };
+    
+    // State
+    let dragState = {
+      isDragging: false,
+      draggedElement: null,
+      startX: 0,
+      startY: 0,
+      startCardX: 0,
+      startCardY: 0,
+      currentX: 0,
+      currentY: 0,
+      originalX: 0,
+      originalY: 0
+    };
+    
+    let nudgePreviews = [];
+    
+    const container = document.getElementById('dashboardContainer');
+    const cards = Array.from(document.querySelectorAll('.card-wrapper'));
+    
+    // Utility functions
+    function snapToGrid(value) {
+      return Math.round(value / GRID_SIZE) * GRID_SIZE;
+    }
+    
+    function rectanglesOverlap(rect1, rect2) {
+      return !(
+        rect1.x + rect1.width <= rect2.x ||
+        rect2.x + rect2.width <= rect1.x ||
+        rect1.y + rect1.height <= rect2.y ||
+        rect2.y + rect2.height <= rect1.y
+      );
+    }
+    
+    function isWithinBounds(x, y, size) {
+      const cardSize = CARD_SIZES[size];
+      if (x < 0 || y < 0) return false;
+      const containerRect = container.getBoundingClientRect();
+      return x + cardSize.width <= containerRect.width && y + cardSize.height <= containerRect.height - 100;
+    }
+    
+    function getCardPosition(card) {
+      return {
+        x: parseInt(card.dataset.x),
+        y: parseInt(card.dataset.y),
+        size: card.dataset.size
+      };
+    }
+    
+    function setCardPosition(card, x, y) {
+      card.dataset.x = x;
+      card.dataset.y = y;
+      card.style.left = x + 'px';
+      card.style.top = y + 'px';
+    }
+    
+    function wouldOverlap(x, y, size, excludeCards = []) {
+      const cardSize = CARD_SIZES[size];
+      const newRect = { x, y, width: cardSize.width, height: cardSize.height };
+      
+      for (const card of cards) {
+        if (excludeCards.includes(card)) continue;
+        
+        const pos = getCardPosition(card);
+        const existingCardSize = CARD_SIZES[pos.size];
+        const existingRect = {
+          x: pos.x,
+          y: pos.y,
+          width: existingCardSize.width,
+          height: existingCardSize.height
+        };
+        
+        if (rectanglesOverlap(newRect, existingRect)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    function findNudgePosition(card, originalX, originalY, excludeCards = []) {
+      const pos = getCardPosition(card);
+      const directions = [
+        { dx: 0, dy: -GRID_SIZE }, // up
+        { dx: 0, dy: GRID_SIZE },  // down
+        { dx: -GRID_SIZE, dy: 0 }, // left
+        { dx: GRID_SIZE, dy: 0 },  // right
+        { dx: -GRID_SIZE, dy: -GRID_SIZE }, // up-left
+        { dx: GRID_SIZE, dy: -GRID_SIZE },  // up-right
+        { dx: -GRID_SIZE, dy: GRID_SIZE },  // down-left
+        { dx: GRID_SIZE, dy: GRID_SIZE }    // down-right
+      ];
+      
+      for (let distance = GRID_SIZE; distance <= MAX_NUDGE_DISTANCE; distance += GRID_SIZE) {
+        for (const direction of directions) {
+          const newX = originalX + direction.dx * (distance / GRID_SIZE);
+          const newY = originalY + direction.dy * (distance / GRID_SIZE);
+          
+          if (isWithinBounds(newX, newY, pos.size) && !wouldOverlap(newX, newY, pos.size, [...excludeCards, card])) {
+            return { x: newX, y: newY };
+          }
+        }
+      }
+      return null;
+    }
+    
+    function calculateNudgePlan(draggedCard, dropX, dropY) {
+      const draggedPos = getCardPosition(draggedCard);
+      const draggedCardSize = CARD_SIZES[draggedPos.size];
+      const dropRect = { x: dropX, y: dropY, width: draggedCardSize.width, height: draggedCardSize.height };
+      
+      // Find overlapping cards
+      const overlappingCards = cards.filter(card => {
+        if (card === draggedCard) return false;
+        
+        const pos = getCardPosition(card);
+        const cardSize = CARD_SIZES[pos.size];
+        const cardRect = { x: pos.x, y: pos.y, width: cardSize.width, height: cardSize.height };
+        
+        return rectanglesOverlap(dropRect, cardRect);
       });
-    })();
-
-    // Manual drag-and-drop logic
-    const grid = document.getElementById('cardGrid');
-    let dragged = null;
-    const positions = JSON.parse(localStorage.getItem('cardPositions') || '{}');
-
-    // Reapply saved positions
-    for (const [file, pos] of Object.entries(positions)) {
-      const card = grid.querySelector(`.card-wrapper[data-file="${file}"]`);
-      if (card) {
-        card.style.gridColumnStart = pos.col;
-        card.style.gridRowStart    = pos.row;
+      
+      if (overlappingCards.length === 0) {
+        return { canPlace: true, nudges: [] };
+      }
+      
+      // Sort by size preference (smaller first) and distance
+      const sortedOverlapping = overlappingCards.sort((a, b) => {
+        const sizeOrder = { small: 1, medium: 2, large: 3 };
+        const sizeA = sizeOrder[getCardPosition(a).size];
+        const sizeB = sizeOrder[getCardPosition(b).size];
+        
+        if (sizeA !== sizeB) return sizeA - sizeB;
+        
+        const posA = getCardPosition(a);
+        const posB = getCardPosition(b);
+        const distA = Math.abs(posA.x - dropX) + Math.abs(posA.y - dropY);
+        const distB = Math.abs(posB.x - dropX) + Math.abs(posB.y - dropY);
+        return distA - distB;
+      });
+      
+      const nudges = [];
+      const processedCards = [draggedCard];
+      
+      for (const card of sortedOverlapping) {
+        const pos = getCardPosition(card);
+        const nudgePos = findNudgePosition(card, pos.x, pos.y, processedCards);
+        
+        if (nudgePos) {
+          nudges.push({
+            card: card,
+            fromX: pos.x,
+            fromY: pos.y,
+            toX: nudgePos.x,
+            toY: nudgePos.y
+          });
+          processedCards.push(card);
+        } else {
+          return { canPlace: false, nudges: [] };
+        }
+      }
+      
+      return { canPlace: true, nudges };
+    }
+    
+    function updateNudgePreviews(nudges) {
+      // Clear existing previews
+      cards.forEach(card => {
+        card.classList.remove('will-nudge');
+        const indicator = card.querySelector('.nudge-indicator');
+        if (indicator) indicator.remove();
+      });
+      
+      // Add new previews
+      nudges.forEach(nudge => {
+        nudge.card.classList.add('will-nudge');
+        const indicator = document.createElement('div');
+        indicator.className = 'nudge-indicator';
+        indicator.textContent = 'Will nudge';
+        nudge.card.appendChild(indicator);
+      });
+    }
+    
+    function updateDragInfo(card, isValid, nudgeCount) {
+      let dragInfo = card.querySelector('.drag-info');
+      if (!dragInfo) {
+        dragInfo = document.createElement('div');
+        dragInfo.className = 'drag-info';
+        card.appendChild(dragInfo);
+      }
+      
+      const pos = getCardPosition(card);
+      const snappedX = snapToGrid(dragState.currentX);
+      const snappedY = snapToGrid(dragState.currentY);
+      
+      dragInfo.innerHTML = `
+        <div class="drag-info-badge">${snappedX}, ${snappedY}</div>
+        <div class="drag-info-badge ${isValid ? 'valid' : 'invalid'}">
+          ${isValid ? '✓ Can Place' : '✗ Cannot Place'}
+        </div>
+        ${nudgeCount > 0 ? `<div class="drag-info-badge nudging">Nudging ${nudgeCount} card${nudgeCount > 1 ? 's' : ''}</div>` : ''}
+      `;
+    }
+    
+    // Load saved positions
+    function loadPositions() {
+      const saved = JSON.parse(localStorage.getItem('cardPositions') || '{}');
+      cards.forEach(card => {
+        const file = card.dataset.file;
+        if (saved[file]) {
+          setCardPosition(card, saved[file].x, saved[file].y);
+        }
+      });
+    }
+    
+    function savePositions() {
+      const positions = {};
+      cards.forEach(card => {
+        const pos = getCardPosition(card);
+        positions[card.dataset.file] = { x: pos.x, y: pos.y };
+      });
+      localStorage.setItem('cardPositions', JSON.stringify(positions));
+    }
+    
+    // Event handlers
+    function handleMouseDown(e) {
+      const card = e.target.closest('.card-wrapper');
+      if (!card) return;
+      
+      const pos = getCardPosition(card);
+      
+      dragState = {
+        isDragging: true,
+        draggedElement: card,
+        startX: e.clientX,
+        startY: e.clientY,
+        startCardX: pos.x,
+        startCardY: pos.y,
+        currentX: pos.x,
+        currentY: pos.y,
+        originalX: pos.x,
+        originalY: pos.y
+      };
+      
+      card.classList.add('dragging');
+      nudgePreviews = [];
+    }
+    
+    function handleMouseMove(e) {
+      if (!dragState.isDragging) return;
+      
+      const deltaX = e.clientX - dragState.startX;
+      const deltaY = e.clientY - dragState.startY;
+      
+      dragState.currentX = dragState.startCardX + deltaX;
+      dragState.currentY = dragState.startCardY + deltaY;
+      
+      // Update visual position
+      dragState.draggedElement.style.left = dragState.currentX + 'px';
+      dragState.draggedElement.style.top = dragState.currentY + 'px';
+      
+      // Calculate nudge plan
+      const snappedX = snapToGrid(dragState.currentX);
+      const snappedY = snapToGrid(dragState.currentY);
+      const pos = getCardPosition(dragState.draggedElement);
+      
+      if (isWithinBounds(snappedX, snappedY, pos.size)) {
+        const nudgePlan = calculateNudgePlan(dragState.draggedElement, snappedX, snappedY);
+        nudgePreviews = nudgePlan.nudges;
+        
+        dragState.draggedElement.classList.toggle('valid', nudgePlan.canPlace);
+        dragState.draggedElement.classList.toggle('invalid', !nudgePlan.canPlace);
+        
+        updateNudgePreviews(nudgePlan.nudges);
+        updateDragInfo(dragState.draggedElement, nudgePlan.canPlace, nudgePlan.nudges.length);
+      } else {
+        dragState.draggedElement.classList.remove('valid');
+        dragState.draggedElement.classList.add('invalid');
+        updateNudgePreviews([]);
+        updateDragInfo(dragState.draggedElement, false, 0);
       }
     }
-
-    grid.addEventListener('dragover', e => e.preventDefault());
-    grid.addEventListener('drop', e => {
-      e.preventDefault();
-      if (!dragged) return;
-      const rect = grid.getBoundingClientRect();
-      const cols = Math.floor(rect.width / 280);
-      const rows = Math.floor(rect.height / 180);
-      const colWidth = rect.width / cols;
-      const rowHeight = rect.height / rows;
-      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width - 1));
-      const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height - 1));
-      const col = Math.floor(x / colWidth) + 1;
-      const row = Math.floor(y / rowHeight) + 1;
-      dragged.style.gridColumnStart = col;
-      dragged.style.gridRowStart    = row;
-      positions[dragged.dataset.file] = { col, row };
-      localStorage.setItem('cardPositions', JSON.stringify(positions));
-      dragged.classList.remove('dragging');
-      dragged = null;
+    
+    function handleMouseUp(e) {
+      if (!dragState.isDragging) return;
+      
+      const snappedX = snapToGrid(dragState.currentX);
+      const snappedY = snapToGrid(dragState.currentY);
+      const pos = getCardPosition(dragState.draggedElement);
+      
+      if (!isWithinBounds(snappedX, snappedY, pos.size)) {
+        // Return to original position
+        setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
+      } else {
+        const nudgePlan = calculateNudgePlan(dragState.draggedElement, snappedX, snappedY);
+        
+        if (nudgePlan.canPlace) {
+          // Apply nudges
+          nudgePlan.nudges.forEach(nudge => {
+            setCardPosition(nudge.card, nudge.toX, nudge.toY);
+          });
+          
+          // Set final position
+          setCardPosition(dragState.draggedElement, snappedX, snappedY);
+          savePositions();
+        } else {
+          // Return to original position
+          setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
+        }
+      }
+      
+      // Cleanup
+      dragState.draggedElement.classList.remove('dragging', 'valid', 'invalid');
+      const dragInfo = dragState.draggedElement.querySelector('.drag-info');
+      if (dragInfo) dragInfo.remove();
+      
+      updateNudgePreviews([]);
+      
+      dragState = {
+        isDragging: false,
+        draggedElement: null,
+        startX: 0,
+        startY: 0,
+        startCardX: 0,
+        startCardY: 0,
+        currentX: 0,
+        currentY: 0,
+        originalX: 0,
+        originalY: 0
+      };
+    }
+    
+    // Initialize
+    loadPositions();
+    
+    // Add event listeners
+    container.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // Prevent default drag behavior
+    cards.forEach(card => {
+      card.addEventListener('dragstart', e => e.preventDefault());
     });
-
-    document.querySelectorAll('.card-wrapper').forEach(card => {
-      card.addEventListener('dragstart', e => {
-        dragged = e.target;
-        e.target.classList.add('dragging');
-      });
-      card.addEventListener('dragend', e => {
-        e.target.classList.remove('dragging');
-      });
+    
+    // Other functionality
+    document.getElementById('view-error-log')?.addEventListener('click', () => {
+      const logCard = document.getElementById('appLogCard');
+      if (logCard) {
+        logCard.style.display = logCard.style.display === 'none' ? '' : 'none';
+      }
     });
   });
   </script>
 </body>
 </html>
-
 <!-- **Consolidated Changelog:**
 
 - **Application Configuration:**
