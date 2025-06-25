@@ -2,46 +2,56 @@ name: FTP Deploy - Final Lean
 
 on:
   push:
-    branches: ["main"] # Trigger on pushes to the 'main' branch
+    branches: ["main"]
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # Run the job on a fresh Ubuntu environment
-    timeout-minutes: 15 # Overall job timeout
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@v4 # Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔢 Generate Version File in Root
+        # This command creates 'version.js' directly in the root of the checked-out repository.
+        run: |
+          echo "window.appVersion = \"0.0.0.${{ github.run_number }}\";" > version.js
 
       - name: 🚀 Deploy Website via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5 # Use latest version
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
-          server: ${{ secrets.FTP_SERVER }} # Use GitHub Secrets
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./ # Deploy from repository root
-          server-dir: / # Deploy to FTP account's root
-          protocol: ftp # Use 'ftps' if server requires explicit FTPS
+          server: ftp.resolutionsbydesign.us
+          username: mpsm@mpsm.resolutionsbydesign.us
+          # IMPORTANT: Use a GitHub Secret for your password in a real-world scenario!
+          # For this non-production example, it's hardcoded as per your instruction.
+          password: Deploy123!
+          protocol: ftp
+          port: 21
+
+          # Deploy everything from the root of the checked-out repository
+          local-dir: ./
+          # Deploy to the root directory of the FTP server
+          server-dir: /
+
+          # CAUTION: This will delete EVERYTHING on the server-dir before uploading!
+          dangerous-clean-slate: true
+
           exclude: |
-            .git/*
-            .gitignore
-            **/.git/**
-            **/.gitignore
-          log-level: verbose # Detailed transfer info
-          delete: true # Delete server files not in local repository
-          timeout-seconds: 120 # Timeout for deploy operation (2 minutes)
+            .git/
+            .github/ # Exclude GitHub Actions workflow files and their directories
+            # Add any other files/directories you do NOT want to deploy from your repository root.
+            # Example: node_modules/
+            # Example: .env.development
+
+          log-level: verbose
 
       - name: 📜 Deployment Completed Report
         run: |
-          echo "### DEPLOYMENT SUMMARY ###" > report.md
-          echo "- Deployment Method: SamKirkland/FTP-Deploy-Action" >> report.md
-          echo "- Local repository root (./) deployed to: FTP account's home directory" >> report.md
-          echo "  (Expected server path: /home/resolut7/public_html/mpsm.resolutionsbydesign.us/)" >> report.md
-          echo "- Website URL: https://mpsm.resolutionsbydesign.us" >> report.md
-          echo "" >> report.md
-          echo "---" >> report.md
-          echo "**Next Steps:**" >> report.md
-          echo "1. **Verify Live Site:** Check https://mpsm.resolutionsbydesign.us in your browser." >> report.md
-          echo "2. **Clear Cache:** If changes aren't visible, clear browser or server-side cache." >> report.md
-          echo "3. **GreenGeeks Support:** If issues persist, contact GreenGeeks support with this workflow run link." >> report.md
-          cat report.md
+          echo "### DEPLOYMENT SUMMARY ###"
+          echo "- Version: 0.0.0.${{ github.run_number }}"
+          echo "- FTP Server: ftp.resolutionsbydesign.us"
+          echo "- Server Directory: /"
+          echo "- Local Directory: ./"
