@@ -1,8 +1,8 @@
 /**
- * styles.css — Global styles for Neumorphic Dashboard UI
+ * styles.css — Enhanced styles with detection and glows
  */
 
-/* Root theme variables */
+/* Theme vars */
 :root {
   --bg-light: #F0F0F3;
   --bg-dark:  #1A1A1E;
@@ -14,66 +14,51 @@
 }
 
 /* Theme application */
-[data-theme="light"] {
-  background-color: var(--bg-light);
-  color: var(--text-light);
-}
-[data-theme="dark"] {
-  background-color: var(--bg-dark);
-  color: var(--text-dark);
-}
+[data-theme="light"] { background: var(--bg-light); color: var(--text-light); }
+[data-theme="dark"] { background: var(--bg-dark); color: var(--text-dark); }
 
-/* Neumorphic card base */
+/* OS classes */
+html.is-desktop body { font-size: 16px; }
+html.is-mobile body { font-size: 14px; }
+
+/* Neumorphic base */
 .neumorphic {
   background: var(--bg-light);
   border-radius: 12px;
-  box-shadow: 8px 8px 16px rgba(0,0,0,0.2),
-              -8px -8px 16px rgba(255,255,255,0.7);
-  transition: background 0.3s, box-shadow 0.3s;
+  box-shadow: 8px 8px 16px rgba(0,0,0,0.2), -8px -8px 16px rgba(255,255,255,0.7);
 }
-
-/* Dark theme card adjustments */
 [data-theme="dark"] .neumorphic {
   background: var(--bg-dark);
-  box-shadow: 8px 8px 16px rgba(0,0,0,0.8),
-              -8px -8px 16px rgba(50,50,50,0.3);
+  box-shadow: 8px 8px 16px rgba(0,0,0,0.8), -8px -8px 16px rgba(50,50,50,0.3);
 }
 
-/* Card grid layout */
+/* Card grid */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
 
-/* Sidebar styling */
+/* Card wrapper for glow & contrast */
+.card-wrapper {
+  transition: opacity 0.2s;
+}
+.glow {
+  box-shadow: 0 0 12px rgba(0,240,255,0.6), 0 0 8px rgba(255,0,212,0.4);
+}
+
+/* Sidebar contrast */
 .sidebar {
   background: var(--bg-light);
-  box-shadow: 8px 0 16px rgba(0,0,0,0.1);
-  transition: width 0.3s;
+  border-right: 1px solid rgba(0,0,0,0.1);
 }
 [data-theme="dark"] .sidebar {
   background: var(--bg-dark);
-  box-shadow: 8px 0 16px rgba(0,0,0,0.8);
+  border-right: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Neumorphic button */
-.neu-btn {
-  padding: 8px;
-  border-radius: 8px;
-  background: var(--bg-light);
-  box-shadow: inset 4px 4px 8px rgba(0,0,0,0.1),
-              inset -4px -4px 8px rgba(255,255,255,0.7);
-  cursor: pointer;
-  transition: box-shadow 0.2s;
+/* Modal */
+#cardSettingsModal {
+  display: none;
 }
-.neu-btn:active {
-  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2),
-              inset -2px -2px 4px rgba(255,255,255,0.5);
-}
-
-/* Utility classes */
-.flex { display: flex; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-p-6 { padding: 1.5rem; }
+#cardSettingsModal.items-center { display: flex; }
