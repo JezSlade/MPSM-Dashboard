@@ -153,7 +153,6 @@ define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
   </script>
 </body>
 </html>
-
 <!--
 Changelog:
 - Restored .dashboard-container and absolute .card-wrapper layout.
