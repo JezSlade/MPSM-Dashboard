@@ -1,28 +1,27 @@
-<?php declare(strict_types=1);
-// includes/footer.php
-// -------------------------------------------------------------------
-// Renders the global footer, including the deploy version (from
-// documentation/backup.deploy.yml) and any copyright.
-// -------------------------------------------------------------------
-
-// Attempt to read “name:” from your deploy YAML
-$deployYml = __DIR__ . '/../documentation/backup.deploy.yml';
-$version   = 'unknown';
-if (is_readable($deployYml)) {
-    $lines = file($deployYml, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (preg_match('/^name:\s*(.+)$/', trim($line), $m)) {
-            $version = trim($m[1]);
-            break;
-        }
-    }
-}
+<?php
+// /includes/footer.php — Shared footer for all views, adds global JS and closes the document
 ?>
-<footer class="bg-gray-800 text-gray-400 text-sm py-3 text-center">
-  <div>
-    Version: <span class="font-mono"><?= htmlspecialchars($version, ENT_QUOTES) ?></span>
+<footer class="app-footer">
+  <div class="footer-left">
+    &copy; <?= date('Y') ?> <?= APP_NAME ?>
   </div>
-  <div class="mt-1">
-    &copy; <?= date('Y') ?> Your Company Name
+  <div class="footer-right">
+    Version <?= getenv('APP_VERSION') ?: '0.0.0' ?>
   </div>
 </footer>
+
+<!-- JS libraries -->
+<script src="https://unpkg.com/feather-icons"></script>
+
+<!-- Main JS -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Ensure all <i data-feather="..."> tags are replaced by SVGs
+    if (window.feather) {
+      feather.replace();
+    }
+  });
+</script>
+
+</body>
+</html>
