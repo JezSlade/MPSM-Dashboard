@@ -4,6 +4,13 @@
  */
 ?>
 <div class="neumorphic p-4">
+<?php
+$title = 'CardKPI';
+$cardId = 'CardKPI';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-2">
     <h2 class="font-medium text-lg">Key Performance Indicators</h2>
     <button class="neu-btn" aria-label="Settings">
@@ -33,3 +40,8 @@
   - Created CardKPI.php to display three side-by-side KPI metrics.
   - Each metric shows value and trend indicator.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

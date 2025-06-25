@@ -4,6 +4,13 @@
  */
 ?>
 <div class="neumorphic p-4">
+<?php
+$title = 'CardList';
+$cardId = 'CardList';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-2">
     <h2 class="font-medium text-lg">Recent Activity</h2>
     <button class="neu-btn" aria-label="Settings">
@@ -24,3 +31,8 @@
   - Created CardList.php to show a scrollable list of dummy activity items.
   - Demonstrates a taller card with overflow behavior.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

@@ -8,6 +8,13 @@
  */
 ?>
 <div id="appLogCard" class="neumorphic p-4" style="display:none; grid-column: span 2;">
+<?php
+$title = 'CardAppLog';
+$cardId = 'CardAppLog';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-2">
     <h2 class="font-medium text-lg">Application Log</h2>
     <button class="neu-btn" aria-label="Minimize log card" id="appLogMinimize">
@@ -54,3 +61,8 @@
     });
   });
 </script>
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

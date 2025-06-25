@@ -4,6 +4,13 @@
  */
 ?>
 <div class="neumorphic p-4">
+<?php
+$title = 'CardChart';
+$cardId = 'CardChart';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-2">
     <h2 class="font-medium text-lg">Sales Trend</h2>
     <div class="flex space-x-1">
@@ -22,3 +29,8 @@
   - Created CardChart.php to demonstrate a card with chart space.
   - Placeholder box simulates where a chart (canvas/SVG) would go.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

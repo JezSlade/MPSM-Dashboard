@@ -4,6 +4,13 @@
  */
 ?>
 <div class="neumorphic p-4">
+<?php
+$title = 'CardLarge';
+$cardId = 'CardLarge';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-2">
     <h2 class="font-medium text-lg">Large Data Overview</h2>
     <div class="flex space-x-1">
@@ -33,3 +40,8 @@
   - Created CardLarge.php to demonstrate a wide, two-column data card.
   - Contains header controls and a 2×2 grid of dummy metrics and text.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

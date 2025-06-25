@@ -7,6 +7,13 @@
  */
 ?>
 <div class="neumorphic p-4">
+<?php
+$title = 'CardDrilldown';
+$cardId = 'CardDrilldown';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-2">
     <h2 class="font-medium text-lg">Drill-Down Card</h2>
     <button id="drillOpen" class="neu-btn" aria-label="Drill down into card">
@@ -64,3 +71,8 @@
   - Overlay toggles between hidden/flex and binds open/close buttons.
   - Includes click-outside logic to close overlay.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

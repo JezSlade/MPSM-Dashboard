@@ -9,6 +9,13 @@
 ?>
 <div id="cardExpandable" class="neumorphic p-4 transition-all duration-200 overflow-hidden" 
      style="max-height: 3rem;">
+<?php
+$title = 'CardExpandable';
+$cardId = 'CardExpandable';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between">
     <h2 class="font-medium text-lg">Expandable Card</h2>
     <button id="expandToggle" class="neu-btn" aria-label="Expand or collapse card">
@@ -57,3 +64,8 @@
   - Uses inline <script> to toggle max-height and opacity.
   - Button icon swaps between chevron-down and chevron-up.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->

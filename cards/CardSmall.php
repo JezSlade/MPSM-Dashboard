@@ -4,6 +4,13 @@
  */
 ?>
 <div class="neumorphic p-3">
+<?php
+$title = 'CardSmall';
+$cardId = 'CardSmall';
+$allowMinimize = true;
+$allowSettings = true;
+include __DIR__ . '/../includes/card_header.php';
+?>
   <header class="flex items-center justify-between mb-1">
     <h2 class="font-medium text-base">Quick Stat</h2>
     <button class="neu-btn" aria-label="Settings">
@@ -17,3 +24,8 @@
   - Created CardSmall.php for a compact, single-metric summary card.
   - Includes only title, settings icon, and centered number.
   -->
+
+<!--
+Changelog:
+- Updated to use shared card_header.php include.
+-->
