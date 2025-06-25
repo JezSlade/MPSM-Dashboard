@@ -1,7 +1,12 @@
 <?php
 /**
- * index.php — Enhanced entrypoint with responsive grid, drag-and-drop reordering,
- * error handling, deferred SortableJS loading, and improved CSS for draggable cards.
+ * index.php — Entrypoint with favicon fix and robust SortableJS integration
+ *
+ * Changelog:
+ * - Added inline data favicon link to eliminate missing-favicon errors.
+ * - Moved SortableJS script into head (without defer) so it's available on DOMContentLoaded.
+ * - Consolidated Sortable initialization into a single DOMContentLoaded handler.
+ * - Added pointer-events:auto to .card-wrapper to ensure SortableJS can capture events.
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -16,6 +21,9 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
   <meta charset="UTF-8">
   <title>Dashboard for <?php echo htmlspecialchars(DEALER_CODE, ENT_QUOTES, 'UTF-8'); ?></title>
 
+  <!-- Prevent favicon 404 -->
+  <link rel="icon" href="data:;base64,">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Global custom styles -->
@@ -23,19 +31,17 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 
   <!-- Inline overrides -->
   <style>
-    /* Responsive grid */
     .card-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 12px;
     }
-    /* Ensure modal.hidden truly hides the modal */
     #cardSettingsModal.hidden { display: none !important; }
-    /* Draggable card styling */
     .card-wrapper {
       cursor: grab;
       user-select: none;
       -webkit-user-drag: element;
+      pointer-events: auto;
     }
     .card-wrapper:active {
       cursor: grabbing;
@@ -44,8 +50,8 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
 
   <!-- Feather Icons -->
   <script src="https://unpkg.com/feather-icons"></script>
-  <!-- SortableJS for drag-and-drop, loaded with defer -->
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
+  <!-- SortableJS for drag-and-drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body class="h-full flex flex-col">
 
@@ -57,11 +63,10 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
     <main class="flex-1 overflow-y-auto p-6">
       <div class="card-grid" id="cardGrid">
         <?php
-        // Auto-discover all cards in /cards/
         $cardsDir = __DIR__ . '/cards/';
-        $files = array_filter(scandir($cardsDir, SCANDIR_SORT_ASCENDING), function($f) {
-          return pathinfo($f, PATHINFO_EXTENSION) === 'php';
-        });
+        $files = array_filter(scandir($cardsDir, SCANDIR_SORT_ASCENDING), fn($f) =>
+          pathinfo($f, PATHINFO_EXTENSION) === 'php'
+        );
         foreach ($files as $file):
         ?>
         <div class="card-wrapper glow" data-file="<?php echo $file; ?>">
@@ -95,7 +100,6 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
     </div>
   </div>
 
-  <!-- Core Scripts: Feather init, header buttons, modal behavior -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const html = document.documentElement;
@@ -142,7 +146,7 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         e.preventDefault();
         const checked = Array.from(document.querySelectorAll('#cardSettingsForm input[name="cards"]:checked'))
                              .map(i => i.value);
-        try { localStorage.setItem('visibleCards', JSON.stringify(checked)); } catch {}
+        localStorage.setItem('visibleCards', JSON.stringify(checked));
         applyCardVisibility();
         modal.style.display = 'none';
         modal.classList.add('hidden');
@@ -161,49 +165,29 @@ define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
         });
       }
       applyCardVisibility();
-    });
-  </script>
 
-  <!-- Initialize SortableJS once it's loaded -->
-  <script>
-    function initializeSortable() {
-      console.log('Initializing Sortable...');
-      const grid = document.getElementById('cardGrid');
-      if (!grid) {
-        console.error('cardGrid not found!');
-        return;
-      }
-      if (typeof Sortable === 'undefined') {
-        console.error('Sortable is not loaded!');
-        return;
-      }
-      console.log('Sortable version:', Sortable.version || 'unknown');
-
-      // Restore saved order
-      const saved = JSON.parse(localStorage.getItem('cardOrder') || '[]');
-      if (saved.length) {
-        saved.forEach(file => {
-          const el = grid.querySelector(`[data-file="${file}"]`);
-          if (el) grid.appendChild(el);
-        });
-      }
-
-      new Sortable(grid, {
-        animation: 150,
-        ghostClass: 'opacity-50',
-        onStart: () => console.log('Drag started'),
-        onEnd: () => {
-          const order = Array.from(grid.children).map(c => c.dataset.file);
-          localStorage.setItem('cardOrder', JSON.stringify(order));
-          console.log('Saved order:', order);
+      // Initialize SortableJS
+      if (typeof Sortable === 'function') {
+        const grid = document.getElementById('cardGrid');
+        if (grid) {
+          console.log('Initializing Sortable...');
+          new Sortable(grid, {
+            animation: 150,
+            ghostClass: 'opacity-50',
+            onStart: () => console.log('Drag started'),
+            onEnd: () => {
+              const order = Array.from(grid.children).map(c => c.dataset.file);
+              localStorage.setItem('cardOrder', JSON.stringify(order));
+              console.log('Saved order:', order);
+            }
+          });
+        } else {
+          console.error('cardGrid not found!');
         }
-      });
-
-      console.log('Sortable initialized successfully');
-    }
-
-    document.addEventListener('DOMContentLoaded', initializeSortable);
-    window.addEventListener('load', initializeSortable);
+      } else {
+        console.error('Sortable is not loaded!');
+      }
+    });
   </script>
 </body>
 </html>
