@@ -1,10 +1,17 @@
+/* Base & theme */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background: #f0f2f5;
-  transition: background .3s;
+  color: #111;
+  transition: background .3s, color .3s;
 }
-body.dark { background: #2e2e2e; color: #ddd; }
+body.dark {
+  background: #2e2e2e;
+  color: #ddd;
+}
+
+/* Header */
 header {
   display: flex;
   justify-content: space-between;
@@ -13,12 +20,16 @@ header {
   background: rgba(255,255,255,0.1);
   backdrop-filter: blur(8px);
 }
+
+/* Grid */
 #cardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
   padding: 16px;
 }
+
+/* Card styling */
 .card {
   background: rgba(255,255,255,0.2);
   backdrop-filter: blur(8px);
@@ -27,11 +38,23 @@ header {
   overflow: hidden;
   transition: transform .2s;
 }
-.card:hover { transform: translateY(-2px); }
-.card header {
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* Card header */
+.card > header {
   display: flex;
   justify-content: space-between;
   padding: 8px 16px;
 }
-.card .expanded, .card .drilldown { padding: 8px 16px; }
-body.dark .card { background: rgba(30,30,30,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+
+/* Expanded & drilldown */
+.expanded, .drilldown {
+  padding: 8px 16px;
+}
+.card[data-mode="min"] .expanded,
+.card[data-mode="min"] .drilldown,
+.card[data-mode="exp"] .drilldown {
+  display: none;
+}
