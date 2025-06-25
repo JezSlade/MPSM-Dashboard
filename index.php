@@ -1,158 +1,34 @@
-<?php
-/**
- * index.php — Restored absolute‐layout dashboard with smart drag‐and‐drop
- *
- * Changelog:
- * - Replaced `.card-grid` grid layout with `.dashboard-container` for absolute positioning.
- * - Each `.card-wrapper` is now absolutely positioned inside `.dashboard-container`.
- * - Re‐added manual drag logic: snap‐to‐grid, overlap nudging, position persistence.
- * - Retained header/navigation/footer and card‐settings modal.
- * - Changelog appended at end after closing </html>.
- */
-declare(strict_types=1);
-error_reporting(E_ALL);
-ini_set('display_errors','1');
+@@ <body class="h-full flex flex-col">
+   <?php include __DIR__ . '/includes/header.php'; ?>
 
-// Load environment constants
-define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
-define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
-?>
-<!DOCTYPE html>
-<html lang="en" class="h-full dark" data-theme="dark">
-<head>
-  <meta charset="UTF-8">
-  <title><?php echo htmlspecialchars(APP_NAME, ENT_QUOTES,'UTF-8'); ?></title>
-  <link rel="icon" href="data:;base64,">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="/public/css/styles.css">
-  <!-- Feather Icons -->
-  <script src="https://unpkg.com/feather-icons"></script>
-</head>
-<body class="h-full flex flex-col">
+-  <div class="flex flex-1 overflow-hidden">
++  <div class="flex flex-1 overflow-hidden">
+     <?php include __DIR__ . '/includes/navigation.php'; ?>
 
-  <?php include __DIR__ . '/includes/header.php'; ?>
+-    <main class="flex-1 p-6">
+-      <!-- ABSOLUTE LAYOUT CONTAINER -->
+-      <div class="dashboard-container" id="dashboard">
++    <main class="flex-1 relative p-6">  <!-- make main relative -->
++      <!-- ABSOLUTE LAYOUT CONTAINER -->
++      <div class="dashboard-container absolute inset-0" id="dashboard">
+         <?php
+           $cardsDir = __DIR__ . '/cards/';
+           $files = array_filter(scandir($cardsDir), fn($f)=>pathinfo($f,PATHINFO_EXTENSION)==='php');
+           foreach ($files as $file):
+             $id = pathinfo($file, PATHINFO_FILENAME);
+         ?>
+         <div 
+           class="card-wrapper neumorphic glow" 
+           id="<?php echo htmlspecialchars($id,ENT_QUOTES); ?>"
+           data-file="<?php echo htmlspecialchars($file,ENT_QUOTES); ?>">
+           <?php include $cardsDir . $file; ?>
+         </div>
+         <?php endforeach; ?>
+-      </div>
++      </div>
+     </main>
+   </div>
 
-  <div class="flex flex-1 overflow-hidden">
-    <?php include __DIR__ . '/includes/navigation.php'; ?>
-
-    <main class="flex-1 p-6">
-      <!-- ABSOLUTE LAYOUT CONTAINER -->
-      <div class="dashboard-container" id="dashboard">
-        <?php
-          $cardsDir = __DIR__ . '/cards/';
-          $files = array_filter(scandir($cardsDir), fn($f)=>pathinfo($f,PATHINFO_EXTENSION)==='php');
-          foreach ($files as $file):
-            $id = pathinfo($file, PATHINFO_FILENAME);
-        ?>
-        <div 
-          class="card-wrapper neumorphic glow" 
-          id="<?php echo htmlspecialchars($id,ENT_QUOTES); ?>"
-          data-file="<?php echo htmlspecialchars($file,ENT_QUOTES); ?>">
-          <?php include $cardsDir . $file; ?>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </main>
-  </div>
-
-  <?php include __DIR__ . '/includes/footer.php'; ?>
-
-  <!-- Card-settings modal -->
-  <?php /* existing modal markup here */ ?>
-
-  <!-- Smart drag‐and‐drop logic -->
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    feather.replace();
-
-    // Toggle App Log card
-    document.getElementById('view-error-log')?.addEventListener('click', () => {
-      const log = document.getElementById('appLogCard');
-      if (!log) return;
-      log.style.display = (getComputedStyle(log).display==='none')?'':'none';
-    });
-
-    const container = document.getElementById('dashboard');
-    const cards = Array.from(container.querySelectorAll('.card-wrapper'));
-    const positions = JSON.parse(localStorage.getItem('cardPositions')||'{}');
-    const GRID = 20, MAX_IT=50;
-    const sizes = {};
-
-    // apply saved/default positions, measure sizes
-    cards.forEach(c => {
-      const file = c.dataset.file;
-      // default fallbacks
-      const pos = positions[file] || { x:20, y:20 };
-      c.style.left = pos.x+'px';
-      c.style.top  = pos.y+'px';
-      const r = c.getBoundingClientRect();
-      sizes[file] = { w:r.width, h:r.height };
-    });
-
-    function rect(c){ 
-      return { x: parseInt(c.style.left), y: parseInt(c.style.top), 
-               w: sizes[c.dataset.file].w, h: sizes[c.dataset.file].h };
-    }
-    function overlap(a,b){
-      return !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
-    }
-    function nudge(c, depth=0){
-      if (depth>MAX_IT) return;
-      const r1 = rect(c);
-      for (let o of cards){
-        if (o===c || o.style.display==='none') continue;
-        const r2 = rect(o);
-        if (overlap(r1,r2)){
-          // push other away
-          const dx = (r2.x + r2.w/2) < (r1.x + r1.w/2) ? -GRID : GRID;
-          const dy = (r2.y + r2.h/2) < (r1.y + r1.h/2) ? -GRID : GRID;
-          o.style.left = Math.max(0,Math.min(container.clientWidth - r2.w, r2.x+dx))+'px';
-          o.style.top  = Math.max(0,Math.min(container.clientHeight - r2.h, r2.y+dy))+'px';
-          nudge(o, depth+1);
-        }
-      }
-    }
-
-    let active = null, ox=0, oy=0, ax=0, ay=0;
-    cards.forEach(c => {
-      const hdr = c.querySelector('.card-header');
-      hdr.style.cursor = 'grab';
-      hdr.addEventListener('mousedown', e => {
-        active = c;
-        ox = e.clientX; oy = e.clientY;
-        ax = rect(c).x; ay = rect(c).y;
-        c.classList.add('dragging');
-      });
-    });
-    document.addEventListener('mousemove', e => {
-      if (!active) return;
-      let nx = ax + (e.clientX - ox);
-      let ny = ay + (e.clientY - oy);
-      // clamp
-      nx = Math.max(0, Math.min(nx, container.clientWidth - sizes[active.dataset.file].w));
-      ny = Math.max(0, Math.min(ny, container.clientHeight - sizes[active.dataset.file].h));
-      active.style.left = nx+'px';
-      active.style.top  = ny+'px';
-      nudge(active);
-    });
-    document.addEventListener('mouseup', () => {
-      if (!active) return;
-      active.classList.remove('dragging');
-      // persist
-      const out = {};
-      cards.forEach(c => {
-        out[c.dataset.file] = { 
-          x: parseInt(c.style.left), 
-          y: parseInt(c.style.top)
-        };
-      });
-      localStorage.setItem('cardPositions', JSON.stringify(out));
-      active = null;
-    });
-  });
-  </script>
-</body>
-</html>
 <!--
 Changelog:
 - Restored .dashboard-container and absolute .card-wrapper layout.
