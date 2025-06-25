@@ -1,5 +1,5 @@
 /**
- * styles.css — Enhanced styles with detection and glows
+ * styles.css — Enhanced styles with detection, glows, and manual drag-and-drop support
  */
 
 /* Theme vars */
@@ -11,11 +11,22 @@
   --neon-c: #00F0FF;
   --neon-m: #FF00D4;
   --neon-y: #FFE000;
+
+  /* Grid & drag-and-drop vars */
+  --grid-gap: 12px;
+  --card-width: 280px;   /* matches min-width of card-grid */
+  --bg-accent: #e5e7eb;
 }
 
 /* Theme application */
-[data-theme="light"] { background: var(--bg-light); color: var(--text-light); }
-[data-theme="dark"] { background: var(--bg-dark); color: var(--text-dark); }
+[data-theme="light"] {
+  background: var(--bg-light);
+  color: var(--text-light);
+}
+[data-theme="dark"] {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
 
 /* OS classes */
 html.is-desktop body { font-size: 16px; }
@@ -25,18 +36,22 @@ html.is-mobile body { font-size: 14px; }
 .neumorphic {
   background: var(--bg-light);
   border-radius: 12px;
-  box-shadow: 8px 8px 16px rgba(0,0,0,0.2), -8px -8px 16px rgba(255,255,255,0.7);
+  box-shadow:
+    8px 8px 16px rgba(0,0,0,0.2),
+    -8px -8px 16px rgba(255,255,255,0.7);
 }
 [data-theme="dark"] .neumorphic {
   background: var(--bg-dark);
-  box-shadow: 8px 8px 16px rgba(0,0,0,0.8), -8px -8px 16px rgba(50,50,50,0.3);
+  box-shadow:
+    8px 8px 16px rgba(0,0,0,0.8),
+    -8px -8px 16px rgba(50,50,50,0.3);
 }
 
 /* Card grid */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+  gap: var(--grid-gap);
 }
 
 /* Card wrapper for glow & contrast */
@@ -44,7 +59,9 @@ html.is-mobile body { font-size: 14px; }
   transition: opacity 0.2s;
 }
 .glow {
-  box-shadow: 0 0 12px rgba(0,240,255,0.6), 0 0 8px rgba(255,0,212,0.4);
+  box-shadow:
+    0 0 12px rgba(0,240,255,0.6),
+    0 0 8px rgba(255,0,212,0.4);
 }
 
 /* Sidebar contrast */
@@ -61,8 +78,62 @@ html.is-mobile body { font-size: 14px; }
 #cardSettingsModal {
   display: none;
 }
-#cardSettingsModal.items-center { display: flex; }
+#cardSettingsModal.items-center {
+  display: flex;
+}
 /* ensure our modal.hidden is always display:none */
 #cardSettingsModal.hidden {
   display: none !important;
 }
+
+/* ============================= */
+/* Drag-and-drop layout support: */
+/* ============================= */
+
+/* Container for absolute-positioned cards */
+.dashboard-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 4rem); /* adjust as needed for header/footer height */
+  background-image:
+    radial-gradient(circle, var(--bg-accent) 1px, transparent 1px);
+  background-size: 20px 20px;
+  overflow: hidden;
+}
+
+/* Make cards absolute and draggable */
+.card-wrapper {
+  position: absolute;
+  touch-action: none;   /* smooth dragging on touch devices */
+  transition: left 0.1s, top 0.1s; /* gentle movement */
+}
+
+/* Dragging state feedback */
+.card-wrapper.dragging {
+  opacity: 0.8;
+  transform: scale(1.02);
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* Ensure app log card spans two “columns” visually */
+#appLogCard {
+  width: calc(2 * var(--card-width) + var(--grid-gap));
+}
+
+/* Changelog:
+- Unified :root to include grid-gap, card-width, bg-accent variables.
+- Added .dashboard-container for relative positioning and snap-grid background.
+- Set .card-wrapper to absolute positioning, touch-action none, and movement transitions.
+- Styled .card-wrapper.dragging for visual drag feedback.
+- Defined #appLogCard width override to span two logical columns.
+*/
+
+/*  
+Changelog:
+- Added .dashboard-container: relative parent with snap‐grid background.
+- Changed .card-wrapper to absolute positioning, touch‐action none, and transitions.
+- Defined .card-wrapper.dragging styles for visual feedback.
+- Added #appLogCard width override to span two logical columns.
+- Introduced CSS variables (--grid-gap, --card-width, --bg-accent) for easy tuning.
+*/
