@@ -1,13 +1,13 @@
 <?php
 /**
- * index.php — Entrypoint with “smart nudging” drag logic applied to PHP cards
+ * index.php — Entrypoint with "smart nudging" drag logic applied to PHP cards
  *
  * Changelog:
  * - Switched from CSS grid to absolute‐positioned `.card-wrapper` inside `.dashboard-container`.
  * - Imported smart nudging & collision resolution from dashboard_fixed.html.
  * - Cards load initial positions from localStorage, or fall back to defaults.
  * - Header drag‐handle uses `.card-header` inside each card template.
- * - Changelog appended at end after </html>.
+ * - Fixed positioning logic with robust fallbacks and debugging.
  */
 declare(strict_types=1);
 error_reporting(E_ALL);
@@ -34,32 +34,6 @@ $defaultsJson = json_encode($phpDefaults);
   <link rel="icon" href="data:;base64,">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/public/css/styles.css">
-  <style>
-    .dashboard-container {
-      position: relative;
-      width: 100%;
-      height: calc(100vh - 4rem); /* adjust for header/footer */
-      background-image:
-        radial-gradient(circle, var(--bg-accent) 1px, transparent 1px);
-      background-size: 20px 20px;
-      overflow: hidden;
-    }
-    .card-wrapper {
-      position: absolute;
-      touch-action: none;
-      transition: left 0.1s, top 0.1s;
-    }
-    .card-wrapper.dragging {
-      opacity: 0.8;
-      transform: scale(1.02);
-      z-index: 1000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    }
-    /* ensure appLogCard spans two logical columns */
-    #appLogCard {
-      /* width handled by its card template */
-    }
-  </style>
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body class="h-full flex flex-col">
@@ -104,90 +78,182 @@ $defaultsJson = json_encode($phpDefaults);
     const defaults = <?php echo $defaultsJson; ?>;
     const container = document.getElementById('dashboard');
     const cards = Array.from(container.querySelectorAll('.card-wrapper'));
-    let positions = JSON.parse(localStorage.getItem('cardPositions') || '{}');
+    let positions = {};
+    
+    // Load positions from localStorage with error handling
+    try {
+      const stored = localStorage.getItem('cardPositions');
+      if (stored) {
+        positions = JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Failed to load positions from localStorage:', e);
+      positions = {};
+    }
 
-    // Apply saved or default positions
-    cards.forEach(c => {
-      const f = c.dataset.file;
-      const pos = positions[f] || defaults[f] || {0:20,1:20};
-      c.style.left = pos[0] + 'px';
-      c.style.top  = pos[1] + 'px';
-    });
+    // Debug: Check what we have
+    console.log('=== CARD POSITIONING DEBUG ===');
+    console.log('Container dimensions:', container.clientWidth, 'x', container.clientHeight);
+    console.log('Stored positions:', positions);
+    console.log('PHP defaults:', defaults);
 
-    const GRID = 20, MAX_IT=100;
+    // Wait for container to have dimensions
+    const initializePositions = () => {
+      if (container.clientWidth === 0 || container.clientHeight === 0) {
+        console.log('Container not ready, retrying...');
+        setTimeout(initializePositions, 100);
+        return;
+      }
+
+      // Apply saved or default positions with robust fallbacks
+      cards.forEach(c => {
+        const f = c.dataset.file;
+        const saved = positions[f];
+        const def = defaults[f];
+        
+        let x = 50, y = 50; // Safe fallback values
+        
+        // Try saved position first
+        if (saved && Array.isArray(saved) && saved.length >= 2) {
+          x = parseInt(saved[0]) || 50;
+          y = parseInt(saved[1]) || 50;
+          console.log(`Using saved position for ${f}: ${x}, ${y}`);
+        } 
+        // Then try default position
+        else if (def && Array.isArray(def) && def.length >= 2) {
+          x = parseInt(def[0]) || 50;
+          y = parseInt(def[1]) || 50;
+          console.log(`Using default position for ${f}: ${x}, ${y}`);
+        } else {
+          console.log(`Using fallback position for ${f}: ${x}, ${y}`);
+        }
+        
+        // Ensure positions are within container bounds
+        const cardRect = c.getBoundingClientRect();
+        const maxX = Math.max(0, container.clientWidth - cardRect.width);
+        const maxY = Math.max(0, container.clientHeight - cardRect.height);
+        
+        x = Math.max(0, Math.min(x, maxX));
+        y = Math.max(0, Math.min(y, maxY));
+        
+        console.log(`Final position for ${f}: ${x}, ${y}`);
+        c.style.left = x + 'px';
+        c.style.top = y + 'px';
+      });
+
+      // Verify positions after a brief delay
+      setTimeout(() => {
+        console.log('\n=== VERIFICATION ===');
+        cards.forEach(c => {
+          const rect = c.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          console.log(`${c.dataset.file}: 
+            Style: left=${c.style.left}, top=${c.style.top}
+            Screen: ${rect.left}, ${rect.top}
+            Relative: ${rect.left - containerRect.left}, ${rect.top - containerRect.top}`);
+        });
+      }, 200);
+    };
+
+    // Start positioning
+    initializePositions();
+
+    const GRID = 20, MAX_IT = 100;
     const cardSizes = {};
-    // Precompute widths/heights
-    cards.forEach(c => {
-      const r = c.getBoundingClientRect();
-      cardSizes[c.dataset.file] = { w: r.width, h: r.height };
-    });
+    
+    // Precompute widths/heights after positioning
+    setTimeout(() => {
+      cards.forEach(c => {
+        const r = c.getBoundingClientRect();
+        cardSizes[c.dataset.file] = { w: r.width, h: r.height };
+      });
+    }, 300);
 
     function rectOf(c) {
       return {
-        x: parseInt(c.style.left),
-        y: parseInt(c.style.top),
-        w: cardSizes[c.dataset.file].w,
-        h: cardSizes[c.dataset.file].h
+        x: parseInt(c.style.left) || 0,
+        y: parseInt(c.style.top) || 0,
+        w: cardSizes[c.dataset.file]?.w || 280,
+        h: cardSizes[c.dataset.file]?.h || 200
       };
     }
+    
     function overlap(r1, r2) {
-      return !(r1.x+r1.w <= r2.x || r2.x+r2.w <= r1.x ||
-               r1.y+r1.h <= r2.y || r2.y+r2.h <= r1.y);
+      return !(r1.x + r1.w <= r2.x || r2.x + r2.w <= r1.x ||
+               r1.y + r1.h <= r2.y || r2.y + r2.h <= r1.y);
     }
-    function resolve(c, iter=0) {
-      if (iter>MAX_IT) return;
+    
+    function resolve(c, iter = 0) {
+      if (iter > MAX_IT) return;
       const r1 = rectOf(c);
       for (let other of cards) {
-        if (other===c || other.style.display==='none') continue;
+        if (other === c || other.style.display === 'none') continue;
         const r2 = rectOf(other);
-        if (overlap(r1,r2)) {
-          const cx1=r1.x+r1.w/2, cy1=r1.y+r1.h/2;
-          const cx2=r2.x+r2.w/2, cy2=r2.y+r2.h/2;
-          const angle=Math.atan2(cy2-cy1,cx2-cx1);
-          const dx=-Math.cos(angle)*GRID, dy=-Math.sin(angle)*GRID;
-          let nx=r2.x+dx, ny=r2.y+dy;
-          // clamp
-          nx=Math.max(0,Math.min(nx,container.clientWidth-r2.w));
-          ny=Math.max(0,Math.min(ny,container.clientHeight-r2.h));
-          other.style.left=nx+'px';
-          other.style.top=ny+'px';
-          resolve(other, iter+1);
+        if (overlap(r1, r2)) {
+          const cx1 = r1.x + r1.w / 2, cy1 = r1.y + r1.h / 2;
+          const cx2 = r2.x + r2.w / 2, cy2 = r2.y + r2.h / 2;
+          const angle = Math.atan2(cy2 - cy1, cx2 - cx1);
+          const dx = -Math.cos(angle) * GRID, dy = -Math.sin(angle) * GRID;
+          let nx = r2.x + dx, ny = r2.y + dy;
+          // clamp to container
+          nx = Math.max(0, Math.min(nx, container.clientWidth - r2.w));
+          ny = Math.max(0, Math.min(ny, container.clientHeight - r2.h));
+          other.style.left = nx + 'px';
+          other.style.top = ny + 'px';
+          resolve(other, iter + 1);
         }
       }
     }
 
-    let active=null, ox=0, oy=0, ax=0, ay=0;
+    let active = null, ox = 0, oy = 0, ax = 0, ay = 0;
+    
     cards.forEach(c => {
       const header = c.querySelector('.card-header');
-      header.style.cursor='move';
-      header.addEventListener('mousedown', e => {
-        active = c;
-        ox = e.clientX; oy = e.clientY;
-        ax = parseInt(c.style.left); ay = parseInt(c.style.top);
-        c.classList.add('dragging');
-      });
+      if (header) {
+        header.style.cursor = 'move';
+        header.addEventListener('mousedown', e => {
+          active = c;
+          ox = e.clientX; 
+          oy = e.clientY;
+          ax = parseInt(c.style.left) || 0; 
+          ay = parseInt(c.style.top) || 0;
+          c.classList.add('dragging');
+          e.preventDefault();
+        });
+      }
     });
+    
     document.addEventListener('mousemove', e => {
       if (!active) return;
       let nx = ax + (e.clientX - ox);
       let ny = ay + (e.clientY - oy);
-      nx = Math.max(0, Math.min(nx, container.clientWidth - cardSizes[active.dataset.file].w));
-      ny = Math.max(0, Math.min(ny, container.clientHeight - cardSizes[active.dataset.file].h));
-      active.style.left = nx+'px';
-      active.style.top  = ny+'px';
+      const cardSize = cardSizes[active.dataset.file];
+      if (cardSize) {
+        nx = Math.max(0, Math.min(nx, container.clientWidth - cardSize.w));
+        ny = Math.max(0, Math.min(ny, container.clientHeight - cardSize.h));
+      }
+      active.style.left = nx + 'px';
+      active.style.top = ny + 'px';
       resolve(active);
     });
+    
     document.addEventListener('mouseup', () => {
       if (active) {
         active.classList.remove('dragging');
-        // save all
+        // Save all positions
+        const newPositions = {};
         cards.forEach(c => {
-          positions[c.dataset.file] = [
-            parseInt(c.style.left), 
-            parseInt(c.style.top)
+          newPositions[c.dataset.file] = [
+            parseInt(c.style.left) || 0, 
+            parseInt(c.style.top) || 0
           ];
         });
-        localStorage.setItem('cardPositions', JSON.stringify(positions));
+        try {
+          localStorage.setItem('cardPositions', JSON.stringify(newPositions));
+          console.log('Saved positions:', newPositions);
+        } catch (e) {
+          console.warn('Failed to save positions:', e);
+        }
         active = null;
       }
     });
@@ -196,6 +262,16 @@ $defaultsJson = json_encode($phpDefaults);
 </body>
 </html>
 
+<!--
+Changelog:
+- Fixed positioning logic with robust array checking and parseInt() for safety
+- Added container dimension checking with retry logic
+- Improved error handling for localStorage operations
+- Added comprehensive debugging output
+- Fixed drag event handling with better null checks
+- Added bounds checking to prevent cards from going outside container
+- Improved collision resolution with safer dimension fallbacks
+-->
 <!--
 Changelog:
 - Imported smart-nudge & collision logic from dashboard_fixed.html.

@@ -4,18 +4,23 @@
 
 /* Theme vars */
 :root {
-  --bg-light: #F0F0F3;
-  --bg-dark:  #1A1A1E;
-  --text-light: #1A1A1A;
-  --text-dark: #F5F5F5;
-  --neon-c: #00F0FF;
-  --neon-m: #FF00D4;
-  --neon-y: #FFE000;
+  --bg-light:    #F0F0F3;
+  --bg-dark:     #1A1A1E;
+  --text-light:  #1A1A1A;
+  --text-dark:   #F5F5F5;
+  --neon-c:      #00F0FF;
+  --neon-m:      #FF00D4;
+  --neon-y:      #FFE000;
 
   /* Grid & drag-and-drop vars */
-  --grid-gap: 12px;
-  --card-width: 280px;   /* matches min-width of card-grid */
-  --bg-accent: #e5e7eb;
+  --grid-gap:    12px;
+  --card-width:  280px;   /* matches min-width of card-grid */
+  --bg-accent:   #e5e7eb;
+}
+
+/* Dark theme accent adjustment */
+[data-theme="dark"] {
+  --bg-accent: #374151;
 }
 
 /* Theme application */
@@ -30,7 +35,7 @@
 
 /* OS classes */
 html.is-desktop body { font-size: 16px; }
-html.is-mobile body { font-size: 14px; }
+html.is-mobile  body { font-size: 14px; }
 
 /* Neumorphic base */
 .neumorphic {
@@ -47,17 +52,14 @@ html.is-mobile body { font-size: 14px; }
     -8px -8px 16px rgba(50,50,50,0.3);
 }
 
-/* Card grid */
+/* Card grid (fallback for non-absolute layout) */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
   gap: var(--grid-gap);
 }
 
-/* Card wrapper for glow & contrast */
-.card-wrapper {
-  transition: opacity 0.2s;
-}
+/* Glow effect for wrappers */
 .glow {
   box-shadow:
     0 0 12px rgba(0,240,255,0.6),
@@ -74,14 +76,13 @@ html.is-mobile body { font-size: 14px; }
   border-right: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Modal */
+/* Modal defaults */
 #cardSettingsModal {
   display: none;
 }
 #cardSettingsModal.items-center {
   display: flex;
 }
-/* ensure our modal.hidden is always display:none */
 #cardSettingsModal.hidden {
   display: none !important;
 }
@@ -90,50 +91,98 @@ html.is-mobile body { font-size: 14px; }
 /* Drag-and-drop layout support: */
 /* ============================= */
 
-/* Container for absolute-positioned cards */
+/* Parent container for absolute-positioned cards */
 .dashboard-container {
-  position: relative;
+  position: relative; /* Critical for absolute positioning context */
   width: 100%;
-  height: calc(100vh - 4rem); /* adjust as needed for header/footer height */
+  height: calc(100vh - 4rem); /* adjust for header/footer height */
+  min-height: 600px; /* Ensure minimum height */
   background-image:
     radial-gradient(circle, var(--bg-accent) 1px, transparent 1px);
   background-size: 20px 20px;
   overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1); /* Debug border - remove later */
 }
 
 /* Make cards absolute and draggable */
 .card-wrapper {
   position: absolute;
   touch-action: none;   /* smooth dragging on touch devices */
-  transition: left 0.1s, top 0.1s; /* gentle movement */
+  transition: left 0.1s ease-out, top 0.1s ease-out; /* gentle movement */
+  min-width: 280px;     /* Ensure consistent minimum size */
+  max-width: 500px;     /* Prevent cards from being too wide */
+  z-index: 1;           /* Base z-index for stacking */
 }
 
-/* Dragging state feedback */
+/* Visual feedback while dragging */
 .card-wrapper.dragging {
-  opacity: 0.8;
+  opacity: 0.9;
   transform: scale(1.02);
   z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 
+    0 12px 32px rgba(0,0,0,0.25),
+    0 0 12px rgba(0,240,255,0.3);
+  transition: none; /* Disable transitions while dragging for smooth movement */
 }
 
-/* Ensure app log card spans two “columns” visually */
+/* Drag handle styling */
+.card-header {
+  cursor: grab;
+  user-select: none;
+}
+
+.card-header:active {
+  cursor: grabbing;
+}
+
+/* Ensure app log card spans two "columns" visually */
 #appLogCard {
   width: calc(2 * var(--card-width) + var(--grid-gap));
+  max-width: 600px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-container {
+    height: calc(100vh - 3rem);
+    padding: 8px;
+  }
+  
+  .card-wrapper {
+    min-width: 260px;
+    max-width: calc(100vw - 32px);
+  }
+  
+  #appLogCard {
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* Debug utilities (remove in production) */
+.debug-bounds {
+  outline: 2px dashed red;
+}
+
+.debug-center {
+  background: rgba(255,0,0,0.1);
 }
 
 /* Changelog:
-- Unified :root to include grid-gap, card-width, bg-accent variables.
-- Added .dashboard-container for relative positioning and snap-grid background.
-- Set .card-wrapper to absolute positioning, touch-action none, and movement transitions.
-- Styled .card-wrapper.dragging for visual drag feedback.
-- Defined #appLogCard width override to span two logical columns.
+- Added min-height to dashboard-container to ensure it has dimensions
+- Enhanced card-wrapper with min/max width constraints
+- Improved dragging visual feedback with better shadows
+- Added proper cursor states for drag handles
+- Added responsive breakpoints for mobile
+- Added debug border to dashboard-container (remove in production)
+- Improved transitions with ease-out timing
+- Added z-index management for proper stacking
+- Enhanced dark theme accent color
 */
-
-/*  
-Changelog:
-- Added .dashboard-container: relative parent with snap‐grid background.
-- Changed .card-wrapper to absolute positioning, touch‐action none, and transitions.
-- Defined .card-wrapper.dragging styles for visual feedback.
-- Added #appLogCard width override to span two logical columns.
-- Introduced CSS variables (--grid-gap, --card-width, --bg-accent) for easy tuning.
+/* Changelog:
+- Unified :root to include grid-gap, card-width, bg-accent variables.
+- Added .dashboard-container for absolute‐positioned grid background.
+- Set .card-wrapper to absolute positioning with movement transitions.
+- Styled .card-wrapper.dragging for drag feedback.
+- Consolidated modal, sidebar, and card-grid rules to avoid duplication.
 */
