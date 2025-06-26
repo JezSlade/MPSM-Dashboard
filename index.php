@@ -1,5 +1,5 @@
 <?php
-// index.php — Fixed dashboard with proper card isolation
+// index.php — Fixed with proper card ID consistency
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -33,7 +33,6 @@
             transition: box-shadow 0.15s ease;
             border-radius: 8px;
             background: var(--bg-accent, #374151);
-            /* CRITICAL: Prevent grouping */
             isolation: isolate;
             contain: layout style;
         }
@@ -108,13 +107,31 @@
             padding: 12px;
             border-radius: 8px;
             color: white;
+            max-width: 200px;
         }
         
-        /* CRITICAL: Prevent event bubbling issues */
+        .settings-menu label {
+            display: block;
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 2px 0;
+        }
+        
+        .settings-menu input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        /* CRITICAL: Prevent button interference with drag */
         .card-wrapper .card-header {
             pointer-events: auto;
             position: relative;
             z-index: 1;
+        }
+        
+        .card-wrapper .card-header button {
+            pointer-events: auto;
+            z-index: 2;
         }
         
         .card-wrapper .card-content {
@@ -122,7 +139,6 @@
             position: relative;
         }
         
-        /* Allow specific interactive elements */
         .card-wrapper button,
         .card-wrapper input,
         .card-wrapper select,
@@ -139,11 +155,19 @@
         <?php
         $cardFiles = glob(__DIR__ . '/cards/*.php');
         foreach ($cardFiles as $index => $cardPath) {
-            $cardId = 'card' . $index;
             $cardName = basename($cardPath, '.php');
-            echo "<label><input type='checkbox' id='{$cardId}-toggle' data-card-id='{$cardId}'> {$cardName}</label><br>\n";
+            $checkboxId = 'checkbox-' . $index;
+            $cardId = 'card-' . $index; // This must match the card div ID
+            
+            echo "<label for='{$checkboxId}'>\n";
+            echo "  <input type='checkbox' id='{$checkboxId}' data-card-target='{$cardId}' data-card-index='{$index}'>\n";
+            echo "  {$cardName}\n";
+            echo "</label>\n";
         }
         ?>
+        <hr style="margin: 10px 0; border-color: #4b5563;">
+        <button id="showAllCards" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px;">Show All</button>
+        <button id="hideAllCards" style="background: #dc2626; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Hide All</button>
     </div>
 
     <div class="dashboard-container" id="dashboardContainer">
@@ -161,7 +185,8 @@
         ];
         
         foreach ($cardFiles as $index => $cardPath) {
-            $cardId = 'card' . $index;
+            // CRITICAL: Consistent ID naming
+            $cardId = 'card-' . $index; // This is the actual card div ID
             $title = basename($cardPath, '.php');
             $config = $cardConfigs[$index] ?? ['size' => 'medium', 'x' => ($index % 3) * 340 + 20, 'y' => floor($index / 3) * 220 + 20];
             
@@ -171,10 +196,15 @@
                        data-x='{$config['x']}' 
                        data-y='{$config['y']}'
                        data-card-index='{$index}'
+                       data-card-file='{$title}'
                        style='left: {$config['x']}px; top: {$config['y']}px; display: none;'>\n";
             
+            // CRITICAL: Set variables for card_header.php
             $allowMinimize = true;
             $allowSettings = true;
+            // $cardId is already set above and matches the div ID
+            // $title is already set above
+            
             include __DIR__ . '/includes/card_header.php';
             echo "<div class='card-content neumorphic glow'>\n";
             include $cardPath;
@@ -194,8 +224,7 @@ const CARD_SIZES = {
     large: { width: 380, height: 220 }
 };
 
-// State - CRITICAL: Use WeakMap to prevent cross-card interference
-const cardStates = new WeakMap();
+// State
 let dragState = {
     isDragging: false,
     draggedElement: null,
@@ -211,7 +240,6 @@ let dragState = {
 
 const container = document.getElementById('dashboardContainer');
 
-// CRITICAL: Get cards fresh each time to avoid stale references
 function getVisibleCards() {
     return Array.from(document.querySelectorAll('.card-wrapper')).filter(card => 
         card.style.display !== 'none'
@@ -391,20 +419,26 @@ function updateDragInfo(card, isValid, nudgeCount) {
     `;
 }
 
-// CRITICAL: Fixed event handlers to prevent grouping
+// CRITICAL: Enhanced drag event handler to avoid button conflicts
 function handleMouseDown(e) {
-    // Only handle mousedown on card headers or card wrappers directly
-    const cardWrapper = e.target.closest('.card-wrapper');
-    if (!cardWrapper) return;
-    
-    // Don't drag if clicking on interactive elements
-    if (e.target.matches('button, input, select, textarea, a, [data-action]')) {
+    // Don't start drag if clicking on buttons or interactive elements
+    if (e.target.matches('button, input, select, textarea, a, [data-action], i[data-feather]')) {
+        console.log('Ignoring drag on interactive element:', e.target);
         return;
     }
     
-    // Only allow dragging from card header
+    const cardWrapper = e.target.closest('.card-wrapper');
+    if (!cardWrapper) return;
+    
+    // Only allow dragging from card header, but not from buttons
     const cardHeader = e.target.closest('.card-header');
     if (!cardHeader) return;
+    
+    // Double-check we're not on a button
+    if (e.target.closest('button')) {
+        console.log('Ignoring drag on button');
+        return;
+    }
     
     const pos = getCardPosition(cardWrapper);
     console.log('Starting drag for card:', cardWrapper.id, 'at position:', pos);
@@ -507,28 +541,71 @@ function handleMouseUp(e) {
     e.preventDefault();
 }
 
-// CRITICAL: Fixed card visibility toggles to prevent syncing
-function handleCardToggle(e) {
-    const checkbox = e.target;
-    const cardId = checkbox.dataset.cardId;
+function toggleCard(cardId, show) {
     const card = document.getElementById(cardId);
-    
     if (!card) {
         console.error('Card not found:', cardId);
-        return;
+        return false;
     }
     
-    console.log('Toggling card:', cardId, 'to', checkbox.checked ? 'visible' : 'hidden');
+    console.log('Toggling card:', cardId, 'to', show ? 'visible' : 'hidden');
     
-    if (checkbox.checked) {
+    if (show) {
         card.style.display = 'block';
-        // Force a reflow to ensure the card is properly rendered
-        card.offsetHeight;
+        card.offsetHeight; // Force reflow
     } else {
         card.style.display = 'none';
     }
     
+    return true;
+}
+
+function handleCheckboxChange(e) {
+    const checkbox = e.target;
+    const cardId = checkbox.dataset.cardTarget;
+    
+    console.log('Checkbox changed:', checkbox.id, 'targeting card:', cardId, 'checked:', checkbox.checked);
+    
     e.stopPropagation();
+    e.stopImmediatePropagation();
+    
+    const success = toggleCard(cardId, checkbox.checked);
+    
+    if (!success) {
+        checkbox.checked = !checkbox.checked;
+    }
+}
+
+// CRITICAL: Handle card header button clicks
+function handleCardButtonClick(e) {
+    const button = e.target.closest('button[data-action]');
+    if (!button) return;
+    
+    const action = button.dataset.action;
+    const cardId = button.dataset.card;
+    const card = document.getElementById(cardId);
+    
+    console.log('Card button clicked:', action, 'for card:', cardId);
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (action === 'minimize' && card) {
+        const content = card.querySelector('.card-content');
+        if (content) {
+            const isHidden = content.style.display === 'none';
+            content.style.display = isHidden ? 'block' : 'none';
+            
+            // Update button icon
+            const icon = button.querySelector('i[data-feather]');
+            if (icon) {
+                icon.setAttribute('data-feather', isHidden ? 'chevron-down' : 'chevron-up');
+                feather.replace();
+            }
+        }
+    } else if (action === 'settings' && card) {
+        alert(`Settings for ${cardId}`);
+    }
 }
 
 // Initialize event listeners
@@ -536,12 +613,43 @@ document.addEventListener('mousedown', handleMouseDown);
 document.addEventListener('mousemove', handleMouseMove);
 document.addEventListener('mouseup', handleMouseUp);
 
-// CRITICAL: Fixed checkbox event listeners
+// CRITICAL: Add button click handler
+document.addEventListener('click', handleCardButtonClick);
+
 document.addEventListener('DOMContentLoaded', function() {
     const checkboxes = document.querySelectorAll('.settings-menu input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleCardToggle);
+    console.log('Found checkboxes:', checkboxes.length);
+    
+    checkboxes.forEach((checkbox, index) => {
+        console.log('Setting up checkbox:', checkbox.id, 'targeting:', checkbox.dataset.cardTarget);
+        checkbox.removeEventListener('change', handleCheckboxChange);
+        checkbox.addEventListener('change', handleCheckboxChange);
     });
+    
+    document.getElementById('showAllCards').addEventListener('click', function(e) {
+        e.preventDefault();
+        checkboxes.forEach(checkbox => {
+            if (!checkbox.checked) {
+                checkbox.checked = true;
+                toggleCard(checkbox.dataset.cardTarget, true);
+            }
+        });
+    });
+    
+    document.getElementById('hideAllCards').addEventListener('click', function(e) {
+        e.preventDefault();
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                checkbox.checked = false;
+                toggleCard(checkbox.dataset.cardTarget, false);
+            }
+        });
+    });
+    
+    // Initialize feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
     
     console.log('Dashboard initialized with', getAllCards().length, 'cards');
 });
