@@ -14,7 +14,7 @@
     <div class="settings-menu" style="position: fixed; top: 10px; right: 10px; z-index: 1001; background: var(--bg-accent); padding: 12px; border-radius: 8px;">
         <h2 style="margin-top: 0;">Card Visibility</h2>
         <?php
-        $cardFiles = glob(__DIR__ . '/card/Card*.php');
+        $cardFiles = glob(__DIR__ . '/card/*.php');
         foreach ($cardFiles as $index => $cardPath) {
             $cardId = 'card' . $index;
             $cardName = basename($cardPath, '.php');
