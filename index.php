@@ -21,6 +21,25 @@
       position: absolute;
       transition: left 0.2s ease, top 0.2s ease;
     }
+    
+    /* Floating settings panel */
+    .settings-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 300px;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+    .settings-panel.hidden {
+      transform: translateX(-320px);
+    }
+    .settings-toggle {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1001;
+    }
   </style>
 </head>
 <body>
@@ -138,7 +157,7 @@
 
     const Dashboard = () => {
       const [cards, setCards] = useState(initialCards);
-      const [showSettings, setShowSettings] = useState(false);
+      const [settingsVisible, setSettingsVisible] = useState(true);
 
       const handleDrag = (id, newX, newY) => {
         // Constrain to viewport
@@ -179,14 +198,25 @@
 
       return (
         <>
-          <div className="settings-menu" style={{ display: showSettings ? 'block' : 'none' }}>
+          {/* Floating Settings Panel */}
+          <div className={`settings-panel ${settingsVisible ? '' : 'hidden'}`}>
             <div className="neumorphic p-4 rounded-lg shadow-xl">
-              <h2 className="text-lg font-semibold mb-3">Card Settings</h2>
-              <div className="space-y-2">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-semibold">Dashboard Settings</h2>
+                <button 
+                  className="neu-btn p-1"
+                  onClick={() => setSettingsVisible(false)}
+                >
+                  <i data-feather="chevron-left"></i>
+                </button>
+              </div>
+              
+              <div className="space-y-2 max-h-[70vh] overflow-y-auto">
                 {cards.map(card => (
-                  <label key={card.id} className="flex items-center space-x-2 text-sm">
+                  <label key={card.id} className="flex items-center space-x-2 text-sm p-2 hover:bg-gray-700 rounded">
                     <input 
                       type="checkbox" 
+                      className="form-checkbox"
                       checked={card.isVisible}
                       onChange={(e) => handleToggle(card.id, e.target.checked)}
                     />
@@ -194,20 +224,41 @@
                   </label>
                 ))}
               </div>
-              <div className="mt-4 border-t pt-4 border-gray-600">
-                <button className="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, true))}>
+              
+              <div className="mt-4 border-t pt-4 border-gray-600 grid grid-cols-2 gap-2">
+                <button 
+                  className="neu-btn"
+                  onClick={() => cards.forEach(c => handleToggle(c.id, true))}
+                >
                   Show All
                 </button>
-                <button className="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, false))}>
+                <button 
+                  className="neu-btn"
+                  onClick={() => cards.forEach(c => handleToggle(c.id, false))}
+                >
                   Hide All
                 </button>
-                <button className="neu-btn w-full" onClick={centerCards}>
+                <button 
+                  className="neu-btn col-span-2"
+                  onClick={centerCards}
+                >
                   Center Cards
                 </button>
               </div>
             </div>
           </div>
 
+          {/* Settings Toggle Button */}
+          {!settingsVisible && (
+            <button 
+              className="settings-toggle neu-btn"
+              onClick={() => setSettingsVisible(true)}
+            >
+              <i data-feather="settings"></i>
+            </button>
+          )}
+
+          {/* Dashboard Cards */}
           {cards.map(card => (
             <Card 
               key={card.id}
@@ -216,13 +267,6 @@
               onToggle={handleToggle}
             />
           ))}
-
-          <button 
-            className="neu-btn fixed top-4 right-4 z-50"
-            onClick={() => setShowSettings(!showSettings)}
-          >
-            <i data-feather="settings"></i>
-          </button>
         </>
       );
     };
