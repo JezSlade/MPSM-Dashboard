@@ -1,5 +1,5 @@
 <?php
-// index.php — Dashboard container with drag-and-drop logic and dynamic cards
+// index.php — Fixed dashboard with proper grid snapping and nudging
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -8,30 +8,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <link rel="stylesheet" href="/public/css/styles.css">
+    <style>
+        body {
+            background: #1f2937;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .dashboard-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: #1f2937;
+            background-image: radial-gradient(circle, #4b5563 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden;
+        }
+        
+        .card-wrapper {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+            transition: box-shadow 0.15s ease;
+            border-radius: 8px;
+            background: var(--bg-accent, #374151);
+        }
+        
+        .card-wrapper:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-wrapper.dragging {
+            z-index: 1000;
+            transform: scale(1.05);
+            cursor: grabbing;
+        }
+        
+        .card-wrapper.dragging.valid {
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5);
+        }
+        
+        .card-wrapper.dragging.invalid {
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+        }
+        
+        .card-wrapper.will-nudge {
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
+            z-index: 100;
+        }
+        
+        .card-size-small { width: 240px; height: 140px; }
+        .card-size-medium { width: 300px; height: 180px; }
+        .card-size-large { width: 380px; height: 220px; }
+        
+        .drag-info {
+            position: absolute;
+            top: -32px;
+            left: 0;
+            display: flex;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 1001;
+        }
+        
+        .drag-info-badge {
+            background: #2563eb;
+            color: white;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .drag-info-badge.valid { background: #16a34a; }
+        .drag-info-badge.invalid { background: #dc2626; }
+        .drag-info-badge.nudging { background: #d97706; }
+        
+        .nudge-indicator {
+            position: absolute;
+            top: -24px;
+            left: 0;
+            background: #d97706;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        
+        .settings-menu {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            background: #374151;
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+        }
+        
+        .card-wrapper * {
+            pointer-events: none;
+        }
+        
+        .card-wrapper {
+            pointer-events: auto;
+        }
+    </style>
 </head>
 <body>
-<main style="position: relative;">
-    <div class="settings-menu" style="position: fixed; top: 10px; right: 10px; z-index: 1001; background: var(--bg-accent); padding: 12px; border-radius: 8px;">
+<main>
+    <div class="settings-menu">
         <h2 style="margin-top: 0;">Card Visibility</h2>
         <?php
         $cardFiles = glob(__DIR__ . '/cards/*.php');
         foreach ($cardFiles as $index => $cardPath) {
             $cardId = 'card' . $index;
             $cardName = basename($cardPath, '.php');
-            echo "<label><input type='checkbox' id='{$cardId}-toggle'> {$cardName}</label><br>\n";
+            echo "<label><input type='checkbox' id='{$cardId}-toggle' checked> {$cardName}</label><br>\n";
         }
         ?>
     </div>
 
-    <div class="dashboard-container">
+    <div class="dashboard-container" id="dashboardContainer">
         <?php
+        // Define card sizes and positions
+        $cardConfigs = [
+            0 => ['size' => 'large', 'x' => 20, 'y' => 20],
+            1 => ['size' => 'medium', 'x' => 420, 'y' => 20],
+            2 => ['size' => 'small', 'x' => 740, 'y' => 20],
+            3 => ['size' => 'small', 'x' => 20, 'y' => 260],
+            4 => ['size' => 'large', 'x' => 280, 'y' => 260],
+            5 => ['size' => 'medium', 'x' => 680, 'y' => 220],
+            6 => ['size' => 'small', 'x' => 20, 'y' => 420],
+            7 => ['size' => 'medium', 'x' => 280, 'y' => 500],
+        ];
+        
         foreach ($cardFiles as $index => $cardPath) {
             $cardId = 'card' . $index;
             $title = basename($cardPath, '.php');
-            $allowMinimize = true;
-            $allowSettings = true;
-
-            echo "<div class='card-wrapper' id='{$cardId}' style='display:none; left: 100px; top: " . ($index * 80 + 40) . "px;'>\n";
+            $config = $cardConfigs[$index] ?? ['size' => 'medium', 'x' => ($index % 3) * 340 + 20, 'y' => floor($index / 3) * 220 + 20];
+            
+            echo "<div class='card-wrapper card-size-{$config['size']}' id='{$cardId}' 
+                       data-size='{$config['size']}' 
+                       data-x='{$config['x']}' 
+                       data-y='{$config['y']}'
+                       style='left: {$config['x']}px; top: {$config['y']}px;'>\n";
+            
             include __DIR__ . '/includes/card_header.php';
             echo "<div class='card-content neumorphic glow'>\n";
             include $cardPath;
@@ -40,116 +163,302 @@
         ?>
     </div>
 </main>
+
 <script>
+// Constants
+const GRID_SIZE = 20;
+const MAX_NUDGE_DISTANCE = 60;
+const CARD_SIZES = {
+    small: { width: 240, height: 140 },
+    medium: { width: 300, height: 180 },
+    large: { width: 380, height: 220 }
+};
+
+// State
+let dragState = {
+    isDragging: false,
+    draggedElement: null,
+    startX: 0,
+    startY: 0,
+    startCardX: 0,
+    startCardY: 0,
+    currentX: 0,
+    currentY: 0,
+    originalX: 0,
+    originalY: 0
+};
+
+const container = document.getElementById('dashboardContainer');
+const cards = Array.from(document.querySelectorAll('.card-wrapper'));
+
+// Utility functions
+function snapToGrid(value) {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+}
+
+function rectanglesOverlap(rect1, rect2) {
+    return !(
+        rect1.x + rect1.width <= rect2.x ||
+        rect2.x + rect2.width <= rect1.x ||
+        rect1.y + rect1.height <= rect2.y ||
+        rect2.y + rect2.height <= rect1.y
+    );
+}
+
+function isWithinBounds(x, y, size) {
+    const cardSize = CARD_SIZES[size];
+    if (x < 0 || y < 0) return false;
+    return x + cardSize.width <= window.innerWidth && y + cardSize.height <= window.innerHeight - 100;
+}
+
+function getCardPosition(card) {
+    return {
+        x: parseInt(card.dataset.x) || 0,
+        y: parseInt(card.dataset.y) || 0,
+        size: card.dataset.size || 'medium'
+    };
+}
+
+function setCardPosition(card, x, y) {
+    card.dataset.x = x;
+    card.dataset.y = y;
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+}
+
+function wouldOverlap(x, y, size, excludeCards = []) {
+    const cardSize = CARD_SIZES[size];
+    const newRect = { x, y, width: cardSize.width, height: cardSize.height };
+    
+    for (const card of cards) {
+        if (excludeCards.includes(card) || card.style.display === 'none') continue;
+        
+        const pos = getCardPosition(card);
+        const existingCardSize = CARD_SIZES[pos.size];
+        const existingRect = {
+            x: pos.x,
+            y: pos.y,
+            width: existingCardSize.width,
+            height: existingCardSize.height
+        };
+        
+        if (rectanglesOverlap(newRect, existingRect)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function findNudgePosition(card, originalX, originalY, excludeCards = []) {
+    const pos = getCardPosition(card);
+    const directions = [
+        { dx: 0, dy: -GRID_SIZE }, { dx: 0, dy: GRID_SIZE },
+        { dx: -GRID_SIZE, dy: 0 }, { dx: GRID_SIZE, dy: 0 },
+        { dx: -GRID_SIZE, dy: -GRID_SIZE }, { dx: GRID_SIZE, dy: -GRID_SIZE },
+        { dx: -GRID_SIZE, dy: GRID_SIZE }, { dx: GRID_SIZE, dy: GRID_SIZE }
+    ];
+    
+    for (let distance = GRID_SIZE; distance <= MAX_NUDGE_DISTANCE; distance += GRID_SIZE) {
+        for (const direction of directions) {
+            const newX = originalX + direction.dx * (distance / GRID_SIZE);
+            const newY = originalY + direction.dy * (distance / GRID_SIZE);
+            
+            if (isWithinBounds(newX, newY, pos.size) && !wouldOverlap(newX, newY, pos.size, [...excludeCards, card])) {
+                return { x: newX, y: newY };
+            }
+        }
+    }
+    return null;
+}
+
+function calculateNudgePlan(draggedCard, dropX, dropY) {
+    const draggedPos = getCardPosition(draggedCard);
+    const draggedCardSize = CARD_SIZES[draggedPos.size];
+    const dropRect = { x: dropX, y: dropY, width: draggedCardSize.width, height: draggedCardSize.height };
+    
+    const overlappingCards = cards.filter(card => {
+        if (card === draggedCard || card.style.display === 'none') return false;
+        
+        const pos = getCardPosition(card);
+        const cardSize = CARD_SIZES[pos.size];
+        const cardRect = { x: pos.x, y: pos.y, width: cardSize.width, height: cardSize.height };
+        
+        return rectanglesOverlap(dropRect, cardRect);
+    });
+    
+    if (overlappingCards.length === 0) {
+        return { canPlace: true, nudges: [] };
+    }
+    
+    const sortedOverlapping = overlappingCards.sort((a, b) => {
+        const sizeOrder = { small: 1, medium: 2, large: 3 };
+        const sizeA = sizeOrder[getCardPosition(a).size];
+        const sizeB = sizeOrder[getCardPosition(b).size];
+        return sizeA - sizeB;
+    });
+    
+    const nudges = [];
+    const processedCards = [draggedCard];
+    
+    for (const card of sortedOverlapping) {
+        const pos = getCardPosition(card);
+        const nudgePos = findNudgePosition(card, pos.x, pos.y, processedCards);
+        
+        if (nudgePos) {
+            nudges.push({
+                card: card,
+                fromX: pos.x,
+                fromY: pos.y,
+                toX: nudgePos.x,
+                toY: nudgePos.y
+            });
+            processedCards.push(card);
+        } else {
+            return { canPlace: false, nudges: [] };
+        }
+    }
+    
+    return { canPlace: true, nudges };
+}
+
+function updateNudgePreviews(nudges) {
+    cards.forEach(card => {
+        card.classList.remove('will-nudge');
+        const indicator = card.querySelector('.nudge-indicator');
+        if (indicator) indicator.remove();
+    });
+    
+    nudges.forEach(nudge => {
+        nudge.card.classList.add('will-nudge');
+        const indicator = document.createElement('div');
+        indicator.className = 'nudge-indicator';
+        indicator.textContent = 'Will nudge';
+        nudge.card.appendChild(indicator);
+    });
+}
+
+function updateDragInfo(card, isValid, nudgeCount) {
+    let dragInfo = card.querySelector('.drag-info');
+    if (!dragInfo) {
+        dragInfo = document.createElement('div');
+        dragInfo.className = 'drag-info';
+        card.appendChild(dragInfo);
+    }
+    
+    const snappedX = snapToGrid(dragState.currentX);
+    const snappedY = snapToGrid(dragState.currentY);
+    
+    dragInfo.innerHTML = `
+        <div class="drag-info-badge">${snappedX}, ${snappedY}</div>
+        <div class="drag-info-badge ${isValid ? 'valid' : 'invalid'}">
+            ${isValid ? '✓ Can Place' : '✗ Cannot Place'}
+        </div>
+        ${nudgeCount > 0 ? `<div class="drag-info-badge nudging">Nudging ${nudgeCount}</div>` : ''}
+    `;
+}
+
+// Event handlers
+function handleMouseDown(e) {
+    const card = e.target.closest('.card-wrapper');
+    if (!card) return;
+    
+    const pos = getCardPosition(card);
+    
+    dragState = {
+        isDragging: true,
+        draggedElement: card,
+        startX: e.clientX,
+        startY: e.clientY,
+        startCardX: pos.x,
+        startCardY: pos.y,
+        currentX: pos.x,
+        currentY: pos.y,
+        originalX: pos.x,
+        originalY: pos.y
+    };
+    
+    card.classList.add('dragging');
+    e.preventDefault();
+}
+
+function handleMouseMove(e) {
+    if (!dragState.isDragging) return;
+    
+    const deltaX = e.clientX - dragState.startX;
+    const deltaY = e.clientY - dragState.startY;
+    
+    dragState.currentX = dragState.startCardX + deltaX;
+    dragState.currentY = dragState.startCardY + deltaY;
+    
+    dragState.draggedElement.style.left = dragState.currentX + 'px';
+    dragState.draggedElement.style.top = dragState.currentY + 'px';
+    
+    const snappedX = snapToGrid(dragState.currentX);
+    const snappedY = snapToGrid(dragState.currentY);
+    const pos = getCardPosition(dragState.draggedElement);
+    
+    if (isWithinBounds(snappedX, snappedY, pos.size)) {
+        const nudgePlan = calculateNudgePlan(dragState.draggedElement, snappedX, snappedY);
+        
+        dragState.draggedElement.classList.toggle('valid', nudgePlan.canPlace);
+        dragState.draggedElement.classList.toggle('invalid', !nudgePlan.canPlace);
+        
+        updateNudgePreviews(nudgePlan.nudges);
+        updateDragInfo(dragState.draggedElement, nudgePlan.canPlace, nudgePlan.nudges.length);
+    } else {
+        dragState.draggedElement.classList.remove('valid');
+        dragState.draggedElement.classList.add('invalid');
+        updateNudgePreviews([]);
+        updateDragInfo(dragState.draggedElement, false, 0);
+    }
+}
+
+function handleMouseUp(e) {
+    if (!dragState.isDragging) return;
+    
+    const snappedX = snapToGrid(dragState.currentX);
+    const snappedY = snapToGrid(dragState.currentY);
+    const pos = getCardPosition(dragState.draggedElement);
+    
+    if (!isWithinBounds(snappedX, snappedY, pos.size)) {
+        setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
+    } else {
+        const nudgePlan = calculateNudgePlan(dragState.draggedElement, snappedX, snappedY);
+        
+        if (nudgePlan.canPlace) {
+            nudgePlan.nudges.forEach(nudge => {
+                setCardPosition(nudge.card, nudge.toX, nudge.toY);
+            });
+            setCardPosition(dragState.draggedElement, snappedX, snappedY);
+        } else {
+            setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
+        }
+    }
+    
+    // Cleanup
+    dragState.draggedElement.classList.remove('dragging', 'valid', 'invalid');
+    const dragInfo = dragState.draggedElement.querySelector('.drag-info');
+    if (dragInfo) dragInfo.remove();
+    updateNudgePreviews([]);
+    
+    dragState.isDragging = false;
+    dragState.draggedElement = null;
+}
+
+// Initialize
+document.addEventListener('mousedown', handleMouseDown);
+document.addEventListener('mousemove', handleMouseMove);
+document.addEventListener('mouseup', handleMouseUp);
+
+// Card visibility toggles
 const checkboxes = document.querySelectorAll('.settings-menu input[type="checkbox"]');
 checkboxes.forEach(cb => {
     cb.addEventListener('change', () => {
         const cardId = cb.id.replace('-toggle', '');
         const card = document.getElementById(cardId);
-        if (cb.checked) {
-            card.style.display = 'block';
-            card.style.zIndex = 1;
-            checkAndResolveCollisions(card);
-        } else {
-            card.style.display = 'none';
-        }
+        card.style.display = cb.checked ? 'block' : 'none';
     });
 });
-
-let dragTarget = null, offsetX = 0, offsetY = 0;
-document.querySelectorAll('.card-wrapper').forEach(card => {
-    const header = card.querySelector('.card-header');
-    const minimizeBtn = card.querySelector('[data-action="minimize"]');
-    const settingsBtn = card.querySelector('[data-action="settings"]');
-    const content = card.querySelector('.card-content');
-
-    if (header) {
-        header.addEventListener('mousedown', e => {
-            dragTarget = card;
-            offsetX = e.clientX - dragTarget.offsetLeft;
-            offsetY = e.clientY - dragTarget.offsetTop;
-            dragTarget.classList.add('dragging');
-        });
-    }
-
-    if (minimizeBtn && content) {
-        minimizeBtn.addEventListener('click', () => {
-            content.style.display = content.style.display === 'none' ? 'block' : 'none';
-        });
-    }
-
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
-            alert(`Settings for ${card.id}`);
-        });
-    }
-});
-
-document.addEventListener('mousemove', e => {
-    if (dragTarget) {
-        dragTarget.style.left = (e.clientX - offsetX) + 'px';
-        dragTarget.style.top = (e.clientY - offsetY) + 'px';
-    }
-});
-
-document.addEventListener('mouseup', () => {
-    if (dragTarget) {
-        dragTarget.classList.remove('dragging');
-        checkAndResolveCollisions(dragTarget);
-        dragTarget = null;
-    }
-});
-
-function getCardRect(card) {
-    const rect = card.getBoundingClientRect();
-    return {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height
-    };
-}
-
-function isOverlapping(rect1, rect2) {
-    return (
-        rect1.left < rect2.left + rect2.width &&
-        rect1.left + rect1.width > rect2.left &&
-        rect1.top < rect2.top + rect2.height &&
-        rect1.top + rect1.height > rect2.top
-    );
-}
-
-function checkAndResolveCollisions(movedCard, iterations = 0) {
-    if (iterations >= 100) return;
-
-    let hasOverlaps = false, dx = 0, dy = 0;
-    const movedRect = getCardRect(movedCard);
-    const cards = Array.from(document.querySelectorAll('.card-wrapper')).filter(card => card !== movedCard && card.style.display !== 'none');
-
-    for (let other of cards) {
-        const otherRect = getCardRect(other);
-        if (isOverlapping(movedRect, otherRect)) {
-            hasOverlaps = true;
-            const cx1 = movedRect.left + movedRect.width / 2;
-            const cx2 = otherRect.left + otherRect.width / 2;
-            const cy1 = movedRect.top + movedRect.height / 2;
-            const cy2 = otherRect.top + otherRect.height / 2;
-            const angle = Math.atan2(cy2 - cy1, cx2 - cx1);
-            dx += -Math.cos(angle) * 5;
-            dy += -Math.sin(angle) * 5;
-        }
-    }
-
-    if (hasOverlaps) {
-        let newLeft = parseInt(movedCard.style.left || '0') + dx;
-        let newTop = parseInt(movedCard.style.top || '0') + dy;
-        newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - movedCard.offsetWidth));
-        newTop = Math.max(0, Math.min(newTop, window.innerHeight - movedCard.offsetHeight));
-        movedCard.style.left = `${newLeft}px`;
-        movedCard.style.top = `${newTop}px`;
-        setTimeout(() => checkAndResolveCollisions(movedCard, iterations + 1), 50);
-    }
-}
 </script>
 </body>
 </html>
