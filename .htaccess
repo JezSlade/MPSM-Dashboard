@@ -35,5 +35,8 @@ DirectoryIndex index.php
     <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/api">
       Require all granted
     </Directory>
+    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/rpd">
+      Require all granted
+    </Directory>
   </IfModule>
 </IfModule>
