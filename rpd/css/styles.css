@@ -1,0 +1,278 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: #333;
+  overflow-x: hidden;
+}
+
+/* Dashboard header */
+.dashboard-header {
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 20px;
+}
+
+.dashboard-header h1 {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dashboard-header p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+}
+
+/* Dashboard content */
+.dashboard-content {
+  position: relative;
+  min-height: calc(100vh - 140px);
+  padding: 20px;
+}
+
+/* Card styles with neumorphic design */
+.card {
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 20px 20px 60px rgba(0, 0, 0, 0.1), -20px -20px 60px rgba(255, 255, 255, 0.1), inset 0 0 0 1px
+    rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  user-select: none;
+  z-index: 10;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 25px 25px 80px rgba(0, 0, 0, 0.15), -25px -25px 80px rgba(255, 255, 255, 0.15), inset 0 0 0 1px
+    rgba(255, 255, 255, 0.3);
+}
+
+/* Card header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px 20px 0 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  cursor: grab;
+}
+
+.card-header:active {
+  cursor: grabbing;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #333;
+}
+
+.card-title i {
+  width: 18px;
+  height: 18px;
+  color: #667eea;
+}
+
+.card-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-close:hover {
+  background: rgba(255, 0, 0, 0.1);
+  transform: scale(1.1);
+}
+
+.card-close i {
+  width: 16px;
+  height: 16px;
+  color: #ff4757;
+}
+
+/* Card content */
+.card-content {
+  padding: 0;
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+}
+
+.card-content iframe {
+  border: none;
+  width: 100%;
+  height: 300px;
+  border-radius: 0 0 20px 20px;
+}
+
+/* Settings card specific styles */
+.settings-card {
+  width: 350px;
+  z-index: 100;
+}
+
+.settings-content {
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.settings-section {
+  margin-bottom: 25px;
+}
+
+.settings-section h3 {
+  color: #333;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+/* Card toggles */
+.card-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.toggle-item:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.toggle-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 500;
+}
+
+/* Control buttons */
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+}
+
+.control-btn i {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
+
+  .card {
+    width: 280px;
+  }
+
+  .settings-card {
+    width: 300px;
+  }
+
+  .dashboard-content {
+    padding: 10px;
+  }
+}
+
+/* Custom scrollbar for settings */
+.settings-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.5);
+  border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.7);
+}
+
+/* Animation for card appearance */
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.card {
+  animation: cardAppear 0.3s ease-out;
+}
