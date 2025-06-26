@@ -34,6 +34,11 @@
   <script>
     const { useState, useEffect } = React;
 
+    const cards = [
+      "CardAppLog", "CardChart", "CardDrilldown", "CardExpandable",
+      "CardKPI", "CardLarge", "CardList", "CardSmall", "SampleCard"
+    ];
+
     function Draggable({ children, style, id }) {
       const [pos, setPos] = useState({ x: 50, y: 50 });
       const ref = React.useRef();
@@ -66,6 +71,7 @@
     }
 
     function Card({ name, visible, onClose }) {
+      if (!name.startsWith("Card")) return null;
       return visible ? (
         React.createElement(Draggable, {
           id: name,
@@ -111,39 +117,13 @@
     }
 
     function Dashboard() {
-      const [cardList, setCardList] = useState([]);
-      const [activeCards, setActiveCards] = useState({});
-      
-      // Fetch card list on component mount
-      useEffect(() => {
-        fetch('/cards/')
-          .then(response => response.text())
-          .then(data => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(data, 'text/html');
-            const links = htmlDoc.querySelectorAll('a[href$=".php"]');
-            
-            const cards = Array.from(links).map(link => {
-              const href = link.getAttribute('href');
-              return href.replace('.php', '');
-            });
-            
-            setCardList(cards);
-            
-            // Initialize activeCards state
-            const initialState = {};
-            cards.forEach(card => {
-              initialState[card] = false;
-            });
-            setActiveCards(initialState);
-          });
-      }, []);
-      
+      const [activeCards, setActiveCards] = useState(() => Object.fromEntries(cards.map(c => [c, false])));
+
       useEffect(() => { feather.replace(); }, [activeCards]);
 
       return React.createElement(React.Fragment, null,
         React.createElement(SettingsCard, { activeCards, setActiveCards }),
-        cardList.map(c => (
+        cards.map(c => (
           React.createElement(Card, {
             key: c,
             name: c,
