@@ -1,5 +1,5 @@
 <?php
-// index.php — Fixed dashboard with proper grid snapping and nudging
+// index.php — Fixed dashboard with proper card isolation
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -33,6 +33,9 @@
             transition: box-shadow 0.15s ease;
             border-radius: 8px;
             background: var(--bg-accent, #374151);
+            /* CRITICAL: Prevent grouping */
+            isolation: isolate;
+            contain: layout style;
         }
         
         .card-wrapper:hover {
@@ -107,11 +110,24 @@
             color: white;
         }
         
-        .card-wrapper * {
-            pointer-events: none;
+        /* CRITICAL: Prevent event bubbling issues */
+        .card-wrapper .card-header {
+            pointer-events: auto;
+            position: relative;
+            z-index: 1;
         }
         
-        .card-wrapper {
+        .card-wrapper .card-content {
+            pointer-events: none;
+            position: relative;
+        }
+        
+        /* Allow specific interactive elements */
+        .card-wrapper button,
+        .card-wrapper input,
+        .card-wrapper select,
+        .card-wrapper textarea,
+        .card-wrapper a {
             pointer-events: auto;
         }
     </style>
@@ -125,7 +141,7 @@
         foreach ($cardFiles as $index => $cardPath) {
             $cardId = 'card' . $index;
             $cardName = basename($cardPath, '.php');
-            echo "<label><input type='checkbox' id='{$cardId}-toggle' checked> {$cardName}</label><br>\n";
+            echo "<label><input type='checkbox' id='{$cardId}-toggle' data-card-id='{$cardId}'> {$cardName}</label><br>\n";
         }
         ?>
     </div>
@@ -149,12 +165,16 @@
             $title = basename($cardPath, '.php');
             $config = $cardConfigs[$index] ?? ['size' => 'medium', 'x' => ($index % 3) * 340 + 20, 'y' => floor($index / 3) * 220 + 20];
             
-            echo "<div class='card-wrapper card-size-{$config['size']}' id='{$cardId}' 
+            echo "<div class='card-wrapper card-size-{$config['size']}' 
+                       id='{$cardId}' 
                        data-size='{$config['size']}' 
                        data-x='{$config['x']}' 
                        data-y='{$config['y']}'
-                       style='left: {$config['x']}px; top: {$config['y']}px;'>\n";
+                       data-card-index='{$index}'
+                       style='left: {$config['x']}px; top: {$config['y']}px; display: none;'>\n";
             
+            $allowMinimize = true;
+            $allowSettings = true;
             include __DIR__ . '/includes/card_header.php';
             echo "<div class='card-content neumorphic glow'>\n";
             include $cardPath;
@@ -174,7 +194,8 @@ const CARD_SIZES = {
     large: { width: 380, height: 220 }
 };
 
-// State
+// State - CRITICAL: Use WeakMap to prevent cross-card interference
+const cardStates = new WeakMap();
 let dragState = {
     isDragging: false,
     draggedElement: null,
@@ -189,7 +210,17 @@ let dragState = {
 };
 
 const container = document.getElementById('dashboardContainer');
-const cards = Array.from(document.querySelectorAll('.card-wrapper'));
+
+// CRITICAL: Get cards fresh each time to avoid stale references
+function getVisibleCards() {
+    return Array.from(document.querySelectorAll('.card-wrapper')).filter(card => 
+        card.style.display !== 'none'
+    );
+}
+
+function getAllCards() {
+    return Array.from(document.querySelectorAll('.card-wrapper'));
+}
 
 // Utility functions
 function snapToGrid(value) {
@@ -230,8 +261,9 @@ function wouldOverlap(x, y, size, excludeCards = []) {
     const cardSize = CARD_SIZES[size];
     const newRect = { x, y, width: cardSize.width, height: cardSize.height };
     
-    for (const card of cards) {
-        if (excludeCards.includes(card) || card.style.display === 'none') continue;
+    const visibleCards = getVisibleCards();
+    for (const card of visibleCards) {
+        if (excludeCards.includes(card)) continue;
         
         const pos = getCardPosition(card);
         const existingCardSize = CARD_SIZES[pos.size];
@@ -276,8 +308,9 @@ function calculateNudgePlan(draggedCard, dropX, dropY) {
     const draggedCardSize = CARD_SIZES[draggedPos.size];
     const dropRect = { x: dropX, y: dropY, width: draggedCardSize.width, height: draggedCardSize.height };
     
-    const overlappingCards = cards.filter(card => {
-        if (card === draggedCard || card.style.display === 'none') return false;
+    const visibleCards = getVisibleCards();
+    const overlappingCards = visibleCards.filter(card => {
+        if (card === draggedCard) return false;
         
         const pos = getCardPosition(card);
         const cardSize = CARD_SIZES[pos.size];
@@ -322,7 +355,8 @@ function calculateNudgePlan(draggedCard, dropX, dropY) {
 }
 
 function updateNudgePreviews(nudges) {
-    cards.forEach(card => {
+    const allCards = getAllCards();
+    allCards.forEach(card => {
         card.classList.remove('will-nudge');
         const indicator = card.querySelector('.nudge-indicator');
         if (indicator) indicator.remove();
@@ -357,16 +391,27 @@ function updateDragInfo(card, isValid, nudgeCount) {
     `;
 }
 
-// Event handlers
+// CRITICAL: Fixed event handlers to prevent grouping
 function handleMouseDown(e) {
-    const card = e.target.closest('.card-wrapper');
-    if (!card) return;
+    // Only handle mousedown on card headers or card wrappers directly
+    const cardWrapper = e.target.closest('.card-wrapper');
+    if (!cardWrapper) return;
     
-    const pos = getCardPosition(card);
+    // Don't drag if clicking on interactive elements
+    if (e.target.matches('button, input, select, textarea, a, [data-action]')) {
+        return;
+    }
+    
+    // Only allow dragging from card header
+    const cardHeader = e.target.closest('.card-header');
+    if (!cardHeader) return;
+    
+    const pos = getCardPosition(cardWrapper);
+    console.log('Starting drag for card:', cardWrapper.id, 'at position:', pos);
     
     dragState = {
         isDragging: true,
-        draggedElement: card,
+        draggedElement: cardWrapper,
         startX: e.clientX,
         startY: e.clientY,
         startCardX: pos.x,
@@ -377,12 +422,13 @@ function handleMouseDown(e) {
         originalY: pos.y
     };
     
-    card.classList.add('dragging');
+    cardWrapper.classList.add('dragging');
     e.preventDefault();
+    e.stopPropagation();
 }
 
 function handleMouseMove(e) {
-    if (!dragState.isDragging) return;
+    if (!dragState.isDragging || !dragState.draggedElement) return;
     
     const deltaX = e.clientX - dragState.startX;
     const deltaY = e.clientY - dragState.startY;
@@ -411,10 +457,14 @@ function handleMouseMove(e) {
         updateNudgePreviews([]);
         updateDragInfo(dragState.draggedElement, false, 0);
     }
+    
+    e.preventDefault();
 }
 
 function handleMouseUp(e) {
-    if (!dragState.isDragging) return;
+    if (!dragState.isDragging || !dragState.draggedElement) return;
+    
+    console.log('Ending drag for card:', dragState.draggedElement.id);
     
     const snappedX = snapToGrid(dragState.currentX);
     const snappedY = snapToGrid(dragState.currentY);
@@ -441,23 +491,59 @@ function handleMouseUp(e) {
     if (dragInfo) dragInfo.remove();
     updateNudgePreviews([]);
     
-    dragState.isDragging = false;
-    dragState.draggedElement = null;
+    dragState = {
+        isDragging: false,
+        draggedElement: null,
+        startX: 0,
+        startY: 0,
+        startCardX: 0,
+        startCardY: 0,
+        currentX: 0,
+        currentY: 0,
+        originalX: 0,
+        originalY: 0
+    };
+    
+    e.preventDefault();
 }
 
-// Initialize
+// CRITICAL: Fixed card visibility toggles to prevent syncing
+function handleCardToggle(e) {
+    const checkbox = e.target;
+    const cardId = checkbox.dataset.cardId;
+    const card = document.getElementById(cardId);
+    
+    if (!card) {
+        console.error('Card not found:', cardId);
+        return;
+    }
+    
+    console.log('Toggling card:', cardId, 'to', checkbox.checked ? 'visible' : 'hidden');
+    
+    if (checkbox.checked) {
+        card.style.display = 'block';
+        // Force a reflow to ensure the card is properly rendered
+        card.offsetHeight;
+    } else {
+        card.style.display = 'none';
+    }
+    
+    e.stopPropagation();
+}
+
+// Initialize event listeners
 document.addEventListener('mousedown', handleMouseDown);
 document.addEventListener('mousemove', handleMouseMove);
 document.addEventListener('mouseup', handleMouseUp);
 
-// Card visibility toggles
-const checkboxes = document.querySelectorAll('.settings-menu input[type="checkbox"]');
-checkboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-        const cardId = cb.id.replace('-toggle', '');
-        const card = document.getElementById(cardId);
-        card.style.display = cb.checked ? 'block' : 'none';
+// CRITICAL: Fixed checkbox event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.settings-menu input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', handleCardToggle);
     });
+    
+    console.log('Dashboard initialized with', getAllCards().length, 'cards');
 });
 </script>
 </body>
