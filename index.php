@@ -158,7 +158,7 @@
             echo "<label for='{$checkboxId}'>\n";
             echo "  <input type='checkbox' id='{$checkboxId}' data-card-target='{$cardId}' data-card-index='{$index}'>\n";
             echo "  {$cardName}\n";
-            </label>\n";
+            echo "</label>\n"; // <-- FIXED: Added missing 'echo' here
         }
         ?>
         <hr style="margin: 10px 0; border-color: #4b5563;">
@@ -199,8 +199,6 @@
             $allowMinimize = true;
             $allowSettings = true;
             $allowClose = false; // Prepared for integration with header
-            // $cardId is already set above and matches the div ID
-            // $title is already set above
             
             include __DIR__ . '/includes/card_header.php';
             echo "<div class='card-content neumorphic glow'>\n";
