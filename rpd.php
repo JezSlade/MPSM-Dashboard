@@ -1,18 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>React + PHP Hybrid Dashboard</title>
   <link rel="stylesheet" href="public/css/styles.css">
-
-  <!-- React / Babel / Icons -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
-
 <body>
   <header class="dashboard-header">
     <h1>React + PHP Hybrid Dashboard</h1>
@@ -22,7 +19,6 @@
   <main id="dashboard-root"></main>
 
   <script type="text/babel">
-
     const { useState, useRef, useEffect } = React;
 
     const fetchCards = async () => {
@@ -38,10 +34,7 @@
       const handleMouseDown = (e) => {
         setDragging(true);
         const rect = cardRef.current.getBoundingClientRect();
-        setOffset({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        });
+        setOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       };
 
       const handleMouseMove = (e) => {
@@ -74,13 +67,15 @@
         >
           <div className="card">
             <div className="card-header" onMouseDown={handleMouseDown}>
-              <div className="card-title">{cardName}</div>
+              <div className="card-title">
+                <i data-feather="grid"></i> {cardName}
+              </div>
               <button className="card-close" onClick={() => onClose(cardName)}>
-                ✕
+                <i data-feather="x"></i>
               </button>
             </div>
             <div className="card-content">
-              <iframe src={`cards/Card${cardName}.php`} loading="lazy"></iframe>
+              <iframe src={`cards/${cardName}.php`} loading="lazy"></iframe>
             </div>
           </div>
         </div>
@@ -91,14 +86,13 @@
       const [cards, setCards] = useState([]);
       const [positions, setPositions] = useState({});
       const [visibility, setVisibility] = useState({});
-      const center = { x: window.innerWidth / 3, y: window.innerHeight / 4 };
+      const center = { x: window.innerWidth / 4, y: window.innerHeight / 4 };
 
       useEffect(() => {
         fetchCards().then(cardList => {
-          const pos = {};
-          const vis = {};
+          const pos = {}, vis = {};
           cardList.forEach((name, i) => {
-            pos[name] = { x: center.x + i * 40, y: center.y + i * 40 };
+            pos[name] = { x: center.x + (i * 60), y: center.y + (i * 40) };
             vis[name] = true;
           });
           setCards(cardList);
@@ -106,6 +100,10 @@
           setVisibility(vis);
         });
       }, []);
+
+      useEffect(() => {
+        feather.replace();
+      });
 
       const handleClose = (cardName) => {
         setVisibility(prev => ({ ...prev, [cardName]: false }));
@@ -132,15 +130,14 @@
       const centerAll = () => {
         const centered = {};
         cards.forEach((name, i) => {
-          centered[name] = { x: center.x + i * 50, y: center.y + i * 50 };
+          centered[name] = { x: center.x + (i * 50), y: center.y + (i * 50) };
         });
         setPositions(centered);
       };
 
       return (
         <div className="dashboard-container">
-          {/* Settings Card */}
-          <div className="card-wrapper settings-card" style={{ top: 100, left: 60 }}>
+          <div className="card-wrapper settings-card" style={{ top: 100, left: 50 }}>
             <div className="card">
               <div className="card-header">
                 <div className="card-title">
@@ -152,13 +149,14 @@
                   <h3>Card Visibility</h3>
                   <div className="card-toggles">
                     {cards.map(name => (
-                      <div
-                        key={name}
-                        className="toggle-item"
-                        onClick={() => toggleCard(name)}
-                      >
+                      <label key={name} className="toggle-item">
+                        <input
+                          type="checkbox"
+                          checked={visibility[name]}
+                          onChange={() => toggleCard(name)}
+                        />
                         <span className="toggle-label">{name}</span>
-                      </div>
+                      </label>
                     ))}
                   </div>
                 </div>
@@ -180,7 +178,6 @@
             </div>
           </div>
 
-          {/* Dynamic Cards */}
           {cards.map(name => (
             <Card
               key={name}
@@ -196,21 +193,6 @@
     };
 
     ReactDOM.render(<Dashboard />, document.getElementById('dashboard-root'));
-    feather.replace();
-
   </script>
 </body>
 </html>
-
-<?php
-// cards.php — backend endpoint returning card list
-if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
-  $files = array_filter(glob(__DIR__ . '/cards/Card*.php'), 'is_file');
-  $names = array_map(function ($file) {
-    return basename($file, '.php');
-  }, $files);
-  header('Content-Type: application/json');
-  echo json_encode($names);
-  exit;
-}
-?>
