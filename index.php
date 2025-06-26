@@ -1,6 +1,3 @@
-<?php
-// index.php — React-powered version
-?>
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -52,18 +49,18 @@
 
     const CardHeader = ({ title, cardId, onToggle }) => {
       return (
-        <header class="card-header flex items-center justify-between p-2 rounded-t-lg bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 shadow-md">
-          <h2 class="text-base font-semibold tracking-wide truncate" title={title}>
+        <header className="card-header flex items-center justify-between p-2 rounded-t-lg bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 shadow-md">
+          <h2 className="text-base font-semibold tracking-wide truncate" title={title}>
             {title}
           </h2>
-          <div class="flex items-center gap-1">
-            <button class="neu-btn" data-action="minimize" data-card={cardId} aria-label="Minimize">
+          <div className="flex items-center gap-1">
+            <button className="neu-btn" data-action="minimize" data-card={cardId} aria-label="Minimize">
               <i data-feather="chevron-down"></i>
             </button>
-            <button class="neu-btn" data-action="settings" data-card={cardId} aria-label="Settings">
+            <button className="neu-btn" data-action="settings" data-card={cardId} aria-label="Settings">
               <i data-feather="settings"></i>
             </button>
-            <button class="neu-btn" onClick={() => onToggle(cardId, false)} aria-label="Close">
+            <button className="neu-btn" onClick={() => onToggle(cardId, false)} aria-label="Close">
               <i data-feather="x"></i>
             </button>
           </div>
@@ -125,10 +122,10 @@
             cardId={card.id}
             onToggle={onToggle}
           />
-          <div class="neumorphic p-4">
+          <div className="neumorphic p-4">
             {/* Dynamic content would go here */}
             {card.id === 'ConsoleLogCard' ? (
-              <div id="inCardLogContent" class="h-64 overflow-auto bg-gray-100 dark:bg-gray-800 p-2 text-xs font-mono">
+              <div id="inCardLogContent" className="h-64 overflow-auto bg-gray-100 dark:bg-gray-800 p-2 text-xs font-mono">
                 Console initialized for this card.
               </div>
             ) : (
@@ -163,17 +160,18 @@
         const cardHeight = 300;
         const gap = 20;
         const cardsPerRow = Math.max(1, Math.floor(window.innerWidth / (cardWidth + gap)));
+        const gridWidth = Math.min(cardsPerRow, visibleCards.length) * (cardWidth + gap);
         
-        setCards(cards.map((card, index) => {
+        setCards(cards.map((card) => {
           if (!card.isVisible) return card;
           
-          const visualIndex = cards.findIndex(c => c.id === card.id);
+          const visualIndex = visibleCards.findIndex(c => c.id === card.id);
           const row = Math.floor(visualIndex / cardsPerRow);
           const col = visualIndex % cardsPerRow;
           
           return {
             ...card,
-            x: (window.innerWidth - (Math.min(cardsPerRow, visibleCards.length) * (cardWidth + gap)) / 2 + col * (cardWidth + gap),
+            x: (window.innerWidth - gridWidth) / 2 + col * (cardWidth + gap),
             y: 50 + row * (cardHeight + gap)
           };
         }));
@@ -181,12 +179,12 @@
 
       return (
         <>
-          <div class="settings-menu" style={{ display: showSettings ? 'block' : 'none' }}>
-            <div class="neumorphic p-4 rounded-lg shadow-xl">
-              <h2 class="text-lg font-semibold mb-3">Card Settings</h2>
-              <div class="space-y-2">
+          <div className="settings-menu" style={{ display: showSettings ? 'block' : 'none' }}>
+            <div className="neumorphic p-4 rounded-lg shadow-xl">
+              <h2 className="text-lg font-semibold mb-3">Card Settings</h2>
+              <div className="space-y-2">
                 {cards.map(card => (
-                  <label class="flex items-center space-x-2 text-sm">
+                  <label key={card.id} className="flex items-center space-x-2 text-sm">
                     <input 
                       type="checkbox" 
                       checked={card.isVisible}
@@ -196,14 +194,14 @@
                   </label>
                 ))}
               </div>
-              <div class="mt-4 border-t pt-4 border-gray-600">
-                <button class="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, true))}>
+              <div className="mt-4 border-t pt-4 border-gray-600">
+                <button className="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, true))}>
                   Show All
                 </button>
-                <button class="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, false))}>
+                <button className="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, false))}>
                   Hide All
                 </button>
-                <button class="neu-btn w-full" onClick={centerCards}>
+                <button className="neu-btn w-full" onClick={centerCards}>
                   Center Cards
                 </button>
               </div>
@@ -220,7 +218,7 @@
           ))}
 
           <button 
-            class="neu-btn fixed top-4 right-4 z-50"
+            className="neu-btn fixed top-4 right-4 z-50"
             onClick={() => setShowSettings(!showSettings)}
           >
             <i data-feather="settings"></i>
