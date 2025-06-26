@@ -1,314 +1,216 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>React + PHP Hybrid Dashboard</title>
-    <link rel="stylesheet" href="public/css/styles.css">
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React + PHP Hybrid Dashboard</title>
+  <link rel="stylesheet" href="public/css/styles.css">
+
+  <!-- React / Babel / Icons -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
 </head>
+
 <body>
-    <div id="dashboard-root"></div>
+  <header class="dashboard-header">
+    <h1>React + PHP Hybrid Dashboard</h1>
+    <p>Draggable cards with dynamic PHP content</p>
+  </header>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+  <main id="dashboard-root"></main>
 
-        function Card({ cardName, onClose, position, onDrag, isVisible }) {
-            const cardRef = useRef(null);
-            const [isDragging, setIsDragging] = useState(false);
-            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  <script type="text/babel">
 
-            const handleMouseDown = (e) => {
-                if (e.target.closest('.card-header')) {
-                    setIsDragging(true);
-                    const rect = cardRef.current.getBoundingClientRect();
-                    setDragOffset({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top
-                    });
-                }
-            };
+    const { useState, useRef, useEffect } = React;
 
-            const handleMouseMove = (e) => {
-                if (isDragging) {
-                    const newPosition = {
-                        x: e.clientX - dragOffset.x,
-                        y: e.clientY - dragOffset.y
-                    };
-                    onDrag(cardName, newPosition);
-                }
-            };
+    const fetchCards = async () => {
+      const res = await fetch('cards.php');
+      return await res.json();
+    };
 
-            const handleMouseUp = () => {
-                setIsDragging(false);
-            };
+    const Card = ({ cardName, onClose, position, onDrag, isVisible }) => {
+      const cardRef = useRef(null);
+      const [isDragging, setDragging] = useState(false);
+      const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-            useEffect(() => {
-                if (isDragging) {
-                    document.addEventListener('mousemove', handleMouseMove);
-                    document.addEventListener('mouseup', handleMouseUp);
-                    return () => {
-                        document.removeEventListener('mousemove', handleMouseMove);
-                        document.removeEventListener('mouseup', handleMouseUp);
-                    };
-                }
-            }, [isDragging, dragOffset]);
+      const handleMouseDown = (e) => {
+        setDragging(true);
+        const rect = cardRef.current.getBoundingClientRect();
+        setOffset({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+      };
 
-            if (!isVisible) return null;
+      const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        const newX = e.clientX - offset.x;
+        const newY = e.clientY - offset.y;
+        onDrag(cardName, { x: newX, y: newY });
+      };
 
-            return (
-                <div
-                    ref={cardRef}
-                    className="card"
-                    style={{
-                        position: 'absolute',
-                        left: position.x,
-                        top: position.y,
-                        cursor: isDragging ? 'grabbing' : 'grab'
-                    }}
-                    onMouseDown={handleMouseDown}
-                >
-                    <div className="card-header">
-                        <div className="card-title">
-                            <i data-feather="grid"></i>
-                            <span>{cardName}</span>
-                        </div>
-                        <button className="card-close" onClick={() => onClose(cardName)}>
-                            <i data-feather="x"></i>
-                        </button>
-                    </div>
-                    <div className="card-content">
-                        <iframe
-                            src={`/cards/${cardName}.php`}
-                            frameBorder="0"
-                            width="100%"
-                            height="300"
-                            title={cardName}
-                        ></iframe>
-                    </div>
-                </div>
-            );
+      const handleMouseUp = () => setDragging(false);
+
+      useEffect(() => {
+        if (isDragging) {
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
         }
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isDragging, offset]);
 
-        function SettingsCard({ cards, onToggleCard, onShowAll, onHideAll, onCenterAll, position, onDrag, isVisible }) {
-            const cardRef = useRef(null);
-            const [isDragging, setIsDragging] = useState(false);
-            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+      if (!isVisible) return null;
 
-            const handleMouseDown = (e) => {
-                if (e.target.closest('.card-header')) {
-                    setIsDragging(true);
-                    const rect = cardRef.current.getBoundingClientRect();
-                    setDragOffset({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top
-                    });
-                }
-            };
+      return (
+        <div
+          ref={cardRef}
+          className={`card-wrapper ${isDragging ? 'dragging' : ''}`}
+          style={{ top: position.y, left: position.x }}
+        >
+          <div className="card">
+            <div className="card-header" onMouseDown={handleMouseDown}>
+              <div className="card-title">{cardName}</div>
+              <button className="card-close" onClick={() => onClose(cardName)}>
+                ✕
+              </button>
+            </div>
+            <div className="card-content">
+              <iframe src={`cards/Card${cardName}.php`} loading="lazy"></iframe>
+            </div>
+          </div>
+        </div>
+      );
+    };
 
-            const handleMouseMove = (e) => {
-                if (isDragging) {
-                    const newPosition = {
-                        x: e.clientX - dragOffset.x,
-                        y: e.clientY - dragOffset.y
-                    };
-                    onDrag('Settings', newPosition);
-                }
-            };
+    const Dashboard = () => {
+      const [cards, setCards] = useState([]);
+      const [positions, setPositions] = useState({});
+      const [visibility, setVisibility] = useState({});
+      const center = { x: window.innerWidth / 3, y: window.innerHeight / 4 };
 
-            const handleMouseUp = () => {
-                setIsDragging(false);
-            };
+      useEffect(() => {
+        fetchCards().then(cardList => {
+          const pos = {};
+          const vis = {};
+          cardList.forEach((name, i) => {
+            pos[name] = { x: center.x + i * 40, y: center.y + i * 40 };
+            vis[name] = true;
+          });
+          setCards(cardList);
+          setPositions(pos);
+          setVisibility(vis);
+        });
+      }, []);
 
-            useEffect(() => {
-                if (isDragging) {
-                    document.addEventListener('mousemove', handleMouseMove);
-                    document.addEventListener('mouseup', handleMouseUp);
-                    return () => {
-                        document.removeEventListener('mousemove', handleMouseMove);
-                        document.removeEventListener('mouseup', handleMouseUp);
-                    };
-                }
-            }, [isDragging, dragOffset]);
+      const handleClose = (cardName) => {
+        setVisibility(prev => ({ ...prev, [cardName]: false }));
+      };
 
-            if (!isVisible) return null;
+      const handleDrag = (cardName, pos) => {
+        setPositions(prev => ({ ...prev, [cardName]: pos }));
+      };
 
-            return (
-                <div
-                    ref={cardRef}
-                    className="card settings-card"
-                    style={{
-                        position: 'absolute',
-                        left: position.x,
-                        top: position.y,
-                        cursor: isDragging ? 'grabbing' : 'grab'
-                    }}
-                    onMouseDown={handleMouseDown}
-                >
-                    <div className="card-header">
-                        <div className="card-title">
-                            <i data-feather="settings"></i>
-                            <span>Dashboard Settings</span>
-                        </div>
-                    </div>
-                    <div className="card-content">
-                        <div className="settings-content">
-                            <div className="settings-section">
-                                <h3>Card Visibility</h3>
-                                <div className="card-toggles">
-                                    {availableCards.map(cardName => (
-                                        <label key={cardName} className="toggle-item">
-                                            <input
-                                                type="checkbox"
-                                                checked={cards[cardName]?.isVisible || false}
-                                                onChange={() => onToggleCard(cardName)}
-                                            />
-                                            <span className="toggle-label">{cardName}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="settings-section">
-                                <h3>Global Controls</h3>
-                                <div className="control-buttons">
-                                    <button className="control-btn" onClick={onShowAll}>
-                                        <i data-feather="eye"></i>
-                                        Show All
-                                    </button>
-                                    <button className="control-btn" onClick={onHideAll}>
-                                        <i data-feather="eye-off"></i>
-                                        Hide All
-                                    </button>
-                                    <button className="control-btn" onClick={onCenterAll}>
-                                        <i data-feather="target"></i>
-                                        Center All
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+      const toggleCard = (cardName) => {
+        setVisibility(prev => ({ ...prev, [cardName]: !prev[cardName] }));
+      };
+
+      const showAll = () => {
+        const allVisible = Object.fromEntries(cards.map(name => [name, true]));
+        setVisibility(allVisible);
+      };
+
+      const hideAll = () => {
+        const allHidden = Object.fromEntries(cards.map(name => [name, false]));
+        setVisibility(allHidden);
+      };
+
+      const centerAll = () => {
+        const centered = {};
+        cards.forEach((name, i) => {
+          centered[name] = { x: center.x + i * 50, y: center.y + i * 50 };
+        });
+        setPositions(centered);
+      };
+
+      return (
+        <div className="dashboard-container">
+          {/* Settings Card */}
+          <div className="card-wrapper settings-card" style={{ top: 100, left: 60 }}>
+            <div className="card">
+              <div className="card-header">
+                <div className="card-title">
+                  <i data-feather="settings"></i> Dashboard Settings
                 </div>
-            );
-        }
-
-        const availableCards = [
-            ...window.cardFiles || []
-        ];
-
-        function Dashboard() {
-            const [cards, setCards] = useState(() => {
-                const saved = localStorage.getItem('dashboardCards');
-                if (saved) {
-                    return JSON.parse(saved);
-                }
-                const initialCards = { Settings: { isVisible: true, position: { x: 20, y: 20 } } };
-                availableCards.forEach((cardName, index) => {
-                    initialCards[cardName] = {
-                        isVisible: index < 3,
-                        position: { x: 50 + (index % 3) * 320, y: 100 + Math.floor(index / 3) * 380 }
-                    };
-                });
-                return initialCards;
-            });
-
-            useEffect(() => {
-                localStorage.setItem('dashboardCards', JSON.stringify(cards));
-            }, [cards]);
-
-            useEffect(() => {
-                feather.replace();
-            });
-
-            const handleToggleCard = (cardName) => {
-                setCards(prev => ({ ...prev, [cardName]: { ...prev[cardName], isVisible: !prev[cardName]?.isVisible } }));
-            };
-
-            const handleCloseCard = (cardName) => {
-                setCards(prev => ({ ...prev, [cardName]: { ...prev[cardName], isVisible: false } }));
-            };
-
-            const handleDragCard = (cardName, position) => {
-                setCards(prev => ({ ...prev, [cardName]: { ...prev[cardName], position } }));
-            };
-
-            const handleShowAll = () => {
-              setCards(prev => {
-                const updated = { ...prev };
-                availableCards.forEach(cardName => {
-                  if (updated[cardName]) {
-                    updated[cardName].isVisible = true;
-                  }
-                });
-                return updated;
-              });
-            };
-
-            const handleHideAll = () => {
-              setCards(prev => {
-                const updated = { ...prev };
-                availableCards.forEach(cardName => {
-                  if (cardName !== 'Settings' && updated[cardName]) {
-                    updated[cardName].isVisible = false;
-                  }
-                });
-                return updated;
-              });
-            };
-            const handleCenterAll = () => {
-                setCards(prev => {
-                    const updated = { ...prev };
-                    let index = 0;
-                    [...availableCards, 'Settings'].forEach(cardName => {
-                        if (updated[cardName]) {
-                            updated[cardName].position = {
-                                x: 50 + (index % 3) * 320,
-                                y: 100 + Math.floor(index / 3) * 380
-                            };
-                            index++;
-                        }
-                    });
-                    return updated;
-                });
-            };
-
-            return (
-                <div className="dashboard">
-                    <div className="dashboard-header">
-                        <h1>React + PHP Hybrid Dashboard</h1>
-                        <p>Draggable cards with dynamic PHP content</p>
-                    </div>
-
-                    <div className="dashboard-content">
-                        <SettingsCard
-                            cards={cards}
-                            onToggleCard={handleToggleCard}
-                            onShowAll={handleShowAll}
-                            onHideAll={handleHideAll}
-                            onCenterAll={handleCenterAll}
-                            position={cards.Settings?.position || { x: 20, y: 20 }}
-                            onDrag={handleDragCard}
-                            isVisible={cards.Settings?.isVisible}
-                        />
-
-                        {availableCards.map(cardName => (
-                            <Card
-                                key={cardName}
-                                cardName={cardName}
-                                onClose={handleCloseCard}
-                                position={cards[cardName]?.position || { x: 100, y: 100 }}
-                                onDrag={handleDragCard}
-                                isVisible={cards[cardName]?.isVisible}
-                            />
-                        ))}
-                    </div>
+              </div>
+              <div className="settings-content">
+                <div className="settings-section">
+                  <h3>Card Visibility</h3>
+                  <div className="card-toggles">
+                    {cards.map(name => (
+                      <div
+                        key={name}
+                        className="toggle-item"
+                        onClick={() => toggleCard(name)}
+                      >
+                        <span className="toggle-label">{name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-            );
-        }
+                <div className="settings-section">
+                  <h3>Global Controls</h3>
+                  <div className="control-buttons">
+                    <button className="control-btn" onClick={showAll}>
+                      <i data-feather="eye"></i> Show All
+                    </button>
+                    <button className="control-btn" onClick={hideAll}>
+                      <i data-feather="eye-off"></i> Hide All
+                    </button>
+                    <button className="control-btn" onClick={centerAll}>
+                      <i data-feather="target"></i> Center All
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        ReactDOM.render(<Dashboard />, document.getElementById('dashboard-root'));
-    </script>
+          {/* Dynamic Cards */}
+          {cards.map(name => (
+            <Card
+              key={name}
+              cardName={name}
+              isVisible={visibility[name]}
+              onClose={handleClose}
+              onDrag={handleDrag}
+              position={positions[name] || center}
+            />
+          ))}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<Dashboard />, document.getElementById('dashboard-root'));
+    feather.replace();
+
+  </script>
 </body>
 </html>
+
+<?php
+// cards.php — backend endpoint returning card list
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+  $files = array_filter(glob(__DIR__ . '/cards/Card*.php'), 'is_file');
+  $names = array_map(function ($file) {
+    return basename($file, '.php');
+  }, $files);
+  header('Content-Type: application/json');
+  echo json_encode($names);
+  exit;
+}
+?>
