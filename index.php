@@ -348,39 +348,12 @@ function calculateNudgePlan(draggedCard, dropX, dropY) {
         return rectanglesOverlap(dropRect, cardRect);
     });
     
-    if (overlappingCards.length === 0) {
-        return { canPlace: true, nudges: [] };
+    // MODIFIED: If any cards overlap, placement is not allowed, effectively disabling nudging.
+    if (overlappingCards.length > 0) {
+        return { canPlace: false, nudges: [] };
     }
     
-    const sortedOverlapping = overlappingCards.sort((a, b) => {
-        const sizeOrder = { small: 1, medium: 2, large: 3 };
-        const sizeA = sizeOrder[getCardPosition(a).size];
-        const sizeB = sizeOrder[getCardPosition(b).size];
-        return sizeA - sizeB;
-    });
-    
-    const nudges = [];
-    const processedCards = [draggedCard];
-    
-    for (const card of sortedOverlapping) {
-        const pos = getCardPosition(card);
-        const nudgePos = findNudgePosition(card, pos.x, pos.y, processedCards);
-        
-        if (nudgePos) {
-            nudges.push({
-                card: card,
-                fromX: pos.x,
-                fromY: pos.y,
-                toX: nudgePos.x,
-                toY: nudgePos.y
-            });
-            processedCards.push(card);
-        } else {
-            return { canPlace: false, nudges: [] };
-        }
-    }
-    
-    return { canPlace: true, nudges };
+    return { canPlace: true, nudges: [] }; // No nudges if no overlap
 }
 
 function updateNudgePreviews(nudges) {
@@ -484,8 +457,9 @@ function handleMouseMove(e) {
         dragState.draggedElement.classList.toggle('valid', nudgePlan.canPlace);
         dragState.draggedElement.classList.toggle('invalid', !nudgePlan.canPlace);
         
-        updateNudgePreviews(nudgePlan.nudges);
-        updateDragInfo(dragState.draggedElement, nudgePlan.canPlace, nudgePlan.nudges.length);
+        // No nudges expected now, so always pass empty array
+        updateNudgePreviews([]); 
+        updateDragInfo(dragState.draggedElement, nudgePlan.canPlace, 0); // Nudge count will always be 0
     } else {
         dragState.draggedElement.classList.remove('valid');
         dragState.draggedElement.classList.add('invalid');
@@ -511,9 +485,10 @@ function handleMouseUp(e) {
         const nudgePlan = calculateNudgePlan(dragState.draggedElement, snappedX, snappedY);
         
         if (nudgePlan.canPlace) {
-            nudgePlan.nudges.forEach(nudge => {
-                setCardPosition(nudge.card, nudge.toX, nudge.toY);
-            });
+            // Since nudging is disabled in calculateNudgePlan, nudges array will be empty
+            // nudgePlan.nudges.forEach(nudge => {
+            //     setCardPosition(nudge.card, nudge.toX, nudge.toY);
+            // });
             setCardPosition(dragState.draggedElement, snappedX, snappedY);
         } else {
             setCardPosition(dragState.draggedElement, dragState.originalX, dragState.originalY);
