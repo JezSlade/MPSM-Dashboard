@@ -202,6 +202,7 @@
             // CRITICAL: Set variables for card_header.php
             $allowMinimize = true;
             $allowSettings = true;
+            $allowClose = false; // Prepared for integration with header
             // $cardId is already set above and matches the div ID
             // $title is already set above
             
