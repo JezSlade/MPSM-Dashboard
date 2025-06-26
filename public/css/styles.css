@@ -229,3 +229,36 @@ main {
   cursor: grab;
   user-select: none;
 }
+/* From index.php inline style block */
+body {
+    background: #1f2937;
+    color: white;
+    margin: 0;
+    padding: 0;
+}
+
+/* Note: .dashboard-container and .card-wrapper already have some styles in styles.css.
+   Ensure these specific properties are either added or updated as needed without
+   creating conflicts if they are already defined differently.
+*/
+.dashboard-container {
+    background: #1f2937; /* Redundant if already defined in :root or [data-theme="dark"] */
+    background-image: radial-gradient(circle, #4b5563 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.card-wrapper {
+    background: var(--bg-accent, #374151); /* Ensure this matches your theme variables */
+    isolation: isolate; /* Good for z-index stacking */
+    contain: layout style; /* Performance optimization */
+}
+
+.card-wrapper:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal styles for the settings popup */
+#cardSettingsModal {
+    z-index: 2000; /* Ensure it's on top of other elements */
+    /* Add any other base styles for your modal if not already present in your CSS framework */
+}
