@@ -1,5 +1,5 @@
 <?php
-// index.php — Updated to match dashlogic.html behavior
+// index.php — Updated with Center Cards functionality
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -36,7 +36,7 @@
             min-width: var(--card-width, 280px);
             max-width: 500px;
             z-index: 1;
-            transition: left 0.1s ease-out, top 0.1s ease-out;
+            transition: left 0.5s ease, top 0.5s ease;
             touch-action: none;
             cursor: default;
         }
@@ -122,7 +122,8 @@
                 </div>
                 <div class="mt-4 border-t pt-4 border-gray-600">
                     <button id="showAllCards" class="neu-btn w-full mb-2">Show All</button>
-                    <button id="hideAllCards" class="neu-btn w-full">Hide All</button>
+                    <button id="hideAllCards" class="neu-btn w-full mb-2">Hide All</button>
+                    <button id="centerCards" class="neu-btn w-full">Center Cards</button>
                 </div>
             </div>
         </aside>
@@ -227,6 +228,49 @@
         }
     }
 
+    function centerAllCards() {
+        const cards = getAllCards().filter(card => card.style.display !== 'none');
+        if (cards.length === 0) return;
+
+        const container = document.getElementById('dashboardContainer');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Get the dimensions of the first visible card (assuming all cards are same size)
+        const cardWidth = cards[0].offsetWidth;
+        const cardHeight = cards[0].offsetHeight;
+        const gap = 20; // pixels between cards
+        
+        // Calculate how many cards fit per row
+        const maxCardsPerRow = Math.max(1, Math.floor(containerWidth / (cardWidth + gap)));
+        
+        // Calculate total grid width and starting position
+        const gridWidth = Math.min(maxCardsPerRow, cards.length) * (cardWidth + gap) - gap;
+        const gridHeight = Math.ceil(cards.length / maxCardsPerRow) * (cardHeight + gap) - gap;
+        
+        // Center the grid in the container
+        const startX = Math.max(0, (containerWidth - gridWidth) / 2);
+        const startY = Math.max(0, (containerHeight - gridHeight) / 2);
+        
+        // Position each card
+        cards.forEach((card, index) => {
+            const row = Math.floor(index / maxCardsPerRow);
+            const col = index % maxCardsPerRow;
+            
+            const x = startX + col * (cardWidth + gap);
+            const y = startY + row * (cardHeight + gap);
+            
+            card.style.left = `${x}px`;
+            card.style.top = `${y}px`;
+            card.style.transition = 'left 0.5s ease, top 0.5s ease';
+            
+            // Remove transition after positioning is done
+            setTimeout(() => {
+                card.style.transition = '';
+            }, 500);
+        });
+    }
+
     // Initialize drag and drop
     document.addEventListener('mousedown', (e) => {
         const cardHeader = e.target.closest('.card-header');
@@ -298,6 +342,12 @@
                     toggleCard(checkbox.dataset.cardTarget, false);
                 }
             });
+        });
+
+        // Center cards button
+        document.getElementById('centerCards').addEventListener('click', (e) => {
+            e.preventDefault();
+            centerAllCards();
         });
 
         // Set initial positions for cards that don't have them
