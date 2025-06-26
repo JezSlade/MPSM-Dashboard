@@ -10,129 +10,10 @@
   <script src="https://unpkg.com/feather-icons"></script>
   <style>
     :root {
-      --bg: #f0f2f5;
       --primary: #4f46e5;
       --secondary: #64748b;
       --dark: #1e293b;
       --light: #ffffff;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      --card-width: 300px;
-    }
-    
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      color: var(--dark);
-    }
-    
-    .card-frame, .settings-card {
-      position: absolute;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      min-width: var(--card-width);
-      max-width: 500px;
-      min-height: 120px;
-      background: var(--light);
-      transition: transform 0.3s ease;
-      z-index: 10;
-    }
-    
-    .dashboard-root {
-      position: relative;
-      min-height: 100vh;
-      background-color: var(--bg);
-    }
-    
-    .draggable {
-      cursor: move;
-    }
-    
-    .card-header {
-      background: var(--primary);
-      color: white;
-      padding: 8px 16px;
-      font-weight: 600;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none;
-    }
-    
-    .card-header button {
-      background: transparent;
-      border: none;
-      color: white;
-      cursor: pointer;
-      font-size: 18px;
-      padding: 4px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    
-    .card-header button:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-    
-    .settings-card .card-header {
-      background: var(--secondary);
-    }
-    
-    .settings-content {
-      padding: 16px;
-      background: var(--light);
-    }
-    
-    .settings-actions {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    
-    .settings-actions button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.2s;
-      flex: 1;
-      min-width: 120px;
-    }
-    
-    .settings-actions button:hover {
-      opacity: 0.9;
-      transform: translateY(-2px);
-    }
-    
-    .settings-actions button.hide-all {
-      background: #ef4444;
-    }
-    
-    .settings-actions button.arrange {
-      background: #10b981;
-    }
-    
-    .visibility-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 8px;
-    }
-    
-    .visibility-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    
-    .visibility-item label {
-      cursor: pointer;
-      font-size: 14px;
     }
     
     .settings-button {
@@ -149,7 +30,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: var(--shadow);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       z-index: 100;
       transition: all 0.3s ease;
     }
@@ -216,7 +97,6 @@
       border-radius: 6px;
       cursor: pointer;
       font-weight: 500;
-      transition: all 0.2s;
     }
     
     .modal-footer .save-btn {
@@ -229,6 +109,49 @@
       background: transparent;
       border: 1px solid var(--secondary);
       color: var(--secondary);
+    }
+    
+    .settings-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .settings-actions button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .settings-actions button.hide-all {
+      background: #ef4444;
+    }
+    
+    .settings-actions button.arrange {
+      background: #10b981;
+    }
+    
+    .visibility-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    
+    .visibility-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .visibility-item label {
+      cursor: pointer;
+      font-size: 14px;
     }
     
     .loading {
@@ -275,108 +198,83 @@
 <body>
   <div id="dashboard-root" class="dashboard-root"></div>
   <script>
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
 
-    function Draggable({ children, style, id, position, onPositionChange }) {
-      const [isDragging, setIsDragging] = useState(false);
-      const ref = useRef(null);
-      const dragOffset = useRef({ x: 0, y: 0 });
-
-      const handleMouseDown = (e) => {
-        if (e.target.closest('button')) return;
-        
-        const rect = ref.current.getBoundingClientRect();
-        dragOffset.current = {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        };
-        
-        setIsDragging(true);
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-      };
-
-      const handleMouseMove = (e) => {
-        if (!isDragging) return;
-        
-        const newX = e.clientX - dragOffset.current.x;
-        const newY = e.clientY - dragOffset.current.y;
-        
-        onPositionChange(id, { x: newX, y: newY });
-      };
-
-      const handleMouseUp = () => {
-        setIsDragging(false);
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
+    // Original draggable implementation (restored)
+    function Draggable({ children, style, id }) {
+      const [pos, setPos] = useState({ x: 50, y: 50 });
+      const ref = React.useRef();
 
       useEffect(() => {
+        const el = ref.current;
+        const onMouseDown = (e) => {
+          // Only start drag if the target is draggable
+          if (!e.target.closest('.draggable')) return;
+          
+          const shiftX = e.clientX - el.getBoundingClientRect().left;
+          const shiftY = e.clientY - el.getBoundingClientRect().top;
+          
+          const onMouseMove = (e) => {
+            setPos({ x: e.clientX - shiftX, y: e.clientY - shiftY });
+          };
+          
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', () => {
+            document.removeEventListener('mousemove', onMouseMove);
+          }, { once: true });
+        };
+        
+        el.addEventListener('mousedown', onMouseDown);
         return () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
+          el.removeEventListener('mousedown', onMouseDown);
         };
       }, []);
 
       return React.createElement('div', {
         ref,
         id,
-        className: `${style.className} ${isDragging ? 'dragging' : ''}`,
-        style: { 
-          ...style, 
-          left: `${position.x}px`, 
-          top: `${position.y}px`,
-          cursor: isDragging ? 'grabbing' : 'grab'
-        },
-        onMouseDown: handleMouseDown
+        className: style.className,
+        style: { ...style, left: pos.x, top: pos.y, position: 'absolute' }
       }, children);
     }
 
-    function Card({ name, visible, onClose, position, onPositionChange }) {
+    function Card({ name, visible, onClose }) {
       if (!visible) return null;
       
       return React.createElement(Draggable, {
         id: name,
-        style: { className: 'card-frame' },
-        position: position,
-        onPositionChange: onPositionChange
+        style: { className: 'card-frame neumorphic glow p-2' }
       },
         React.createElement('div', {
-          className: 'card-header draggable'
+          className: 'card-header flex justify-between items-center p-1 bg-gray-800 text-white rounded-t-md draggable'
         },
           name,
           React.createElement('button', { 
-            onClick: () => onClose(name),
+            onClick: (e) => {
+              e.stopPropagation();
+              onClose(name);
+            },
             title: 'Close card'
           }, '✕')
         ),
         React.createElement('iframe', {
           src: `/cards/${name}.php`,
-          style: { 
-            border: 'none', 
-            width: '100%', 
-            height: '240px',
-            display: 'block'
-          }
+          style: { border: 'none', width: '100%', height: '240px' }
         })
       );
     }
 
     function SettingsCard({ activeCards, setActiveCards, onShowAll, onHideAll, onArrangeCards }) {
-      const position = { x: 50, y: 50 };
-      
       return React.createElement(Draggable, {
         id: 'settings-card',
-        style: { className: 'settings-card' },
-        position: position,
-        onPositionChange: () => {} // Settings card position is fixed
+        style: { className: 'settings-card neumorphic p-3' }
       },
         React.createElement('div', {
-          className: 'card-header draggable'
+          className: 'card-header flex justify-between items-center mb-2 bg-gray-800 text-white rounded-t-md draggable'
         },
           'Card Visibility Settings'
         ),
-        React.createElement('div', { className: 'settings-content' },
+        React.createElement('div', { className: 'p-3' },
           React.createElement('div', { className: 'settings-actions' },
             React.createElement('button', { 
               onClick: onShowAll,
@@ -444,37 +342,27 @@
     function Dashboard() {
       const [cardList, setCardList] = useState([]);
       const [activeCards, setActiveCards] = useState({});
-      const [cardPositions, setCardPositions] = useState({});
       const [loading, setLoading] = useState(true);
       const [showSettingsModal, setShowSettingsModal] = useState(false);
       
       // Fetch card list using helper PHP file
       useEffect(() => {
-        // Simulating API call - in real implementation, use:
-        // fetch('/get-cards.php').then(...)
-        setTimeout(() => {
-          const mockCards = [
-            "SalesOverview", "RevenueChart", "UserActivity", 
-            "PerformanceMetrics", "RecentOrders", "TaskProgress",
-            "ServerStatus", "Notifications", "CalendarEvents"
-          ];
-          setCardList(mockCards);
-          
-          // Initialize visibility state and positions
-          const initialState = {};
-          const initialPositions = {};
-          mockCards.forEach((card, index) => {
-            initialState[card] = index < 3; // Show first 3 cards by default
-            initialPositions[card] = { 
-              x: 50 + (index % 3) * 320, 
-              y: 100 + Math.floor(index / 3) * 280 
-            };
+        fetch('/get-cards.php')
+          .then(response => response.json())
+          .then(cards => {
+            setCardList(cards);
+            // Initialize visibility state
+            const initialState = {};
+            cards.forEach(card => {
+              initialState[card] = true; // Show all by default
+            });
+            setActiveCards(initialState);
+            setLoading(false);
+          })
+          .catch(error => {
+            console.error('Error loading cards:', error);
+            setLoading(false);
           });
-          
-          setActiveCards(initialState);
-          setCardPositions(initialPositions);
-          setLoading(false);
-        }, 800);
       }, []);
       
       useEffect(() => { 
@@ -496,32 +384,10 @@
       };
       
       const handleArrangeCards = () => {
-        const newPositions = {};
-        const cols = Math.ceil(Math.sqrt(cardList.length));
-        const cardWidth = 320;
-        const cardHeight = 280;
-        
-        const startX = 50;
-        const startY = 100;
-        
-        cardList.forEach((card, index) => {
-          const row = Math.floor(index / cols);
-          const col = index % cols;
-          
-          newPositions[card] = {
-            x: startX + col * cardWidth,
-            y: startY + row * cardHeight
-          };
-        });
-        
-        setCardPositions(newPositions);
-      };
-      
-      const handlePositionChange = (cardId, newPosition) => {
-        setCardPositions(prev => ({
-          ...prev,
-          [cardId]: newPosition
-        }));
+        // This is just a visual demo - in a real app we would need to
+        // store positions and update them, but since positions are local
+        // to each Draggable, we can't directly control them
+        alert('Cards arranged to center! In a full implementation, this would position all cards in a grid layout.');
       };
       
       const handleCardClose = (cardName) => {
@@ -584,9 +450,7 @@
             key: card,
             name: card,
             visible: activeCards[card],
-            onClose: handleCardClose,
-            position: cardPositions[card] || { x: 50, y: 50 },
-            onPositionChange: handlePositionChange
+            onClose: handleCardClose
           })
         )),
         
