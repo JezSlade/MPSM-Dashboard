@@ -487,3 +487,37 @@ main {
 .settings-content::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 126, 234, 0.7);
 }
+/* ====== Neon Glassmorphic Enhancements ====== */
+.settings-section h3 {
+  color: var(--neon-c);
+  text-shadow: 0 0 4px var(--neon-c), 0 0 8px var(--neon-c);
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.toggle-label {
+  color: var(--text-dark);
+  font-weight: 500;
+  text-shadow: 0 0 2px var(--neon-y);
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--neon-c), var(--neon-m));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4), 0 0 8px rgba(255, 0, 212, 0.3);
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 0, 212, 0.4), 0 0 10px rgba(0, 240, 255, 0.4);
+}
