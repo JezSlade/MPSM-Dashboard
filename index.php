@@ -1,158 +1,77 @@
 <?php
-/**
- * index.php — Restored layout with absolute‐positioned dashboard to right of sidebar
- * and all header/navigation/footer controls working
- *
- * Changelog:
- * - Wrapped `<main>` in `relative` so `.dashboard-container` can be `absolute inset-0`.
- * - Changed `.dashboard-container` to `absolute inset-0` inside `<main>`.
- * - Ensured header and navigation remain visible above the dashboard container.
- * - Retained card-settings modal, smart drag logic, and APP_NAME title.
- * - Changelog appended at end after </html>.
- */
-declare(strict_types=1);
-error_reporting(E_ALL);
-ini_set('display_errors','1');
-
-// Load environment constants
-define('DEALER_CODE', getenv('DEALER_CODE') ?: 'N/A');
-define('APP_NAME',    getenv('APP_NAME')    ?: 'MPS Monitor Dashboard');
+// index.php — Dashboard container with drag-and-drop logic and dynamic cards
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full dark" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <title><?php echo htmlspecialchars(APP_NAME, ENT_QUOTES,'UTF-8'); ?></title>
-  <link rel="icon" href="data:;base64,">
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Global styles -->
-  <link rel="stylesheet" href="/public/css/styles.css">
-  <!-- Feather Icons -->
-  <script src="https://unpkg.com/feather-icons"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="h-full flex flex-col">
-
-  <?php include __DIR__ . '/includes/header.php'; ?>
-
-  <div class="flex flex-1 overflow-hidden">
-    <?php include __DIR__ . '/includes/navigation.php'; ?>
-
-    <!-- Make main relative so the absolute dashboard-container fills it -->
-    <main class="flex-1 relative p-6">
-      <div class="dashboard-container absolute inset-0" id="dashboard">
+<body>
+<main style="position: relative;">
+    <div class="settings-menu" style="position: fixed; top: 10px; right: 10px; z-index: 1001; background: var(--bg-accent); padding: 12px; border-radius: 8px;">
+        <h2 style="margin-top: 0;">Card Visibility</h2>
         <?php
-          $cardsDir = __DIR__ . '/cards/';
-          $files = array_filter(scandir($cardsDir), fn($f)=>pathinfo($f,PATHINFO_EXTENSION)==='php');
-          foreach ($files as $file):
-            $id = pathinfo($file, PATHINFO_FILENAME);
-        ?>
-        <div 
-          class="card-wrapper neumorphic glow" 
-          id="<?php echo htmlspecialchars($id,ENT_QUOTES); ?>"
-          data-file="<?php echo htmlspecialchars($file,ENT_QUOTES); ?>">
-          <?php include $cardsDir . $file; ?>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </main>
-  </div>
-
-  <?php include __DIR__ . '/includes/footer.php'; ?>
-
-  <!-- Card-settings modal (unchanged) -->
-
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    feather.replace();
-
-    // Toggle Application Log card
-    document.getElementById('view-error-log')?.addEventListener('click', () => {
-      const log = document.getElementById('appLogCard');
-      if (!log) return;
-      log.style.display = getComputedStyle(log).display==='none' ? '' : 'none';
-    });
-
-    const container = document.getElementById('dashboard');
-    const cards = Array.from(container.querySelectorAll('.card-wrapper'));
-    const positions = JSON.parse(localStorage.getItem('cardPositions')||'{}');
-    const GRID = 20, MAX_IT=50;
-    const sizes = {};
-
-    // Apply saved/default positions and measure sizes
-    cards.forEach(c => {
-      const file = c.dataset.file;
-      const pos = positions[file] || { x:20, y:20 };
-      c.style.left = pos.x+'px';
-      c.style.top  = pos.y+'px';
-      const r = c.getBoundingClientRect();
-      sizes[file] = { w:r.width, h:r.height };
-    });
-
-    function rect(c){ 
-      return { 
-        x: parseInt(c.style.left), 
-        y: parseInt(c.style.top), 
-        w: sizes[c.dataset.file].w, 
-        h: sizes[c.dataset.file].h 
-      };
-    }
-    function overlap(a,b){
-      return !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
-    }
-    function nudge(c, depth=0){
-      if (depth>MAX_IT) return;
-      const r1 = rect(c);
-      for (let o of cards){
-        if (o===c || o.style.display==='none') continue;
-        const r2 = rect(o);
-        if (overlap(r1,r2)){
-          const dx = (r2.x + r2.w/2) < (r1.x + r1.w/2) ? -GRID : GRID;
-          const dy = (r2.y + r2.h/2) < (r1.y + r1.h/2) ? -GRID : GRID;
-          o.style.left = Math.max(0, Math.min(container.clientWidth - r2.w, r2.x+dx)) + 'px';
-          o.style.top  = Math.max(0, Math.min(container.clientHeight - r2.h, r2.y+dy)) + 'px';
-          nudge(o, depth+1);
+        $cardFiles = glob(__DIR__ . '/card/Card*.php');
+        foreach ($cardFiles as $index => $cardPath) {
+            $cardId = 'card' . $index;
+            $cardName = basename($cardPath, '.php');
+            echo "<label><input type='checkbox' id='{$cardId}-toggle'> {$cardName}</label><br>\n";
         }
-      }
-    }
+        ?>
+    </div>
 
-    let active=null, ox=0, oy=0, ax=0, ay=0;
-    cards.forEach(c => {
-      const hdr = c.querySelector('.card-header');
-      hdr.style.cursor = 'grab';
-      hdr.addEventListener('mousedown', e => {
-        active = c;
-        ox = e.clientX; oy = e.clientY;
-        const rc = rect(c);
-        ax = rc.x; ay = rc.y;
-        c.classList.add('dragging');
-      });
+    <div class="dashboard-container">
+        <?php
+        foreach ($cardFiles as $index => $cardPath) {
+            $cardId = 'card' . $index;
+            echo "<div class='card-wrapper' id='{$cardId}' style='display:none; left: 100px; top: " . ($index * 80 + 40) . "px;'>\n";
+            include 'card_header.php';
+            echo "<div class='card-content neumorphic glow'>\n";
+            include $cardPath;
+            echo "</div></div>\n";
+        }
+        ?>
+    </div>
+</main>
+<script>
+const checkboxes = document.querySelectorAll('.settings-menu input[type="checkbox"]');
+checkboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+        const cardId = cb.id.replace('-toggle', '');
+        const card = document.getElementById(cardId);
+        if (cb.checked) {
+            card.style.display = 'block';
+            card.style.zIndex = 1;
+        } else {
+            card.style.display = 'none';
+        }
     });
-    document.addEventListener('mousemove', e => {
-      if (!active) return;
-      let nx = ax + (e.clientX - ox);
-      let ny = ay + (e.clientY - oy);
-      nx = Math.max(0, Math.min(nx, container.clientWidth - sizes[active.dataset.file].w));
-      ny = Math.max(0, Math.min(ny, container.clientHeight - sizes[active.dataset.file].h));
-      active.style.left = nx+'px';
-      active.style.top  = ny+'px';
-      nudge(active);
+});
+
+// Drag logic
+let dragTarget = null, offsetX = 0, offsetY = 0;
+document.querySelectorAll('.card-wrapper .card-header').forEach(header => {
+    header.addEventListener('mousedown', e => {
+        dragTarget = header.parentElement;
+        offsetX = e.clientX - dragTarget.offsetLeft;
+        offsetY = e.clientY - dragTarget.offsetTop;
+        dragTarget.classList.add('dragging');
     });
-    document.addEventListener('mouseup', () => {
-      if (!active) return;
-      active.classList.remove('dragging');
-      const out = {};
-      cards.forEach(c => {
-        out[c.dataset.file] = { 
-          x: parseInt(c.style.left), 
-          y: parseInt(c.style.top) 
-        };
-      });
-      localStorage.setItem('cardPositions', JSON.stringify(out));
-      active = null;
-    });
-  });
-  </script>
+});
+document.addEventListener('mousemove', e => {
+    if (dragTarget) {
+        dragTarget.style.left = (e.clientX - offsetX) + 'px';
+        dragTarget.style.top = (e.clientY - offsetY) + 'px';
+    }
+});
+document.addEventListener('mouseup', () => {
+    if (dragTarget) dragTarget.classList.remove('dragging');
+    dragTarget = null;
+});
+</script>
 </body>
 </html>
 
