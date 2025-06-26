@@ -60,10 +60,6 @@
             z-index: 100;
         }
         
-        .card-size-small { width: 240px; height: 140px; }
-        .card-size-medium { width: 300px; height: 180px; }
-        .card-size-large { width: 380px; height: 220px; }
-        
         .drag-info {
             position: absolute;
             top: -32px;
@@ -162,7 +158,7 @@
             echo "<label for='{$checkboxId}'>\n";
             echo "  <input type='checkbox' id='{$checkboxId}' data-card-target='{$cardId}' data-card-index='{$index}'>\n";
             echo "  {$cardName}\n";
-            echo "</label>\n";
+            </label>\n";
         }
         ?>
         <hr style="margin: 10px 0; border-color: #4b5563;">
@@ -520,15 +516,16 @@ function handleMouseUp(e) {
 function toggleCard(cardId, show) {
     const card = document.getElementById(cardId);
     if (!card) {
-        console.error('Card not found:', cardId);
+        console.error('Card not found for toggle:', cardId); // Diagnostic log
         return false;
     }
     
-    console.log('Toggling card:', cardId, 'to', show ? 'visible' : 'hidden');
+    console.log('Toggling card:', cardId, 'to', show ? 'visible' : 'hidden'); // Diagnostic log
     
     if (show) {
         card.style.display = 'block';
         card.offsetHeight; // Force reflow
+        console.log('Card position after toggle (block):', card.id, 'left:', card.style.left, 'top:', card.style.top); // Diagnostic log
     } else {
         card.style.display = 'none';
     }
@@ -540,8 +537,13 @@ function handleCheckboxChange(e) {
     const checkbox = e.target;
     const cardId = checkbox.dataset.cardTarget;
     
-    console.log('Checkbox changed:', checkbox.id, 'targeting card:', cardId, 'checked:', checkbox.checked);
+    console.log('Checkbox changed:', checkbox.id, 'targeting card:', cardId, 'checked:', checkbox.checked); // Diagnostic log
     
+    // Diagnostic check: Verify if the card element exists
+    if (!document.getElementById(cardId)) {
+        console.error('ERROR: Card element with ID', cardId, 'not found in DOM for checkbox', checkbox.id); // Diagnostic log
+    }
+
     e.stopPropagation();
     e.stopImmediatePropagation();
     
