@@ -122,7 +122,7 @@
                 <div class="space-y-2" id="cardVisibilityCheckboxes">
                     <?php
                     // Dynamically include checkboxes for each card
-                    $cardFiles = glob(__DIR__ . '/cards/Card*.php');
+                    $cardFiles = glob(__DIR__ . '/cards/.php');
                     foreach ($cardFiles as $file) {
                         $cardId = basename($file, '.php');
                         // Skip CardTemplate and CardAppLog as requested
