@@ -56,20 +56,41 @@ checkboxes.forEach(cb => {
 });
 
 let dragTarget = null, offsetX = 0, offsetY = 0;
-document.querySelectorAll('.card-wrapper .card-header').forEach(header => {
-    header.addEventListener('mousedown', e => {
-        dragTarget = header.parentElement;
-        offsetX = e.clientX - dragTarget.offsetLeft;
-        offsetY = e.clientY - dragTarget.offsetTop;
-        dragTarget.classList.add('dragging');
-    });
+document.querySelectorAll('.card-wrapper').forEach(card => {
+    const header = card.querySelector('.card-header');
+    const minimizeBtn = card.querySelector('[data-action="minimize"]');
+    const settingsBtn = card.querySelector('[data-action="settings"]');
+    const content = card.querySelector('.card-content');
+
+    if (header) {
+        header.addEventListener('mousedown', e => {
+            dragTarget = card;
+            offsetX = e.clientX - dragTarget.offsetLeft;
+            offsetY = e.clientY - dragTarget.offsetTop;
+            dragTarget.classList.add('dragging');
+        });
+    }
+
+    if (minimizeBtn && content) {
+        minimizeBtn.addEventListener('click', () => {
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            alert(`Settings for ${card.id}`);
+        });
+    }
 });
+
 document.addEventListener('mousemove', e => {
     if (dragTarget) {
         dragTarget.style.left = (e.clientX - offsetX) + 'px';
         dragTarget.style.top = (e.clientY - offsetY) + 'px';
     }
 });
+
 document.addEventListener('mouseup', () => {
     if (dragTarget) dragTarget.classList.remove('dragging');
     dragTarget = null;
