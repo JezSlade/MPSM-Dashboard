@@ -113,33 +113,33 @@
     function Dashboard() {
       const [cardList, setCardList] = useState([]);
       const [activeCards, setActiveCards] = useState({});
+      const [loading, setLoading] = useState(true);
       
-      // Fetch card list on component mount
+      // Fetch card list using helper PHP file
       useEffect(() => {
-        fetch('/cards/')
-          .then(response => response.text())
-          .then(data => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(data, 'text/html');
-            const links = htmlDoc.querySelectorAll('a[href$=".php"]');
-            
-            const cards = Array.from(links).map(link => {
-              const href = link.getAttribute('href');
-              return href.replace('.php', '');
-            });
-            
+        fetch('/get-cards.php')
+          .then(response => response.json())
+          .then(cards => {
             setCardList(cards);
-            
-            // Initialize activeCards state
+            // Initialize visibility state
             const initialState = {};
             cards.forEach(card => {
               initialState[card] = false;
             });
             setActiveCards(initialState);
+            setLoading(false);
+          })
+          .catch(error => {
+            console.error('Error loading cards:', error);
+            setLoading(false);
           });
       }, []);
       
       useEffect(() => { feather.replace(); }, [activeCards]);
+
+      if (loading) {
+        return React.createElement('div', { className: 'loading' }, 'Loading dashboard...');
+      }
 
       return React.createElement(React.Fragment, null,
         React.createElement(SettingsCard, { activeCards, setActiveCards }),
