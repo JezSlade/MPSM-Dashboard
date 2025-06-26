@@ -235,26 +235,28 @@
             };
 
             const handleShowAll = () => {
-                setCards(prev => {
-                    const updated = { ...prev };
-                    [...availableCards, 'Settings'].forEach(cardName => {
-                        if (updated[cardName]) updated[cardName].isVisible = true;
-                    });
-                    return updated;
+              setCards(prev => {
+                const updated = { ...prev };
+                availableCards.forEach(cardName => {
+                  if (updated[cardName]) {
+                    updated[cardName].isVisible = true;
+                  }
                 });
+                return updated;
+              });
             };
 
             const handleHideAll = () => {
-                setCards(prev => {
-                    const updated = { ...prev };
-                    availableCards.forEach(cardName => {
-                        if (updated[cardName]) updated[cardName].isVisible = false;
-                    });
-                    if (updated.Settings) updated.Settings.isVisible = true;
-                    return updated;
+              setCards(prev => {
+                const updated = { ...prev };
+                availableCards.forEach(cardName => {
+                  if (cardName !== 'Settings' && updated[cardName]) {
+                    updated[cardName].isVisible = false;
+                  }
                 });
+                return updated;
+              });
             };
-
             const handleCenterAll = () => {
                 setCards(prev => {
                     const updated = { ...prev };
