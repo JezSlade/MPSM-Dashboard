@@ -1,5 +1,5 @@
 <?php
-// index.php — Fixed with proper card ID consistency
+// index.php — Updated to match dashlogic.html behavior
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -10,17 +10,22 @@
     <link rel="stylesheet" href="/public/css/styles.css">
     <style>
         body {
-            background: #1f2937;
-            color: white;
             margin: 0;
             padding: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        main {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .dashboard-container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            background: #1f2937;
+            position: absolute;
+            inset: 0;
             background-image: radial-gradient(circle, #4b5563 1px, transparent 1px);
             background-size: 20px 20px;
             overflow: hidden;
@@ -28,40 +33,38 @@
 
         .card-wrapper {
             position: absolute;
+            min-width: var(--card-width, 280px);
+            max-width: 500px;
+            z-index: 1;
+            transition: left 0.1s ease-out, top 0.1s ease-out;
+            touch-action: none;
+            cursor: default;
+        }
+
+        .card-wrapper.dragging {
+            opacity: 0.9;
+            transform: scale(1.02);
+            z-index: 1000;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.25), 0 0 12px rgba(0,240,255,0.3);
+            transition: none;
+        }
+
+        .card-header {
             cursor: grab;
             user-select: none;
-            transition: box-shadow 0.15s ease;
-            border-radius: 8px;
-            background: var(--bg-accent, #374151);
-            isolation: isolate;
-            contain: layout style;
         }
 
-        .card-wrapper:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Card-specific neumorphic adjustments */
-        #ConsoleLogCard {
-            /* Example initial position */
-            left: 50px;
-            top: 50px;
-            z-index: 10;
-        }
-
-        /* Settings menu specific styles */
         .settings-menu {
-            position: fixed; /* Use fixed for global menu */
+            position: fixed;
             top: 20px;
             left: 20px;
             z-index: 50;
             padding: 15px;
-            background: #2D3748; /* Darker background for distinction */
+            background: #2D3748;
             border-radius: 10px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
 
-        /* Basic form element styling */
         .form-checkbox {
             appearance: none;
             display: inline-block;
@@ -92,45 +95,21 @@
             transform: translate(-50%, -50%);
             line-height: 1;
         }
-
-        .form-checkbox:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
-        }
-
-        /* Styles for the modal overlay and content (CardDrilldown) */
-        #drillOverlay {
-            /* flex utilities handled by JS for toggle */
-            z-index: 1000; /* Ensure it's on top */
-        }
-
-        #drillOverlay > div { /* The actual modal content */
-            max-width: 90%;
-            max-height: 90%;
-        }
-
-        /* Hide specific cards initially if needed, managed by JS */
-        /* .card-wrapper[data-card-hidden="true"] { display: none; } */
-
     </style>
 </head>
-<body class="overflow-hidden">
+<body>
     <?php
-    // Define $cardFiles once at the beginning of the body to ensure it's accessible globally
     $cardFiles = glob(__DIR__ . '/cards/Card*.php');
     ?>
 
-    <main class="relative h-screen w-screen overflow-hidden">
-        <aside class="absolute top-0 left-0 p-4 z-50">
+    <main>
+        <aside class="settings-menu">
             <div class="neumorphic p-4 rounded-lg shadow-xl">
                 <h2 class="text-lg font-semibold mb-3">Card Settings</h2>
                 <div class="space-y-2" id="cardVisibilityCheckboxes">
                     <?php
-                    // Dynamically include checkboxes for each card
-                    // $cardFiles is now defined globally above
                     foreach ($cardFiles as $file) {
                         $cardId = basename($file, '.php');
-                        // Skip CardTemplate and CardAppLog as requested
                         if ($cardId === 'CardTemplate' || $cardId === 'CardAppLog') {
                             continue;
                         }
@@ -150,15 +129,12 @@
 
         <div id="dashboardContainer" class="dashboard-container">
             <?php
-            // Include all active cards
-            // $cardFiles is now defined globally above and accessible here
             foreach ($cardFiles as $file) {
                 $cardId = basename($file, '.php');
                 if ($cardId === 'CardTemplate' || $cardId === 'CardAppLog') {
-                    continue; // Skip template and the duplicate log card
+                    continue;
                 }
-                echo '<div class="card-wrapper" id="' . htmlspecialchars($cardId) . '-wrapper">';
-                // Pass $cardId to ensure unique IDs for elements within the card if needed
+                echo '<div class="card-wrapper" id="' . htmlspecialchars($cardId) . '">';
                 include $file;
                 echo '</div>';
             }
@@ -168,144 +144,145 @@
 
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script>
-    // Helper function to get a card's wrapper element
-    function getCardWrapper(cardId) {
-        return document.getElementById(cardId + '-wrapper');
+    // Dashboard functionality
+    let activeCard = null;
+    let offsetX, offsetY;
+    const maxIterations = 100;
+
+    function getAllCards() {
+        return Array.from(document.querySelectorAll('.card-wrapper'));
     }
 
-    // Toggles card visibility based on checkbox state
-    function toggleCard(cardId, isChecked) {
-        const cardWrapper = getCardWrapper(cardId);
-        if (cardWrapper) {
-            cardWrapper.style.display = isChecked ? 'block' : 'none';
-        }
+    function getCardRect(card) {
+        const rect = card.getBoundingClientRect();
+        return {
+            left: parseInt(card.style.left) || 0,
+            top: parseInt(card.style.top) || 0,
+            width: rect.width,
+            height: rect.height
+        };
     }
 
-    // Handles changes to card visibility checkboxes
-    function handleCheckboxChange(event) {
-        const checkbox = event.target;
-        const cardId = checkbox.dataset.cardTarget;
-        toggleCard(cardId, checkbox.checked);
+    function isOverlapping(rect1, rect2) {
+        return (
+            rect1.left < rect2.left + rect2.width &&
+            rect1.left + rect1.width > rect2.left &&
+            rect1.top < rect2.top + rect2.height &&
+            rect1.top + rect1.height > rect2.top
+        );
     }
 
-    // Handles clicks on card action buttons (minimize, settings, close)
-    function handleCardButtonClick(event) {
-        const target = event.target.closest('[data-action][data-card]');
-        if (!target) return; // Not a card action button
-
-        const action = target.dataset.action;
-        const cardId = target.dataset.card;
-        const cardWrapper = getCardWrapper(cardId);
-
-        if (!cardWrapper) {
-            console.warn(`Card wrapper not found for ID: ${cardId}`);
+    function checkAndResolveCollisions(movedCard, iterations = 0) {
+        if (iterations >= maxIterations) {
+            console.warn('Max iterations reached in collision resolution');
             return;
         }
 
-        switch (action) {
-            case 'minimize':
-                // Implement minimize logic here, e.g., toggle a class for height/overflow
-                // For now, let's just log
-                console.log(`Minimize action for card: ${cardId}`);
-                break;
-            case 'settings':
-                // Implement settings logic, e.g., open a modal
-                console.log(`Settings action for card: ${cardId}`);
-                break;
-            case 'close':
-                // Implement close logic, e.g., remove the card from DOM
-                cardWrapper.remove();
-                // Also uncheck the corresponding checkbox
-                const checkbox = document.querySelector(`.settings-menu input[data-card-target="${cardId}"]`);
-                if (checkbox) {
-                    checkbox.checked = false;
-                }
-                console.log(`Close action for card: ${cardId}`);
-                break;
-            default:
-                console.warn(`Unknown action: ${action} for card: ${cardId}`);
-        }
-    }
+        let hasOverlaps = false;
+        let dx = 0;
+        let dy = 0;
 
-    // Drag and Drop (from the provided context, assuming it's implemented elsewhere or globally)
-    let activeItem = null;
-    let initialX, initialY, currentX, currentY, xOffset = 0, yOffset = 0;
+        const movedRect = getCardRect(movedCard);
+        const cards = getAllCards().filter(card => card !== movedCard && card.style.display !== 'none');
 
-    function dragStart(e) {
-        if (e.type === "touchstart") {
-            initialX = e.touches[0].clientX - xOffset;
-            initialY = e.touches[0].clientY - yOffset;
-        } else {
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-        }
-
-        const header = e.target.closest('.card-header');
-        if (header && header.closest('.card-wrapper')) {
-            activeItem = header.closest('.card-wrapper');
-            activeItem.classList.add('dragging');
-        }
-    }
-
-    function dragEnd(e) {
-        if (activeItem) {
-            activeItem.classList.remove('dragging');
-            xOffset = currentX;
-            yOffset = currentY;
-        }
-        activeItem = null;
-    }
-
-    function drag(e) {
-        if (activeItem) {
-            e.preventDefault();
-
-            if (e.type === "touchmove") {
-                currentX = e.touches[0].clientX - initialX;
-                currentY = e.touches[0].clientY - initialY;
-            } else {
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
+        cards.forEach(otherCard => {
+            const otherRect = getCardRect(otherCard);
+            if (isOverlapping(movedRect, otherRect)) {
+                hasOverlaps = true;
+                const cx1 = movedRect.left + movedRect.width / 2;
+                const cx2 = otherRect.left + otherRect.width / 2;
+                const cy1 = movedRect.top + movedRect.height / 2;
+                const cy2 = otherRect.top + otherRect.height / 2;
+                const angle = Math.atan2(cy2 - cy1, cx2 - cx1);
+                dx += -Math.cos(angle) * 5;
+                dy += -Math.sin(angle) * 5;
             }
-
-            setTranslate(currentX, currentY, activeItem);
-        }
-    }
-
-    function setTranslate(xPos, yPos, el) {
-        el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
-        el.style.left = ''; // Clear inline left/top if transform is used
-        el.style.top = '';
-    }
-
-    // Event listeners for drag and drop
-    const dashboardContainer = document.getElementById('dashboardContainer');
-    dashboardContainer.addEventListener("touchstart", dragStart, false);
-    dashboardContainer.addEventListener("touchend", dragEnd, false);
-    dashboardContainer.addEventListener("touchmove", drag, false);
-
-    dashboardContainer.addEventListener("mousedown", dragStart, false);
-    dashboardContainer.addEventListener("mouseup", dragEnd, false);
-    dashboardContainer.addEventListener("mousemove", drag, false);
-
-
-    // CRITICAL: Add button click handler
-    // Changed to delegate on dashboardContainer for better performance and scope
-    document.getElementById('dashboardContainer').addEventListener('click', handleCardButtonClick);
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const checkboxes = document.querySelectorAll('.settings-menu input[type="checkbox"]');
-        console.log('Found checkboxes:', checkboxes.length);
-
-        checkboxes.forEach((checkbox, index) => {
-            console.log('Setting up checkbox:', checkbox.id, 'targeting:', checkbox.dataset.cardTarget);
-            // REMOVED: Redundant removeEventListener
-            checkbox.addEventListener('change', handleCheckboxChange);
         });
 
-        document.getElementById('showAllCards').addEventListener('click', function(e) {
+        if (hasOverlaps) {
+            const newLeft = parseInt(movedCard.style.left || '0') + dx;
+            const newTop = parseInt(movedCard.style.top || '0') + dy;
+            
+            const clampedLeft = Math.max(0, Math.min(newLeft, window.innerWidth - movedCard.offsetWidth));
+            const clampedTop = Math.max(0, Math.min(newTop, window.innerHeight - movedCard.offsetHeight));
+            
+            movedCard.style.left = `${clampedLeft}px`;
+            movedCard.style.top = `${clampedTop}px`;
+            
+            setTimeout(() => checkAndResolveCollisions(movedCard, iterations + 1), 50);
+        }
+    }
+
+    function toggleCard(cardId, show) {
+        const card = document.getElementById(cardId);
+        const checkbox = document.querySelector(`input[data-card-target="${cardId}"]`);
+        if (card) {
+            card.style.display = show ? 'block' : 'none';
+            if (checkbox) {
+                checkbox.checked = show;
+            }
+            if (show) {
+                checkAndResolveCollisions(card);
+            }
+        }
+    }
+
+    // Initialize drag and drop
+    document.addEventListener('mousedown', (e) => {
+        const cardHeader = e.target.closest('.card-header');
+        if (cardHeader && !e.target.closest('.neu-btn')) {
+            activeCard = cardHeader.closest('.card-wrapper');
+            if (activeCard) {
+                activeCard.classList.add('dragging');
+                const rect = activeCard.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                activeCard.style.zIndex = 1000;
+            }
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!activeCard) return;
+        e.preventDefault();
+
+        let newX = e.clientX - offsetX;
+        let newY = e.clientY - offsetY;
+
+        newX = Math.max(0, Math.min(newX, window.innerWidth - activeCard.offsetWidth));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - activeCard.offsetHeight));
+
+        activeCard.style.left = `${newX}px`;
+        activeCard.style.top = `${newY}px`;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (activeCard) {
+            activeCard.classList.remove('dragging');
+            checkAndResolveCollisions(activeCard);
+            activeCard.style.zIndex = 1;
+            activeCard = null;
+        }
+    });
+
+    // Initialize card visibility toggles
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+
+        // Set up checkbox handlers
+        document.querySelectorAll('.settings-menu input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                toggleCard(e.target.dataset.cardTarget, e.target.checked);
+            });
+        });
+
+        // Show all/hide all buttons
+        document.getElementById('showAllCards').addEventListener('click', (e) => {
             e.preventDefault();
-            checkboxes.forEach(checkbox => {
+            document.querySelectorAll('.settings-menu input[type="checkbox"]').forEach(checkbox => {
                 if (!checkbox.checked) {
                     checkbox.checked = true;
                     toggleCard(checkbox.dataset.cardTarget, true);
@@ -313,9 +290,9 @@
             });
         });
 
-        document.getElementById('hideAllCards').addEventListener('click', function(e) {
+        document.getElementById('hideAllCards').addEventListener('click', (e) => {
             e.preventDefault();
-            checkboxes.forEach(checkbox => {
+            document.querySelectorAll('.settings-menu input[type="checkbox"]').forEach(checkbox => {
                 if (checkbox.checked) {
                     checkbox.checked = false;
                     toggleCard(checkbox.dataset.cardTarget, false);
@@ -323,68 +300,18 @@
             });
         });
 
-        // Initialize feather icons
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
+        // Set initial positions for cards that don't have them
+        const cards = getAllCards();
+        cards.forEach(card => {
+            if (!card.style.left && !card.style.top) {
+                const maxX = window.innerWidth - card.offsetWidth;
+                const maxY = window.innerHeight - card.offsetHeight;
+                card.style.left = `${Math.floor(Math.random() * maxX * 0.7)}px`;
+                card.style.top = `${Math.floor(Math.random() * maxY * 0.7)}px`;
+            }
+        });
 
-        // Helper function to get all card wrappers (can be useful for initial setup)
-        function getAllCards() {
-            return document.querySelectorAll('.card-wrapper');
-        }
-
-        // Example of initial card positioning (you might load this from storage)
-        // This should be done after cards are in the DOM and feather.replace() has run
-        const sampleCardWrapper = document.getElementById('SampleCard-wrapper');
-        if (sampleCardWrapper) {
-             sampleCardWrapper.style.left = '300px';
-             sampleCardWrapper.style.top = '100px';
-        }
-
-        const cardKPIWrapper = document.getElementById('CardKPI-wrapper');
-        if (cardKPIWrapper) {
-            cardKPIWrapper.style.left = '650px';
-            cardKPIWrapper.style.top = '50px';
-        }
-
-        const consoleLogCardWrapper = document.getElementById('ConsoleLogCard-wrapper');
-        if (consoleLogCardWrapper) {
-            consoleLogCardWrapper.style.left = '50px';
-            consoleLogCardWrapper.style.top = '400px';
-        }
-        
-        const cardExpandableWrapper = document.getElementById('CardExpandable-wrapper');
-        if (cardExpandableWrapper) {
-            cardExpandableWrapper.style.left = '450px';
-            cardExpandableWrapper.style.top = '450px';
-        }
-
-        const cardChartWrapper = document.getElementById('CardChart-wrapper');
-        if (cardChartWrapper) {
-            cardChartWrapper.style.left = '900px';
-            cardChartWrapper.style.top = '100px';
-        }
-
-        const cardLargeWrapper = document.getElementById('CardLarge-wrapper');
-        if (cardLargeWrapper) {
-            cardLargeWrapper.style.left = '900px';
-            cardLargeWrapper.style.top = '400px';
-        }
-
-        const cardListWrapper = document.getElementById('CardList-wrapper');
-        if (cardListWrapper) {
-            cardListWrapper.style.left = '50px';
-            cardListWrapper.style.top = '700px';
-        }
-
-        const cardDrilldownWrapper = document.getElementById('CardDrilldown-wrapper');
-        if (cardDrilldownWrapper) {
-            cardDrilldownWrapper.style.left = '600px';
-            cardDrilldownWrapper.style.top = '700px';
-        }
-
-
-        console.log('Dashboard initialized with', getAllCards().length, 'cards');
+        console.log('Dashboard initialized with', cards.length, 'cards');
     });
     </script>
 </body>
