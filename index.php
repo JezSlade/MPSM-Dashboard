@@ -115,6 +115,11 @@
     </style>
 </head>
 <body class="overflow-hidden">
+    <?php
+    // Define $cardFiles once at the beginning of the body to ensure it's accessible globally
+    $cardFiles = glob(__DIR__ . '/cards/Card*.php');
+    ?>
+
     <main class="relative h-screen w-screen overflow-hidden">
         <aside class="absolute top-0 left-0 p-4 z-50">
             <div class="neumorphic p-4 rounded-lg shadow-xl">
@@ -122,7 +127,7 @@
                 <div class="space-y-2" id="cardVisibilityCheckboxes">
                     <?php
                     // Dynamically include checkboxes for each card
-                    $cardFiles = glob(__DIR__ . '/cards/.php');
+                    // $cardFiles is now defined globally above
                     foreach ($cardFiles as $file) {
                         $cardId = basename($file, '.php');
                         // Skip CardTemplate and CardAppLog as requested
@@ -146,6 +151,7 @@
         <div id="dashboardContainer" class="dashboard-container">
             <?php
             // Include all active cards
+            // $cardFiles is now defined globally above and accessible here
             foreach ($cardFiles as $file) {
                 $cardId = basename($file, '.php');
                 if ($cardId === 'CardTemplate' || $cardId === 'CardAppLog') {
