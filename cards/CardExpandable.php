@@ -3,6 +3,8 @@
  * cards/CardExpandable.php — FIXED VERSION with unique IDs and no currentScript dependency
  * Expects $cardId from parent index.php to ensure unique element IDs.
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
+
 // Fallback if $cardId is not set (though index.php should always set it)
 if (!isset($cardId)) {
     $cardId = 'expandable-card-fallback-' . uniqid();
@@ -43,7 +45,7 @@ $expandToggleBtnId = $cardId . '-expand-toggle-btn';
 
     // Add a check to ensure elements are found (important for robustness)
     if (!card || !body || !btn) {
-        console.warn('Expandable Card: Elements not found for card ID "<?php echo $cardId; ?>". Script may not function correctly for this instance.');
+        console.warn('Expandable Card: Elements not found for card ID: <?php echo $cardId; ?>. Script may not function correctly for this instance.');
         return; // Exit if elements aren't found for this card
     }
 

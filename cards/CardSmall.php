@@ -2,11 +2,12 @@
 /**
  * cards/CardSmall.php — Dummy “Small” card (compact summary)
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
 ?>
 <div class="neumorphic p-3">
 <?php
-$title = 'CardSmall';
-$cardId = 'CardSmall';
+// $title = 'CardSmall'; // REMOVED (managed by index.php)
+// $cardId = 'CardSmall'; // REMOVED (managed by index.php)
 $allowMinimize = true;
 $allowSettings = true;
 include __DIR__ . '/../includes/card_header.php';
@@ -18,14 +19,3 @@ include __DIR__ . '/../includes/card_header.php';
     </button>
   </header>
   <p class="text-xl font-semibold text-center">42</p>
-
-  <!--
-  Changelog:
-  - Created CardSmall.php for a compact, single-metric summary card.
-  - Includes only title, settings icon, and centered number.
-  -->
-
-<!--
-Changelog:
-- Updated to use shared card_header.php include.
--->

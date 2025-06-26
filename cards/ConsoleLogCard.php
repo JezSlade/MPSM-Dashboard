@@ -2,11 +2,10 @@
 /**
  * cards/ConsoleLogCard.php — Display a console log within a card.
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
 ?>
 <div class="neumorphic p-4">
 <?php
-$title = 'Console Log';
-$cardId = 'ConsoleLogCard';
 $allowMinimize = true;
 $allowSettings = true;
 include __DIR__ . '/../includes/card_header.php';
@@ -24,37 +23,32 @@ include __DIR__ . '/../includes/card_header.php';
   document.addEventListener('DOMContentLoaded', () => {
     const content = document.getElementById('inCardLogContent');
     
-    // Check if the content div actually exists for this specific card
-    // This prevents errors if the script runs before the element is ready
     if (!content) {
         console.warn('In-card log content div not found. Skipping in-card logging setup.');
         return;
     }
 
-    // Store original console functions
     const originalLog = console.log;
     const originalError = console.error;
 
     function addEntry(type, args) {
       const msg = document.createElement('div');
       msg.textContent = `[${type}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`;
-      content.appendChild(msg);
-      // Keep scroll at the bottom
-      content.scrollTop = content.scrollHeight;
+      content.prepend(msg); // Changed to prepend to add new logs at the top
+      // content.scrollTop = content.scrollHeight; // REMOVED: No longer needed as new logs are at top
     }
 
-    // Override console functions for this card's display
     console.log = (...args) => {
-        originalLog.apply(console, args); // Call original console.log
+        originalLog.apply(console, args);
         addEntry('LOG', args);
     };
     console.error = (...args) => {
-        originalError.apply(console, args); // Call original console.error
+        originalError.apply(console, args);
         addEntry('ERROR', args);
     };
 
-    // Log a test message to confirm it's working
-    console.log('In-card logging activated!');
+    // Log a test message to ensure the in-card console is working
+    console.log('In-card console operational.');
     console.error('Test error message within card.');
   });
 </script>

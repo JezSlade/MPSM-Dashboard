@@ -1,13 +1,13 @@
 <?php
 /**
  * SampleCard.php — Proof-of-concept card.
- * Demonstrates the card template and Neumorphic styling.
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
 ?>
 <div class="neumorphic p-4">
 <?php
-$title = 'SampleCard';
-$cardId = 'SampleCard';
+// $title = 'SampleCard'; // REMOVED (managed by index.php)
+// $cardId = 'SampleCard'; // REMOVED (managed by index.php)
 $allowMinimize = true;
 $allowSettings = true;
 include __DIR__ . '/../includes/card_header.php';
@@ -25,8 +25,3 @@ include __DIR__ . '/../includes/card_header.php';
     <p class="text-sm">This is a placeholder content area for the Sample Card.</p>
   </div>
 </div>
-
-<!--
-Changelog:
-- Updated to use shared card_header.php include.
--->

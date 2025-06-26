@@ -2,11 +2,12 @@
 /**
  * cards/CardChart.php — Dummy “Chart” card
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
 ?>
 <div class="neumorphic p-4">
 <?php
-$title = 'CardChart';
-$cardId = 'CardChart';
+// $title = 'CardChart'; // REMOVED (managed by index.php)
+// $cardId = 'CardChart'; // REMOVED (managed by index.php)
 $allowMinimize = true;
 $allowSettings = true;
 include __DIR__ . '/../includes/card_header.php';
@@ -23,14 +24,3 @@ include __DIR__ . '/../includes/card_header.php';
   <div class="h-32 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
     <span class="opacity-50">[Chart Placeholder]</span>
   </div>
-
-  <!--
-  Changelog:
-  - Created CardChart.php to demonstrate a card with chart space.
-  - Placeholder box simulates where a chart (canvas/SVG) would go.
-  -->
-
-<!--
-Changelog:
-- Updated to use shared card_header.php include.
--->

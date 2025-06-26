@@ -2,11 +2,12 @@
 /**
  * cards/CardList.php — Dummy “List” card (activity feed)
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
 ?>
 <div class="neumorphic p-4">
 <?php
-$title = 'CardList';
-$cardId = 'CardList';
+// $title = 'CardList'; // REMOVED (managed by index.php)
+// $cardId = 'CardList'; // REMOVED (managed by index.php)
 $allowMinimize = true;
 $allowSettings = true;
 include __DIR__ . '/../includes/card_header.php';
@@ -25,14 +26,3 @@ include __DIR__ . '/../includes/card_header.php';
       </li>
     <?php endfor; ?>
   </ul>
-
-  <!--
-  Changelog:
-  - Created CardList.php to show a scrollable list of dummy activity items.
-  - Demonstrates a taller card with overflow behavior.
-  -->
-
-<!--
-Changelog:
-- Updated to use shared card_header.php include.
--->

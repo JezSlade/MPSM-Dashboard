@@ -2,11 +2,12 @@
 /**
  * cards/CardLarge.php — Dummy “Large” card (wider content)
  */
+include __DIR__ . '/../includes/card_helpers.php'; // NEW: Include helper file
 ?>
 <div class="neumorphic p-4">
 <?php
-$title = 'CardLarge';
-$cardId = 'CardLarge';
+// $title = 'CardLarge'; // REMOVED (managed by index.php)
+// $cardId = 'CardLarge'; // REMOVED (managed by index.php)
 $allowMinimize = true;
 $allowSettings = true;
 include __DIR__ . '/../includes/card_header.php';
@@ -34,14 +35,3 @@ include __DIR__ . '/../includes/card_header.php';
       <p class="text-base">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.</p>
     </div>
   </div>
-
-  <!--
-  Changelog:
-  - Created CardLarge.php to demonstrate a wide, two-column data card.
-  - Contains header controls and a 2×2 grid of dummy metrics and text.
-  -->
-
-<!--
-Changelog:
-- Updated to use shared card_header.php include.
--->
