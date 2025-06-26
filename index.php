@@ -1,83 +1,83 @@
+<?php
+// index.php — React-powered version
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>React Dashboard</title>
+  <title>Dashboard</title>
+  <!-- Load React -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Your existing styles -->
+  <link rel="stylesheet" href="/public/css/styles.css">
   <style>
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1f2937;
-      color: white;
-      overflow: hidden;
-    }
-    
-    .dashboard {
+    /* Add React-specific adjustments */
+    #react-root {
       position: relative;
       width: 100vw;
       height: 100vh;
     }
-    
-    .card {
+    .react-card {
       position: absolute;
-      width: 280px;
-      background: #374151;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      cursor: grab;
-      user-select: none;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
-    }
-    
-    .card.dragging {
-      cursor: grabbing;
-      transform: scale(1.02);
-      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-      z-index: 100;
-    }
-    
-    .card-header {
-      padding: 12px;
-      background: #4b5563;
-      border-top-left-radius: 8px;
-      border-top-right-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .card-content {
-      padding: 16px;
-    }
-    
-    .settings-panel {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1000;
-      background: #2D3748;
-      padding: 16px;
-      border-radius: 8px;
+      transition: left 0.2s ease, top 0.2s ease;
     }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="react-root"></div>
 
   <script type="text/babel">
     const { useState, useRef, useEffect } = React;
 
-    const Card = ({ id, title, x, y, isVisible, onDrag, onToggle }) => {
+    // PHP-generated card config
+    const initialCards = [
+      <?php 
+      $cardFiles = glob(__DIR__ . '/cards/Card*.php');
+      foreach($cardFiles as $i => $file) {
+        $cardId = basename($file, '.php');
+        if($cardId === 'CardTemplate' || $cardId === 'CardAppLog') continue;
+        echo "{
+          id: '".$cardId."',
+          title: '".preg_replace('/(?<!^)([A-Z])/', ' $1', $cardId)."',
+          x: ".($i * 300 % 900 + 50).",
+          y: ".(floor($i / 3) * 250 + 50).",
+          isVisible: true
+        }".($i < count($cardFiles)-1 ? ',' : '');
+      }
+      ?>
+    ];
+
+    const CardHeader = ({ title, cardId, onToggle }) => {
+      return (
+        <header class="card-header flex items-center justify-between p-2 rounded-t-lg bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 shadow-md">
+          <h2 class="text-base font-semibold tracking-wide truncate" title={title}>
+            {title}
+          </h2>
+          <div class="flex items-center gap-1">
+            <button class="neu-btn" data-action="minimize" data-card={cardId} aria-label="Minimize">
+              <i data-feather="chevron-down"></i>
+            </button>
+            <button class="neu-btn" data-action="settings" data-card={cardId} aria-label="Settings">
+              <i data-feather="settings"></i>
+            </button>
+            <button class="neu-btn" onClick={() => onToggle(cardId, false)} aria-label="Close">
+              <i data-feather="x"></i>
+            </button>
+          </div>
+        </header>
+      );
+    };
+
+    const Card = ({ card, onDrag, onToggle }) => {
       const cardRef = useRef(null);
       const [isDragging, setIsDragging] = useState(false);
       const [offset, setOffset] = useState({ x: 0, y: 0 });
 
       const handleMouseDown = (e) => {
-        if (e.button !== 0) return; // Only left mouse button
+        if (!e.target.closest('.card-header') || e.target.closest('.neu-btn')) return;
         
         const rect = cardRef.current.getBoundingClientRect();
         setOffset({
@@ -85,56 +85,54 @@
           y: e.clientY - rect.top
         });
         setIsDragging(true);
-        e.stopPropagation();
-      };
-
-      const handleMouseMove = (e) => {
-        if (!isDragging) return;
-        
-        const newX = e.clientX - offset.x;
-        const newY = e.clientY - offset.y;
-        onDrag(id, newX, newY);
-      };
-
-      const handleMouseUp = () => {
-        setIsDragging(false);
       };
 
       useEffect(() => {
-        if (isDragging) {
-          document.addEventListener('mousemove', handleMouseMove);
-          document.addEventListener('mouseup', handleMouseUp);
-          return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-          };
-        }
+        if (!isDragging) return;
+        
+        const handleMouseMove = (e) => {
+          const newX = e.clientX - offset.x;
+          const newY = e.clientY - offset.y;
+          onDrag(card.id, newX, newY);
+        };
+
+        const handleMouseUp = () => setIsDragging(false);
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
       }, [isDragging, offset]);
 
-      if (!isVisible) return null;
+      if (!card.isVisible) return null;
 
       return (
-        <div
+        <div 
           ref={cardRef}
-          className={`card ${isDragging ? 'dragging' : ''}`}
+          className={`card-wrapper react-card ${isDragging ? 'dragging' : ''}`}
           style={{
-            left: `${x}px`,
-            top: `${y}px`,
-            display: isVisible ? 'block' : 'none'
+            left: `${card.x}px`,
+            top: `${card.y}px`,
+            zIndex: isDragging ? 1000 : 1
           }}
           onMouseDown={handleMouseDown}
         >
-          <div className="card-header">
-            <h3>{title}</h3>
-            <button onClick={() => onToggle(id, false)}>×</button>
-          </div>
-          <div className="card-content">
-            {id === 'ConsoleLogCard' ? (
-              <div style={{ height: '200px', overflow: 'auto', background: '#1f2937' }}>
-                Console log content would go here...
+          <CardHeader 
+            title={card.title} 
+            cardId={card.id}
+            onToggle={onToggle}
+          />
+          <div class="neumorphic p-4">
+            {/* Dynamic content would go here */}
+            {card.id === 'ConsoleLogCard' ? (
+              <div id="inCardLogContent" class="h-64 overflow-auto bg-gray-100 dark:bg-gray-800 p-2 text-xs font-mono">
+                Console initialized for this card.
               </div>
             ) : (
-              <p>Card content for {title}</p>
+              <p>Card content for {card.title}</p>
             )}
           </div>
         </div>
@@ -142,97 +140,105 @@
     };
 
     const Dashboard = () => {
-      const [cards, setCards] = useState([
-        { id: 'ConsoleLogCard', title: 'Console Log', x: 50, y: 50, isVisible: true },
-        { id: 'Card1', title: 'Performance', x: 350, y: 50, isVisible: true },
-        { id: 'Card2', title: 'Statistics', x: 650, y: 50, isVisible: true },
-        { id: 'Card3', title: 'Settings', x: 50, y: 300, isVisible: true },
-        { id: 'Card4', title: 'Alerts', x: 350, y: 300, isVisible: true },
-        { id: 'Card5', title: 'Metrics', x: 650, y: 300, isVisible: true }
-      ]);
+      const [cards, setCards] = useState(initialCards);
+      const [showSettings, setShowSettings] = useState(false);
 
       const handleDrag = (id, newX, newY) => {
         // Constrain to viewport
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const cardWidth = 280; // Match your CSS
+        newX = Math.max(0, Math.min(newX, window.innerWidth - 280));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - 200));
         
-        newX = Math.max(0, Math.min(newX, viewportWidth - cardWidth));
-        newY = Math.max(0, Math.min(newY, viewportHeight - 200)); // Approx card height
-        
-        setCards(cards.map(card => 
-          card.id === id ? { ...card, x: newX, y: newY } : card
-        ));
+        setCards(cards.map(c => c.id === id ? { ...c, x: newX, y: newY } : c));
       };
 
       const handleToggle = (id, isVisible) => {
-        setCards(cards.map(card => 
-          card.id === id ? { ...card, isVisible } : card
-        ));
+        setCards(cards.map(c => c.id === id ? { ...c, isVisible } : c));
       };
 
       const centerCards = () => {
-        const visibleCards = cards.filter(card => card.isVisible);
+        const visibleCards = cards.filter(c => c.isVisible);
         if (visibleCards.length === 0) return;
-        
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
+
         const cardWidth = 280;
-        const cardHeight = 200; // Approximate
+        const cardHeight = 300;
         const gap = 20;
-        
-        const cardsPerRow = Math.max(1, Math.floor(viewportWidth / (cardWidth + gap)));
-        const gridWidth = Math.min(cardsPerRow, visibleCards.length) * (cardWidth + gap) - gap;
-        const startX = (viewportWidth - gridWidth) / 2;
-        const startY = 50; // Top padding
+        const cardsPerRow = Math.max(1, Math.floor(window.innerWidth / (cardWidth + gap)));
         
         setCards(cards.map((card, index) => {
           if (!card.isVisible) return card;
           
-          const row = Math.floor(index / cardsPerRow);
-          const col = index % cardsPerRow;
+          const visualIndex = cards.findIndex(c => c.id === card.id);
+          const row = Math.floor(visualIndex / cardsPerRow);
+          const col = visualIndex % cardsPerRow;
           
           return {
             ...card,
-            x: startX + col * (cardWidth + gap),
-            y: startY + row * (cardHeight + gap)
+            x: (window.innerWidth - (Math.min(cardsPerRow, visibleCards.length) * (cardWidth + gap)) / 2 + col * (cardWidth + gap),
+            y: 50 + row * (cardHeight + gap)
           };
         }));
       };
 
       return (
-        <div className="dashboard">
-          <div className="settings-panel">
-            <h3>Card Controls</h3>
-            {cards.map(card => (
-              <div key={card.id}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={card.isVisible}
-                    onChange={(e) => handleToggle(card.id, e.target.checked)}
-                  />
-                  {card.title}
-                </label>
+        <>
+          <div class="settings-menu" style={{ display: showSettings ? 'block' : 'none' }}>
+            <div class="neumorphic p-4 rounded-lg shadow-xl">
+              <h2 class="text-lg font-semibold mb-3">Card Settings</h2>
+              <div class="space-y-2">
+                {cards.map(card => (
+                  <label class="flex items-center space-x-2 text-sm">
+                    <input 
+                      type="checkbox" 
+                      checked={card.isVisible}
+                      onChange={(e) => handleToggle(card.id, e.target.checked)}
+                    />
+                    <span>{card.title}</span>
+                  </label>
+                ))}
               </div>
-            ))}
-            <button onClick={centerCards}>Center Cards</button>
+              <div class="mt-4 border-t pt-4 border-gray-600">
+                <button class="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, true))}>
+                  Show All
+                </button>
+                <button class="neu-btn w-full mb-2" onClick={() => cards.forEach(c => handleToggle(c.id, false))}>
+                  Hide All
+                </button>
+                <button class="neu-btn w-full" onClick={centerCards}>
+                  Center Cards
+                </button>
+              </div>
+            </div>
           </div>
-          
+
           {cards.map(card => (
-            <Card
+            <Card 
               key={card.id}
-              {...card}
+              card={card}
               onDrag={handleDrag}
               onToggle={handleToggle}
             />
           ))}
-        </div>
+
+          <button 
+            class="neu-btn fixed top-4 right-4 z-50"
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            <i data-feather="settings"></i>
+          </button>
+        </>
       );
     };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
+    // Initialize the app
+    const root = ReactDOM.createRoot(document.getElementById('react-root'));
     root.render(<Dashboard />);
+
+    // Initialize Feather Icons after render
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    });
   </script>
 </body>
 </html>
