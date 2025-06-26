@@ -88,6 +88,7 @@
       user-select: none;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      cursor: move;
     }
     
     .card-header button {
@@ -104,6 +105,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 20;
     }
     
     .card-header button:hover {
@@ -382,13 +384,6 @@
       background: rgba(0, 0, 0, 0.2);
     }
     
-    .grid-layout {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 25px;
-      padding: 20px;
-    }
-    
     @keyframes float {
       0% { transform: translateY(0px); }
       50% { transform: translateY(-10px); }
@@ -416,16 +411,17 @@
   <script>
     const { useState, useEffect, useRef } = React;
 
-    function Draggable({ children, style, id, position, onPositionChange }) {
+    // Simplified and reliable draggable implementation
+    function Draggable({ children, id, defaultPosition }) {
+      const [position, setPosition] = useState(defaultPosition || { x: 50, y: 50 });
       const [isDragging, setIsDragging] = useState(false);
-      const ref = useRef(null);
       const dragOffset = useRef({ x: 0, y: 0 });
-
+      
       const handleMouseDown = (e) => {
-        if (e.target.closest('button')) return;
-        if (!e.target.closest('.draggable')) return;
+        // Only allow dragging by the header
+        if (!e.target.classList.contains('draggable')) return;
         
-        const rect = ref.current.getBoundingClientRect();
+        const rect = e.currentTarget.getBoundingClientRect();
         dragOffset.current = {
           x: e.clientX - rect.left,
           y: e.clientY - rect.top
@@ -435,51 +431,41 @@
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
       };
-
+      
       const handleMouseMove = (e) => {
         if (!isDragging) return;
         
         const newX = e.clientX - dragOffset.current.x;
         const newY = e.clientY - dragOffset.current.y;
         
-        onPositionChange(id, { x: newX, y: newY });
+        setPosition({ x: newX, y: newY });
       };
-
+      
       const handleMouseUp = () => {
         setIsDragging(false);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
-
-      useEffect(() => {
-        return () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
-        };
-      }, []);
-
+      
       return React.createElement('div', {
-        ref,
         id,
-        className: `${style.className} ${isDragging ? 'dragging' : ''}`,
-        style: { 
-          ...style, 
-          left: `${position.x}px`, 
-          top: `${position.y}px`,
-          cursor: isDragging ? 'grabbing' : 'grab'
+        className: 'card-frame',
+        style: {
+          left: position.x,
+          top: position.y,
+          cursor: isDragging ? 'grabbing' : 'default',
+          position: 'absolute'
         },
         onMouseDown: handleMouseDown
       }, children);
     }
 
-    function Card({ name, visible, onClose, position, onPositionChange }) {
+    function Card({ name, visible, onClose, defaultPosition }) {
       if (!visible) return null;
       
       return React.createElement(Draggable, {
         id: name,
-        style: { className: 'card-frame' },
-        position: position,
-        onPositionChange: onPositionChange
+        defaultPosition: defaultPosition
       },
         React.createElement('div', {
           className: 'card-header draggable'
@@ -504,13 +490,9 @@
     }
 
     function SettingsCard({ activeCards, setActiveCards, onShowAll, onHideAll, onArrangeCards }) {
-      const position = { x: 50, y: 50 };
-      
       return React.createElement(Draggable, {
         id: 'settings-card',
-        style: { className: 'settings-card' },
-        position: position,
-        onPositionChange: () => {} // Settings card position is fixed
+        defaultPosition: { x: 50, y: 50 }
       },
         React.createElement('div', {
           className: 'card-header draggable'
@@ -589,7 +571,7 @@
       const [loading, setLoading] = useState(true);
       const [showSettingsModal, setShowSettingsModal] = useState(false);
       
-      // Simulate fetching card list (in real app, use fetch('/get-cards.php'))
+      // Simulate fetching card list
       useEffect(() => {
         setTimeout(() => {
           const mockCards = [
@@ -599,19 +581,22 @@
           ];
           setCardList(mockCards);
           
-          // Initialize visibility state and positions
-          const initialState = {};
+          // Initialize positions in a grid
           const initialPositions = {};
           mockCards.forEach((card, index) => {
-            initialState[card] = true;
             initialPositions[card] = { 
               x: 50 + (index % 3) * 340, 
               y: 100 + Math.floor(index / 3) * 320 
             };
           });
           
-          setActiveCards(initialState);
           setCardPositions(initialPositions);
+          
+          // Initialize all cards as visible
+          const initialState = {};
+          mockCards.forEach(card => initialState[card] = true);
+          setActiveCards(initialState);
+          
           setLoading(false);
         }, 800);
       }, []);
@@ -654,13 +639,6 @@
         });
         
         setCardPositions(newPositions);
-      };
-      
-      const handlePositionChange = (cardId, newPosition) => {
-        setCardPositions(prev => ({
-          ...prev,
-          [cardId]: newPosition
-        }));
       };
       
       const handleCardClose = (cardName) => {
@@ -729,8 +707,7 @@
             name: card,
             visible: activeCards[card],
             onClose: handleCardClose,
-            position: cardPositions[card] || { x: 50, y: 50 },
-            onPositionChange: handlePositionChange
+            defaultPosition: cardPositions[card] || { x: 50, y: 50 }
           })
         )),
         
