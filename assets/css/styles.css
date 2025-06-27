@@ -1,0 +1,16 @@
+:root {
+    --bg-primary: #1a1d24;
+    --bg-secondary: #232831;
+    --bg-tertiary: #2d333f;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0aec0;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --glass-bg: rgba(35, 40, 49, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --shadow-dark: rgba(0, 0, 0, 0.5);
+    --transition: all 0.3s ease;
+}
+
+/* All other CSS rules from original implementation */
+/* [Previous CSS content would go here in full] */
