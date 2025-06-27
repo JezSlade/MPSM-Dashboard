@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const grid = new GridStack({
+    const grid = GridStack.init({
         float: true,
         removable: true,
         acceptWidgets: true,
@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
     grid.on('change', (e, items) => {
+        if (!e?.target?.classList?.contains('grid-stack-item')) {
+            console.warn('Event target missing classList or unexpected type:', e?.target);
+            return;
+        }
         items.forEach(item => {
             updateWidgetPosition(item.id, item.x, item.y, item.width, item.height);
         });
