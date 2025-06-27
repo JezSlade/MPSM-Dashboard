@@ -1,4 +1,10 @@
 <?php
+// PHP Debugging Lines - START
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
+
 // dashboard.php
 session_start();
 
@@ -52,7 +58,6 @@ $settings = $_SESSION['dashboard_settings'] ?? [
 ];
 
 // Pass available widgets to the view
-// The 'global' keyword is not strictly necessary here but causes no harm.
 global $available_widgets;
 
 ?>
