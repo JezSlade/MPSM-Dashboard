@@ -19,6 +19,7 @@ define('SETUP_SCRIPT', ROOT_DIR . '/setup.php');
 
 // Check if setup needs to run
 if (!file_exists(SETUP_COMPLETE_FILE)) {
+    define('IN_SETUP_MODE', true);
     // Redirect to setup if not completed
     if (!defined('IN_SETUP_MODE')) {
         header('Location: setup.php');

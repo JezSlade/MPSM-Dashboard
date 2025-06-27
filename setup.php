@@ -21,6 +21,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Check if setup is already complete
 if (file_exists(SETUP_COMPLETE_FILE)) {
+    file_put_contents(SETUP_COMPLETE_FILE, 'done');
     header('Location: index.php');
     exit;
 }
@@ -149,7 +150,8 @@ try {
             case 3: // Finalize setup
                 file_put_contents(SETUP_COMPLETE_FILE, date('Y-m-d H:i:s'));
                 log_progress('Setup completed successfully');
-                header('Location: index.php');
+                file_put_contents(SETUP_COMPLETE_FILE, 'done');
+    header('Location: index.php');
                 exit;
         }
         
