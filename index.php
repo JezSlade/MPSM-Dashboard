@@ -8,7 +8,7 @@ require_once ROOT_DIR . '/config.php';
 ErrorHandler::initialize();
 
 try {
-    // If setup hasn't completed, redirect to setup
+    // If setup hasn’t completed, redirect to setup
     if (!file_exists(SETUP_COMPLETE_FILE)) {
         header('Location: /setup.php');
         exit;
