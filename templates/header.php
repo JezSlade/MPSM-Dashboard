@@ -13,6 +13,9 @@
             csrfToken: '<?= $_SESSION['csrf_token'] ?? '' ?>'
         };
     </script>
+    <!-- GridStack CSS and JS -->
+<link href="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack-h5.js"></script>
 </head>
 <body>
     <header>
