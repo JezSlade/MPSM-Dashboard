@@ -12,8 +12,21 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Define root path
+// Define root path and setup constants
 define('ROOT_DIR', __DIR__);
+define('SETUP_COMPLETE_FILE', ROOT_DIR . '/db/.setup_complete');
+define('SETUP_SCRIPT', ROOT_DIR . '/setup.php');
+
+// Check if setup needs to run
+if (!file_exists(SETUP_COMPLETE_FILE)) {
+    // Redirect to setup if not completed
+    if (!defined('IN_SETUP_MODE')) {
+        header('Location: setup.php');
+        exit;
+    }
+    // If we're already in setup mode but setup isn't complete, show error
+    die("System setup is required. Please complete the setup process first.");
+}
 
 // Load core files
 require_once ROOT_DIR . '/../config.php';
@@ -26,6 +39,15 @@ ErrorHandler::initialize();
 try {
     // Create database instance
     $db = new Database();
+    
+    // Verify database schema version
+    $requiredVersion = '1.0'; // Your required schema version
+    $currentVersion = $db->query("SELECT value FROM settings WHERE key = 'schema_version'")
+                         ->fetchColumn();
+    
+    if ($currentVersion !== $requiredVersion) {
+        die("Database schema mismatch. Please run setup again or contact support.");
+    }
     
     // Fetch active widgets
     $stmt = $db->query("SELECT * FROM widgets WHERE is_active = 1 ORDER BY created_at");
