@@ -4,12 +4,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    const container = document.querySelector('.grid-stack');
+    if (!container) {
+        console.warn('GridStack: no element found with selector ".grid-stack" – ensure it exists in the DOM.');
+        return;
+    }
+
     const grid = GridStack.init({
         float: true,
         removable: true,
         acceptWidgets: true,
         styleInHead: true
     });
+
+    if (!grid) {
+        console.error("GridStack initialization failed – grid is null.");
+        return;
+    }
 
     fetch('/api/widgets')
         .then(res => res.json())
