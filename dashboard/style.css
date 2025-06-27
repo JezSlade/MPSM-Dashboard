@@ -1,0 +1,34 @@
+:root {
+    --glass-bg: rgba(30, 30, 45, 0.7);
+    --neon-accent: #0af;
+    --text-primary: #e0f7fa;
+}
+
+body {
+    background: radial-gradient(circle at center, #1a1a2e, #16213e);
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.widget {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+        inset 2px 2px 5px rgba(255, 255, 255, 0.1),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.5),
+        5px 5px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.widget-header {
+    border-bottom: 1px solid rgba(var(--neon-accent), 0.3);
+    text-shadow: 0 0 8px rgba(var(--neon-accent), 0.7);
+}
+
+.code-editor {
+    background: rgba(10, 15, 30, 0.9);
+    border: 1px solid var(--neon-accent);
+    border-radius: 8px;
+}

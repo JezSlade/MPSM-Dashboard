@@ -1,8 +1,0 @@
-{
-  "schema_version":"v1","name_for_human":"MPSM Dashboard","name_for_model":"mpsm_dashboard",
-  "description_for_human":"List customers, devices, alerts","description_for_model":"Plugin for MPSM Dashboard API",
-  "auth":{"type":"service_http","authorization_type":"bearer","verification_tokens":{"openai":"YOUR_OPENAI_PLUGIN_VERIFICATION_TOKEN"}},
-  "api":{"url":"https://dashboard.yourdomain.com/openapi.yaml","is_user_authenticated":false},
-  "logo_url":"https://dashboard.yourdomain.com/public/images/plugin-logo.png",
-  "contact_email":"support@yourdomain.com","legal_info_url":"https://yourdomain.com/legal"
-}
