@@ -7,22 +7,17 @@
     <link rel="stylesheet" href="/dashboard/style.css">
     <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
     <script>
-        // Global configuration
         const APP_CONFIG = {
             baseUrl: '<?= APP_BASE_URL ?>',
             csrfToken: '<?= $_SESSION['csrf_token'] ?? '' ?>'
         };
     </script>
-    
-    <!-- GridStack CSS (Local fallback optional) -->
+
+    <!-- GridStack CSS and fixed JS -->
     <link href="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack.min.css" rel="stylesheet">
-    <!-- Fallback: <link rel="stylesheet" href="/dashboard/libs/gridstack.min.css"> -->
-
-    <!-- Fixed JS: gridstack-all.js loads correctly -->
     <script src="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack-all.js"></script>
-    <!-- Fallback: <script src="/dashboard/libs/gridstack-all.js"></script> -->
 
-    <!-- Favicon (optional) -->
+    <!-- Favicon fix -->
     <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -33,4 +28,4 @@
             <a href="/settings/">Settings</a>
         </nav>
     </header>
-    <main></main>
+    <main>
