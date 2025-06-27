@@ -1,4 +1,6 @@
 <?php
+// widgets/calendar.php
+
 $_widget_config = [
     'name' => 'Calendar',
     'icon' => 'calendar',
@@ -9,32 +11,36 @@ $_widget_config = [
 /**
  * Helper function to generate calendar grid HTML.
  * This function is now local to the calendar widget.
+ * It's wrapped in function_exists() to prevent redeclaration errors
+ * if this file is included multiple times (e.g., by config.php and helpers.php).
  */
-function generate_calendar() {
-    $days_in_month = date('t');
-    $first_day = date('w', strtotime(date('Y-m-01')));
+if (!function_exists('generate_calendar')) {
+    function generate_calendar() {
+        $days_in_month = date('t');
+        $first_day = date('w', strtotime(date('Y-m-01')));
 
-    $html = '';
+        $html = '';
 
-    // Empty days for the first week
-    for ($i = 0; $i < $first_day; $i++) {
-        $html .= '<div class="day empty"></div>';
+        // Empty days for the first week
+        for ($i = 0; $i < $first_day; $i++) {
+            $html .= '<div class="day empty"></div>';
+        }
+
+        // Days of the month
+        for ($day = 1; $day <= $days_in_month; $day++) {
+            $today = ($day == date('j')) ? ' today' : '';
+            $event = (in_array($day, [7, 10, 17, 24])) ? ' event' : '';
+            $html .= '<div class="day'.$today.$event.'">'.$day.'</div>';
+        }
+
+        // Fill remaining empty days
+        $remaining = 42 - $days_in_month - $first_day;
+        for ($i = 0; $i < $remaining; $i++) {
+            $html .= '<div class="day empty"></div>';
+        }
+
+        return $html;
     }
-
-    // Days of the month
-    for ($day = 1; $day <= $days_in_month; $day++) {
-        $today = ($day == date('j')) ? ' today' : '';
-        $event = (in_array($day, [7, 10, 17, 24])) ? ' event' : '';
-        $html .= '<div class="day'.$today.$event.'">'.$day.'</div>';
-    }
-
-    // Fill remaining empty days
-    $remaining = 42 - $days_in_month - $first_day;
-    for ($i = 0; $i < $remaining; $i++) {
-        $html .= '<div class="day empty"></div>';
-    }
-
-    return $html;
 }
 ?>
 <div class="calendar-header">

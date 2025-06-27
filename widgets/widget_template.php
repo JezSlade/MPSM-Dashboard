@@ -11,7 +11,7 @@ $_widget_config = [
 ?>
 <div class="your-widget-specific-class">
     <!-- Your widget's HTML content goes here -->
-    <p>This is the content for Widget Name.</p>
+    <p>This is the Widget Template</p>
     <?php
     // You can include PHP logic here, e.g.,
     // if (isset($data_from_parent)) { echo $data_from_parent; }
