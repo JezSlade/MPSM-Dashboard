@@ -2,9 +2,24 @@
 // Load environment variables safely
 $envPath = __DIR__ . '/.env';
 if (file_exists($envPath)) {
-    $env = parse_ini_file($envPath);
-    foreach ($env as $key => $value) {
-        putenv("$key=$value");
+    $envContents = file_get_contents($envPath);
+    // Remove empty lines and comments
+    $envContents = preg_replace('/^\s*#.*$/m', '', $envContents);
+    $envContents = preg_replace('/^\s*$/m', '', $envContents);
+    
+    // Write cleaned version to temp file
+    $tempEnv = tempnam(sys_get_temp_dir(), 'env');
+    file_put_contents($tempEnv, $envContents);
+    
+    $env = parse_ini_file($tempEnv);
+    unlink($tempEnv);
+    
+    if ($env) {
+        foreach ($env as $key => $value) {
+            putenv("$key=$value");
+        }
+    } else {
+        error_log("Failed to parse .env file");
     }
 }
 
@@ -19,6 +34,7 @@ define('TIMEZONE', getenv('TIMEZONE') ?: 'America/New_York');
 
 // Database Configuration
 define('DB_FILE', getenv('DB_FILE') ?: __DIR__ . '/db/cms.db');
+define('DB_DIR', dirname(DB_FILE));
 define('DB_SCHEMA_VERSION', getenv('DB_SCHEMA_VERSION') ?: '1.0');
 
 // API Configuration
@@ -42,6 +58,23 @@ error_reporting(DEBUG_MODE ? E_ALL : E_ERROR);
 ini_set('display_errors', DEBUG_MODE ? '1' : '0');
 ini_set('log_errors', '1');
 ini_set('error_log', DEBUG_LOG_FILE);
+
+// Create required directories
+if (!file_exists(DB_DIR)) {
+    mkdir(DB_DIR, 0755, true);
+    file_put_contents(DB_DIR . '/.htaccess', "Deny from all");
+}
+
+$logDir = dirname(DEBUG_LOG_FILE);
+if (!file_exists($logDir)) {
+    mkdir($logDir, 0755, true);
+}
+
+// Initialize database if needed
+if (!file_exists(DB_FILE) || filesize(DB_FILE) === 0) {
+    require_once __DIR__ . '/setup.php';
+    exit;
+}
 
 // Security headers
 if (!headers_sent()) {

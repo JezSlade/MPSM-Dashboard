@@ -1,42 +1,56 @@
-# Enable rewrite engine
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Force HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # Redirect all requests to index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+    
+    # Protect sensitive files
+    <FilesMatch "(\.env|\.htaccess|composer\.json|composer\.lock)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
 
-# Preserve HTTP Authorization headers (for APIs)
-RewriteCond %{HTTP:Authorization} .
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+<IfModule mod_headers.c>
+    # Security headers
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    
+    # Remove server signature
+    Header unset X-Powered-By
+    ServerSignature Off
+</IfModule>
 
-# Redirect HTTP to HTTPS (optional but recommended)
-RewriteCond %{HTTPS} off
-RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Disable directory listing
+Options -Indexes
 
-# Ensure index.php is used as default for root
-DirectoryIndex index.php
+# Compress responses
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
 
-# Allow access to .php files
-<FilesMatch "\.php$">
-  Require all granted
+# Cache control
+<FilesMatch "\.(jpg|jpeg|png|gif|js|css|woff2)$">
+    Header set Cache-Control "max-age=31536000, public"
 </FilesMatch>
 
-# Explicit MIME type declarations (no override)
-<IfModule mod_mime.c>
-  AddType text/css .css
-  AddType application/javascript .js
-  AddType image/x-icon .ico
-  AddType image/svg+xml .svg
-  AddType font/woff2 .woff2
-  AddType font/woff .woff
-  AddType font/ttf .ttf
-  AddType font/eot .eot
-</IfModule>
+# Protect database directory
+<Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/db">
+    Require all denied
+    <FilesMatch "\.db$">
+        Require all denied
+    </FilesMatch>
+</Directory>
 
-# Grant access to /api/ folder explicitly
-<IfModule mod_dir.c>
-  <IfModule mod_access_compat.c>
-    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/api">
-      Require all granted
-    </Directory>
-    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/rpd">
-      Require all granted
-    </Directory>
-  </IfModule>
-</IfModule>
+# Error documents
+ErrorDocument 403 /error.php?code=403
+ErrorDocument 404 /error.php?code=404
+ErrorDocument 500 /error.php?code=500
