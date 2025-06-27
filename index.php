@@ -5,7 +5,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 <html>
 <head>
     <title><?= $_SESSION['dashboard']['settings']['title'] ?></title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="public/css/styles.css">
 </head>
 <body>
     <h1><?= $_SESSION['dashboard']['settings']['title'] ?></h1>
@@ -19,7 +19,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 <html>
 <head>
     <title><?= $_SESSION['dashboard']['settings']['title'] ?></title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="public/css/styles.css">
 </head>
 <body>
     <h1><?= $_SESSION['dashboard']['settings']['title'] ?></h1>
@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 <html>
 <head>
     <title><?= $_SESSION['dashboard']['settings']['title'] ?></title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="public/css/styles.css">
 </head>
 <body>
     <h1><?= $_SESSION['dashboard']['settings']['title'] ?></h1>
