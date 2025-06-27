@@ -3,7 +3,7 @@
 // Setup Configuration
 // =============================================
 define('ROOT_DIR', __DIR__);
-define('SETUP_COMPLETE_FILE', ROOT_DIR . '/db/.setup_complete');
+define('SETUP_COMPLETE_FILE', ROOT_DIR . '/.setup_complete');
 define('CONFIG_FILE', ROOT_DIR . '/config.php');
 define('DB_FILE', ROOT_DIR . '/db/cms.db');
 define('REQUIRED_SCHEMA_VERSION', '1.0');
@@ -17,11 +17,21 @@ error_reporting(E_ALL);
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+
+// Handle setup reset
+if (isset($_GET['reset']) && $_GET['reset'] == '1') {
+    if (file_exists(SETUP_COMPLETE_FILE)) unlink(SETUP_COMPLETE_FILE);
+    session_destroy();
+    header('Location: setup.php');
+    exit;
+}
+
 }
 
 // Check if setup is already complete
 if (file_exists(SETUP_COMPLETE_FILE)) {
     file_put_contents(SETUP_COMPLETE_FILE, 'done');
+    session_destroy();
     header('Location: index.php');
     exit;
 }
@@ -151,6 +161,7 @@ try {
                 file_put_contents(SETUP_COMPLETE_FILE, date('Y-m-d H:i:s'));
                 log_progress('Setup completed successfully');
                 file_put_contents(SETUP_COMPLETE_FILE, 'done');
+    session_destroy();
     header('Location: index.php');
                 exit;
         }
