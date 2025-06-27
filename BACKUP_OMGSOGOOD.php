@@ -1,358 +1,231 @@
 <?php
+// dashboard.php
 session_start();
 
-// Initialize dashboard if not set
-if (!isset($_SESSION['dashboard'])) {
-    $_SESSION['dashboard'] = [
-        'settings' => [
-            'title' => 'Glass Dashboard',
-            'accent_color' => '#6366f1',
-            'glass_intensity' => 0.6,
-            'blur_amount' => '10px',
-            'enable_animations' => true
-        ],
-        'widgets' => [
-            [
-                'id' => 'stats', 
-                'position' => 1,
-                'title' => 'Key Metrics',
-                'expanded' => false,
-                'settings' => ['show_icons' => true]
-            ],
-            [
-                'id' => 'tasks', 
-                'position' => 2,
-                'title' => 'Task Manager',
-                'expanded' => false,
-                'settings' => ['show_completed' => true]
-            ],
-            [
-                'id' => 'calendar', 
-                'position' => 3,
-                'title' => 'Calendar',
-                'expanded' => false,
-                'settings' => ['show_events' => true]
-            ],
-            [
-                'id' => 'notes', 
-                'position' => 4,
-                'title' => 'Quick Notes',
-                'expanded' => false,
-                'settings' => ['theme' => 'dark']
-            ],
-            [
-                'id' => 'activity', 
-                'position' => 5,
-                'title' => 'Recent Activity',
-                'expanded' => false,
-                'settings' => ['show_timestamps' => true]
-            ]
-        ]
+// Initialize active widgets if not set
+if (!isset($_SESSION['active_widgets'])) {
+    $_SESSION['active_widgets'] = [
+        ['id' => 'stats', 'position' => 1],
+        ['id' => 'tasks', 'position' => 2],
+        ['id' => 'calendar', 'position' => 3],
+        ['id' => 'notes', 'position' => 4],
+        ['id' => 'activity', 'position' => 5]
     ];
 }
 
-$dashboard = &$_SESSION['dashboard'];
-$settings = $dashboard['settings'];
-$widgets = $dashboard['widgets'];
-
-// Handle form submissions
+// Handle widget management
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Add new widget
-    if (isset($_POST['add_widget'])) {
+    if (isset($_POST['add_widget']) && !empty($_POST['widget_id'])) {
+        // Add new widget
         $new_widget = [
             'id' => $_POST['widget_id'],
-            'position' => count($widgets) + 1,
-            'title' => $_POST['widget_title'] ?? 'New Widget',
-            'expanded' => false,
-            'settings' => []
+            'position' => count($_SESSION['active_widgets']) + 1
         ];
-        $widgets[] = $new_widget;
-    }
-    
-    // Remove widget
-    if (isset($_POST['remove_widget'])) {
-        $index = $_POST['widget_index'];
-        if (isset($widgets[$index])) {
-            array_splice($widgets, $index, 1);
-        }
-    }
-    
-    // Update settings
-    if (isset($_POST['update_settings'])) {
-        $settings['title'] = $_POST['dashboard_title'] ?? $settings['title'];
-        $settings['accent_color'] = $_POST['accent_color'] ?? $settings['accent_color'];
-        $settings['glass_intensity'] = $_POST['glass_intensity'] ?? $settings['glass_intensity'];
-        $settings['blur_amount'] = $_POST['blur_amount'] ?? $settings['blur_amount'];
-        $settings['enable_animations'] = isset($_POST['enable_animations']);
-    }
-    
-    // Toggle widget expansion
-    if (isset($_POST['toggle_expand'])) {
-        $index = $_POST['widget_index'];
-        if (isset($widgets[$index])) {
-            // Collapse all other widgets when expanding one
-            if (!$widgets[$index]['expanded']) {
-                foreach ($widgets as &$w) {
-                    $w['expanded'] = false;
-                }
-            }
-            $widgets[$index]['expanded'] = !$widgets[$index]['expanded'];
-        }
-    }
-    
-    // Update widget settings
-    if (isset($_POST['update_widget_settings'])) {
-        $index = $_POST['widget_index'];
-        if (isset($widgets[$index])) {
-            // Handle each widget's specific settings
-            switch ($widgets[$index]['id']) {
-                case 'stats':
-                    $widgets[$index]['settings']['show_icons'] = isset($_POST['show_icons']);
-                    break;
-                case 'tasks':
-                    $widgets[$index]['settings']['show_completed'] = isset($_POST['show_completed']);
-                    break;
-                case 'calendar':
-                    $widgets[$index]['settings']['show_events'] = isset($_POST['show_events']);
-                    break;
-                case 'notes':
-                    $widgets[$index]['settings']['theme'] = $_POST['notes_theme'] ?? 'dark';
-                    break;
-                case 'activity':
-                    $widgets[$index]['settings']['show_timestamps'] = isset($_POST['show_timestamps']);
-                    break;
-            }
-        }
-    }
-    
-    // Update widget title
-    if (isset($_POST['update_widget_title'])) {
-        $index = $_POST['widget_index'];
-        $new_title = $_POST['widget_title'] ?? '';
-        if (isset($widgets[$index]) && !empty($new_title)) {
-            $widgets[$index]['title'] = $new_title;
-        }
+        $_SESSION['active_widgets'][] = $new_widget;
+    } elseif (isset($_POST['remove_widget']) && isset($_POST['widget_index'])) {
+        // Remove widget
+        unset($_SESSION['active_widgets'][$_POST['widget_index']]);
+        $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']);
+    } elseif (isset($_POST['update_settings'])) {
+        // Update settings
+        $_SESSION['dashboard_settings'] = [
+            'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
+            'accent_color' => $_POST['accent_color'] ?? '#6366f1',
+            'glass_intensity' => $_POST['glass_intensity'] ?? 0.6,
+            'blur_amount' => $_POST['blur_amount'] ?? '10px',
+            'enable_animations' => isset($_POST['enable_animations'])
+        ];
     }
 }
 
-// Save changes back to session
-$dashboard['widgets'] = $widgets;
-$dashboard['settings'] = $settings;
+// Load settings
+$settings = $_SESSION['dashboard_settings'] ?? [
+    'title' => 'Glass Dashboard',
+    'accent_color' => '#6366f1',
+    'glass_intensity' => 0.6,
+    'blur_amount' => '10px',
+    'enable_animations' => true
+];
 
 // Widget definitions
 $available_widgets = [
-    'stats' => ['name' => 'Statistics', 'icon' => 'chart-bar', 'width' => 2, 'height' => 1],
-    'tasks' => ['name' => 'Task Manager', 'icon' => 'tasks', 'width' => 1, 'height' => 2],
-    'calendar' => ['name' => 'Calendar', 'icon' => 'calendar', 'width' => 1, 'height' => 1],
-    'notes' => ['name' => 'Quick Notes', 'icon' => 'sticky-note', 'width' => 1, 'height' => 1],
-    'activity' => ['name' => 'Recent Activity', 'icon' => 'history', 'width' => 2, 'height' => 1]
+    'stats' => [
+        'name' => 'Statistics',
+        'icon' => 'chart-bar',
+        'width' => 2,
+        'height' => 1
+    ],
+    'tasks' => [
+        'name' => 'Task Manager',
+        'icon' => 'tasks',
+        'width' => 1,
+        'height' => 2
+    ],
+    'calendar' => [
+        'name' => 'Calendar',
+        'icon' => 'calendar',
+        'width' => 1,
+        'height' => 1
+    ],
+    'notes' => [
+        'name' => 'Quick Notes',
+        'icon' => 'sticky-note',
+        'width' => 1,
+        'height' => 1
+    ],
+    'activity' => [
+        'name' => 'Recent Activity',
+        'icon' => 'history',
+        'width' => 2,
+        'height' => 1
+    ]
 ];
 
 // Function to render widget content
-function render_widget($widget) {
-    $id = $widget['id'];
-    $settings = $widget['settings'];
+function render_widget($widget_id) {
+    // This would normally be in separate files
+    // For this demo, we'll include the content directly
+    $widget_content = [
+        'stats' => '
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">1,254</div>
+                <div class="stat-label">Visitors</div>
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">$7,842</div>
+                <div class="stat-label">Revenue</div>
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">64%</div>
+                <div class="stat-label">Conversion</div>
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">312</div>
+                <div class="stat-label">Orders</div>
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+        </div>',
+        
+        'tasks' => '
+        <div class="task-list">
+            <div class="task-item completed">
+                <input type="checkbox" checked>
+                <label>Create dashboard layout</label>
+            </div>
+            <div class="task-item">
+                <input type="checkbox">
+                <label>Implement widget system</label>
+            </div>
+            <div class="task-item">
+                <input type="checkbox">
+                <label>Design settings panel</label>
+            </div>
+            <div class="task-item urgent">
+                <input type="checkbox">
+                <label>Fix responsive issues</label>
+            </div>
+            <div class="task-item">
+                <input type="checkbox">
+                <label>Add user documentation</label>
+            </div>
+        </div>
+        <div class="task-input">
+            <input type="text" placeholder="Add new task...">
+            <button><i class="fas fa-plus"></i></button>
+        </div>',
+        
+        'calendar' => '
+        <div class="calendar-header">
+            <button><i class="fas fa-chevron-left"></i></button>
+            <h3>'.date('F Y').'</h3>
+            <button><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="calendar-grid">
+            <div class="day-name">Sun</div>
+            <div class="day-name">Mon</div>
+            <div class="day-name">Tue</div>
+            <div class="day-name">Wed</div>
+            <div class="day-name">Thu</div>
+            <div class="day-name">Fri</div>
+            <div class="day-name">Sat</div>
+            
+            '.generate_calendar().'
+        </div>',
+        
+        'notes' => '
+        <div class="note active">
+            <div class="note-header">
+                <h4>Meeting Notes</h4>
+                <div class="note-date">Today, '.date('g:i A').'</div>
+            </div>
+            <div class="note-content">
+                Discussed dashboard features and widget implementation. 
+                Decided to go with a dark glass theme with neomorphic elements.
+                Need to finalize the settings panel by Friday.
+            </div>
+        </div>
+        <div class="note">
+            <div class="note-header">
+                <h4>To-Do List</h4>
+                <div class="note-date">Yesterday</div>
+            </div>
+            <div class="note-content">
+                - Research neomorphism trends<br>
+                - Create widget templates<br>
+                - Implement drag and drop<br>
+                - Test responsiveness
+            </div>
+        </div>
+        <div class="new-note">
+            <textarea placeholder="Start typing a new note..."></textarea>
+            <button>Save Note</button>
+        </div>',
+        
+        'activity' => '
+        <div class="activity-list">
+            <div class="activity-item">
+                <i class="fas fa-user-plus"></i>
+                <div class="activity-content">
+                    <div class="activity-title">New user registered</div>
+                    <div class="activity-time">2 minutes ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-chart-line"></i>
+                <div class="activity-content">
+                    <div class="activity-title">Monthly report generated</div>
+                    <div class="activity-time">15 minutes ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-wrench"></i>
+                <div class="activity-content">
+                    <div class="activity-title">System maintenance completed</div>
+                    <div class="activity-time">1 hour ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-tasks"></i>
+                <div class="activity-content">
+                    <div class="activity-title">Task "Design settings" completed</div>
+                    <div class="activity-time">3 hours ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-download"></i>
+                <div class="activity-content">
+                    <div class="activity-title">New update available</div>
+                    <div class="activity-time">5 hours ago</div>
+                </div>
+            </div>
+        </div>'
+    ];
     
-    switch ($id) {
-        case 'stats':
-            $show_icons = $settings['show_icons'] ?? true;
-            $icons = $show_icons ? '<i class="fas fa-users"></i><i class="fas fa-dollar-sign"></i><i class="fas fa-percentage"></i><i class="fas fa-shopping-cart"></i>' : '';
-            return '
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">1,254</div>
-                    <div class="stat-label">Visitors</div>
-                    '.($show_icons ? '<i class="fas fa-users"></i>' : '').'
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">$7,842</div>
-                    <div class="stat-label">Revenue</div>
-                    '.($show_icons ? '<i class="fas fa-dollar-sign"></i>' : '').'
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">64%</div>
-                    <div class="stat-label">Conversion</div>
-                    '.($show_icons ? '<i class="fas fa-percentage"></i>' : '').'
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">312</div>
-                    <div class="stat-label">Orders</div>
-                    '.($show_icons ? '<i class="fas fa-shopping-cart"></i>' : '').'
-                </div>
-            </div>';
-            
-        case 'tasks':
-            $show_completed = $settings['show_completed'] ?? true;
-            $completed_class = $show_completed ? 'completed' : '';
-            return '
-            <div class="task-list">
-                <div class="task-item '.$completed_class.'">
-                    <input type="checkbox" checked>
-                    <label>Create dashboard layout</label>
-                </div>
-                <div class="task-item">
-                    <input type="checkbox">
-                    <label>Implement widget system</label>
-                </div>
-                <div class="task-item">
-                    <input type="checkbox">
-                    <label>Design settings panel</label>
-                </div>
-                <div class="task-item urgent">
-                    <input type="checkbox">
-                    <label>Fix responsive issues</label>
-                </div>
-                <div class="task-item">
-                    <input type="checkbox">
-                    <label>Add user documentation</label>
-                </div>
-            </div>
-            <div class="task-input">
-                <input type="text" placeholder="Add new task...">
-                <button><i class="fas fa-plus"></i></button>
-            </div>';
-            
-        case 'calendar':
-            $show_events = $settings['show_events'] ?? true;
-            $event_dots = $show_events ? 'event' : '';
-            return '
-            <div class="calendar-header">
-                <button><i class="fas fa-chevron-left"></i></button>
-                <h3>'.date('F Y').'</h3>
-                <button><i class="fas fa-chevron-right"></i></button>
-            </div>
-            <div class="calendar-grid">
-                <div class="day-name">Sun</div>
-                <div class="day-name">Mon</div>
-                <div class="day-name">Tue</div>
-                <div class="day-name">Wed</div>
-                <div class="day-name">Thu</div>
-                <div class="day-name">Fri</div>
-                <div class="day-name">Sat</div>
-                
-                <div class="day empty"></div>
-                <div class="day empty"></div>
-                <div class="day">1</div>
-                <div class="day">2</div>
-                <div class="day">3</div>
-                <div class="day">4</div>
-                <div class="day">5</div>
-                
-                <div class="day">6</div>
-                <div class="day '.$event_dots.'">7</div>
-                <div class="day">8</div>
-                <div class="day">9</div>
-                <div class="day '.$event_dots.'">10</div>
-                <div class="day">11</div>
-                <div class="day">12</div>
-                
-                <div class="day">13</div>
-                <div class="day">14</div>
-                <div class="day">15</div>
-                <div class="day">16</div>
-                <div class="day '.$event_dots.'">17</div>
-                <div class="day">18</div>
-                <div class="day">19</div>
-                
-                <div class="day">20</div>
-                <div class="day">21</div>
-                <div class="day">22</div>
-                <div class="day">23</div>
-                <div class="day">24</div>
-                <div class="day">25</div>
-                <div class="day">26</div>
-                
-                <div class="day">27</div>
-                <div class="day">28</div>
-                <div class="day">29</div>
-                <div class="day">30</div>
-                <div class="day empty"></div>
-                <div class="day empty"></div>
-                <div class="day empty"></div>
-            </div>';
-            
-        case 'notes':
-            $theme = $settings['theme'] ?? 'dark';
-            $theme_class = $theme === 'light' ? 'light-theme' : '';
-            return '
-            <div class="note active '.$theme_class.'">
-                <div class="note-header">
-                    <h4>Meeting Notes</h4>
-                    <div class="note-date">Today, '.date('g:i A').'</div>
-                </div>
-                <div class="note-content">
-                    Discussed dashboard features and widget implementation. 
-                    Decided to go with a dark glass theme with neomorphic elements.
-                    Need to finalize the settings panel by Friday.
-                </div>
-            </div>
-            <div class="note '.$theme_class.'">
-                <div class="note-header">
-                    <h4>To-Do List</h4>
-                    <div class="note-date">Yesterday</div>
-                </div>
-                <div class="note-content">
-                    - Research neomorphism trends<br>
-                    - Create widget templates<br>
-                    - Implement drag and drop<br>
-                    - Test responsiveness
-                </div>
-            </div>
-            <div class="new-note '.$theme_class.'">
-                <textarea placeholder="Start typing a new note..."></textarea>
-                <button>Save Note</button>
-            </div>';
-            
-        case 'activity':
-            $show_timestamps = $settings['show_timestamps'] ?? true;
-            $timestamps = $show_timestamps ? 
-                '<div class="activity-time">2 minutes ago</div>
-                 <div class="activity-time">15 minutes ago</div>
-                 <div class="activity-time">1 hour ago</div>
-                 <div class="activity-time">3 hours ago</div>
-                 <div class="activity-time">5 hours ago</div>' : '';
-            return '
-            <div class="activity-list">
-                <div class="activity-item">
-                    <i class="fas fa-user-plus"></i>
-                    <div class="activity-content">
-                        <div class="activity-title">New user registered</div>
-                        '.($show_timestamps ? '<div class="activity-time">2 minutes ago</div>' : '').'
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <i class="fas fa-chart-line"></i>
-                    <div class="activity-content">
-                        <div class="activity-title">Monthly report generated</div>
-                        '.($show_timestamps ? '<div class="activity-time">15 minutes ago</div>' : '').'
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <i class="fas fa-wrench"></i>
-                    <div class="activity-content">
-                        <div class="activity-title">System maintenance completed</div>
-                        '.($show_timestamps ? '<div class="activity-time">1 hour ago</div>' : '').'
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <i class="fas fa-tasks"></i>
-                    <div class="activity-content">
-                        <div class="activity-title">Task "Design settings" completed</div>
-                        '.($show_timestamps ? '<div class="activity-time">3 hours ago</div>' : '').'
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <i class="fas fa-download"></i>
-                    <div class="activity-content">
-                        <div class="activity-title">New update available</div>
-                        '.($show_timestamps ? '<div class="activity-time">5 hours ago</div>' : '').'
-                    </div>
-                </div>
-            </div>';
-            
-        default:
-            return '<div class="widget-content">Widget content will appear here</div>';
-    }
+    return $widget_content[$widget_id] ?? '<div class="widget-content">Widget content will appear here</div>';
 }
 
 // Helper function to generate calendar
@@ -652,17 +525,6 @@ function generate_calendar() {
             grid-row: span var(--height, 1);
         }
 
-        .widget.expanded {
-            grid-column: 1 / -1;
-            grid-row: span 3;
-            z-index: 10;
-            transform: scale(1.02);
-            box-shadow: 
-                0 0 30px rgba(0,0,0,0.5),
-                12px 12px 24px var(--shadow-dark),
-                -12px -12px 24px rgba(74, 78, 94, 0.1);
-        }
-
         .widget:hover {
             <?php if ($settings['enable_animations']): ?>
             transform: translateY(-5px);
@@ -687,25 +549,6 @@ function generate_calendar() {
             gap: 10px;
             font-size: 18px;
             font-weight: 600;
-            cursor: pointer;
-        }
-
-        .widget-title-form {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .widget-title-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid var(--accent);
-            color: var(--text-primary);
-            font-size: 18px;
-            font-weight: 600;
-            padding: 5px;
-            outline: none;
         }
 
         .widget-actions {
@@ -790,17 +633,13 @@ function generate_calendar() {
             transition: var(--transition);
         }
 
-        .task-item.completed {
-            opacity: 0.6;
-            text-decoration: line-through;
+        .task-item.urgent {
+            border-left: 4px solid var(--danger);
         }
 
         .task-item.completed label {
+            text-decoration: line-through;
             color: var(--text-secondary);
-        }
-
-        .task-item.urgent {
-            border-left: 4px solid var(--danger);
         }
 
         .task-input {
@@ -884,11 +723,6 @@ function generate_calendar() {
             padding: 15px;
             margin-bottom: 15px;
             transition: var(--transition);
-        }
-
-        .note.light-theme {
-            background: rgba(255,255,255,0.1);
-            color: #333;
         }
 
         .note.active {
@@ -1064,30 +898,6 @@ function generate_calendar() {
             display: none;
         }
 
-        .widget-settings-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.7);
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(5px);
-        }
-
-        .widget-settings-content {
-            background: var(--bg-tertiary);
-            border-radius: 20px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
-            border: 1px solid var(--glass-border);
-        }
-
         /* Responsive Design */
         @media (max-width: 1200px) {
             .dashboard {
@@ -1203,30 +1013,29 @@ function generate_calendar() {
         
         <!-- Main Content Area -->
         <main class="main-content" id="widget-container">
-            <?php foreach ($widgets as $index => $widget): 
+            <?php foreach ($_SESSION['active_widgets'] as $index => $widget): 
                 $widget_def = $available_widgets[$widget['id']] ?? ['width' => 1, 'height' => 1];
-                $expanded_class = $widget['expanded'] ? 'expanded' : '';
             ?>
-            <div class="widget <?= $expanded_class ?>" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
+            <div class="widget" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
                 <div class="widget-header">
-                    <div class="widget-title" data-index="<?= $index ?>">
+                    <div class="widget-title">
                         <i class="fas fa-<?= $widget_def['icon'] ?? 'cube' ?>"></i>
-                        <span><?= htmlspecialchars($widget['title']) ?></span>
+                        <span><?= $widget_def['name'] ?? 'Widget' ?></span>
                     </div>
                     <div class="widget-actions">
-                        <div class="widget-action settings-btn" data-index="<?= $index ?>">
+                        <div class="widget-action">
                             <i class="fas fa-cog"></i>
                         </div>
-                        <div class="widget-action expand-btn" data-index="<?= $index ?>">
-                            <i class="fas <?= $widget['expanded'] ? 'fa-compress' : 'fa-expand' ?>"></i>
+                        <div class="widget-action">
+                            <i class="fas fa-expand"></i>
                         </div>
-                        <div class="widget-action remove-btn" data-index="<?= $index ?>">
+                        <div class="widget-action remove-widget" data-index="<?= $index ?>">
                             <i class="fas fa-times"></i>
                         </div>
                     </div>
                 </div>
                 <div class="widget-content">
-                    <?= render_widget($widget) ?>
+                    <?= render_widget($widget['id']) ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -1302,12 +1111,6 @@ function generate_calendar() {
                     </select>
                 </div>
                 
-                <div class="form-group">
-                    <label for="widget_title">Widget Title</label>
-                    <input type="text" id="widget_title" name="widget_title" 
-                        class="form-control" value="New Widget">
-                </div>
-                
                 <button type="submit" name="add_widget" class="btn btn-primary" style="width: 100%;">
                     <i class="fas fa-plus"></i> Add Widget to Dashboard
                 </button>
@@ -1332,42 +1135,6 @@ function generate_calendar() {
                 <i class="fas fa-save"></i> Save All Settings
             </button>
         </form>
-    </div>
-    
-    <!-- Widget Settings Modal -->
-    <div class="widget-settings-modal" id="widget-settings-modal">
-        <div class="widget-settings-content">
-            <div class="settings-header">
-                <h2 id="widget-settings-title">Widget Settings</h2>
-                <button class="btn close-widget-settings">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <form method="post" class="widget-settings-form">
-                <input type="hidden" name="widget_index" id="widget-settings-index">
-                
-                <div class="settings-group">
-                    <div class="form-group">
-                        <label for="widget-title-edit">Widget Title</label>
-                        <input type="text" id="widget-title-edit" name="widget_title" class="form-control">
-                    </div>
-                    
-                    <div id="widget-specific-settings">
-                        <!-- Widget-specific settings will be inserted here -->
-                    </div>
-                </div>
-                
-                <div class="widget-settings-footer">
-                    <button type="submit" name="update_widget_title" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save Title
-                    </button>
-                    <button type="submit" name="update_widget_settings" class="btn btn-primary">
-                        <i class="fas fa-cog"></i> Save Settings
-                    </button>
-                </div>
-            </form>
-        </div>
     </div>
     
     <script>
@@ -1395,7 +1162,7 @@ function generate_calendar() {
             });
             
             // Widget removal
-            document.querySelectorAll('.remove-btn').forEach(button => {
+            document.querySelectorAll('.remove-widget').forEach(button => {
                 button.addEventListener('click', function() {
                     const widgetIndex = this.getAttribute('data-index');
                     const form = document.createElement('form');
@@ -1410,151 +1177,6 @@ function generate_calendar() {
                     form.appendChild(input);
                     document.body.appendChild(form);
                     form.submit();
-                });
-            });
-            
-            // Widget expansion
-            document.querySelectorAll('.expand-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const widgetIndex = this.getAttribute('data-index');
-                    const form = document.createElement('form');
-                    form.method = 'post';
-                    form.style.display = 'none';
-                    
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'toggle_expand';
-                    input.value = '1';
-                    
-                    const indexInput = document.createElement('input');
-                    indexInput.type = 'hidden';
-                    indexInput.name = 'widget_index';
-                    indexInput.value = widgetIndex;
-                    
-                    form.appendChild(input);
-                    form.appendChild(indexInput);
-                    document.body.appendChild(form);
-                    form.submit();
-                });
-            });
-            
-            // Widget settings
-            document.querySelectorAll('.settings-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const widgetIndex = this.getAttribute('data-index');
-                    const widget = document.querySelector(`.widget-title[data-index="${widgetIndex}"]`);
-                    const widgetTitle = widget.querySelector('span').textContent;
-                    
-                    // Set modal title and index
-                    document.getElementById('widget-settings-title').textContent = widgetTitle + ' Settings';
-                    document.getElementById('widget-settings-index').value = widgetIndex;
-                    document.getElementById('widget-title-edit').value = widgetTitle;
-                    
-                    // Get widget type
-                    const widgetId = <?= json_encode(array_column($widgets, 'id')) ?>[widgetIndex];
-                    
-                    // Generate widget-specific settings
-                    let settingsHtml = '';
-                    switch(widgetId) {
-                        case 'stats':
-                            settingsHtml = `
-                                <div class="form-group">
-                                    <label>Show Icons</label>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" name="show_icons" 
-                                            <?= $widgets[0]['settings']['show_icons'] ? 'checked' : '' ?>>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            `;
-                            break;
-                            
-                        case 'tasks':
-                            settingsHtml = `
-                                <div class="form-group">
-                                    <label>Show Completed Tasks</label>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" name="show_completed" 
-                                            <?= $widgets[1]['settings']['show_completed'] ? 'checked' : '' ?>>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            `;
-                            break;
-                            
-                        case 'calendar':
-                            settingsHtml = `
-                                <div class="form-group">
-                                    <label>Show Event Indicators</label>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" name="show_events" 
-                                            <?= $widgets[2]['settings']['show_events'] ? 'checked' : '' ?>>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            `;
-                            break;
-                            
-                        case 'notes':
-                            settingsHtml = `
-                                <div class="form-group">
-                                    <label>Note Theme</label>
-                                    <select name="notes_theme" class="form-control">
-                                        <option value="dark" <?= $widgets[3]['settings']['theme'] === 'dark' ? 'selected' : '' ?>>Dark</option>
-                                        <option value="light" <?= $widgets[3]['settings']['theme'] === 'light' ? 'selected' : '' ?>>Light</option>
-                                    </select>
-                                </div>
-                            `;
-                            break;
-                            
-                        case 'activity':
-                            settingsHtml = `
-                                <div class="form-group">
-                                    <label>Show Timestamps</label>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" name="show_timestamps" 
-                                            <?= $widgets[4]['settings']['show_timestamps'] ? 'checked' : '' ?>>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            `;
-                            break;
-                            
-                        default:
-                            settingsHtml = '<p>No specific settings for this widget</p>';
-                    }
-                    
-                    document.getElementById('widget-specific-settings').innerHTML = settingsHtml;
-                    
-                    // Show the modal
-                    document.getElementById('widget-settings-modal').style.display = 'flex';
-                });
-            });
-            
-            // Close widget settings modal
-            document.querySelector('.close-widget-settings').addEventListener('click', function() {
-                document.getElementById('widget-settings-modal').style.display = 'none';
-            });
-            
-            // Widget title editing
-            document.querySelectorAll('.widget-title').forEach(title => {
-                title.addEventListener('dblclick', function() {
-                    const index = this.getAttribute('data-index');
-                    const span = this.querySelector('span');
-                    const titleText = span.textContent;
-                    
-                    const formHtml = `
-                        <form method="post" class="widget-title-form">
-                            <input type="text" class="widget-title-input" name="widget_title" value="${titleText}">
-                            <input type="hidden" name="widget_index" value="${index}">
-                            <button type="submit" name="update_widget_title" class="widget-action">
-                                <i class="fas fa-check"></i>
-                            </button>
-                        </form>
-                    `;
-                    
-                    this.innerHTML = formHtml;
-                    this.querySelector('.widget-title-input').focus();
                 });
             });
             
