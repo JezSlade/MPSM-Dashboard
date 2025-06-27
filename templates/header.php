@@ -13,9 +13,17 @@
             csrfToken: '<?= $_SESSION['csrf_token'] ?? '' ?>'
         };
     </script>
-    <!-- GridStack CSS and JS -->
-<link href="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack.min.css" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack-h5.js"></script>
+    
+    <!-- GridStack CSS (Local fallback optional) -->
+    <link href="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack.min.css" rel="stylesheet">
+    <!-- Fallback: <link rel="stylesheet" href="/dashboard/libs/gridstack.min.css"> -->
+
+    <!-- Fixed JS: gridstack-all.js loads correctly -->
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@8.2.1/dist/gridstack-all.js"></script>
+    <!-- Fallback: <script src="/dashboard/libs/gridstack-all.js"></script> -->
+
+    <!-- Favicon (optional) -->
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <header>
