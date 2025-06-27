@@ -5,6 +5,37 @@ $_widget_config = [
     'width' => 1,
     'height' => 1
 ];
+
+/**
+ * Helper function to generate calendar grid HTML.
+ * This function is now local to the calendar widget.
+ */
+function generate_calendar() {
+    $days_in_month = date('t');
+    $first_day = date('w', strtotime(date('Y-m-01')));
+
+    $html = '';
+
+    // Empty days for the first week
+    for ($i = 0; $i < $first_day; $i++) {
+        $html .= '<div class="day empty"></div>';
+    }
+
+    // Days of the month
+    for ($day = 1; $day <= $days_in_month; $day++) {
+        $today = ($day == date('j')) ? ' today' : '';
+        $event = (in_array($day, [7, 10, 17, 24])) ? ' event' : '';
+        $html .= '<div class="day'.$today.$event.'">'.$day.'</div>';
+    }
+
+    // Fill remaining empty days
+    $remaining = 42 - $days_in_month - $first_day;
+    for ($i = 0; $i < $remaining; $i++) {
+        $html .= '<div class="day empty"></div>';
+    }
+
+    return $html;
+}
 ?>
 <div class="calendar-header">
     <button><i class="fas fa-chevron-left"></i></button>
@@ -20,5 +51,5 @@ $_widget_config = [
     <div class="day-name">Fri</div>
     <div class="day-name">Sat</div>
 
-    <?= generate_calendar() // Assuming generate_calendar is in helpers.php and included ?>
+    <?= generate_calendar() ?>
 </div>

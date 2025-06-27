@@ -5,12 +5,21 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
 
-// index.php
+// dashboard.php
 session_start();
 
 // Include configuration and helper functions
 require_once 'config.php';
 require_once 'helpers.php';
+
+// --- TEMPORARY DEBUGGING LINE ---
+// This will show you what widgets config.php successfully discovered.
+// Remove or comment out this line once you've confirmed widgets are loading.
+echo '<pre>';
+var_dump($available_widgets);
+echo '</pre>';
+// --- END TEMPORARY DEBUGGING LINE ---
+
 
 // Handle widget management and settings updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -58,7 +67,10 @@ $settings = $_SESSION['dashboard_settings'] ?? [
 ];
 
 // Pass available widgets to the view
-global $available_widgets; // Make available_widgets global to be accessible in helpers.php
+// The 'global' keyword might not be necessary here if $available_widgets is defined
+// directly in config.php and config.php is included.
+// It's primarily for ensuring it's available for rendering in the HTML below.
+global $available_widgets;
 
 ?>
 <!DOCTYPE html>
