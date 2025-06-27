@@ -13,7 +13,16 @@
         <div class="widget-list">
             <?php foreach (['stats', 'tasks', 'calendar', 'notes', 'activity'] as $widgetId): ?>
             <div class="widget-item" draggable="true" data-widget-id="<?= $widgetId ?>">
-                <i class="fas fa-<?= $widgetId === 'stats' ? 'chart-bar' : $widgetId === 'tasks' ? 'tasks' : $widgetId === 'calendar' ? 'calendar' : $widgetId === 'notes' ? 'sticky-note' : 'history' ?>"></i>
+                <?php
+                $icon = 'history'; // default
+                switch ($widgetId) {
+                    case 'stats': $icon = 'chart-bar'; break;
+                    case 'tasks': $icon = 'tasks'; break;
+                    case 'calendar': $icon = 'calendar'; break;
+                    case 'notes': $icon = 'sticky-note'; break;
+                }
+                ?>
+                <i class="fas fa-<?= $icon ?>"></i>
                 <div class="widget-name"><?= ucfirst($widgetId) ?></div>
             </div>
             <?php endforeach; ?>
