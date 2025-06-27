@@ -60,24 +60,32 @@ class Database {
         }
     }
 
-    public function query(string $sql, array $params = []): PDOStatement {
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            foreach ($params as $key => $value) {
-                $type = is_int($value) ? PDO::PARAM_INT : 
-                       (is_bool($value) ? PDO::PARAM_BOOL : 
-                       (is_null($value) ? PDO::PARAM_NULL : PDO::PARAM_STR));
-                $stmt->bindValue(is_int($key) ? $key+1 : ":{$key}", $value, $type);
-            }
-            $stmt->execute();
-            return $stmt;
-        } catch (PDOException $e) {
-            if ($this->inTransaction) {
-                $this->rollBack();
-            }
-            throw new RuntimeException("Query failed: " . $e->getMessage());
+public function query(string $sql, array $params = []): PDOStatement {
+    $stmt = $this->pdo->prepare($sql);
+    
+    // Bind parameters with proper types
+    foreach ($params as $key => $value) {
+        $paramType = PDO::PARAM_STR;
+        
+        if (is_int($value)) {
+            $paramType = PDO::PARAM_INT;
+        } elseif (is_bool($value)) {
+            $paramType = PDO::PARAM_BOOL;
+        } elseif (is_null($value)) {
+            $paramType = PDO::PARAM_NULL;
+        }
+        
+        // Handle numeric and named parameters
+        if (is_int($key)) {
+            $stmt->bindValue($key + 1, $value, $paramType);
+        } else {
+            $stmt->bindValue(':' . ltrim($key, ':'), $value, $paramType);
         }
     }
+    
+    $stmt->execute();
+    return $stmt;
+}
 
     private function checkSchema(): void {
         $currentVersion = $this->getSetting('schema_version');
