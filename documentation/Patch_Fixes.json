@@ -1,0 +1,37 @@
+{
+  "issue_identified": "Infinite redirect loop between index.php and setup.php",
+  "root_cause": {
+    "description": "Mismatch in SETUP_COMPLETE_FILE path",
+    "details": {
+      "index_php_path": "/.setup_complete",
+      "setup_php_path": "/db/.setup_complete"
+    }
+  },
+  "actions_taken": [
+    {
+      "action": "Standardized Path",
+      "details": "Unified SETUP_COMPLETE_FILE path in both files to ROOT_DIR . '/.setup_complete'"
+    },
+    {
+      "action": "Cleaned Logic",
+      "details": "setup.php now properly handles setup reset, completion, and redirection"
+    },
+    {
+      "action": "Improved UX",
+      "details": "Added HTML setup form, visual alerts, and reset button"
+    },
+    {
+      "action": "Testability",
+      "details": "Simplified setup logic for easier validation and testing"
+    }
+  ],
+  "files_affected": [
+    "index.php",
+    "setup.php"
+  ],
+  "avoided": [
+    "No unnecessary database alterations",
+    "No logic inside front-end markup",
+    "No regressions to existing functionality"
+  ]
+}
