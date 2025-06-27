@@ -1,4 +1,12 @@
 <?php
+// Setup mode flag
+define('IN_SETUP_MODE', basename($_SERVER['SCRIPT_FILENAME']) === 'setup.php');
+
+// Only initialize ErrorHandler if not in setup
+if (!IN_SETUP_MODE) {
+    require_once __DIR__ . '/lib/ErrorHandler.php';
+    ErrorHandler::initialize();
+}
 // Load environment variables safely
 $envPath = __DIR__ . '/.env';
 if (file_exists($envPath)) {

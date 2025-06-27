@@ -8,90 +8,92 @@ error_reporting(E_ALL);
 // =============================================
 class ErrorHandler {
     private static $logFile;
-    private static $maxLogSize;
+    private static $initialized = false;
 
     public static function initialize(): void {
-        self::$logFile = defined('DEBUG_LOG_FILE') ? DEBUG_LOG_FILE : __DIR__ . '/../logs/error.log';
-        self::$maxLogSize = defined('MAX_LOG_SIZE_MB') ? MAX_LOG_SIZE_MB * 1024 * 1024 : 10 * 1024 * 1024;
+        if (self::$initialized) return;
         
-        if (!file_exists(dirname(self::$logFile))) {
-            mkdir(dirname(self::$logFile), 0755, true);
-        }
-
+        // Define constants if not already defined
+        if (!defined('DEBUG_MODE')) define('DEBUG_MODE', false);
+        if (!defined('DEBUG_LOG_FILE')) define('DEBUG_LOG_FILE', __DIR__ . '/../logs/debug.log');
+        
+        self::$logFile = DEBUG_LOG_FILE;
+        self::$initialized = true;
+        
         set_error_handler([self::class, 'handleError']);
         set_exception_handler([self::class, 'handleException']);
         register_shutdown_function([self::class, 'handleShutdown']);
-    }
-
-    private static function rotateLogs(): void {
-        if (file_exists(self::$logFile)) {
-            clearstatcache(true, self::$logFile);
-            if (@filesize(self::$logFile) >= self::$maxLogSize) {
-                $backupFile = self::$logFile . '.' . date('YmdHis');
-                @rename(self::$logFile, $backupFile);
-                file_put_contents(self::$logFile, "Log rotated at " . date('Y-m-d H:i:s') . PHP_EOL);
-            }
+        
+        // Create log directory if needed
+        $logDir = dirname(self::$logFile);
+        if (!file_exists($logDir)) {
+            mkdir($logDir, 0755, true);
         }
     }
 
     public static function handleError(int $code, string $message, string $file, int $line): bool {
-        self::rotateLogs();
-        
-        $error = new ErrorException($message, 0, $code, $file, $line);
-        self::logException($error);
-        
-        if (DEBUG_MODE) {
-            self::displayError($error);
-        }
-        
+        self::log("Error [$code] $message in $file on line $line");
+        if (DEBUG_MODE) self::display("Error: $message", $file, $line);
         return true;
     }
 
     public static function handleException(Throwable $e): void {
-        self::logException($e);
-        self::displayError($e);
+        self::log("Exception: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+        self::display("Exception: " . $e->getMessage(), $e->getFile(), $e->getLine(), $e->getTraceAsString());
+        exit(1);
     }
 
     public static function handleShutdown(): void {
         $error = error_get_last();
         if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-            self::handleError(
-                $error['type'],
-                $error['message'],
-                $error['file'],
-                $error['line']
-            );
+            self::log("Shutdown error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+            self::display("Fatal error: " . $error['message'], $error['file'], $error['line']);
         }
     }
 
-    private static function logException(Throwable $e): void {
-        $message = sprintf(
-            "[%s] %s in %s:%d\nStack Trace:\n%s\n\n",
-            get_class($e),
-            $e->getMessage(),
-            $e->getFile(),
-            $e->getLine(),
-            $e->getTraceAsString()
-        );
-        
-        $fp = fopen(self::$logFile, 'a');
-        if (flock($fp, LOCK_EX)) {
-            fwrite($fp, $message);
-            flock($fp, LOCK_UN);
-        }
-        fclose($fp);
+    private static function log(string $message): void {
+        $message = sprintf("[%s] %s\n", date('Y-m-d H:i:s'), $message);
+        file_put_contents(self::$logFile, $message, FILE_APPEND);
     }
 
-    private static function displayError(Throwable $e): void {
+    private static function display(string $error, string $file, int $line, string $trace = ''): void {
         if (php_sapi_name() === 'cli') {
-            echo "Error: {$e->getMessage()}\n";
+            echo "$error\nFile: $file\nLine: $line\n";
+            if ($trace) echo "Trace:\n$trace\n";
             return;
         }
-        
+
         http_response_code(500);
-        include __DIR__ . '/../templates/error.php';
+        ?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error</title>
+            <style>
+                body { font-family: sans-serif; background: #1a1a2e; color: #e0f7fa; padding: 2rem; }
+                .error-container { background: rgba(30,30,45,0.8); border: 1px solid #f00; padding: 1rem; }
+                pre { background: rgba(0,0,0,0.3); padding: 1rem; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h2>System Error</h2>
+                <p><?= htmlspecialchars($error) ?></p>
+                <?php if (DEBUG_MODE): ?>
+                <pre>Error in <?= htmlspecialchars("$file:$line") ?>
+
+
+                <?= htmlspecialchars($trace) ?></pre>
+                <?php endif; ?>
+            </div>
+        </body>
+        </html>
+        <?php
         exit;
     }
 }
 
-ErrorHandler::initialize();
+// Initialize if not in setup mode
+if (!defined('IN_SETUP_MODE')) {
+    ErrorHandler::initialize();
+}
