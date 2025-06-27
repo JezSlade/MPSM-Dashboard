@@ -29,7 +29,7 @@ if (!file_exists(SETUP_COMPLETE_FILE)) {
 }
 
 // Load core files
-require_once ROOT_DIR . '/../config.php';
+require_once __DIR__ . '/config.php';
 require_once ROOT_DIR . '/../lib/ErrorHandler.php';
 require_once ROOT_DIR . '/../lib/Database.php';
 
