@@ -282,6 +282,7 @@ body.expanded-active .widget-expanded-overlay {
     position: relative; /* Ensure z-index works for children */
     z-index: 1; /* Default z-index for widgets */
     transition: var(--transition); /* Ensure smooth transition for hover */
+    pointer-events: auto; /* Ensure it's clickable */
 }
 
 
@@ -756,14 +757,6 @@ input:checked + .slider:before {
     pointer-events: auto; /* Ensure it's clickable */
     opacity: 1; /* Ensure it's visible */
     visibility: visible; /* Ensure it's visible */
-}
-
-/* New: Hide the original widget in its grid position when it's maximized */
-/* This prevents it from pushing other widgets and avoids a "hole" */
-.main-content .widget.maximized-placeholder {
-    visibility: hidden; /* Keep its space but hide it */
-    opacity: 0; /* Fade it out */
-    pointer-events: none; /* Make it unclickable */
 }
 
 /* Overrides for hover effects when maximized */

@@ -76,20 +76,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Maximize
                     widget.classList.add('maximized');
                     document.body.classList.add('expanded-active'); // Add class to body for overlay
-                    // Add a placeholder class to hide the original in-flow widget
-                    widget.classList.add('maximized-placeholder');
+                    // Removed: widget.classList.add('maximized-placeholder');
                     target.querySelector('i').classList.replace('fa-expand', 'fa-compress');
-
-                    // If you want the expanded widget to be interactive *over* the overlay,
-                    // you might need to append it directly to body for z-index stacking context,
-                    // then move it back. For now, keep it in main-content but ensure z-index.
-                    // This is handled by CSS z-index and fixed positioning.
                 } else {
                     // Minimize
                     widget.classList.remove('maximized');
                     document.body.classList.remove('expanded-active'); // Remove class from body
-                    // Remove placeholder class
-                    widget.classList.remove('maximized-placeholder');
+                    // Removed: widget.classList.remove('maximized-placeholder');
                     target.querySelector('i').classList.replace('fa-compress', 'fa-expand');
                 }
             }
@@ -125,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (activeMaximizedWidget) {
             activeMaximizedWidget.classList.remove('maximized');
             document.body.classList.remove('expanded-active');
-            activeMaximizedWidget.classList.remove('maximized-placeholder');
+            // Removed: activeMaximizedWidget.classList.remove('maximized-placeholder');
             activeMaximizedWidget.querySelector('.action-expand i').classList.replace('fa-compress', 'fa-expand');
         }
     });
