@@ -67,12 +67,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // If the clicked action is not part of a widget, or if the widget is null, do nothing
             if (!widget) return;
 
-            const widgetId = target.dataset.widgetId; // Get widget ID if applicable
-
             // Handle Settings Action (Cog Icon)
             if (target.classList.contains('action-settings')) {
                 const widgetName = widget.querySelector('.widget-title span').textContent;
-                showMessageModal('Widget Settings', `Settings for "${widgetName}" widget. (ID: ${widgetId || 'N/A'})`);
+                showMessageModal('Widget Settings', `Settings for "${widgetName}" widget.`);
             }
             // Handle Expand/Shrink Action (Expand Icon)
             else if (target.classList.contains('action-expand')) {
@@ -80,17 +78,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // Handle Remove Widget Action (Times Icon)
             else if (target.classList.contains('remove-widget')) {
+                // Get the widget index from the data-index attribute on the action button
                 const widgetIndex = target.getAttribute('data-index');
+
+                console.log("Remove button clicked. Widget index:", widgetIndex);
 
                 if (widget.classList.contains('maximized')) {
                     // If maximized, clicking 'X' should minimize/close the modal
+                    console.log("Widget is maximized, minimizing instead of removing.");
                     toggleWidgetExpansion(widget); // Restore to original position
-                } else {
-                    // If not maximized, clicking 'X' should remove the widget
+                } else if (widgetIndex !== null && widgetIndex !== undefined) {
+                    // If not maximized and a valid index is found, proceed with removal confirmation
+                    console.log("Widget is minimized, prompting for removal confirmation.");
                     showMessageModal(
                         'Confirm Removal',
-                        'Are you sure you want to remove this widget?',
+                        'Are you sure you want to remove this widget from the dashboard?',
                         function() {
+                            console.log("Confirmed removal for widget index:", widgetIndex);
                             const form = document.createElement('form');
                             form.method = 'post';
                             form.style.display = 'none';
@@ -98,13 +102,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             const input = document.createElement('input');
                             input.type = 'hidden';
                             input.name = 'remove_widget';
-                            input.value = widgetIndex;
+                            input.value = widgetIndex; // This is the index passed to PHP
 
                             form.appendChild(input);
                             document.body.appendChild(form);
-                            form.submit();
+                            form.submit(); // This submits the form to index.php
                         }
                     );
+                } else {
+                    // Fallback for cases where data-index might be missing (shouldn't happen with current HTML)
+                    console.error("Error: Could not determine widget index for removal on a non-maximized widget.");
+                    showMessageModal('Error', 'Could not determine which widget to remove.');
                 }
             }
         }
