@@ -706,18 +706,28 @@ input:checked + .slider:before {
     position: fixed; /* Use fixed to truly center and overlay */
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) !important; /* Keep it centered, override any other transforms */
     width: 95%; /* Take almost full width */
     height: 95%; /* Take almost full height */
     max-width: 1200px; /* Limit max size on very large screens */
     max-height: 900px; /* Limit max height */
     z-index: 1001; /* Above other widgets but below main settings panel/modal */
-    grid-column: 1 / -1 !important; /* Force full width in grid if still in flow */
-    grid-row: 1 / -1 !important; /* Force full height in grid if still in flow */
-    overflow: hidden; /* Hide scrollbars on main widget if content fits */
-    display: flex; /* Ensure content distribution */
+    overflow: hidden;
+    display: flex;
     flex-direction: column;
+    background: var(--bg-tertiary); /* Ensure it has a solid background */
+    border: 1px solid var(--glass-border); /* Keep glass border */
+    border-radius: 20px; /* Keep border radius */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); /* A more prominent shadow for maximized state */
+    transition: all 0.4s ease-in-out; /* Smooth transition for expand/collapse */
 }
+
+/* Explicitly disable normal widget hover effects when maximized */
+.widget.maximized:hover {
+    transform: translate(-50%, -50%) !important; /* Prevent translateY(-5px) */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important; /* Prevent change in shadow */
+}
+
 
 .widget.maximized .widget-content {
     overflow-y: auto; /* Allow internal scrolling if content overflows */
