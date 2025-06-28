@@ -54,15 +54,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // --- Widget Actions ---
-    // Delegated event listeners for efficiency and future widgets
-    const mainContent = document.getElementById('widget-container');
+    // Changed: Listener now on document.body so it can capture clicks on widgets
+    // whether they are in mainContent or expandedOverlay.
+    const mainContent = document.getElementById('widget-container'); // Still needed for placeholder appendChild
     const expandedOverlay = document.getElementById('widget-expanded-overlay'); // The new overlay
 
-    mainContent.addEventListener('click', function(e) {
+    document.body.addEventListener('click', function(e) { // Listener moved to document.body
         const target = e.target.closest('.widget-action'); // Find the clicked action button
 
         if (target) {
             const widget = target.closest('.widget'); // Get the parent widget element
+            // If the clicked action is not part of a widget, or if the widget is null, do nothing
+            if (!widget) return;
+
             const widgetId = target.dataset.widgetId; // Get widget ID if applicable
 
             // Handle Settings Action (Cog Icon)
@@ -187,13 +191,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // --- Drag and drop functionality ---
-    const widgetItems = document.querySelectorAll('.widget-item');
-
-    widgetItems.forEach(item => {
-        item.addEventListener('dragstart', function(e) {
-            e.dataTransfer.setData('text/plain', this.dataset.widgetId);
-        });
+    // Changed: Listener now on document.body for widget items, as they might be dragged from sidebar.
+    // mainContent is still used for drop target, as that's where widgets are dropped.
+    document.body.addEventListener('dragstart', function(e) {
+        const target = e.target.closest('.widget-item');
+        if (target) {
+            e.dataTransfer.setData('text/plain', target.dataset.widgetId);
+        }
     });
+
 
     mainContent.addEventListener('dragover', function(e) {
         e.preventDefault();
@@ -228,7 +234,6 @@ document.addEventListener('DOMContentLoaded', function() {
         widgetInput.value = widgetId;
 
         form.appendChild(input);
-        form.appendChild(widgetInput);
         document.body.appendChild(form);
         form.submit();
     }
