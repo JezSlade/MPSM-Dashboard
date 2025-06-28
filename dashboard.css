@@ -36,9 +36,9 @@ body {
     overflow: auto; /* Allow scrolling by default */
 }
 
-/* New: Overlay for when a widget is expanded */
+/* Ensure that when a modal/expanded widget is active, the body doesn't scroll */
 body.expanded-active {
-    overflow: hidden; /* Prevent background scrolling */
+    overflow: hidden;
 }
 
 .widget-expanded-overlay {
@@ -58,7 +58,6 @@ body.expanded-active .widget-expanded-overlay {
     opacity: 1;
     visibility: visible;
 }
-
 
 .dashboard {
     display: grid;
@@ -679,14 +678,16 @@ input:checked + .slider:before {
     width: 90%;
     max-width: 500px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    transform: translateY(-20px);
+    /* Removed transform for vertical centering with flex */
     transition: transform 0.3s ease;
     border: 1px solid var(--glass-border);
+    margin: auto; /* New: To center vertically and horizontally within flex container */
 }
 
-.message-modal-overlay.active .message-modal {
+/* Removed specific transform translateY as flex/margin auto handles it */
+/* .message-modal-overlay.active .message-modal {
     transform: translateY(0);
-}
+} */
 
 .message-modal-header {
     display: flex;
@@ -729,59 +730,68 @@ input:checked + .slider:before {
 }
 
 /* --- Maximized Widget Styles --- */
+/* Base widget styling */
+.widget {
+    transition: var(--transition);
+    pointer-events: auto;
+}
+
+/* Styling for the widget when it is in the maximized (modal-like) state */
 .widget.maximized {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    /* Use translate3d for hardware acceleration and to ensure it's a new composite layer */
-    transform: translate3d(-50%, -50%, 0) scale(1) !important;
-    width: 95%;
-    height: 95%;
-    max-width: 1200px;
-    max-height: 900px;
-    z-index: 1002;
+    top: 0; /* Anchor to top-left of viewport */
+    left: 0; /* Anchor to top-left of viewport */
+    width: 100%; /* Take full width of viewport */
+    height: 100%; /* Take full height of viewport */
+    display: flex; /* Use flexbox to center content */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    z-index: 1002; /* Ensure it's on top of everything */
+    background: var(--bg-primary); /* Use primary background for full screen */
+    border-radius: 0; /* No rounded corners when full screen */
+    box-shadow: none; /* No shadow when full screen */
+    padding: 20px; /* Padding from viewport edges */
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.4s ease, visibility 0.4s ease, background 0.4s ease; /* Smooth transition for overlay/widget */
+}
+
+/* Content inside the maximized widget */
+.widget.maximized > .widget-header,
+.widget.maximized > .widget-content {
+    /* To make the widget itself appear as a centered box within the full-screen overlay */
     background: var(--bg-tertiary);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8);
-    transition: all 0.4s ease-in-out;
-    overflow: hidden;
-    pointer-events: auto;
-    opacity: 1;
-    visibility: visible;
+    max-width: 90%; /* Max width of the widget content inside the maximized view */
+    max-height: 90%; /* Max height of the widget content inside the maximized view */
+    padding: 20px;
+    flex-shrink: 0; /* Prevent header from shrinking too much */
 }
 
-/* When a widget is maximized, ensure its grid position is visually empty */
-/* This works by applying 'display: none' to it initially, and then removing it */
-/* This requires a slightly different approach in JS, where we swap classes instead of toggle. */
-/* However, for a simple overlay, we can just hide the original element's presence */
-/* while it's in its fixed maximized state. A more robust solution might involve cloning. */
+.widget.maximized > .widget-content {
+    flex-grow: 1; /* Allow content to fill available space */
+    overflow-y: auto;
+}
 
-/* To stop the original widget from "pushing" content when maximized, and to prevent its hover effects */
-/* This assumes the widget *itself* is toggled with 'maximized' class. */
-/* The key here is to control its state when not fixed. */
-
-/* Override normal hover when maximized */
+/* Override normal widget hover effects when maximized */
 .widget.maximized:hover {
-    transform: translate3d(-50%, -50%, 0) scale(1) !important;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8) !important;
+    /* Do not apply normal widget hover transforms/shadows when maximized */
+    transform: none !important;
+    box-shadow: none !important;
 }
 
-/* When the body has expanded-active, all widgets NOT maximized should be inert */
+/* When the body has expanded-active, all widgets NOT maximized should be hidden */
 body.expanded-active .main-content .widget:not(.maximized) {
-    /* Hide the original widget instance by making it visually absent and unclickable */
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    /* Optional: If you want a slight blur or scale on background content */
+    /* transform: scale(0.95); */
+    /* transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease; */
 }
 
-
-.widget.maximized .widget-content {
-    flex: 1;
-    overflow-y: auto; /* Allow internal scrolling if content overflows */
-    padding-right: 10px; /* Space for scrollbar */
-}
 
 /* Responsive Design */
 @media (max-width: 1200px) {
@@ -823,5 +833,14 @@ body.expanded-active .main-content .widget:not(.maximized) {
         width: 100%;
         height: 100%;
         border-radius: 0;
+        padding: 0; /* No padding on mobile for true full screen */
+    }
+
+    .widget.maximized > .widget-header,
+    .widget.maximized > .widget-content {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        padding: 20px; /* Re-add padding for content itself */
     }
 }
