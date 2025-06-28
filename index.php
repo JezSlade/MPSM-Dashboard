@@ -12,32 +12,49 @@ session_start();
 require_once 'config.php';
 require_once 'helpers.php';
 
-// Handle widget management and settings updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['add_widget']) && !empty($_POST['widget_id'])) {
-        // Add new widget
-        $new_widget = [
-            'id' => $_POST['widget_id'],
-            'position' => count($_SESSION['active_widgets']) + 1
-        ];
-        $_SESSION['active_widgets'][] = $new_widget;
-    } elseif (isset($_POST['remove_widget']) && isset($_POST['widget_index'])) {
-        // Remove widget
-        unset($_SESSION['active_widgets'][$_POST['widget_index']]);
-        $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']);
-    } elseif (isset($_POST['update_settings'])) {
-        // Update settings
-        $_SESSION['dashboard_settings'] = [
-            'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
-            'accent_color' => $_POST['accent_color'] ?? '#6366f1',
-            'glass_intensity' => $_POST['glass_intensity'] ?? 0.6,
-            'blur_amount' => $_POST['blur_amount'] ?? '10px',
-            'enable_animations' => isset($_POST['enable_animations'])
-        ];
+// --- Persistent Settings Functions ---
+
+/**
+ * Loads dashboard settings from the JSON file.
+ *
+ * @return array Loaded settings or an empty array if file doesn't exist/is invalid.
+ */
+function loadDashboardSettings() {
+    if (file_exists(DASHBOARD_SETTINGS_FILE)) {
+        $json_data = file_get_contents(DASHBOARD_SETTINGS_FILE);
+        $settings = json_decode($json_data, true);
+        // Ensure settings is an array and contains expected keys or provide defaults
+        if (is_array($settings)) {
+            return $settings;
+        }
     }
+    return []; // Return empty array if file not found or invalid
 }
 
-// Initialize active widgets if not set
+/**
+ * Saves dashboard settings to the JSON file.
+ *
+ * @param array $settings The settings array to save.
+ * @return bool True on success, false on failure.
+ */
+function saveDashboardSettings(array $settings) {
+    $json_data = json_encode($settings, JSON_PRETTY_PRINT);
+    if ($json_data === false) {
+        error_log("Failed to encode dashboard settings to JSON.");
+        return false;
+    }
+    // Attempt to write the file. File permissions are crucial here.
+    $result = file_put_contents(DASHBOARD_SETTINGS_FILE, $json_data);
+    if ($result === false) {
+        error_log("Failed to write dashboard settings to file: " . DASHBOARD_SETTINGS_FILE);
+    }
+    return $result !== false;
+}
+
+// --- End Persistent Settings Functions ---
+
+
+// Initialize active widgets if not set (retains session logic for active widgets for simplicity)
 if (!isset($_SESSION['active_widgets'])) {
     $_SESSION['active_widgets'] = [
         ['id' => 'stats', 'position' => 1],
@@ -48,14 +65,63 @@ if (!isset($_SESSION['active_widgets'])) {
     ];
 }
 
-// Load settings
-$settings = $_SESSION['dashboard_settings'] ?? [
+// Default settings if no persistent settings are found
+$default_settings = [
     'title' => 'Glass Dashboard',
     'accent_color' => '#6366f1',
     'glass_intensity' => 0.6,
     'blur_amount' => '10px',
     'enable_animations' => true
 ];
+
+// Load settings from persistent file first
+$persistent_settings = loadDashboardSettings();
+$settings = array_merge($default_settings, $persistent_settings);
+
+
+// Handle widget management and settings updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['add_widget']) && !empty($_POST['widget_id'])) {
+        // Add new widget
+        $new_widget = [
+            'id' => $_POST['widget_id'],
+            'position' => count($_SESSION['active_widgets']) + 1
+        ];
+        $_SESSION['active_widgets'][] = $new_widget;
+        // No need to save active_widgets to file here, as they are session-specific.
+        // If you want active widgets to persist, they would also need to be stored in the JSON file.
+    } elseif (isset($_POST['remove_widget']) && isset($_POST['widget_index'])) {
+        // Remove widget
+        unset($_SESSION['active_widgets'][$_POST['widget_index']]);
+        $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']);
+    } elseif (isset($_POST['update_settings'])) {
+        // Update settings from POST data
+        $settings_to_save = [
+            'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
+            'accent_color' => $_POST['accent_color'] ?? '#6366f1',
+            'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6), // Cast to float
+            'blur_amount' => $_POST['blur_amount'] ?? '10px',
+            'enable_animations' => isset($_POST['enable_animations'])
+        ];
+
+        // Save updated settings to persistent file
+        if (saveDashboardSettings($settings_to_save)) {
+            // If successfully saved to file, also update the current session settings
+            $_SESSION['dashboard_settings'] = $settings_to_save;
+            $settings = $settings_to_save; // Update $settings for current rendering
+        } else {
+            // Fallback to session if file save failed
+            $_SESSION['dashboard_settings'] = $settings_to_save;
+            $settings = $settings_to_save;
+            error_log("Failed to persist settings to file. Using session only.");
+        }
+    }
+}
+
+// Ensure current $settings are merged with session, prioritizing session if it was just updated.
+// This handles cases where settings are loaded from file, but then updated in the same request.
+$settings = array_merge($default_settings, $persistent_settings, $_SESSION['dashboard_settings'] ?? []);
+
 
 // Pass available widgets to the view
 global $available_widgets;
@@ -173,7 +239,6 @@ global $available_widgets;
             ?>
             <div class="widget" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
                 <!-- This placeholder div marks the widget's original position in the DOM -->
-                <!-- It's hidden when the widget is maximized and moved to the overlay -->
                 <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-index="<?= $index ?>"></div>
 
                 <div class="widget-header">

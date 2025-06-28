@@ -4,6 +4,11 @@
 $available_widgets = [];
 $widget_directory = __DIR__ . '/widgets/'; // Path to the widgets folder
 
+// Define the path for persistent dashboard settings
+// This file will store settings in JSON format
+define('DASHBOARD_SETTINGS_FILE', __DIR__ . '/dashboard_settings.json');
+
+
 // Check if the directory exists
 if (is_dir($widget_directory)) {
     // Scan the directory for PHP files
