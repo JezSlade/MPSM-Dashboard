@@ -1,10 +1,4 @@
 <?php
-// PHP Debugging Lines - START
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-// PHP Debugging Lines - END
-
 // dashboard.php
 session_start();
 
@@ -175,10 +169,11 @@ global $available_widgets;
                         <span><?= $widget_def['name'] ?? 'Widget' ?></span>
                     </div>
                     <div class="widget-actions">
-                        <div class="widget-action">
+                        <!-- Add data attributes to identify actions -->
+                        <div class="widget-action action-settings" data-widget-id="<?= $widget['id'] ?>">
                             <i class="fas fa-cog"></i>
                         </div>
-                        <div class="widget-action">
+                        <div class="widget-action action-expand">
                             <i class="fas fa-expand"></i>
                         </div>
                         <div class="widget-action remove-widget" data-index="<?= $index ?>">
@@ -193,6 +188,23 @@ global $available_widgets;
             <?php endforeach; ?>
         </main>
     </div>
+
+    <!-- Simple Message Modal Structure -->
+    <div class="message-modal-overlay" id="message-modal-overlay">
+        <div class="message-modal">
+            <div class="message-modal-header">
+                <h3 id="message-modal-title"></h3>
+                <button class="btn-close-modal" id="close-message-modal">&times;</button>
+            </div>
+            <div class="message-modal-body">
+                <p id="message-modal-content"></p>
+            </div>
+            <div class="message-modal-footer">
+                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Settings Panel -->
     <div class="overlay" id="settings-overlay"></div>
