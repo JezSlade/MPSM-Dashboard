@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Widget Actions ---
     // Delegated event listeners for efficiency and future widgets
     const mainContent = document.getElementById('widget-container');
-    const expandedOverlay = document.getElementById('widget-expanded-overlay'); // New overlay for expanded widgets
+    const expandedOverlay = document.getElementById('widget-expanded-overlay'); // Overlay for expanded widgets
 
     mainContent.addEventListener('click', function(e) {
         const target = e.target.closest('.widget-action'); // Find the clicked action button
@@ -76,13 +76,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Maximize
                     widget.classList.add('maximized');
                     document.body.classList.add('expanded-active'); // Add class to body for overlay
-                    // Removed: widget.classList.add('maximized-placeholder');
                     target.querySelector('i').classList.replace('fa-expand', 'fa-compress');
                 } else {
                     // Minimize
                     widget.classList.remove('maximized');
                     document.body.classList.remove('expanded-active'); // Remove class from body
-                    // Removed: widget.classList.remove('maximized-placeholder');
                     target.querySelector('i').classList.replace('fa-compress', 'fa-expand');
                 }
             }
@@ -112,14 +110,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // New: Close expanded widget when clicking on the expanded overlay
+    // Close expanded widget when clicking on the expanded overlay
     expandedOverlay.addEventListener('click', function() {
         const activeMaximizedWidget = document.querySelector('.widget.maximized');
         if (activeMaximizedWidget) {
             activeMaximizedWidget.classList.remove('maximized');
             document.body.classList.remove('expanded-active');
-            // Removed: activeMaximizedWidget.classList.remove('maximized-placeholder');
-            activeMaximizedWidget.querySelector('.action-expand i').classList.replace('fa-compress', 'fa-expand');
+            // Ensure the icon reverts even if clicked on overlay
+            const expandIcon = activeMaximizedWidget.querySelector('.action-expand i');
+            if (expandIcon) { // Check if icon exists before trying to replace class
+                expandIcon.classList.replace('fa-compress', 'fa-expand');
+            }
         }
     });
 

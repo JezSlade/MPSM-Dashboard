@@ -729,41 +729,53 @@ input:checked + .slider:before {
 }
 
 /* --- Maximized Widget Styles --- */
-/* The base widget styling */
-.widget {
-    /* ... existing widget styles ... */
-    transition: var(--transition); /* Keep transition for smooth size/position changes */
-    /* Add this line to prevent it from being clickable when minimized and another is maximized */
-    pointer-events: auto;
-}
-
-/* Styling for the widget when it is in the maximized (modal-like) state */
 .widget.maximized {
-    position: fixed; /* Takes it out of document flow */
+    position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(1); /* Centers it and ensures full size */
-    width: 95%; /* Almost full width */
-    height: 95%; /* Almost full height */
-    max-width: 1200px; /* Max size on large screens */
-    max-height: 900px; /* Max height on large screens */
-    z-index: 1002; /* Higher than widget-expanded-overlay and other modals */
-    background: var(--bg-tertiary); /* Ensure a solid background */
+    /* Use translate3d for hardware acceleration and to ensure it's a new composite layer */
+    transform: translate3d(-50%, -50%, 0) scale(1) !important;
+    width: 95%;
+    height: 95%;
+    max-width: 1200px;
+    max-height: 900px;
+    z-index: 1002;
+    background: var(--bg-tertiary);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8); /* Stronger shadow for pop-out effect */
-    transition: all 0.4s ease-in-out; /* Smooth transition for expand/collapse */
-    overflow: hidden; /* Hide scrollbars on the widget's main container */
-    pointer-events: auto; /* Ensure it's clickable */
-    opacity: 1; /* Ensure it's visible */
-    visibility: visible; /* Ensure it's visible */
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8);
+    transition: all 0.4s ease-in-out;
+    overflow: hidden;
+    pointer-events: auto;
+    opacity: 1;
+    visibility: visible;
 }
 
-/* Overrides for hover effects when maximized */
+/* When a widget is maximized, ensure its grid position is visually empty */
+/* This works by applying 'display: none' to it initially, and then removing it */
+/* This requires a slightly different approach in JS, where we swap classes instead of toggle. */
+/* However, for a simple overlay, we can just hide the original element's presence */
+/* while it's in its fixed maximized state. A more robust solution might involve cloning. */
+
+/* To stop the original widget from "pushing" content when maximized, and to prevent its hover effects */
+/* This assumes the widget *itself* is toggled with 'maximized' class. */
+/* The key here is to control its state when not fixed. */
+
+/* Override normal hover when maximized */
 .widget.maximized:hover {
-    transform: translate(-50%, -50%) scale(1) !important; /* No translateY(-5px) on hover when maximized */
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8) !important; /* No change in shadow on hover when maximized */
+    transform: translate3d(-50%, -50%, 0) scale(1) !important;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8) !important;
 }
+
+/* When the body has expanded-active, all widgets NOT maximized should be inert */
+body.expanded-active .main-content .widget:not(.maximized) {
+    /* Hide the original widget instance by making it visually absent and unclickable */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
 
 .widget.maximized .widget-content {
     flex: 1;
