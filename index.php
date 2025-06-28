@@ -9,118 +9,181 @@ error_reporting(E_ALL);
 session_start();
 
 // Include configuration and helper functions
-require_once 'config.php';
+require_once 'config.php'; // Ensures DASHBOARD_SETTINGS_FILE is defined
 require_once 'helpers.php';
 
-// --- Persistent Settings Functions ---
+// --- Persistent Settings & Widgets Functions ---
 
 /**
- * Loads dashboard settings from the JSON file.
- *
- * @return array Loaded settings or an empty array if file doesn't exist/is invalid.
+ * Default dashboard settings including default active widgets.
+ * This acts as a fallback if the settings file doesn't exist or is invalid.
  */
-function loadDashboardSettings() {
-    if (file_exists(DASHBOARD_SETTINGS_FILE)) {
-        $json_data = file_get_contents(DASHBOARD_SETTINGS_FILE);
-        $settings = json_decode($json_data, true);
-        // Ensure settings is an array and contains expected keys or provide defaults
-        if (is_array($settings)) {
-            return $settings;
-        }
-    }
-    return []; // Return empty array if file not found or invalid
-}
-
-/**
- * Saves dashboard settings to the JSON file.
- *
- * @param array $settings The settings array to save.
- * @return bool True on success, false on failure.
- */
-function saveDashboardSettings(array $settings) {
-    $json_data = json_encode($settings, JSON_PRETTY_PRINT);
-    if ($json_data === false) {
-        error_log("Failed to encode dashboard settings to JSON.");
-        return false;
-    }
-    // Attempt to write the file. File permissions are crucial here.
-    $result = file_put_contents(DASHBOARD_SETTINGS_FILE, $json_data);
-    if ($result === false) {
-        error_log("Failed to write dashboard settings to file: " . DASHBOARD_SETTINGS_FILE);
-    }
-    return $result !== false;
-}
-
-// --- End Persistent Settings Functions ---
-
-
-// Initialize active widgets if not set (retains session logic for active widgets for simplicity)
-if (!isset($_SESSION['active_widgets'])) {
-    $_SESSION['active_widgets'] = [
+$default_dashboard_state = [
+    'title' => 'Glass Dashboard',
+    'accent_color' => '#6366f1',
+    'glass_intensity' => 0.6,
+    'blur_amount' => '10px',
+    'enable_animations' => true,
+    'active_widgets' => [
         ['id' => 'stats', 'position' => 1],
         ['id' => 'tasks', 'position' => 2],
         ['id' => 'calendar', 'position' => 3],
         ['id' => 'notes', 'position' => 4],
         ['id' => 'activity', 'position' => 5]
-    ];
-}
-
-// Default settings if no persistent settings are found
-$default_settings = [
-    'title' => 'Glass Dashboard',
-    'accent_color' => '#6366f1',
-    'glass_intensity' => 0.6,
-    'blur_amount' => '10px',
-    'enable_animations' => true
+    ]
 ];
 
-// Load settings from persistent file first
-$persistent_settings = loadDashboardSettings();
-$settings = array_merge($default_settings, $persistent_settings);
+/**
+ * Loads dashboard settings and active widgets from the JSON file.
+ *
+ * @return array Loaded settings including active_widgets or default state.
+ */
+function loadDashboardState() {
+    global $default_dashboard_state; // Access the default state
+    if (file_exists(DASHBOARD_SETTINGS_FILE)) {
+        $json_data = file_get_contents(DASHBOARD_SETTINGS_FILE);
+        $loaded_state = json_decode($json_data, true);
+
+        // Merge loaded state with defaults to ensure all keys are present
+        // This handles cases where new settings keys are added in future versions
+        if (is_array($loaded_state)) {
+            // Ensure active_widgets is an array, if not, use default
+            if (!isset($loaded_state['active_widgets']) || !is_array($loaded_state['active_widgets'])) {
+                $loaded_state['active_widgets'] = $default_dashboard_state['active_widgets'];
+            }
+            return array_replace_recursive($default_dashboard_state, $loaded_state);
+        }
+    }
+    return $default_dashboard_state; // Return default if file not found or invalid
+}
+
+/**
+ * Saves the entire dashboard state (settings + active widgets) to the JSON file.
+ *
+ * @param array $state The complete dashboard state array to save.
+ * @return bool True on success, false on failure.
+ */
+function saveDashboardState(array $state) {
+    $json_data = json_encode($state, JSON_PRETTY_PRINT);
+    if ($json_data === false) {
+        error_log("Failed to encode dashboard state to JSON: " . json_last_error_msg());
+        echo "<p style='color: red;'>PHP Error: Failed to encode JSON for saving. Details in server error log.</p>";
+        return false;
+    }
+    // Attempt to write the file. File permissions are crucial here.
+    $result = file_put_contents(DASHBOARD_SETTINGS_FILE, $json_data);
+    if ($result === false) {
+        $error_message = "Failed to write dashboard state to file: " . DASHBOARD_SETTINGS_FILE;
+        if (!is_writable(dirname(DASHBOARD_SETTINGS_FILE))) {
+             $error_message .= " - Directory not writable: " . dirname(DASHBOARD_SETTINGS_FILE);
+        } else if (file_exists(DASHBOARD_SETTINGS_FILE) && !is_writable(DASHBOARD_SETTINGS_FILE)) {
+             $error_message .= " - File exists but is not writable: " . DASHBOARD_SETTINGS_FILE;
+        } else {
+            $error_message .= " - Unknown write error."; // Generic error if no specific permission issue found
+        }
+        error_log($error_message);
+        echo "<p style='color: red;'>PHP Critical Error: " . htmlspecialchars($error_message) . "</p>";
+    }
+    return $result !== false;
+}
+
+// --- End Persistent Settings & Widgets Functions ---
 
 
-// Handle widget management and settings updates
+// Load current dashboard state (settings + active widgets)
+$current_dashboard_state = loadDashboardState();
+$settings = $current_dashboard_state; // Settings now includes active_widgets
+
+// IMPORTANT: Initialize $_SESSION['active_widgets'] from the loaded state
+// This ensures session state is synced with persistent state on page load.
+$_SESSION['active_widgets'] = $current_dashboard_state['active_widgets'];
+
+
+// --- DEBUGGING OUTPUT: Session state BEFORE POST handling ---
+echo '<h2>Debugging Active Widgets & Settings Persistence</h2>';
+echo '<h3>SESSION Active Widgets (BEFORE POST):</h3>';
+echo '<pre>';
+var_dump($_SESSION['active_widgets']);
+echo '</pre>';
+
+echo '<h3>Persistent Settings (BEFORE POST Load):</h3>';
+echo '<pre>';
+if (file_exists(DASHBOARD_SETTINGS_FILE)) {
+    echo htmlspecialchars(file_get_contents(DASHBOARD_SETTINGS_FILE));
+} else {
+    echo "dashboard_settings.json does not exist.";
+}
+echo '</pre>';
+// --- END DEBUGGING OUTPUT ---
+
+
+// Handle POST requests for widget management and settings updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $has_state_changed = false; // Flag to know if we need to save the state
+
     if (isset($_POST['add_widget']) && !empty($_POST['widget_id'])) {
-        // Add new widget
+        // Add new widget to active_widgets in session
         $new_widget = [
             'id' => $_POST['widget_id'],
             'position' => count($_SESSION['active_widgets']) + 1
         ];
         $_SESSION['active_widgets'][] = $new_widget;
-        // No need to save active_widgets to file here, as they are session-specific.
-        // If you want active widgets to persist, they would also need to be stored in the JSON file.
+        $has_state_changed = true;
+        echo "<p style='color: green;'>PHP Action: Widget '{$_POST['widget_id']}' added to session.</p>";
+
     } elseif (isset($_POST['remove_widget']) && isset($_POST['widget_index'])) {
-        // Remove widget
-        unset($_SESSION['active_widgets'][$_POST['widget_index']]);
-        $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']);
+        // Remove widget from active_widgets in session
+        $widget_index_to_remove = (int)$_POST['widget_index'];
+        echo "<p style='color: orange;'>PHP Action: Attempting to remove widget at index {$widget_index_to_remove}.</p>";
+
+        if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
+            unset($_SESSION['active_widgets'][$widget_index_to_remove]);
+            $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']); // Re-index array
+            $has_state_changed = true;
+            echo "<p style='color: green;'>PHP Action: Widget at index {$widget_index_to_remove} successfully unset and array re-indexed in session.</p>";
+        } else {
+            echo "<p style='color: red;'>PHP Warning: Widget at index {$widget_index_to_remove} not found in session.</p>";
+        }
     } elseif (isset($_POST['update_settings'])) {
-        // Update settings from POST data
-        $settings_to_save = [
+        // Update general dashboard settings
+        $settings_from_post = [
             'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
             'accent_color' => $_POST['accent_color'] ?? '#6366f1',
-            'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6), // Cast to float
+            'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
             'blur_amount' => $_POST['blur_amount'] ?? '10px',
             'enable_animations' => isset($_POST['enable_animations'])
         ];
+        // Merge only the general settings part
+        $settings = array_merge($settings, $settings_from_post); // Update current $settings array
+        $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
+        $has_state_changed = true;
+        echo "<p style='color: green;'>PHP Action: General settings updated in session.</p>";
+    }
 
-        // Save updated settings to persistent file
-        if (saveDashboardSettings($settings_to_save)) {
-            // If successfully saved to file, also update the current session settings
-            $_SESSION['dashboard_settings'] = $settings_to_save;
-            $settings = $settings_to_save; // Update $settings for current rendering
+    // If any state (settings or active widgets) changed, save the entire state
+    if ($has_state_changed) {
+        // Create the full state array to save, combining current $settings and active widgets from session
+        $state_to_save = $settings; // Start with current $settings
+        $state_to_save['active_widgets'] = $_SESSION['active_widgets']; // OVERRIDE active_widgets with latest session state
+
+        echo '<h3>STATE TO BE SAVED:</h3><pre>';
+        var_dump($state_to_save);
+        echo '</pre>';
+
+        if (saveDashboardState($state_to_save)) {
+            echo "<p style='color: green;'>PHP Persistence: Dashboard state successfully saved to JSON file.</p>";
         } else {
-            // Fallback to session if file save failed
-            $_SESSION['dashboard_settings'] = $settings_to_save;
-            $settings = $settings_to_save;
-            error_log("Failed to persist settings to file. Using session only.");
+            echo "<p style='color: red;'>PHP Persistence Critical Error: Failed to save dashboard state persistently. Check server error logs for more details!</p>";
         }
     }
 }
 
-// Ensure current $settings are merged with session, prioritizing session if it was just updated.
-// This handles cases where settings are loaded from file, but then updated in the same request.
-$settings = array_merge($default_settings, $persistent_settings, $_SESSION['dashboard_settings'] ?? []);
+// Ensure the $settings array used for rendering always reflects the latest state,
+// potentially updated by POST or loaded from persistence.
+// This merge ensures default values are applied, then persistent ones, then session ones.
+$settings = array_replace_recursive($default_dashboard_state, $current_dashboard_state, $_SESSION['dashboard_settings'] ?? []);
+// The 'active_widgets' for rendering should always come from the final $_SESSION state after processing
+$settings['active_widgets'] = $_SESSION['active_widgets'];
 
 
 // Pass available widgets to the view
@@ -234,7 +297,7 @@ global $available_widgets;
 
         <!-- Main Content Area -->
         <main class="main-content" id="widget-container">
-            <?php foreach ($_SESSION['active_widgets'] as $index => $widget):
+            <?php foreach ($settings['active_widgets'] as $index => $widget): // Loop through persistent active_widgets
                 $widget_def = $available_widgets[$widget['id']] ?? ['width' => 1, 'height' => 1];
             ?>
             <div class="widget" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
