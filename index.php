@@ -1,4 +1,10 @@
 <?php
+// PHP Debugging Lines - START
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
+
 // dashboard.php
 session_start();
 
@@ -83,6 +89,9 @@ global $available_widgets;
     </style>
 </head>
 <body>
+    <!-- New: Overlay for expanded widgets -->
+    <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
+
     <div class="dashboard">
         <!-- Dashboard Header -->
         <header class="header">

@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Widget Actions ---
     // Delegated event listeners for efficiency and future widgets
     const mainContent = document.getElementById('widget-container');
+    const expandedOverlay = document.getElementById('widget-expanded-overlay'); // New overlay for expanded widgets
 
     mainContent.addEventListener('click', function(e) {
         const target = e.target.closest('.widget-action'); // Find the clicked action button
@@ -66,18 +67,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Handle Settings Action (Cog Icon)
             if (target.classList.contains('action-settings')) {
-                // You could open a specific settings panel for the widget here
-                // For now, a generic message:
                 const widgetName = widget.querySelector('.widget-title span').textContent;
                 showMessageModal('Widget Settings', `Settings for "${widgetName}" widget. (ID: ${widgetId || 'N/A'})`);
             }
             // Handle Expand/Shrink Action (Expand Icon)
             else if (target.classList.contains('action-expand')) {
-                widget.classList.toggle('maximized');
-                // Change icon based on state
-                if (widget.classList.contains('maximized')) {
+                if (!widget.classList.contains('maximized')) {
+                    // Maximize
+                    widget.classList.add('maximized');
+                    document.body.classList.add('expanded-active'); // Add class to body for overlay
+                    // Add a placeholder class to hide the original in-flow widget
+                    widget.classList.add('maximized-placeholder');
                     target.querySelector('i').classList.replace('fa-expand', 'fa-compress');
+
+                    // If you want the expanded widget to be interactive *over* the overlay,
+                    // you might need to append it directly to body for z-index stacking context,
+                    // then move it back. For now, keep it in main-content but ensure z-index.
+                    // This is handled by CSS z-index and fixed positioning.
                 } else {
+                    // Minimize
+                    widget.classList.remove('maximized');
+                    document.body.classList.remove('expanded-active'); // Remove class from body
+                    // Remove placeholder class
+                    widget.classList.remove('maximized-placeholder');
                     target.querySelector('i').classList.replace('fa-compress', 'fa-expand');
                 }
             }
@@ -85,7 +97,6 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (target.classList.contains('remove-widget')) {
                 const widgetIndex = target.getAttribute('data-index');
 
-                // Use the custom modal for confirmation
                 showMessageModal(
                     'Confirm Removal',
                     'Are you sure you want to remove this widget?',
@@ -105,6 +116,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 );
             }
+        }
+    });
+
+    // New: Close expanded widget when clicking on the expanded overlay
+    expandedOverlay.addEventListener('click', function() {
+        const activeMaximizedWidget = document.querySelector('.widget.maximized');
+        if (activeMaximizedWidget) {
+            activeMaximizedWidget.classList.remove('maximized');
+            document.body.classList.remove('expanded-active');
+            activeMaximizedWidget.classList.remove('maximized-placeholder');
+            activeMaximizedWidget.querySelector('.action-expand i').classList.replace('fa-compress', 'fa-expand');
         }
     });
 
