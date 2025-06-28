@@ -41,6 +41,7 @@ body.expanded-active {
     overflow: hidden;
 }
 
+/* --- Widget Expanded Overlay (the actual modal background) --- */
 .widget-expanded-overlay {
     position: fixed;
     top: 0;
@@ -48,16 +49,34 @@ body.expanded-active {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.7); /* Darker overlay */
-    z-index: 1000; /* Below maximized widget, above dashboard */
+    z-index: 1000; /* Below the actual maximized widget */
+    display: flex; /* Use flexbox to center content */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-body.expanded-active .widget-expanded-overlay {
+.widget-expanded-overlay.active {
     opacity: 1;
     visibility: visible;
 }
+
+/* --- Widget Placeholder (for hiding original slot when widget is moved) --- */
+.widget-placeholder {
+    display: none; /* Hidden by default */
+}
+.widget.maximized + .widget-placeholder { /* When a widget is maximized and its sibling is the placeholder */
+    display: block; /* Show the placeholder to maintain space */
+    /* You can style the placeholder if you want a visual indication of the original spot */
+    width: var(--placeholder-width);
+    height: var(--placeholder-height);
+    grid-column: span var(--width);
+    grid-row: span var(--height);
+    /* For a smoother effect during transition, you might match its size with the original widget's */
+}
+
 
 .dashboard {
     display: grid;
@@ -730,68 +749,55 @@ input:checked + .slider:before {
 }
 
 /* --- Maximized Widget Styles --- */
-/* Base widget styling */
-.widget {
-    transition: var(--transition);
-    pointer-events: auto;
-}
-
-/* Styling for the widget when it is in the maximized (modal-like) state */
+/* The widget itself when it's in the maximized state, styled as a modal. */
+/* This will be a child of the .widget-expanded-overlay */
 .widget.maximized {
-    position: fixed;
-    top: 0; /* Anchor to top-left of viewport */
-    left: 0; /* Anchor to top-left of viewport */
-    width: 100%; /* Take full width of viewport */
-    height: 100%; /* Take full height of viewport */
-    display: flex; /* Use flexbox to center content */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
-    z-index: 1002; /* Ensure it's on top of everything */
-    background: var(--bg-primary); /* Use primary background for full screen */
-    border-radius: 0; /* No rounded corners when full screen */
-    box-shadow: none; /* No shadow when full screen */
-    padding: 20px; /* Padding from viewport edges */
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 0.4s ease, visibility 0.4s ease, background 0.4s ease; /* Smooth transition for overlay/widget */
-}
-
-/* Content inside the maximized widget */
-.widget.maximized > .widget-header,
-.widget.maximized > .widget-content {
-    /* To make the widget itself appear as a centered box within the full-screen overlay */
-    background: var(--bg-tertiary);
+    position: relative; /* Relative to its flex parent (the overlay) */
+    width: 90%; /* Widget takes up 90% of the overlay's width */
+    height: 90%; /* Widget takes up 90% of the overlay's height */
+    max-width: 1200px; /* Max size for desktop screens */
+    max-height: 900px; /* Max height for desktop screens */
+    z-index: 1002; /* Ensure it's above the overlay */
+    background: var(--bg-tertiary); /* Widget's own background */
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8);
-    max-width: 90%; /* Max width of the widget content inside the maximized view */
-    max-height: 90%; /* Max height of the widget content inside the maximized view */
+    display: flex;
+    flex-direction: column;
     padding: 20px;
-    flex-shrink: 0; /* Prevent header from shrinking too much */
+    opacity: 1; /* Make sure it's visible */
+    visibility: visible; /* Make sure it's visible */
+    transform: scale(0.8); /* Start smaller for a pop-in effect */
+    transition: transform 0.3s ease-out, opacity 0.3s ease, visibility 0.3s ease; /* Smooth transition */
 }
 
-.widget.maximized > .widget-content {
-    flex-grow: 1; /* Allow content to fill available space */
-    overflow-y: auto;
+/* When the widget is maximized, scale it to 1 */
+.widget-expanded-overlay.active .widget.maximized {
+    transform: scale(1);
 }
 
 /* Override normal widget hover effects when maximized */
 .widget.maximized:hover {
-    /* Do not apply normal widget hover transforms/shadows when maximized */
-    transform: none !important;
-    box-shadow: none !important;
+    transform: scale(1) !important; /* No translateY(-5px) or shadow changes on hover when maximized */
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* When the body has expanded-active, all widgets NOT maximized should be hidden */
-body.expanded-active .main-content .widget:not(.maximized) {
+/* Hide the original widget in its grid position when it's moved to the overlay */
+.widget-original-hidden {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    /* Optional: If you want a slight blur or scale on background content */
-    /* transform: scale(0.95); */
-    /* transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease; */
+    /* Maintain its grid space so other widgets don't reflow into it */
+    grid-column: span var(--width, 1);
+    grid-row: span var(--height, 1);
 }
 
+
+.widget.maximized .widget-content {
+    flex: 1;
+    overflow-y: auto; /* Allow internal scrolling if content overflows */
+    padding-right: 10px; /* Space for scrollbar */
+}
 
 /* Responsive Design */
 @media (max-width: 1200px) {
@@ -833,14 +839,6 @@ body.expanded-active .main-content .widget:not(.maximized) {
         width: 100%;
         height: 100%;
         border-radius: 0;
-        padding: 0; /* No padding on mobile for true full screen */
-    }
-
-    .widget.maximized > .widget-header,
-    .widget.maximized > .widget-content {
-        max-width: 100%;
-        max-height: 100%;
-        border-radius: 0;
-        padding: 20px; /* Re-add padding for content itself */
+        padding: 10px; /* Smaller padding for mobile full screen */
     }
 }

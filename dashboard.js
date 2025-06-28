@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Widget Actions ---
     // Delegated event listeners for efficiency and future widgets
     const mainContent = document.getElementById('widget-container');
-    const expandedOverlay = document.getElementById('widget-expanded-overlay'); // Overlay for expanded widgets
+    const expandedOverlay = document.getElementById('widget-expanded-overlay'); // The new overlay
 
     mainContent.addEventListener('click', function(e) {
         const target = e.target.closest('.widget-action'); // Find the clicked action button
@@ -73,14 +73,56 @@ document.addEventListener('DOMContentLoaded', function() {
             // Handle Expand/Shrink Action (Expand Icon)
             else if (target.classList.contains('action-expand')) {
                 if (!widget.classList.contains('maximized')) {
-                    // Maximize
+                    // MAXIMIZE Logic:
+                    const widgetPlaceholder = widget.querySelector('.widget-placeholder');
+                    
+                    // Store original position references on the placeholder
+                    widgetPlaceholder.dataset.originalParentId = widget.parentNode.id;
+                    // Get index relative to its siblings
+                    widgetPlaceholder.dataset.originalIndex = Array.from(widget.parentNode.children).indexOf(widget);
+
+                    // Add classes for styling
                     widget.classList.add('maximized');
-                    document.body.classList.add('expanded-active'); // Add class to body for overlay
+                    document.body.classList.add('expanded-active'); // This triggers the overlay
+                    expandedOverlay.classList.add('active'); // Directly activate the overlay
+
+                    // Move the widget into the overlay
+                    expandedOverlay.appendChild(widget);
+
+                    // Make the placeholder visible in the original spot to maintain grid flow
+                    widgetPlaceholder.style.display = 'block';
+
+                    // Change icon
                     target.querySelector('i').classList.replace('fa-expand', 'fa-compress');
+
                 } else {
-                    // Minimize
+                    // MINIMIZE Logic:
+                    const widgetPlaceholder = widget.querySelector('.widget-placeholder');
+                    const originalParent = document.getElementById(widgetPlaceholder.dataset.originalParentId);
+                    const originalIndex = parseInt(widgetPlaceholder.dataset.originalIndex);
+
+                    // Move the widget back to its original parent
+                    if (originalParent && originalParent.children[originalIndex]) {
+                        // Insert before the sibling at the original index
+                        originalParent.insertBefore(widget, originalParent.children[originalIndex]);
+                    } else if (originalParent) {
+                        // If no sibling at index (e.g., it was the last child), just append
+                        originalParent.appendChild(widget);
+                    } else {
+                        // Fallback if original parent not found (shouldn't happen with correct IDs)
+                        console.error("Original parent not found for widget ID:", widget.id);
+                        mainContent.appendChild(widget); // Fallback to mainContent
+                    }
+
+                    // Remove classes
                     widget.classList.remove('maximized');
-                    document.body.classList.remove('expanded-active'); // Remove class from body
+                    document.body.classList.remove('expanded-active');
+                    expandedOverlay.classList.remove('active'); // Deactivate the overlay
+
+                    // Hide the placeholder
+                    widgetPlaceholder.style.display = 'none';
+
+                    // Change icon
                     target.querySelector('i').classList.replace('fa-compress', 'fa-expand');
                 }
             }
@@ -111,15 +153,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Close expanded widget when clicking on the expanded overlay
-    expandedOverlay.addEventListener('click', function() {
-        const activeMaximizedWidget = document.querySelector('.widget.maximized');
-        if (activeMaximizedWidget) {
-            activeMaximizedWidget.classList.remove('maximized');
-            document.body.classList.remove('expanded-active');
-            // Ensure the icon reverts even if clicked on overlay
-            const expandIcon = activeMaximizedWidget.querySelector('.action-expand i');
-            if (expandIcon) { // Check if icon exists before trying to replace class
-                expandIcon.classList.replace('fa-compress', 'fa-expand');
+    expandedOverlay.addEventListener('click', function(e) {
+        // Only close if the click is directly on the overlay, not on the widget itself
+        if (e.target === expandedOverlay) {
+            const activeMaximizedWidget = document.querySelector('.widget.maximized');
+            if (activeMaximizedWidget) {
+                const widgetPlaceholder = activeMaximizedWidget.querySelector('.widget-placeholder');
+                const originalParent = document.getElementById(widgetPlaceholder.dataset.originalParentId);
+                const originalIndex = parseInt(widgetPlaceholder.dataset.originalIndex);
+
+                // Move the widget back
+                if (originalParent && originalParent.children[originalIndex]) {
+                    originalParent.insertBefore(activeMaximizedWidget, originalParent.children[originalIndex]);
+                } else if (originalParent) {
+                    originalParent.appendChild(activeMaximizedWidget);
+                } else {
+                    mainContent.appendChild(activeMaximizedWidget); // Fallback
+                }
+
+                activeMaximizedWidget.classList.remove('maximized');
+                document.body.classList.remove('expanded-active');
+                expandedOverlay.classList.remove('active');
+
+                widgetPlaceholder.style.display = 'none'; // Hide placeholder
+
+                const expandIcon = activeMaximizedWidget.querySelector('.action-expand i');
+                if (expandIcon) {
+                    expandIcon.classList.replace('fa-compress', 'fa-expand');
+                }
             }
         }
     });

@@ -172,6 +172,10 @@ global $available_widgets;
                 $widget_def = $available_widgets[$widget['id']] ?? ['width' => 1, 'height' => 1];
             ?>
             <div class="widget" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
+                <!-- This placeholder div marks the widget's original position in the DOM -->
+                <!-- It's hidden when the widget is maximized and moved to the overlay -->
+                <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-index="<?= $index ?>"></div>
+
                 <div class="widget-header">
                     <div class="widget-title">
                         <i class="fas fa-<?= $widget_def['icon'] ?? 'cube' ?>"></i>
