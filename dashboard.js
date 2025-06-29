@@ -95,7 +95,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Are you sure you want to remove this widget from the dashboard?',
                         function() {
                             console.log("Confirmed removal for widget index:", widgetIndex);
-                            // New: Use submitActionForm for consistent handling
                             submitActionForm('remove_widget', { widget_index: widgetIndex });
                         }
                     );
@@ -197,24 +196,23 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.backgroundColor = '';
 
         const widgetId = e.dataTransfer.getData('text/plain');
-        // New: Use submitActionForm for consistent handling
         submitActionForm('add_widget', { widget_id: widgetId });
     });
 
-    // New helper function to submit POST forms
+    // Helper function to submit POST forms dynamically
     function submitActionForm(actionType, data = {}) {
         const form = document.createElement('form');
         form.method = 'post';
-        form.style.display = 'none';
+        form.style.display = 'none'; // Keep hidden
 
-        // Main action type input
+        // Add the action_type input
         const actionInput = document.createElement('input');
         actionInput.type = 'hidden';
         actionInput.name = 'action_type';
         actionInput.value = actionType;
         form.appendChild(actionInput);
 
-        // Add additional data parameters
+        // Add other data parameters
         for (const key in data) {
             if (data.hasOwnProperty(key)) {
                 const hiddenInput = document.createElement('input');
@@ -225,8 +223,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        document.body.appendChild(form);
-        form.submit();
+        document.body.appendChild(form); // Append to body
+        
+        // Log the form data *before* submission for debugging
+        const formData = new FormData(form);
+        console.log(`Submitting form for action: ${actionType}`);
+        for (let pair of formData.entries()) {
+            console.log(`  ${pair[0]}: ${pair[1]}`);
+        }
+
+        form.submit(); // Submit the form
     }
 
 
@@ -242,25 +248,24 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsOverlay.style.display = 'block';
     });
 
-    // New: Handle form submission for update_settings (from settings panel)
+    // Handle form submission for update_settings (from settings panel)
     const settingsForm = settingsPanel.querySelector('form');
     if (settingsForm) {
         settingsForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default form submission for now
-            // You can enhance this to use AJAX later, but for now,
-            // we'll explicitly add the action_type before re-submitting programmatically
+            e.preventDefault(); // Prevent default form submission to handle it via JS
+
             const formData = new FormData(settingsForm);
-            const data = {};
+            const dataToSubmit = {};
             for (const [key, value] of formData.entries()) {
-                // Handle checkbox specially: if unchecked, it's not in formData.
-                // We need to explicitly set it to false if it's a known boolean setting.
+                // Special handling for checkbox: if unchecked, it's not in formData.
+                // We need to explicitly set it to '0' or false if it's a known boolean setting.
                 if (key === 'enable_animations') {
-                    data[key] = settingsForm.elements[key].checked ? '1' : ''; // Use '1' or empty string for PHP
+                    dataToSubmit[key] = settingsForm.elements[key].checked ? '1' : '0'; // Send '1' or '0'
                 } else {
-                    data[key] = value;
+                    dataToSubmit[key] = value;
                 }
             }
-            submitActionForm('update_settings', data);
+            submitActionForm('update_settings', dataToSubmit);
         });
     }
 });
