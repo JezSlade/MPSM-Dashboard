@@ -121,7 +121,10 @@ echo '</pre>';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $has_state_changed = false; // Flag to know if we need to save the state
 
-    if (isset($_POST['add_widget']) && !empty($_POST['widget_id'])) {
+    // Check the 'action_type' to dispatch
+    $action_type = $_POST['action_type'] ?? '';
+
+    if ($action_type === 'add_widget' && !empty($_POST['widget_id'])) {
         // Add new widget to active_widgets in session
         $new_widget = [
             'id' => $_POST['widget_id'],
@@ -131,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $has_state_changed = true;
         echo "<p style='color: green;'>PHP Action: Widget '{$_POST['widget_id']}' added to session.</p>";
 
-    } elseif (isset($_POST['remove_widget']) && isset($_POST['widget_index'])) {
+    } elseif ($action_type === 'remove_widget' && isset($_POST['widget_index'])) {
         // Remove widget from active_widgets in session
         $widget_index_to_remove = (int)$_POST['widget_index'];
         echo "<p style='color: orange;'>PHP Action: Attempting to remove widget at index {$widget_index_to_remove}.</p>";
@@ -144,20 +147,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             echo "<p style='color: red;'>PHP Warning: Widget at index {$widget_index_to_remove} not found in session.</p>";
         }
-    } elseif (isset($_POST['update_settings'])) {
+    } elseif ($action_type === 'update_settings') {
         // Update general dashboard settings
         $settings_from_post = [
             'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
             'accent_color' => $_POST['accent_color'] ?? '#6366f1',
             'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
             'blur_amount' => $_POST['blur_amount'] ?? '10px',
-            'enable_animations' => isset($_POST['enable_animations'])
+            // Checkbox value needs specific handling: if unchecked, it won't be in POST.
+            // We use '1' for true, and check if it exists in POST.
+            'enable_animations' => isset($_POST['enable_animations']) && $_POST['enable_animations'] === '1'
         ];
         // Merge only the general settings part
         $settings = array_merge($settings, $settings_from_post); // Update current $settings array
         $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
         $has_state_changed = true;
         echo "<p style='color: green;'>PHP Action: General settings updated in session.</p>";
+    } else {
+        echo "<p style='color: red;'>PHP Warning: Unknown or invalid POST action_type: " . htmlspecialchars($action_type) . "</p>";
     }
 
     // If any state (settings or active widgets) changed, save the entire state

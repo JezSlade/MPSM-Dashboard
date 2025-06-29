@@ -95,18 +95,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Are you sure you want to remove this widget from the dashboard?',
                         function() {
                             console.log("Confirmed removal for widget index:", widgetIndex);
-                            const form = document.createElement('form');
-                            form.method = 'post';
-                            form.style.display = 'none';
-
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'remove_widget';
-                            input.value = widgetIndex; // This is the index passed to PHP
-
-                            form.appendChild(input);
-                            document.body.appendChild(form);
-                            form.submit(); // This submits the form to index.php
+                            // New: Use submitActionForm for consistent handling
+                            submitActionForm('remove_widget', { widget_index: widgetIndex });
                         }
                     );
                 } else {
@@ -207,28 +197,38 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.backgroundColor = '';
 
         const widgetId = e.dataTransfer.getData('text/plain');
-        addWidgetToDashboard(widgetId);
+        // New: Use submitActionForm for consistent handling
+        submitActionForm('add_widget', { widget_id: widgetId });
     });
 
-    function addWidgetToDashboard(widgetId) {
+    // New helper function to submit POST forms
+    function submitActionForm(actionType, data = {}) {
         const form = document.createElement('form');
         form.method = 'post';
         form.style.display = 'none';
 
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'add_widget';
-        input.value = '1';
+        // Main action type input
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action_type';
+        actionInput.value = actionType;
+        form.appendChild(actionInput);
 
-        const widgetInput = document.createElement('input');
-        widgetInput.type = 'hidden';
-        widgetInput.name = 'widget_id';
-        widgetInput.value = widgetId;
+        // Add additional data parameters
+        for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = key;
+                hiddenInput.value = data[key];
+                form.appendChild(hiddenInput);
+            }
+        }
 
-        form.appendChild(input);
         document.body.appendChild(form);
         form.submit();
     }
+
 
     // --- Other Global Buttons ---
     // Refresh button
@@ -241,4 +241,26 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsPanel.classList.add('active');
         settingsOverlay.style.display = 'block';
     });
+
+    // New: Handle form submission for update_settings (from settings panel)
+    const settingsForm = settingsPanel.querySelector('form');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent default form submission for now
+            // You can enhance this to use AJAX later, but for now,
+            // we'll explicitly add the action_type before re-submitting programmatically
+            const formData = new FormData(settingsForm);
+            const data = {};
+            for (const [key, value] of formData.entries()) {
+                // Handle checkbox specially: if unchecked, it's not in formData.
+                // We need to explicitly set it to false if it's a known boolean setting.
+                if (key === 'enable_animations') {
+                    data[key] = settingsForm.elements[key].checked ? '1' : ''; // Use '1' or empty string for PHP
+                } else {
+                    data[key] = value;
+                }
+            }
+            submitActionForm('update_settings', data);
+        });
+    }
 });
