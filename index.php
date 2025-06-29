@@ -33,6 +33,7 @@ $default_dashboard_state = [
     'glass_intensity' => 0.6,
     'blur_amount' => '10px',
     'enable_animations' => true,
+    'show_all_available_widgets' => false, // NEW SETTING: Default to false
     'active_widgets' => [
         ['id' => 'stats', 'position' => 1],
         ['id' => 'tasks', 'position' => 2],
@@ -82,7 +83,7 @@ function saveDashboardState(array $state) {
     // Attempt to write the file. File permissions are crucial here.
     $result = file_put_contents(DASHBOARD_SETTINGS_FILE, $json_data);
     if ($result === false) {
-        $error_message = "Failed to write dashboard state to file: " . DASHARD_SETTINGS_FILE;
+        $error_message = "Failed to write dashboard state to file: " . DASHBOARD_SETTINGS_FILE;
         if (!is_writable(dirname(DASHBOARD_SETTINGS_FILE))) {
              $error_message .= " - Directory not writable: " . dirname(DASHBOARD_SETTINGS_FILE);
         } else if (file_exists(DASHBOARD_SETTINGS_FILE) && !is_writable(DASHBOARD_SETTINGS_FILE)) {
@@ -134,28 +135,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action_type = $_POST['action_type'] ?? '';
 
     if ($action_type === 'add_widget' && !empty($_POST['widget_id'])) {
-        // Add new widget to active_widgets in session
-        $new_widget = [
-            'id' => $_POST['widget_id'],
-            'position' => count($_SESSION['active_widgets']) + 1
-        ];
-        $_SESSION['active_widgets'][] = $new_widget;
-        $has_state_changed = true;
-        echo "<p style='color: green;'>PHP Action: Widget '{$_POST['widget_id']}' added to session.</p>";
+        // Only allow adding widgets if 'show all' is OFF
+        if (!$settings['show_all_available_widgets']) {
+            // Add new widget to active_widgets in session
+            $new_widget = [
+                'id' => $_POST['widget_id'],
+                'position' => count($_SESSION['active_widgets']) + 1
+            ];
+            $_SESSION['active_widgets'][] = $new_widget;
+            $has_state_changed = true;
+            echo "<p style='color: green;'>PHP Action: Widget '{$_POST['widget_id']}' added to session.</p>";
+        } else {
+            echo "<p style='color: orange;'>PHP Info: Cannot add widget in 'Show All Widgets' mode.</p>";
+        }
 
     } elseif ($action_type === 'remove_widget' && isset($_POST['widget_index'])) {
-        // Remove widget from active_widgets in session
-        $widget_index_to_remove = (int)$_POST['widget_index'];
-        echo "<p style='color: orange;'>PHP Action: Attempting to remove widget at index {$widget_index_to_remove}.</p>";
+        // Only allow removing widgets if 'show all' is OFF
+        if (!$settings['show_all_available_widgets']) {
+            // Remove widget from active_widgets in session
+            $widget_index_to_remove = (int)$_POST['widget_index'];
+            echo "<p style='color: orange;'>PHP Action: Attempting to remove widget at index {$widget_index_to_remove}.</p>";
 
-        if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
-            unset($_SESSION['active_widgets'][$widget_index_to_remove]);
-            $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']); // Re-index array
-            $has_state_changed = true;
-            echo "<p style='color: green;'>PHP Action: Widget at index {$widget_index_to_remove} successfully unset and array re-indexed in session.</p>";
+            if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
+                unset($_SESSION['active_widgets'][$widget_index_to_remove]);
+                $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']); // Re-index array
+                $has_state_changed = true;
+                echo "<p style='color: green;'>PHP Action: Widget at index {$widget_index_to_remove} successfully unset and array re-indexed in session.</p>";
+            } else {
+                echo "<p style='color: red;'>PHP Warning: Widget at index {$widget_index_to_remove} not found in session.</p>";
+            }
         } else {
-            echo "<p style='color: red;'>PHP Warning: Widget at index {$widget_index_to_remove} not found in session.</p>";
+            echo "<p style='color: orange;'>PHP Info: Cannot remove widget in 'Show All Widgets' mode.</p>";
         }
+
     } elseif ($action_type === 'update_settings') {
         // Update general dashboard settings
         $settings_from_post = [
@@ -163,15 +175,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'accent_color' => $_POST['accent_color'] ?? '#6366f1',
             'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
             'blur_amount' => $_POST['blur_amount'] ?? '10px',
-            // Checkbox value needs specific handling: if unchecked, it won't be in POST.
-            // We use '1' for true, and check if it exists in POST.
-            'enable_animations' => isset($_POST['enable_animations']) && $_POST['enable_animations'] === '1'
+            'enable_animations' => isset($_POST['enable_animations']) && $_POST['enable_animations'] === '1',
+            'show_all_available_widgets' => isset($_POST['show_all_available_widgets']) && $_POST['show_all_available_widgets'] === '1' // NEW SETTING VALUE
         ];
-        // Merge only the general settings part
-        $settings = array_merge($settings, $settings_from_post); // Update current $settings array
+        
+        // Update current $settings array with new values from POST
+        $settings = array_merge($settings, $settings_from_post);
         $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
         $has_state_changed = true;
         echo "<p style='color: green;'>PHP Action: General settings updated in session.</p>";
+
+        // Special handling if 'show_all_available_widgets' was just turned ON
+        if ($settings['show_all_available_widgets'] && !($current_dashboard_state['show_all_available_widgets'] ?? false)) {
+            echo "<p style='color: blue;'>PHP Action: 'Show All Widgets' mode ENABLED. Rebuilding active widgets list.</p>";
+            // Overwrite active_widgets with all available widgets, sorted alphabetically by ID
+            $new_active_widgets = [];
+            foreach ($available_widgets as $id => $def) {
+                $new_active_widgets[] = ['id' => $id, 'position' => count($new_active_widgets) + 1];
+            }
+            usort($new_active_widgets, function($a, $b) {
+                return strcmp($a['id'], $b['id']);
+            });
+            $_SESSION['active_widgets'] = $new_active_widgets;
+        } elseif (!$settings['show_all_available_widgets'] && ($current_dashboard_state['show_all_available_widgets'] ?? false)) {
+            // If 'show_all_available_widgets' was just turned OFF, we revert to the last manually curated state.
+            // This means we DON'T overwrite $_SESSION['active_widgets'] with defaults, it retains its value.
+            // No explicit action needed here as $_SESSION['active_widgets'] was already populated on page load
+            // by loadDashboardState and then potentially modified by user actions when 'show_all_available_widgets' was false.
+            echo "<p style='color: blue;'>PHP Action: 'Show All Widgets' mode DISABLED. Reverting to manually curated widgets.</p>";
+        }
+
+
     } else {
         echo "<p style='color: red;'>PHP Warning: Unknown or invalid POST action_type: " . htmlspecialchars($action_type) . "</p>";
     }
@@ -180,7 +214,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($has_state_changed) {
         // Create the full state array to save, combining current $settings and active widgets from session
         $state_to_save = $settings; // Start with current $settings
-        $state_to_save['active_widgets'] = $_SESSION['active_widgets']; // OVERRIDE active_widgets with latest session state
+        // The 'active_widgets' in $state_to_save must always come from $_SESSION after processing POST
+        $state_to_save['active_widgets'] = $_SESSION['active_widgets'];
 
         echo '<h3>STATE TO BE SAVED:</h3><pre>';
         var_dump($state_to_save);
@@ -313,7 +348,24 @@ global $available_widgets;
 
         <!-- Main Content Area -->
         <main class="main-content" id="widget-container">
-            <?php foreach ($settings['active_widgets'] as $index => $widget): // Loop through persistent active_widgets
+            <?php
+            // Determine which widgets to display based on 'show_all_available_widgets' setting
+            $widgets_to_render = [];
+            if ($settings['show_all_available_widgets']) {
+                // If 'show all' is true, render ALL available widgets from config.php
+                foreach ($available_widgets as $id => $def) {
+                    $widgets_to_render[] = ['id' => $id, 'position' => count($widgets_to_render) + 1];
+                }
+                // Sort them alphabetically by ID for consistent positioning
+                usort($widgets_to_render, function($a, $b) {
+                    return strcmp($a['id'], $b['id']);
+                });
+            } else {
+                // Otherwise, render the active widgets from persistent storage
+                $widgets_to_render = $settings['active_widgets'];
+            }
+
+            foreach ($widgets_to_render as $index => $widget):
                 $widget_def = $available_widgets[$widget['id']] ?? ['width' => 1, 'height' => 1];
             ?>
             <div class="widget" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
@@ -333,7 +385,10 @@ global $available_widgets;
                         <div class="widget-action action-expand">
                             <i class="fas fa-expand"></i>
                         </div>
-                        <div class="widget-action remove-widget" data-index="<?= $index ?>">
+                        <div class="widget-action remove-widget
+                            <?= $settings['show_all_available_widgets'] ? 'disabled' : '' ?>"
+                            data-index="<?= $index ?>"
+                            title="<?= $settings['show_all_available_widgets'] ? 'Remove disabled in "Show All Widgets" mode' : 'Remove widget' ?>">
                             <i class="fas fa-times"></i>
                         </div>
                     </div>
@@ -394,6 +449,16 @@ global $available_widgets;
                     <label class="toggle-switch">
                         <input type="checkbox" name="enable_animations"
                             <?= $settings['enable_animations'] ? 'checked' : '' ?>>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- NEW: Show All Available Widgets Toggle -->
+                <div class="form-group">
+                    <label>Show All Available Widgets</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="show_all_available_widgets" id="show_all_available_widgets"
+                            <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
                         <span class="slider"></span>
                     </label>
                 </div>

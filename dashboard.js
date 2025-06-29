@@ -78,6 +78,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // Handle Remove Widget Action (Times Icon)
             else if (target.classList.contains('remove-widget')) {
+                // If the remove button is disabled, do nothing
+                if (target.classList.contains('disabled')) {
+                    showMessageModal('Information', 'This widget cannot be removed in "Show All Widgets" mode.');
+                    return;
+                }
+
                 // Get the widget index from the data-index attribute on the action button
                 const widgetIndex = target.getAttribute('data-index');
 
@@ -196,6 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.backgroundColor = '';
 
         const widgetId = e.dataTransfer.getData('text/plain');
+        // Check if 'Add Widget' is disabled by 'Show All Widgets' mode
+        const newWidgetBtn = document.getElementById('new-widget-btn');
+        if (newWidgetBtn && newWidgetBtn.classList.contains('disabled')) {
+            showMessageModal('Information', 'Adding widgets is disabled in "Show All Widgets" mode.');
+            return;
+        }
         submitActionForm('add_widget', { widget_id: widgetId });
     });
 
@@ -257,9 +269,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(settingsForm);
             const dataToSubmit = {};
             for (const [key, value] of formData.entries()) {
-                // Special handling for checkbox: if unchecked, it's not in formData.
-                // We need to explicitly set it to '0' or false if it's a known boolean setting.
-                if (key === 'enable_animations') {
+                // Special handling for checkboxes: if unchecked, they are not in formData.
+                // We need to explicitly set them to '0' if they are known boolean settings.
+                if (key === 'enable_animations' || key === 'show_all_available_widgets') { // Added new setting here
                     dataToSubmit[key] = settingsForm.elements[key].checked ? '1' : '0'; // Send '1' or '0'
                 } else {
                     dataToSubmit[key] = value;
@@ -268,4 +280,34 @@ document.addEventListener('DOMContentLoaded', function() {
             submitActionForm('update_settings', dataToSubmit);
         });
     }
+
+    // New: Disable/Enable Add Widget button based on 'Show All Widgets' state
+    const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
+    const newWidgetBtn = document.getElementById('new-widget-btn');
+    const widgetSelect = document.getElementById('widget_select'); // The select inside settings panel
+    const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]'); // The button in settings panel
+
+    function updateAddRemoveButtonStates() {
+        if (showAllWidgetsToggle && newWidgetBtn && widgetSelect && addWidgetToDashboardBtn) {
+            if (showAllWidgetsToggle.checked) {
+                newWidgetBtn.classList.add('disabled');
+                newWidgetBtn.disabled = true;
+                widgetSelect.disabled = true;
+                addWidgetToDashboardBtn.disabled = true;
+            } else {
+                newWidgetBtn.classList.remove('disabled');
+                newWidgetBtn.disabled = false;
+                widgetSelect.disabled = false;
+                addWidgetToDashboardBtn.disabled = false;
+            }
+        }
+    }
+
+    // Attach listener to the new toggle
+    if (showAllWidgetsToggle) {
+        showAllWidgetsToggle.addEventListener('change', updateAddRemoveButtonStates);
+    }
+
+    // Initial state update on load
+    updateAddRemoveButtonStates();
 });
