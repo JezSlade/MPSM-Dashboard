@@ -5,6 +5,15 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
 
+// --- Cache Control Headers ---
+// These headers instruct the browser not to cache the page, ensuring
+// it always fetches the latest content, especially after a POST request.
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // A date in the past
+// --- End Cache Control Headers ---
+
 // dashboard.php
 session_start();
 
@@ -73,7 +82,7 @@ function saveDashboardState(array $state) {
     // Attempt to write the file. File permissions are crucial here.
     $result = file_put_contents(DASHBOARD_SETTINGS_FILE, $json_data);
     if ($result === false) {
-        $error_message = "Failed to write dashboard state to file: " . DASHBOARD_SETTINGS_FILE;
+        $error_message = "Failed to write dashboard state to file: " . DASHARD_SETTINGS_FILE;
         if (!is_writable(dirname(DASHBOARD_SETTINGS_FILE))) {
              $error_message .= " - Directory not writable: " . dirname(DASHBOARD_SETTINGS_FILE);
         } else if (file_exists(DASHBOARD_SETTINGS_FILE) && !is_writable(DASHBOARD_SETTINGS_FILE)) {
