@@ -196,12 +196,11 @@ body {
     grid-row: 2;
     display: grid;
     /* Dynamically create columns based on content. Each column is a "half-unit" wide. */
-    /* --min-half-unit-width defines the minimum pixel width of a 0.5 user-facing unit widget */
-    --min-half-unit-width: 150px; /* Adjust this value as needed for visual density */
-    grid-template-columns: repeat(auto-fit, minmax(var(--min-half-unit-width), 1fr));
+    /* 150px is the base width for a 0.5 user-facing unit. */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     grid-auto-flow: dense; /* Fill in empty spaces to optimize layout */
-    /* Flexible row heights, auto for content based on half-unit logic */
-    grid-template-rows: repeat(auto-fill, minmax(calc(var(--min-half-unit-width) * 0.6), auto)); /* Adjust 0.6 multiplier as needed */
+    /* Flexible row heights. 90px is the base height for a 0.5 user-facing unit. */
+    grid-template-rows: repeat(auto-fill, minmax(90px, auto));
     gap: 20px;
     padding: 20px;
     overflow-y: auto;
@@ -563,13 +562,17 @@ input:checked + .slider:before {
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(5px);
     z-index: 1001; /* Above everything */
-    display: none; /* Hidden by default */
+    display: flex; /* Always flex to center children */
     justify-content: center;
     align-items: center;
+    opacity: 0; /* Hidden by default */
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
 
 .message-modal-overlay.active {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
 }
 
 .message-modal {
@@ -577,15 +580,16 @@ input:checked + .slider:before {
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-lg);
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
-    width: 90%;
-    max-width: 400px;
+    width: 90%; /* Default width */
+    max-width: 400px; /* Default max-width for smaller modals */
     animation: fadeInScale 0.2s ease-out forwards;
     display: flex;
     flex-direction: column;
+    margin: auto; /* Ensures it's truly centered within flex parent */
 }
 
 .message-modal.large-modal {
-    max-width: 800px; /* For widget management table */
+    max-width: 800px; /* Specific max-width for larger modals like Widget Management */
 }
 
 .message-modal-header {
@@ -1200,7 +1204,7 @@ input:checked + .slider:before {
         grid-template-columns: 1fr; /* Single column for widgets on mobile */
         grid-template-rows: auto; /* Auto rows */
         padding: 10px;
-        /* Reset min-half-unit-width for mobile to ensure full width */
+        /* On mobile, widgets should always span full width */
         --min-half-unit-width: 100%; 
     }
 
