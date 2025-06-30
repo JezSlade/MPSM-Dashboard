@@ -28,6 +28,7 @@ require_once 'helpers.php';
 
 // Define the application root directory for security
 define('APP_ROOT', __DIR__);
+// Removed: define('DYNAMIC_WIDGETS_FILE', APP_ROOT . '/dynamic_widgets.json'); // This is now defined only in config.php
 
 // --- Persistent Settings & Widgets Functions ---
 

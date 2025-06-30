@@ -195,10 +195,13 @@ body {
     grid-column: 2;
     grid-row: 2;
     display: grid;
-    /* Updated for 6 "half-columns" */
-    grid-template-columns: repeat(6, 1fr); /* Now 6 flexible columns */
-    /* Updated minmax for height to reflect half-unit */
-    grid-template-rows: repeat(auto-fill, minmax(80px, auto)); /* Flexible row heights, auto for content */
+    /* Dynamically create columns based on content. Each column is a "half-unit" wide. */
+    /* --min-half-unit-width defines the minimum pixel width of a 0.5 user-facing unit widget */
+    --min-half-unit-width: 150px; /* Adjust this value as needed for visual density */
+    grid-template-columns: repeat(auto-fit, minmax(var(--min-half-unit-width), 1fr));
+    grid-auto-flow: dense; /* Fill in empty spaces to optimize layout */
+    /* Flexible row heights, auto for content based on half-unit logic */
+    grid-template-rows: repeat(auto-fill, minmax(calc(var(--min-half-unit-width) * 0.6), auto)); /* Adjust 0.6 multiplier as needed */
     gap: 20px;
     padding: 20px;
     overflow-y: auto;
@@ -207,7 +210,7 @@ body {
 
 /* Individual Widget Styling */
 .widget {
-    /* Fallback values for --width and --height in case they are not set */
+    /* --width and --height are now internal grid units (user_value * 2, e.g., 1 for 0.5, 2 for 1.0) */
     --width: 2; /* Default to 1.0 user unit (2 internal units) */
     --height: 2; /* Default to 1.0 user unit (2 internal units) */
     
@@ -1197,6 +1200,8 @@ input:checked + .slider:before {
         grid-template-columns: 1fr; /* Single column for widgets on mobile */
         grid-template-rows: auto; /* Auto rows */
         padding: 10px;
+        /* Reset min-half-unit-width for mobile to ensure full width */
+        --min-half-unit-width: 100%; 
     }
 
     .widget {
