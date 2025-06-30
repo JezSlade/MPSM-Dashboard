@@ -196,7 +196,8 @@ body {
     grid-row: 2;
     display: grid;
     /* Explicit column count for desktop: 4 full units (8 half-units) */
-    grid-template-columns: repeat(8, 1fr);
+    /* Using minmax(0, 1fr) ensures columns can shrink but still distribute space proportionally */
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     grid-auto-flow: dense; /* Fill in empty spaces to optimize layout */
     /* Flexible row heights. A 0.5 height unit will be approx 100px. */
     grid-template-rows: repeat(auto-fill, minmax(100px, auto));
@@ -1182,19 +1183,19 @@ input:checked + .slider:before {
 /* Responsive Design */
 @media (min-width: 1200px) { /* Desktop */
     .main-content {
-        grid-template-columns: repeat(8, 1fr); /* 4 full units / 8 half-units */
+        grid-template-columns: repeat(8, minmax(0, 1fr)); /* 4 full units / 8 half-units */
     }
 }
 
 @media (max-width: 1199px) and (min-width: 992px) { /* Medium Desktop / Large Tablet */
     .main-content {
-        grid-template-columns: repeat(6, 1fr); /* 3 full units / 6 half-units */
+        grid-template-columns: repeat(6, minmax(0, 1fr)); /* 3 full units / 6 half-units */
     }
 }
 
 @media (max-width: 991px) and (min-width: 768px) { /* Small Tablet */
     .main-content {
-        grid-template-columns: repeat(4, 1fr); /* 2 full units / 4 half-units */
+        grid-template-columns: repeat(4, minmax(0, 1fr)); /* 2 full units / 4 half-units */
     }
 }
 
@@ -1222,7 +1223,7 @@ input:checked + .slider:before {
     .main-content {
         grid-column: 1;
         grid-row: 3;
-        grid-template-columns: repeat(2, 1fr); /* 1 full unit / 2 half-units on mobile */
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* 1 full unit / 2 half-units on mobile */
         grid-template-rows: auto; /* Auto rows */
         padding: 10px;
     }
