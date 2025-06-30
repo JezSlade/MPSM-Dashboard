@@ -3,6 +3,8 @@ Dashboard CMS Documentation
 This document provides an exhaustive overview of the custom PHP-based dashboard Content Management System (CMS). It details the architecture, file structure, component interactions, data storage mechanisms, core functionalities, and best practices for future development and maintenance.
 Table of Contents
 
+    Recent Development History & Current Status (For Handover)
+
     System Overview and Architecture
 
         1.1. Core Technologies and Dependencies
@@ -69,6 +71,61 @@ Table of Contents
 
         8.2. Dashboard Layout Adjustments
 
+    Changelog
+
+0. Recent Development History & Current Status (For Handover)
+
+This section provides a summary of the most recent development efforts and the current known status of the dashboard, intended for a smooth handover to a new development context.
+
+Over the past few interactions, the primary focus has been on resolving critical layout and UI interaction issues:
+
+    Horizontal Widget Flow (Side-by-Side Layout):
+
+        Problem: Widgets were consistently stacking one per row, even on wide screens, despite CSS Grid configurations intended to enable multi-column layouts.
+
+        Attempts & Fixes:
+
+            Initial attempts involved explicit repeat(X, 1fr) column definitions and media queries in dashboard.css.
+
+            Further refinement introduced minmax(0, 1fr) for the grid columns to ensure flexible space distribution.
+
+            The most critical fix identified and implemented was adding min-width: 0; to the .widget CSS rule itself. This prevents the intrinsic minimum width of widget content from overriding the grid's ability to shrink columns, allowing multiple widgets to flow horizontally.
+
+        Current Status (as of last user feedback): The user reported "No joy" with widgets arranging side-by-side. This indicates that despite the CSS fixes, the issue persists, suggesting a deeper problem with CSS application, browser caching, or an unknown override. A key diagnostic test involves reducing active widgets to only "Task Manager" (1.0 width) and "Calendar" (1.0 width) to see if they appear side-by-side.
+
+    Modal Centering:
+
+        Problem: The "Widget Management" modal and other confirmation modals were appearing in the top-left corner instead of being perfectly centered.
+
+        Attempts & Fixes: Standard Flexbox centering (display: flex; justify-content: center; align-items: center; on the overlay and margin: auto; on the modal) was applied. To force these styles, !important flags were added to the relevant CSS properties (position, top, left, width, height, display, justify-content, align-items, margin) on .message-modal-overlay and .message-modal.
+
+        Current Status (as of last user feedback): The user reported "No" for modals being perfectly centered. This is highly unusual given the !important overrides, pointing to a potential browser-specific rendering quirk or a very strong external style overriding even !important.
+
+    Widget Deactivation Functionality:
+
+        Problem: The "Deactivate" button within the "Manage Widgets" modal stopped working.
+
+        Fix: The JavaScript event listener for the "Deactivate" buttons was refactored to use robust event delegation on the activeWidgetsTableBody. This ensures that even dynamically added rows and buttons are correctly handled. The fetch call and data payload for the deactivate_widget action were also verified.
+
+        Current Status: This issue should be resolved with the regenerated dashboard.js.
+
+Latest Codebase:
+
+    index.php, dashboard.js, and dashboard.css were fully regenerated in the last interaction to ensure all fixes and best practices are consistently applied across the codebase.
+
+    The dashboard.css includes min-width: 0; on .main-content and .widget, and repeat(X, minmax(0, 1fr)) for grid columns, along with !important for modal centering.
+
+    The dashboard.js includes robust event delegation for dynamic elements and correct API calls.
+
+Next Steps for a Fresh Instance:
+The immediate priority is to re-verify the "Horizontal Widget Flow" and "Modal Centering" issues. The recommended diagnostic steps are:
+
+    Hard Refresh: Ensure the user performs a hard refresh (Ctrl+F5 or Cmd+Shift+R) after applying the latest code.
+
+    Specific Widget Test: Instruct the user to deactivate all widgets except "Task Manager" (1.0 width) and "Calendar" (1.0 width) and observe if they appear side-by-side. This isolates the grid behavior.
+
+    Developer Tools Inspection: If issues persist, guide the user through inspecting the computed styles in the browser's developer tools for .main-content (checking display: grid, grid-template-columns) and .widget (checking grid-column: span var(--width); and min-width: 0;). For modals, inspect .message-modal-overlay and .message-modal for their display, position, top, left, margin, justify-content, and align-items properties, looking for any !important overrides being ignored or other conflicting styles.
+
 1. System Overview and Architecture
 
 The Dashboard CMS is designed as a lightweight, single-page application built primarily with PHP for server-side logic and persistence, and a combination of HTML, CSS, and JavaScript for a dynamic and responsive frontend. Its modular widget system allows for straightforward extensibility and maintainability.
@@ -126,31 +183,31 @@ The system operates in a request-response cycle, with client-side JavaScript med
 
         dashboard.js determines the action_type and relevant data (e.g., widget_index, new_width).
 
-        submitActionForm() (in dashboard.js) dynamically creates a hidden HTML <form> with the action_type and data as hidden inputs.
-
-        form.submit() is called, triggering a full page POST request to index.php.
+        A fetch API call (POST request) is made to api.php or index.php (depending on the implementation, currently api.php is assumed for actions like save_settings, reset_layout, get_dashboard_settings, update_active_widgets, create_widget_template, deactivate_widget, add_widget, remove_widget, update_widget_positions).
 
     Server-Side Processing (POST Request):
 
-        index.php receives the POST request.
+        index.php (or api.php) receives the POST request.
 
         $_SESSION is loaded (resuming the previous session).
 
         loadDashboardState() is called again to ensure PHP has the absolute latest persistent state from dashboard_settings.json before processing the new request.
 
-        PHP checks $_POST['action_type'] to determine the requested operation.
+        PHP checks the action parameter (or action_type) to determine the requested operation.
 
-        Based on action_type, $_SESSION['active_widgets'] or other session-based settings are modified. Permissions checks (e.g., if "Show All" mode is active) are applied.
+        Based on the action, $_SESSION['active_widgets'] or other session-based settings are modified. Permissions checks (e.g., if "Show All" mode is active) are applied.
 
         The $has_state_changed flag is set to true if modifications occurred.
 
         If $has_state_changed is true, saveDashboardState() is called to write the updated $settings array (including $_SESSION['active_widgets']) back to dashboard_settings.json.
 
-        PHP then proceeds to render the new HTML page based on the now-updated $_SESSION and persistent state.
+        A JSON response indicating success or failure is sent back to the client.
 
     Browser Re-rendering:
 
-        The browser receives the new HTML response. Due to the cache-control headers, it discards any old cached versions and renders the fresh page.
+        dashboard.js receives the JSON response.
+
+        If successful, location.reload() is often called to trigger a full page refresh, ensuring the latest state from index.php is rendered. This is crucial due to the stateless nature of PHP and the need to re-render the entire grid.
 
         dashboard.js re-initializes, attaching event listeners to the new DOM elements and reflecting the updated dashboard state (e.g., a widget is now gone, or its size has changed).
 
@@ -167,7 +224,7 @@ This is the central file that orchestrates the entire dashboard, acting as the p
 
         Loads current dashboard settings and active widgets from persistent storage (dashboard_settings.json).
 
-        Processes all incoming POST requests (add/remove widgets, update global settings, update individual widget dimensions).
+        Processes all incoming POST requests (add/remove widgets, update global settings, update individual widget dimensions, reorder widgets).
 
         Saves changes back to persistent storage.
 
@@ -200,6 +257,12 @@ This is the central file that orchestrates the entire dashboard, acting as the p
             action_type === 'update_settings': Updates global dashboard settings (title, colors, animations, "Show All Widgets" toggle). Critically, if show_all_available_widgets is just turned on, $_SESSION['active_widgets'] is dynamically repopulated with all widgets from $available_widgets (with their default dimensions), effectively resetting the layout to "all on."
 
             action_type === 'update_widget_dimensions': Receives widget_index, new_width, and new_height for a specific widget. It updates the width and height properties for that widget's entry within $_SESSION['active_widgets']. This action is also disabled if show_all_available_widgets is true.
+
+            action_type === 'update_widget_positions': Receives an array of positions (containing id, width, height, position) for all active widgets. It completely rebuilds $_SESSION['active_widgets'] based on this new order.
+
+            action_type === 'deactivate_widget': Removes a widget by its id from the $_SESSION['active_widgets'] array.
+
+            action_type === 'reset_layout': Resets $_SESSION['active_widgets'] to the default layout from config.php.
 
             $has_state_changed and saveDashboardState(): If any of the above actions modify the session state, $has_state_changed is set to true, triggering a call to saveDashboardState() to write the updated configuration to dashboard_settings.json. Error logging is used if saving fails.
 
@@ -394,7 +457,7 @@ The dashboard.css file is the central stylesheet that dictates the visual presen
 
         Basic Resets & Typography: Standard universal resets (* { margin: 0; padding: 0; box-sizing: border-box; }) and font-family declarations.
 
-        Body Styling: Sets the background gradient and default text color. overflow: auto; allows the main page to scroll if content exceeds viewport height.
+        Body Styling: Sets the background gradient and default text color. overflow: auto; allows the main page to scroll if content exceeds viewport height. html, body now explicitly have height: 100%; to ensure correct fixed positioning for modals.
 
         body.expanded-active: This class is added to the <body> by dashboard.js when a widget is maximized. overflow: hidden; is applied here to prevent the background dashboard from scrolling while a modal widget is open.
 
@@ -404,7 +467,7 @@ The dashboard.css file is the central stylesheet that dictates the visual presen
 
             background: rgba(0, 0, 0, 0.7); creates the darkened overlay effect.
 
-            z-index: 1000; ensures it sits above the main dashboard content.
+            z-index: 999; ensures it sits above the main dashboard content.
 
             display: flex; justify-content: center; align-items: center; are crucial for horizontally and vertically centering the maximized widget within the overlay.
 
@@ -418,9 +481,9 @@ The dashboard.css file is the central stylesheet that dictates the visual presen
 
         dashboard (Main Grid Container):
 
-            display: grid; grid-template-columns: 280px 1fr; grid-template-rows: auto 1fr;: Establishes the primary two-column layout (sidebar and main content) with a header row.
+            display: grid; grid-template-columns: var(--sidebar-width) 1fr; grid-template-rows: var(--header-height) 1fr;: Establishes the primary two-column layout (sidebar and main content) with a header row.
 
-            gap: 20px; max-width: 1800px; margin: 0 auto;: Controls spacing and centers the dashboard.
+            height: 100vh; ensures the dashboard takes full viewport height.
 
         Header, Sidebar, Widget List Styling: Extensive styles for the header, sidebar, navigation items, and widget library items. They utilize glassmorphism (via background: var(--glass-bg); border: var(--glass-border); backdrop-filter: blur(var(--blur-amount));) and neomorphic shadow effects.
 
@@ -434,15 +497,19 @@ The dashboard.css file is the central stylesheet that dictates the visual presen
 
         main-content (Widget Grid Area):
 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));: Sets up a responsive grid for widgets, automatically adjusting columns based on available space and a minimum widget width of 300px.
+            display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));: Sets up a responsive grid for widgets, using minmax(0, 1fr) to ensure columns are flexible and can shrink, allowing multiple widgets to fit horizontally. This is crucial for the side-by-side layout.
 
-            grid-auto-rows: minmax(200px, auto);: Ensures a minimum row height for widgets and allows rows to expand based on content.
+            grid-auto-rows: minmax(100px, auto);: Ensures a minimum row height for widgets and allows rows to expand based on content.
+
+            min-width: 0; and box-sizing: border-box; are applied to prevent content from implicitly forcing the grid columns wider than intended.
 
         .widget:
 
             display: flex; flex-direction: column;: Makes the widget content a flex container, allowing its header and content to stack vertically.
 
-            grid-column: span var(--width, 1); grid-row: span var(--height, 1);: These are critical for individual widget dimension control. The var(--width) and var(--height) CSS variables are dynamically set inline by PHP based on the width and height properties stored for each widget in active_widgets. (..., 1) provides a fallback default if the variables are not set.
+            grid-column: span var(--width); grid-row: span var(--height);: These are critical for individual widget dimension control. The var(--width) and var(--height) CSS variables are dynamically set inline by PHP based on the width and height properties stored for each widget in active_widgets.
+
+            min-width: 0; is critically important here. It allows the grid item (the widget) to shrink below its content's intrinsic minimum size, enabling the 1fr columns in the parent grid to distribute space correctly and allow widgets to flow horizontally.
 
             transition: var(--transition);: Enables smooth animations for hover effects and other transitions.
 
@@ -450,31 +517,37 @@ The dashboard.css file is the central stylesheet that dictates the visual presen
 
         Widget Content States (.compact-content, .expanded-content):
 
-            .widget .compact-content { display: block; }: By default, the compact-content section within any widget is visible.
+            .widget .compact-content { display: flex; }: By default, the compact-content section within any widget is visible.
 
             .widget .expanded-content { display: none; }: By default, the expanded-content section is hidden.
 
             .widget.maximized .compact-content { display: none; }: When the parent .widget element gains the maximized class, the compact-content is hidden.
 
-            .widget.maximized .expanded-content { display: block; flex: 1; overflow-y: auto; }: When the parent .widget is maximized, the expanded-content is revealed, taking up all available vertical space and allowing its internal content to scroll. This is the core CSS logic for differentiating widget views based on their expansion state.
+            .widget.maximized .expanded-content { display: flex; flex: 1; overflow-y: auto; }: When the parent .widget is maximized, the expanded-content is revealed, taking up all available vertical space and allowing its internal content to scroll. This is the core CSS logic for differentiating widget views based on their expansion state.
 
         stat-card, task-item, calendar-grid, note, activity-item: Specific styling for the content within the various default widgets.
 
-        settings-panel (Global Settings Sidebar): position: fixed; right: -400px; (to hide off-screen initially), width: 380px;, height: 100vh;, z-index: 1000;, and transition: ...;. The right: 0; rule on .settings-panel.active slides it into view.
+        settings-panel (Global Settings Sidebar): position: fixed; right: -350px; (to hide off-screen initially), width: 350px;, height: 100%;, z-index: 100;, and transition: ...;. The right: 0; rule on .settings-panel.active slides it into view.
 
-        overlay: A generic transparent overlay used for the global settings panel.
+        overlay: A generic transparent overlay used for the global settings panel. Its width and height are now 100% !important; for robust coverage.
 
         message-modal-overlay and message-modal: These classes are reused for both the general confirmation/alert modal and the specific widget settings modal. They provide consistent styling for modal dialogs.
 
-            z-index: 1050; ensures they appear on top of other elements like the settings panel.
+            z-index: 1001 !important; ensures they appear on top of other elements like the settings panel.
 
-            display: flex; justify-content: center; align-items: center; centrally align the modal content.
+            position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; are used to aggressively force the overlay to cover the entire viewport.
+
+            display: flex !important; justify-content: center !important; align-items: center !important; centrally align the modal content, with !important to override any conflicting styles.
 
             opacity: 0; visibility: hidden; for smooth transitions.
 
+            .message-modal itself uses margin: auto !important; for self-centering within its flex parent.
+
+        Responsive Design Media Queries: Define how the grid adapts to different screen sizes, adjusting the number of 1fr columns.
+
 2.6. dashboard.js (Client-Side Interactivity)
 
-The dashboard.js file is the powerhouse of client-side interactivity, bringing the static HTML and CSS to life. It manages all user interactions, orchestrates dynamic DOM manipulations, and handles communication with the PHP backend without constant full page reloads.
+The dashboard.js file is the powerhouse of client-side interactivity, bringing the static HTML and CSS to life. It manages all user interactions, orchestrates dynamic DOM manipulations, and handles communication with the PHP backend.
 
     Purpose:
 
@@ -482,9 +555,9 @@ The dashboard.js file is the powerhouse of client-side interactivity, bringing t
 
         Manages widget expansion/minimization.
 
-        Implements drag-and-drop for adding widgets.
+        Implements drag-and-drop for adding and reordering widgets.
 
-        Collects and submits data for adding/removing widgets and updating settings (global and individual widget).
+        Collects and submits data for adding/removing/deactivating widgets and updating settings (global and individual widget dimensions).
 
         Provides visual feedback and disables elements based on dashboard state ("Show All Widgets" mode).
 
@@ -492,81 +565,53 @@ The dashboard.js file is the powerhouse of client-side interactivity, bringing t
 
         DOMContentLoaded Listener: All JavaScript code is wrapped in this listener, ensuring the entire HTML DOM structure is fully loaded and parsed before any script attempts to interact with it.
 
-        Global Settings Panel Controls: Event listeners for #settings-toggle, #close-settings, and #settings-overlay manage the active class on #settings-panel and display on #settings-overlay to show/hide the global settings sidebar.
+        Global Settings Panel Controls: Event listeners for #openSettingsBtn, #closeSettingsBtn, and #settingsOverlay manage the active class on #settingsPanel and display on #settingsOverlay to show/hide the global settings sidebar.
 
-        showMessageModal(title, message, confirmCallback):
+        showMessageModal(title, message, buttons, isLarge):
 
-            This function creates a custom, consistent modal for alerts and confirmations. It replaces native alert() and confirm() which are often visually jarring and can block the browser.
+            This function creates a custom, consistent modal for alerts and confirmations, replacing native alert() and confirm().
 
             It dynamically sets the modal's title and content.
 
-            confirmCallback: An optional callback function that executes if the user clicks "OK". This is used for confirmation steps like widget removal.
+            buttons: An array of button configurations, allowing flexible actions and auto-hiding.
 
-            Event Listener Cleanup: Uses cloneNode(true) and replaceChild() on the modal's buttons. This is a common pattern to effectively remove all previously attached event listeners from an element before re-attaching new ones. This prevents "double-firing" of callbacks, especially when the modal is opened multiple times.
+            isLarge: A boolean to apply a wider modal style.
 
-        Widget Settings Modal Logic (showWidgetSettingsModal):
+        Widget Management Modal Logic:
 
-            A dedicated modal for adjusting individual widget dimensions.
+            openWidgetManagementModal(): Populates the table of active widgets with their current dimensions and status.
 
-            Populates the input fields (#widget-settings-width, #widget-settings-height) with the current dimensions from the clicked widget's data-* attributes (dataset.currentWidth, dataset.currentHeight).
+            populateWidgetManagementTable(): Fetches current active widgets and their configurations, dynamically creating table rows with input fields for width/height and a "Deactivate" button.
 
-            Sets the hidden widget-settings-index input field to identify which widget is being configured.
+            saveWidgetManagementChanges(): Collects updated width/height values from the table and sends them to the server.
 
-            Crucially, it checks the state of the global show_all_available_widgets toggle and disables the dimension input fields and the save button if "Show All" mode is active, reinforcing the system's rules.
+            createNewWidgetTemplate(): Handles the creation of new widget PHP files.
 
-            Event listeners handle opening (action-settings click), closing (close-widget-settings-modal click, overlay click), and form submission (widget-dimensions-form submit).
+        Widget Deactivation Logic (Delegated Event Listener):
 
-        Delegated Widget Actions (document.body.addEventListener('click', ...)):
+            Crucial Fix: Instead of attaching individual click listeners to every "Deactivate" button (which can break when the table is re-rendered), a single delegated event listener is attached to activeWidgetsTableBody.
 
-            Instead of attaching individual click listeners to every widget's action buttons, a single listener is on document.body.
+            activeWidgetsTableBody.addEventListener('click', async (event) => { ... }); checks if the clicked element or its ancestor matches .btn-deactivate-widget. This ensures that dynamically added buttons are always clickable.
 
-            e.target.closest('.widget-action') is used to efficiently determine if a widget-action button was clicked, even if the click occurred on an icon inside the button.
+            It triggers a confirmation modal before sending an action: 'deactivate_widget' request to api.php.
 
-            This is highly effective for dynamically added/removed/moved DOM elements, as the listener on document.body is always present, and events bubble up to it.
+        Drag-and-Drop Functionality (Adding & Reordering):
 
-            Dispatches to different logic paths based on the specific action class (action-settings, action-expand, remove-widget).
+            Adding: dragstart on sidebar widgets, dragover/drop on mainContent. Sends action: 'add_widget' to api.php.
 
-        toggleWidgetExpansion(widget):
+            Reordering: dragstart on active widgets, dragover/drop on mainContent. A visual widget-placeholder is used to indicate the drop position. After drop, updateWidgetPositions() is called to send an action: 'update_widget_positions' request to api.php with the new order.
 
-            Handles the complex DOM manipulation required for widget expansion/minimization.
+        Widget Actions (Maximize/Remove):
 
-            State Preservation: Stores the widget's originalParentId and originalIndex in data-* attributes on its internal .widget-placeholder. This allows the widget to be returned to its exact previous position in the grid.
+            Uses event delegation on mainContent for .maximize-widget and .remove-widget buttons.
 
-            DOM Movement: Physically moves the widget DOM element from #widget-container to #widget-expanded-overlay for maximization, and back again for minimization. This is distinct from just showing/hiding and allows the widget to break out of the CSS Grid.
+            maximize-widget: Toggles the maximized class on the widget and expanded-active on body for full-screen view.
 
-            Placeholder Role: Toggles the display of the .widget-placeholder to ensure that the grid layout remains stable when a widget is moved out of its original slot.
+            remove-widget: Triggers a confirmation modal and sends action: 'remove_widget' to api.php.
 
-            Class Toggling: Manages the maximized class on the widget, expanded-active on body, and active on expandedOverlay to trigger CSS transitions and visibility.
+        API Communication: All server interactions are handled via fetch API calls to api.php (or index.php for direct form submissions). Responses are typically JSON, and location.reload() is often used on success to ensure the UI reflects the latest server state.
 
-            Icon Swap: Changes the Font Awesome icon from fa-expand to fa-compress and vice-versa.
-
-        Drag-and-Drop Functionality:
-
-            dragstart on .widget-item: Stores the widgetId in e.dataTransfer.
-
-            dragover, dragleave on main-content: Provide visual feedback for valid drop targets.
-
-            drop on main-content: Retrieves widgetId from e.dataTransfer.
-
-            "Show All Widgets" Restriction: Before allowing a drop, it checks if show_all_available_widgets is enabled and prevents adding if so, displaying an informative modal.
-
-            Calls submitActionForm('add_widget', { widget_id: widgetId }).
-
-        submitActionForm(actionType, data = {}):
-
-            This is the central function for sending all POST requests to index.php.
-
-            It dynamically creates a temporary <form> element in memory.
-
-            It systematically adds hidden input fields for action_type and all key-value pairs from the data object.
-
-            Appends the form to document.body and immediately calls form.submit(). This causes a full page reload, which is how the PHP backend is triggered to process the request and re-render the dashboard.
-
-            Includes console.log statements for debugging the submitted form data.
-
-        Global Settings Form Submission: Handles the submission of the main settings form (settings-form) in the global settings panel. It prevents the default form submission (e.preventDefault()) and instead constructs the dataToSubmit object, converting checkbox states ('1' or '0') before calling submitActionForm('update_settings', dataToSubmit).
-
-        updateAddRemoveButtonStates(): This function is critical for UI synchronization. It's called on DOMContentLoaded and whenever the show_all_available_widgets toggle changes. It dynamically adds/removes the disabled class and disabled attribute to the "New Widget" button, the "Add Widget" select/button in the settings panel, and the individual "Remove" icons on widgets. It also affects the state of inputs in the widget settings modal if it's open. This ensures UI elements correctly reflect whether adding/removing/resizing is allowed in the current mode.
+        UI State Synchronization: Functions like updateThemePreview() and logic within event listeners ensure that the UI accurately reflects the current dashboard settings and widget states.
 
 3. Widget Development Guide
 
@@ -633,7 +678,7 @@ Widgets are designed to have two distinct content states, automatically managed 
 
         Content: Keep this content concise and visually appealing for a small space. Examples include a single metric, a status indicator, or a very brief list.
 
-        Visibility: Controlled by dashboard.css. By default, display: block; when the widget is not maximized.
+        Visibility: Controlled by dashboard.css. By default, display: flex; when the widget is not maximized.
 
     expanded-content (<div class="expanded-content">...</div>)
 
@@ -641,7 +686,7 @@ Widgets are designed to have two distinct content states, automatically managed 
 
         Content: This is where you put the "drilldown" information. Ensure it's designed to fit well within a larger modal window. Use internal scrolling (overflow-y: auto;) for large tables or lists within this div.
 
-        Visibility: Controlled by dashboard.css. By default, display: none;. When the parent .widget has the maximized class, display: block; is applied.
+        Visibility: Controlled by dashboard.css. By default, display: none;. When the parent .widget has the maximized class, display: flex; is applied.
 
     Implementation Example (within render_YOUR_WIDGET_ID_widget()):
 
@@ -689,9 +734,7 @@ The loadDashboardState() function, implicitly defined within index.php, is respo
 
             $final_state = array_replace_recursive($default_dashboard_state, $loaded_state);
 
-            This is a sophisticated merging strategy. It combines the $default_dashboard_state with any $loaded_state from the JSON file.
-
-            Purpose: This ensures that if new configuration keys or sections are added to $default_dashboard_state in a CMS update, existing dashboard_settings.json files from previous versions will automatically inherit these new defaults without losing any user-defined settings. It intelligently merges arrays, handling nested arrays correctly.
+            Purpose: This is a sophisticated merging strategy. It combines the $default_dashboard_state with any $loaded_state from the JSON file. This ensures that if new configuration keys or sections are added to $default_dashboard_state in a CMS update, existing dashboard_settings.json files from previous versions will automatically inherit these new defaults without losing any user-defined settings. It intelligently merges arrays, handling nested arrays correctly.
 
         Active Widget Dimension Enrichment: A critical loop within loadDashboardState() ensures that every widget entry in active_widgets (whether loaded from JSON or from defaults) has explicit width and height properties.
 
@@ -788,7 +831,7 @@ This feature allows users to temporarily enlarge any widget into a modal-like fu
 
             Class Toggling: The maximized class is dynamically added to the target widget element. Concurrently, the expanded-active class is added to the <body> element, and the active class is applied to the #widget-expanded-overlay. These class additions trigger predefined CSS rules that manage the visual transformations and visibility states for the modal display.
 
-            DOM Relocation (The Core Mechanism): The entire DOM element representing the widget is physically detached from its original position within the CSS Grid layout (#widget-container) and is then appended as a child to the #widget-expanded-overlay element. This critical step moves the widget out of the normal document flow and places it within the dedicated full-screen modal container.
+            DOM Relocation (The Core Mechanism): The entire DOM element representing the widget is physically detached from its original position within the CSS Grid layout (#mainContent) and is then appended as a child to the #widget-expanded-overlay element. This critical step moves the widget out of the normal document flow and places it within the dedicated full-screen modal container.
 
             Placeholder Activation: The .widget-placeholder element, which was previously hidden (display: none), is now explicitly made visible (style.display = 'block'). This placeholder effectively reserves and occupies the original grid cell where the widget resided, preventing other surrounding widgets from collapsing, reflowing, or otherwise disrupting the grid layout in the main dashboard area.
 
@@ -806,25 +849,25 @@ This feature allows users to temporarily enlarge any widget into a modal-like fu
 
             Icon Change: The icon reverts from fa-compress back to fa-expand.
 
-        Overlay Click Handling (expandedOverlay.addEventListener('click', ...)): A dedicated event listener on the expandedOverlay (the darkened background behind the modal) detects clicks. If the click occurred directly on the overlay (not on the maximized widget itself), it triggers the minimization process, providing an intuitive way to close the modal.
+        Overlay Click Handling (widgetManagementModalOverlay.addEventListener('click', ...)): A dedicated event listener on the widgetManagementModalOverlay (the darkened background behind the modal) detects clicks. If the click occurred directly on the overlay (not on the maximized widget itself), it triggers the minimization process, providing an intuitive way to close the modal.
 
     Client-Side (CSS):
 
         widget-expanded-overlay: Styles this fixed-position, full-screen div as the modal background. Its opacity and visibility are transitioned for smooth fade effects. It uses Flexbox (display: flex, justify-content: center, align-items: center) to perfectly center the contained maximized widget.
 
-        widget.maximized: When this class is applied by JavaScript, it transforms the widget into its large, centered modal appearance. transform: scale(0.8) on initial display (and transform: scale(1) when active on the overlay) creates a subtle "pop-in" animation. Its high z-index (1002) ensures it overlays all other content. Hover effects are overridden (!important) to prevent visual glitches when maximized.
+        widget.maximized: When this class is applied by JavaScript, it transforms the widget into its large, centered modal appearance. transform: scale(0.8) on initial display (and transform: scale(1) when active on the overlay) creates a subtle "pop-in" animation. Its high z-index (1000) ensures it overlays all other content. Hover effects are overridden (!important) to prevent visual glitches when maximized.
 
-        body.expanded-active: This class, applied to the <body>, sets overflow: hidden to prevent the underlying dashboard content from scrolling while the modal is open. It also sets opacity: 0, visibility: hidden, and pointer-events: none on .main-content .widget:not(.maximized) to ensure only the expanded widget is interactive and visible, preventing accidental clicks on background elements.
+        body.expanded-active: This class, applied to the <body>, sets overflow: hidden to prevent the underlying dashboard content from scrolling while the modal is open.
 
         Content State Management (.compact-content, .expanded-content): This is a key part of the dual-state widget display.
 
-            .widget .compact-content { display: block; }: By default, the compact view content is always visible within any widget.
+            .widget .compact-content { display: flex; }: By default, the compact view content is always visible within any widget.
 
             .widget .expanded-content { display: none; }: By default, the expanded view content is always hidden.
 
             .widget.maximized .compact-content { display: none; }: When the parent .widget element has the maximized class (i.e., is expanded), the compact content is hidden.
 
-            .widget.maximized .expanded-content { display: block; flex: 1; overflow-y: auto; }: Simultaneously, when the widget is maximized, the expanded content is revealed. flex: 1 ensures it takes up all available vertical space, and overflow-y: auto enables internal scrolling for extensive content.
+            .widget.maximized .expanded-content { display: flex; flex: 1; overflow-y: auto; }: Simultaneously, when the widget is maximized, the expanded content is revealed. flex: 1 ensures it takes up all available vertical space, and overflow-y: auto enables internal scrolling for extensive content.
 
     User Experience: This approach delivers a fluid and intuitive modal experience. The expanded widget visually floats above the rest of the dashboard, which becomes temporarily dimmed and non-interactive. The ability to close the modal by clicking outside the widget enhances user comfort.
 
@@ -836,41 +879,41 @@ Users have the capability to permanently remove unwanted widgets from their dash
 
     Client-Side (JavaScript):
 
-        Event Listener (document.body.addEventListener('click', ...)): The delegated click listener on document.body detects clicks on elements with the remove-widget class.
+        Event Listener (mainContent.addEventListener('click', ...)): The delegated click listener on mainContent detects clicks on elements with the remove-widget class.
 
         Maximized State Check: The script first checks if the clicked widget is currently in the maximized (expanded) state. If it is, the "X" button functionality is repurposed to act as a "minimize" button, and toggleWidgetExpansion() is called to revert the widget to its normal size. This prevents accidentally removing a widget that is being actively viewed in detail.
 
-        Disabled Check (target.classList.contains('disabled')): Before proceeding, it verifies if the "Remove" button has the disabled CSS class. This class is applied by JavaScript when the "Show All Available Widgets" mode is active (as individual widget removal is disallowed in that mode). If disabled, an informational modal is shown, and the process stops.
+        Disabled Check (removeButton.classList.contains('disabled')): Before proceeding, it verifies if the "Remove" button has the disabled CSS class. This class is applied by JavaScript when the "Show All Available Widgets" mode is active (as individual widget removal is disallowed in that mode). If disabled, an informational modal is shown, and the process stops.
 
         Confirmation Modal: If the widget is not maximized and not disabled, a showMessageModal() (the custom alert/confirmation modal) is displayed. This asks the user to confirm their intent to remove the widget, providing a crucial safeguard against accidental deletion.
 
-        Form Submission (submitActionForm()): If the user confirms the removal within the modal, the submitActionForm() helper function is invoked. This function dynamically generates a hidden HTML <form> element.
+        API Call: If the user confirms the removal within the modal, a fetch POST request is made to api.php.
 
-        Payload Construction: The form is populated with:
+        Payload Construction: The request body is a JSON string containing:
 
-            A hidden input name="action_type" with the value remove_widget. This signals to the PHP backend the type of action requested.
+            action: 'remove_widget'
 
-            A hidden input name="widget_index" containing the zero-based numerical index of the widget within the active_widgets array. This index is dynamically rendered into a data-index attribute on the "Remove" button by PHP when the page is generated.
+            widget_id: The ID of the widget to remove (obtained from removeButton.dataset.widgetId).
 
-        Page Reload: The form is appended to the <body> and form.submit() is immediately called. This action triggers a full page POST request to index.php.
+        Page Reload: On successful response from api.php, location.reload() is called to refresh the dashboard and reflect the removal.
 
-    Server-Side (PHP index.php):
+    Server-Side (PHP api.php):
 
-        Request Reception: Upon receiving the POST request, index.php processes the $_POST superglobal. It checks specifically for $_POST['action_type'] === 'remove_widget' and verifies that $_POST['widget_index'] is present.
+        Request Reception: api.php receives the POST request, decodes the JSON payload, and checks for action === 'remove_widget' and the widget_id.
 
-        "Show All Widgets" Mode Enforcement: A server-side check confirms that the show_all_available_widgets setting is false. If this mode is active, the removal operation is gracefully skipped, and an informational message is logged to the server's error logs (as direct widget modification is prevented in this mode).
+        "Show All Widgets" Mode Enforcement: A server-side check confirms that the show_all_available_widgets setting is false. If this mode is active, the removal operation is gracefully skipped, and an error response is returned.
 
-        active_widgets Array Manipulation: If the removal is permitted, PHP accesses the $_SESSION['active_widgets'] array.
+        active_widgets Array Manipulation: If the removal is permitted, PHP accesses the $_SESSION['active_widgets'] array. It iterates through the array to find the widget with the matching widget_id and removes it.
 
-            unset($_SESSION['active_widgets'][$widget_index_to_remove]);: The array entry corresponding to the specified widget_index is removed. It's important to note that unset() leaves a "gap" in the array's numerical keys.
-
-            $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']);: This is a crucial step. It re-indexes the array, creating a new array where all numeric keys are sequential from 0. This re-indexing is vital for consistent rendering by PHP's foreach loops and for correct future index lookups by JavaScript.
+        $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']);: This is a crucial step. It re-indexes the array, creating a new array where all numeric keys are sequential from 0. This re-indexing is vital for consistent rendering by PHP's foreach loops and for correct future index lookups by JavaScript.
 
         Persistence Trigger: The $has_state_changed flag is set to true. This flag then ensures that the saveDashboardState() function is called.
 
         Data Saving: saveDashboardState() writes the now-modified $_SESSION['active_widgets'] (with the widget permanently removed) to dashboard_settings.json, ensuring the change persists across browser sessions.
 
-    User Experience: As the form.submit() triggers a full page reload, the browser, compelled by the Cache-Control headers, fetches the latest HTML from index.php. This new HTML is generated based on the updated dashboard_settings.json, resulting in the removed widget no longer being present on the dashboard.
+        JSON Response: Returns a JSON response indicating success: true or success: false with an error message.
+
+    User Experience: As location.reload() is triggered, the browser fetches the latest HTML from index.php. This new HTML is generated based on the updated dashboard_settings.json, resulting in the removed widget no longer being present on the dashboard.
 
 5.3. Widget Addition (Drag-and-Drop & Button)
 
@@ -878,107 +921,89 @@ Widgets can be added to the dashboard using two distinct user interfaces: by dra
 
     Trigger:
 
-        Drag-and-Drop: Initiated by dragging a .widget-item element from the "Widget Library" section in the sidebar and releasing (dropping) it onto the #widget-container (the main content area).
+        Drag-and-Drop: Initiated by dragging a .widget-item element from the "Widget Library" section in the sidebar and releasing (dropping) it onto the #mainContent (the main content area).
 
-        "Add Widget to Dashboard" Button: Clicking this button within the global settings panel, after a widget has been selected from the dropdown.
+        "Create New Widget Template" Button: Clicking this button within the Widget Management modal.
 
     Client-Side (JavaScript):
 
         Drag-and-Drop Event Listeners:
 
-            dragstart on .widget-item: When a widget library item begins to be dragged, e.dataTransfer.setData('text/plain', target.dataset.widgetId) is used to store the widget's ID in the drag event's data transfer object.
+            dragstart on .draggable (sidebar widget items): Stores the widgetId in e.dataTransfer.
 
-            dragover, dragleave on main-content: These listeners provide visual feedback (e.g., changing the background color of the main-content area) to indicate a valid drop target during the drag operation. e.preventDefault() is essential in dragover to allow for a drop.
+            dragover, dragleave on mainContent: Provide visual feedback for valid drop targets. e.preventDefault() is essential in dragover to allow for a drop.
 
-            drop on main-content: When a draggable item is dropped, e.dataTransfer.getData('text/plain') retrieves the widget_id.
+            drop on mainContent: Retrieves widgetId from e.dataTransfer.
 
-        "Show All Widgets" Mode Restriction: Before initiating any add operation (whether via drag-and-drop or the button), JavaScript performs a client-side check. It queries the state of the #show_all_available_widgets toggle. If "Show All Widgets" mode is active, it displays an informative modal (showMessageModal) to the user, explaining that adding widgets is disabled in this mode, and then prevents the form submission. This provides immediate feedback and prevents unnecessary server requests.
+        "Show All Widgets" Mode Restriction: Before initiating any add operation (whether via drag-and-drop or the button), JavaScript performs a client-side check. It queries the state of the #showAvailableWidgets toggle. If "Show All Widgets" mode is active, it displays an informative modal (showMessageModal) to the user, explaining that adding widgets is disabled in this mode, and then prevents the action. This provides immediate feedback and prevents unnecessary server requests.
 
-        Common Submission Logic (submitActionForm()): Both drag-and-drop and the "Add Widget" button ultimately funnel their logic through a call to the submitActionForm('add_widget', { widget_id: widgetId }) helper function. This centralizes the form submission process.
+        API Call: For drag-and-drop, a fetch POST request is made to api.php with action: 'add_widget' and the widget_id.
 
-        Payload Construction: The dynamically created hidden form contains:
+        createNewWidgetTemplate(): This function handles the button click for creating a new widget file. It sends a fetch POST request to api.php with action: 'create_widget_template' and the widget_id.
 
-            A hidden input with name="action_type" set to add_widget.
+        Page Reload: On successful response from api.php for adding or creating, location.reload() is called to refresh the dashboard and reflect the changes.
 
-            A hidden input with name="widget_id" set to the unique ID of the widget being added.
+    Server-Side (PHP api.php):
 
-        Page Reload: The form is appended to the <body> and form.submit() is immediately called, triggering a full page POST request to index.php.
+        action === 'add_widget':
 
-    Server-Side (PHP index.php):
+            Receives widget_id.
 
-        Request Reception: index.php receives the POST request and checks if $_POST['action_type'] === 'add_widget' and if $_POST['widget_id'] is present.
+            Performs server-side check for show_all_available_widgets mode.
 
-        "Show All Widgets" Mode Enforcement: A server-side check is also performed to ensure !$settings['show_all_available_widgets']. If "Show All" mode is active, the add operation is skipped (as this mode overrides individual widget management), and a warning is logged.
+            Appends a new widget entry (with id, position, default width, height from config.php) to $_SESSION['active_widgets'].
 
-        active_widgets Array Manipulation: If the action is permitted, PHP accesses the $_SESSION['active_widgets'] array.
+            Calls saveDashboardState() to persist the change.
 
-            A new associative array representing the added widget is created. This new entry includes:
+            Returns JSON success: true.
 
-                'id' (from $_POST['widget_id']).
+        action === 'create_widget_template':
 
-                'position' (a new incremental position for simple ordering).
+            Receives widget_id.
 
-                'width' and 'height' (retrieved from the widget's default dimensions as defined in its $_widget_config and made available via the global $available_widgets array).
+            Generates a new PHP file in the widgets/ directory based on widgets/template.php.
 
-            This new widget entry is then appended to the $_SESSION['active_widgets'] array.
+            Returns JSON success: true or false with error.
 
-        Persistence Trigger: The $has_state_changed flag is set to true, which ensures that saveDashboardState() is called.
-
-        Data Saving: saveDashboardState() writes the updated $_SESSION['active_widgets'] (now including the newly added widget) to dashboard_settings.json, making the addition persistent.
-
-    User Experience: Following the full page reload initiated by the form.submit(), the browser re-renders the dashboard based on the updated dashboard_settings.json. The newly added widget will now appear in the dashboard's main content area.
+    User Experience: Following the full page reload, the newly added widget will now appear in the dashboard's main content area, or the new template will be available in the "Available Widgets" sidebar.
 
 5.4. "Show All Available Widgets" Mode
 
 This powerful setting provides a quick way to toggle the dashboard's display behavior between a custom-curated selection of widgets and a comprehensive view that includes every available widget from the library. It acts as a global override for individual widget management.
 
-    Trigger: Toggling the "Show All Available Widgets" checkbox located within the "General Settings" group of the global settings panel.
+    Trigger: Toggling the "Show All Available Widgets" checkbox located within the "Widget Behavior" group of the global settings panel.
 
     Client-Side (JavaScript):
 
-        Event Listener (#show_all_available_widgets.addEventListener('change', ...)): A change event listener is attached to the checkbox. This listener ensures that updateAddRemoveButtonStates() is called immediately when the toggle's state changes.
+        Event Listener (#showAvailableWidgets.addEventListener('change', ...)): A change event listener is attached to the checkbox. This listener ensures that the UI's interactive elements are immediately updated.
 
-        updateAddRemoveButtonStates() Function: This crucial function is invoked on DOMContentLoaded (for initial setup) and whenever the toggle's state changes. Its responsibilities are:
+        UI Synchronization: The JavaScript dynamically applies or removes the disabled CSS class and the disabled HTML attribute to several interactive elements (e.g., "Create New Widget" button, "Deactivate" buttons on active widgets). This provides clear, immediate feedback to the user, indicating that adding or removing individual widgets (as well as adjusting individual dimensions) is not permitted while "Show All Widgets" mode is active.
 
-            UI Synchronization: It dynamically applies or removes the disabled CSS class and the disabled HTML attribute to several interactive elements:
+        Form Submission: When the global settings form is submitted, the value of the showAvailableWidgets checkbox is sent as part of the settings payload to api.php via action: 'save_settings'.
 
-                The "New Widget" button in the dashboard header (#new-widget-btn).
+    Server-Side (PHP api.php):
 
-                The "Select Widget" dropdown (#widget_select) in the settings panel.
+        Request Reception (action === 'save_settings'): When api.php receives a POST request with action='save_settings', it reads the show_available_widgets value from the JSON payload.
 
-                The "Add Widget to Dashboard" button in the settings panel (button[name="add_widget"]).
+        Conditional active_widgets Generation (Critical Logic):
 
-                All individual widget "Remove" (fa-times) action buttons.
-
-            Contextual Feedback: This visual and functional disabling provides clear, immediate feedback to the user, indicating that adding or removing individual widgets (as well as adjusting individual dimensions) is not permitted while "Show All Widgets" mode is active, as the dashboard is forced to display everything.
-
-            Widget Settings Modal Adjustment: If the individual widget settings modal is currently open, this function also updates the disabled state of its width/height input fields and save button, providing consistent feedback.
-
-        Form Submission: When the global settings form is submitted, the value of the show_all_available_widgets checkbox ('1' for checked, '0' for unchecked) is sent as a POST parameter.
-
-    Server-Side (PHP index.php):
-
-        Request Reception (action_type === 'update_settings'): When index.php receives a POST request with action_type='update_settings', it reads the show_all_available_widgets value from $_POST.
-
-        Conditional active_widgets Generation (Critical Logic): This is where the core logic for the "Show All" mode resides:
-
-            Enabling "Show All": If the show_all_available_widgets setting is now true (and it was previously false):
+            Enabling "Show All": If the show_available_widgets setting is now true (and it was previously false):
 
                 The $_SESSION['active_widgets'] array is completely overwritten.
 
                 It is repopulated by iterating through the entire $available_widgets array (which contains metadata for all widgets registered via config.php).
 
-                Each available widget is added to $_SESSION['active_widgets'] with its id, a new position, and its default width and height dimensions (as defined in its $_widget_config).
+                Each available widget is added to $_SESSION['active_widgets'] with its id, a new position, and its default width and height dimensions.
 
-                The list is then sorted alphabetically by id using usort() to ensure a consistent display order when all widgets are shown. This action effectively "resets" the dashboard layout to include every possible widget in a predefined order.
+                The list is then sorted alphabetically by id using usort() to ensure a consistent display order. This action effectively "resets" the dashboard layout to include every possible widget.
 
-            Disabling "Show All": If the show_all_available_widgets setting is now false (and it was previously true):
+            Disabling "Show All": If the show_available_widgets setting is now false (and it was previously true):
 
                 The $_SESSION['active_widgets'] array is not explicitly overwritten in this block.
 
-                Instead, because loadDashboardState() is called at the very beginning of every index.php request, when "Show All" is turned off, the active_widgets list in $_SESSION will automatically revert to the last saved state from dashboard_settings.json (which would be the manually curated list that existed before "Show All" was enabled).
+                Instead, because loadDashboardState() is called at the very beginning of every request, when "Show All" is turned off, the active_widgets list in $_SESSION will automatically revert to the last saved state from dashboard_settings.json (which would be the manually curated list that existed before "Show All" was enabled).
 
-        Persistence: The updated show_all_available_widgets setting, along with the potentially modified (or reverted) $_SESSION['active_widgets'] list, is saved persistently to dashboard_settings.json via saveDashboardState().
+        Persistence: The updated show_available_widgets setting, along with the potentially modified (or reverted) $_SESSION['active_widgets'] list, is saved persistently to dashboard_settings.json via saveDashboardState().
 
     User Experience:
 
@@ -990,67 +1015,33 @@ This powerful setting provides a quick way to toggle the dashboard's display beh
 
 This feature allows users to customize the width and height (in grid units) of individual widgets on the dashboard, providing fine-grained control over their layout. These custom dimensions override the widget's default dimensions and are persistently saved.
 
-    Trigger: Clicking the "Cog" icon (fa-cog) on a specific widget's header.
+    Trigger: Clicking the "Manage Widgets" button in the header, then editing the width/height inputs in the modal.
 
     Client-Side (JavaScript):
 
-        Event Listener: The delegated click listener on document.body detects clicks on elements with the action-settings class.
+        Event Listener: The saveWidgetManagementBtn in the "Manage Widgets" modal triggers saveWidgetManagementChanges().
 
-        Data Retrieval: When an action-settings button is clicked, JavaScript extracts specific data-* attributes from the parent widget element:
+        Data Retrieval: The function iterates through each row in the activeWidgetsTableBody, extracting the widgetId, and the width and height values from the input fields.
 
-            data-widget-id: The unique ID of the widget.
+        "Show All Widgets" Mode Check: A client-side check is performed to ensure that the "Show All Widgets" mode is not active before sending the update request.
 
-            data-widget-index: The current index of the widget within the active_widgets array in the DOM. This is crucial for updating the correct widget entry on the server.
+        API Call: A fetch POST request is made to api.php with action: 'update_active_widgets' and an array of updatedWidgets (containing id, width, height, position).
 
-            data-current-width: The current width of the widget.
+        Page Reload: On successful response from api.php, location.reload() is called to refresh the dashboard and reflect the changes.
 
-            data-current-height: The current height of the widget.
+    Server-Side (PHP api.php):
 
-        showWidgetSettingsModal(): This function is invoked, passing the retrieved widget name, index, width, and height.
-
-        Modal Population: The showWidgetSettingsModal() function populates the input fields within the #widget-settings-modal with the widget's current dimensions and sets the hidden widget-settings-index field.
-
-        "Show All Widgets" Mode Check: The modal's input fields and "Save Dimensions" button are disabled if "Show All Widgets" mode is currently active. An informative message is also displayed on the button.
-
-        Form Submission (widget-dimensions-form.addEventListener('submit', ...)): When the "Save Dimensions" button inside the widget settings modal is clicked:
-
-            e.preventDefault() prevents the default browser form submission.
-
-            A final check for "Show All Widgets" mode is performed client-side to ensure no invalid requests are sent.
-
-            submitActionForm('update_widget_dimensions', { widget_index: ..., new_width: ..., new_height: ... }) is called.
-
-        Payload: The hidden form sent to PHP contains:
-
-            name="action_type" set to update_widget_dimensions.
-
-            name="widget_index": The index of the widget to update.
-
-            name="new_width": The new width value.
-
-            name="new_height": The new height value.
-
-        Page Reload: form.submit() triggers a full page POST request to index.php.
-
-    Server-Side (PHP index.php):
-
-        Request Reception (action_type === 'update_widget_dimensions'): index.php receives the POST request and checks for this action_type along with widget_index, new_width, and new_height.
+        Request Reception (action === 'update_active_widgets'): api.php receives the POST request and checks for this action along with the active_widgets array.
 
         "Show All Widgets" Mode Enforcement: A server-side check ensures !$settings['show_all_available_widgets']. If "Show All" mode is active, the dimension update is skipped, and an error is logged.
 
-        active_widgets Array Update: If the action is permitted, PHP accesses $_SESSION['active_widgets'] at the given widget_index.
-
-            $_SESSION['active_widgets'][$widget_index]['width'] = $new_width;
-
-            $_SESSION['active_widgets'][$widget_index]['height'] = $new_height;
-
-            The width and height properties for that specific widget instance are updated in the session.
+        active_widgets Array Update: If the action is permitted, PHP iterates through the received active_widgets array and updates the corresponding entries in $_SESSION['active_widgets'].
 
         Persistence Trigger: The $has_state_changed flag is set to true, ensuring saveDashboardState() is called.
 
-        Data Saving: saveDashboardState() writes the modified $_SESSION['active_widgets'] (now with the updated dimensions for that widget) to dashboard_settings.json, making the dimension change permanent.
+        Data Saving: saveDashboardState() writes the modified $_SESSION['active_widgets'] (now with the updated dimensions for those widgets) to dashboard_settings.json, making the dimension change permanent.
 
-    User Experience: After the page reload, the dashboard is re-rendered using the updated dimensions from dashboard_settings.json. The affected widget will now occupy its new custom size in the grid.
+    User Experience: After the page reload, the dashboard is re-rendered using the updated dimensions from dashboard_settings.json. The affected widgets will now occupy their new custom sizes in the grid.
 
 6. Debugging and Troubleshooting Guide
 
@@ -1089,11 +1080,11 @@ Effective debugging is paramount for maintaining and extending the CMS. This sec
 
             JavaScript Errors: Look for red error messages indicating issues in dashboard.js. Click on the error to go to the specific line of code.
 
-            console.log() Output: The dashboard.js file is instrumented with numerous console.log() statements (e.g., in submitActionForm). Monitor this tab to see the flow of JavaScript execution, values being sent in POST requests, and internal state. This is invaluable for tracking client-side behavior.
+            console.log() Output: The dashboard.js file is instrumented with numerous console.log() statements (e.g., in showMessageModal and fetch calls). Monitor this tab to see the flow of JavaScript execution, values being sent in requests, and internal state. This is invaluable for tracking client-side behavior.
 
         Network Tab:
 
-            Inspect Requests: After any user interaction that triggers a server request (e.g., clicking a button, dragging a widget, reloading the page), observe the HTTP requests. Filter for index.php.
+            Inspect Requests: After any user interaction that triggers a server request (e.g., clicking a button, dragging a widget, reloading the page), observe the HTTP requests. Filter for api.php or index.php.
 
             Headers: Examine the "Headers" sub-tab. Verify:
 
@@ -1101,9 +1092,9 @@ Effective debugging is paramount for maintaining and extending the CMS. This sec
 
                 Cache-Control headers are correctly set by index.php to no-store, no-cache, etc. If you're seeing cached content, these headers might not be applied correctly by the server or an upstream proxy.
 
-            Payload: Check the "Payload" (or "Request Body") sub-tab. This shows the exact data (action_type, widget_id, widget_index, new_width, new_height, etc.) that your JavaScript sent to the PHP backend. This is crucial for verifying that the client is sending the correct parameters PHP expects.
+            Payload: Check the "Payload" (or "Request Body") sub-tab. This shows the exact JSON data (action, widget_id, settings, active_widgets, etc.) that your JavaScript sent to the PHP backend. This is crucial for verifying that the client is sending the correct parameters PHP expects.
 
-            Response: View the "Response" sub-tab. This displays the raw HTML (or any text) that PHP sent back. Any PHP error messages or debugging output (var_dump, echo) that were not intended for the final UI will appear here. This helps confirm what PHP is processing and returning.
+            Response: View the "Response" sub-tab. This displays the raw JSON (or HTML if index.php is accessed directly) that PHP sent back. Any PHP error messages or debugging output (var_dump, echo) that were not intended for the final UI will appear here. This helps confirm what PHP is processing and returning.
 
     Debug Info Stream Widget:
 
@@ -1134,6 +1125,30 @@ Effective debugging is paramount for maintaining and extending the CMS. This sec
         Cause 3: Cache: The browser or an intermediary proxy is serving a cached version of index.php.
 
         Solution 3: Verify Cache-Control headers are correctly set in index.php. Perform a "hard refresh" in your browser (Ctrl+F5 or Cmd+Shift+R).
+
+    Widgets are not arranging side-by-side (only one per row).
+
+        Cause 1: Insufficient Grid Columns: The grid-template-columns definition in dashboard.css might not be allowing enough columns, or the minmax() values are too large.
+
+        Solution 1: Ensure grid-template-columns on .main-content is using repeat(X, minmax(0, 1fr)) with an appropriate X (e.g., 8 for desktop) and that min-width: 0; is applied to .main-content itself.
+
+        Cause 2: Widget Minimum Width: The .widget elements themselves have an implicit minimum width (due to content, padding, etc.) that prevents the grid columns from shrinking enough to allow multiple widgets per row.
+
+        Solution 2: Crucially, ensure min-width: 0; is applied directly to the .widget CSS rule. This allows the browser to shrink the widget as needed for grid distribution.
+
+        Cause 3: Combined Widget Width Exceeds Grid Capacity: If the sum of --width values for widgets in a single row exceeds the total columns available in the main-content grid (e.g., an IDE widget with --width: 6; and a Stats widget with --width: 4; will sum to 10, exceeding the 8-column desktop grid), they will naturally wrap.
+
+        Solution 3: Adjust widget width settings in the "Manage Widgets" modal to ensure their combined size fits within the grid's column capacity for the given screen size. Test with small widgets (e.g., two 1.0 width widgets, which sum to 4 internal units) to isolate the grid behavior.
+
+        Cause 4: CSS Specificity/Override: Another CSS rule, potentially inline or from a different stylesheet, is overriding the grid-template-columns or grid-column properties.
+
+        Solution 4: Use browser developer tools (Elements tab, Styles panel) to inspect .main-content and .widget. Look for grid-template-columns, grid-column, and min-width properties. If they are struck through or have a warning icon, another rule is overriding them. Identify the conflicting rule and adjust its specificity or remove it.
+
+    Modals (Settings, Widget Management, Confirmation) are not centered.
+
+        Cause: Conflicting CSS, or the position: fixed context is not correctly established.
+
+        Solution: Ensure html, body { height: 100%; } is present. Verify that .message-modal-overlay has position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;. Also, ensure .message-modal has margin: auto;. If issues persist, the use of !important flags on these properties in dashboard.css (position: fixed !important;, margin: auto !important; etc.) has been added as a strong diagnostic measure to force their application.
 
     Widgets are added/removed/resized, but they revert when "Show All Widgets" is toggled.
 
@@ -1204,33 +1219,33 @@ The current CMS provides a solid, flexible foundation. Here are potential future
 
 This is a frequently requested feature that allows users to visually rearrange widgets on the dashboard.
 
-    Current State: Widgets are currently rendered based on their position in the active_widgets array. Changes to order require manually removing and re-adding.
+    Current State: Widgets are currently rendered based on their position in the active_widgets array. Changes to order require manually removing and re-adding. The latest dashboard.js now includes basic drag-and-drop reordering functionality that saves positions to the server.
 
     Implementation Strategy:
 
         Client-Side (JavaScript):
 
-            Drag & Drop Library/API: Leverage a dedicated JavaScript drag-and-drop library (e.g., SortableJS, interact.js, or HTML5 Drag and Drop API with custom logic).
+            Drag & Drop Library/API: Leverages the HTML5 Drag and Drop API with custom logic.
 
-            Visual Feedback: Implement visual cues during dragging (e.g., a "ghost" image of the dragged widget, highlighting of valid drop zones, animated reordering of other widgets).
+            Visual Feedback: Implements a widget-placeholder to provide visual feedback during dragging.
 
-            DOM Reordering: When a widget is dropped in a new position, the JavaScript logic needs to dynamically update the order of the actual DOM elements within the #widget-container.
+            DOM Reordering: Updates the order of DOM elements within #mainContent during drag.
 
-            State Reconstruction: After a successful reorder, the JavaScript must construct a new, reordered array of widget ids (and their associated width/height) based on the updated DOM order. This new array represents the desired active_widgets state.
+            State Reconstruction: After a successful reorder, constructs a new, reordered array of widget ids (and their associated width/height) based on the updated DOM order.
 
-            Asynchronous Request (AJAX): Send an AJAX POST request (using fetch API) to index.php. This request would contain the updated, reordered active_widgets array. AJAX is highly preferred here to avoid a full page reload for a purely layout change, providing a smoother user experience. The response from PHP would likely be a simple JSON status (e.g., {'status': 'success'}).
+            Asynchronous Request (AJAX): Sends an AJAX POST request (using fetch API) to api.php with action: 'update_widget_positions' and the new ordered array.
 
-        Server-Side (PHP index.php):
+        Server-Side (PHP api.php):
 
-            New Action Type: Introduce a new action_type (e.g., 'reorder_widgets') to index.php's POST handling logic.
+            New Action Type: Handles action: 'update_widget_positions'.
 
-            Payload Processing: PHP would receive the new ordered array of widget ids (and dimensions) from the AJAX request (e.g., in $_POST['reordered_widgets_data']).
+            Payload Processing: Receives the new ordered array of widget data.
 
-            Update active_widgets: The $_SESSION['active_widgets'] array would be completely replaced with this new, reordered data. The position property for each widget would be re-calculated based on its new index in the array.
+            Update active_widgets: Completely replaces $_SESSION['active_widgets'] with this new, reordered data. The position property for each widget is re-calculated based on its new index in the array.
 
-            Persistence: Call saveDashboardState() to write this new active_widgets array to dashboard_settings.json.
+            Persistence: Calls saveDashboardState() to write this new active_widgets array to dashboard_settings.json.
 
-            Response: Send a minimal JSON response back to the client (echo json_encode(['status' => 'success']);).
+            Response: Sends a minimal JSON response back to the client (echo json_encode(['success' => true]);).
 
     Benefits: Provides a highly intuitive and interactive way for users to personalize their dashboard layout with visual drag-and-drop actions.
 
@@ -1238,7 +1253,7 @@ This is a frequently requested feature that allows users to visually rearrange w
 
 Beyond simple widget reordering, offering options to dynamically change the grid layout of the main content area would further enhance customization.
 
-    Current State: The main-content currently uses grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); which creates columns automatically.
+    Current State: The main-content currently uses a responsive grid with a fixed maximum of 8 internal columns on desktop, adapting via media queries.
 
     Implementation Strategy:
 
@@ -1246,9 +1261,9 @@ Beyond simple widget reordering, offering options to dynamically change the grid
 
         Client-Side (JavaScript/CSS):
 
-            When these settings are updated, dashboard.js would need to dynamically modify the CSS styles of the #widget-container element. This could involve updating the grid-template-columns CSS property directly via element.style.gridTemplateColumns based on the user's selection.
+            When these settings are updated, dashboard.js would need to dynamically modify the CSS styles of the #mainContent element. This could involve updating the grid-template-columns CSS property directly via element.style.gridTemplateColumns based on the user's selection.
 
-            Alternatively, new CSS classes could be defined (e.g., .grid-2-columns, .grid-3-columns), and JavaScript would toggle these classes on the main-content element.
+            Alternatively, new CSS classes could be defined (e.g., .grid-2-columns, .grid-3-columns), and JavaScript would toggle these classes on the mainContent element.
 
             The dashboard.css file would need to include flexible rules to respond to these dynamic changes.
 
@@ -1259,3 +1274,79 @@ Beyond simple widget reordering, offering options to dynamically change the grid
             Save these new settings to dashboard_settings.json alongside other global settings.
 
     Benefits: Allows users greater control over the density and arrangement of their widgets, optimizing the dashboard for different screen sizes, resolutions, or personal viewing preferences. For instance, a user with a large monitor might prefer a 4-column layout, while a user on a smaller screen might opt for 1 or 2 columns.
+
+9. Changelog
+
+This document outlines significant changes and improvements made to the dashboard application.
+Version 0.1.0 - Initial Setup (Implicit)
+
+    Basic dashboard structure with header, sidebar, and main content area.
+
+    Initial CSS styling for a glass theme.
+
+    Core PHP logic for loading widgets and dashboard settings.
+
+Version 0.2.0 - Widget Sizing and Persistence (Implicit)
+
+    Implemented functionality to define and save widget dimensions (width and height) in dashboard_settings.json.
+
+    Introduced "half-unit" sizing (e.g., 0.5, 1.5) for widgets, with PHP converting these to internal grid units for CSS.
+
+    Added "Show All Available Widgets" toggle in settings.
+
+    Introduced drag-and-drop for reordering existing widgets on the dashboard.
+
+    Added a "Widget Management" modal for adjusting individual widget dimensions and deactivating widgets.
+
+    Implemented a "Create New Widget Template" feature, allowing users to generate new PHP widget files.
+
+    Added IDE widget for file editing.
+
+Version 0.3.0 - June 30, 2025
+Features & Improvements:
+
+    Enhanced Dynamic Grid Layout:
+
+        Implemented an explicit column-based CSS Grid for the main content area (.main-content).
+
+        The grid now uses repeat(X, minmax(0, 1fr)) for its columns. This crucial change ensures that columns correctly distribute available space proportionally, even when content might otherwise try to force them wider, thereby resolving the persistent "single widget per row" issue.
+
+        Media queries dynamically adjust the column count for different screen sizes:
+
+            @media (min-width: 1200px): repeat(8, minmax(0, 1fr)) (allows for 4 full-width widgets or 8 half-width widgets in a row).
+
+            @media (max-width: 1199px) and (min-width: 992px): repeat(6, minmax(0, 1fr)) (3 full units).
+
+            @media (max-width: 991px) and (min-width: 768px): repeat(4, minmax(0, 1fr)) (2 full units).
+
+            @media (max-width: 767px): repeat(2, minmax(0, 1fr)) (1 full unit on mobile).
+
+        grid-auto-flow: dense; is maintained to encourage efficient filling of empty spaces.
+
+    Robust Modal Centering:
+
+        Strengthened CSS for .message-modal-overlay and .message-modal with !important flags on position, top, left, width, height, display, justify-content, align-items, and margin to ensure modals are forced to center, addressing previous off-screen rendering issues.
+
+        Added html, body { height: 100%; } to ensure the viewport is correctly sized for fixed positioning.
+
+    Improved Widget Deactivation:
+
+        Refactored JavaScript event listener for "Deactivate" buttons within the Widget Management modal to use robust event delegation, ensuring dynamically added buttons are always clickable.
+
+        Verified the fetch call and data payload for the deactivate_widget action in api.php.
+
+Bug Fixes:
+
+    Resolved Persistent Single-Column Layout Issue: The primary fix for widgets stacking one per row, allowing them to flow into multiple columns as intended, achieved by adding min-width: 0; to the .widget grid items. This prevents widget content from implicitly forcing columns wider than intended.
+
+    Corrected Modal Positioning: Fixed the bug where modals were rendering partially off-screen by enforcing centering properties with !important.
+
+    Restored Widget Deactivation Functionality: Fixed the issue preventing widgets from being deactivated via the "Manage Widgets" modal.
+
+Technical Notes:
+
+    Added min-width: 0; to both .main-content and, critically, to .widget to prevent implicit minimum content widths from breaking grid column distribution.
+
+    Explicitly set box-sizing: border-box; for .main-content and .widget for consistent layout calculations.
+
+    Regenerated index.php and dashboard.js to ensure consistency and incorporate all latest fixes.
