@@ -38,6 +38,7 @@ define('APP_ROOT', __DIR__);
  */
 $default_dashboard_state = [
     'title' => 'Glass Dashboard',
+    'header_icon' => 'fas fa-gem', // New: Default header icon
     'accent_color' => '#6366f1',
     'glass_intensity' => 0.6,
     'blur_amount' => '10px',
@@ -341,105 +342,62 @@ if ($is_ajax_request) {
                     $response['message'] = "Failed to delete settings file. Check permissions.";
                 }
             } else {
-                $response['message'] = "Settings file does not exist.";
+                $response = ['status' => 'success', 'message' => 'Settings file already absent.'];
             }
             break;
-        case 'get_active_widgets_data': // NEW: AJAX to get active widget data for the management panel
-            global $available_widgets;
-            $current_dashboard_state = loadDashboardState();
-            $active_widgets_data = [];
-            foreach ($current_dashboard_state['active_widgets'] as $index => $widget_entry) {
-                $widget_id = $widget_entry['id'];
-                // Ensure widget_def exists before accessing its properties
-                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1.0, 'height' => 1.0];
-                $active_widgets_data[] = [
-                    'id' => $widget_id,
-                    'index' => $index, // Important for updates
-                    'name' => $widget_def['name'],
-                    'icon' => $widget_def['icon'],
-                    'width' => (float)$widget_entry['width'], // Ensure float
-                    'height' => (float)$widget_entry['height'] // Ensure float
-                ];
-            }
-            $response = ['status' => 'success', 'widgets' => $active_widgets_data];
-            break;
-        case 'update_single_widget_dimensions': // NEW: AJAX to update a single widget's dimensions
-            $widget_index = (int)$_POST['widget_index'];
-            $new_width = (float)$_POST['new_width']; // Cast to float
-            $new_height = (float)$_POST['new_height']; // Cast to float
-
-            // Clamp values between 0.5 and 3.0 for width, 0.5 and 4.0 for height
-            $new_width = max(0.5, min(3.0, $new_width));
-            $new_height = max(0.5, min(4.0, $new_height));
-
-            $current_dashboard_state = loadDashboardState();
-            if (isset($current_dashboard_state['active_widgets'][$widget_index])) {
-                $current_dashboard_state['active_widgets'][$widget_index]['width'] = $new_width;
-                $current_dashboard_state['active_widgets'][$widget_index]['height'] = $new_height;
-                if (saveDashboardState($current_dashboard_state)) {
-                    $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
-                    $response = ['status' => 'success', 'message' => 'Widget dimensions updated.'];
-                } else {
-                    $response['message'] = 'Failed to save widget dimensions.';
-                }
-            } else {
-                $response['message'] = 'Widget not found at specified index.';
-            }
-            break;
-        case 'update_widget_order': // NEW: AJAX to update the order of widgets
-            $new_order_ids = json_decode($_POST['order'], true); // Expects an array of widget IDs in new order
-            if (!is_array($new_order_ids)) {
-                $response['message'] = 'Invalid order data received.';
-                break;
-            }
-
-            $current_dashboard_state = loadDashboardState();
-            $old_active_widgets = $current_dashboard_state['active_widgets'];
-            $new_active_widgets = [];
-
-            // Reconstruct active_widgets based on the new order, preserving dimensions
-            foreach ($new_order_ids as $ordered_id) {
-                foreach ($old_active_widgets as $old_widget) {
-                    if ($old_widget['id'] === $ordered_id) {
-                        $new_active_widgets[] = $old_widget;
-                        break; // Found and added, move to next ordered ID
+        case 'add_widget':
+            $widget_id = $_POST['widget_id'] ?? '';
+            if (!empty($widget_id) && isset($available_widgets[$widget_id])) {
+                $current_dashboard_state = loadDashboardState();
+                $widget_exists = false;
+                foreach ($current_dashboard_state['active_widgets'] as $active_widget) {
+                    if ($active_widget['id'] === $widget_id) {
+                        $widget_exists = true;
+                        break;
                     }
                 }
-            }
-            
-            // Ensure all original widgets are still present (e.g., if one was not in the new_order_ids)
-            // For simplicity, we'll just use the new_active_widgets as the source of truth for order.
-            // Any widgets not in new_order_ids will be effectively removed from the active list.
-            
-            $current_dashboard_state['active_widgets'] = $new_active_widgets;
-            if (saveDashboardState($current_dashboard_state)) {
-                $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
-                $response = ['status' => 'success', 'message' => 'Widget order updated.'];
+
+                if (!$widget_exists) {
+                    // Add to active widgets with default dimensions from config.php
+                    $new_widget_entry = [
+                        'id' => $widget_id,
+                        'position' => count($current_dashboard_state['active_widgets']) + 1, // Simple position increment
+                        'width' => (float)($available_widgets[$widget_id]['width'] ?? 1.0),
+                        'height' => (float)($available_widgets[$widget_id]['height'] ?? 1.0)
+                    ];
+                    $current_dashboard_state['active_widgets'][] = $new_widget_entry;
+                    if (saveDashboardState($current_dashboard_state)) {
+                        $response = ['status' => 'success', 'message' => htmlspecialchars($available_widgets[$widget_id]['name']) . ' widget added to active list.'];
+                    } else {
+                        $response['message'] = 'Failed to add widget to active list (save error).';
+                    }
+                } else {
+                    $response['message'] = htmlspecialchars($available_widgets[$widget_id]['name']) . ' widget is already active.';
+                }
             } else {
-                $response['message'] = 'Failed to save widget order.';
+                $response['message'] = 'Invalid widget ID.';
             }
             break;
-        case 'remove_widget_from_management': // NEW: AJAX to remove a widget from the management modal
-            $widget_id_to_remove = $_POST['widget_id'];
+        case 'remove_widget':
+            $widget_id = $_POST['widget_id'] ?? '';
             $current_dashboard_state = loadDashboardState();
-            
-            $updated_active_widgets = [];
-            $found = false;
-            foreach ($current_dashboard_state['active_widgets'] as $widget_entry) {
-                if ($widget_entry['id'] !== $widget_id_to_remove) {
-                    $updated_active_widgets[] = $widget_entry;
-                } else {
-                    $found = true;
+            $initial_count = count($current_dashboard_state['active_widgets']);
+            $current_dashboard_state['active_widgets'] = array_values(array_filter(
+                $current_dashboard_state['active_widgets'],
+                function($widget) use ($widget_id) {
+                    return $widget['id'] !== $widget_id;
                 }
-            }
+            ));
 
-            if ($found) {
-                $current_dashboard_state['active_widgets'] = $updated_active_widgets;
+            if (count($current_dashboard_state['active_widgets']) < $initial_count) {
+                // Re-index positions after removal
+                foreach ($current_dashboard_state['active_widgets'] as $key => &$widget) {
+                    $widget['position'] = $key + 1;
+                }
                 if (saveDashboardState($current_dashboard_state)) {
-                    $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
-                    $response = ['status' => 'success', 'message' => 'Widget deactivated successfully.'];
+                    $response = ['status' => 'success', 'message' => 'Widget removed successfully.'];
                 } else {
-                    $response['message'] = 'Failed to save dashboard state after deactivation.';
+                    $response['message'] = 'Failed to remove widget (save error).';
                 }
             } else {
                 $response['message'] = 'Widget not found in active list.';
@@ -464,81 +422,177 @@ if ($is_ajax_request) {
 
             $widget_file_path = APP_ROOT . '/widgets/' . $widget_id . '.php';
             if (file_exists($widget_file_path)) {
-                $response['message'] = 'Widget ID already exists. Please choose a different ID.';
+                $response['message'] = 'A widget with this ID already exists. Please choose a different ID.';
                 break;
             }
+            
+            // Create the widget PHP file content
+            $widget_template_content = "<?php\n" .
+                "// widgets/{$widget_id}.php\n" .
+                "// This widget was dynamically created. Feel free to modify its content.\n" .
+                "?>\n" .
+                "<div class=\"widget-content\">\n" .
+                "    <h3><i class=\"<?= htmlspecialchars(\$widget_icon ?? 'fas fa-cube')?>\"></i> <?= htmlspecialchars(\$widget_name ?? '{$widget_name}') ?></h3>\n" .
+                "    <p>This is your new custom widget: <strong><?= htmlspecialchars(\$widget_name ?? '{$widget_name}') ?></strong> (ID: {$widget_id}).</p>\n" .
+                "    <p>You can edit this file at <code>widgets/{$widget_id}.php</code> to add your desired functionality.</p>\n" .
+                "    <p>Default dimensions: Width <?= htmlspecialchars(\$widget_width ?? '{$widget_width}') ?>, Height <?= htmlspecialchars(\$widget_height ?? '{$widget_height}') ?></p>\n" .
+                "</div>\n";
 
-            // Clamp dimensions
-            $widget_width = max(0.5, min(3.0, $widget_width));
-            $widget_height = max(0.5, min(4.0, $widget_height));
+            if (file_put_contents($widget_file_path, $widget_template_content)) {
+                // Add to dynamic widgets config
+                $dynamic_widgets = loadDynamicWidgets();
+                $dynamic_widgets[$widget_id] = [
+                    'name' => $widget_name,
+                    'icon' => $widget_icon,
+                    'width' => $widget_width,
+                    'height' => $widget_height,
+                    'dynamic' => true // Mark as dynamically created
+                ];
+                if (saveDynamicWidgets($dynamic_widgets)) {
+                    // Try to add it to the active dashboard state immediately
+                    $current_dashboard_state = loadDashboardState();
+                    $new_widget_entry = [
+                        'id' => $widget_id,
+                        'position' => count($current_dashboard_state['active_widgets']) + 1,
+                        'width' => $widget_width,
+                        'height' => $widget_height
+                    ];
+                    $current_dashboard_state['active_widgets'][] = $new_widget_entry;
+                    saveDashboardState($current_dashboard_state); // Save, but don't fail the response if this save fails, as the widget file is created.
 
-            // Generate widget file content
-            $template_content = <<<PHP
-<?php
-// widgets/{$widget_id}.php
-
-// Widget configuration
-\$_widget_config = [
-    'name' => '{$widget_name}',
-    'icon' => '{$widget_icon}',
-    'width' => {$widget_width},
-    'height' => {$widget_height}
-];
-?>
-<div class="compact-content">
-    <div style="text-align: center; padding: 20px;">
-        <p style="font-size: 20px; font-weight: bold; color: var(--accent);">
-            <i class="fas fa-{$widget_icon}"></i> {$widget_name}
-        </p>
-        <p style="font-size: 14px; color: var(--text-secondary);">
-            This is your new widget!
-        </p>
-    </div>
-</div>
-<div class="expanded-content">
-    <h4 style="color: var(--accent); margin-bottom: 15px;">Expanded View for {$widget_name}</h4>
-    <p>Add more detailed content or functionality here.</p>
-    <p>You can edit this file in the IDE widget: <code>widgets/{$widget_id}.php</code></p>
-</div>
-PHP;
-
-            // Attempt to write the new widget file
-            if (!file_put_contents($widget_file_path, $template_content)) {
-                $response['message'] = 'Failed to create widget file. Check permissions for the widgets/ directory.';
-                error_log("Failed to write widget file: " . $widget_file_path);
-                break;
+                    $response = ['status' => 'success', 'message' => "Widget '{$widget_name}' created successfully!"];
+                } else {
+                    unlink($widget_file_path); // Clean up created file if config save fails
+                    $response['message'] = "Widget file created, but failed to update dynamic widgets configuration.";
+                }
+            } else {
+                $response['message'] = "Failed to create widget file. Check server permissions for the 'widgets/' directory.";
             }
-
-            // Update dynamic_widgets.json
-            $dynamic_widgets = loadDynamicWidgets();
-            $dynamic_widgets[$widget_id] = [
-                'name' => $widget_name,
-                'icon' => $widget_icon,
-                'width' => $widget_width,
-                'height' => $widget_height
-            ];
-
-            if (!saveDynamicWidgets($dynamic_widgets)) {
-                // If saving dynamic_widgets.json fails, try to clean up the created PHP file
-                unlink($widget_file_path);
-                $response['message'] = 'Failed to save widget configuration. Widget file created but not registered. Please try again.';
-                break;
-            }
-
-            $response = ['status' => 'success', 'message' => 'New widget template created and registered successfully! Reloading...'];
             break;
-        default:
-            // Handled by default response
+        case 'update_widget_details':
+            $widget_id = $_POST['widget_id'] ?? '';
+            $widget_name = trim($_POST['name'] ?? '');
+            $widget_icon = trim($_POST['icon'] ?? '');
+            $widget_width = (float)($_POST['width'] ?? 1.0);
+            $widget_height = (float)($_POST['height'] ?? 1.0);
+
+            if (empty($widget_id)) {
+                $response['message'] = 'Widget ID is required for update.';
+                break;
+            }
+
+            $current_dashboard_state = loadDashboardState();
+            $widget_updated_in_active_list = false;
+
+            // Update in active widgets list if present
+            foreach ($current_dashboard_state['active_widgets'] as $key => $widget_entry) {
+                if ($widget_entry['id'] === $widget_id) {
+                    $current_dashboard_state['active_widgets'][$key]['width'] = $widget_width;
+                    $current_dashboard_state['active_widgets'][$key]['height'] = $widget_height;
+                    $widget_updated_in_active_list = true;
+                    break;
+                }
+            }
+
+            // Update in available_widgets (config.php) or dynamic_widgets.json
+            global $available_widgets;
+            if (isset($available_widgets[$widget_id])) {
+                // Check if it's a dynamic widget
+                $dynamic_widgets = loadDynamicWidgets();
+                if (isset($dynamic_widgets[$widget_id])) {
+                    // Update dynamic widget
+                    $dynamic_widgets[$widget_id]['name'] = $widget_name;
+                    $dynamic_widgets[$widget_id]['icon'] = $widget_icon;
+                    $dynamic_widgets[$widget_id]['width'] = $widget_width;
+                    $dynamic_widgets[$widget_id]['height'] = $widget_height;
+                    saveDynamicWidgets($dynamic_widgets); // Save dynamic widgets
+                } else {
+                    // This is a static widget from config.php, we cannot directly modify config.php via this UI.
+                    // For static widgets, only width/height in active_widgets will be affected.
+                    // Name/icon changes won't persist unless config.php is manually edited.
+                    // We'll still save the dashboard state for dimension changes.
+                }
+
+                // If dimensions were updated in active_widgets, save the dashboard state
+                if ($widget_updated_in_active_list) {
+                    saveDashboardState($current_dashboard_state);
+                }
+                
+                $response = ['status' => 'success', 'message' => "Widget '{$widget_name}' details updated."];
+
+            } else {
+                $response['message'] = 'Widget ID not found in available widgets.';
+            }
+            break;
+        case 'display_widget_settings_modal': // NEW: AJAX action to display the widget management table
+            $output = '<p>Drag and drop widgets on the dashboard to reorder them visually.</p>';
+            $output .= '<p>Widgets marked with <i class="fas fa-magic"></i> are dynamically created.</p>';
+            $output .= '<h4>Active Widgets</h4>';
+            $output .= '<table class="widget-settings-table">';
+            $output .= '<thead><tr><th>ID</th><th>Name</th><th>Icon</th><th>W</th><th>H</th><th>Actions</th></tr></thead>';
+            $output .= '<tbody>';
+
+            $current_dashboard_state = loadDashboardState();
+            foreach ($current_dashboard_state['active_widgets'] as $active_widget) {
+                $widget_id = htmlspecialchars($active_widget['id']);
+                
+                // Get widget details (name, icon, default width/height) from available_widgets
+                // This includes both static (from config.php) and dynamic widgets
+                $widget_info = $available_widgets[$widget_id] ?? [
+                    'name' => 'Unknown Widget',
+                    'icon' => 'fas fa-question-circle',
+                    'width' => 1,
+                    'height' => 1
+                ];
+
+                $is_dynamic = isset($widget_info['dynamic']) && $widget_info['dynamic'];
+                $dynamic_badge = $is_dynamic ? '<i class="fas fa-magic" title="Dynamically Created Widget"></i> ' : '';
+
+                $output .= '<tr data-widget-id="' . $widget_id . '">';
+                $output .= '<td>' . $dynamic_badge . $widget_id . '</td>';
+                $output .= '<td><input type="text" class="form-control widget-setting-name" value="' . htmlspecialchars($widget_info['name']) . '" data-widget-id="' . $widget_id . '"></td>';
+                $output .= '<td><input type="text" class="form-control widget-setting-icon" value="' . htmlspecialchars($widget_info['icon']) . '" data-widget-id="' . $widget_id . '"></td>';
+                $output .= '<td><input type="number" class="form-control widget-setting-width" value="' . htmlspecialchars($active_widget['width']) . '" min="0.5" max="3" step="0.5" data-widget-id="' . $widget_id . '"></td>';
+                $output .= '<td><input type="number" class="form-control widget-setting-height" value="' . htmlspecialchars($active_widget['height']) . '" min="0.5" max="4" step="0.5" data-widget-id="' . $widget_id . '"></td>';
+                $output .= '<td><button class="btn btn-danger btn-sm remove-widget-btn" data-widget-id="' . $widget_id . '"><i class="fas fa-times"></i> Remove</button>';
+                $output .= '<button class="btn btn-primary btn-sm update-widget-details-btn" data-widget-id="' . $widget_id . '" style="margin-left: 5px;"><i class="fas fa-save"></i> Save</button></td>';
+                $output .= '</tr>';
+            }
+            $output .= '</tbody>';
+            $output .= '</table>';
+
+            $output .= '<h4>Available Widgets (Inactive)</h4>';
+            $output .= '<div class="available-widgets-list">';
+            $found_inactive = false;
+            foreach ($available_widgets as $widget_id => $widget_info) {
+                $is_active = false;
+                foreach ($current_dashboard_state['active_widgets'] as $active_widget) {
+                    if ($active_widget['id'] === $widget_id) {
+                        $is_active = true;
+                        break;
+                    }
+                }
+                if (!$is_active) {
+                    $dynamic_badge = isset($widget_info['dynamic']) && $widget_info['dynamic'] ? '<i class="fas fa-magic" title="Dynamically Created Widget"></i> ' : '';
+                    $output .= '<button class="btn btn-sm add-widget-btn" data-widget-id="' . htmlspecialchars($widget_id) . '">';
+                    $output .= '<i class="' . htmlspecialchars($widget_info['icon']) . '"></i> ' . $dynamic_badge . htmlspecialchars($widget_info['name']);
+                    $output .= '</button>';
+                    $found_inactive = true;
+                }
+            }
+            if (!$found_inactive) {
+                $output .= '<p>All available widgets are currently active.</p>';
+            }
+            $output .= '</div>';
+            
+            $response = ['status' => 'success', 'message' => 'Widget settings loaded.', 'html' => $output];
             break;
     }
-
     header('Content-Type: application/json');
     echo json_encode($response);
-    exit; // Terminate script execution after sending JSON response for AJAX
+    exit(); // Terminate script after AJAX response
 }
 
-
-// --- Normal Full Page POST Request Handling (only if not AJAX) ---
 // This block will only execute if it's not an AJAX request.
 // It handles widget adds/removes, global settings updates, and widget dimension updates (which still trigger full reloads).
 
@@ -550,123 +604,50 @@ $settings = $current_dashboard_state; // $settings now includes 'active_widgets'
 // This ensures session state is synced with persistent state on page load.
 $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets'];
 
-// Handle POST requests for widget management and settings updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-AJAX POSTs now
-    $has_state_changed = false; // Flag to know if we need to save the state
 
-    // Check the 'action_type' to dispatch
-    $action_type = $_POST['action_type'] ?? '';
-
-    if ($action_type === 'add_widget' && !empty($_POST['widget_id'])) {
-        // Only allow adding widgets if 'show all' is OFF
-        if (!$settings['show_all_available_widgets']) {
-            $widget_id_to_add = $_POST['widget_id'];
-            // Get default dimensions from available_widgets
-            $default_width = (float)($available_widgets[$widget_id_to_add]['width'] ?? 1.0);
-            $default_height = (float)($available_widgets[$widget_id_to_add]['height'] ?? 1.0);
-
-            $new_widget = [
-                'id' => $widget_id_to_add,
-                'position' => count($_SESSION['active_widgets']) + 1,
-                'width' => $default_width,
-                'height' => $default_height
-            ];
-            $_SESSION['active_widgets'][] = $new_widget;
-            $has_state_changed = true;
-        }
-
-    } elseif ($action_type === 'remove_widget' && isset($_POST['widget_index'])) {
-        // Only allow removing widgets if 'show all' is OFF
-        if (!$settings['show_all_available_widgets']) {
-            $widget_index_to_remove = (int)$_POST['widget_index'];
-
-            if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
-                unset($_SESSION['active_widgets'][$widget_index_to_remove]);
-                $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']); // Re-index array
-                $has_state_changed = true;
-            }
-        }
-
-    } elseif ($action_type === 'update_settings') {
+// Handle form submissions for general settings and widget activation/deactivation (non-AJAX)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_ajax_request) {
+    if (isset($_POST['update_settings'])) {
         // Update general dashboard settings
-        $settings_from_post = [
-            'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
-            'accent_color' => $_POST['accent_color'] ?? '#6366f1',
-            'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
-            'blur_amount' => $_POST['blur_amount'] ?? '10px',
-            'enable_animations' => isset($_POST['enable_animations']) && $_POST['enable_animations'] === '1',
-            'show_all_available_widgets' => isset($_POST['show_all_available_widgets']) && $_POST['show_all_available_widgets'] === '1'
-        ];
+        $settings['title'] = $_POST['title'] ?? $settings['title'];
+        $settings['header_icon'] = $_POST['header_icon'] ?? $settings['header_icon']; // NEW: Save header icon
+        $settings['accent_color'] = $_POST['accent_color'] ?? $settings['accent_color'];
+        $settings['glass_intensity'] = (float)($_POST['glass_intensity'] ?? $settings['glass_intensity']);
+        $settings['blur_amount'] = $_POST['blur_amount'] ?? $settings['blur_amount'];
+        $settings['enable_animations'] = isset($_POST['enable_animations']);
+        $settings['show_all_available_widgets'] = isset($_POST['show_all_available_widgets']);
+
+        // Only save dimensions if they are explicitly sent from the form
+        // (This part is mainly for the initial setup, gridstack handles most dimension changes via AJAX)
+        if (isset($_POST['widget_dimensions']) && is_array($_POST['widget_dimensions'])) {
+            foreach ($settings['active_widgets'] as &$active_widget) {
+                $id = $active_widget['id'];
+                if (isset($_POST['widget_dimensions'][$id]['width']) && isset($_POST['widget_dimensions'][$id]['height'])) {
+                    $active_widget['width'] = max(0.5, min(3.0, (float)$_POST['widget_dimensions'][$id]['width']));
+                    $active_widget['height'] = max(0.5, min(4.0, (float)$_POST['widget_dimensions'][$id]['height']));
+                }
+            }
+            unset($active_widget); // Break the reference
+        }
         
-        // Update current $settings array with new values from POST
-        $settings = array_merge($settings, $settings_from_post);
-        $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
-        $has_state_changed = true;
-
-        // Special handling if 'show_all_available_widgets' was just turned ON
-        if ($settings['show_all_available_widgets'] && !($current_dashboard_state['show_all_available_widgets'] ?? false)) {
-            // Overwrite active_widgets with all available widgets, sorted alphabetically by ID,
-            // using their default dimensions from config.php
-            $new_active_widgets = [];
-            foreach ($available_widgets as $id => $def) {
-                $new_active_widgets[] = [
-                    'id' => $id,
-                    'position' => count($new_active_widgets) + 1,
-                    'width' => (float)($def['width'] ?? 1.0),
-                    'height' => (float)($def['height'] ?? 1.0)
-                ];
-            }
-            usort($new_active_widgets, function($a, $b) {
-                return strcmp($a['id'], $b['id']);
-            });
-            $_SESSION['active_widgets'] = $new_active_widgets;
-        }
-
-    } elseif ($action_type === 'update_widget_dimensions' && isset($_POST['widget_index']) && isset($_POST['new_width']) && isset($_POST['new_height'])) {
-        // This block is now less frequently used for single widget dimension updates,
-        // as the new Widget Management panel uses AJAX for this.
-        // However, it's kept for consistency and if a direct form submission needed it.
-        $widget_index = (int)$_POST['widget_index'];
-        $new_width = (float)$_POST['new_width']; // Cast to float
-        $new_height = (float)$_POST['new_height']; // Cast to float
-
-        // Ensure width/height are within the allowed bounds (width max 3, height max 4)
-        $new_width = max(0.5, min(3.0, $new_width)); // Clamp between 0.5 and 3.0
-        $new_height = max(0.5, min(4.0, $new_height)); // Clamp between 0.5 and 4.0
-
-
-        // Only allow changing dimensions if 'show all' is OFF
-        if (!$settings['show_all_available_widgets']) {
-            if (isset($_SESSION['active_widgets'][$widget_index])) {
-                $_SESSION['active_widgets'][$widget_index]['width'] = $new_width;
-                $_SESSION['active_widgets'][$widget_index]['height'] = $new_height;
-                $has_state_changed = true;
-            }
-        }
-    }
-
-    // If any state (settings or active widgets) changed, save the entire state
-    if ($has_state_changed) {
-        // Create the full state array to save, combining current $settings and active widgets from session
-        $state_to_save = $settings; // Start with current $settings
-        // The 'active_widgets' in $state_to_save must always come from the final $_SESSION state after processing
-        $state_to_save['active_widgets'] = $_SESSION['active_widgets'];
-
-        if (!saveDashboardState($state_to_save)) {
-            error_log("CRITICAL ERROR: index.php - Failed to save dashboard state persistently. Check server error logs for more details!");
-        }
+        saveDashboardState($settings);
+        // After saving, redirect to GET to prevent form resubmission on refresh
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit();
     }
 }
 
-// Ensure the $settings array used for rendering always reflects the latest state,
-// potentially updated by POST or loaded from persistence.
-// This merge ensures default values are applied, then persistent ones, then session ones.
-$settings = array_replace_recursive($default_dashboard_state, $current_dashboard_state, $_SESSION['dashboard_settings'] ?? []);
-// The 'active_widgets' for rendering should always come from the final $_SESSION state after processing
-$settings['active_widgets'] = $_SESSION['active_widgets'];
 
-// Pass available widgets to the view
-global $available_widgets;
+// Read Font Awesome icons for display in settings (optional: for icon picker UI)
+// This is a placeholder. A real icon picker would involve more sophisticated JS.
+$font_awesome_icons = [
+    'fas fa-chart-line', 'fas fa-tasks', 'fas fa-calendar', 'fas fa-sticky-note',
+    'fas fa-history', 'fas fa-print', 'fas fa-users', 'fas fa-bug', 'fas fa-code',
+    'fas fa-gem', 'fas fa-star', 'fas fa-bell', 'fas fa-cog', 'fas fa-sync-alt',
+    'fas fa-plus', 'fas fa-times', 'fas fa-save', 'fas fa-download', 'fas fa-trash-alt',
+    'fas fa-undo', 'fas fa-magic', 'fas fa-question-circle', 'fas fa-cube',
+    'fas fa-chart-bar', 'fas fa-info-circle', 'fas fa-exclamation-triangle'
+];
 
 ?>
 <!DOCTYPE html>
@@ -675,139 +656,31 @@ global $available_widgets;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($settings['title']) ?></title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/1.2.0/gridstack.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* Dynamic CSS variables for theming */
         :root {
-            --accent: <?= $settings['accent_color'] ?>;
-            --glass-bg: rgba(35, 40, 49, <?= $settings['glass_intensity'] ?>);
-            --blur-amount: <?= $settings['blur_amount'] ?>;
+            --accent: <?= htmlspecialchars($settings['accent_color']) ?>;
+            --glass-bg: rgba(35, 40, 49, <?= htmlspecialchars($settings['glass_intensity']) ?>);
+            --blur-amount: <?= htmlspecialchars($settings['blur_amount']) ?>;
         }
-        .widget {
-            transition: <?= $settings['enable_animations'] ? 'var(--transition)' : 'none' ?>;
-        }
-        .widget:hover {
-            <?php if ($settings['enable_animations']): ?>
-            transform: translateY(-5px);
-            box-shadow:
-                12px 12px 24px var(--shadow-dark),
-                -12px -12px 24px rgba(74, 78, 94, 0.1);
-            <?php endif; ?>
+        /* Optional: Animations toggle */
+        body.no-animations * {
+            transition: none !important;
         }
     </style>
 </head>
-<body>
-    <!-- New: Overlay for expanded widgets -->
-    <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
-
-    <!-- Widget Settings Modal Structure (for single widget dimensions) -->
-    <div class="message-modal-overlay" id="widget-settings-modal-overlay">
-        <div class="message-modal" id="widget-settings-modal">
-            <div class="message-modal-header">
-                <h3 id="widget-settings-modal-title">Widget Settings</h3>
-                <button class="btn-close-modal" id="close-widget-settings-modal">&times;</button>
-            </div>
-            <div class="message-modal-body">
-                <form id="widget-dimensions-form">
-                    <input type="hidden" id="widget-settings-index" name="widget_index">
-                    <div class="form-group">
-                        <label for="widget-settings-width">Width (Grid Units)</label>
-                        <input type="number" id="widget-settings-width" name="new_width" min="0.5" max="3" step="0.5" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label for="widget-settings-height">Height (Grid Units)</label>
-                        <input type="number" id="widget-settings-height" name="new_height" min="0.5" max="4" step="0.5" class="form-control">
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
-                </form>
-            </div>
-        </div>
-    </div>
-    <!-- END Widget Settings Modal Structure -->
-
-    <!-- NEW: Widget Management Modal Structure (Consolidated Widget Settings) -->
-    <div class="message-modal-overlay" id="widget-management-modal-overlay">
-        <div class="message-modal large-modal" id="widget-management-modal">
-            <div class="message-modal-header">
-                <h3 id="widget-management-modal-title">Widget Management</h3>
-                <button class="btn-close-modal" id="close-widget-management-modal">&times;</button>
-            </div>
-            <div class="message-modal-body">
-                <div style="max-height: 500px; overflow-y: auto;">
-                    <table class="widget-management-table">
-                        <thead>
-                            <tr>
-                                <th>Icon</th>
-                                <th>Name</th>
-                                <th>Status</th>
-                                <th>Width</th>
-                                <th>Height</th>
-                                <th>Save Status</th>
-                                <th>Deactivate</th>
-                            </tr>
-                        </thead>
-                        <tbody id="widget-management-table-body">
-                            <!-- Widget data will be populated here by JavaScript -->
-                            <tr><td colspan="7" style="text-align: center; padding: 20px;">Loading widgets...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="message-modal-footer">
-                <button class="btn btn-primary" id="save-widget-management-changes-btn">Save All Widget Changes</button>
-            </div>
-        </div>
-    </div>
-    <!-- END NEW: Widget Management Modal Structure -->
-
-    <!-- NEW: Create New Widget Modal Structure -->
-    <div class="message-modal-overlay" id="create-widget-modal-overlay">
-        <div class="message-modal" id="create-widget-modal">
-            <div class="message-modal-header">
-                <h3>Create New Widget Template</h3>
-                <button class="btn-close-modal" id="close-create-widget-modal">&times;</button>
-            </div>
-            <div class="message-modal-body">
-                <form id="create-widget-form">
-                    <div class="form-group">
-                        <label for="new-widget-name">Widget Name</label>
-                        <input type="text" id="new-widget-name" name="name" class="form-control" placeholder="e.g., My Custom Chart" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="new-widget-id">Widget ID (lowercase, no spaces, e.g., my_custom_chart)</label>
-                        <input type="text" id="new-widget-id" name="id" class="form-control" placeholder="e.g., my_custom_chart" pattern="^[a-z0-9_]+$" title="Lowercase letters, numbers, and underscores only." required>
-                    </div>
-                    <div class="form-group">
-                        <label for="new-widget-icon">Font Awesome Icon (e.g., chart-bar)</label>
-                        <input type="text" id="new-widget-icon" name="icon" class="form-control" value="cube" placeholder="e.g., chart-bar">
-                    </div>
-                    <div class="form-group">
-                        <label for="new-widget-width">Default Width (0.5-3.0 grid units)</label>
-                        <input type="number" id="new-widget-width" name="width" class="form-control" value="1.0" min="0.5" max="3" step="0.5" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="new-widget-height">Default Height (0.5-4.0 grid units)</label>
-                        <input type="number" id="new-widget-height" name="height" class="form-control" value="1.0" min="0.5" max="4" step="0.5" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
-                        <i class="fas fa-plus"></i> Create Widget Template
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    <!-- END NEW: Create New Widget Modal Structure -->
-
+<body class="<?= !$settings['enable_animations'] ? 'no-animations' : '' ?>">
     <div class="dashboard">
-        <!-- Dashboard Header -->
         <header class="header">
             <div class="logo">
                 <div class="logo-icon">
-                    <i class="fas fa-gem"></i>
+                    <i class="<?= htmlspecialchars($settings['header_icon']) ?>"></i>
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
             </div>
-
             <div class="header-actions">
                 <button class="btn" id="settings-toggle">
                     <i class="fas fa-cog"></i> Settings
@@ -815,222 +688,142 @@ global $available_widgets;
                 <button class="btn" id="refresh-btn">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
-                <!-- Removed: <button class="btn btn-primary" id="new-widget-btn"> -->
             </div>
         </header>
 
-        <!-- Dashboard Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-section">
-                <div class="section-title">Navigation</div>
-                <div class="nav-item active">
-                    <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
-                </div>
-                <div class="nav-item">
-                    <i class="fas fa-chart-pie"></i>
-                    <span>Analytics</span>
-                </div>
-                <div class="nav-item">
-                    <i class="fas fa-users"></i>
-                    <span>Users</span>
-                </div>
-                <div class="nav-item" id="widget-management-nav-item">
-                    <i class="fas fa-th-large"></i>
-                    <span>Widget Management</span>
-                </div>
-            </div>
-
-            <div class="sidebar-section">
-                <div class="section-title">Widget Library</div>
-                <div class="widget-list">
-                    <?php foreach ($available_widgets as $id => $widget): ?>
-                    <div class="widget-item" draggable="true" data-widget-id="<?= $id ?>">
-                        <i class="fas fa-<?= $widget['icon'] ?>"></i>
-                        <div class="widget-name"><?= $widget['name'] ?></div>
+            <h2>Widget Library</h2>
+            <div class="widget-list">
+                <?php foreach ($available_widgets as $widget_id => $widget_info): ?>
+                    <?php
+                        $is_active = false;
+                        foreach ($settings['active_widgets'] as $active_widget) {
+                            if ($active_widget['id'] === $widget_id) {
+                                $is_active = true;
+                                break;
+                            }
+                        }
+                        $dynamic_badge = isset($widget_info['dynamic']) && $widget_info['dynamic'] ? '<i class="fas fa-magic" title="Dynamically Created Widget"></i> ' : '';
+                    ?>
+                    <div class="widget-item grid-stack-item-content <?= $is_active ? 'active' : '' ?>"
+                         data-widget-id="<?= htmlspecialchars($widget_id) ?>"
+                         data-gs-w="<?= htmlspecialchars($widget_info['width']) ?>"
+                         data-gs-h="<?= htmlspecialchars($widget_info['height']) ?>"
+                         data-gs-no-resize="true" data-gs-no-move="true">
+                        <i class="<?= htmlspecialchars($widget_info['icon']) ?>"></i>
+                        <?= $dynamic_badge ?><?= htmlspecialchars($widget_info['name']) ?>
+                        <?php if ($is_active): ?>
+                            <span>(Active)</span>
+                        <?php else: ?>
+                            <button class="add-widget-btn" data-widget-id="<?= htmlspecialchars($widget_id) ?>"><i class="fas fa-plus"></i> Add</button>
+                        <?php endif; ?>
                     </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <div class="sidebar-section">
-                <div class="section-title">Dashboard Settings</div>
-                <div class="nav-item" id="theme-settings-btn">
-                    <i class="fas fa-palette"></i>
-                    <span>Theme Settings</span>
-                </div>
-                <div class="nav-item">
-                    <i class="fas fa-columns"></i>
-                    <span>Layout Options</span>
-                </div>
-                <div class="nav-item">
-                    <i class="fas fa-sliders-h"></i>
-                    <span>Advanced Settings</span>
-                </div>
+                <?php endforeach; ?>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="main-content" id="widget-container">
-            <?php
-            // Determine which widgets to display based on 'show_all_available_widgets' setting
-            $widgets_to_render = [];
-            if ($settings['show_all_available_widgets']) {
-                // If 'show all' is true, render ALL available widgets from config.php
-                foreach ($available_widgets as $id => $def) {
-                    $widgets_to_render[] = [
-                        'id' => $id,
-                        'position' => count($widgets_to_render) + 1,
-                        'width' => (float)($def['width'] ?? 1.0),
-                        'height' => (float)($def['height'] ?? 1.0)
-                    ];
+        <main class="main-content">
+            <div class="grid-stack">
+                <?php
+                // Display active widgets based on loaded settings
+                foreach ($settings['active_widgets'] as $widget_data) {
+                    $widget_id = $widget_data['id'];
+                    $position = $widget_data['position'];
+                    $width = $widget_data['width'] ?? ($available_widgets[$widget_id]['width'] ?? 1);
+                    $height = $widget_data['height'] ?? ($available_widgets[$widget_id]['height'] ?? 1);
+
+                    // If show_all_available_widgets is true, and this widget is not in the default_dashboard_state
+                    // or if it's a dynamic widget, ensure it gets a position if it somehow lost it.
+                    // This is more for robustness if a position is missing.
+                    if (!isset($widget_data['position'])) {
+                        $widget_data['position'] = $position; // Re-assign if missing
+                    }
+
+                    echo '<div class="grid-stack-item" ' .
+                         'data-gs-id="' . htmlspecialchars($widget_id) . '" ' .
+                         'data-gs-x="' . htmlspecialchars(($position - 1) % 3) . '" ' . // Simple layout for initial load
+                         'data-gs-y="' . htmlspecialchars(floor(($position - 1) / 3)) . '" ' .
+                         'data-gs-w="' . htmlspecialchars($width) . '" ' .
+                         'data-gs-h="' . htmlspecialchars($height) . '" ' .
+                         'data-gs-no-resize="false" data-gs-no-move="false">';
+                    echo '    <div class="grid-stack-item-content widget" data-widget-id="' . htmlspecialchars($widget_id) . '">';
+                    echo '        <div class="widget-header">';
+                    // Use widget_info from $available_widgets for dynamic name/icon, fall back to default if not found
+                    $display_name = $available_widgets[$widget_id]['name'] ?? ucfirst(str_replace('_', ' ', $widget_id));
+                    $display_icon = $available_widgets[$widget_id]['icon'] ?? 'fas fa-cube';
+                    echo '            <h4 class="widget-title"><i class="' . htmlspecialchars($display_icon) . '"></i> ' . htmlspecialchars($display_name) . '</h4>';
+                    echo '            <div class="widget-actions">';
+                    echo '                <button class="remove-widget-btn" data-widget-id="' . htmlspecialchars($widget_id) . '" title="Remove from Dashboard"><i class="fas fa-times"></i></button>';
+                    echo '            </div>';
+                    echo '        </div>';
+                    echo render_widget($widget_id); // Function from helpers.php to include widget content
+                    echo '    </div>';
+                    echo '</div>';
                 }
-                // Sort them alphabetically by ID for consistent positioning
-                usort($widgets_to_render, function($a, $b) {
-                    return strcmp($a['id'], $b['id']);
-                });
-            } else {
-                // Otherwise, render the active widgets from persistent storage
-                $widgets_to_render = $settings['active_widgets'];
-            }
-
-            foreach ($widgets_to_render as $index => $widget):
-                $widget_id = $widget['id'];
-                // Use a fallback for widget_def if config.php isn't correctly loading it
-                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1.0, 'height' => 1.0];
-                
-                // Use the dimensions from the active_widgets array if present, otherwise fall back to config default
-                // And ensure they are clamped for safety during rendering
-                $current_width_user_facing = max(0.5, min(3.0, (float)($widget['width'] ?? $widget_def['width'])));
-                $current_height_user_facing = max(0.5, min(4.0, (float)($widget['height'] ?? $widget_def['height'])));
-
-                // Convert user-facing units to internal grid units (doubled for half-unit precision)
-                $current_width_internal = $current_width_user_facing * 2;
-                $current_height_internal = $current_height_user_facing * 2;
-            ?>
-            <!-- Widget container, made draggable for reordering -->
-            <div class="widget"
-                 draggable="true"
-                 style="--width: <?= $current_width_internal ?>; --height: <?= $current_height_internal ?>;"
-                 data-widget-id="<?= htmlspecialchars($widget_id) ?>"
-                 data-widget-index="<?= $index ?>"
-                 data-current-width="<?= $current_width_user_facing ?>"
-                 data-current-height="<?= $current_height_user_facing ?>">
-                <!-- This placeholder div marks the widget's original position in the DOM -->
-                <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-index="<?= $index ?>"></div>
-
-                <div class="widget-header">
-                    <div class="widget-title">
-                        <i class="fas fa-<?= $widget_def['icon'] ?? 'cube' ?>"></i>
-                        <span><?= $widget_def['name'] ?? 'Widget' ?></span>
-                    </div>
-                    <div class="widget-actions">
-                        <!-- Add data attributes to identify actions -->
-                        <div class="widget-action action-settings"
-                            data-widget-id="<?= htmlspecialchars($widget_id) ?>"
-                            data-widget-index="<?= $index ?>"
-                            data-current-width="<?= $current_width_user_facing ?>"
-                            data-current-height="<?= $current_height_user_facing ?>"
-                            title="Adjust widget dimensions">
-                            <i class="fas fa-cog"></i>
-                        </div>
-                        <div class="widget-action action-expand">
-                            <i class="fas fa-expand"></i>
-                        </div>
-                        <div class="widget-action remove-widget
-                            <?= $settings['show_all_available_widgets'] ? 'disabled' : '' ?>"
-                            data-index="<?= $index ?>"
-                            title="<?= $settings['show_all_available_widgets'] ? 'Remove disabled in "Show All Widgets" mode' : 'Remove widget' ?>">
-                            <i class="fas fa-times"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="widget-content">
-                    <?= render_widget($widget_id) ?>
-                </div>
+                ?>
             </div>
-            <?php endforeach; ?>
         </main>
     </div>
 
-    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
-    <div class="message-modal-overlay" id="message-modal-overlay">
-        <div class="message-modal">
-            <div class="message-modal-header">
-                <h3 id="message-modal-title"></h3>
-                <button class="btn-close-modal" id="close-message-modal">&times;</button>
-            </div>
-            <div class="message-modal-body">
-                <p id="message-modal-content"></p>
-            </div>
-            <div class="message-modal-footer">
-                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Settings Panel (Global Dashboard Settings) -->
-    <div class="overlay" id="settings-overlay"></div>
-    <div class="settings-panel" id="settings-panel">
+    <div id="settings-overlay" class="modal-overlay"></div>
+    <div id="settings-panel" class="settings-panel">
         <div class="settings-header">
-            <h2>Dashboard Settings</h2>
-            <button class="btn" id="close-settings">
-                <i class="fas fa-times"></i>
-            </button>
+            <h2><i class="fas fa-cog"></i> Dashboard Settings</h2>
+            <button class="close-btn" id="close-settings">&times;</button>
         </div>
+        <form id="dashboard-settings-form" method="POST" action="">
+            <input type="hidden" name="update_settings" value="1">
 
-        <form method="post" class="settings-form">
             <div class="settings-group">
                 <h3 class="settings-title">General Settings</h3>
-
                 <div class="form-group">
-                    <label for="dashboard_title">Dashboard Title</label>
-                    <input type="text" id="dashboard_title" name="dashboard_title"
-                        class="form-control" value="<?= htmlspecialchars($settings['title']) ?>">
+                    <label for="dashboard-title">Dashboard Title</label>
+                    <input type="text" id="dashboard-title" name="title" class="form-control" value="<?= htmlspecialchars($settings['title']) ?>">
                 </div>
-
                 <div class="form-group">
-                    <label for="accent_color">Accent Color</label>
-                    <input type="color" id="accent_color" name="accent_color"
-                        class="form-control" value="<?= $settings['accent_color'] ?>" style="height: 50px;">
+                    <label for="header-icon">Header Icon (Font Awesome 6 class)</label>
+                    <input type="text" id="header-icon" name="header_icon" class="form-control" value="<?= htmlspecialchars($settings['header_icon']) ?>" placeholder="e.g., fas fa-gem, fas fa-star">
+                    <small>Browse icons: <a href="https://fontawesome.com/v6/search" target="_blank" class="text-link">Font Awesome 6</a></small>
                 </div>
-
                 <div class="form-group">
                     <label>Enable Animations</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" name="enable_animations"
-                            <?= $settings['enable_animations'] ? 'checked' : '' ?>>
-                        <span class="slider"></span>
+                    <label class="switch">
+                        <input type="checkbox" id="enable-animations" name="enable_animations" <?= $settings['enable_animations'] ? 'checked' : '' ?>>
+                        <span class="slider round"></span>
                     </label>
                 </div>
-
-                <!-- NEW: Show All Available Widgets Toggle -->
                 <div class="form-group">
-                    <label>Show All Available Widgets</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" name="show_all_available_widgets" id="show_all_available_widgets"
-                            <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
-                        <span class="slider"></span>
+                    <label>Show All Available Widgets in Library</label>
+                    <label class="switch">
+                        <input type="checkbox" id="show-all-available-widgets" name="show_all_available_widgets" <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
+                        <span class="slider round"></span>
                     </label>
+                </div>
+                <div class="form-group">
+                    <label>Theme Customization</label>
+                    <button type="button" id="reset-theme-btn" class="btn" style="width: 100%;">
+                        <i class="fas fa-undo"></i> Reset Theme to Default
+                    </button>
                 </div>
             </div>
 
             <div class="settings-group">
-                <h3 class="settings-title">Glass Effect</h3>
-
+                <h3 class="settings-title">Appearance</h3>
                 <div class="form-group">
-                    <label for="glass_intensity">Glass Intensity</label>
-                    <input type="range" id="glass_intensity" name="glass_intensity"
-                        class="form-control" min="0.1" max="0.9" step="0.05"
-                        value="<?= $settings['glass_intensity'] ?>">
+                    <label for="accent-color">Accent Color</label>
+                    <input type="color" id="accent-color" name="accent_color" class="form-control" value="<?= htmlspecialchars($settings['accent_color']) ?>">
                 </div>
-
                 <div class="form-group">
-                    <label for="blur_amount">Blur Amount</labeSl>
-                    <select id="blur_amount" name="blur_amount" class="form-control">
-                        <option value="5px" <?= $settings['blur_amount'] == '5px' ? 'selected' : '' ?>>Subtle (5px)</option>
-                        <option value="10px" <?= $settings['blur_amount'] == '10px' ? 'selected' : '' ?>>Standard (10px)</option>
+                    <label for="glass-intensity">Glass Effect Intensity</label>
+                    <input type="range" id="glass-intensity" name="glass_intensity" class="form-control" min="0.1" max="1.0" step="0.05" value="<?= htmlspecialchars($settings['glass_intensity']) ?>">
+                    <span><?= htmlspecialchars($settings['glass_intensity'] * 100) ?>%</span>
+                </div>
+                <div class="form-group">
+                    <label for="blur-amount">Blur Amount</label>
+                    <select id="blur-amount" name="blur_amount" class="form-control">
+                        <option value="0px" <?= $settings['blur_amount'] == '0px' ? 'selected' : '' ?>>None (0px)</option>
+                        <option value="5px" <?= $settings['blur_amount'] == '5px' ? 'selected' : '' ?>>Light (5px)</option>
+                        <option value="10px" <?= $settings['blur_amount'] == '10px' ? 'selected' : '' ?>>Medium (10px)</option>
                         <option value="15px" <?= $settings['blur_amount'] == '15px' ? 'selected' : '' ?>>Strong (15px)</option>
                         <option value="20px" <?= $settings['blur_amount'] == '20px' ? 'selected' : '' ?>>Extra Strong (20px)</option>
                     </select>
@@ -1038,29 +831,11 @@ global $available_widgets;
             </div>
 
             <div class="settings-group">
-                <h3 class="settings-title">Add Existing Widget</h3>
-
-                <div class="form-group">
-                    <label for="widget_select">Select Widget</label>
-                    <select id="widget_select" name="widget_id" class="form-control">
-                        <?php foreach ($available_widgets as $id => $widget): ?>
-                        <option value="<?= $id ?>"><?= $widget['name'] ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <button type="submit" name="add_widget" class="btn btn-primary" style="width: 100%;">
-                    <i class="fas fa-plus"></i> Add Widget to Dashboard
+                <h3 class="settings-title">Widget Management</h3>
+                <button type="button" id="manage-widgets-btn" class="btn" style="width: 100%; margin-bottom: 10px;">
+                    <i class="fas fa-cogs"></i> Manage Active Widgets
                 </button>
-            </div>
-
-            <!-- NEW: Create New Widget Template Button -->
-            <div class="settings-group">
-                <h3 class="settings-title">Create New Widget</h3>
-                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
-                    Generate a new blank widget file ready for your custom code.
-                </p>
-                <button type="button" class="btn btn-primary" id="open-create-widget-modal" style="width: 100%;">
+                <button type="button" class="btn btn-secondary" id="open-create-widget-modal" style="width: 100%;">
                     <i class="fas fa-file-code"></i> Create New Widget Template
                 </button>
             </div>
@@ -1079,7 +854,6 @@ global $available_widgets;
                     <label>Import Configuration</label>
                     <input type="file" class="form-control">
                 </div>
-                <!-- NEW: Delete Settings JSON Button -->
                 <div class="form-group">
                     <label>Reset Dashboard</label>
                     <button type="button" id="delete-settings-json-btn" class="btn btn-danger" style="width: 100%;">
@@ -1094,6 +868,67 @@ global $available_widgets;
         </form>
     </div>
 
+    <div id="message-modal-overlay" class="modal-overlay">
+        <div id="message-modal" class="modal-content">
+            <div class="modal-header">
+                <h2 id="message-modal-title"></h2>
+                <button class="close-btn" id="close-message-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="message-modal-content">
+                </div>
+            <div class="modal-footer" id="message-modal-footer">
+                <button class="btn btn-secondary" id="cancel-message-modal">Cancel</button>
+                <button class="btn btn-primary" id="confirm-message-modal">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="create-widget-modal-overlay" class="modal-overlay">
+        <div id="create-widget-modal" class="modal-content">
+            <div class="modal-header">
+                <h2 id="create-widget-modal-title">Create New Widget Template</h2>
+                <button class="close-btn" id="close-create-widget-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="create-widget-form">
+                    <div class="form-group">
+                        <label for="new-widget-id">Widget ID (Unique, lowercase_snake_case)</label>
+                        <input type="text" id="new-widget-id" name="id" class="form-control" required
+                               pattern="^[a-z0-9_]+$" title="Widget ID can only contain lowercase letters, numbers, and underscores."
+                               placeholder="e.g., my_custom_widget">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-widget-name">Widget Name (Display Title)</label>
+                        <input type="text" id="new-widget-name" name="name" class="form-control" required
+                               placeholder="e.g., My Custom Report">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-widget-icon">Widget Icon (Font Awesome 6 class)</label>
+                        <input type="text" id="new-widget-icon" name="icon" class="form-control" value="fas fa-cube"
+                               placeholder="e.g., fas fa-chart-bar, fas fa-bell">
+                        <small>Browse icons: <a href="https://fontawesome.com/v6/search" target="_blank" class="text-link">Font Awesome 6</a></small>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="new-widget-width">Default Width (1-3)</label>
+                        <input type="number" id="new-widget-width" name="width" class="form-control" value="1" min="1" max="3" step="1" required>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="new-widget-height">Default Height (1-4)</label>
+                        <input type="number" id="new-widget-height" name="height" class="form-control" value="1" min="1" max="4" step="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
+                        <i class="fas fa-plus"></i> Create Widget Template
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/1.2.0/gridstack.min.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
