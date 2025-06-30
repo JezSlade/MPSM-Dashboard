@@ -19,13 +19,15 @@ $base_dir = __DIR__;
 $allowed_extensions = ['php', 'txt', 'html', 'css', 'js', 'json', 'md'];
 
 // Security: Prevent directory traversal
-function sanitize_path($path) {
-    global $base_dir;
-    $real_path = realpath($base_dir . '/' . $path);
-    if ($real_path === false || strpos($real_path, realpath($base_dir)) !== 0) {
-        return false;
+if (!function_exists('sanitize_path')) {
+    function sanitize_path($path) {
+        global $base_dir;
+        $real_path = realpath($base_dir . '/' . $path);
+        if ($real_path === false || strpos($real_path, realpath($base_dir)) !== 0) {
+            return false;
+        }
+        return $real_path;
     }
-    return $real_path;
 }
 
 // Handle AJAX requests
@@ -105,48 +107,50 @@ if (isset($_POST['action'])) {
 }
 
 // Get directory listing
-function get_directory_tree($dir, $prefix = '') {
-    global $allowed_extensions;
-    
-    // Fallback if global variable is not set
-    if (!is_array($allowed_extensions)) {
-        $allowed_extensions = ['php', 'txt', 'html', 'css', 'js', 'json', 'md'];
-    }
-    
-    $items = [];
-    
-    if (!is_dir($dir)) return $items;
-    
-    $files = scandir($dir);
-    sort($files);
-    
-    foreach ($files as $file) {
-        if ($file === '.' || $file === '..') continue;
+if (!function_exists('get_directory_tree')) {
+    function get_directory_tree($dir, $prefix = '') {
+        global $allowed_extensions;
         
-        $full_path = $dir . '/' . $file;
-        $relative_path = $prefix . $file;
+        // Fallback if global variable is not set
+        if (!is_array($allowed_extensions)) {
+            $allowed_extensions = ['php', 'txt', 'html', 'css', 'js', 'json', 'md'];
+        }
         
-        if (is_dir($full_path)) {
-            $items[] = [
-                'type' => 'folder',
-                'name' => $file,
-                'path' => $relative_path,
-                'children' => get_directory_tree($full_path, $relative_path . '/')
-            ];
-        } else {
-            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-            if (in_array($ext, $allowed_extensions)) {
+        $items = [];
+        
+        if (!is_dir($dir)) return $items;
+        
+        $files = scandir($dir);
+        sort($files);
+        
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..') continue;
+            
+            $full_path = $dir . '/' . $file;
+            $relative_path = $prefix . $file;
+            
+            if (is_dir($full_path)) {
                 $items[] = [
-                    'type' => 'file',
+                    'type' => 'folder',
                     'name' => $file,
                     'path' => $relative_path,
-                    'extension' => $ext
+                    'children' => get_directory_tree($full_path, $relative_path . '/')
                 ];
+            } else {
+                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                if (in_array($ext, $allowed_extensions)) {
+                    $items[] = [
+                        'type' => 'file',
+                        'name' => $file,
+                        'path' => $relative_path,
+                        'extension' => $ext
+                    ];
+                }
             }
         }
+        
+        return $items;
     }
-    
-    return $items;
 }
 
 $directory_tree = get_directory_tree($base_dir);
