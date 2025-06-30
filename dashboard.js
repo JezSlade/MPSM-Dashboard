@@ -316,14 +316,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         const widgetId = e.dataTransfer.getData('text/plain');
-        const newWidgetBtn = document.getElementById('new-widget-btn');
+        // const newWidgetBtn = document.getElementById('new-widget-btn'); // This button is removed from header
 
-        // Check if it's an "add new widget" drop
-        if (e.dataTransfer.effectAllowed === 'copy' && newWidgetBtn && newWidgetBtn.classList.contains('disabled')) {
-            showMessageModal('Information', 'Adding widgets is disabled in "Show All Widgets" mode.');
-            return;
-        } else if (e.dataTransfer.effectAllowed === 'copy') {
-            // This is a drop from the widget library (add new widget)
+        // Check if it's an "add new widget" drop (from sidebar library)
+        // The disabled check for 'newWidgetBtn' is no longer relevant for drag-and-drop from library
+        // as the library itself is always available.
+        if (e.dataTransfer.effectAllowed === 'copy') {
             submitActionForm('add_widget', { widget_id: widgetId });
         } else if (e.dataTransfer.effectAllowed === 'move' && draggedWidget) {
             // This is a drop for reordering an existing widget
@@ -640,19 +638,9 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsOverlay.style.display = 'block';
     });
 
-    // NEW: Functionality for the "+ New Widget" button in the header
-    const newWidgetHeaderBtn = document.getElementById('new-widget-btn');
-    if (newWidgetHeaderBtn) {
-        newWidgetHeaderBtn.addEventListener('click', function() {
-            settingsPanel.classList.add('active'); // Open settings panel
-            settingsOverlay.style.display = 'block';
-            // Optionally, scroll to the "Add New Widget" section if it has an ID
-            const addWidgetSection = settingsPanel.querySelector('.settings-group h3:contains("Add New Widget")');
-            if (addWidgetSection) {
-                addWidgetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        });
-    }
+    // Removed: Functionality for the "+ New Widget" button in the header (it's now gone)
+    // const newWidgetHeaderBtn = document.getElementById('new-widget-btn');
+    // if (newWidgetHeaderBtn) { /* ... */ }
 
 
     // Handle form submission for global update_settings (from settings panel)
@@ -676,15 +664,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Disable/Enable Add Widget button based on 'Show All Widgets' state
     const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
-    // const newWidgetBtn = document.getElementById('new-widget-btn'); // Already defined above
+    // const newWidgetBtn = document.getElementById('new-widget-btn'); // No longer in header
     const widgetSelect = document.getElementById('widget_select');
     const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]');
 
     function updateAddRemoveButtonStates() {
-        if (showAllWidgetsToggle && newWidgetHeaderBtn && widgetSelect && addWidgetToDashboardBtn) {
+        if (showAllWidgetsToggle && widgetSelect && addWidgetToDashboardBtn) {
             const isDisabled = showAllWidgetsToggle.checked;
-            // newWidgetHeaderBtn.classList.toggle('disabled', isDisabled); // This button now opens settings, not adds directly
-            // newWidgetHeaderBtn.disabled = isDisabled;
             widgetSelect.disabled = isDisabled;
             addWidgetToDashboardBtn.disabled = isDisabled;
 
@@ -880,6 +866,72 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessageModal('Success', 'All changes saved. Reloading dashboard...', () => location.reload(true));
             } else {
                 showMessageModal('Partial Success/Error', 'Some changes could not be saved: ' + messages.join('. ') + ' Reloading dashboard...', () => location.reload(true));
+            }
+        });
+    }
+
+    // --- NEW WIDGET CREATION MODAL LOGIC ---
+    const createWidgetModalOverlay = document.getElementById('create-widget-modal-overlay');
+    const closeCreateWidgetModalBtn = document.getElementById('close-create-widget-modal');
+    const openCreateWidgetModalBtn = document.getElementById('open-create-widget-modal');
+    const createWidgetForm = document.getElementById('create-widget-form');
+
+    if (openCreateWidgetModalBtn) {
+        openCreateWidgetModalBtn.addEventListener('click', function() {
+            createWidgetModalOverlay.classList.add('active');
+            // Reset form fields
+            createWidgetForm.reset();
+            // Set default icon and dimensions
+            document.getElementById('new-widget-icon').value = 'cube';
+            document.getElementById('new-widget-width').value = '1';
+            document.getElementById('new-widget-height').value = '1';
+        });
+    }
+
+    if (closeCreateWidgetModalBtn) {
+        closeCreateWidgetModalBtn.addEventListener('click', function() {
+            createWidgetModalOverlay.classList.remove('active');
+        });
+    }
+
+    if (createWidgetModalOverlay) {
+        createWidgetModalOverlay.addEventListener('click', function(e) {
+            if (e.target === createWidgetModalOverlay) {
+                createWidgetModalOverlay.classList.remove('active');
+            }
+        });
+    }
+
+    if (createWidgetForm) {
+        createWidgetForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const widgetData = {};
+            for (const [key, value] of formData.entries()) {
+                widgetData[key] = value;
+            }
+
+            // Basic client-side validation for widget ID format
+            const widgetIdInput = document.getElementById('new-widget-id');
+            if (!widgetIdInput.checkValidity()) {
+                showMessageModal('Validation Error', widgetIdInput.title || 'Please ensure Widget ID contains only lowercase letters, numbers, and underscores.');
+                return;
+            }
+
+            // Disable button and show loading
+            const submitBtn = createWidgetForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+            const response = await sendAjaxRequest('create_new_widget_template', widgetData);
+
+            if (response.status === 'success') {
+                showMessageModal('Success', response.message, () => location.reload(true)); // Reload to show new widget in library
+            } else {
+                showMessageModal('Error', response.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Create Widget Template';
             }
         });
     }

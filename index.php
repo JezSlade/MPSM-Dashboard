@@ -28,6 +28,7 @@ require_once 'helpers.php';
 
 // Define the application root directory for security
 define('APP_ROOT', __DIR__);
+define('DYNAMIC_WIDGETS_FILE', APP_ROOT . '/dynamic_widgets.json'); // New: Path to store dynamically created widget configs
 
 // --- Persistent Settings & Widgets Functions ---
 
@@ -126,7 +127,37 @@ function saveDashboardState(array $state) {
     return $result !== false;
 }
 
-// --- END Persistent Settings & Widgets Functions ---
+/**
+ * Loads dynamically created widget configurations from dynamic_widgets.json.
+ * @return array An associative array of dynamic widget configurations.
+ */
+function loadDynamicWidgets() {
+    if (file_exists(DYNAMIC_WIDGETS_FILE)) {
+        $json_data = file_get_contents(DYNAMIC_WIDGETS_FILE);
+        $widgets = json_decode($json_data, true);
+        return is_array($widgets) ? $widgets : [];
+    }
+    return [];
+}
+
+/**
+ * Saves dynamically created widget configurations to dynamic_widgets.json.
+ * @param array $widgets An associative array of dynamic widget configurations.
+ * @return bool True on success, false on failure.
+ */
+function saveDynamicWidgets(array $widgets) {
+    $json_data = json_encode($widgets, JSON_PRETTY_PRINT);
+    if ($json_data === false) {
+        error_log("ERROR: saveDynamicWidgets - Failed to encode dynamic widgets to JSON: " . json_last_error_msg());
+        return false;
+    }
+    $result = file_put_contents(DYNAMIC_WIDGETS_FILE, $json_data);
+    if ($result === false) {
+        error_log("ERROR: saveDynamicWidgets - Failed to write dynamic widgets to file: " . DYNAMIC_WIDGETS_FILE);
+    }
+    return $result !== false;
+}
+
 
 // --- IDE Widget File Operations (Server-Side) ---
 
@@ -415,6 +446,88 @@ if ($is_ajax_request) {
                 $response['message'] = 'Widget not found in active list.';
             }
             break;
+        case 'create_new_widget_template': // NEW: AJAX to create a new widget file
+            $widget_name = trim($_POST['name'] ?? '');
+            $widget_id = trim($_POST['id'] ?? '');
+            $widget_icon = trim($_POST['icon'] ?? 'cube');
+            $widget_width = (int)($_POST['width'] ?? 1);
+            $widget_height = (int)($_POST['height'] ?? 1);
+
+            // Basic validation
+            if (empty($widget_name) || empty($widget_id)) {
+                $response['message'] = 'Widget Name and ID are required.';
+                break;
+            }
+            if (!preg_match('/^[a-z0-9_]+$/', $widget_id)) {
+                $response['message'] = 'Widget ID can only contain lowercase letters, numbers, and underscores.';
+                break;
+            }
+
+            $widget_file_path = APP_ROOT . '/widgets/' . $widget_id . '.php';
+            if (file_exists($widget_file_path)) {
+                $response['message'] = 'Widget ID already exists. Please choose a different ID.';
+                break;
+            }
+
+            // Clamp dimensions
+            $widget_width = max(1, min(3, $widget_width));
+            $widget_height = max(1, min(4, $widget_height));
+
+            // Generate widget file content
+            $template_content = <<<PHP
+<?php
+// widgets/{$widget_id}.php
+
+// Widget configuration
+\$_widget_config = [
+    'name' => '{$widget_name}',
+    'icon' => '{$widget_icon}',
+    'width' => {$widget_width},
+    'height' => {$widget_height}
+];
+?>
+<div class="compact-content">
+    <div style="text-align: center; padding: 20px;">
+        <p style="font-size: 20px; font-weight: bold; color: var(--accent);">
+            <i class="fas fa-{$widget_icon}"></i> {$widget_name}
+        </p>
+        <p style="font-size: 14px; color: var(--text-secondary);">
+            This is your new widget!
+        </p>
+    </div>
+</div>
+<div class="expanded-content">
+    <h4 style="color: var(--accent); margin-bottom: 15px;">Expanded View for {$widget_name}</h4>
+    <p>Add more detailed content or functionality here.</p>
+    <p>You can edit this file in the IDE widget: <code>widgets/{$widget_id}.php</code></p>
+</div>
+PHP;
+
+            // Attempt to write the new widget file
+            if (!file_put_contents($widget_file_path, $template_content)) {
+                $response['message'] = 'Failed to create widget file. Check permissions for the widgets/ directory.';
+                error_log("Failed to write widget file: " . $widget_file_path);
+                break;
+            }
+
+            // Update dynamic_widgets.json
+            $dynamic_widgets = loadDynamicWidgets();
+            $dynamic_widgets[$widget_id] = [
+                'name' => $widget_name,
+                'icon' => $widget_icon,
+                'width' => $widget_width,
+                'height' => $widget_height
+            ];
+
+            if (!saveDynamicWidgets($dynamic_widgets)) {
+                // If saving dynamic_widgets.json fails, try to clean up the created PHP file
+                unlink($widget_file_path);
+                $response['message'] = 'Failed to save widget configuration. Widget file created but not registered. Please try again.';
+                break;
+            }
+
+            $response = ['status' => 'success', 'message' => 'New widget template created and registered successfully! Reloading...'];
+            break;
         default:
             // Handled by default response
             break;
@@ -631,7 +744,7 @@ global $available_widgets;
                                 <th>Width</th>
                                 <th>Height</th>
                                 <th>Save Status</th>
-                                <th>Deactivate</th> <!-- NEW COLUMN HEADER -->
+                                <th>Deactivate</th>
                             </tr>
                         </thead>
                         <tbody id="widget-management-table-body">
@@ -647,6 +760,44 @@ global $available_widgets;
         </div>
     </div>
     <!-- END NEW: Widget Management Modal Structure -->
+
+    <!-- NEW: Create New Widget Modal Structure -->
+    <div class="message-modal-overlay" id="create-widget-modal-overlay">
+        <div class="message-modal" id="create-widget-modal">
+            <div class="message-modal-header">
+                <h3>Create New Widget Template</h3>
+                <button class="btn-close-modal" id="close-create-widget-modal">&times;</button>
+            </div>
+            <div class="message-modal-body">
+                <form id="create-widget-form">
+                    <div class="form-group">
+                        <label for="new-widget-name">Widget Name</label>
+                        <input type="text" id="new-widget-name" name="name" class="form-control" placeholder="e.g., My Custom Chart" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-widget-id">Widget ID (lowercase, no spaces, e.g., my_custom_chart)</label>
+                        <input type="text" id="new-widget-id" name="id" class="form-control" placeholder="e.g., my_custom_chart" pattern="^[a-z0-9_]+$" title="Lowercase letters, numbers, and underscores only." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-widget-icon">Font Awesome Icon (e.g., chart-bar)</label>
+                        <input type="text" id="new-widget-icon" name="icon" class="form-control" value="cube" placeholder="e.g., chart-bar">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-widget-width">Default Width (1-3 grid units)</label>
+                        <input type="number" id="new-widget-width" name="width" class="form-control" value="1" min="1" max="3" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-widget-height">Default Height (1-4 grid units)</label>
+                        <input type="number" id="new-widget-height" name="height" class="form-control" value="1" min="1" max="4" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                        <i class="fas fa-plus"></i> Create Widget Template
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END NEW: Create New Widget Modal Structure -->
 
     <div class="dashboard">
         <!-- Dashboard Header -->
@@ -665,9 +816,7 @@ global $available_widgets;
                 <button class="btn" id="refresh-btn">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
-                <button class="btn btn-primary" id="new-widget-btn">
-                    <i class="fas fa-plus"></i> New Widget
-                </button>
+                <!-- Removed: <button class="btn btn-primary" id="new-widget-btn"> -->
             </div>
         </header>
 
@@ -885,7 +1034,7 @@ global $available_widgets;
             </div>
 
             <div class="settings-group">
-                <h3 class="settings-title">Add New Widget</h3>
+                <h3 class="settings-title">Add Existing Widget</h3>
 
                 <div class="form-group">
                     <label for="widget_select">Select Widget</label>
@@ -900,6 +1049,18 @@ global $available_widgets;
                     <i class="fas fa-plus"></i> Add Widget to Dashboard
                 </button>
             </div>
+
+            <!-- NEW: Create New Widget Template Button -->
+            <div class="settings-group">
+                <h3 class="settings-title">Create New Widget</h3>
+                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
+                    Generate a new blank widget file ready for your custom code.
+                </p>
+                <button type="button" class="btn btn-primary" id="open-create-widget-modal" style="width: 100%;">
+                    <i class="fas fa-file-code"></i> Create New Widget Template
+                </button>
+            </div>
+
 
             <div class="settings-group">
                 <h3 class="settings-title">Advanced</h3>
