@@ -179,6 +179,12 @@ document.addEventListener('DOMContentLoaded', function() {
             expandedOverlay.appendChild(widget);
             widgetPlaceholder.style.display = 'block';
             if (expandIcon) expandIcon.classList.replace('fa-expand', 'fa-compress');
+
+            // NEW: If the expanded widget is the IDE, initialize/refresh its file tree
+            if (widget.dataset.widgetId === 'ide') {
+                initializeIdeWidget(widget);
+            }
+
         } else {
             // MINIMIZE Logic:
             const originalParent = document.getElementById(widgetPlaceholder.dataset.originalParentId);
@@ -241,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitActionForm('add_widget', { widget_id: widgetId });
     });
 
-    // Helper function to submit POST forms dynamically
+    // Helper function to submit POST forms dynamically (for full page reloads)
     function submitActionForm(actionType, data = {}) {
         const form = document.createElement('form');
         form.method = 'post';
@@ -270,6 +276,215 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         form.submit();
     }
+
+    // --- NEW: AJAX Request Helper ---
+    /**
+     * Sends an AJAX POST request to the server.
+     * @param {string} ajaxAction - The specific action for the PHP AJAX handler.
+     * @param {Object} data - Data to send with the request.
+     * @returns {Promise<Object>} A promise that resolves with the JSON response.
+     */
+    async function sendAjaxRequest(ajaxAction, data = {}) {
+        const formData = new FormData();
+        formData.append('ajax_action', ajaxAction);
+        for (const key in data) {
+            formData.append(key, data[key]);
+        }
+
+        try {
+            const response = await fetch('index.php', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest' // Custom header to identify AJAX requests in PHP
+                },
+                body: formData
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('AJAX Error:', error);
+            showMessageModal('Error', `AJAX request failed: ${error.message}`);
+            return { status: 'error', message: error.message };
+        }
+    }
+
+
+    // --- NEW: IDE Widget Specific Logic ---
+    let currentIdePath = '.'; // Current directory being viewed in the IDE
+    let currentEditingFile = null; // Current file being edited
+
+    const ideFileTree = document.getElementById('ide-file-tree');
+    const ideCurrentPathDisplay = document.getElementById('ide-current-path');
+    const ideCodeEditor = document.getElementById('ide-code-editor');
+    const ideFileNameDisplay = document.getElementById('ide-current-file-name');
+    const ideFileStatus = document.getElementById('ide-file-status');
+    const ideSaveBtn = document.getElementById('ide-save-btn');
+
+    // Function to update file status (Saved, Unsaved)
+    function setFileStatus(status) {
+        if (!ideFileStatus) return; // Guard against IDE not being present
+
+        ideFileStatus.classList.remove('ide-status-saved', 'ide-status-unsaved');
+        if (status === 'saved') {
+            ideFileStatus.textContent = 'Saved';
+            ideFileStatus.classList.add('ide-status-saved');
+        } else if (status === 'unsaved') {
+            ideFileStatus.textContent = 'Unsaved Changes';
+            ideFileStatus.classList.add('ide-status-unsaved');
+        } else {
+            ideFileStatus.textContent = ''; // Clear status
+        }
+    }
+
+    // Initialize IDE on widget expansion
+    function initializeIdeWidget(widget) {
+        // Ensure elements exist before trying to use them
+        if (!ideFileTree || !ideCodeEditor || !ideSaveBtn) {
+            console.warn("IDE elements not found. Widget might not be fully rendered.");
+            return;
+        }
+
+        // Reset editor state
+        ideCodeEditor.value = '';
+        ideCodeEditor.readOnly = true;
+        ideFileNameDisplay.textContent = 'No file selected';
+        ideSaveBtn.disabled = true;
+        setFileStatus('');
+        currentEditingFile = null;
+
+        // Load root directory initially
+        loadIdeFileTree('.');
+    }
+
+    // Load file tree for a given path
+    async function loadIdeFileTree(path) {
+        if (!ideFileTree || !ideCurrentPathDisplay) return;
+
+        ideFileTree.innerHTML = '<li class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</li>';
+        ideCurrentPathDisplay.textContent = path === '.' ? '/' : `/${path}`; // Display root as /
+
+        const response = await sendAjaxRequest('ide_list_files', { path: path });
+
+        if (response.status === 'success' && response.files) {
+            currentIdePath = response.current_path; // Update current path from server response
+            ideCurrentPathDisplay.textContent = currentIdePath === '' ? '/' : `/${currentIdePath}`;
+
+            ideFileTree.innerHTML = ''; // Clear loading indicator
+            response.files.forEach(item => {
+                const li = document.createElement('li');
+                li.classList.add('ide-file-tree-item');
+                li.dataset.path = item.path;
+                li.dataset.type = item.type;
+
+                let icon = '';
+                if (item.type === 'dir') {
+                    icon = '<i class="fas fa-folder"></i>';
+                } else {
+                    icon = '<i class="fas fa-file"></i>';
+                }
+
+                li.innerHTML = `${icon} <span>${item.name}</span>`;
+                if (!item.is_writable) {
+                     li.classList.add('ide-item-read-only');
+                     li.title = 'Not writable';
+                }
+
+                ideFileTree.appendChild(li);
+            });
+        } else {
+            ideFileTree.innerHTML = `<li class="ide-error-indicator"><i class="fas fa-exclamation-triangle"></i> Error: ${response.message}</li>`;
+            showMessageModal('IDE Error', `Failed to load files: ${response.message}`);
+        }
+    }
+
+    // Handle file tree clicks
+    if (ideFileTree) { // Check if IDE elements exist on the page
+        ideFileTree.addEventListener('click', async function(e) {
+            const item = e.target.closest('.ide-file-tree-item');
+            if (!item) return;
+
+            const path = item.dataset.path;
+            const type = item.dataset.type;
+            const isWritable = !item.classList.contains('ide-item-read-only');
+
+            if (type === 'dir') {
+                loadIdeFileTree(path);
+                currentEditingFile = null; // Clear current file when navigating directories
+                ideCodeEditor.value = '';
+                ideCodeEditor.readOnly = true;
+                ideFileNameDisplay.textContent = 'No file selected';
+                ideSaveBtn.disabled = true;
+                setFileStatus('');
+            } else if (type === 'file') {
+                if (!isWritable) {
+                    showMessageModal('Read-Only File', `"${item.dataset.name}" is not writable.`);
+                    ideCodeEditor.readOnly = true;
+                    ideSaveBtn.disabled = true;
+                } else {
+                    ideCodeEditor.readOnly = false;
+                    ideSaveBtn.disabled = false;
+                }
+
+                ideFileNameDisplay.textContent = item.dataset.name;
+                setFileStatus('saved'); // Assume saved until changes are made
+
+                const response = await sendAjaxRequest('ide_read_file', { path: path });
+                if (response.status === 'success' && typeof response.content === 'string') {
+                    ideCodeEditor.value = response.content;
+                    currentEditingFile = path;
+                } else {
+                    ideCodeEditor.value = `Error loading file: ${response.message}`;
+                    currentEditingFile = null;
+                    ideCodeEditor.readOnly = true;
+                    ideSaveBtn.disabled = true;
+                    setFileStatus('');
+                    showMessageModal('IDE Error', `Failed to read file: ${response.message}`);
+                }
+            }
+        });
+    }
+
+
+    // Handle editor content changes (mark as unsaved)
+    if (ideCodeEditor) {
+        ideCodeEditor.addEventListener('input', function() {
+            setFileStatus('unsaved');
+            if (ideSaveBtn) ideSaveBtn.disabled = ideCodeEditor.readOnly; // Re-enable save if it wasn't already
+        });
+    }
+
+
+    // Handle save button click
+    if (ideSaveBtn) {
+        ideSaveBtn.addEventListener('click', async function() {
+            if (!currentEditingFile || ideCodeEditor.readOnly) {
+                showMessageModal('Action Not Allowed', 'No file selected or file is read-only.');
+                return;
+            }
+
+            ideSaveBtn.disabled = true;
+            ideSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            const response = await sendAjaxRequest('ide_save_file', {
+                path: currentEditingFile,
+                content: ideCodeEditor.value
+            });
+
+            if (response.status === 'success') {
+                setFileStatus('saved');
+                showMessageModal('Success', response.message);
+            } else {
+                setFileStatus('unsaved'); // Remain unsaved if save failed
+                showMessageModal('Error', `Save failed: ${response.message}`);
+            }
+            ideSaveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+            ideSaveBtn.disabled = ideCodeEditor.readOnly; // Keep disabled if read-only
+        });
+    }
+
 
     // --- Other Global Buttons ---
     document.getElementById('refresh-btn').addEventListener('click', function() {

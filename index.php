@@ -21,6 +21,9 @@ session_start();
 require_once 'config.php'; // Ensures DASHBOARD_SETTINGS_FILE is defined
 require_once 'helpers.php';
 
+// Define the application root directory for security
+define('APP_ROOT', __DIR__);
+
 // --- Persistent Settings & Widgets Functions ---
 
 /**
@@ -64,7 +67,11 @@ function loadDashboardState() {
     // Merge loaded state with defaults to ensure all keys are present
     $final_state = array_replace_recursive($default_dashboard_state, $loaded_state);
 
-    // --- NEW: Ensure active_widgets entries have width/height, falling back to config defaults ---
+    // --- LOGGING: Before adjusting active_widgets from loaded_state ---
+    error_log("DEBUG: loadDashboardState - After initial merge with defaults:");
+    error_log("DEBUG: " . print_r($final_state, true));
+
+    // --- Ensure active_widgets entries have width/height, falling back to config defaults ---
     if (isset($final_state['active_widgets']) && is_array($final_state['active_widgets'])) {
         foreach ($final_state['active_widgets'] as $key => $widget_entry) {
             $widget_id = $widget_entry['id'];
@@ -80,7 +87,10 @@ function loadDashboardState() {
         // If active_widgets was missing or not an array, use default ones
         $final_state['active_widgets'] = $default_dashboard_state['active_widgets'];
     }
-    // --- END NEW ---
+
+    // --- LOGGING: After active_widgets dimension enrichment ---
+    error_log("DEBUG: loadDashboardState - Final state after dimension enrichment:");
+    error_log("DEBUG: " . print_r($final_state, true));
 
     return $final_state;
 }
@@ -92,15 +102,19 @@ function loadDashboardState() {
  * @return bool True on success, false on failure.
  */
 function saveDashboardState(array $state) {
+    // --- LOGGING: State being saved ---
+    error_log("DEBUG: saveDashboardState - Attempting to save the following state:");
+    error_log("DEBUG: " . print_r($state, true));
+
     $json_data = json_encode($state, JSON_PRETTY_PRINT);
     if ($json_data === false) {
-        error_log("Failed to encode dashboard state to JSON: " . json_last_error_msg());
+        error_log("ERROR: saveDashboardState - Failed to encode dashboard state to JSON: " . json_last_error_msg());
         return false;
     }
     // Attempt to write the file. File permissions are crucial here.
     $result = file_put_contents(DASHBOARD_SETTINGS_FILE, $json_data);
     if ($result === false) {
-        $error_message = "Failed to write dashboard state to file: " . DASHBOARD_SETTINGS_FILE;
+        $error_message = "ERROR: saveDashboardState - Failed to write dashboard state to file: " . DASHBOARD_SETTINGS_FILE;
         if (!is_writable(dirname(DASHBOARD_SETTINGS_FILE))) {
              $error_message .= " - Directory not writable: " . dirname(DASHBOARD_SETTINGS_FILE);
         } else if (file_exists(DASHBOARD_SETTINGS_FILE) && !is_writable(DASHBOARD_SETTINGS_FILE)) {
@@ -109,12 +123,198 @@ function saveDashboardState(array $state) {
             $error_message .= " - Unknown write error."; // Generic error if no specific permission issue found
         }
         error_log($error_message);
+    } else {
+        error_log("DEBUG: saveDashboardState - Successfully saved state to " . DASHBOARD_SETTINGS_FILE);
     }
     return $result !== false;
 }
 
-// --- End Persistent Settings & Widgets Functions ---
+// --- END Persistent Settings & Widgets Functions ---
 
+// --- NEW: IDE Widget File Operations (Server-Side) ---
+
+/**
+ * Validates and normalizes a given file path to prevent directory traversal.
+ * Ensures the path stays within the APP_ROOT.
+ *
+ * @param string $path The user-provided path.
+ * @return string|false The normalized real path within APP_ROOT, or false if invalid/outside root.
+ */
+function validate_path($path) {
+    $full_path = realpath(APP_ROOT . '/' . $path);
+
+    // Ensure the path is within the APP_ROOT and is not pointing to a device/symlink outside.
+    if ($full_path && str_starts_with($full_path, APP_ROOT . DIRECTORY_SEPARATOR)) {
+        return $full_path;
+    }
+    // Handle the APP_ROOT itself
+    if ($full_path === APP_ROOT) {
+        return $full_path;
+    }
+
+    return false; // Path is invalid or outside APP_ROOT
+}
+
+
+/**
+ * Lists files and directories within a given path, restricted to APP_ROOT.
+ * @param string $path Relative path from APP_ROOT.
+ * @return array|false List of files/dirs (name, type), or false on error/invalid path.
+ */
+function list_files($path) {
+    $absolute_path = validate_path($path);
+    if ($absolute_path === false || !is_dir($absolute_path)) {
+        error_log("IDE: list_files - Invalid or non-directory path: " . $path);
+        return false;
+    }
+
+    $items = scandir($absolute_path);
+    if ($items === false) {
+        error_log("IDE: list_files - Failed to scan directory: " . $absolute_path);
+        return false;
+    }
+
+    $file_list = [];
+    foreach ($items as $item) {
+        if ($item === '.' || ($item === '..' && $absolute_path === APP_ROOT)) {
+            // '.' is always useful. '..' only if not at root.
+            continue;
+        }
+
+        $item_full_path = $absolute_path . DIRECTORY_SEPARATOR . $item;
+        $relative_path = str_replace(APP_ROOT . DIRECTORY_SEPARATOR, '', $item_full_path);
+
+        $file_list[] = [
+            'name' => $item,
+            'path' => $relative_path,
+            'type' => is_dir($item_full_path) ? 'dir' : 'file',
+            'is_writable' => is_writable($item_full_path)
+        ];
+    }
+
+    // Sort directories first, then files, both alphabetically
+    usort($file_list, function($a, $b) {
+        if ($a['type'] === 'dir' && $b['type'] === 'file') return -1;
+        if ($a['type'] === 'file' && $b['type'] === 'dir') return 1;
+        return strcmp($a['name'], $b['name']);
+    });
+
+    // Add '..' entry if not at the root
+    if ($absolute_path !== APP_ROOT) {
+        array_unshift($file_list, [
+            'name' => '..',
+            'path' => str_replace(APP_ROOT . DIRECTORY_SEPARATOR, '', dirname($absolute_path)),
+            'type' => 'dir',
+            'is_writable' => true // Parent is always conceptually writable to navigate back
+        ]);
+    }
+    
+    return $file_list;
+}
+
+/**
+ * Reads content of a file, restricted to APP_ROOT.
+ * @param string $path Relative path from APP_ROOT.
+ * @return string|false File content, or false on error/invalid path.
+ */
+function read_file($path) {
+    $absolute_path = validate_path($path);
+    if ($absolute_path === false || !is_file($absolute_path)) {
+        error_log("IDE: read_file - Invalid or non-file path: " . $path);
+        return false;
+    }
+    $content = file_get_contents($absolute_path);
+    if ($content === false) {
+        error_log("IDE: read_file - Failed to read file: " . $absolute_path);
+    }
+    return $content;
+}
+
+/**
+ * Saves content to a file, restricted to APP_ROOT.
+ * @param string $path Relative path from APP_ROOT.
+ * @param string $content Content to write.
+ * @return bool True on success, false on failure.
+ */
+function save_file($path, $content) {
+    $absolute_path = validate_path($path);
+    if ($absolute_path === false) {
+        error_log("IDE: save_file - Invalid path: " . $path);
+        return false;
+    }
+    // Check if the file exists and is writable, or if its directory is writable for new files
+    if (file_exists($absolute_path) && !is_writable($absolute_path)) {
+        error_log("IDE: save_file - File exists but not writable: " . $absolute_path);
+        return false;
+    }
+    if (!file_exists($absolute_path) && !is_writable(dirname($absolute_path))) {
+        error_log("IDE: save_file - Directory not writable for new file: " . dirname($absolute_path));
+        return false;
+    }
+
+    $result = file_put_contents($absolute_path, $content);
+    if ($result === false) {
+        error_log("IDE: save_file - Failed to write content to file: " . $absolute_path);
+    }
+    return $result !== false;
+}
+
+// --- END NEW: IDE Widget File Operations ---
+
+
+// Check if this is an AJAX request
+$is_ajax_request = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+if ($is_ajax_request) {
+    // Handle AJAX requests
+    $ajax_action = $_POST['ajax_action'] ?? '';
+    $response = ['status' => 'error', 'message' => 'Unknown AJAX action.'];
+
+    error_log("DEBUG: AJAX request detected. Action: " . $ajax_action);
+    error_log("DEBUG: AJAX POST data: " . print_r($_POST, true));
+
+    switch ($ajax_action) {
+        case 'ide_list_files':
+            $current_dir = $_POST['path'] ?? '.';
+            $files = list_files($current_dir);
+            if ($files !== false) {
+                $response = ['status' => 'success', 'files' => $files, 'current_path' => $current_dir];
+            } else {
+                $response['message'] = "Failed to list files or invalid path.";
+            }
+            break;
+        case 'ide_read_file':
+            $file_path = $_POST['path'] ?? '';
+            $content = read_file($file_path);
+            if ($content !== false) {
+                $response = ['status' => 'success', 'content' => $content];
+            } else {
+                $response['message'] = "Failed to read file or invalid path.";
+            }
+            break;
+        case 'ide_save_file':
+            $file_path = $_POST['path'] ?? '';
+            $content = $_POST['content'] ?? '';
+            if (save_file($file_path, $content)) {
+                $response = ['status' => 'success', 'message' => 'File saved successfully.'];
+            } else {
+                $response['message'] = "Failed to save file. Check permissions or path.";
+            }
+            break;
+        default:
+            // Handled by default response
+            break;
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit; // Terminate script execution after sending JSON response for AJAX
+}
+
+
+// --- Normal Full Page POST Request Handling (only if not AJAX) ---
+// This block will only execute if it's not an AJAX request.
+// It handles widget adds/removes, global settings updates, and widget dimension updates (which still trigger full reloads).
 
 // Load current dashboard state (settings + active widgets)
 $current_dashboard_state = loadDashboardState();
@@ -124,13 +324,22 @@ $settings = $current_dashboard_state; // $settings now includes 'active_widgets'
 // This ensures session state is synced with persistent state on page load.
 $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets'];
 
+// --- LOGGING: $_SESSION active_widgets after initial load ---
+error_log("DEBUG: index.php - Initial \$_SESSION['active_widgets'] after loadDashboardState:");
+error_log("DEBUG: " . print_r($_SESSION['active_widgets'], true));
+
 
 // Handle POST requests for widget management and settings updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-AJAX POSTs now
     $has_state_changed = false; // Flag to know if we need to save the state
 
     // Check the 'action_type' to dispatch
     $action_type = $_POST['action_type'] ?? '';
+
+    // --- LOGGING: Incoming POST action and data ---
+    error_log("DEBUG: index.php (FULL REFRESH) - Received POST action_type: " . $action_type);
+    error_log("DEBUG: index.php (FULL REFRESH) - POST data: " . print_r($_POST, true));
+
 
     if ($action_type === 'add_widget' && !empty($_POST['widget_id'])) {
         // Only allow adding widgets if 'show all' is OFF
@@ -143,11 +352,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $new_widget = [
                 'id' => $widget_id_to_add,
                 'position' => count($_SESSION['active_widgets']) + 1,
-                'width' => $default_width,  // NEW: Add default width
-                'height' => $default_height // NEW: Add default height
+                'width' => $default_width,
+                'height' => $default_height
             ];
             $_SESSION['active_widgets'][] = $new_widget;
             $has_state_changed = true;
+            error_log("DEBUG: index.php - Widget added to session: " . $widget_id_to_add);
+        } else {
+            error_log("INFO: index.php - Add widget attempted but 'Show All Widgets' mode is active.");
         }
 
     } elseif ($action_type === 'remove_widget' && isset($_POST['widget_index'])) {
@@ -156,10 +368,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $widget_index_to_remove = (int)$_POST['widget_index'];
 
             if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
+                $removed_id = $_SESSION['active_widgets'][$widget_index_to_remove]['id'];
                 unset($_SESSION['active_widgets'][$widget_index_to_remove]);
                 $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']); // Re-index array
                 $has_state_changed = true;
+                error_log("DEBUG: index.php - Widget removed from session: " . $removed_id . " at index " . $widget_index_to_remove);
+            } else {
+                error_log("WARN: index.php - Attempted to remove non-existent widget at index: " . $widget_index_to_remove);
             }
+        } else {
+            error_log("INFO: index.php - Remove widget attempted but 'Show All Widgets' mode is active.");
         }
 
     } elseif ($action_type === 'update_settings') {
@@ -177,6 +395,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $settings = array_merge($settings, $settings_from_post);
         $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
         $has_state_changed = true;
+        error_log("DEBUG: index.php - Global settings updated in session.");
+
 
         // Special handling if 'show_all_available_widgets' was just turned ON
         if ($settings['show_all_available_widgets'] && !($current_dashboard_state['show_all_available_widgets'] ?? false)) {
@@ -187,17 +407,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $new_active_widgets[] = [
                     'id' => $id,
                     'position' => count($new_active_widgets) + 1,
-                    'width' => $def['width'] ?? 1,   // NEW: Use default width from config
-                    'height' => $def['height'] ?? 1  // NEW: Use default height from config
+                    'width' => $def['width'] ?? 1,
+                    'height' => $def['height'] ?? 1
                 ];
             }
             usort($new_active_widgets, function($a, $b) {
                 return strcmp($a['id'], $b['id']);
             });
             $_SESSION['active_widgets'] = $new_active_widgets;
+            error_log("DEBUG: index.php - 'Show All Widgets' turned ON. Active widgets reset to all available.");
         }
-        // If 'show_all_available_widgets' was just turned OFF, active_widgets in session
-        // will automatically revert to the last saved persistent state due to loadDashboardState at top.
 
     } elseif ($action_type === 'update_widget_dimensions' && isset($_POST['widget_index']) && isset($_POST['new_width']) && isset($_POST['new_height'])) {
         $widget_index = (int)$_POST['widget_index'];
@@ -210,15 +429,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['active_widgets'][$widget_index]['width'] = $new_width;
                 $_SESSION['active_widgets'][$widget_index]['height'] = $new_height;
                 $has_state_changed = true;
+                error_log("DEBUG: index.php - Widget dimensions updated for index " . $widget_index . ": W=" . $new_width . ", H=" . $new_height);
+            } else {
+                error_log("WARN: index.php - Attempted to update dimensions for non-existent widget at index: " . $widget_index);
             }
+        } else {
+            error_log("INFO: index.php - Widget dimension update attempted but 'Show All Widgets' mode is active.");
+        }
+    } else {
+        error_log("WARN: index.php (FULL REFRESH) - Unknown or invalid POST action_type received: " . ($_POST['action_type'] ?? 'EMPTY'));
+    }
+
+    // If any state (settings or active widgets) changed, save the entire state
+    if ($has_state_changed) {
+        // Create the full state array to save, combining current $settings and active widgets from session
+        $state_to_save = $settings; // Start with current $settings
+        // The 'active_widgets' in $state_to_save must always come from $_SESSION after processing POST
+        $state_to_save['active_widgets'] = $_SESSION['active_widgets'];
+
+        if (!saveDashboardState($state_to_save)) {
+            error_log("CRITICAL ERROR: index.php - Failed to save dashboard state persistently. Check server error logs for more details!");
         }
     }
+    // --- LOGGING: $_SESSION active_widgets after POST processing ---
+    error_log("DEBUG: index.php - \$_SESSION['active_widgets'] after POST processing:");
+    error_log("DEBUG: " . print_r($_SESSION['active_widgets'], true));
+
 }
 
 // Ensure the $settings array used for rendering always reflects the latest state,
 // potentially updated by POST or loaded from persistence.
+// This merge ensures default values are applied, then persistent ones, then session ones.
 $settings = array_replace_recursive($default_dashboard_state, $current_dashboard_state, $_SESSION['dashboard_settings'] ?? []);
-$settings['active_widgets'] = $_SESSION['active_widgets']; // Make sure active_widgets is the latest from session
+// The 'active_widgets' for rendering should always come from the final $_SESSION state after processing
+$settings['active_widgets'] = $_SESSION['active_widgets'];
+
+// --- LOGGING: Final $settings['active_widgets'] before HTML rendering ---
+error_log("DEBUG: index.php - Final \$settings['active_widgets'] before HTML rendering:");
+error_log("DEBUG: " . print_r($settings['active_widgets'], true));
+
 
 // Pass available widgets to the view
 global $available_widgets;

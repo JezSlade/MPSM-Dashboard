@@ -29,14 +29,19 @@ if (is_dir($widget_directory)) {
         $widget_id = basename($file_path, '.php');
 
         // Check if the widget config is valid and contains necessary info
-        if (!empty($widget_config) && isset($widget_config['name'], $widget_config['icon'])) {
+        // and ignore the template.php file as it's not a real widget
+        if (!empty($widget_config) && isset($widget_config['name'], $widget_config['icon']) && $widget_id !== 'template') {
             $available_widgets[$widget_id] = [
                 'name' => $widget_config['name'],
                 'icon' => $widget_config['icon'],
                 'width' => $widget_config['width'] ?? 1, // Default to 1 if not specified
                 'height' => $widget_config['height'] ?? 1 // Default to 1 if not specified
             ];
-        } else {
+        } else if ($widget_id === 'template') {
+            // Log that the template was ignored, useful for debugging
+            error_log("INFO: config.php - Ignoring template widget file: '{$file_path}'");
+        }
+        else {
             error_log("Warning: Widget file '{$file_path}' does not contain valid \$_widget_config.");
         }
     }

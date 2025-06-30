@@ -67,18 +67,6 @@ body.expanded-active {
 .widget-placeholder {
     display: none; /* Hidden by default */
 }
-/* If you want a visual representation of the placeholder when widget is maximized, uncomment this:
-.widget.maximized + .widget-placeholder {
-    display: block;
-    width: var(--placeholder-width); // You'd need to set these dynamically via JS or CSS
-    height: var(--placeholder-height); // based on original widget size if desired
-    grid-column: span var(--width);
-    grid-row: span var(--height);
-    background-color: rgba(255,255,255,0.05);
-    border: 1px dashed rgba(255,255,255,0.1);
-    border-radius: 20px;
-}
-*/
 
 
 .dashboard {
@@ -294,7 +282,7 @@ body.expanded-active {
         8px 8px 16px var(--shadow-dark),
         -8px -8px 16px rgba(74, 78, 94, 0.1);
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Adjusted to 300px min */
     grid-auto-rows: minmax(200px, auto);
     gap: 20px;
     align-content: flex-start;
@@ -384,6 +372,8 @@ body.expanded-active {
     /* Ensure expanded content can scroll if needed inside the modal */
     overflow-y: auto;
     flex: 1; /* Take up available vertical space */
+    display: flex; /* Make expanded content a flex container */
+    flex-direction: column; /* Stack its children vertically */
 }
 
 /* --- Widget Specific Content Styles (Keep these as they were) --- */
@@ -867,5 +857,186 @@ input:checked + .slider:before {
         height: 100%;
         border-radius: 0;
         padding: 10px;
+    }
+}
+
+/* --- NEW: IDE Widget Specific Styles --- */
+.ide-container {
+    display: flex;
+    flex-direction: row; /* Horizontal layout for sidebar and editor */
+    height: 100%; /* Take full height of the widget-content */
+    overflow: hidden; /* Prevent overall scroll, children will handle */
+    border-radius: 15px; /* Rounded corners for the IDE itself */
+    background: var(--bg-secondary); /* A slightly different background for the IDE */
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+.ide-sidebar {
+    width: 250px; /* Fixed width for the sidebar */
+    background: var(--bg-tertiary); /* Darker background for sidebar */
+    padding: 15px;
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Allow sidebar to scroll */
+}
+
+.ide-path {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ide-file-tree {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1; /* Take remaining vertical space */
+}
+
+.ide-file-tree-item {
+    padding: 8px 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+    border-radius: 8px;
+    color: var(--text-primary);
+}
+
+.ide-file-tree-item:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.ide-file-tree-item i {
+    color: var(--text-secondary);
+    width: 18px; /* Fixed width for icons */
+    text-align: center;
+}
+
+.ide-file-tree-item[data-type="dir"] i {
+    color: var(--warning); /* Yellow for folders */
+}
+
+.ide-file-tree-item.ide-item-read-only {
+    opacity: 0.6;
+    cursor: not-allowed;
+    color: var(--text-secondary);
+}
+.ide-file-tree-item.ide-item-read-only i {
+    color: var(--text-secondary);
+}
+
+
+.ide-loading-indicator, .ide-error-indicator {
+    padding: 10px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+.ide-error-indicator {
+    color: var(--danger);
+}
+
+
+.ide-editor-area {
+    flex: 1; /* Take remaining horizontal space */
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+.ide-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+#ide-current-file-name {
+    font-weight: bold;
+    color: var(--text-primary);
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#ide-file-status {
+    margin-left: 10px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 5px;
+}
+
+.ide-status-saved {
+    background-color: var(--success);
+    color: white;
+}
+
+.ide-status-unsaved {
+    background-color: var(--warning);
+    color: var(--bg-primary); /* Dark text on warning background */
+}
+
+#ide-save-btn {
+    margin-left: 15px;
+    padding: 5px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+.ide-code-editor {
+    flex: 1; /* Take remaining vertical space */
+    width: 100%;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 15px;
+    color: #f8f8f2; /* Light code editor text */
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none; /* Disable textarea resize handle */
+    outline: none; /* Remove blue outline on focus */
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+}
+
+.ide-code-editor:focus {
+    border-color: var(--accent);
+}
+
+.ide-code-editor:read-only {
+    cursor: not-allowed;
+    background-color: rgba(0,0,0,0.1);
+    opacity: 0.8;
+}
+
+/* Media Queries for IDE responsiveness */
+@media (max-width: 768px) {
+    .ide-container {
+        flex-direction: column; /* Stack sidebar and editor vertically */
+    }
+
+    .ide-sidebar {
+        width: 100%; /* Full width for sidebar on small screens */
+        height: 200px; /* Fixed height for sidebar, allow scroll */
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border); /* Add bottom border */
+    }
+
+    .ide-editor-area {
+        flex: 1; /* Editor takes remaining height */
     }
 }
