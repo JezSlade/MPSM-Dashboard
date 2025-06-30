@@ -43,19 +43,35 @@ if (!function_exists('generate_calendar')) {
     }
 }
 ?>
-<div class="calendar-header">
-    <button><i class="fas fa-chevron-left"></i></button>
-    <h3><?= date('F Y') ?></h3>
-    <button><i class="fas fa-chevron-right"></i></button>
+<div class="compact-content">
+    <div class="calendar-header">
+        <h3><?= date('F Y') ?></h3>
+    </div>
+    <div class="calendar-grid">
+        <div class="day-name">Sun</div>
+        <div class="day-name">Mon</div>
+        <div class="day-name">Tue</div>
+        <div class="day-name">Wed</div>
+        <div class="day-name">Thu</div>
+        <div class="day-name">Fri</div>
+        <div class="day-name">Sat</div>
+        <?= generate_calendar() ?>
+    </div>
 </div>
-<div class="calendar-grid">
-    <div class="day-name">Sun</div>
-    <div class="day-name">Mon</div>
-    <div class="day-name">Tue</div>
-    <div class="day-name">Wed</div>
-    <div class="day-name">Thu</div>
-    <div class="day-name">Fri</div>
-    <div class="day-name">Sat</div>
-
-    <?= generate_calendar() ?>
+<div class="expanded-content">
+    <div class="calendar-header">
+        <button><i class="fas fa-chevron-left"></i></button>
+        <h3><?= date('F Y') ?></h3>
+        <button><i class="fas fa-chevron-right"></i></button>
+    </div>
+    <div class="calendar-grid">
+        <div class="day-name">Sun</div>
+        <div class="day-name">Mon</div>
+        <div class="day-name">Tue</div>
+        <div class="day-name">Wed</div>
+        <div class="day-name">Thu</div>
+        <div class="day-name">Fri</div>
+        <div class="day-name">Sat</div>
+        <?= generate_calendar() ?>
+    </div>
 </div>
