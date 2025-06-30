@@ -8,7 +8,7 @@
 $_widget_config = [
     'name' => 'File Editor (IDE)', // Display name
     'icon' => 'code',               // Font Awesome icon for code
-    'width' => 4,                   // Default size: wide for an IDE
+    'width' => 3,                   // Default size: wide for an IDE (Adjusted from 4 to 3)
     'height' => 3                   // Default size: tall for an IDE
 ];
 

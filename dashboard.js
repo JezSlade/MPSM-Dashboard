@@ -171,13 +171,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!widget.classList.contains('maximized')) {
             // MAXIMIZE Logic:
+            // Ensure the placeholder is created and correctly positioned relative to its original parent
+            if (!widgetPlaceholder) {
+                console.error("Widget placeholder not found!");
+                return; // Cannot proceed without placeholder
+            }
             widgetPlaceholder.dataset.originalParentId = widget.parentNode.id;
             widgetPlaceholder.dataset.originalIndex = Array.from(widget.parentNode.children).indexOf(widget);
+            widgetPlaceholder.style.display = 'block'; // Make placeholder visible to hold space
+
             widget.classList.add('maximized');
             document.body.classList.add('expanded-active');
             expandedOverlay.classList.add('active');
-            expandedOverlay.appendChild(widget);
-            widgetPlaceholder.style.display = 'block';
+            expandedOverlay.appendChild(widget); // Move widget to overlay
+            
             if (expandIcon) expandIcon.classList.replace('fa-expand', 'fa-compress');
 
             // NEW: If the expanded widget is the IDE, initialize/refresh its file tree
@@ -202,7 +209,9 @@ document.addEventListener('DOMContentLoaded', function() {
             widget.classList.remove('maximized');
             document.body.classList.remove('expanded-active');
             expandedOverlay.classList.remove('active');
-            widgetPlaceholder.style.display = 'none';
+            if (widgetPlaceholder) { // Check if placeholder exists before trying to hide
+                widgetPlaceholder.style.display = 'none';
+            }
             if (expandIcon) expandIcon.classList.replace('fa-compress', 'fa-expand');
         }
     }
@@ -277,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
         form.submit();
     }
 
-    // --- NEW: AJAX Request Helper ---
+    // --- AJAX Request Helper ---
     /**
      * Sends an AJAX POST request to the server.
      * @param {string} ajaxAction - The specific action for the PHP AJAX handler.
@@ -316,67 +325,55 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentIdePath = '.'; // Current directory being viewed in the IDE
     let currentEditingFile = null; // Current file being edited
 
-    const ideFileTree = document.getElementById('ide-file-tree');
-    const ideCurrentPathDisplay = document.getElementById('ide-current-path');
-    const ideCodeEditor = document.getElementById('ide-code-editor');
-    const ideFileNameDisplay = document.getElementById('ide-current-file-name');
-    const ideFileStatus = document.getElementById('ide-file-status');
-    const ideSaveBtn = document.getElementById('ide-save-btn');
-
     // Function to update file status (Saved, Unsaved)
+    // This function needs `this.ideFileStatus` to be bound to the correct element
     function setFileStatus(status) {
-        // Guard against IDE elements not being present (e.g., if IDE widget isn't on dashboard)
-        if (!ideFileStatus) return; 
+        const ideFileStatusEl = this.ideFileStatus || document.getElementById('ide-file-status'); // Fallback for global context
+        if (!ideFileStatusEl) return; 
 
-        ideFileStatus.classList.remove('ide-status-saved', 'ide-status-unsaved');
+        ideFileStatusEl.classList.remove('ide-status-saved', 'ide-status-unsaved');
         if (status === 'saved') {
-            ideFileStatus.textContent = 'Saved';
-            ideFileStatus.classList.add('ide-status-saved');
+            ideFileStatusEl.textContent = 'Saved';
+            ideFileStatusEl.classList.add('ide-status-saved');
         } else if (status === 'unsaved') {
-            ideFileStatus.textContent = 'Unsaved Changes';
-            ideFileStatus.classList.add('ide-status-unsaved');
+            ideFileStatusEl.textContent = 'Unsaved Changes';
+            ideFileStatusEl.classList.add('ide-status-unsaved');
         } else {
-            ideFileStatus.textContent = ''; // Clear status
+            ideFileStatusEl.textContent = ''; // Clear status
         }
     }
 
     // Initialize IDE on widget expansion
     function initializeIdeWidget(widget) {
-        // Ensure elements exist before trying to use them
-        // The IDE elements are only available when the IDE widget is expanded.
-        if (!widget.querySelector('#ide-file-tree') || !widget.querySelector('#ide-code-editor') || !widget.querySelector('#ide-save-btn')) {
+        // Get elements within the *specific* expanded widget
+        const ideFileTreeEl = widget.querySelector('#ide-file-tree');
+        const ideCurrentPathDisplayEl = widget.querySelector('#ide-current-path');
+        const ideCodeEditorEl = widget.querySelector('#ide-code-editor');
+        const ideFileNameDisplayEl = widget.querySelector('#ide-current-file-name');
+        const ideFileStatusEl = widget.querySelector('#ide-file-status');
+        const ideSaveBtnEl = widget.querySelector('#ide-save-btn');
+
+        if (!ideFileTreeEl || !ideCodeEditorEl || !ideSaveBtnEl || !ideFileStatusEl || !ideFileNameDisplayEl || !ideCurrentPathDisplayEl) {
             console.warn("IDE elements not found inside the expanded widget. Skipping IDE initialization.");
             return;
         }
-        
-        // Re-assign local consts to elements within the expanded widget
-        // This is crucial because when the widget is moved to expandedOverlay,
-        // the original element references might become stale or point to elements
-        // that are no longer in the active DOM part.
-        const currentIdeFileTree = widget.querySelector('#ide-file-tree');
-        const currentIdeCurrentPathDisplay = widget.querySelector('#ide-current-path');
-        const currentIdeCodeEditor = widget.querySelector('#ide-code-editor');
-        const currentIdeFileNameDisplay = widget.querySelector('#ide-current-file-name');
-        const currentIdeFileStatus = widget.querySelector('#ide-file-status');
-        const currentIdeSaveBtn = widget.querySelector('#ide-save-btn');
 
         // Reset editor state
-        currentIdeCodeEditor.value = '';
-        currentIdeCodeEditor.readOnly = true;
-        currentIdeFileNameDisplay.textContent = 'No file selected';
-        currentIdeSaveBtn.disabled = true;
-        setFileStatus('');
+        ideCodeEditorEl.value = '';
+        ideCodeEditorEl.readOnly = true;
+        ideFileNameDisplayEl.textContent = 'No file selected';
+        ideSaveBtnEl.disabled = true;
+        setFileStatus.call({ideFileStatus: ideFileStatusEl}, ''); // Call setFileStatus with correct context
         currentEditingFile = null;
 
         // Load root directory initially
-        // Use the local reference to loadIdeFileTree and currentIdePathDisplay
-        loadIdeFileTreeInternal(currentIdeFileTree, currentIdeCurrentPathDisplay, currentIdeCodeEditor, currentIdeFileNameDisplay, currentIdeSaveBtn, currentIdeFileStatus, '.');
+        loadIdeFileTreeInternal(ideFileTreeEl, ideCurrentPathDisplayEl, ideCodeEditorEl, ideFileNameDisplayEl, ideSaveBtnEl, ideFileStatusEl, '.');
     }
 
     // This internal function helps with re-scoping elements after widget expansion
     async function loadIdeFileTreeInternal(fileTreeEl, pathDisplayEl, codeEditorEl, fileNameDisplayEl, saveBtnEl, fileStatusEl, path) {
         fileTreeEl.innerHTML = '<li class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</li>';
-        pathDisplayEl.textContent = path === '' ? '/' : `/${path}`; // Display root as /
+        pathDisplayEl.textContent = path === '.' ? '/' : `/${path}`; // Display root as /
 
         const response = await sendAjaxRequest('ide_list_files', { path: path });
 
@@ -399,6 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon = '<i class="fas fa-file"></i>';
                 }
 
+                // Append the HTML string to the list item
                 li.innerHTML = `${icon} <span>${item.name}</span>`;
                 if (!item.is_writable) {
                      li.classList.add('ide-item-read-only');
@@ -420,12 +418,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!item || !item.closest('.widget.maximized[data-widget-id="ide"]')) return;
 
         // Re-get elements within the context of the active IDE widget
-        const currentIdeCodeEditor = item.closest('.ide-container').querySelector('#ide-code-editor');
-        const currentIdeFileNameDisplay = item.closest('.ide-container').querySelector('#ide-current-file-name');
-        const currentIdeSaveBtn = item.closest('.ide-container').querySelector('#ide-save-btn');
-        const currentIdeFileStatus = item.closest('.ide-container').querySelector('#ide-file-status');
-        const currentIdeFileTree = item.closest('.ide-container').querySelector('#ide-file-tree');
-        const currentIdeCurrentPathDisplay = item.closest('.ide-container').querySelector('#ide-current-path');
+        const ideContainer = item.closest('.ide-container');
+        const currentIdeCodeEditor = ideContainer.querySelector('#ide-code-editor');
+        const currentIdeFileNameDisplay = ideContainer.querySelector('#ide-current-file-name');
+        const currentIdeSaveBtn = ideContainer.querySelector('#ide-save-btn');
+        const currentIdeFileStatus = ideContainer.querySelector('#ide-file-status');
+        const currentIdeFileTree = ideContainer.querySelector('#ide-file-tree');
+        const currentIdeCurrentPathDisplay = ideContainer.querySelector('#ide-current-path');
 
         const path = item.dataset.path;
         const type = item.dataset.type;
@@ -572,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     updateAddRemoveButtonStates(); // Initial state update on load
 
-    // --- NEW: Delete Settings JSON Button Logic ---
+    // --- Delete Settings JSON Button Logic ---
     const deleteSettingsJsonBtn = document.getElementById('delete-settings-json-btn');
     if (deleteSettingsJsonBtn) {
         deleteSettingsJsonBtn.addEventListener('click', function() {

@@ -60,4 +60,5 @@ if (!function_exists('render_debug_info_widget')) {
     }
 }
 
+// THIS IS THE CRITICAL LINE THAT WAS MISSING OR INCORRECT
 return 'render_debug_info_widget';

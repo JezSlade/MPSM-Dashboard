@@ -377,10 +377,17 @@ body.expanded-active {
 /* --- Widget Content States --- */
 /* By default, show compact content, hide expanded content */
 .widget .compact-content {
-    display: block;
+    display: block; /* Use block to occupy space */
+    height: 100%; /* Occupy full height of widget-content */
+    display: flex; /* Make it a flex container */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    text-align: center;
 }
 .widget .expanded-content {
-    display: none;
+    display: none; /* Hidden by default */
 }
 
 /* When widget is maximized, hide compact content, show expanded content */
@@ -388,12 +395,10 @@ body.expanded-active {
     display: none;
 }
 .widget.maximized .expanded-content {
-    display: block;
-    /* Ensure expanded content can scroll if needed inside the modal */
-    overflow-y: auto;
+    display: flex; /* Show expanded content */
     flex: 1; /* Take up available vertical space */
-    display: flex; /* Make expanded content a flex container */
     flex-direction: column; /* Stack its children vertically */
+    padding-right: 10px; /* Add right padding for scrollbar if needed */
 }
 
 /* --- Widget Specific Content Styles (Keep these as they were) --- */
