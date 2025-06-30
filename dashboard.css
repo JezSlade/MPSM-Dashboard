@@ -67,15 +67,18 @@ body.expanded-active {
 .widget-placeholder {
     display: none; /* Hidden by default */
 }
-.widget.maximized + .widget-placeholder { /* When a widget is maximized and its sibling is the placeholder */
-    display: block; /* Show the placeholder to maintain space */
-    /* You can style the placeholder if you want a visual indication of the original spot */
-    width: var(--placeholder-width);
-    height: var(--placeholder-height);
+/* If you want a visual representation of the placeholder when widget is maximized, uncomment this:
+.widget.maximized + .widget-placeholder {
+    display: block;
+    width: var(--placeholder-width); // You'd need to set these dynamically via JS or CSS
+    height: var(--placeholder-height); // based on original widget size if desired
     grid-column: span var(--width);
     grid-row: span var(--height);
-    /* For a smoother effect during transition, you might match its size with the original widget's */
+    background-color: rgba(255,255,255,0.05);
+    border: 1px dashed rgba(255,255,255,0.1);
+    border-radius: 20px;
 }
+*/
 
 
 .dashboard {
@@ -161,6 +164,19 @@ body.expanded-active {
         6px 6px 12px var(--shadow-dark),
         -6px -6px 12px rgba(74, 78, 94, 0.1);
 }
+
+/* Style for disabled buttons */
+.btn.disabled,
+.widget-action.disabled,
+.widget-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none; /* Prevents click events from firing */
+    filter: grayscale(100%); /* Visually indicate it's inactive */
+    transform: none !important; /* Prevent hover effects on disabled */
+    box-shadow: none !important; /* Prevent hover effects on disabled */
+}
+
 
 .btn-primary {
     background: var(--accent);
@@ -348,6 +364,26 @@ body.expanded-active {
 .widget-content {
     flex: 1;
     overflow-y: auto;
+}
+
+/* --- Widget Content States --- */
+/* By default, show compact content, hide expanded content */
+.widget .compact-content {
+    display: block;
+}
+.widget .expanded-content {
+    display: none;
+}
+
+/* When widget is maximized, hide compact content, show expanded content */
+.widget.maximized .compact-content {
+    display: none;
+}
+.widget.maximized .expanded-content {
+    display: block;
+    /* Ensure expanded content can scroll if needed inside the modal */
+    overflow-y: auto;
+    flex: 1; /* Take up available vertical space */
 }
 
 /* --- Widget Specific Content Styles (Keep these as they were) --- */
@@ -669,6 +705,7 @@ input:checked + .slider:before {
 }
 
 /* --- Message Modal Styles --- */
+/* This class is reused for both general message modal AND widget settings modal */
 .message-modal-overlay {
     position: fixed;
     top: 0;
@@ -697,16 +734,10 @@ input:checked + .slider:before {
     width: 90%;
     max-width: 500px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    /* Removed transform for vertical centering with flex */
     transition: transform 0.3s ease;
     border: 1px solid var(--glass-border);
-    margin: auto; /* New: To center vertically and horizontally within flex container */
+    margin: auto;
 }
-
-/* Removed specific transform translateY as flex/margin auto handles it */
-/* .message-modal-overlay.active .message-modal {
-    transform: translateY(0);
-} */
 
 .message-modal-header {
     display: flex;
@@ -749,36 +780,32 @@ input:checked + .slider:before {
 }
 
 /* --- Maximized Widget Styles --- */
-/* The widget itself when it's in the maximized state, styled as a modal. */
-/* This will be a child of the .widget-expanded-overlay */
 .widget.maximized {
-    position: relative; /* Relative to its flex parent (the overlay) */
-    width: 90%; /* Widget takes up 90% of the overlay's width */
-    height: 90%; /* Widget takes up 90% of the overlay's height */
-    max-width: 1200px; /* Max size for desktop screens */
-    max-height: 900px; /* Max height for desktop screens */
-    z-index: 1002; /* Ensure it's above the overlay */
-    background: var(--bg-tertiary); /* Widget's own background */
+    position: relative;
+    width: 90%;
+    height: 90%;
+    max-width: 1200px;
+    max-height: 900px;
+    z-index: 1002;
+    background: var(--bg-tertiary);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8);
     display: flex;
     flex-direction: column;
     padding: 20px;
-    opacity: 1; /* Make sure it's visible */
-    visibility: visible; /* Make sure it's visible */
-    transform: scale(0.8); /* Start smaller for a pop-in effect */
-    transition: transform 0.3s ease-out, opacity 0.3s ease, visibility 0.3s ease; /* Smooth transition */
+    opacity: 1;
+    visibility: visible;
+    transform: scale(0.8);
+    transition: transform 0.3s ease-out, opacity 0.3s ease, visibility 0.3s ease;
 }
 
-/* When the widget is maximized, scale it to 1 */
 .widget-expanded-overlay.active .widget.maximized {
     transform: scale(1);
 }
 
-/* Override normal widget hover effects when maximized */
 .widget.maximized:hover {
-    transform: scale(1) !important; /* No translateY(-5px) or shadow changes on hover when maximized */
+    transform: scale(1) !important;
     box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8) !important;
 }
 
@@ -795,8 +822,8 @@ input:checked + .slider:before {
 
 .widget.maximized .widget-content {
     flex: 1;
-    overflow-y: auto; /* Allow internal scrolling if content overflows */
-    padding-right: 10px; /* Space for scrollbar */
+    overflow-y: auto;
+    padding-right: 10px;
 }
 
 /* Responsive Design */
@@ -839,6 +866,6 @@ input:checked + .slider:before {
         width: 100%;
         height: 100%;
         border-radius: 0;
-        padding: 10px; /* Smaller padding for mobile full screen */
+        padding: 10px;
     }
 }

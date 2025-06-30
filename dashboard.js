@@ -1,7 +1,7 @@
 // dashboard.js
 
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Settings Panel Toggle ---
+    // --- Global Settings Panel Toggle ---
     const settingsToggle = document.getElementById('settings-toggle');
     const closeSettings = document.getElementById('close-settings');
     const settingsPanel = document.getElementById('settings-panel');
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.display = 'none';
     });
 
-    // --- Message Modal Functions (to replace alerts) ---
+    // --- Message Modal Functions (for general confirmations/alerts) ---
     const messageModalOverlay = document.getElementById('message-modal-overlay');
     const messageModalTitle = document.getElementById('message-modal-title');
     const messageModalContent = document.getElementById('message-modal-content');
@@ -53,61 +53,112 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // --- Widget Actions ---
-    // Listener on document.body so it can capture clicks on widgets
-    // whether they are in mainContent or expandedOverlay.
+    // --- Widget Settings Modal Elements ---
+    const widgetSettingsModalOverlay = document.getElementById('widget-settings-modal-overlay');
+    const widgetSettingsModal = document.getElementById('widget-settings-modal');
+    const closeWidgetSettingsModalBtn = document.getElementById('close-widget-settings-modal');
+    const widgetSettingsTitle = document.getElementById('widget-settings-modal-title');
+    const widgetSettingsIndexInput = document.getElementById('widget-settings-index');
+    const widgetSettingsWidthInput = document.getElementById('widget-settings-width');
+    const widgetSettingsHeightInput = document.getElementById('widget-settings-height');
+    const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
+
+    // Function to show the widget settings modal
+    function showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight) {
+        widgetSettingsTitle.textContent = `Settings for "${widgetName}"`;
+        widgetSettingsIndexInput.value = widgetIndex;
+        widgetSettingsWidthInput.value = currentWidth;
+        widgetSettingsHeightInput.value = currentHeight;
+
+        // Check if "Show All Widgets" mode is active and disable inputs if it is
+        const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
+        const isDisabled = showAllWidgetsToggle && showAllWidgetsToggle.checked;
+        widgetSettingsWidthInput.disabled = isDisabled;
+        widgetSettingsHeightInput.disabled = isDisabled;
+        widgetDimensionsForm.querySelector('button[type="submit"]').disabled = isDisabled;
+        widgetDimensionsForm.querySelector('button[type="submit"]').textContent = isDisabled ? 'Disabled in Show All Mode' : 'Save Dimensions';
+
+
+        widgetSettingsModalOverlay.classList.add('active');
+    }
+
+    // Close widget settings modal listeners
+    closeWidgetSettingsModalBtn.addEventListener('click', function() {
+        widgetSettingsModalOverlay.classList.remove('active');
+    });
+    widgetSettingsModalOverlay.addEventListener('click', function(e) {
+        if (e.target === widgetSettingsModalOverlay) {
+            widgetSettingsModalOverlay.classList.remove('active');
+        }
+    });
+
+    // Handle submission of widget dimensions form
+    widgetDimensionsForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const widgetIndex = widgetSettingsIndexInput.value;
+        const newWidth = widgetSettingsWidthInput.value;
+        const newHeight = widgetSettingsHeightInput.value;
+
+        // Check if "Show All Widgets" mode is active before submitting
+        const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
+        if (showAllWidgetsToggle && showAllWidgetsToggle.checked) {
+            showMessageModal('Information', 'Widget dimension adjustment is disabled in "Show All Widgets" mode.');
+            widgetSettingsModalOverlay.classList.remove('active'); // Close settings modal
+            return;
+        }
+
+        submitActionForm('update_widget_dimensions', {
+            widget_index: widgetIndex,
+            new_width: newWidth,
+            new_height: newHeight
+        });
+    });
+
+
+    // --- Widget Actions (delegated listener on document.body) ---
     const mainContent = document.getElementById('widget-container');
-    const expandedOverlay = document.getElementById('widget-expanded-overlay'); // The new overlay
+    const expandedOverlay = document.getElementById('widget-expanded-overlay');
 
     document.body.addEventListener('click', function(e) {
-        const target = e.target.closest('.widget-action'); // Find the clicked action button
+        const target = e.target.closest('.widget-action');
 
         if (target) {
-            const widget = target.closest('.widget'); // Get the parent widget element
-            // If the clicked action is not part of a widget, or if the widget is null, do nothing
+            const widget = target.closest('.widget');
             if (!widget) return;
 
             // Handle Settings Action (Cog Icon)
             if (target.classList.contains('action-settings')) {
                 const widgetName = widget.querySelector('.widget-title span').textContent;
-                showMessageModal('Widget Settings', `Settings for "${widgetName}" widget.`);
+                const widgetIndex = widget.dataset.widgetIndex;
+                const currentWidth = widget.dataset.currentWidth;
+                const currentHeight = widget.dataset.currentHeight;
+
+                showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight);
+
             }
             // Handle Expand/Shrink Action (Expand Icon)
             else if (target.classList.contains('action-expand')) {
-                toggleWidgetExpansion(widget); // Call a dedicated function for consistency
+                toggleWidgetExpansion(widget);
             }
             // Handle Remove Widget Action (Times Icon)
             else if (target.classList.contains('remove-widget')) {
-                // If the remove button is disabled, do nothing
+                // If the remove button is disabled (due to 'Show All Widgets' mode), do nothing
                 if (target.classList.contains('disabled')) {
                     showMessageModal('Information', 'This widget cannot be removed in "Show All Widgets" mode.');
                     return;
                 }
 
-                // Get the widget index from the data-index attribute on the action button
                 const widgetIndex = target.getAttribute('data-index');
-
-                console.log("Remove button clicked. Widget index:", widgetIndex);
-
                 if (widget.classList.contains('maximized')) {
-                    // If maximized, clicking 'X' should minimize/close the modal
-                    console.log("Widget is maximized, minimizing instead of removing.");
-                    toggleWidgetExpansion(widget); // Restore to original position
+                    toggleWidgetExpansion(widget); // Minimize if maximized
                 } else if (widgetIndex !== null && widgetIndex !== undefined) {
-                    // If not maximized and a valid index is found, proceed with removal confirmation
-                    console.log("Widget is minimized, prompting for removal confirmation.");
                     showMessageModal(
                         'Confirm Removal',
                         'Are you sure you want to remove this widget from the dashboard?',
                         function() {
-                            console.log("Confirmed removal for widget index:", widgetIndex);
                             submitActionForm('remove_widget', { widget_index: widgetIndex });
                         }
                     );
-                } else {
-                    // Fallback for cases where data-index might be missing (shouldn't happen with current HTML)
-                    console.error("Error: Could not determine widget index for removal on a non-maximized widget.");
-                    showMessageModal('Error', 'Could not determine which widget to remove.');
                 }
             }
         }
@@ -116,68 +167,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper function to toggle widget expansion state
     function toggleWidgetExpansion(widget) {
         const widgetPlaceholder = widget.querySelector('.widget-placeholder');
-        const expandIcon = widget.querySelector('.action-expand i'); // Get the specific expand icon for this widget
+        const expandIcon = widget.querySelector('.action-expand i');
 
         if (!widget.classList.contains('maximized')) {
             // MAXIMIZE Logic:
-            // Store original position references on the placeholder
             widgetPlaceholder.dataset.originalParentId = widget.parentNode.id;
             widgetPlaceholder.dataset.originalIndex = Array.from(widget.parentNode.children).indexOf(widget);
-
-            // Add classes for styling
             widget.classList.add('maximized');
             document.body.classList.add('expanded-active');
             expandedOverlay.classList.add('active');
-
-            // Move the widget into the overlay
             expandedOverlay.appendChild(widget);
-
-            // Make the placeholder visible in the original spot to maintain grid flow
             widgetPlaceholder.style.display = 'block';
-
-            // Change icon
             if (expandIcon) expandIcon.classList.replace('fa-expand', 'fa-compress');
-
         } else {
             // MINIMIZE Logic:
             const originalParent = document.getElementById(widgetPlaceholder.dataset.originalParentId);
             const originalIndex = parseInt(widgetPlaceholder.dataset.originalIndex);
 
-            // Move the widget back to its original parent
             if (originalParent && originalParent.children[originalIndex]) {
                 originalParent.insertBefore(widget, originalParent.children[originalIndex]);
             } else if (originalParent) {
                 originalParent.appendChild(widget);
             } else {
                 console.error("Original parent not found for widget ID:", widget.id);
-                mainContent.appendChild(widget); // Fallback to mainContent
+                mainContent.appendChild(widget);
             }
 
-            // Remove classes
             widget.classList.remove('maximized');
             document.body.classList.remove('expanded-active');
             expandedOverlay.classList.remove('active');
-
-            // Hide the placeholder
             widgetPlaceholder.style.display = 'none';
-
-            // Change icon
             if (expandIcon) expandIcon.classList.replace('fa-compress', 'fa-expand');
         }
     }
 
-
     // Close expanded widget when clicking on the expanded overlay
     expandedOverlay.addEventListener('click', function(e) {
-        // Only close if the click is directly on the overlay, not on the widget itself
         if (e.target === expandedOverlay) {
             const activeMaximizedWidget = document.querySelector('.widget.maximized');
             if (activeMaximizedWidget) {
-                toggleWidgetExpansion(activeMaximizedWidget); // Use the helper function to minimize
+                toggleWidgetExpansion(activeMaximizedWidget);
             }
         }
     });
-
 
     // --- Drag and drop functionality ---
     document.body.addEventListener('dragstart', function(e) {
@@ -187,14 +219,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-
     mainContent.addEventListener('dragover', function(e) {
         e.preventDefault();
-        this.style.backgroundColor = 'rgba(63, 114, 175, 0.1)'; // Visual feedback for drag
+        this.style.backgroundColor = 'rgba(63, 114, 175, 0.1)';
     });
 
     mainContent.addEventListener('dragleave', function() {
-        this.style.backgroundColor = ''; // Remove visual feedback
+        this.style.backgroundColor = '';
     });
 
     mainContent.addEventListener('drop', function(e) {
@@ -202,7 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.backgroundColor = '';
 
         const widgetId = e.dataTransfer.getData('text/plain');
-        // Check if 'Add Widget' is disabled by 'Show All Widgets' mode
         const newWidgetBtn = document.getElementById('new-widget-btn');
         if (newWidgetBtn && newWidgetBtn.classList.contains('disabled')) {
             showMessageModal('Information', 'Adding widgets is disabled in "Show All Widgets" mode.');
@@ -215,16 +245,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function submitActionForm(actionType, data = {}) {
         const form = document.createElement('form');
         form.method = 'post';
-        form.style.display = 'none'; // Keep hidden
+        form.style.display = 'none';
 
-        // Add the action_type input
         const actionInput = document.createElement('input');
         actionInput.type = 'hidden';
         actionInput.name = 'action_type';
         actionInput.value = actionType;
         form.appendChild(actionInput);
 
-        // Add other data parameters
         for (const key in data) {
             if (data.hasOwnProperty(key)) {
                 const hiddenInput = document.createElement('input');
@@ -235,44 +263,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        document.body.appendChild(form); // Append to body
-        
-        // Log the form data *before* submission for debugging
-        const formData = new FormData(form);
+        document.body.appendChild(form);
         console.log(`Submitting form for action: ${actionType}`);
-        for (let pair of formData.entries()) {
+        for (let pair of new FormData(form).entries()) {
             console.log(`  ${pair[0]}: ${pair[1]}`);
         }
-
-        form.submit(); // Submit the form
+        form.submit();
     }
 
-
     // --- Other Global Buttons ---
-    // Refresh button
     document.getElementById('refresh-btn').addEventListener('click', function() {
         location.reload();
     });
 
-    // Theme settings button (this one already opened settings panel)
     document.getElementById('theme-settings-btn').addEventListener('click', function() {
         settingsPanel.classList.add('active');
         settingsOverlay.style.display = 'block';
     });
 
-    // Handle form submission for update_settings (from settings panel)
+    // Handle form submission for global update_settings (from settings panel)
     const settingsForm = settingsPanel.querySelector('form');
     if (settingsForm) {
         settingsForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default form submission to handle it via JS
+            e.preventDefault();
 
             const formData = new FormData(settingsForm);
             const dataToSubmit = {};
             for (const [key, value] of formData.entries()) {
-                // Special handling for checkboxes: if unchecked, they are not in formData.
-                // We need to explicitly set them to '0' if they are known boolean settings.
-                if (key === 'enable_animations' || key === 'show_all_available_widgets') { // Added new setting here
-                    dataToSubmit[key] = settingsForm.elements[key].checked ? '1' : '0'; // Send '1' or '0'
+                if (key === 'enable_animations' || key === 'show_all_available_widgets') {
+                    dataToSubmit[key] = settingsForm.elements[key].checked ? '1' : '0';
                 } else {
                     dataToSubmit[key] = value;
                 }
@@ -281,33 +300,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // New: Disable/Enable Add Widget button based on 'Show All Widgets' state
+    // Disable/Enable Add Widget button based on 'Show All Widgets' state
     const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
     const newWidgetBtn = document.getElementById('new-widget-btn');
-    const widgetSelect = document.getElementById('widget_select'); // The select inside settings panel
-    const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]'); // The button in settings panel
+    const widgetSelect = document.getElementById('widget_select');
+    const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]');
 
     function updateAddRemoveButtonStates() {
         if (showAllWidgetsToggle && newWidgetBtn && widgetSelect && addWidgetToDashboardBtn) {
-            if (showAllWidgetsToggle.checked) {
-                newWidgetBtn.classList.add('disabled');
-                newWidgetBtn.disabled = true;
-                widgetSelect.disabled = true;
-                addWidgetToDashboardBtn.disabled = true;
-            } else {
-                newWidgetBtn.classList.remove('disabled');
-                newWidgetBtn.disabled = false;
-                widgetSelect.disabled = false;
-                addWidgetToDashboardBtn.disabled = false;
+            const isDisabled = showAllWidgetsToggle.checked;
+            newWidgetBtn.classList.toggle('disabled', isDisabled);
+            newWidgetBtn.disabled = isDisabled;
+            widgetSelect.disabled = isDisabled;
+            addWidgetToDashboardBtn.disabled = isDisabled;
+
+            // Also update widget settings modal's inputs if it's open
+            if (widgetSettingsModalOverlay.classList.contains('active')) {
+                widgetSettingsWidthInput.disabled = isDisabled;
+                widgetSettingsHeightInput.disabled = isDisabled;
+                widgetDimensionsForm.querySelector('button[type="submit"]').disabled = isDisabled;
+                widgetDimensionsForm.querySelector('button[type="submit"]').textContent = isDisabled ? 'Disabled in Show All Mode' : 'Save Dimensions';
             }
         }
     }
 
-    // Attach listener to the new toggle
     if (showAllWidgetsToggle) {
         showAllWidgetsToggle.addEventListener('change', updateAddRemoveButtonStates);
     }
-
-    // Initial state update on load
-    updateAddRemoveButtonStates();
+    updateAddRemoveButtonStates(); // Initial state update on load
 });

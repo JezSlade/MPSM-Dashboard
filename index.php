@@ -33,8 +33,9 @@ $default_dashboard_state = [
     'glass_intensity' => 0.6,
     'blur_amount' => '10px',
     'enable_animations' => true,
-    'show_all_available_widgets' => false, // NEW SETTING: Default to false
+    'show_all_available_widgets' => false,
     'active_widgets' => [
+        // Default widgets with their initial default dimensions (from config.php)
         ['id' => 'stats', 'position' => 1],
         ['id' => 'tasks', 'position' => 2],
         ['id' => 'calendar', 'position' => 3],
@@ -49,22 +50,39 @@ $default_dashboard_state = [
  * @return array Loaded settings including active_widgets or default state.
  */
 function loadDashboardState() {
-    global $default_dashboard_state; // Access the default state
+    global $default_dashboard_state, $available_widgets; // Access global config
+
+    $loaded_state = [];
     if (file_exists(DASHBOARD_SETTINGS_FILE)) {
         $json_data = file_get_contents(DASHBOARD_SETTINGS_FILE);
-        $loaded_state = json_decode($json_data, true);
-
-        // Merge loaded state with defaults to ensure all keys are present
-        // This handles cases where new settings keys are added in future versions
-        if (is_array($loaded_state)) {
-            // Ensure active_widgets is an array, if not, use default
-            if (!isset($loaded_state['active_widgets']) || !is_array($loaded_state['active_widgets'])) {
-                $loaded_state['active_widgets'] = $default_dashboard_state['active_widgets'];
-            }
-            return array_replace_recursive($default_dashboard_state, $loaded_state);
+        $decoded_state = json_decode($json_data, true);
+        if (is_array($decoded_state)) {
+            $loaded_state = $decoded_state;
         }
     }
-    return $default_dashboard_state; // Return default if file not found or invalid
+
+    // Merge loaded state with defaults to ensure all keys are present
+    $final_state = array_replace_recursive($default_dashboard_state, $loaded_state);
+
+    // --- NEW: Ensure active_widgets entries have width/height, falling back to config defaults ---
+    if (isset($final_state['active_widgets']) && is_array($final_state['active_widgets'])) {
+        foreach ($final_state['active_widgets'] as $key => $widget_entry) {
+            $widget_id = $widget_entry['id'];
+            // Get default dimensions from available_widgets (which are loaded from config.php)
+            $default_width = $available_widgets[$widget_id]['width'] ?? 1;
+            $default_height = $available_widgets[$widget_id]['height'] ?? 1;
+
+            // Apply loaded dimensions, or fall back to defaults if not present in JSON
+            $final_state['active_widgets'][$key]['width'] = $widget_entry['width'] ?? $default_width;
+            $final_state['active_widgets'][$key]['height'] = $widget_entry['height'] ?? $default_height;
+        }
+    } else {
+        // If active_widgets was missing or not an array, use default ones
+        $final_state['active_widgets'] = $default_dashboard_state['active_widgets'];
+    }
+    // --- END NEW ---
+
+    return $final_state;
 }
 
 /**
@@ -77,7 +95,6 @@ function saveDashboardState(array $state) {
     $json_data = json_encode($state, JSON_PRETTY_PRINT);
     if ($json_data === false) {
         error_log("Failed to encode dashboard state to JSON: " . json_last_error_msg());
-        // Removed direct echo for cleaner output
         return false;
     }
     // Attempt to write the file. File permissions are crucial here.
@@ -92,7 +109,6 @@ function saveDashboardState(array $state) {
             $error_message .= " - Unknown write error."; // Generic error if no specific permission issue found
         }
         error_log($error_message);
-        // Removed direct echo for cleaner output
     }
     return $result !== false;
 }
@@ -102,7 +118,7 @@ function saveDashboardState(array $state) {
 
 // Load current dashboard state (settings + active widgets)
 $current_dashboard_state = loadDashboardState();
-$settings = $current_dashboard_state; // Settings now includes active_widgets
+$settings = $current_dashboard_state; // $settings now includes 'active_widgets' with dimensions
 
 // IMPORTANT: Initialize $_SESSION['active_widgets'] from the loaded state
 // This ensures session state is synced with persistent state on page load.
@@ -119,10 +135,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action_type === 'add_widget' && !empty($_POST['widget_id'])) {
         // Only allow adding widgets if 'show all' is OFF
         if (!$settings['show_all_available_widgets']) {
-            // Add new widget to active_widgets in session
+            $widget_id_to_add = $_POST['widget_id'];
+            // Get default dimensions from available_widgets
+            $default_width = $available_widgets[$widget_id_to_add]['width'] ?? 1;
+            $default_height = $available_widgets[$widget_id_to_add]['height'] ?? 1;
+
             $new_widget = [
-                'id' => $_POST['widget_id'],
-                'position' => count($_SESSION['active_widgets']) + 1
+                'id' => $widget_id_to_add,
+                'position' => count($_SESSION['active_widgets']) + 1,
+                'width' => $default_width,  // NEW: Add default width
+                'height' => $default_height // NEW: Add default height
             ];
             $_SESSION['active_widgets'][] = $new_widget;
             $has_state_changed = true;
@@ -131,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action_type === 'remove_widget' && isset($_POST['widget_index'])) {
         // Only allow removing widgets if 'show all' is OFF
         if (!$settings['show_all_available_widgets']) {
-            // Remove widget from active_widgets in session
             $widget_index_to_remove = (int)$_POST['widget_index'];
 
             if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
@@ -159,47 +180,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Special handling if 'show_all_available_widgets' was just turned ON
         if ($settings['show_all_available_widgets'] && !($current_dashboard_state['show_all_available_widgets'] ?? false)) {
-            // Overwrite active_widgets with all available widgets, sorted alphabetically by ID
+            // Overwrite active_widgets with all available widgets, sorted alphabetically by ID,
+            // using their default dimensions from config.php
             $new_active_widgets = [];
             foreach ($available_widgets as $id => $def) {
-                $new_active_widgets[] = ['id' => $id, 'position' => count($new_active_widgets) + 1];
+                $new_active_widgets[] = [
+                    'id' => $id,
+                    'position' => count($new_active_widgets) + 1,
+                    'width' => $def['width'] ?? 1,   // NEW: Use default width from config
+                    'height' => $def['height'] ?? 1  // NEW: Use default height from config
+                ];
             }
             usort($new_active_widgets, function($a, $b) {
                 return strcmp($a['id'], $b['id']);
             });
             $_SESSION['active_widgets'] = $new_active_widgets;
-        } elseif (!$settings['show_all_available_widgets'] && ($current_dashboard_state['show_all_available_widgets'] ?? false)) {
-            // If 'show_all_available_widgets' was just turned OFF, revert to the last saved 'active_widgets' from file,
-            // before it was potentially overwritten by 'show all' mode.
-            // This is handled implicitly by loading $current_dashboard_state at the top.
         }
+        // If 'show_all_available_widgets' was just turned OFF, active_widgets in session
+        // will automatically revert to the last saved persistent state due to loadDashboardState at top.
 
+    } elseif ($action_type === 'update_widget_dimensions' && isset($_POST['widget_index']) && isset($_POST['new_width']) && isset($_POST['new_height'])) {
+        $widget_index = (int)$_POST['widget_index'];
+        $new_width = (int)$_POST['new_width'];
+        $new_height = (int)$_POST['new_height'];
 
-    } else {
-        // Log unknown POST actions, but don't output directly to page for cleaner output
-        error_log("PHP Warning: Unknown or invalid POST action_type received: " . ($_POST['action_type'] ?? 'EMPTY'));
-    }
-
-    // If any state (settings or active widgets) changed, save the entire state
-    if ($has_state_changed) {
-        // Create the full state array to save, combining current $settings and active widgets from session
-        $state_to_save = $settings; // Start with current $settings
-        // The 'active_widgets' in $state_to_save must always come from $_SESSION after processing POST
-        $state_to_save['active_widgets'] = $_SESSION['active_widgets'];
-
-        if (!saveDashboardState($state_to_save)) {
-            error_log("PHP Persistence Critical Error: Failed to save dashboard state persistently. Check server error logs for more details!");
+        // Only allow changing dimensions if 'show all' is OFF
+        if (!$settings['show_all_available_widgets']) {
+            if (isset($_SESSION['active_widgets'][$widget_index])) {
+                $_SESSION['active_widgets'][$widget_index]['width'] = $new_width;
+                $_SESSION['active_widgets'][$widget_index]['height'] = $new_height;
+                $has_state_changed = true;
+            }
         }
     }
 }
 
 // Ensure the $settings array used for rendering always reflects the latest state,
 // potentially updated by POST or loaded from persistence.
-// This merge ensures default values are applied, then persistent ones, then session ones.
 $settings = array_replace_recursive($default_dashboard_state, $current_dashboard_state, $_SESSION['dashboard_settings'] ?? []);
-// The 'active_widgets' for rendering should always come from the final $_SESSION state after processing
-$settings['active_widgets'] = $_SESSION['active_widgets'];
-
+$settings['active_widgets'] = $_SESSION['active_widgets']; // Make sure active_widgets is the latest from session
 
 // Pass available widgets to the view
 global $available_widgets;
@@ -235,6 +254,31 @@ global $available_widgets;
 <body>
     <!-- New: Overlay for expanded widgets -->
     <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
+
+    <!-- NEW: Widget Settings Modal Structure -->
+    <div class="message-modal-overlay" id="widget-settings-modal-overlay">
+        <div class="message-modal" id="widget-settings-modal">
+            <div class="message-modal-header">
+                <h3 id="widget-settings-modal-title">Widget Settings</h3>
+                <button class="btn-close-modal" id="close-widget-settings-modal">&times;</button>
+            </div>
+            <div class="message-modal-body">
+                <form id="widget-dimensions-form">
+                    <input type="hidden" id="widget-settings-index" name="widget_index">
+                    <div class="form-group">
+                        <label for="widget-settings-width">Width (Grid Units)</label>
+                        <input type="number" id="widget-settings-width" name="new_width" min="1" max="4" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="widget-settings-height">Height (Grid Units)</label>
+                        <input type="number" id="widget-settings-height" name="new_height" min="1" max="4" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END NEW: Widget Settings Modal Structure -->
 
     <div class="dashboard">
         <!-- Dashboard Header -->
@@ -318,7 +362,12 @@ global $available_widgets;
             if ($settings['show_all_available_widgets']) {
                 // If 'show all' is true, render ALL available widgets from config.php
                 foreach ($available_widgets as $id => $def) {
-                    $widgets_to_render[] = ['id' => $id, 'position' => count($widgets_to_render) + 1];
+                    $widgets_to_render[] = [
+                        'id' => $id,
+                        'position' => count($widgets_to_render) + 1,
+                        'width' => $def['width'] ?? 1,
+                        'height' => $def['height'] ?? 1
+                    ];
                 }
                 // Sort them alphabetically by ID for consistent positioning
                 usort($widgets_to_render, function($a, $b) {
@@ -330,9 +379,18 @@ global $available_widgets;
             }
 
             foreach ($widgets_to_render as $index => $widget):
-                $widget_def = $available_widgets[$widget['id']] ?? ['width' => 1, 'height' => 1];
+                $widget_id = $widget['id'];
+                $widget_def = $available_widgets[$widget_id] ?? ['width' => 1, 'height' => 1];
+                // Use the dimensions from the active_widgets array if present, otherwise fall back to config default
+                $current_width = $widget['width'] ?? $widget_def['width'];
+                $current_height = $widget['height'] ?? $widget_def['height'];
             ?>
-            <div class="widget" style="--width: <?= $widget_def['width'] ?>; --height: <?= $widget_def['height'] ?>">
+            <div class="widget"
+                 style="--width: <?= $current_width ?>; --height: <?= $current_height ?>"
+                 data-widget-id="<?= htmlspecialchars($widget_id) ?>"
+                 data-widget-index="<?= $index ?>"
+                 data-current-width="<?= $current_width ?>"
+                 data-current-height="<?= $current_height ?>">
                 <!-- This placeholder div marks the widget's original position in the DOM -->
                 <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-index="<?= $index ?>"></div>
 
@@ -343,7 +401,12 @@ global $available_widgets;
                     </div>
                     <div class="widget-actions">
                         <!-- Add data attributes to identify actions -->
-                        <div class="widget-action action-settings" data-widget-id="<?= $widget['id'] ?>">
+                        <div class="widget-action action-settings"
+                            data-widget-id="<?= htmlspecialchars($widget_id) ?>"
+                            data-widget-index="<?= $index ?>"
+                            data-current-width="<?= $current_width ?>"
+                            data-current-height="<?= $current_height ?>"
+                            title="Adjust widget dimensions">
                             <i class="fas fa-cog"></i>
                         </div>
                         <div class="widget-action action-expand">
@@ -358,14 +421,14 @@ global $available_widgets;
                     </div>
                 </div>
                 <div class="widget-content">
-                    <?= render_widget($widget['id']) ?>
+                    <?= render_widget($widget_id) ?>
                 </div>
             </div>
             <?php endforeach; ?>
         </main>
     </div>
 
-    <!-- Simple Message Modal Structure -->
+    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
     <div class="message-modal-overlay" id="message-modal-overlay">
         <div class="message-modal">
             <div class="message-modal-header">
@@ -382,7 +445,7 @@ global $available_widgets;
     </div>
 
 
-    <!-- Settings Panel -->
+    <!-- Settings Panel (Global Dashboard Settings) -->
     <div class="overlay" id="settings-overlay"></div>
     <div class="settings-panel" id="settings-panel">
         <div class="settings-header">

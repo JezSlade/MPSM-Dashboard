@@ -5,6 +5,7 @@ $_widget_config = [
     'width' => 2,
     'height' => 1
 ];
+<?php
 // Simple PHP IDE - Single File
 // Place this file in your project directory and access via web browser
 
@@ -14,18 +15,34 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Configuration
-$base_dir = __DIR__;
+$base_dir = isset($_GET['dir']) ? realpath($_GET['dir']) : __DIR__;
+if (!$base_dir || !is_dir($base_dir)) {
+    $base_dir = __DIR__;
+}
+$current_dir = isset($_GET['current_dir']) ? $_GET['current_dir'] : '';
 $allowed_extensions = ['php', 'txt', 'html', 'css', 'js', 'json', 'md'];
 
 // Security: Prevent directory traversal
 if (!function_exists('sanitize_path')) {
     function sanitize_path($path) {
         global $base_dir;
-        $real_path = realpath($base_dir . '/' . $path);
+        // Handle both absolute and relative paths
+        if (is_absolute_path($path)) {
+            $real_path = realpath($path);
+        } else {
+            $real_path = realpath($base_dir . '/' . $path);
+        }
+        
         if ($real_path === false || strpos($real_path, realpath($base_dir)) !== 0) {
             return false;
         }
         return $real_path;
+    }
+}
+
+if (!function_exists('is_absolute_path')) {
+    function is_absolute_path($path) {
+        return (substr($path, 0, 1) === '/' || (PHP_OS_FAMILY === 'Windows' && preg_match('/^[a-zA-Z]:/', $path)));
     }
 }
 
@@ -43,7 +60,28 @@ if (isset($_POST['action'])) {
                     'file' => $_POST['file']
                 ]);
             } else {
-                echo json_encode(['success' => false, 'error' => 'File not found']);
+                // Debug info
+                echo json_encode([
+                    'success' => false, 
+                    'error' => 'File not found',
+                    'debug' => [
+                        'requested_file' => $_POST['file'],
+                        'sanitized_path' => $file_path,
+                        'base_dir' => $GLOBALS['base_dir'],
+                        'file_exists' => $file_path ? file_exists($file_path) : false,
+                        'is_file' => $file_path ? is_file($file_path) : false
+                    ]
+                ]);
+            }
+        case 'change_directory':
+            $new_dir = sanitize_path($_POST['directory']);
+            if ($new_dir && is_dir($new_dir)) {
+                echo json_encode([
+                    'success' => true,
+                    'directory' => str_replace(realpath($GLOBALS['base_dir']), '', $new_dir)
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Directory not found']);
             }
             exit;
             
@@ -108,7 +146,7 @@ if (isset($_POST['action'])) {
 // Get directory listing
 if (!function_exists('get_directory_tree')) {
     function get_directory_tree($dir, $prefix = '') {
-        global $allowed_extensions;
+        global $allowed_extensions, $base_dir;
         
         // Fallback if global variable is not set
         if (!is_array($allowed_extensions)) {
@@ -133,6 +171,7 @@ if (!function_exists('get_directory_tree')) {
                     'type' => 'folder',
                     'name' => $file,
                     'path' => $relative_path,
+                    'full_path' => $full_path,
                     'children' => get_directory_tree($full_path, $relative_path . '/')
                 ];
             } else {
@@ -142,6 +181,7 @@ if (!function_exists('get_directory_tree')) {
                         'type' => 'file',
                         'name' => $file,
                         'path' => $relative_path,
+                        'full_path' => $full_path,
                         'extension' => $ext
                     ];
                 }
@@ -375,6 +415,11 @@ $directory_tree = get_directory_tree($base_dir);
     <div class="sidebar">
         <div class="sidebar-header">
             File Explorer
+            <div style="font-size: 11px; color: #888; margin-top: 5px;">
+                <input type="text" id="currentPath" value="<?php echo htmlspecialchars($base_dir); ?>" style="width: 100%; background: #3c3c3c; border: 1px solid #5a5a5a; color: #d4d4d4; padding: 2px 4px; font-size: 10px;">
+                <button onclick="changeDirectory()" style="margin-top: 3px; font-size: 10px; padding: 2px 6px;">Go</button>
+                <button onclick="goUpDirectory()" style="font-size: 10px; padding: 2px 6px;">Up</button>
+            </div>
         </div>
         <div class="file-tree" id="fileTree">
             <?php
@@ -458,6 +503,12 @@ $directory_tree = get_directory_tree($base_dir);
             
             if (item.classList.contains('file')) {
                 openFile(item.dataset.path);
+            } else if (item.classList.contains('folder')) {
+                // Double-click to navigate into folder
+                if (item.dataset.lastClick && (Date.now() - item.dataset.lastClick) < 300) {
+                    navigateToFolder(item.dataset.path);
+                }
+                item.dataset.lastClick = Date.now();
             }
         });
         
@@ -501,9 +552,27 @@ $directory_tree = get_directory_tree($base_dir);
                     switchTab(path);
                     updateStatus('File loaded: ' + path);
                 } else {
-                    alert('Error loading file: ' + data.error);
+                    console.error('Load file error:', data);
+                    alert('Error loading file: ' + data.error + (data.debug ? '\nDebug: ' + JSON.stringify(data.debug, null, 2) : ''));
                 }
             });
+        }
+        
+        function navigateToFolder(path) {
+            window.location.href = '?dir=' + encodeURIComponent(document.getElementById('currentPath').value + '/' + path);
+        }
+        
+        function changeDirectory() {
+            const newPath = document.getElementById('currentPath').value;
+            window.location.href = '?dir=' + encodeURIComponent(newPath);
+        }
+        
+        function goUpDirectory() {
+            const currentPath = document.getElementById('currentPath').value;
+            const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+            if (parentPath) {
+                window.location.href = '?dir=' + encodeURIComponent(parentPath);
+            }
         }
         
         function createTab(path) {
