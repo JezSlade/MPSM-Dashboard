@@ -5,7 +5,6 @@ $_widget_config = [
     'width' => 2,
     'height' => 1
 ];
-
 // Simple PHP IDE - Single File
 // Place this file in your project directory and access via web browser
 
@@ -379,23 +378,25 @@ $directory_tree = get_directory_tree($base_dir);
         </div>
         <div class="file-tree" id="fileTree">
             <?php
-            function render_tree_item($item, $level = 0) {
-                $indent = str_repeat('  ', $level);
-                if ($item['type'] === 'folder') {
-                    echo "<div class='tree-item folder' data-path='{$item['path']}' style='padding-left: " . ($level * 15 + 4) . "px'>";
-                    echo "<span class='folder-icon'></span>{$item['name']}";
-                    echo "</div>";
-                    if (!empty($item['children'])) {
-                        echo "<div class='children'>";
-                        foreach ($item['children'] as $child) {
-                            render_tree_item($child, $level + 1);
+            if (!function_exists('render_tree_item')) {
+                function render_tree_item($item, $level = 0) {
+                    $indent = str_repeat('  ', $level);
+                    if ($item['type'] === 'folder') {
+                        echo "<div class='tree-item folder' data-path='{$item['path']}' style='padding-left: " . ($level * 15 + 4) . "px'>";
+                        echo "<span class='folder-icon'></span>{$item['name']}";
+                        echo "</div>";
+                        if (!empty($item['children'])) {
+                            echo "<div class='children'>";
+                            foreach ($item['children'] as $child) {
+                                render_tree_item($child, $level + 1);
+                            }
+                            echo "</div>";
                         }
+                    } else {
+                        echo "<div class='tree-item file {$item['extension']}' data-path='{$item['path']}' style='padding-left: " . ($level * 15 + 4) . "px'>";
+                        echo "<span class='file-icon'></span>{$item['name']}";
                         echo "</div>";
                     }
-                } else {
-                    echo "<div class='tree-item file {$item['extension']}' data-path='{$item['path']}' style='padding-left: " . ($level * 15 + 4) . "px'>";
-                    echo "<span class='file-icon'></span>{$item['name']}";
-                    echo "</div>";
                 }
             }
             
