@@ -97,8 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
     widgetDimensionsForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const widgetIndex = widgetSettingsIndexInput.value;
-        const newWidth = widgetSettingsWidthInput.value;
-        const newHeight = widgetSettingsHeightInput.value;
+        const newWidth = parseFloat(widgetSettingsWidthInput.value); // Parse as float
+        const newHeight = parseFloat(widgetSettingsHeightInput.value); // Parse as float
 
         // Check if "Show All Widgets" mode is active before submitting
         const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (target.classList.contains('action-settings')) {
                 const widgetName = widget.querySelector('.widget-title span').textContent;
                 const widgetIndex = widget.dataset.widgetIndex;
-                const currentWidth = widget.dataset.currentWidth;
-                const currentHeight = widget.dataset.currentHeight;
+                const currentWidth = parseFloat(widget.dataset.currentWidth); // Parse as float
+                const currentHeight = parseFloat(widget.dataset.currentHeight); // Parse as float
 
                 showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight);
 
@@ -638,11 +638,6 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsOverlay.style.display = 'block';
     });
 
-    // Removed: Functionality for the "+ New Widget" button in the header (it's now gone)
-    // const newWidgetHeaderBtn = document.getElementById('new-widget-btn');
-    // if (newWidgetHeaderBtn) { /* ... */ }
-
-
     // Handle form submission for global update_settings (from settings panel)
     const settingsForm = settingsPanel.querySelector('form');
     if (settingsForm) {
@@ -664,7 +659,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Disable/Enable Add Widget button based on 'Show All Widgets' state
     const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
-    // const newWidgetBtn = document.getElementById('new-widget-btn'); // No longer in header
     const widgetSelect = document.getElementById('widget_select');
     const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]');
 
@@ -758,10 +752,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${widget.name}</td>
                         <td>Active</td> <!-- All listed here are active -->
                         <td>
-                            <input type="number" class="widget-width-input form-control-small" value="${widget.width}" min="1" max="3" data-original-width="${widget.width}">
+                            <input type="number" class="widget-width-input form-control-small" value="${widget.width}" min="0.5" max="3" step="0.5" data-original-width="${widget.width}">
                         </td>
                         <td>
-                            <input type="number" class="widget-height-input form-control-small" value="${widget.height}" min="1" max="4" data-original-height="${widget.height}">
+                            <input type="number" class="widget-height-input form-control-small" value="${widget.height}" min="0.5" max="4" step="0.5" data-original-height="${widget.height}">
                         </td>
                         <td>
                             <span class="widget-management-status">Saved</span>
@@ -827,10 +821,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const heightInput = row.querySelector('.widget-height-input');
                 const statusSpan = row.querySelector('.widget-management-status');
 
-                const newWidth = parseInt(widthInput.value, 10);
-                const newHeight = parseInt(heightInput.value, 10);
-                const originalWidth = parseInt(widthInput.dataset.originalWidth, 10);
-                const originalHeight = parseInt(heightInput.dataset.originalHeight, 10);
+                const newWidth = parseFloat(widthInput.value); // Parse as float
+                const newHeight = parseFloat(heightInput.value); // Parse as float
+                const originalWidth = parseFloat(widthInput.dataset.originalWidth); // Parse as float
+                const originalHeight = parseFloat(heightInput.dataset.originalHeight); // Parse as float
 
                 // Only save if dimensions have actually changed
                 if (newWidth !== originalWidth || newHeight !== originalHeight) {
@@ -881,10 +875,10 @@ document.addEventListener('DOMContentLoaded', function() {
             createWidgetModalOverlay.classList.add('active');
             // Reset form fields
             createWidgetForm.reset();
-            // Set default icon and dimensions
+            // Set default icon and dimensions (as floats)
             document.getElementById('new-widget-icon').value = 'cube';
-            document.getElementById('new-widget-width').value = '1';
-            document.getElementById('new-widget-height').value = '1';
+            document.getElementById('new-widget-width').value = '1.0';
+            document.getElementById('new-widget-height').value = '1.0';
         });
     }
 
@@ -909,7 +903,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             const widgetData = {};
             for (const [key, value] of formData.entries()) {
-                widgetData[key] = value;
+                // Parse width and height as floats
+                if (key === 'width' || key === 'height') {
+                    widgetData[key] = parseFloat(value);
+                } else {
+                    widgetData[key] = value;
+                }
             }
 
             // Basic client-side validation for widget ID format

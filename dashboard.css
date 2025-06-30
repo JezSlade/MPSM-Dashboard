@@ -1,617 +1,409 @@
-/* dashboard.css */
-
+/* General Variables */
 :root {
-    --bg-primary: #1a1d24;
-    --bg-secondary: #232831;
-    --bg-tertiary: #2d333f;
+    --primary: #6366f1; /* Indigo 500 */
+    --secondary: #8b5cf6; /* Violet 500 */
+    --accent: #6366f1; /* Default accent, overridden by JS */
     --text-primary: #e0e0e0;
-    --text-secondary: #a0aec0;
-    /* --accent: value set in PHP based on settings */
-    --accent-hover: #4f46e5;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --info: #3b82f6;
-    /* --glass-bg: value set in PHP based on settings */
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --shadow-light: rgba(0, 0, 0, 0.3);
-    --shadow-dark: rgba(0, 0, 0, 0.5);
-    --transition: all 0.3s ease;
-    /* --blur-amount: value set in PHP based on settings */
+    --text-secondary: #a0a0a0;
+    --bg-primary: #1a1a2e; /* Dark blue background */
+    --bg-secondary: #222540; /* Slightly lighter dark blue */
+    --glass-bg: rgba(35, 40, 49, 0.6); /* Default glass background, overridden by JS */
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --shadow-dark: rgba(0, 0, 0, 0.4);
+    --shadow-light: rgba(255, 255, 255, 0.05);
+    --transition: all 0.3s ease-in-out;
+    --header-height: 60px;
+    --sidebar-width: 250px;
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 16px;
+
+    /* Status Colors */
+    --success: #10b981; /* Green */
+    --warning: #f59e0b; /* Yellow */
+    --danger: #ef4444; /* Red */
+    --info: #3b82f6; /* Blue */
 }
 
-* {
+/* Base Styles */
+body {
+    font-family: 'Inter', sans-serif;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-body {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
+    background-color: var(--bg-primary);
     color: var(--text-primary);
+    overflow-x: hidden; /* Prevent horizontal scroll */
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Dashboard Layout */
+.dashboard {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-rows: var(--header-height) 1fr;
+    height: 100vh;
+}
+
+/* Header */
+.header {
+    grid-column: 1 / -1; /* Span across sidebar and main content */
+    grid-row: 1;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur-amount));
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-shadow: 0 2px 10px var(--shadow-dark);
+    z-index: 100; /* Ensure header is on top */
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    font-size: 24px;
+    color: var(--accent);
+}
+
+.logo-text {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.header-actions .btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 8px 15px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 5px var(--accent);
+}
+
+.header-actions .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.header-actions .btn-primary:hover {
+    background: var(--secondary);
+    border-color: var(--secondary);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+/* Sidebar */
+.sidebar {
+    grid-column: 1;
+    grid-row: 2;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--glass-border);
+    padding: 20px 0;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px var(--shadow-dark);
+    z-index: 90;
+}
+
+.sidebar-section {
+    margin-bottom: 30px;
+    padding: 0 20px;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+}
+
+.nav-item, .widget-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.nav-item:hover, .widget-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--accent);
+}
+
+.nav-item.active {
+    background: var(--accent);
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.nav-item.active i {
+    color: white;
+}
+
+.nav-item i, .widget-item i {
+    font-size: 18px;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.nav-item.active:hover i {
+    color: white; /* Keep icon white on hover when active */
+}
+
+.widget-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    justify-content: flex-start;
+}
+
+.widget-item:hover {
+    border-color: var(--accent);
+}
+
+.widget-item.dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--accent);
+}
+
+
+/* Main Content Grid */
+.main-content {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    /* Updated for 6 "half-columns" */
+    grid-template-columns: repeat(6, 1fr); /* Now 6 flexible columns */
+    /* Updated minmax for height to reflect half-unit */
+    grid-template-rows: repeat(auto-fill, minmax(80px, auto)); /* Flexible row heights, auto for content */
+    gap: 20px;
     padding: 20px;
-    background-attachment: fixed;
-    overflow: auto; /* Allow scrolling by default */
+    overflow-y: auto;
+    min-height: calc(100vh - var(--header-height));
 }
 
-/* Ensure that when a modal/expanded widget is active, the body doesn't scroll */
-body.expanded-active {
-    overflow: hidden;
+/* Individual Widget Styling */
+.widget {
+    /* Fallback values for --width and --height in case they are not set */
+    --width: 2; /* Default to 1.0 user unit (2 internal units) */
+    --height: 2; /* Default to 1.0 user unit (2 internal units) */
+    
+    /* Use CSS variables for grid spanning */
+    grid-column: span var(--width);
+    grid-row: span var(--height);
+
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    overflow: hidden; /* Ensures content within stays rounded */
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px var(--shadow-dark);
+    transition: var(--transition);
+    position: relative; /* For placeholder positioning */
 }
 
-/* --- Widget Expanded Overlay (the actual modal background) --- */
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.widget-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.widget-title i {
+    color: var(--accent);
+    font-size: 16px;
+}
+
+.widget-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.widget-action {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 5px;
+    border-radius: 50%;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.widget-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--accent);
+}
+
+.widget-action.remove-widget.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.widget-content {
+    flex: 1; /* Allows content to take remaining height */
+    padding: 15px;
+    overflow: auto; /* Enable scrolling for content if it overflows */
+    display: flex; /* Use flex for compact/expanded content alignment */
+    flex-direction: column;
+    justify-content: center; /* Center compact content vertically */
+    align-items: center; /* Center compact content horizontally */
+}
+
+/* Compact and Expanded Content Views */
+.compact-content {
+    display: flex; /* Default: visible in normal state */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%; /* Take full height of widget-content */
+    width: 100%;
+    text-align: center;
+}
+
+.expanded-content {
+    display: none; /* Default: hidden in normal state */
+    flex-direction: column;
+    height: 100%; /* Take full height of widget-content */
+    width: 100%;
+    overflow: auto; /* Allow scrolling for expanded content */
+}
+
+/* When widget is maximized */
+.widget.maximized {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vw; /* Almost full viewport width */
+    height: 90vh; /* Almost full viewport height */
+    max-width: 1200px; /* Max width for large screens */
+    max-height: 800px; /* Max height for large screens */
+    z-index: 1000; /* Bring to front */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--accent);
+    animation: fadeInScale 0.3s ease-out forwards;
+    grid-column: auto !important; /* Override grid placement when maximized */
+    grid-row: auto !important; /* Override grid placement when maximized */
+}
+
+.widget.maximized .compact-content {
+    display: none;
+}
+
+.widget.maximized .expanded-content {
+    display: flex; /* Show expanded content when maximized */
+}
+
+/* Overlay for maximized widget */
 .widget-expanded-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7); /* Darker overlay */
-    z-index: 1000; /* Below the actual maximized widget */
-    display: flex; /* Use flexbox to center content */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 999;
+    display: none; /* Hidden by default */
 }
 
-.widget-expanded-overlay.active {
-    opacity: 1;
-    visibility: visible;
+.expanded-active .widget-expanded-overlay {
+    display: block; /* Show when a widget is maximized */
 }
 
-/* --- Widget Placeholder (for hiding original slot when widget is moved) --- */
+
+/* Animations */
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Widget Placeholder for Drag-and-Drop Reordering */
 .widget-placeholder {
-    display: none; /* Hidden by default */
-}
-
-
-.dashboard {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 20px;
-    max-width: 1800px;
-    margin: 0 auto;
-}
-
-/* Header Styles */
-.header {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    backdrop-filter: blur(var(--blur-amount));
-    -webkit-backdrop-filter: blur(var(--blur-amount));
-    box-shadow:
-        8px 8px 16px var(--shadow-dark),
-        -8px -8px 16px rgba(74, 78, 94, 0.1);
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.logo-icon {
-    width: 40px;
-    height: 40px;
-    background: var(--accent);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow:
-        4px 4px 8px var(--shadow-dark),
-        -4px -4px 8px rgba(74, 78, 94, 0.1);
-}
-
-.logo-text {
-    font-size: 24px;
-    font-weight: 700;
-    background: linear-gradient(90deg, var(--accent), var(--info));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.header-actions {
-    display: flex;
-    gap: 15px;
-}
-
-.btn {
-    padding: 10px 20px;
-    border-radius: 12px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    color: var(--text-primary);
-    box-shadow:
-        4px 4px 8px var(--shadow-dark),
-        -4px -4px 8px rgba(74, 78, 94, 0.1);
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        6px 6px 12px var(--shadow-dark),
-        -6px -6px 12px rgba(74, 78, 94, 0.1);
-}
-
-/* Style for disabled buttons */
-.btn.disabled,
-.widget-action.disabled,
-.widget-item.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none; /* Prevents click events from firing */
-    filter: grayscale(100%); /* Visually indicate it's inactive */
-    transform: none !important; /* Prevent hover effects on disabled */
-    box-shadow: none !important; /* Prevent hover effects on disabled */
-}
-
-
-.btn-primary {
-    background: var(--accent);
-    color: white;
-}
-
-.btn-primary:hover {
-    background: var(--accent-hover);
-}
-
-/* Sidebar Styles */
-.sidebar {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 20px;
-    backdrop-filter: blur(var(--blur-amount));
-    -webkit-backdrop-filter: blur(var(--blur-amount));
-    box-shadow:
-        8px 8px 16px var(--shadow-dark),
-        -8px -8px 16px rgba(74, 78, 94, 0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.sidebar-section {
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.section-title {
-    font-size: 16px;
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 15px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: var(--transition);
-    margin-bottom: 8px;
-}
-
-.nav-item:hover, .nav-item.active {
-    background: var(--bg-tertiary);
-    box-shadow:
-        inset 3px 3px 6px var(--shadow-dark),
-        inset -3px -3px 6px rgba(74, 78, 94, 0.1);
-}
-
-.nav-item i {
-    width: 20px;
-    text-align: center;
-}
-
-.widget-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-.widget-item {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    padding: 15px;
-    cursor: grab;
-    transition: var(--transition);
-    text-align: center;
-    box-shadow:
-        4px 4px 8px var(--shadow-dark),
-        -4px -4px 8px rgba(74, 78, 94, 0.1);
-}
-
-.widget-item:hover {
-    transform: translateY(-3px);
-    box-shadow:
-        6px 6px 12px var(--shadow-dark),
-        -6px -6px 12px rgba(74, 78, 94, 0.1);
-}
-
-.widget-item i {
-    font-size: 24px;
-    margin-bottom: 10px;
-    color: var(--accent);
-}
-
-.widget-item .widget-name {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-/* Main Content Styles */
-.main-content {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 20px;
-    backdrop-filter: blur(var(--blur-amount));
-    -webkit-backdrop-filter: blur(var(--blur-amount));
-    box-shadow:
-        8px 8px 16px var(--shadow-dark),
-        -8px -8px 16px rgba(74, 78, 94, 0.1);
-    display: grid;
-    /* Use flexible columns, max 3 on larger screens for consistency */
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    grid-auto-rows: minmax(200px, auto);
-    gap: 20px;
-    align-content: flex-start;
-    /* Max width to reinforce the idea of a 3-column layout on very wide screens.
-       3 columns * approx 300px/col + 2*20px (gaps) = ~940px total. */
-    max-width: 960px; /* Adjust this value if 3 columns don't fill screen as expected */
-    margin: 0 auto; /* Center the main content within the dashboard grid cell */
-}
-
-/* Force exactly 3 columns on larger desktops for consistent layout, overriding auto-fit */
-@media (min-width: 993px) and (max-width: 1800px) { /* Up to dashboard's max-width */
-    .main-content {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-/* Ensure the dashboard itself doesn't get too wide on super-large screens,
-   allowing the 3-column content to be visually contained. */
-@media (min-width: 1801px) {
-    .dashboard {
-        max-width: 1800px; /* Maintain the dashboard's max-width */
-    }
-}
-
-
-.widget {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow:
-        8px 8px 16px var(--shadow-dark),
-        -8px -8px 16px rgba(74, 78, 94, 0.1);
-    /* Transition and hover effects are set dynamically in PHP based on settings */
-    display: flex;
-    flex-direction: column;
-    grid-column: span var(--width, 1);
-    grid-row: span var(--height, 1);
-    position: relative; /* Ensure z-index works for children */
-    z-index: 1; /* Default z-index for widgets */
-    transition: var(--transition); /* Ensure smooth transition for hover */
-    pointer-events: auto; /* Ensure it's clickable */
-}
-
-/* Dragging feedback */
-.widget.dragging {
-    opacity: 0.5;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(63, 114, 175, 0.1); /* Light blue transparent */
     border: 2px dashed var(--accent);
-}
-
-
-.widget-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.widget-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.widget-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.widget-action {
-    width: 30px;
-    height: 30px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    background: var(--bg-secondary);
-    border: 1px solid var(--glass-border);
-    color: var(--text-secondary);
-    transition: var(--transition);
-}
-
-.widget-action:hover {
-    background: var(--accent);
-    color: white;
-}
-
-.widget-content {
-    flex: 1;
-    overflow-y: auto;
-}
-
-/* --- Widget Content States --- */
-/* By default, show compact content, hide expanded content */
-.widget .compact-content {
-    display: block; /* Use block to occupy space */
-    height: 100%; /* Occupy full height of widget-content */
-    display: flex; /* Make it a flex container */
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 15px;
-    text-align: center;
-}
-.widget .expanded-content {
+    border-radius: var(--border-radius-md);
     display: none; /* Hidden by default */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
-/* When widget is maximized, hide compact content, show expanded content */
-.widget.maximized .compact-content {
+
+/* --- Settings Panel --- */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 99;
     display: none;
 }
-.widget.maximized .expanded-content {
-    display: flex; /* Show expanded content */
-    flex: 1; /* Take up available vertical space */
-    flex-direction: column; /* Stack its children vertically */
-    padding-right: 10px; /* Add right padding for scrollbar if needed */
-}
 
-/* --- Widget Specific Content Styles (Keep these as they were) --- */
-.stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-.stat-card {
-    background: var(--bg-secondary);
-    border-radius: 15px;
-    padding: 15px;
-    position: relative;
-    overflow: hidden;
-    box-shadow:
-        inset 3px 3px 6px var(--shadow-dark),
-        inset -3px -3px 6px rgba(74, 78, 94, 0.1);
-}
-
-.stat-card i {
-    position: absolute;
-    right: 15px;
-    top: 15px;
-    font-size: 24px;
-    opacity: 0.3;
-}
-
-.stat-value {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.stat-label {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.task-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.task-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 12px;
-    background: var(--bg-secondary);
-    transition: var(--transition);
-}
-
-.task-item.urgent {
-    border-left: 4px solid var(--danger);
-}
-
-.task-item.completed label {
-    text-decoration: line-through;
-    color: var(--text-secondary);
-}
-
-.task-input {
-    display: flex;
-    margin-top: 15px;
-    gap: 10px;
-}
-
-.task-input input {
-    flex: 1;
-    padding: 12px;
-    border-radius: 12px;
-    border: none;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    box-shadow:
-        inset 3px 3px 6px var(--shadow-dark),
-        inset -3px -3px 6px rgba(74, 78, 94, 0.1);
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-}
-
-.day-name, .day {
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-}
-
-.day-name {
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 14px;
-}
-
-.day {
-    background: var(--bg-secondary);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.day.today {
-    background: var(--accent);
-    color: white;
-    font-weight: bold;
-}
-
-.day:hover:not(.today) {
-    background: var(--accent);
-}
-
-.day.event {
-    position: relative;
-}
-
-.day.event:after {
-    content: '';
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    bottom: 5px;
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.note {
-    background: var(--bg-secondary);
-    border-radius: 15px;
-    padding: 15px;
-    margin-bottom: 15px;
-    transition: var(--transition);
-}
-
-.note.active {
-    border-left: 4px solid var(--accent);
-}
-
-.note-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.note-date {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.activity-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.activity-item {
-    display: flex;
-    gap: 15px;
-}
-
-.activity-item i {
-    font-size: 20px;
-    color: var(--accent);
-}
-
-.activity-content {
-    flex: 1;
-}
-
-.activity-title {
-    font-weight: 500;
-    margin-bottom: 4px;
-}
-
-.activity-time {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-/* Settings Panel */
 .settings-panel {
     position: fixed;
     top: 0;
-    right: -400px;
-    width: 380px;
-    height: 100vh;
-    background: var(--bg-tertiary);
+    right: -350px; /* Hidden by default */
+    width: 350px;
+    height: 100%;
+    background: var(--bg-secondary);
     border-left: 1px solid var(--glass-border);
-    padding: 30px;
-    z-index: 1000;
-    transition: var(--transition);
-    overflow-y: auto;
-    box-shadow:
-        -8px 0 16px var(--shadow-dark);
+    box-shadow: -5px 0 15px var(--shadow-dark);
+    z-index: 100;
+    transition: right 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 20px; /* Add padding for scrollable content */
 }
 
 .settings-panel.active {
@@ -622,80 +414,83 @@ body.expanded-active {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
-    padding-bottom: 15px;
+    padding: 15px 20px;
     border-bottom: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.settings-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.settings-header .btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.settings-form {
+    flex: 1; /* Allows form to take available space and scroll */
+    overflow-y: auto; /* Enable scrolling for form content */
+    padding: 20px;
 }
 
 .settings-group {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--glass-border);
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
 }
-.settings-group:last-of-type {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
 
 .settings-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 20px;
+    font-size: 16px;
     color: var(--accent);
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px dashed var(--glass-border);
+    padding-bottom: 10px;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-secondary);
 }
 
 .form-control {
-    width: 100%;
-    padding: 12px 15px;
-    border-radius: 12px;
+    width: calc(100% - 20px); /* Adjust for padding */
+    padding: 10px;
     background: var(--bg-secondary);
     border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
     color: var(--text-primary);
-    box-shadow:
-        inset 3px 3px 6px var(--shadow-dark),
-        inset -3px -3px 6px rgba(74, 78, 94, 0.1);
+    font-size: 14px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
 .form-control:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
 }
 
-/* For smaller form controls in tables/compact areas */
-.form-control-small {
-    width: 80px; /* Fixed width for small inputs */
-    padding: 6px 8px;
-    border-radius: 8px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--glass-border);
-    color: var(--text-primary);
-    box-shadow:
-        inset 2px 2px 4px var(--shadow-dark),
-        inset -2px -2px 4px rgba(74, 78, 94, 0.1);
-    text-align: center;
-}
-
-.form-control-small:focus {
-    outline: none;
-    border-color: var(--accent);
-}
-
+/* Toggle Switch */
 .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 50px;
-    height: 24px;
+    width: 40px;
+    height: 20px;
 }
 
 .toggle-switch input {
@@ -711,23 +506,20 @@ body.expanded-active {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--bg-secondary);
-    transition: .4s;
-    border-radius: 24px;
-    box-shadow:
-        inset 2px 2px 4px var(--shadow-dark),
-        inset -2px -2px 4px rgba(74, 78, 94, 0.1);
+    background-color: #ccc;
+    transition: var(--transition);
+    border-radius: 20px;
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: var(--text-secondary);
-    transition: .4s;
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: var(--transition);
     border-radius: 50%;
 }
 
@@ -736,385 +528,602 @@ input:checked + .slider {
 }
 
 input:checked + .slider:before {
-    transform: translateX(26px);
-    background-color: white;
+    transform: translateX(20px);
 }
 
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: none;
+/* Buttons within settings panel */
+.settings-form .btn {
+    padding: 10px 20px;
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
+    font-weight: bold;
 }
 
-/* --- Message Modal Styles (reused for widget settings and widget management) --- */
+.settings-form .btn-danger {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+}
+
+.settings-form .btn-danger:hover {
+    background: darken(var(--danger), 10%);
+    border-color: darken(var(--danger), 10%);
+}
+
+/* Message Modal */
 .message-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 1050; /* Higher than settings panel overlay */
-    display: flex;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1001; /* Above everything */
+    display: none; /* Hidden by default */
     justify-content: center;
     align-items: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .message-modal-overlay.active {
-    opacity: 1;
-    visibility: visible;
+    display: flex;
 }
 
 .message-modal {
-    background: var(--bg-tertiary);
-    border-radius: 20px;
-    padding: 30px;
-    width: 90%;
-    max-width: 500px; /* Default max-width for smaller modals */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    transition: transform 0.3s ease;
+    background: var(--bg-secondary);
     border: 1px solid var(--glass-border);
-    margin: auto;
-}
-.message-modal.large-modal { /* For the new Widget Management modal */
-    max-width: 800px; /* Wider for tables */
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 400px;
+    animation: fadeInScale 0.2s ease-out forwards;
+    display: flex;
+    flex-direction: column;
 }
 
+.message-modal.large-modal {
+    max-width: 800px; /* For widget management table */
+}
 
 .message-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    padding: 15px 20px;
     border-bottom: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .message-modal-header h3 {
-    font-size: 20px;
+    margin: 0;
+    font-size: 18px;
     color: var(--accent);
+}
+
+.message-modal-body {
+    padding: 20px;
+    color: var(--text-primary);
+    flex-grow: 1; /* Allow body to expand */
+    overflow-y: auto; /* For scrollable content in larger modals */
+}
+
+.message-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
+    text-align: right;
 }
 
 .btn-close-modal {
     background: none;
     border: none;
-    font-size: 30px;
     color: var(--text-secondary);
+    font-size: 24px;
     cursor: pointer;
-    transition: var(--transition);
+    line-height: 1;
 }
 
 .btn-close-modal:hover {
     color: var(--danger);
-    transform: rotate(90deg);
 }
 
-.message-modal-body p {
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--text-primary);
-    margin-bottom: 20px;
+/* Form controls within modals */
+.message-modal .form-control {
+    width: 100%; /* Override default for modal */
+    margin-bottom: 10px;
 }
 
-.message-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 20px;
-    border-top: 1px solid var(--glass-border);
-    margin-top: 20px;
-}
-
-/* --- Maximized Widget Styles --- */
-.widget.maximized {
-    position: relative;
-    width: 90%;
-    height: 90%;
-    max-width: 1200px;
-    max-height: 900px;
-    z-index: 1002;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    opacity: 1;
-    visibility: visible;
-    transform: scale(0.8);
-    transition: transform 0.3s ease-out, opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.widget-expanded-overlay.active .widget.maximized {
-    transform: scale(1);
-}
-
-.widget.maximized:hover {
-    transform: scale(1) !important;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8) !important;
-}
-
-/* Hide the original widget in its grid position when it's moved to the overlay */
-.widget-original-hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    /* Maintain its grid space so other widgets don't reflow into it */
-    grid-column: span var(--width, 1);
-    grid-row: span var(--height, 1);
-}
-
-
-.widget.maximized .widget-content {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 10px;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .dashboard {
-        grid-template-columns: 1fr;
-    }
-
-    .sidebar {
-        grid-row: 2;
-    }
-}
-
-@media (max-width: 992px) {
-    .main-content {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .widget-list {
-        grid-template-columns: 1fr;
-    }
-
-    .main-content {
-        grid-template-columns: 1fr;
-    }
-
-    .header {
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .settings-panel {
-        width: 100%;
-        right: -100%;
-    }
-
-    .widget.maximized {
-        width: 100%;
-        height: 100%;
-        border-radius: 0;
-        padding: 10px;
-    }
-}
-
-/* --- IDE Widget Specific Styles --- */
+/* IDE Widget Specific Styles */
 .ide-container {
     display: flex;
-    flex-direction: row; /* Horizontal layout for sidebar and editor */
-    height: 100%; /* Take full height of the widget-content */
-    overflow: hidden; /* Prevent overall scroll, children will handle */
-    border-radius: 15px; /* Rounded corners for the IDE itself */
-    background: var(--bg-secondary); /* A slightly different background for the IDE */
-    border: 1px solid var(--glass-border);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+    height: 100%; /* Takes full height of expanded-content */
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
 }
 
 .ide-sidebar {
-    width: 250px; /* Fixed width for the sidebar */
-    background: var(--bg-tertiary); /* Darker background for sidebar */
-    padding: 15px;
+    width: 200px;
+    background: var(--bg-secondary);
     border-right: 1px solid var(--glass-border);
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Allow sidebar to scroll */
+    overflow-y: auto;
 }
 
 .ide-path {
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--accent);
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 5px;
+    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-sm);
+    word-break: break-all;
 }
 
 .ide-file-tree {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex: 1; /* Take remaining vertical space */
+    flex-grow: 1;
 }
 
 .ide-file-tree-item {
-    padding: 8px 5px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: background-color 0.2s ease;
-    border-radius: 8px;
+    padding: 8px 5px;
+    cursor: pointer;
+    font-size: 13px;
     color: var(--text-primary);
+    border-radius: 5px;
+    transition: var(--transition);
 }
 
 .ide-file-tree-item:hover {
-    background-color: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--accent);
 }
 
 .ide-file-tree-item i {
     color: var(--text-secondary);
-    width: 18px; /* Fixed width for icons */
-    text-align: center;
-}
-
-.ide-file-tree-item[data-type="dir"] i {
-    color: var(--warning); /* Yellow for folders */
 }
 
 .ide-file-tree-item.ide-item-read-only {
-    opacity: 0.6;
+    opacity: 0.7;
     cursor: not-allowed;
-    color: var(--text-secondary);
 }
-.ide-file-tree-item.ide-item-read-only i {
-    color: var(--text-secondary);
+.ide-file-tree-item.ide-item-read-only:hover {
+    background: none;
+    color: var(--text-primary);
 }
 
 
 .ide-loading-indicator, .ide-error-indicator {
-    padding: 10px;
     text-align: center;
+    padding: 20px;
     color: var(--text-secondary);
 }
-.ide-error-indicator {
-    color: var(--danger);
+
+.ide-loading-indicator i {
+    margin-right: 5px;
 }
 
-
 .ide-editor-area {
-    flex: 1; /* Take remaining horizontal space */
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    position: relative; /* For status positioning */
 }
 
 .ide-editor-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--glass-border);
     font-size: 14px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 #ide-current-file-name {
     font-weight: bold;
-    color: var(--text-primary);
     flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 #ide-file-status {
-    margin-left: 10px;
     font-size: 12px;
+    margin-right: 10px;
     padding: 3px 8px;
     border-radius: 5px;
 }
 
 .ide-status-saved {
-    background-color: var(--success);
-    color: white;
+    background-color: rgba(16, 185, 129, 0.2); /* Green transparent */
+    color: var(--success);
 }
 
 .ide-status-unsaved {
-    background-color: var(--warning);
-    color: var(--bg-primary); /* Dark text on warning background */
-}
-
-#ide-save-btn {
-    margin-left: 15px;
-    padding: 5px 12px;
-    font-size: 13px;
-    border-radius: 8px;
+    background-color: rgba(245, 158, 11, 0.2); /* Yellow transparent */
+    color: var(--warning);
 }
 
 .ide-code-editor {
-    flex: 1; /* Take remaining vertical space */
     width: 100%;
-    background-color: var(--bg-primary);
-    border: 1px solid var(--glass-border);
-    border-radius: 10px;
+    flex-grow: 1;
+    background: #1e1e1e; /* Darker background for code */
+    border: none;
+    color: #d4d4d4; /* Light grey for code */
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 14px;
     padding: 15px;
-    color: #f8f8f2; /* Light code editor text */
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.5;
     resize: none; /* Disable textarea resize handle */
-    outline: none; /* Remove blue outline on focus */
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+    outline: none;
+    line-height: 1.5;
+    white-space: pre; /* Preserve whitespace */
+    word-wrap: normal; /* Prevent word wrapping */
+    overflow-x: auto; /* Enable horizontal scroll for code */
 }
 
-.ide-code-editor:focus {
-    border-color: var(--accent);
-}
-
-.ide-code-editor:read-only {
-    cursor: not-allowed;
-    background-color: rgba(0,0,0,0.1);
-    opacity: 0.8;
-}
-
-/* --- Widget Management Table Styles --- */
-.widget-management-table {
+/* Stats Widget Specific Styles */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 14px;
-    background-color: var(--bg-secondary);
-    border-radius: 10px;
-    overflow: hidden; /* For rounded corners on table */
+    height: 100%;
+    align-content: center; /* Center grid items vertically */
+    justify-content: center; /* Center grid items horizontally */
 }
 
-.widget-management-table thead tr {
-    background-color: var(--bg-tertiary);
+.stat-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: 15px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card i {
+    font-size: 24px;
+    color: var(--accent);
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+/* Task Manager Widget Styles */
+.task-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 5px; /* For scrollbar */
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.task-item input[type="checkbox"] {
+    margin-right: 10px;
+    accent-color: var(--accent);
+}
+
+.task-item.completed label {
+    text-decoration: line-through;
     color: var(--text-secondary);
 }
 
-.widget-management-table th,
-.widget-management-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid var(--glass-border);
+.task-item.urgent {
+    color: var(--warning);
+    font-weight: bold;
 }
 
-.widget-management-table tbody tr:last-child td {
+.task-input {
+    display: flex;
+    margin-top: 15px;
+    gap: 10px;
+}
+
+.task-input input[type="text"] {
+    flex-grow: 1;
+    padding: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+}
+
+.task-input button {
+    background: var(--accent);
+    border: none;
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.task-input button:hover {
+    background: var(--secondary);
+}
+
+/* Calendar Widget Styles */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 5px 0;
+}
+
+.calendar-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--accent);
+}
+
+.calendar-header button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.calendar-header button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 days a week */
+    gap: 5px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.day-name {
+    font-weight: bold;
+    color: var(--text-secondary);
+    padding-bottom: 5px;
+}
+
+.day {
+    padding: 8px 5px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px; /* Ensure consistent height */
+}
+
+.day.empty {
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+}
+
+.day.today {
+    background: var(--accent);
+    color: white;
+    font-weight: bold;
+}
+
+.day.event {
+    border: 1px solid var(--warning);
+    position: relative;
+}
+
+.day.event::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 4px;
+    height: 4px;
+    background-color: var(--warning);
+    border-radius: 50%;
+}
+
+/* Notes Widget Styles */
+.note {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.note-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--accent);
+}
+
+.note-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.note-content {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.new-note {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.new-note textarea {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    font-size: 14px;
+    min-height: 80px;
+    resize: vertical;
+}
+
+.new-note button {
+    background: var(--accent);
+    border: none;
+    padding: 10px 15px;
+    border-radius: var(--border-radius-sm);
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: bold;
+}
+
+.new-note button:hover {
+    background: var(--secondary);
+}
+
+/* Printers Widget Styles */
+.printers-summary {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.printers-summary .value {
+    font-size: 36px;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.printers-summary .label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.printers-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.printers-table th, .printers-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--glass-border);
+    text-align: left;
+}
+
+.printers-table th {
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.printers-table tr:last-child td {
     border-bottom: none;
 }
 
+.printers-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Select Customer Widget Styles */
+.select-box {
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    border-radius: var(--border-radius-md);
+    padding: 20px;
+    box-shadow: 0 0 8px var(--shadow-dark);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.select-box label {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--accent);
+}
+
+.select-box select {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    appearance: none; /* Remove default select arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23e0e0e0%22%20d%3D%22M287%2C197.6l-131.3%2C131.3c-4.1%2C4.1-9.9%2C6.4-15.8%2C6.4s-11.7-2.3-15.8-6.4L5.4%2C197.6c-8.2-8.2-8.2-21.5%2C0-29.7s21.5-8.2%2C29.7%2C0l116.9%2C116.9l116.9-116.9c8.2-8.2%2C21.5-8.2%2C29.7%2C0S295.2%2C189.4%2C287%2C197.6z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+}
+
+/* Widget Management Table */
+.widget-management-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.widget-management-table th, .widget-management-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--glass-border);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.widget-management-table th {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-secondary);
+    font-weight: bold;
+}
+
 .widget-management-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .widget-management-table td i {
@@ -1122,56 +1131,94 @@ input:checked + .slider:before {
     margin-right: 5px;
 }
 
+.widget-management-table .form-control-small {
+    width: 60px; /* Smaller width for number inputs */
+    padding: 5px;
+    font-size: 13px;
+    text-align: center;
+}
+
 .widget-management-status {
     font-size: 12px;
-    font-weight: 600;
     padding: 4px 8px;
     border-radius: 5px;
-    background-color: rgba(255,255,255,0.05); /* Neutral background */
-    color: var(--text-secondary);
-}
-
-/* Specific status colors */
-.widget-management-status[style*="--warning"] { /* Can't target CSS variables directly, rely on JS style */
-    color: var(--warning);
-}
-.widget-management-status[style*="--success"] {
+    background: rgba(16, 185, 129, 0.2);
     color: var(--success);
 }
-.widget-management-status[style*="--danger"] {
-    color: var(--danger);
+
+.widget-management-status[style*="var(--warning)"] {
+    background: rgba(245, 158, 11, 0.2);
 }
 
+.widget-management-status[style*="var(--danger)"] {
+    background: rgba(239, 68, 68, 0.2);
+}
 
-/* Media Queries for IDE responsiveness */
+.btn-deactivate-widget {
+    background: var(--danger);
+    border: none;
+    color: white;
+    padding: 6px 10px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 12px;
+}
+
+.btn-deactivate-widget:hover {
+    background: darken(var(--danger), 10%);
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
-    .ide-container {
-        flex-direction: column; /* Stack sidebar and editor vertically */
+    .dashboard {
+        grid-template-columns: 1fr; /* Single column layout */
+        grid-template-rows: var(--header-height) auto 1fr; /* Header, then sidebar, then main content */
+    }
+
+    .header {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .sidebar {
+        grid-column: 1;
+        grid-row: 2;
+        width: 100%; /* Full width sidebar */
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 0;
+        max-height: 200px; /* Limit sidebar height on mobile */
+    }
+
+    .main-content {
+        grid-column: 1;
+        grid-row: 3;
+        grid-template-columns: 1fr; /* Single column for widgets on mobile */
+        grid-template-rows: auto; /* Auto rows */
+        padding: 10px;
+    }
+
+    .widget {
+        grid-column: 1 / -1; /* All widgets span full width on small screens */
+        grid-row: auto; /* Default row span */
+    }
+
+    .settings-panel {
+        width: 100%;
+        right: -100%;
+        border-left: none;
+    }
+
+    .settings-panel.active {
+        right: 0;
+    }
+
+    .message-modal {
+        width: 95%;
     }
 
     .ide-sidebar {
-        width: 100%; /* Full width for sidebar on small screens */
-        height: 200px; /* Fixed height for sidebar, allow scroll */
-        border-right: none;
-        border-bottom: 1px solid var(--glass-border); /* Add bottom border */
-    }
-
-    .ide-editor-area {
-        flex: 1; /* Editor takes remaining height */
-    }
-
-    .message-modal.large-modal {
-        max-width: 100%;
-        border-radius: 0;
-    }
-    .widget-management-table th,
-    .widget-management-table td {
-        padding: 8px 10px;
-    }
-    .widget-management-table th:nth-child(1), .widget-management-table td:nth-child(1) { /* Hide icon on small screens */
-        display: none;
-    }
-    .form-control-small {
-        width: 60px;
+        width: 150px; /* Smaller sidebar for IDE on mobile */
     }
 }

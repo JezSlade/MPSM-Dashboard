@@ -28,7 +28,6 @@ require_once 'helpers.php';
 
 // Define the application root directory for security
 define('APP_ROOT', __DIR__);
-// Removed: define('DYNAMIC_WIDGETS_FILE', APP_ROOT . '/dynamic_widgets.json'); // This is now defined only in config.php
 
 // --- Persistent Settings & Widgets Functions ---
 
@@ -47,13 +46,13 @@ $default_dashboard_state = [
         // Default widgets with their initial default dimensions (from config.php)
         // These are examples. The actual width/height will be derived from config.php's $available_widgets
         // when a new widget is added or when show_all_available_widgets is enabled.
-        ['id' => 'stats', 'position' => 1, 'width' => 2, 'height' => 1],
-        ['id' => 'tasks', 'position' => 2, 'width' => 1, 'height' => 2],
-        ['id' => 'calendar', 'position' => 3, 'width' => 1, 'height' => 1],
-        ['id' => 'notes', 'position' => 4, 'width' => 1, 'height' => 1],
-        ['id' => 'activity', 'position' => 5, 'width' => 2, 'height' => 1],
-        ['id' => 'debug_info', 'position' => 6, 'width' => 2, 'height' => 2], // Added debug_info default
-        ['id' => 'ide', 'position' => 7, 'width' => 3, 'height' => 3] // Added IDE default
+        ['id' => 'stats', 'position' => 1, 'width' => 2.0, 'height' => 1.0],
+        ['id' => 'tasks', 'position' => 2, 'width' => 1.0, 'height' => 2.0],
+        ['id' => 'calendar', 'position' => 3, 'width' => 1.0, 'height' => 1.0],
+        ['id' => 'notes', 'position' => 4, 'width' => 1.0, 'height' => 1.0],
+        ['id' => 'activity', 'position' => 5, 'width' => 2.0, 'height' => 1.0],
+        ['id' => 'debug_info', 'position' => 6, 'width' => 2.0, 'height' => 2.0], // Added debug_info default
+        ['id' => 'ide', 'position' => 7, 'width' => 3.0, 'height' => 3.0] // Added IDE default
     ]
 ];
 
@@ -83,13 +82,13 @@ function loadDashboardState() {
         foreach ($final_state['active_widgets'] as $key => $widget_entry) {
             $widget_id = $widget_entry['id'];
             // Get default dimensions from available_widgets (which are loaded from config.php)
-            $default_width = $available_widgets[$widget_id]['width'] ?? 1;
-            $default_height = $available_widgets[$widget_id]['height'] ?? 1;
+            $default_width = (float)($available_widgets[$widget_id]['width'] ?? 1.0);
+            $default_height = (float)($available_widgets[$widget_id]['height'] ?? 1.0);
 
             // Apply loaded dimensions, or fall back to defaults if not present in JSON
-            // Also clamp values to allowed min/max if they somehow got out of range
-            $final_state['active_widgets'][$key]['width'] = max(1, min(3, $widget_entry['width'] ?? $default_width));
-            $final_state['active_widgets'][$key]['height'] = max(1, min(4, $widget_entry['height'] ?? $default_height));
+            // Also clamp values to allowed min/max (0.5 to 3.0 for width, 0.5 to 4.0 for height)
+            $final_state['active_widgets'][$key]['width'] = max(0.5, min(3.0, (float)($widget_entry['width'] ?? $default_width)));
+            $final_state['active_widgets'][$key]['height'] = max(0.5, min(4.0, (float)($widget_entry['height'] ?? $default_height)));
         }
     } else {
         // If active_widgets was missing or not an array, use default ones
@@ -351,26 +350,26 @@ if ($is_ajax_request) {
             foreach ($current_dashboard_state['active_widgets'] as $index => $widget_entry) {
                 $widget_id = $widget_entry['id'];
                 // Ensure widget_def exists before accessing its properties
-                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1, 'height' => 1];
+                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1.0, 'height' => 1.0];
                 $active_widgets_data[] = [
                     'id' => $widget_id,
                     'index' => $index, // Important for updates
                     'name' => $widget_def['name'],
                     'icon' => $widget_def['icon'],
-                    'width' => $widget_entry['width'],
-                    'height' => $widget_entry['height']
+                    'width' => (float)$widget_entry['width'], // Ensure float
+                    'height' => (float)$widget_entry['height'] // Ensure float
                 ];
             }
             $response = ['status' => 'success', 'widgets' => $active_widgets_data];
             break;
         case 'update_single_widget_dimensions': // NEW: AJAX to update a single widget's dimensions
             $widget_index = (int)$_POST['widget_index'];
-            $new_width = (int)$_POST['new_width'];
-            $new_height = (int)$_POST['new_height'];
+            $new_width = (float)$_POST['new_width']; // Cast to float
+            $new_height = (float)$_POST['new_height']; // Cast to float
 
-            // Clamp values
-            $new_width = max(1, min(3, $new_width));
-            $new_height = max(1, min(4, $new_height));
+            // Clamp values between 0.5 and 3.0 for width, 0.5 and 4.0 for height
+            $new_width = max(0.5, min(3.0, $new_width));
+            $new_height = max(0.5, min(4.0, $new_height));
 
             $current_dashboard_state = loadDashboardState();
             if (isset($current_dashboard_state['active_widgets'][$widget_index])) {
@@ -449,8 +448,8 @@ if ($is_ajax_request) {
             $widget_name = trim($_POST['name'] ?? '');
             $widget_id = trim($_POST['id'] ?? '');
             $widget_icon = trim($_POST['icon'] ?? 'cube');
-            $widget_width = (int)($_POST['width'] ?? 1);
-            $widget_height = (int)($_POST['height'] ?? 1);
+            $widget_width = (float)($_POST['width'] ?? 1.0); // Cast to float
+            $widget_height = (float)($_POST['height'] ?? 1.0); // Cast to float
 
             // Basic validation
             if (empty($widget_name) || empty($widget_id)) {
@@ -469,8 +468,8 @@ if ($is_ajax_request) {
             }
 
             // Clamp dimensions
-            $widget_width = max(1, min(3, $widget_width));
-            $widget_height = max(1, min(4, $widget_height));
+            $widget_width = max(0.5, min(3.0, $widget_width));
+            $widget_height = max(0.5, min(4.0, $widget_height));
 
             // Generate widget file content
             $template_content = <<<PHP
@@ -562,8 +561,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-A
         if (!$settings['show_all_available_widgets']) {
             $widget_id_to_add = $_POST['widget_id'];
             // Get default dimensions from available_widgets
-            $default_width = $available_widgets[$widget_id_to_add]['width'] ?? 1;
-            $default_height = $available_widgets[$widget_id_to_add]['height'] ?? 1;
+            $default_width = (float)($available_widgets[$widget_id_to_add]['width'] ?? 1.0);
+            $default_height = (float)($available_widgets[$widget_id_to_add]['height'] ?? 1.0);
 
             $new_widget = [
                 'id' => $widget_id_to_add,
@@ -612,8 +611,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-A
                 $new_active_widgets[] = [
                     'id' => $id,
                     'position' => count($new_active_widgets) + 1,
-                    'width' => $def['width'] ?? 1,
-                    'height' => $def['height'] ?? 1
+                    'width' => (float)($def['width'] ?? 1.0),
+                    'height' => (float)($def['height'] ?? 1.0)
                 ];
             }
             usort($new_active_widgets, function($a, $b) {
@@ -627,12 +626,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-A
         // as the new Widget Management panel uses AJAX for this.
         // However, it's kept for consistency and if a direct form submission needed it.
         $widget_index = (int)$_POST['widget_index'];
-        $new_width = (int)$_POST['new_width'];
-        $new_height = (int)$_POST['new_height'];
+        $new_width = (float)$_POST['new_width']; // Cast to float
+        $new_height = (float)$_POST['new_height']; // Cast to float
 
         // Ensure width/height are within the allowed bounds (width max 3, height max 4)
-        $new_width = max(1, min(3, $new_width)); // Clamp between 1 and 3
-        $new_height = max(1, min(4, $new_height)); // Clamp between 1 and 4 (height can still be 4)
+        $new_width = max(0.5, min(3.0, $new_width)); // Clamp between 0.5 and 3.0
+        $new_height = max(0.5, min(4.0, $new_height)); // Clamp between 0.5 and 4.0
 
 
         // Only allow changing dimensions if 'show all' is OFF
@@ -712,11 +711,11 @@ global $available_widgets;
                     <input type="hidden" id="widget-settings-index" name="widget_index">
                     <div class="form-group">
                         <label for="widget-settings-width">Width (Grid Units)</label>
-                        <input type="number" id="widget-settings-width" name="new_width" min="1" max="3" class="form-control">
+                        <input type="number" id="widget-settings-width" name="new_width" min="0.5" max="3" step="0.5" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="widget-settings-height">Height (Grid Units)</label>
-                        <input type="number" id="widget-settings-height" name="new_height" min="1" max="4" class="form-control">
+                        <input type="number" id="widget-settings-height" name="new_height" min="0.5" max="4" step="0.5" class="form-control">
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
                 </form>
@@ -782,12 +781,12 @@ global $available_widgets;
                         <input type="text" id="new-widget-icon" name="icon" class="form-control" value="cube" placeholder="e.g., chart-bar">
                     </div>
                     <div class="form-group">
-                        <label for="new-widget-width">Default Width (1-3 grid units)</label>
-                        <input type="number" id="new-widget-width" name="width" class="form-control" value="1" min="1" max="3" required>
+                        <label for="new-widget-width">Default Width (0.5-3.0 grid units)</label>
+                        <input type="number" id="new-widget-width" name="width" class="form-control" value="1.0" min="0.5" max="3" step="0.5" required>
                     </div>
                     <div class="form-group">
-                        <label for="new-widget-height">Default Height (1-4 grid units)</label>
-                        <input type="number" id="new-widget-height" name="height" class="form-control" value="1" min="1" max="4" required>
+                        <label for="new-widget-height">Default Height (0.5-4.0 grid units)</label>
+                        <input type="number" id="new-widget-height" name="height" class="form-control" value="1.0" min="0.5" max="4" step="0.5" required>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
                         <i class="fas fa-plus"></i> Create Widget Template
@@ -881,8 +880,8 @@ global $available_widgets;
                     $widgets_to_render[] = [
                         'id' => $id,
                         'position' => count($widgets_to_render) + 1,
-                        'width' => $def['width'] ?? 1,
-                        'height' => $def['height'] ?? 1
+                        'width' => (float)($def['width'] ?? 1.0),
+                        'height' => (float)($def['height'] ?? 1.0)
                     ];
                 }
                 // Sort them alphabetically by ID for consistent positioning
@@ -897,20 +896,25 @@ global $available_widgets;
             foreach ($widgets_to_render as $index => $widget):
                 $widget_id = $widget['id'];
                 // Use a fallback for widget_def if config.php isn't correctly loading it
-                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1, 'height' => 1];
+                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1.0, 'height' => 1.0];
+                
                 // Use the dimensions from the active_widgets array if present, otherwise fall back to config default
                 // And ensure they are clamped for safety during rendering
-                $current_width = max(1, min(3, $widget['width'] ?? $widget_def['width']));
-                $current_height = max(1, min(4, $widget['height'] ?? $widget_def['height']));
+                $current_width_user_facing = max(0.5, min(3.0, (float)($widget['width'] ?? $widget_def['width'])));
+                $current_height_user_facing = max(0.5, min(4.0, (float)($widget['height'] ?? $widget_def['height'])));
+
+                // Convert user-facing units to internal grid units (doubled for half-unit precision)
+                $current_width_internal = $current_width_user_facing * 2;
+                $current_height_internal = $current_height_user_facing * 2;
             ?>
             <!-- Widget container, made draggable for reordering -->
             <div class="widget"
                  draggable="true"
-                 style="--width: <?= $current_width ?>; --height: <?= $current_height ?>;"
+                 style="--width: <?= $current_width_internal ?>; --height: <?= $current_height_internal ?>;"
                  data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                  data-widget-index="<?= $index ?>"
-                 data-current-width="<?= $current_width ?>"
-                 data-current-height="<?= $current_height ?>">
+                 data-current-width="<?= $current_width_user_facing ?>"
+                 data-current-height="<?= $current_height_user_facing ?>">
                 <!-- This placeholder div marks the widget's original position in the DOM -->
                 <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-index="<?= $index ?>"></div>
 
@@ -924,8 +928,8 @@ global $available_widgets;
                         <div class="widget-action action-settings"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                             data-widget-index="<?= $index ?>"
-                            data-current-width="<?= $current_width ?>"
-                            data-current-height="<?= $current_height ?>"
+                            data-current-width="<?= $current_width_user_facing ?>"
+                            data-current-height="<?= $current_height_user_facing ?>"
                             title="Adjust widget dimensions">
                             <i class="fas fa-cog"></i>
                         </div>
