@@ -77,7 +77,7 @@ function saveDashboardState(array $state) {
     $json_data = json_encode($state, JSON_PRETTY_PRINT);
     if ($json_data === false) {
         error_log("Failed to encode dashboard state to JSON: " . json_last_error_msg());
-        echo "<p style='color: red;'>PHP Error: Failed to encode JSON for saving. Details in server error log.</p>";
+        // Removed direct echo for cleaner output
         return false;
     }
     // Attempt to write the file. File permissions are crucial here.
@@ -92,7 +92,7 @@ function saveDashboardState(array $state) {
             $error_message .= " - Unknown write error."; // Generic error if no specific permission issue found
         }
         error_log($error_message);
-        echo "<p style='color: red;'>PHP Critical Error: " . htmlspecialchars($error_message) . "</p>";
+        // Removed direct echo for cleaner output
     }
     return $result !== false;
 }
@@ -107,24 +107,6 @@ $settings = $current_dashboard_state; // Settings now includes active_widgets
 // IMPORTANT: Initialize $_SESSION['active_widgets'] from the loaded state
 // This ensures session state is synced with persistent state on page load.
 $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets'];
-
-
-// --- DEBUGGING OUTPUT: Session state BEFORE POST handling ---
-echo '<h2>Debugging Active Widgets & Settings Persistence</h2>';
-echo '<h3>SESSION Active Widgets (BEFORE POST):</h3>';
-echo '<pre>';
-var_dump($_SESSION['active_widgets']);
-echo '</pre>';
-
-echo '<h3>Persistent Settings (BEFORE POST Load):</h3>';
-echo '<pre>';
-if (file_exists(DASHBOARD_SETTINGS_FILE)) {
-    echo htmlspecialchars(file_get_contents(DASHBOARD_SETTINGS_FILE));
-} else {
-    echo "dashboard_settings.json does not exist.";
-}
-echo '</pre>';
-// --- END DEBUGGING OUTPUT ---
 
 
 // Handle POST requests for widget management and settings updates
@@ -144,9 +126,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
             $_SESSION['active_widgets'][] = $new_widget;
             $has_state_changed = true;
-            echo "<p style='color: green;'>PHP Action: Widget '{$_POST['widget_id']}' added to session.</p>";
-        } else {
-            echo "<p style='color: orange;'>PHP Info: Cannot add widget in 'Show All Widgets' mode.</p>";
         }
 
     } elseif ($action_type === 'remove_widget' && isset($_POST['widget_index'])) {
@@ -154,18 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$settings['show_all_available_widgets']) {
             // Remove widget from active_widgets in session
             $widget_index_to_remove = (int)$_POST['widget_index'];
-            echo "<p style='color: orange;'>PHP Action: Attempting to remove widget at index {$widget_index_to_remove}.</p>";
 
             if (isset($_SESSION['active_widgets'][$widget_index_to_remove])) {
                 unset($_SESSION['active_widgets'][$widget_index_to_remove]);
                 $_SESSION['active_widgets'] = array_values($_SESSION['active_widgets']); // Re-index array
                 $has_state_changed = true;
-                echo "<p style='color: green;'>PHP Action: Widget at index {$widget_index_to_remove} successfully unset and array re-indexed in session.</p>";
-            } else {
-                echo "<p style='color: red;'>PHP Warning: Widget at index {$widget_index_to_remove} not found in session.</p>";
             }
-        } else {
-            echo "<p style='color: orange;'>PHP Info: Cannot remove widget in 'Show All Widgets' mode.</p>";
         }
 
     } elseif ($action_type === 'update_settings') {
@@ -176,18 +149,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
             'blur_amount' => $_POST['blur_amount'] ?? '10px',
             'enable_animations' => isset($_POST['enable_animations']) && $_POST['enable_animations'] === '1',
-            'show_all_available_widgets' => isset($_POST['show_all_available_widgets']) && $_POST['show_all_available_widgets'] === '1' // NEW SETTING VALUE
+            'show_all_available_widgets' => isset($_POST['show_all_available_widgets']) && $_POST['show_all_available_widgets'] === '1'
         ];
         
         // Update current $settings array with new values from POST
         $settings = array_merge($settings, $settings_from_post);
         $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
         $has_state_changed = true;
-        echo "<p style='color: green;'>PHP Action: General settings updated in session.</p>";
 
         // Special handling if 'show_all_available_widgets' was just turned ON
         if ($settings['show_all_available_widgets'] && !($current_dashboard_state['show_all_available_widgets'] ?? false)) {
-            echo "<p style='color: blue;'>PHP Action: 'Show All Widgets' mode ENABLED. Rebuilding active widgets list.</p>";
             // Overwrite active_widgets with all available widgets, sorted alphabetically by ID
             $new_active_widgets = [];
             foreach ($available_widgets as $id => $def) {
@@ -198,16 +169,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
             $_SESSION['active_widgets'] = $new_active_widgets;
         } elseif (!$settings['show_all_available_widgets'] && ($current_dashboard_state['show_all_available_widgets'] ?? false)) {
-            // If 'show_all_available_widgets' was just turned OFF, we revert to the last manually curated state.
-            // This means we DON'T overwrite $_SESSION['active_widgets'] with defaults, it retains its value.
-            // No explicit action needed here as $_SESSION['active_widgets'] was already populated on page load
-            // by loadDashboardState and then potentially modified by user actions when 'show_all_available_widgets' was false.
-            echo "<p style='color: blue;'>PHP Action: 'Show All Widgets' mode DISABLED. Reverting to manually curated widgets.</p>";
+            // If 'show_all_available_widgets' was just turned OFF, revert to the last saved 'active_widgets' from file,
+            // before it was potentially overwritten by 'show all' mode.
+            // This is handled implicitly by loading $current_dashboard_state at the top.
         }
 
 
     } else {
-        echo "<p style='color: red;'>PHP Warning: Unknown or invalid POST action_type: " . htmlspecialchars($action_type) . "</p>";
+        // Log unknown POST actions, but don't output directly to page for cleaner output
+        error_log("PHP Warning: Unknown or invalid POST action_type received: " . ($_POST['action_type'] ?? 'EMPTY'));
     }
 
     // If any state (settings or active widgets) changed, save the entire state
@@ -217,14 +187,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // The 'active_widgets' in $state_to_save must always come from $_SESSION after processing POST
         $state_to_save['active_widgets'] = $_SESSION['active_widgets'];
 
-        echo '<h3>STATE TO BE SAVED:</h3><pre>';
-        var_dump($state_to_save);
-        echo '</pre>';
-
-        if (saveDashboardState($state_to_save)) {
-            echo "<p style='color: green;'>PHP Persistence: Dashboard state successfully saved to JSON file.</p>";
-        } else {
-            echo "<p style='color: red;'>PHP Persistence Critical Error: Failed to save dashboard state persistently. Check server error logs for more details!</p>";
+        if (!saveDashboardState($state_to_save)) {
+            error_log("PHP Persistence Critical Error: Failed to save dashboard state persistently. Check server error logs for more details!");
         }
     }
 }

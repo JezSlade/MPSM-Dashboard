@@ -13,7 +13,7 @@ $_widget_config = [
 // Ensure this function is only declared once
 if (!function_exists('render_debug_info_widget')) {
     function render_debug_info_widget() {
-        echo '<div style="font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; padding-right: 10px;">';
+        echo '<div style="font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; padding-right: 10px; min-height: 100px; /* Ensure visibility */">';
 
         echo '<h4 style="color: var(--accent); margin-top: 10px; margin-bottom: 5px;">$_SESSION Data:</h4>';
         echo '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); word-break: break-all; white-space: pre-wrap;">';
