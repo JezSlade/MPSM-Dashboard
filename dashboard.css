@@ -584,13 +584,12 @@ input:checked + .slider:before {
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-lg);
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
-    width: auto; /* Let content dictate width, up to max-width */
-    min-width: 300px; /* Minimum width for readability */
-    max-width: 90vw; /* Ensure it doesn't exceed viewport width */
+    width: 90%; /* Adjusted for better responsiveness */
+    max-width: 500px; /* Max width for typical modals */
     animation: fadeInScale 0.2s ease-out forwards;
     display: flex;
     flex-direction: column;
-    margin: auto; /* Ensures it's truly centered within flex parent */
+    /* margin: auto;  Removed, flexbox handles centering */
 }
 
 .message-modal.large-modal {
