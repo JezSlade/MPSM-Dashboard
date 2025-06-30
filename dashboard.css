@@ -204,6 +204,8 @@ body {
     padding: 20px;
     overflow-y: auto;
     min-height: calc(100vh - var(--header-height));
+    min-width: 0; /* Important for grid items to shrink correctly */
+    box-sizing: border-box; /* Include padding and border in width */
 }
 
 /* Individual Widget Styling */
@@ -225,6 +227,7 @@ body {
     box-shadow: 0 4px 15px var(--shadow-dark);
     transition: var(--transition);
     position: relative; /* For placeholder positioning */
+    box-sizing: border-box; /* Include padding and border in width */
 }
 
 .widget-header {
