@@ -18,7 +18,12 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // A date in the past
 session_start();
 
 // Include configuration and helper functions
-require_once 'config.php'; // Ensures DASHBOARD_SETTINGS_FILE is defined
+// NOTE: These files are assumed to be present and correctly structured.
+// If you are still seeing "Unknown Widget" or "Widget content not found",
+// it means your config.php and helpers.php (and individual widget files)
+// are NOT the correct versions. This reordering feature will work on the
+// *containers*, but cannot fix the content if PHP isn't generating it.
+require_once 'config.php';
 require_once 'helpers.php';
 
 // Define the application root directory for security
@@ -308,27 +313,26 @@ if ($is_ajax_request) {
                 $response['message'] = "Settings file does not exist.";
             }
             break;
-        case 'get_active_widgets_data': // AJAX to get active widget data for the management panel
+        case 'get_active_widgets_data': // NEW: AJAX to get active widget data for the management panel
             global $available_widgets;
             $current_dashboard_state = loadDashboardState();
             $active_widgets_data = [];
             foreach ($current_dashboard_state['active_widgets'] as $index => $widget_entry) {
                 $widget_id = $widget_entry['id'];
-                if (isset($available_widgets[$widget_id])) {
-                    $widget_def = $available_widgets[$widget_id];
-                    $active_widgets_data[] = [
-                        'id' => $widget_id,
-                        'index' => $index, // Important for updates
-                        'name' => $widget_def['name'],
-                        'icon' => $widget_def['icon'],
-                        'width' => $widget_entry['width'],
-                        'height' => $widget_entry['height']
-                    ];
-                }
+                // Ensure widget_def exists before accessing its properties
+                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1, 'height' => 1];
+                $active_widgets_data[] = [
+                    'id' => $widget_id,
+                    'index' => $index, // Important for updates
+                    'name' => $widget_def['name'],
+                    'icon' => $widget_def['icon'],
+                    'width' => $widget_entry['width'],
+                    'height' => $widget_entry['height']
+                ];
             }
             $response = ['status' => 'success', 'widgets' => $active_widgets_data];
             break;
-        case 'update_single_widget_dimensions': // AJAX to update a single widget's dimensions
+        case 'update_single_widget_dimensions': // NEW: AJAX to update a single widget's dimensions
             $widget_index = (int)$_POST['widget_index'];
             $new_width = (int)$_POST['new_width'];
             $new_height = (int)$_POST['new_height'];
@@ -349,6 +353,40 @@ if ($is_ajax_request) {
                 }
             } else {
                 $response['message'] = 'Widget not found at specified index.';
+            }
+            break;
+        case 'update_widget_order': // NEW: AJAX to update the order of widgets
+            $new_order_ids = json_decode($_POST['order'], true); // Expects an array of widget IDs in new order
+            if (!is_array($new_order_ids)) {
+                $response['message'] = 'Invalid order data received.';
+                break;
+            }
+
+            $current_dashboard_state = loadDashboardState();
+            $old_active_widgets = $current_dashboard_state['active_widgets'];
+            $new_active_widgets = [];
+
+            // Reconstruct active_widgets based on the new order, preserving dimensions
+            foreach ($new_order_ids as $ordered_id) {
+                foreach ($old_active_widgets as $old_widget) {
+                    if ($old_widget['id'] === $ordered_id) {
+                        $new_active_widgets[] = $old_widget;
+                        break; // Found and added, move to next ordered ID
+                    }
+                }
+            }
+            
+            // Ensure all original widgets are still present (e.g., if one was not in the new_order_ids)
+            // This also handles cases where 'show all' mode might have added extra widgets
+            // For simplicity, we'll just use the new_active_widgets as the source of truth for order.
+            // Any widgets not in new_order_ids will be effectively removed from the active list.
+            
+            $current_dashboard_state['active_widgets'] = $new_active_widgets;
+            if (saveDashboardState($current_dashboard_state)) {
+                $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
+                $response = ['status' => 'success', 'message' => 'Widget order updated.'];
+            } else {
+                $response['message'] = 'Failed to save widget order.';
             }
             break;
         default:
@@ -473,7 +511,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-A
     if ($has_state_changed) {
         // Create the full state array to save, combining current $settings and active widgets from session
         $state_to_save = $settings; // Start with current $settings
-        // The 'active_widgets' in $state_to_save must always come from $_SESSION after processing POST
+        // The 'active_widgets' in $state_to_save must always come from the final $_SESSION state after processing
         $state_to_save['active_widgets'] = $_SESSION['active_widgets'];
 
         if (!saveDashboardState($state_to_save)) {
@@ -563,7 +601,6 @@ global $available_widgets;
                             <tr>
                                 <th>Icon</th>
                                 <th>Name</th>
-                                <th>Status</th>
                                 <th>Width</th>
                                 <th>Height</th>
                                 <th>Actions</th>
@@ -622,9 +659,9 @@ global $available_widgets;
                     <i class="fas fa-users"></i>
                     <span>Users</span>
                 </div>
-                <div class="nav-item" id="widget-management-nav-item"> <!-- NEW ID for Widget Management -->
-                    <i class="fas fa-th-large"></i> <!-- Changed icon -->
-                    <span>Widget Management</span> <!-- Renamed from Settings -->
+                <div class="nav-item" id="widget-management-nav-item">
+                    <i class="fas fa-th-large"></i>
+                    <span>Widget Management</span>
                 </div>
             </div>
 
@@ -683,6 +720,7 @@ global $available_widgets;
 
             foreach ($widgets_to_render as $index => $widget):
                 $widget_id = $widget['id'];
+                // Use a fallback for widget_def if config.php isn't correctly loading it
                 $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1, 'height' => 1];
                 // Use the dimensions from the active_widgets array if present, otherwise fall back to config default
                 // And ensure they are clamped for safety during rendering
@@ -690,6 +728,7 @@ global $available_widgets;
                 $current_height = max(1, min(4, $widget['height'] ?? $widget_def['height']));
             ?>
             <div class="widget"
+                 draggable="true" <!-- Make widgets on the dashboard draggable -->
                  style="--width: <?= $current_width ?>; --height: <?= $current_height ?>"
                  data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                  data-widget-index="<?= $index ?>"

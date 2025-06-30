@@ -327,6 +327,12 @@ body.expanded-active {
     pointer-events: auto; /* Ensure it's clickable */
 }
 
+/* Dragging feedback */
+.widget.dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--accent);
+}
+
 
 .widget-header {
     display: flex;
