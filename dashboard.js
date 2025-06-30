@@ -17,9 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsOverlay.style.display = 'none';
     });
 
-    settingsOverlay.addEventListener('click', function() {
-        settingsPanel.classList.remove('active');
-        this.style.display = 'none';
+    settingsOverlay.addEventListener('click', function(e) {
+        if (e.target === settingsOverlay) {
+            settingsPanel.classList.remove('active');
+            this.style.display = 'none';
+        }
     });
 
     // --- Message Modal Functions (for general confirmations/alerts) ---
@@ -53,9 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // --- Widget Settings Modal Elements ---
+    // --- Widget Settings Modal Elements (for individual widget settings from its header) ---
     const widgetSettingsModalOverlay = document.getElementById('widget-settings-modal-overlay');
-    const widgetSettingsModal = document.getElementById('widget-settings-modal');
     const closeWidgetSettingsModalBtn = document.getElementById('close-widget-settings-modal');
     const widgetSettingsTitle = document.getElementById('widget-settings-modal-title');
     const widgetSettingsIndexInput = document.getElementById('widget-settings-index');
@@ -63,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const widgetSettingsHeightInput = document.getElementById('widget-settings-height');
     const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
 
-    // Function to show the widget settings modal
+    // Function to show the individual widget settings modal
     function showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight) {
         widgetSettingsTitle.textContent = `Settings for "${widgetName}"`;
         widgetSettingsIndexInput.value = widgetIndex;
@@ -82,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
         widgetSettingsModalOverlay.classList.add('active');
     }
 
-    // Close widget settings modal listeners
+    // Close individual widget settings modal listeners
     closeWidgetSettingsModalBtn.addEventListener('click', function() {
         widgetSettingsModalOverlay.classList.remove('active');
     });
@@ -92,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Handle submission of widget dimensions form
+    // Handle submission of individual widget dimensions form
     widgetDimensionsForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const widgetIndex = widgetSettingsIndexInput.value;
@@ -106,11 +107,19 @@ document.addEventListener('DOMContentLoaded', function() {
             widgetSettingsModalOverlay.classList.remove('active'); // Close settings modal
             return;
         }
-
-        submitActionForm('update_widget_dimensions', {
+        
+        // Use AJAX to update a single widget's dimensions
+        sendAjaxRequest('update_single_widget_dimensions', {
             widget_index: widgetIndex,
             new_width: newWidth,
             new_height: newHeight
+        }).then(response => {
+            if (response.status === 'success') {
+                showMessageModal('Success', response.message, () => location.reload()); // Reload on success
+            } else {
+                showMessageModal('Error', response.message);
+            }
+            widgetSettingsModalOverlay.classList.remove('active');
         });
     });
 
@@ -126,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const widget = target.closest('.widget');
             if (!widget) return;
 
-            // Handle Settings Action (Cog Icon)
+            // Handle Settings Action (Cog Icon) for individual widget
             if (target.classList.contains('action-settings')) {
                 const widgetName = widget.querySelector('.widget-title span').textContent;
                 const widgetIndex = widget.dataset.widgetIndex;
@@ -328,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update file status (Saved, Unsaved)
     // This function needs `this.ideFileStatus` to be bound to the correct element
     function setFileStatus(status) {
-        const ideFileStatusEl = this.ideFileStatus || document.getElementById('ide-file-status'); // Fallback for global context
+        const ideFileStatusEl = this.ideFileStatus || document.getElementById('ide-file-status'); // Fallback for global context if called incorrectly
         if (!ideFileStatusEl) return; 
 
         ideFileStatusEl.classList.remove('ide-status-saved', 'ide-status-unsaved');
@@ -591,4 +600,140 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         });
     }
+
+    // --- NEW: Widget Management Panel Logic ---
+    const widgetManagementNavItem = document.getElementById('widget-management-nav-item');
+    const widgetManagementModalOverlay = document.getElementById('widget-management-modal-overlay');
+    const closeWidgetManagementModalBtn = document.getElementById('close-widget-management-modal');
+    const widgetManagementTableBody = document.getElementById('widget-management-table-body');
+    const saveWidgetManagementChangesBtn = document.getElementById('save-widget-management-changes-btn');
+
+    if (widgetManagementNavItem) {
+        widgetManagementNavItem.addEventListener('click', async function() {
+            widgetManagementModalOverlay.classList.add('active');
+            await loadWidgetManagementTable();
+        });
+    }
+
+    if (closeWidgetManagementModalBtn) {
+        closeWidgetManagementModalBtn.addEventListener('click', function() {
+            widgetManagementModalOverlay.classList.remove('active');
+        });
+    }
+
+    if (widgetManagementModalOverlay) {
+        widgetManagementModalOverlay.addEventListener('click', function(e) {
+            if (e.target === widgetManagementModalOverlay) {
+                widgetManagementModalOverlay.classList.remove('active');
+            }
+        });
+    }
+
+    async function loadWidgetManagementTable() {
+        widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading widgets...</td></tr>';
+        
+        const response = await sendAjaxRequest('get_active_widgets_data');
+
+        if (response.status === 'success' && response.widgets) {
+            widgetManagementTableBody.innerHTML = ''; // Clear loading message
+            if (response.widgets.length === 0) {
+                widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No active widgets. Add some from Dashboard Settings!</td></tr>';
+            } else {
+                response.widgets.forEach(widget => {
+                    const row = document.createElement('tr');
+                    row.dataset.widgetIndex = widget.index; // Store the original index for saving
+
+                    row.innerHTML = `
+                        <td><i class="fas fa-${widget.icon}"></i></td>
+                        <td>${widget.name}</td>
+                        <td>Active</td> <!-- All listed here are active -->
+                        <td>
+                            <input type="number" class="widget-width-input form-control-small" value="${widget.width}" min="1" max="3" data-original-width="${widget.width}">
+                        </td>
+                        <td>
+                            <input type="number" class="widget-height-input form-control-small" value="${widget.height}" min="1" max="4" data-original-height="${widget.height}">
+                        </td>
+                        <td>
+                            <span class="widget-management-status">Saved</span>
+                        </td>
+                    `;
+                    widgetManagementTableBody.appendChild(row);
+                });
+
+                // Add event listeners for input changes to mark as unsaved
+                widgetManagementTableBody.querySelectorAll('.widget-width-input, .widget-height-input').forEach(input => {
+                    input.addEventListener('input', function() {
+                        const row = this.closest('tr');
+                        const statusSpan = row.querySelector('.widget-management-status');
+                        statusSpan.textContent = 'Unsaved';
+                        statusSpan.style.color = 'var(--warning)';
+                        saveWidgetManagementChangesBtn.disabled = false;
+                    });
+                });
+            }
+        } else {
+            widgetManagementTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 20px;">Error loading widgets: ${response.message}</td></tr>`;
+            showMessageModal('Error', `Failed to load widget data for management: ${response.message}`);
+        }
+        saveWidgetManagementChangesBtn.disabled = true; // Initially disabled
+    }
+
+    if (saveWidgetManagementChangesBtn) {
+        saveWidgetManagementChangesBtn.addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            const rows = widgetManagementTableBody.querySelectorAll('tr');
+            let allSuccess = true;
+            let messages = [];
+
+            for (const row of rows) {
+                const widgetIndex = row.dataset.widgetIndex;
+                const widthInput = row.querySelector('.widget-width-input');
+                const heightInput = row.querySelector('.widget-height-input');
+                const statusSpan = row.querySelector('.widget-management-status');
+
+                const newWidth = parseInt(widthInput.value, 10);
+                const newHeight = parseInt(heightInput.value, 10);
+                const originalWidth = parseInt(widthInput.dataset.originalWidth, 10);
+                const originalHeight = parseInt(heightInput.dataset.originalHeight, 10);
+
+                // Only save if dimensions have actually changed
+                if (newWidth !== originalWidth || newHeight !== originalHeight) {
+                    statusSpan.textContent = 'Saving...';
+                    statusSpan.style.color = 'var(--info)';
+
+                    const response = await sendAjaxRequest('update_single_widget_dimensions', {
+                        widget_index: widgetIndex,
+                        new_width: newWidth,
+                        new_height: newHeight
+                    });
+
+                    if (response.status === 'success') {
+                        statusSpan.textContent = 'Saved';
+                        statusSpan.style.color = 'var(--success)';
+                        widthInput.dataset.originalWidth = newWidth; // Update original data
+                        heightInput.dataset.originalHeight = newHeight;
+                    } else {
+                        statusSpan.textContent = 'Error';
+                        statusSpan.style.color = 'var(--danger)';
+                        allSuccess = false;
+                        messages.push(`Widget at index ${widgetIndex} failed to save: ${response.message}`);
+                    }
+                } else {
+                    statusSpan.textContent = 'Saved';
+                    statusSpan.style.color = 'inherit'; // Reset color for unchanged items
+                }
+            }
+
+            this.innerHTML = '<i class="fas fa-save"></i> Save All Widget Changes';
+
+            if (allSuccess) {
+                showMessageModal('Success', 'All changes saved. Reloading dashboard...', () => location.reload(true));
+            } else {
+                showMessageModal('Partial Success/Error', 'Some changes could not be saved: ' + messages.join('. ') + ' Reloading dashboard...', () => location.reload(true));
+            }
+        });
+    }
+
 });

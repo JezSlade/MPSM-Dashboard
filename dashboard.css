@@ -623,7 +623,14 @@ body.expanded-active {
 
 .settings-group {
     margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--glass-border);
 }
+.settings-group:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
 
 .settings-title {
     font-size: 18px;
@@ -655,6 +662,25 @@ body.expanded-active {
 }
 
 .form-control:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* For smaller form controls in tables/compact areas */
+.form-control-small {
+    width: 80px; /* Fixed width for small inputs */
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    box-shadow:
+        inset 2px 2px 4px var(--shadow-dark),
+        inset -2px -2px 4px rgba(74, 78, 94, 0.1);
+    text-align: center;
+}
+
+.form-control-small:focus {
     outline: none;
     border-color: var(--accent);
 }
@@ -719,8 +745,7 @@ input:checked + .slider:before {
     display: none;
 }
 
-/* --- Message Modal Styles --- */
-/* This class is reused for both general message modal AND widget settings modal */
+/* --- Message Modal Styles (reused for widget settings and widget management) --- */
 .message-modal-overlay {
     position: fixed;
     top: 0;
@@ -747,12 +772,16 @@ input:checked + .slider:before {
     border-radius: 20px;
     padding: 30px;
     width: 90%;
-    max-width: 500px;
+    max-width: 500px; /* Default max-width for smaller modals */
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     transition: transform 0.3s ease;
     border: 1px solid var(--glass-border);
     margin: auto;
 }
+.message-modal.large-modal { /* For the new Widget Management modal */
+    max-width: 800px; /* Wider for tables */
+}
+
 
 .message-modal-header {
     display: flex;
@@ -792,6 +821,9 @@ input:checked + .slider:before {
 .message-modal-footer {
     display: flex;
     justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid var(--glass-border);
+    margin-top: 20px;
 }
 
 /* --- Maximized Widget Styles --- */
@@ -1048,6 +1080,63 @@ input:checked + .slider:before {
     opacity: 0.8;
 }
 
+/* --- Widget Management Table Styles --- */
+.widget-management-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+    background-color: var(--bg-secondary);
+    border-radius: 10px;
+    overflow: hidden; /* For rounded corners on table */
+}
+
+.widget-management-table thead tr {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.widget-management-table th,
+.widget-management-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.widget-management-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.widget-management-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.widget-management-table td i {
+    color: var(--accent);
+    margin-right: 5px;
+}
+
+.widget-management-status {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background-color: rgba(255,255,255,0.05); /* Neutral background */
+    color: var(--text-secondary);
+}
+
+/* Specific status colors */
+.widget-management-status[style*="--warning"] { /* Can't target CSS variables directly, rely on JS style */
+    color: var(--warning);
+}
+.widget-management-status[style*="--success"] {
+    color: var(--success);
+}
+.widget-management-status[style*="--danger"] {
+    color: var(--danger);
+}
+
+
 /* Media Queries for IDE responsiveness */
 @media (max-width: 768px) {
     .ide-container {
@@ -1063,5 +1152,20 @@ input:checked + .slider:before {
 
     .ide-editor-area {
         flex: 1; /* Editor takes remaining height */
+    }
+
+    .message-modal.large-modal {
+        max-width: 100%;
+        border-radius: 0;
+    }
+    .widget-management-table th,
+    .widget-management-table td {
+        padding: 8px 10px;
+    }
+    .widget-management-table th:nth-child(1), .widget-management-table td:nth-child(1) { /* Hide icon on small screens */
+        display: none;
+    }
+    .form-control-small {
+        width: 60px;
     }
 }
