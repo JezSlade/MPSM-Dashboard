@@ -229,6 +229,7 @@ body {
     transition: var(--transition);
     position: relative; /* For placeholder positioning */
     box-sizing: border-box; /* Include padding and border in width */
+    min-width: 0; /* CRITICAL FIX: Allows grid item to shrink below its content's intrinsic minimum size */
 }
 
 .widget-header {
