@@ -28,7 +28,7 @@ require_once 'helpers.php';
 
 // Define the application root directory for security
 define('APP_ROOT', __DIR__);
-define('DYNAMIC_WIDGETS_FILE', APP_ROOT . '/dynamic_widgets.json'); // New: Path to store dynamically created widget configs
+// Removed: define('DYNAMIC_WIDGETS_FILE', APP_ROOT . '/dynamic_widgets.json'); // This is now defined only in config.php
 
 // --- Persistent Settings & Widgets Functions ---
 
@@ -408,7 +408,6 @@ if ($is_ajax_request) {
             }
             
             // Ensure all original widgets are still present (e.g., if one was not in the new_order_ids)
-            // This also handles cases where 'show all' mode might have added extra widgets
             // For simplicity, we'll just use the new_active_widgets as the source of truth for order.
             // Any widgets not in new_order_ids will be effectively removed from the active list.
             
