@@ -1024,7 +1024,6 @@ input:checked + .slider:before {
     color: white;
     cursor: pointer;
     transition: var(--transition);
-    font-weight: bold;
 }
 
 .new-note button:hover {
