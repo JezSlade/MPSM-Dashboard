@@ -728,6 +728,7 @@ global $available_widgets;
                 $current_width = max(1, min(3, $widget['width'] ?? $widget_def['width']));
                 $current_height = max(1, min(4, $widget['height'] ?? $widget_def['height']));
             ?>
+            <!-- Widget container, made draggable for reordering -->
             <div class="widget"
                  draggable="true"
                  style="--width: <?= $current_width ?>; --height: <?= $current_height ?>;"
