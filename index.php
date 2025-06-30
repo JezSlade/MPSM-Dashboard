@@ -131,7 +131,7 @@ function saveDashboardState(array $state) {
 
 // --- END Persistent Settings & Widgets Functions ---
 
-// --- NEW: IDE Widget File Operations (Server-Side) ---
+// --- IDE Widget File Operations (Server-Side) ---
 
 /**
  * Validates and normalizes a given file path to prevent directory traversal.
@@ -263,7 +263,7 @@ function save_file($path, $content) {
     return $result !== false;
 }
 
-// --- END NEW: IDE Widget File Operations ---
+// --- END IDE Widget File Operations ---
 
 
 // Check if this is an AJAX request
@@ -303,6 +303,23 @@ if ($is_ajax_request) {
                 $response = ['status' => 'success', 'message' => 'File saved successfully.'];
             } else {
                 $response['message'] = "Failed to save file. Check permissions or path.";
+            }
+            break;
+        case 'delete_settings_json': // NEW: Handle deletion of settings file
+            if (file_exists(DASHBOARD_SETTINGS_FILE)) {
+                if (unlink(DASHBOARD_SETTINGS_FILE)) {
+                    // Clear session to ensure default state is loaded on refresh
+                    session_destroy();
+                    session_start(); // Start a new session
+                    $response = ['status' => 'success', 'message' => 'Dashboard settings reset successfully.'];
+                    error_log("DEBUG: dashboard_settings.json deleted successfully.");
+                } else {
+                    $response['message'] = "Failed to delete settings file. Check permissions.";
+                    error_log("ERROR: Failed to unlink dashboard_settings.json. Path: " . DASHBOARD_SETTINGS_FILE);
+                }
+            } else {
+                $response['message'] = "Settings file does not exist.";
+                error_log("INFO: Attempted to delete dashboard_settings.json, but it didn't exist.");
             }
             break;
         default:
@@ -427,7 +444,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-A
         $new_width = (int)$_POST['new_width'];
         $new_height = (int)$_POST['new_height'];
 
-        // Ensure width/height are within the allowed bounds (1 to 3)
+        // Ensure width/height are within the allowed bounds (width max 3, height max 4)
         $new_width = max(1, min(3, $new_width)); // Clamp between 1 and 3
         $new_height = max(1, min(4, $new_height)); // Clamp between 1 and 4 (height can still be 4)
 
@@ -799,6 +816,13 @@ global $available_widgets;
                 <div class="form-group">
                     <label>Import Configuration</label>
                     <input type="file" class="form-control">
+                </div>
+                <!-- NEW: Delete Settings JSON Button -->
+                <div class="form-group">
+                    <label>Reset Dashboard</label>
+                    <button type="button" id="delete-settings-json-btn" class="btn btn-danger" style="width: 100%;">
+                        <i class="fas fa-trash-alt"></i> Delete Settings JSON (Reset All)
+                    </button>
                 </div>
             </div>
 

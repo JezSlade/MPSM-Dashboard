@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // --- NEW: IDE Widget Specific Logic ---
+    // --- IDE Widget Specific Logic ---
     let currentIdePath = '.'; // Current directory being viewed in the IDE
     let currentEditingFile = null; // Current file being edited
 
@@ -325,7 +325,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to update file status (Saved, Unsaved)
     function setFileStatus(status) {
-        if (!ideFileStatus) return; // Guard against IDE not being present
+        // Guard against IDE elements not being present (e.g., if IDE widget isn't on dashboard)
+        if (!ideFileStatus) return; 
 
         ideFileStatus.classList.remove('ide-status-saved', 'ide-status-unsaved');
         if (status === 'saved') {
@@ -342,42 +343,54 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize IDE on widget expansion
     function initializeIdeWidget(widget) {
         // Ensure elements exist before trying to use them
-        if (!ideFileTree || !ideCodeEditor || !ideSaveBtn) {
-            console.warn("IDE elements not found. Widget might not be fully rendered.");
+        // The IDE elements are only available when the IDE widget is expanded.
+        if (!widget.querySelector('#ide-file-tree') || !widget.querySelector('#ide-code-editor') || !widget.querySelector('#ide-save-btn')) {
+            console.warn("IDE elements not found inside the expanded widget. Skipping IDE initialization.");
             return;
         }
+        
+        // Re-assign local consts to elements within the expanded widget
+        // This is crucial because when the widget is moved to expandedOverlay,
+        // the original element references might become stale or point to elements
+        // that are no longer in the active DOM part.
+        const currentIdeFileTree = widget.querySelector('#ide-file-tree');
+        const currentIdeCurrentPathDisplay = widget.querySelector('#ide-current-path');
+        const currentIdeCodeEditor = widget.querySelector('#ide-code-editor');
+        const currentIdeFileNameDisplay = widget.querySelector('#ide-current-file-name');
+        const currentIdeFileStatus = widget.querySelector('#ide-file-status');
+        const currentIdeSaveBtn = widget.querySelector('#ide-save-btn');
 
         // Reset editor state
-        ideCodeEditor.value = '';
-        ideCodeEditor.readOnly = true;
-        ideFileNameDisplay.textContent = 'No file selected';
-        ideSaveBtn.disabled = true;
+        currentIdeCodeEditor.value = '';
+        currentIdeCodeEditor.readOnly = true;
+        currentIdeFileNameDisplay.textContent = 'No file selected';
+        currentIdeSaveBtn.disabled = true;
         setFileStatus('');
         currentEditingFile = null;
 
         // Load root directory initially
-        loadIdeFileTree('.');
+        // Use the local reference to loadIdeFileTree and currentIdePathDisplay
+        loadIdeFileTreeInternal(currentIdeFileTree, currentIdeCurrentPathDisplay, currentIdeCodeEditor, currentIdeFileNameDisplay, currentIdeSaveBtn, currentIdeFileStatus, '.');
     }
 
-    // Load file tree for a given path
-    async function loadIdeFileTree(path) {
-        if (!ideFileTree || !ideCurrentPathDisplay) return;
-
-        ideFileTree.innerHTML = '<li class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</li>';
-        ideCurrentPathDisplay.textContent = path === '.' ? '/' : `/${path}`; // Display root as /
+    // This internal function helps with re-scoping elements after widget expansion
+    async function loadIdeFileTreeInternal(fileTreeEl, pathDisplayEl, codeEditorEl, fileNameDisplayEl, saveBtnEl, fileStatusEl, path) {
+        fileTreeEl.innerHTML = '<li class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</li>';
+        pathDisplayEl.textContent = path === '' ? '/' : `/${path}`; // Display root as /
 
         const response = await sendAjaxRequest('ide_list_files', { path: path });
 
         if (response.status === 'success' && response.files) {
             currentIdePath = response.current_path; // Update current path from server response
-            ideCurrentPathDisplay.textContent = currentIdePath === '' ? '/' : `/${currentIdePath}`;
+            pathDisplayEl.textContent = currentIdePath === '' ? '/' : `/${currentIdePath}`;
 
-            ideFileTree.innerHTML = ''; // Clear loading indicator
+            fileTreeEl.innerHTML = ''; // Clear loading indicator
             response.files.forEach(item => {
                 const li = document.createElement('li');
                 li.classList.add('ide-file-tree-item');
                 li.dataset.path = item.path;
                 li.dataset.type = item.type;
+                li.dataset.name = item.name; // Store name for display later
 
                 let icon = '';
                 if (item.type === 'dir') {
@@ -392,98 +405,113 @@ document.addEventListener('DOMContentLoaded', function() {
                      li.title = 'Not writable';
                 }
 
-                ideFileTree.appendChild(li);
+                fileTreeEl.appendChild(li);
             });
         } else {
-            ideFileTree.innerHTML = `<li class="ide-error-indicator"><i class="fas fa-exclamation-triangle"></i> Error: ${response.message}</li>`;
+            fileTreeEl.innerHTML = `<li class="ide-error-indicator"><i class="fas fa-exclamation-triangle"></i> Error: ${response.message}</li>`;
             showMessageModal('IDE Error', `Failed to load files: ${response.message}`);
         }
     }
 
-    // Handle file tree clicks
-    if (ideFileTree) { // Check if IDE elements exist on the page
-        ideFileTree.addEventListener('click', async function(e) {
-            const item = e.target.closest('.ide-file-tree-item');
-            if (!item) return;
+    // Handle file tree clicks (delegated to document.body because IDE widget is dynamic)
+    document.body.addEventListener('click', async function(e) {
+        const item = e.target.closest('.ide-file-tree-item');
+        // Ensure the clicked item is part of an expanded IDE widget
+        if (!item || !item.closest('.widget.maximized[data-widget-id="ide"]')) return;
 
-            const path = item.dataset.path;
-            const type = item.dataset.type;
-            const isWritable = !item.classList.contains('ide-item-read-only');
+        // Re-get elements within the context of the active IDE widget
+        const currentIdeCodeEditor = item.closest('.ide-container').querySelector('#ide-code-editor');
+        const currentIdeFileNameDisplay = item.closest('.ide-container').querySelector('#ide-current-file-name');
+        const currentIdeSaveBtn = item.closest('.ide-container').querySelector('#ide-save-btn');
+        const currentIdeFileStatus = item.closest('.ide-container').querySelector('#ide-file-status');
+        const currentIdeFileTree = item.closest('.ide-container').querySelector('#ide-file-tree');
+        const currentIdeCurrentPathDisplay = item.closest('.ide-container').querySelector('#ide-current-path');
 
-            if (type === 'dir') {
-                loadIdeFileTree(path);
-                currentEditingFile = null; // Clear current file when navigating directories
-                ideCodeEditor.value = '';
-                ideCodeEditor.readOnly = true;
-                ideFileNameDisplay.textContent = 'No file selected';
-                ideSaveBtn.disabled = true;
-                setFileStatus('');
-            } else if (type === 'file') {
-                if (!isWritable) {
-                    showMessageModal('Read-Only File', `"${item.dataset.name}" is not writable.`);
-                    ideCodeEditor.readOnly = true;
-                    ideSaveBtn.disabled = true;
-                } else {
-                    ideCodeEditor.readOnly = false;
-                    ideSaveBtn.disabled = false;
-                }
+        const path = item.dataset.path;
+        const type = item.dataset.type;
+        const isWritable = !item.classList.contains('ide-item-read-only');
 
-                ideFileNameDisplay.textContent = item.dataset.name;
-                setFileStatus('saved'); // Assume saved until changes are made
-
-                const response = await sendAjaxRequest('ide_read_file', { path: path });
-                if (response.status === 'success' && typeof response.content === 'string') {
-                    ideCodeEditor.value = response.content;
-                    currentEditingFile = path;
-                } else {
-                    ideCodeEditor.value = `Error loading file: ${response.message}`;
-                    currentEditingFile = null;
-                    ideCodeEditor.readOnly = true;
-                    ideSaveBtn.disabled = true;
-                    setFileStatus('');
-                    showMessageModal('IDE Error', `Failed to read file: ${response.message}`);
-                }
-            }
-        });
-    }
-
-
-    // Handle editor content changes (mark as unsaved)
-    if (ideCodeEditor) {
-        ideCodeEditor.addEventListener('input', function() {
-            setFileStatus('unsaved');
-            if (ideSaveBtn) ideSaveBtn.disabled = ideCodeEditor.readOnly; // Re-enable save if it wasn't already
-        });
-    }
-
-
-    // Handle save button click
-    if (ideSaveBtn) {
-        ideSaveBtn.addEventListener('click', async function() {
-            if (!currentEditingFile || ideCodeEditor.readOnly) {
-                showMessageModal('Action Not Allowed', 'No file selected or file is read-only.');
-                return;
-            }
-
-            ideSaveBtn.disabled = true;
-            ideSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-            const response = await sendAjaxRequest('ide_save_file', {
-                path: currentEditingFile,
-                content: ideCodeEditor.value
-            });
-
-            if (response.status === 'success') {
-                setFileStatus('saved');
-                showMessageModal('Success', response.message);
+        if (type === 'dir') {
+            loadIdeFileTreeInternal(currentIdeFileTree, currentIdeCurrentPathDisplay, currentIdeCodeEditor, currentIdeFileNameDisplay, currentIdeSaveBtn, currentIdeFileStatus, path);
+            currentEditingFile = null; // Clear current file when navigating directories
+            currentIdeCodeEditor.value = '';
+            currentIdeCodeEditor.readOnly = true;
+            currentIdeFileNameDisplay.textContent = 'No file selected';
+            currentIdeSaveBtn.disabled = true;
+            setFileStatus.call({ideFileStatus: currentIdeFileStatus}, ''); // Call setFileStatus with correct context
+        } else if (type === 'file') {
+            if (!isWritable) {
+                showMessageModal('Read-Only File', `"${item.dataset.name}" is not writable.`);
+                currentIdeCodeEditor.readOnly = true;
+                currentIdeSaveBtn.disabled = true;
             } else {
-                setFileStatus('unsaved'); // Remain unsaved if save failed
-                showMessageModal('Error', `Save failed: ${response.message}`);
+                currentIdeCodeEditor.readOnly = false;
+                currentIdeSaveBtn.disabled = false;
             }
-            ideSaveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
-            ideSaveBtn.disabled = ideCodeEditor.readOnly; // Keep disabled if read-only
+
+            currentIdeFileNameDisplay.textContent = item.dataset.name;
+            setFileStatus.call({ideFileStatus: currentIdeFileStatus}, 'saved'); // Assume saved until changes are made
+
+            const response = await sendAjaxRequest('ide_read_file', { path: path });
+            if (response.status === 'success' && typeof response.content === 'string') {
+                currentIdeCodeEditor.value = response.content;
+                currentEditingFile = path;
+            } else {
+                currentIdeCodeEditor.value = `Error loading file: ${response.message}`;
+                currentEditingFile = null;
+                currentIdeCodeEditor.readOnly = true;
+                currentIdeSaveBtn.disabled = true;
+                setFileStatus.call({ideFileStatus: currentIdeFileStatus}, '');
+                showMessageModal('IDE Error', `Failed to read file: ${response.message}`);
+            }
+        }
+    });
+
+
+    // Handle editor content changes (mark as unsaved) - delegated
+    document.body.addEventListener('input', function(e) {
+        const editor = e.target.closest('.ide-code-editor');
+        if (editor && editor.closest('.widget.maximized[data-widget-id="ide"]')) {
+            const currentIdeFileStatus = editor.closest('.ide-container').querySelector('#ide-file-status');
+            const currentIdeSaveBtn = editor.closest('.ide-container').querySelector('#ide-save-btn');
+            
+            setFileStatus.call({ideFileStatus: currentIdeFileStatus}, 'unsaved');
+            if (currentIdeSaveBtn) currentIdeSaveBtn.disabled = editor.readOnly; // Re-enable save if it wasn't already
+        }
+    });
+
+
+    // Handle save button click - delegated
+    document.body.addEventListener('click', async function(e) {
+        const saveBtn = e.target.closest('#ide-save-btn');
+        if (!saveBtn || !saveBtn.closest('.widget.maximized[data-widget-id="ide"]')) return;
+
+        const currentIdeCodeEditor = saveBtn.closest('.ide-container').querySelector('#ide-code-editor');
+        const currentIdeFileStatus = saveBtn.closest('.ide-container').querySelector('#ide-file-status');
+
+        if (!currentEditingFile || currentIdeCodeEditor.readOnly) {
+            showMessageModal('Action Not Allowed', 'No file selected or file is read-only.');
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        const response = await sendAjaxRequest('ide_save_file', {
+            path: currentEditingFile,
+            content: currentIdeCodeEditor.value
         });
-    }
+
+        if (response.status === 'success') {
+            setFileStatus.call({ideFileStatus: currentIdeFileStatus}, 'saved');
+            showMessageModal('Success', response.message);
+        } else {
+            setFileStatus.call({ideFileStatus: currentIdeFileStatus}, 'unsaved'); // Remain unsaved if save failed
+            showMessageModal('Error', `Save failed: ${response.message}`);
+        }
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+        saveBtn.disabled = currentIdeCodeEditor.readOnly; // Keep disabled if read-only
+    });
 
 
     // --- Other Global Buttons ---
@@ -543,4 +571,25 @@ document.addEventListener('DOMContentLoaded', function() {
         showAllWidgetsToggle.addEventListener('change', updateAddRemoveButtonStates);
     }
     updateAddRemoveButtonStates(); // Initial state update on load
+
+    // --- NEW: Delete Settings JSON Button Logic ---
+    const deleteSettingsJsonBtn = document.getElementById('delete-settings-json-btn');
+    if (deleteSettingsJsonBtn) {
+        deleteSettingsJsonBtn.addEventListener('click', function() {
+            showMessageModal(
+                'Confirm Reset',
+                'Are you sure you want to delete all dashboard settings and reset to default? This cannot be undone.',
+                async function() {
+                    const response = await sendAjaxRequest('delete_settings_json');
+                    if (response.status === 'success') {
+                        showMessageModal('Success', response.message + ' Reloading dashboard...', function() {
+                            location.reload(true); // Force a hard reload
+                        });
+                    } else {
+                        showMessageModal('Error', response.message);
+                    }
+                }
+            );
+        });
+    }
 });
