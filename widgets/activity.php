@@ -5,7 +5,7 @@ $_widget_config = [
     'width' => 2,
     'height' => 1
 ];
-<?php
+
 // Simple PHP IDE - Single File
 // Place this file in your project directory and access via web browser
 
