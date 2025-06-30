@@ -601,9 +601,10 @@ global $available_widgets;
                             <tr>
                                 <th>Icon</th>
                                 <th>Name</th>
+                                <th>Status</th> <!-- Added for "Active" -->
                                 <th>Width</th>
                                 <th>Height</th>
-                                <th>Actions</th>
+                                <th>Save Status</th> <!-- Renamed from "Actions" to clarify -->
                             </tr>
                         </thead>
                         <tbody id="widget-management-table-body">
@@ -728,8 +729,8 @@ global $available_widgets;
                 $current_height = max(1, min(4, $widget['height'] ?? $widget_def['height']));
             ?>
             <div class="widget"
-                 draggable="true" <!-- Make widgets on the dashboard draggable -->
-                 style="--width: <?= $current_width ?>; --height: <?= $current_height ?>"
+                 draggable="true"
+                 style="--width: <?= $current_width ?>; --height: <?= $current_height ?>;"
                  data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                  data-widget-index="<?= $index ?>"
                  data-current-width="<?= $current_width ?>"
