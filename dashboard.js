@@ -640,6 +640,21 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsOverlay.style.display = 'block';
     });
 
+    // NEW: Functionality for the "+ New Widget" button in the header
+    const newWidgetHeaderBtn = document.getElementById('new-widget-btn');
+    if (newWidgetHeaderBtn) {
+        newWidgetHeaderBtn.addEventListener('click', function() {
+            settingsPanel.classList.add('active'); // Open settings panel
+            settingsOverlay.style.display = 'block';
+            // Optionally, scroll to the "Add New Widget" section if it has an ID
+            const addWidgetSection = settingsPanel.querySelector('.settings-group h3:contains("Add New Widget")');
+            if (addWidgetSection) {
+                addWidgetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+
+
     // Handle form submission for global update_settings (from settings panel)
     const settingsForm = settingsPanel.querySelector('form');
     if (settingsForm) {
@@ -661,15 +676,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Disable/Enable Add Widget button based on 'Show All Widgets' state
     const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
-    const newWidgetBtn = document.getElementById('new-widget-btn');
+    // const newWidgetBtn = document.getElementById('new-widget-btn'); // Already defined above
     const widgetSelect = document.getElementById('widget_select');
     const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]');
 
     function updateAddRemoveButtonStates() {
-        if (showAllWidgetsToggle && newWidgetBtn && widgetSelect && addWidgetToDashboardBtn) {
+        if (showAllWidgetsToggle && newWidgetHeaderBtn && widgetSelect && addWidgetToDashboardBtn) {
             const isDisabled = showAllWidgetsToggle.checked;
-            newWidgetBtn.classList.toggle('disabled', isDisabled);
-            newWidgetBtn.disabled = isDisabled;
+            // newWidgetHeaderBtn.classList.toggle('disabled', isDisabled); // This button now opens settings, not adds directly
+            // newWidgetHeaderBtn.disabled = isDisabled;
             widgetSelect.disabled = isDisabled;
             addWidgetToDashboardBtn.disabled = isDisabled;
 
@@ -738,18 +753,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function loadWidgetManagementTable() {
-        widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading widgets...</td></tr>';
+        widgetManagementTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading widgets...</td></tr>';
         
         const response = await sendAjaxRequest('get_active_widgets_data');
 
         if (response.status === 'success' && response.widgets) {
             widgetManagementTableBody.innerHTML = ''; // Clear loading message
             if (response.widgets.length === 0) {
-                widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No active widgets. Add some from Dashboard Settings!</td></tr>';
+                widgetManagementTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No active widgets. Add some from Dashboard Settings!</td></tr>';
             } else {
                 response.widgets.forEach(widget => {
                     const row = document.createElement('tr');
                     row.dataset.widgetIndex = widget.index; // Store the original index for saving
+                    row.dataset.widgetId = widget.id; // Store widget ID for deactivation
 
                     row.innerHTML = `
                         <td><i class="fas fa-${widget.icon}"></i></td>
@@ -763,6 +779,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>
                             <span class="widget-management-status">Saved</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-deactivate-widget" data-widget-id="${widget.id}">
+                                <i class="fas fa-trash-alt"></i> Deactivate
+                            </button>
                         </td>
                     `;
                     widgetManagementTableBody.appendChild(row);
@@ -778,9 +799,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         saveWidgetManagementChangesBtn.disabled = false;
                     });
                 });
+
+                // Add event listeners for deactivate buttons
+                widgetManagementTableBody.querySelectorAll('.btn-deactivate-widget').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const widgetIdToDeactivate = this.dataset.widgetId;
+                        showMessageModal(
+                            'Confirm Deactivation',
+                            `Are you sure you want to deactivate "${widgetIdToDeactivate}"? It will be removed from your dashboard.`,
+                            async () => {
+                                const response = await sendAjaxRequest('remove_widget_from_management', { widget_id: widgetIdToDeactivate });
+                                if (response.status === 'success') {
+                                    showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
+                                } else {
+                                    showMessageModal('Error', response.message);
+                                }
+                            }
+                        );
+                    });
+                });
             }
         } else {
-            widgetManagementTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 20px;">Error loading widgets: ${response.message}</td></tr>`;
+            widgetManagementTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 20px;">Error loading widgets: ${response.message}</td></tr>`;
             showMessageModal('Error', `Failed to load widget data for management: ${response.message}`);
         }
         saveWidgetManagementChangesBtn.disabled = true; // Initially disabled

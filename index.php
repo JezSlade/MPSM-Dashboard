@@ -389,6 +389,32 @@ if ($is_ajax_request) {
                 $response['message'] = 'Failed to save widget order.';
             }
             break;
+        case 'remove_widget_from_management': // NEW: AJAX to remove a widget from the management modal
+            $widget_id_to_remove = $_POST['widget_id'];
+            $current_dashboard_state = loadDashboardState();
+            
+            $updated_active_widgets = [];
+            $found = false;
+            foreach ($current_dashboard_state['active_widgets'] as $widget_entry) {
+                if ($widget_entry['id'] !== $widget_id_to_remove) {
+                    $updated_active_widgets[] = $widget_entry;
+                } else {
+                    $found = true;
+                }
+            }
+
+            if ($found) {
+                $current_dashboard_state['active_widgets'] = $updated_active_widgets;
+                if (saveDashboardState($current_dashboard_state)) {
+                    $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
+                    $response = ['status' => 'success', 'message' => 'Widget deactivated successfully.'];
+                } else {
+                    $response['message'] = 'Failed to save dashboard state after deactivation.';
+                }
+            } else {
+                $response['message'] = 'Widget not found in active list.';
+            }
+            break;
         default:
             // Handled by default response
             break;
@@ -601,15 +627,16 @@ global $available_widgets;
                             <tr>
                                 <th>Icon</th>
                                 <th>Name</th>
-                                <th>Status</th> <!-- Added for "Active" -->
+                                <th>Status</th>
                                 <th>Width</th>
                                 <th>Height</th>
-                                <th>Save Status</th> <!-- Renamed from "Actions" to clarify -->
+                                <th>Save Status</th>
+                                <th>Deactivate</th> <!-- NEW COLUMN HEADER -->
                             </tr>
                         </thead>
                         <tbody id="widget-management-table-body">
                             <!-- Widget data will be populated here by JavaScript -->
-                            <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading widgets...</td></tr>
+                            <tr><td colspan="7" style="text-align: center; padding: 20px;">Loading widgets...</td></tr>
                         </tbody>
                     </table>
                 </div>
