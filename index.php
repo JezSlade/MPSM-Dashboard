@@ -147,7 +147,7 @@ function validate_path($path) {
     if ($full_path && str_starts_with($full_path, APP_ROOT . DIRECTORY_SEPARATOR)) {
         return $full_path;
     }
-    // Handle the APP_ROOT itself
+    // Handle the APP_ROOT itself (e.g., if path is '.' or '')
     if ($full_path === APP_ROOT) {
         return $full_path;
     }
@@ -201,9 +201,13 @@ function list_files($path) {
 
     // Add '..' entry if not at the root
     if ($absolute_path !== APP_ROOT) {
+        $parent_path_relative = str_replace(APP_ROOT . DIRECTORY_SEPARATOR, '', dirname($absolute_path));
+        // Special case for root-level folders: if parent path becomes just '.' after stripping APP_ROOT, make it '' for consistency.
+        if ($parent_path_relative === '.') $parent_path_relative = '';
+
         array_unshift($file_list, [
             'name' => '..',
-            'path' => str_replace(APP_ROOT . DIRECTORY_SEPARATOR, '', dirname($absolute_path)),
+            'path' => $parent_path_relative,
             'type' => 'dir',
             'is_writable' => true // Parent is always conceptually writable to navigate back
         ]);
@@ -278,7 +282,7 @@ if ($is_ajax_request) {
             $current_dir = $_POST['path'] ?? '.';
             $files = list_files($current_dir);
             if ($files !== false) {
-                $response = ['status' => 'success', 'files' => $files, 'current_path' => $current_dir];
+                $response = ['status' => 'success', 'files' => $files, 'current_path' => ($current_dir === '.' ? '' : $current_dir)];
             } else {
                 $response['message'] = "Failed to list files or invalid path.";
             }
@@ -423,6 +427,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // This will only be true for non-A
         $new_width = (int)$_POST['new_width'];
         $new_height = (int)$_POST['new_height'];
 
+        // Ensure width/height are within the allowed bounds (1 to 3)
+        $new_width = max(1, min(3, $new_width)); // Clamp between 1 and 3
+        $new_height = max(1, min(4, $new_height)); // Clamp between 1 and 4 (height can still be 4)
+
+
         // Only allow changing dimensions if 'show all' is OFF
         if (!$settings['show_all_available_widgets']) {
             if (isset($_SESSION['active_widgets'][$widget_index])) {
@@ -516,7 +525,7 @@ global $available_widgets;
                     <input type="hidden" id="widget-settings-index" name="widget_index">
                     <div class="form-group">
                         <label for="widget-settings-width">Width (Grid Units)</label>
-                        <input type="number" id="widget-settings-width" name="new_width" min="1" max="4" class="form-control">
+                        <input type="number" id="widget-settings-width" name="new_width" min="1" max="3" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="widget-settings-height">Height (Grid Units)</label>
@@ -751,7 +760,7 @@ global $available_widgets;
                 </div>
 
                 <div class="form-group">
-                    <label for="blur_amount">Blur Amount</label>
+                    <label for="blur_amount">Blur Amount</labeSl>
                     <select id="blur_amount" name="blur_amount" class="form-control">
                         <option value="5px" <?= $settings['blur_amount'] == '5px' ? 'selected' : '' ?>>Subtle (5px)</option>
                         <option value="10px" <?= $settings['blur_amount'] == '10px' ? 'selected' : '' ?>>Standard (10px)</option>

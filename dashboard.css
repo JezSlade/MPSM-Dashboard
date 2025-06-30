@@ -282,11 +282,31 @@ body.expanded-active {
         8px 8px 16px var(--shadow-dark),
         -8px -8px 16px rgba(74, 78, 94, 0.1);
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Adjusted to 300px min */
+    /* Use flexible columns, max 3 on larger screens for consistency */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     grid-auto-rows: minmax(200px, auto);
     gap: 20px;
     align-content: flex-start;
+    /* Max width to reinforce the idea of a 3-column layout on very wide screens.
+       3 columns * approx 300px/col + 2*20px (gaps) = ~940px total. */
+    max-width: 960px; /* Adjust this value if 3 columns don't fill screen as expected */
+    margin: 0 auto; /* Center the main content within the dashboard grid cell */
 }
+
+/* Force exactly 3 columns on larger desktops for consistent layout, overriding auto-fit */
+@media (min-width: 993px) and (max-width: 1800px) { /* Up to dashboard's max-width */
+    .main-content {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+/* Ensure the dashboard itself doesn't get too wide on super-large screens,
+   allowing the 3-column content to be visually contained. */
+@media (min-width: 1801px) {
+    .dashboard {
+        max-width: 1800px; /* Maintain the dashboard's max-width */
+    }
+}
+
 
 .widget {
     background: var(--bg-tertiary);
@@ -860,7 +880,7 @@ input:checked + .slider:before {
     }
 }
 
-/* --- NEW: IDE Widget Specific Styles --- */
+/* --- IDE Widget Specific Styles --- */
 .ide-container {
     display: flex;
     flex-direction: row; /* Horizontal layout for sidebar and editor */
