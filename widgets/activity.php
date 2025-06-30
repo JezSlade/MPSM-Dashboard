@@ -5,12 +5,14 @@ $_widget_config = [
     'width' => 2,
     'height' => 1
 ];
-?>
-<?php
+
 // Simple PHP IDE - Single File
 // Place this file in your project directory and access via web browser
 
-session_start();
+// Only start session if one isn't already active
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Configuration
 $base_dir = __DIR__;
@@ -105,6 +107,12 @@ if (isset($_POST['action'])) {
 // Get directory listing
 function get_directory_tree($dir, $prefix = '') {
     global $allowed_extensions;
+    
+    // Fallback if global variable is not set
+    if (!is_array($allowed_extensions)) {
+        $allowed_extensions = ['php', 'txt', 'html', 'css', 'js', 'json', 'md'];
+    }
+    
     $items = [];
     
     if (!is_dir($dir)) return $items;
