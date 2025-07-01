@@ -38,7 +38,7 @@ function get_widget_metadata_from_file(string $file_path): array {
     // Read the first few lines to look for metadata comments or variables
     $handle = fopen($file_path, "r");
     if ($handle) {
-        $content = fread($handle, 2048); // Read first 2KB
+        $content = fread($handle, 2048); // Read first 2KB - usually enough for metadata comments
         fclose($handle);
 
         // Look for PHP variable definitions or comments like:
@@ -90,6 +90,9 @@ function discover_widgets(): array {
             $file_path = $widgets_dir . $file;
             $metadata = get_widget_metadata_from_file($file_path);
             $available_widgets[$widget_id] = $metadata;
+            // --- DEBUGGING LINE ---
+            error_log("Widget metadata for {$widget_id}: " . print_r($metadata, true));
+            // --- END DEBUGGING LINE ---
         }
     }
 
