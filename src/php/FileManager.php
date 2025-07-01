@@ -148,16 +148,38 @@ class FileManager {
      * @return bool True on success, false on failure.
      */
     public function createWidgetTemplate($widget_id, $widget_name, $widget_icon, $widget_width, $widget_height) {
-        $widget_file_path = APP_ROOT . '/widgets/' . $widget_id . '.php';
+        // --- START: Added/Enhanced validation and path handling ---
+        // Validate widget ID format to prevent path traversal and ensure valid filename
+        if (!preg_match('/^[a-z0-9_]+$/', $widget_id)) {
+            error_log("FileManager: createWidgetTemplate failed - Invalid widget ID format: " . $widget_id);
+            return false;
+        }
+        
+        // Use $this->appRoot for consistency within the class
+        $widget_file_path = $this->appRoot . '/widgets/' . $widget_id . '.php';
+
         if (file_exists($widget_file_path)) {
+            error_log("FileManager: createWidgetTemplate failed - Widget template file already exists: " . $widget_file_path);
             return false; // Widget ID already exists
         }
 
-        // Clamp dimensions
+        // Check if the widgets directory is writable
+        $widgets_dir = $this->appRoot . '/widgets/';
+        if (!is_dir($widgets_dir) && !mkdir($widgets_dir, 0755, true)) {
+            error_log("FileManager: createWidgetTemplate failed - Could not create widgets directory: " . $widgets_dir);
+            return false;
+        }
+        if (!is_writable($widgets_dir)) {
+            error_log("FileManager: createWidgetTemplate failed - Widgets directory is not writable: " . $widgets_dir);
+            return false;
+        }
+        // --- END: Added/Enhanced validation and path handling ---
+
+        // Clamp dimensions (already present in your original code)
         $widget_width = max(0.5, min(3.0, (float)$widget_width));
         $widget_height = max(0.5, min(4.0, (float)$widget_height));
 
-        // Generate widget file content
+        // Generate widget file content (kept from your original code)
         $template_content = <<<PHP
 <?php
 // widgets/{$widget_id}.php
@@ -187,6 +209,10 @@ class FileManager {
 </div>
 PHP;
 
-        return file_put_contents($widget_file_path, $template_content) !== false;
+        $result = file_put_contents($widget_file_path, $template_content);
+        if ($result === false) {
+            error_log("FileManager: createWidgetTemplate failed - Failed to write widget file: " . $widget_file_path);
+        }
+        return $result !== false;
     }
 }

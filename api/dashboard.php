@@ -14,7 +14,7 @@ ob_start();
 // Include configuration and classes
 require_once __DIR__ . '/../config.php'; // Adjust path as needed
 require_once __DIR__ . '/../src/php/DashboardManager.php';
-require_once __DIR__ . '/../src/php/FileManager.php'; // Needed for widget creation
+require_once __DIR__ . '/../src/php/FileManager.php'; // Ensure FileManager is included
 
 session_start();
 
@@ -129,12 +129,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
 
-            // Use FileManager to create the PHP template file
-            if ($fileManager->createWidgetTemplateFile($widget_id, $widget_name, $widget_icon, $widget_width, $widget_height)) {
+            // --- IMPORTANT: Call the MERGED createWidgetTemplate method ---
+            if ($fileManager->createWidgetTemplate($widget_id, $widget_name, $widget_icon, $widget_width, $widget_height)) {
                 // The widget will be automatically discovered on next loadDashboardState()
                 $response = ['status' => 'success', 'message' => 'Widget template created successfully. Reloading to discover new widget...'];
             } else {
-                $response['message'] = 'Failed to create widget template. It might already exist or permissions are incorrect.';
+                // Improved error message for widget creation failure
+                $response['message'] = 'Failed to create widget template. This might be due to an invalid widget ID, a duplicate ID, or incorrect folder permissions (ensure "widgets/" directory is writable).';
             }
             break;
 
@@ -192,5 +193,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 echo json_encode($response);
+// IMPORTANT: Exit immediately after sending JSON to prevent any further output
 exit;
-?>
