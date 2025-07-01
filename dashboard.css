@@ -926,6 +926,19 @@ input:checked + .slider:before {
     -o-tab-size: 4;
 }
 
+/* Ensure Font Awesome icons are visible - DEBUGGING ADDITION */
+.fas, .far, .fal, .fab, .fa {
+    font-family: "Font Awesome 6 Free" !important; /* Ensure correct font family */
+    font-weight: 900 !important; /* For solid icons (fas) */
+    display: inline-block !important; /* Ensure they are not display: none; */
+    font-size: inherit !important; /* Don't override font size unexpectedly */
+    color: inherit !important; /* Don't override color unexpectedly */
+    text-rendering: auto !important; /* Ensure proper rendering */
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+
 /* Responsive Design */
 @media (min-width: 1200px) { /* Desktop */
     .main-content {

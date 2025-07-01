@@ -8,7 +8,8 @@ error_reporting(E_ALL);
 // PHP Debugging Lines - END
 
 // Ensure no whitespace or output before this line
-ob_start(); // Start output buffering to catch any accidental output
+// Start output buffering as early as possible
+ob_start();
 
 // Include configuration and classes
 require_once __DIR__ . '/../config.php'; // Adjust path as needed
@@ -18,6 +19,7 @@ require_once __DIR__ . '/../src/php/FileManager.php'; // Needed for widget creat
 session_start();
 
 // Clear any buffered output before setting header
+// This ensures no accidental whitespace or errors precede the JSON
 ob_clean();
 header('Content-Type: application/json');
 
@@ -130,7 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Use FileManager to create the PHP template file
             if ($fileManager->createWidgetTemplateFile($widget_id, $widget_name, $widget_icon, $widget_width, $widget_height)) {
                 // The widget will be automatically discovered on next loadDashboardState()
-                // No need to explicitly add to dynamic_widgets.json anymore
                 $response = ['status' => 'success', 'message' => 'Widget template created successfully. Reloading to discover new widget...'];
             } else {
                 $response['message'] = 'Failed to create widget template. It might already exist or permissions are incorrect.';
@@ -151,9 +152,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update current $settings array with new values from POST
             $updated_settings = array_merge($current_dashboard_state, $settings_from_post);
             
-            // Note: 'show_all_available_widgets' now only affects rendering, not the 'is_active' flag
-            // The 'active_widgets' concept is replaced by 'widgets_state' and 'is_active' flag
-
             if ($dashboardManager->saveDashboardState($updated_settings)) {
                 $_SESSION['dashboard_settings'] = $updated_settings; // Update session for current request
                 $response = ['status' => 'success', 'message' => 'Settings updated successfully.'];
@@ -175,12 +173,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $response['message'] = 'Invalid JSON format for imported settings.';
                 break;
             }
-
-            // When importing, we should merge with current state to ensure newly discovered
-            // widgets are not lost if the imported settings are older.
-            // However, for a full "import", we might want to overwrite completely.
-            // Given the "no security concern" context, a full overwrite is simpler.
-            // If merging is desired, a more complex merge logic would be needed here.
 
             if ($dashboardManager->saveDashboardState($imported_settings)) {
                 // After successful import, update session to reflect new state immediately

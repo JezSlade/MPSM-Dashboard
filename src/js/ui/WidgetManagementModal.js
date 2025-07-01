@@ -19,50 +19,56 @@ async function loadWidgetManagementTable() {
     widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading widgets...</td></tr>';
     currentWidgetStates = {}; // Reset states
 
-    const response = await sendAjaxRequest('api/dashboard.php', 'get_all_widget_states');
+    try {
+        const response = await sendAjaxRequest('api/dashboard.php', 'get_all_widget_states');
 
-    if (response.status === 'success' && response.widgets_state) {
-        widgetManagementTableBody.innerHTML = ''; // Clear loading message
-        if (response.widgets_state.length === 0) {
-            widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No widgets found.</td></tr>';
-            return;
+        if (response.status === 'success' && response.widgets_state) {
+            widgetManagementTableBody.innerHTML = ''; // Clear loading message
+            if (response.widgets_state.length === 0) {
+                widgetManagementTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No widgets found.</td></tr>';
+                return;
+            }
+
+            // Sort widgets by their 'position' property for consistent display in the table
+            response.widgets_state.sort((a, b) => a.position - b.position);
+
+            response.widgets_state.forEach(widget => {
+                const row = document.createElement('tr');
+                row.dataset.widgetId = widget.id; // Store widget ID on the row
+
+                // Store initial state for change tracking
+                currentWidgetStates[widget.id] = {
+                    width: widget.width,
+                    height: widget.height,
+                    is_active: widget.is_active
+                };
+
+                const isActiveChecked = widget.is_active ? 'checked' : '';
+                const statusText = widget.is_active ? 'Active' : 'Inactive';
+                // Add these classes to your dashboard.css if they don't exist
+                const statusClass = widget.is_active ? 'text-green-500' : 'text-red-500'; 
+
+                row.innerHTML = `
+                    <td><i class="fas fa-${widget.icon}"></i></td>
+                    <td>${widget.name}</td>
+                    <td><span class="${statusClass}">${statusText}</span></td>
+                    <td><input type="number" class="form-control-small widget-width-input" value="${widget.width}" min="0.5" max="3" step="0.5"></td>
+                    <td><input type="number" class="form-control-small widget-height-input" value="${widget.height}" min="0.5" max="4" step="0.5"></td>
+                    <td>
+                        <label class="toggle-switch">
+                            <input type="checkbox" class="widget-active-toggle" ${isActiveChecked}>
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                `;
+                widgetManagementTableBody.appendChild(row);
+            });
+        } else {
+            widgetManagementTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--danger);">Error loading widgets: ${response.message || 'Unknown error.'}</td></tr>`;
         }
-
-        // Sort widgets by their 'position' property for consistent display in the table
-        response.widgets_state.sort((a, b) => a.position - b.position);
-
-        response.widgets_state.forEach(widget => {
-            const row = document.createElement('tr');
-            row.dataset.widgetId = widget.id; // Store widget ID on the row
-
-            // Store initial state for change tracking
-            currentWidgetStates[widget.id] = {
-                width: widget.width,
-                height: widget.height,
-                is_active: widget.is_active
-            };
-
-            const isActiveChecked = widget.is_active ? 'checked' : '';
-            const statusText = widget.is_active ? 'Active' : 'Inactive';
-            const statusClass = widget.is_active ? 'text-green-500' : 'text-red-500'; // Tailwind classes for status color (add to dashboard.css if not present)
-
-            row.innerHTML = `
-                <td><i class="fas fa-${widget.icon}"></i></td>
-                <td>${widget.name}</td>
-                <td><span class="${statusClass}">${statusText}</span></td>
-                <td><input type="number" class="form-control-small widget-width-input" value="${widget.width}" min="0.5" max="3" step="0.5"></td>
-                <td><input type="number" class="form-control-small widget-height-input" value="${widget.height}" min="0.5" max="4" step="0.5"></td>
-                <td>
-                    <label class="toggle-switch">
-                        <input type="checkbox" class="widget-active-toggle" ${isActiveChecked}>
-                        <span class="slider"></span>
-                    </label>
-                </td>
-            `;
-            widgetManagementTableBody.appendChild(row);
-        });
-    } else {
-        widgetManagementTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--danger);">Error loading widgets: ${response.message || 'Unknown error.'}</td></tr>`;
+    } catch (error) {
+        console.error("Failed to load widget data for management:", error);
+        widgetManagementTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--danger);">Error loading widgets: ${error.message || 'Network or parsing error.'}</td></tr>`;
     }
 }
 
@@ -100,12 +106,6 @@ async function saveAllWidgetChanges() {
     saveWidgetManagementChangesBtn.disabled = true;
     saveWidgetManagementChangesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-    // Send all changes in one go (or iterate if backend expects individual calls)
-    // For simplicity and efficiency, we'll send a single request with all changes.
-    // The backend will need an action to handle an array of widget updates.
-    // For now, let's send individual requests for clarity based on current backend.
-    // A more advanced refactor would have a single 'batch_update_widgets' action.
-
     let successCount = 0;
     let errorCount = 0;
     let errorMessage = '';
@@ -113,7 +113,6 @@ async function saveAllWidgetChanges() {
     for (const change of changesToSave) {
         let response;
         if (currentWidgetStates[change.id].width !== change.width || currentWidgetStates[change.id].height !== change.height) {
-            // Only send dimension update if dimensions changed
             response = await sendAjaxRequest('api/dashboard.php', 'update_single_widget_dimensions', {
                 widget_id: change.id,
                 new_width: change.width,
@@ -128,7 +127,6 @@ async function saveAllWidgetChanges() {
         }
         
         if (currentWidgetStates[change.id].is_active !== change.is_active) {
-            // Only send active status update if status changed
             response = await sendAjaxRequest('api/dashboard.php', 'toggle_widget_active_status', {
                 widget_id: change.id,
                 is_active: change.is_active ? '1' : '0' // Send as string '1' or '0' for PHP filter_var

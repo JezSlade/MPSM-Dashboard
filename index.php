@@ -18,6 +18,7 @@ session_start();
 require_once 'config.php';
 require_once 'helpers.php';
 require_once 'src/php/DashboardManager.php';
+require_once 'src/php/FileManager.php'; // Ensure FileManager is included if used for widget creation
 
 // Instantiate DashboardManager
 // $available_widgets is populated by discover_widgets() in config.php
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // potentially updated by AJAX and then reloaded via loadDashboardState().
 $settings = array_replace_recursive($dashboardManager->loadDashboardState(), $_SESSION['dashboard_settings'] ?? []);
 
-// Pass available widgets to the view (used by sidebar Widget Library)
+// Pass available widgets to the view
 global $available_widgets; // Ensure $available_widgets from config.php is accessible
 
 ?>
@@ -54,6 +55,8 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     <title><?= htmlspecialchars($settings['title']) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css">
+    <!-- Chart.js CDN for charting widgets -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
         :root {
             --accent: <?= $settings['accent_color'] ?>;
