@@ -5,6 +5,11 @@
     RewriteCond %{REQUEST_URI} ^/setup.php$ [NC]
     RewriteRule ^ - [L]
 
+    # NEW RULE: Exclude the mps_monitor/api/ directory from being rewritten
+    # This ensures your API endpoints are directly accessible.
+    RewriteCond %{REQUEST_URI} ^/mps_monitor/api/ [NC]
+    RewriteRule ^ - [L]
+
     # Force HTTPS
     RewriteCond %{HTTPS} off
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
@@ -22,7 +27,7 @@
 
 <IfModule mod_headers.c>
     # Security headers
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set Strict-TransportSecurity "max-age=31536000; includeSubDomains"
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "DENY"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
