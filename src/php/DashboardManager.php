@@ -15,7 +15,7 @@ class DashboardManager {
         // Define default dashboard state
         $this->defaultDashboardState = [
             'title' => 'MPS Monitor Dashboard', // Updated default title
-            'site_icon' => 'gem', // New: Default site icon
+            'site_icon' => 'server', // New: Default site icon
             'accent_color' => '#6366f1',
             'glass_intensity' => 0.6,
             'blur_amount' => '10px',
@@ -23,13 +23,12 @@ class DashboardManager {
             'show_all_available_widgets' => false,
             'active_widgets' => [
                 // Default widgets with their initial default dimensions (from config.php)
-                ['id' => 'stats', 'position' => 1, 'width' => 2.0, 'height' => 1.0],
-                ['id' => 'tasks', 'position' => 2, 'width' => 1.0, 'height' => 2.0],
+                ['id' => 'stats', 'position' => 1, 'width' => 1.0, 'height' => 1.0],
+                ['id' => 'tasks', 'position' => 2, 'width' => 1.0, 'height' => 1.0],
                 ['id' => 'calendar', 'position' => 3, 'width' => 1.0, 'height' => 1.0],
                 ['id' => 'notes', 'position' => 4, 'width' => 1.0, 'height' => 1.0],
-                ['id' => 'activity', 'position' => 5, 'width' => 2.0, 'height' => 1.0],
-                ['id' => 'debug_info', 'position' => 6, 'width' => 2.0, 'height' => 2.0],
-                ['id' => 'ide', 'position' => 7, 'width' => 3.0, 'height' => 3.0]
+                ['id' => 'debug_info', 'position' => 6, 'width' => 1.0, 'height' => 1.0],
+                ['id' => 'ide', 'position' => 7, 'width' => 1.0, 'height' => 1.0]
             ]
         ];
     }
