@@ -18,9 +18,12 @@ require_once __DIR__ . '/../src/php/FileManager.php'; // Ensure FileManager is i
 
 session_start();
 
-// Clear any buffered output before setting header
-// This ensures no accidental whitespace or errors precede the JSON
-ob_clean();
+// Clear ALL existing output buffers before sending JSON header
+// This is a more aggressive approach to prevent "unexpected character" errors.
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
+
 header('Content-Type: application/json');
 
 $response = ['status' => 'error', 'message' => 'Invalid request.'];
@@ -129,12 +132,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
 
-            // --- IMPORTANT: Call the MERGED createWidgetTemplate method ---
+            // Call the MERGED createWidgetTemplate method
             if ($fileManager->createWidgetTemplate($widget_id, $widget_name, $widget_icon, $widget_width, $widget_height)) {
                 // The widget will be automatically discovered on next loadDashboardState()
                 $response = ['status' => 'success', 'message' => 'Widget template created successfully. Reloading to discover new widget...'];
             } else {
-                // Improved error message for widget creation failure
                 $response['message'] = 'Failed to create widget template. This might be due to an invalid widget ID, a duplicate ID, or incorrect folder permissions (ensure "widgets/" directory is writable).';
             }
             break;
@@ -193,5 +195,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 echo json_encode($response);
-// IMPORTANT: Exit immediately after sending JSON to prevent any further output
-exit;
+// IMPORTANT: Exit immediately and terminate script execution to prevent any further output
+die();

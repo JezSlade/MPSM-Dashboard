@@ -2,7 +2,7 @@
 
 const messageModalOverlay = document.getElementById('message-modal-overlay');
 const messageModalTitle = document.getElementById('message-modal-title');
-const messageModalContent = document.getElementById('message-modal-content'); // This element will now accept HTML
+const messageModalContent = document.getElementById('message-modal-content');
 const closeMessageModalBtn = document.getElementById('close-message-modal');
 const confirmMessageModalBtn = document.getElementById('confirm-message-modal');
 
@@ -14,8 +14,7 @@ const confirmMessageModalBtn = document.getElementById('confirm-message-modal');
  */
 export function showMessageModal(title, message, confirmCallback = null) {
     messageModalTitle.textContent = title;
-    // IMPORTANT CHANGE: Use innerHTML to render HTML content
-    messageModalContent.innerHTML = message;
+    messageModalContent.innerHTML = message; // Use innerHTML to render HTML content
     messageModalOverlay.classList.add('active');
 
     // Clear previous event listeners to prevent multiple calls
@@ -35,4 +34,14 @@ export function showMessageModal(title, message, confirmCallback = null) {
     newCloseBtn.addEventListener('click', function() {
         messageModalOverlay.classList.remove('active');
     });
+}
+
+/**
+ * Initializes event listeners for the message modal.
+ * This function should be called once on DOMContentLoaded.
+ */
+export function initMessageModal() {
+    // No specific initialization logic needed here beyond what showMessageModal handles
+    // but having it ensures consistency if we add more static listeners later.
+    console.log("MessageModal initialized.");
 }
