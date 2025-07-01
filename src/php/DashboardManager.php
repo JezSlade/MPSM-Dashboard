@@ -23,12 +23,14 @@ class DashboardManager {
             'show_all_available_widgets' => false,
             'active_widgets' => [
                 // Default widgets with their initial default dimensions (from config.php)
-                ['id' => 'stats', 'position' => 1, 'width' => 1.0, 'height' => 1.0],
-                ['id' => 'tasks', 'position' => 2, 'width' => 1.0, 'height' => 1.0],
-                ['id' => 'calendar', 'position' => 3, 'width' => 1.0, 'height' => 1.0],
-                ['id' => 'notes', 'position' => 4, 'width' => 1.0, 'height' => 1.0],
-                ['id' => 'debug_info', 'position' => 6, 'width' => 1.0, 'height' => 1.0],
-                ['id' => 'ide', 'position' => 7, 'width' => 1.0, 'height' => 1.0]
+                /**
+                *['id' => 'stats', 'position' => 1, 'width' => 1.0, 'height' => 1.0],
+                *['id' => 'tasks', 'position' => 2, 'width' => 1.0, 'height' => 1.0],
+                *['id' => 'calendar', 'position' => 3, 'width' => 1.0, 'height' => 1.0],
+                *['id' => 'notes', 'position' => 4, 'width' => 1.0, 'height' => 1.0],
+                *['id' => 'debug_info', 'position' => 6, 'width' => 1.0, 'height' => 1.0],
+                *['id' => 'ide', 'position' => 7, 'width' => 1.0, 'height' => 1.0]
+                */
             ]
         ];
     }
