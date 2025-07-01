@@ -14,7 +14,8 @@ class DashboardManager {
 
         // Define default dashboard state
         $this->defaultDashboardState = [
-            'title' => 'Glass Dashboard',
+            'title' => 'MPS Monitor Dashboard', // Updated default title
+            'site_icon' => 'gem', // New: Default site icon
             'accent_color' => '#6366f1',
             'glass_intensity' => 0.6,
             'blur_amount' => '10px',

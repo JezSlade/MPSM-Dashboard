@@ -138,7 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         case 'update_settings': // Handle global settings update
             $settings_from_post = [
-                'title' => $_POST['dashboard_title'] ?? 'MPS Monitor Dashboard', // Updated default title
+                'title' => $_POST['dashboard_title'] ?? 'MPS Monitor Dashboard',
+                'site_icon' => $_POST['site_icon'] ?? 'gem', // New: Get site icon from POST
                 'accent_color' => $_POST['accent_color'] ?? '#6366f1',
                 'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
                 'blur_amount' => $_POST['blur_amount'] ?? '10px',

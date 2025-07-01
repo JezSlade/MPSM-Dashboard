@@ -187,7 +187,8 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         <header class="header">
             <div class="logo">
                 <div class="logo-icon">
-                    <i class="fas fa-gem"></i>
+                    <!-- Use the site_icon setting here -->
+                    <i class="fas fa-<?= htmlspecialchars($settings['site_icon'] ?? 'gem') ?>"></i>
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
             </div>
@@ -380,6 +381,12 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <label for="dashboard_title">Dashboard Title</label>
                         <input type="text" id="dashboard_title" name="dashboard_title"
                             class="form-control" value="<?= htmlspecialchars($settings['title']) ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="site_icon">Site Icon (Font Awesome class, e.g., gem)</label>
+                        <input type="text" id="site_icon" name="site_icon"
+                            class="form-control" value="<?= htmlspecialchars($settings['site_icon'] ?? 'gem') ?>" placeholder="e.g., gem">
                     </div>
 
                     <div class="form-group">
