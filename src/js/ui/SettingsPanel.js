@@ -22,6 +22,7 @@ const advancedSettingsNavItem = document.getElementById('advanced-settings-nav-i
 
 // New elements for advanced settings
 const outputSettingsJsonBtn = document.getElementById('output-settings-json-btn');
+const outputActiveWidgetsJsonBtn = document.getElementById('output-active-widgets-json-btn'); // New button
 const exportSettingsBtn = document.getElementById('export-settings-btn');
 const importSettingsFileInput = document.getElementById('import-settings-file-input');
 const importSettingsBtn = document.getElementById('import-settings-btn');
@@ -192,11 +193,27 @@ export function initSettingsPanel() {
             const response = await sendAjaxRequest('api/dashboard.php', 'get_current_settings');
             
             if (response.status === 'success' && response.settings) {
-                // This line is responsible for pretty-printing the JSON
                 const settingsJson = JSON.stringify(response.settings, null, 2); // Pretty print JSON
                 showMessageModal('Current Dashboard Settings', `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; border: 1px solid var(--glass-border); padding: 10px; border-radius: var(--border-radius); background-color: rgba(0,0,0,0.2);">${settingsJson}</pre>`);
             } else {
                 showMessageModal('Error', 'Failed to retrieve current settings: ' + response.message);
+            }
+        });
+    }
+
+    // --- Output Active Widgets JSON Button Logic (NEW) ---
+    if (outputActiveWidgetsJsonBtn) {
+        outputActiveWidgetsJsonBtn.addEventListener('click', async function() {
+            console.log('Show Active Widgets button clicked!'); // Debugging log
+            const response = await sendAjaxRequest('api/dashboard.php', 'get_current_settings');
+            
+            if (response.status === 'success' && response.settings && Array.isArray(response.settings.active_widgets)) {
+                const activeWidgetsJson = JSON.stringify(response.settings.active_widgets, null, 2); // Pretty print JSON
+                showMessageModal('Active Widgets List', `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; border: 1px solid var(--glass-border); padding: 10px; border-radius: var(--border-radius); background-color: rgba(0,0,0,0.2);">${activeWidgetsJson}</pre>`);
+            } else {
+                // More specific error message if active_widgets is not an array or missing
+                const errorMessage = response.message || 'Response did not contain valid active widgets data.';
+                showMessageModal('Error', 'Failed to retrieve active widgets: ' + errorMessage);
             }
         });
     }
