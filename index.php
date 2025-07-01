@@ -20,16 +20,17 @@ require_once 'helpers.php';
 require_once 'src/php/DashboardManager.php';
 
 // Instantiate DashboardManager
-$dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, DYNAMIC_WIDGETS_FILE, $available_widgets);
+// IMPORTANT: DYNAMIC_WIDGETS_FILE is no longer a parameter.
+// $available_widgets is now passed directly, which is populated by discover_widgets() in config.php
+$dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, $available_widgets);
 
 // Load current dashboard state (settings + active widgets)
 $current_dashboard_state = $dashboardManager->loadDashboardState();
-$settings = $current_dashboard_state; // $settings now includes 'active_widgets' with dimensions
+$settings = $current_dashboard_state; // $settings now includes 'widgets_state' with dimensions
 
-// IMPORTANT: Initialize $_SESSION['active_widgets'] from the loaded state
+// IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state
 // This ensures session state is synced with persistent state on page load.
-$_SESSION['active_widgets'] = $current_dashboard_state['active_widgets'];
-$_SESSION['dashboard_settings'] = $current_dashboard_state; // Sync all settings to session for current request
+$_SESSION['dashboard_settings'] = $current_dashboard_state;
 
 // The index.php no longer handles POST requests directly for actions.
 // All actions are now handled by dedicated API endpoints via AJAX.
@@ -46,8 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // potentially updated by AJAX and then reloaded via loadDashboardState().
 // This merge ensures default values are applied, then persistent ones, then session ones.
 $settings = array_replace_recursive($dashboardManager->loadDashboardState(), $_SESSION['dashboard_settings'] ?? []);
-// The 'active_widgets' for rendering should always come from the final $_SESSION state after processing
-$settings['active_widgets'] = $_SESSION['active_widgets'];
 
 // Pass available widgets to the view
 global $available_widgets; // Ensure $available_widgets from config.php is accessible
@@ -93,7 +92,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
             <div class="message-modal-body">
                 <form id="widget-dimensions-form">
-                    <input type="hidden" id="widget-settings-index" name="widget_index">
+                    <input type="hidden" id="widget-settings-id" name="widget_id">
                     <div class="form-group">
                         <label for="widget-settings-width">Width (Grid Units)</label>
                         <input type="number" id="widget-settings-width" name="new_width" min="0.5" max="3" step="0.5" class="form-control">
@@ -126,13 +125,12 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                                 <th>Status</th>
                                 <th>Width</th>
                                 <th>Height</th>
-                                <th>Save Status</th>
-                                <th>Deactivate</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="widget-management-table-body">
                             <!-- Widget data will be populated here by JavaScript -->
-                            <tr><td colspan="7" style="text-align: center; padding: 20px;">Loading widgets...</td></tr>
+                            <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading widgets...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -257,36 +255,30 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         <!-- Main Content Area -->
         <main class="main-content" id="widget-container">
             <?php
-            // Determine which widgets to display based on 'show_all_available_widgets' setting
+            // Filter widgets to render based on 'show_all_available_widgets' and 'is_active'
             $widgets_to_render = [];
             if ($settings['show_all_available_widgets']) {
-                // If 'show all' is true, render ALL available widgets from config.php
-                foreach ($available_widgets as $id => $def) {
-                    $widgets_to_render[] = [
-                        'id' => $id,
-                        'position' => count($widgets_to_render) + 1,
-                        'width' => (float)($def['width'] ?? 1.0),
-                        'height' => (float)($def['height'] ?? 1.0)
-                    ];
-                }
-                // Sort them alphabetically by ID for consistent positioning
-                usort($widgets_to_render, function($a, $b) {
-                    return strcmp($a['id'], $b['id']);
-                });
+                // If 'show all' is true, render ALL discovered widgets
+                $widgets_to_render = array_values($settings['widgets_state']);
             } else {
-                // Otherwise, render the active widgets from persistent storage
-                $widgets_to_render = $settings['active_widgets'];
+                // Otherwise, render only widgets marked as active
+                foreach ($settings['widgets_state'] as $widget_id => $widget_data) {
+                    if ($widget_data['is_active']) {
+                        $widgets_to_render[] = $widget_data;
+                    }
+                }
             }
 
-            foreach ($widgets_to_render as $index => $widget):
+            // Sort widgets for rendering by their 'position'
+            usort($widgets_to_render, function($a, $b) {
+                return $a['position'] <=> $b['position'];
+            });
+
+            foreach ($widgets_to_render as $widget):
                 $widget_id = $widget['id'];
-                // Use a fallback for widget_def if config.php isn't correctly loading it
-                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1.0, 'height' => 1.0];
-                
-                // Use the dimensions from the active_widgets array if present, otherwise fall back to config default
-                // And ensure they are clamped for safety during rendering
-                $current_width_user_facing = max(0.5, min(3.0, (float)($widget['width'] ?? $widget_def['width'])));
-                $current_height_user_facing = max(0.5, min(4.0, (float)($widget['height'] ?? $widget_def['height'])));
+                // Use the dimensions from the widgets_state array
+                $current_width_user_facing = max(0.5, min(3.0, (float)($widget['width'])));
+                $current_height_user_facing = max(0.5, min(4.0, (float)($widget['height'])));
 
                 // Convert user-facing units to internal grid units (doubled for half-unit precision)
                 $current_width_internal = $current_width_user_facing * 2;
@@ -297,22 +289,20 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                  draggable="true"
                  style="--width: <?= $current_width_internal ?>; --height: <?= $current_height_internal ?>;"
                  data-widget-id="<?= htmlspecialchars($widget_id) ?>"
-                 data-widget-index="<?= $index ?>"
                  data-current-width="<?= $current_width_user_facing ?>"
                  data-current-height="<?= $current_height_user_facing ?>">
                 <!-- This placeholder div marks the widget's original position in the DOM -->
-                <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-index="<?= $index ?>"></div>
+                <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-id="<?= htmlspecialchars($widget_id) ?>"></div>
 
                 <div class="widget-header">
                     <div class="widget-title">
-                        <i class="fas fa-<?= $widget_def['icon'] ?? 'cube' ?>"></i>
-                        <span><?= $widget_def['name'] ?? 'Widget' ?></span>
+                        <i class="fas fa-<?= htmlspecialchars($widget['icon']) ?>"></i>
+                        <span><?= htmlspecialchars($widget['name']) ?></span>
                     </div>
                     <div class="widget-actions">
                         <!-- Add data attributes to identify actions -->
                         <div class="widget-action action-settings"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
-                            data-widget-index="<?= $index ?>"
                             data-current-width="<?= $current_width_user_facing ?>"
                             data-current-height="<?= $current_height_user_facing ?>"
                             title="Adjust widget dimensions">
@@ -321,10 +311,9 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <div class="widget-action action-expand">
                             <i class="fas fa-expand"></i>
                         </div>
-                        <div class="widget-action remove-widget
-                            <?= $settings['show_all_available_widgets'] ? 'disabled' : '' ?>"
-                            data-index="<?= $index ?>"
-                            title="<?= $settings['show_all_available_widgets'] ? 'Remove disabled in "Show All Widgets" mode' : 'Remove widget' ?>">
+                        <div class="widget-action remove-widget"
+                            data-widget-id="<?= htmlspecialchars($widget_id) ?>"
+                            title="Deactivate widget">
                             <i class="fas fa-times"></i>
                         </div>
                     </div>
@@ -433,7 +422,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <h3 class="settings-title">Widget Layout</h3>
                     <!-- Show All Available Widgets Toggle -->
                     <div class="form-group">
-                        <label>Show All Available Widgets</label>
+                        <label>Show All Available Widgets (Overrides active/inactive status)</label>
                         <label class="toggle-switch">
                             <input type="checkbox" name="show_all_available_widgets" id="show_all_available_widgets"
                                 <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
@@ -444,16 +433,11 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
                 <div class="settings-group">
                     <h3 class="settings-title">Add Existing Widget</h3>
-                    <div class="form-group">
-                        <label for="widget_select">Select Widget</label>
-                        <select id="widget_select" name="widget_id" class="form-control">
-                            <?php foreach ($available_widgets as $id => $widget): ?>
-                            <option value="<?= $id ?>"><?= $widget['name'] ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <button type="submit" name="add_widget" class="btn btn-primary" id="add-widget-to-dashboard-btn" style="width: 100%;">
-                        <i class="fas fa-plus"></i> Add Widget to Dashboard
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
+                        Use Widget Management to activate/deactivate widgets.
+                    </p>
+                    <button type="button" class="btn" style="width: 100%;" disabled>
+                        <i class="fas fa-info-circle"></i> Use Widget Management
                     </button>
                 </div>
 
