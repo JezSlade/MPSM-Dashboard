@@ -3,29 +3,18 @@
 import { showMessageModal } from './MessageModal.js';
 import { sendAjaxRequest } from '../utils/AjaxService.js';
 
+// These elements are always expected to be present when the script loads,
+// as they are part of the main dashboard structure.
 const settingsToggle = document.getElementById('settings-toggle');
 const closeSettings = document.getElementById('close-settings');
 const settingsPanel = document.getElementById('settings-panel');
 const settingsOverlay = document.getElementById('settings-overlay');
 const globalSettingsForm = document.getElementById('global-settings-form');
-const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
-const widgetSelect = document.getElementById('widget_select');
-const addWidgetToDashboardBtn = document.getElementById('add-widget-to-dashboard-btn');
-const deleteSettingsJsonBtn = document.getElementById('delete-settings-json-btn');
 
-// New elements for settings tabs
-const settingsTabButtons = document.querySelectorAll('.settings-tab-btn');
-const settingsSections = document.querySelectorAll('.settings-section');
+// Settings tab navigation items (also part of main structure)
 const generalSettingsNavItem = document.getElementById('general-settings-nav-item');
 const layoutSettingsNavItem = document.getElementById('layout-settings-nav-item');
 const advancedSettingsNavItem = document.getElementById('advanced-settings-nav-item');
-
-// New elements for advanced settings
-const outputSettingsJsonBtn = document.getElementById('output-settings-json-btn');
-const outputActiveWidgetsJsonBtn = document.getElementById('output-active-widgets-json-btn'); // New button
-const exportSettingsBtn = document.getElementById('export-settings-btn');
-const importSettingsFileInput = document.getElementById('import-settings-file-input');
-const importSettingsBtn = document.getElementById('import-settings-btn');
 
 
 /**
@@ -33,6 +22,10 @@ const importSettingsBtn = document.getElementById('import-settings-btn');
  * @param {string} targetSectionId - The ID of the section to activate.
  */
 function activateSettingsSection(targetSectionId) {
+    // These are queried inside the function as they might be dynamic or loaded later
+    const settingsSections = document.querySelectorAll('.settings-section');
+    const settingsTabButtons = document.querySelectorAll('.settings-tab-btn');
+
     settingsSections.forEach(section => {
         if (section.id === targetSectionId) {
             section.classList.add('active');
@@ -51,24 +44,44 @@ function activateSettingsSection(targetSectionId) {
 }
 
 export function initSettingsPanel() {
+    // --- Elements that might not be available immediately on script load ---
+    // Moved inside initSettingsPanel to ensure DOM is ready
+    const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
+    const widgetSelect = document.getElementById('widget_select');
+    const addWidgetToDashboardBtn = document.getElementById('add-widget-to-dashboard-btn');
+    const deleteSettingsJsonBtn = document.getElementById('delete-settings-json-btn');
+    const outputSettingsJsonBtn = document.getElementById('output-settings-json-btn');
+    const outputActiveWidgetsJsonBtn = document.getElementById('output-active-widgets-json-btn');
+    const exportSettingsBtn = document.getElementById('export-settings-btn');
+    const importSettingsFileInput = document.getElementById('import-settings-file-input');
+    const importSettingsBtn = document.getElementById('import-settings-btn');
+    const settingsTabButtons = document.querySelectorAll('.settings-tab-btn'); // Re-query here too for safety
+
+
     // --- Global Settings Panel Toggle ---
-    settingsToggle.addEventListener('click', function() {
-        settingsPanel.classList.add('active');
-        settingsOverlay.style.display = 'block';
-        activateSettingsSection('general-settings-section'); // Default to General tab
-    });
+    if (settingsToggle) { // Add null checks for safety, though these should always exist
+        settingsToggle.addEventListener('click', function() {
+            settingsPanel.classList.add('active');
+            settingsOverlay.style.display = 'block';
+            activateSettingsSection('general-settings-section'); // Default to General tab
+        });
+    }
 
-    closeSettings.addEventListener('click', function() {
-        settingsPanel.classList.remove('active');
-        settingsOverlay.style.display = 'none';
-    });
-
-    settingsOverlay.addEventListener('click', function(e) {
-        if (e.target === settingsOverlay) {
+    if (closeSettings) {
+        closeSettings.addEventListener('click', function() {
             settingsPanel.classList.remove('active');
-            this.style.display = 'none';
-        }
-    });
+            settingsOverlay.style.display = 'none';
+        });
+    }
+
+    if (settingsOverlay) {
+        settingsOverlay.addEventListener('click', function(e) {
+            if (e.target === settingsOverlay) {
+                settingsPanel.classList.remove('active');
+                this.style.display = 'none';
+            }
+        });
+    }
 
     // --- Settings Tab Navigation ---
     settingsTabButtons.forEach(button => {
