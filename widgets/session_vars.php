@@ -8,46 +8,58 @@ $_widget_config = [
     'height' => 2
 ];
 
-// Start session if not already active
+// Start session if needed
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Keys to hide (dashboard or irrelevant internal ones)
-$excluded_keys = ['dashboard_config', 'active_widgets', 'widget_order'];
+// Exclude UI/dashboard config junk
+$excluded_prefixes = ['dashboard_', 'widget_', 'ui_', 'layout_', 'grid_', 'settings'];
+$excluded_keys = ['active_widgets', 'widget_order', 'dashboard_config'];
+
+// Helper: Filter out keys based on prefix or name
+function is_runtime_variable($key) {
+    global $excluded_prefixes, $excluded_keys;
+    foreach ($excluded_prefixes as $prefix) {
+        if (stripos($key, $prefix) === 0) return false;
+    }
+    return !in_array($key, $excluded_keys, true);
+}
+
+// Filter session data
+$runtime_session = array_filter($_SESSION, function($k) {
+    return is_runtime_variable($k);
+}, ARRAY_FILTER_USE_KEY);
 ?>
 
 <div class="widget-body">
-    <h3 class="widget-section-title">Session Variables</h3>
-    <?php
-    $filtered_session = array_diff_key($_SESSION, array_flip($excluded_keys));
-    if (!empty($filtered_session)):
-    ?>
-        <pre><?= htmlspecialchars(print_r($filtered_session, true)) ?></pre>
+    <h3 class="widget-section-title">Runtime Session Variables</h3>
+    <?php if (!empty($runtime_session)): ?>
+        <pre><?= htmlspecialchars(print_r($runtime_session, true)) ?></pre>
     <?php else: ?>
-        <p><em>No relevant session variables set.</em></p>
+        <p><em>No runtime session variables are set.</em></p>
     <?php endif; ?>
 
-    <h3 class="widget-section-title">Cookieszz</h3>
+    <h3 class="widget-section-title">Cookies</h3>
     <?php if (!empty($_COOKIE)): ?>
         <pre><?= htmlspecialchars(print_r($_COOKIE, true)) ?></pre>
     <?php else: ?>
         <p><em>No cookies set.</em></p>
     <?php endif; ?>
 
-    <h3 class="widget-section-title">Token Overview</h3>
+    <h3 class="widget-section-title">Tokens</h3>
     <?php
-        $token_keys = ['access_token', 'refresh_token'];
-        $found = false;
+        $token_keys = ['access_token', 'refresh_token', 'mps_token'];
+        $tokens_found = false;
         foreach ($token_keys as $key) {
-            if (isset($_SESSION[$key]) || isset($_COOKIE[$key])) {
-                $found = true;
-                echo "<strong>$key:</strong><br>";
-                echo "<code>" . htmlspecialchars($_SESSION[$key] ?? $_COOKIE[$key]) . "</code><br><br>";
+            $value = $_SESSION[$key] ?? $_COOKIE[$key] ?? null;
+            if ($value) {
+                echo "<strong>$key:</strong><br><code>" . htmlspecialchars($value) . "</code><br><br>";
+                $tokens_found = true;
             }
         }
-        if (!$found) {
-            echo "<p><em>No access or refresh tokens found.</em></p>";
+        if (!$tokens_found) {
+            echo "<p><em>No tokens found in session or cookies.</em></p>";
         }
     ?>
 </div>
