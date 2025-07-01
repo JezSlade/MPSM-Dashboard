@@ -8,28 +8,36 @@ $_widget_config = [
     'height' => 2
 ];
 
-// Start session if needed
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Exclude UI/dashboard config junk
+// Config: ignore these dashboard/control variables
 $excluded_prefixes = ['dashboard_', 'widget_', 'ui_', 'layout_', 'grid_', 'settings'];
 $excluded_keys = ['active_widgets', 'widget_order', 'dashboard_config'];
 
-// Helper: Filter out keys based on prefix or name
-function is_runtime_variable($key) {
-    global $excluded_prefixes, $excluded_keys;
-    foreach ($excluded_prefixes as $prefix) {
-        if (stripos($key, $prefix) === 0) return false;
+/**
+ * Determines whether a session key is considered runtime-relevant.
+ */
+function is_runtime_variable($key, $excluded_keys, $excluded_prefixes) {
+    if (in_array($key, $excluded_keys, true)) {
+        return false;
     }
-    return !in_array($key, $excluded_keys, true);
+    foreach ($excluded_prefixes as $prefix) {
+        if (stripos($key, $prefix) === 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
-// Filter session data
-$runtime_session = array_filter($_SESSION, function($k) {
-    return is_runtime_variable($k);
-}, ARRAY_FILTER_USE_KEY);
+// Filter session for runtime variables only
+$runtime_session = [];
+foreach ($_SESSION as $key => $value) {
+    if (is_runtime_variable($key, $excluded_keys, $excluded_prefixes)) {
+        $runtime_session[$key] = $value;
+    }
+}
 ?>
 
 <div class="widget-body">
