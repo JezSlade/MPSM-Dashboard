@@ -307,13 +307,14 @@ body {
     position: fixed; /* Fixed position relative to viewport */
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) translateZ(0); /* Add translateZ(0) for hardware acceleration */
+    transform: translate(-50%, -50%) translateZ(0); /* Centering with hardware acceleration */
     width: 90vw; /* Maximize width */
     height: 90vh; /* Maximize height */
     z-index: 1200; /* Ensure it's above the overlay */
     box-shadow: 0 0 50px rgba(0, 188, 212, 0.8); /* Stronger glow */
     border: 2px solid var(--accent);
-    transition: all 0.4s ease-in-out;
+    /* Explicitly list properties for transition during maximize/minimize */
+    transition: width 0.4s ease-in-out, height 0.4s ease-in-out, top 0.4s ease-in-out, left 0.4s ease-in-out, transform 0.4s ease-in-out, box-shadow 0.4s ease-in-out, border 0.4s ease-in-out;
     cursor: default; /* Change cursor when maximized */
     display: flex; /* Ensure flex layout for content */
     flex-direction: column;
@@ -321,10 +322,17 @@ body {
     backface-visibility: hidden; /* Further hint for hardware acceleration */
 }
 
+/* IMPORTANT: Disable hover effects when widget is maximized to prevent glitches */
+.widget.maximized:hover {
+    transform: translate(-50%, -50%) translateZ(0); /* Reset transform to its maximized state */
+    box-shadow: 0 0 50px rgba(0, 188, 212, 0.8); /* Keep the glow from maximized state */
+}
+
+
 .widget.maximized .widget-content {
     flex-grow: 1;
-    overflow: auto; /* Allow content to scroll if it exceeds maximized size */
     padding: 20px; /* Adjust padding for expanded view */
+    overflow: auto; /* Allow content to scroll if it exceeds maximized size */
 }
 
 /* Hide compact content, show expanded content when maximized */
