@@ -307,7 +307,7 @@ body {
     position: fixed; /* Fixed position relative to viewport */
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) translateZ(0); /* Add translateZ(0) for hardware acceleration */
     width: 90vw; /* Maximize width */
     height: 90vh; /* Maximize height */
     z-index: 1200; /* Ensure it's above the overlay */
@@ -318,6 +318,7 @@ body {
     display: flex; /* Ensure flex layout for content */
     flex-direction: column;
     will-change: transform; /* Hint to browser for optimization */
+    backface-visibility: hidden; /* Further hint for hardware acceleration */
 }
 
 .widget.maximized .widget-content {
@@ -553,6 +554,7 @@ input:checked + .slider:before {
 
 .settings-header .btn {
     background: none;
+    border: none;
     color: var(--text-secondary);
     font-size: 1.5em;
     padding: 5px;
