@@ -7,20 +7,34 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
 
+// Ensure no whitespace or output before this line
+ob_start(); // Start output buffering to catch any accidental output
+
 // Include configuration and classes
 require_once __DIR__ . '/../config.php'; // Adjust path as needed
 require_once __DIR__ . '/../src/php/DashboardManager.php';
+require_once __DIR__ . '/../src/php/FileManager.php'; // Needed for widget creation
 
 session_start();
 
+// Clear any buffered output before setting header
+ob_clean();
 header('Content-Type: application/json');
+
 $response = ['status' => 'error', 'message' => 'Invalid request.'];
 
-$dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, DYNAMIC_WIDGETS_FILE, $available_widgets);
+// Instantiate DashboardManager with the dynamically discovered widgets
+// $available_widgets is populated by discover_widgets() in config.php
+$dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, $available_widgets);
+$fileManager = new FileManager(APP_ROOT); // Instantiate FileManager for widget creation
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ajax_action = $_POST['ajax_action'] ?? '';
 
+    // Load current dashboard state at the beginning of each POST request
+    // This ensures we always work with the latest persistent data.
+    $current_dashboard_state = $dashboardManager->loadDashboardState();
+    
     switch ($ajax_action) {
         case 'delete_settings_json':
             if (file_exists(DASHBOARD_SETTINGS_FILE)) {
@@ -36,35 +50,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             break;
 
-        case 'get_active_widgets_data':
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
-            $active_widgets_data = [];
-            foreach ($current_dashboard_state['active_widgets'] as $index => $widget_entry) {
-                $widget_id = $widget_entry['id'];
-                $widget_def = $available_widgets[$widget_id] ?? ['name' => 'Unknown Widget', 'icon' => 'question', 'width' => 1.0, 'height' => 1.0];
-                $active_widgets_data[] = [
-                    'id' => $widget_id,
-                    'index' => $index,
-                    'name' => $widget_def['name'],
-                    'icon' => $widget_def['icon'],
-                    'width' => (float)$widget_entry['width'],
-                    'height' => (float)$widget_entry['height']
-                ];
-            }
-            $response = ['status' => 'success', 'widgets' => $active_widgets_data];
+        case 'get_all_widget_states': // New action to get all widget states (active/deactivated) for management table
+            // This now returns the full 'widgets_state' array from the dashboard settings
+            $response = ['status' => 'success', 'widgets_state' => array_values($current_dashboard_state['widgets_state'])];
             break;
 
         case 'update_single_widget_dimensions':
-            $widget_index = (int)$_POST['widget_index'];
-            $new_width = (float)$_POST['new_width'];
-            $new_height = (float)$_POST['new_height'];
+            $widget_id = $_POST['widget_id'] ?? ''; // Now using widget_id
+            $new_width = (float)($_POST['new_width'] ?? 0);
+            $new_height = (float)($_POST['new_height'] ?? 0);
 
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
-            $updated_active_widgets = $dashboardManager->updateWidgetDimensions($widget_index, $new_width, $new_height, $current_dashboard_state['active_widgets']);
+            if (empty($widget_id)) {
+                $response['message'] = 'Widget ID is missing.';
+                break;
+            }
+
+            $updated_widgets_state = $dashboardManager->updateWidgetDimensions($widget_id, $new_width, $new_height, $current_dashboard_state['widgets_state']);
             
-            $current_dashboard_state['active_widgets'] = $updated_active_widgets;
+            $current_dashboard_state['widgets_state'] = $updated_widgets_state;
             if ($dashboardManager->saveDashboardState($current_dashboard_state)) {
-                $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
+                $_SESSION['dashboard_settings'] = $current_dashboard_state; // Sync session
                 $response = ['status' => 'success', 'message' => 'Widget dimensions updated.'];
             } else {
                 $response['message'] = 'Failed to save widget dimensions.';
@@ -78,68 +83,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
 
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
-            $updated_active_widgets = $dashboardManager->updateWidgetOrder($new_order_ids, $current_dashboard_state['active_widgets']);
+            // The updateWidgetOrder now handles re-positioning all widgets, active or not
+            $updated_widgets_state = $dashboardManager->updateWidgetOrder($new_order_ids, $current_dashboard_state['widgets_state']);
             
-            $current_dashboard_state['active_widgets'] = $updated_active_widgets;
+            $current_dashboard_state['widgets_state'] = $updated_widgets_state;
             if ($dashboardManager->saveDashboardState($current_dashboard_state)) {
-                $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
+                $_SESSION['dashboard_settings'] = $current_dashboard_state; // Sync session
                 $response = ['status' => 'success', 'message' => 'Widget order updated.'];
             } else {
                 $response['message'] = 'Failed to save widget order.';
             }
             break;
 
-        case 'remove_widget_from_management':
-            $widget_id_to_remove = $_POST['widget_id'];
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
+        case 'toggle_widget_active_status': // New action to toggle active status
+            $widget_id = $_POST['widget_id'] ?? '';
+            $is_active = filter_var($_POST['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            if (empty($widget_id)) {
+                $response['message'] = 'Widget ID is missing.';
+                break;
+            }
+
+            $updated_widgets_state = $dashboardManager->updateWidgetActiveStatus($widget_id, $is_active, $current_dashboard_state['widgets_state']);
             
-            $updated_active_widgets = $dashboardManager->removeWidgetById($widget_id_to_remove, $current_dashboard_state['active_widgets']);
-
-            // Check if any widget was actually removed by comparing counts
-            $found = (count($current_dashboard_state['active_widgets']) > count($updated_active_widgets));
-
-            if ($found) {
-                $current_dashboard_state['active_widgets'] = $updated_active_widgets;
-                if ($dashboardManager->saveDashboardState($current_dashboard_state)) {
-                    $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
-                    $response = ['status' => 'success', 'message' => 'Widget deactivated successfully.'];
-                } else {
-                    $response['message'] = 'Failed to save dashboard state after deactivation.';
-                }
+            $current_dashboard_state['widgets_state'] = $updated_widgets_state;
+            if ($dashboardManager->saveDashboardState($current_dashboard_state)) {
+                $_SESSION['dashboard_settings'] = $current_dashboard_state; // Sync session
+                $response = ['status' => 'success', 'message' => 'Widget status updated.'];
             } else {
-                $response['message'] = 'Widget not found in active list.';
+                $response['message'] = 'Failed to update widget status.';
             }
             break;
         
-        case 'add_widget': // Handle adding widget from sidebar drag-and-drop
-            $widget_id_to_add = $_POST['widget_id'] ?? '';
-            if (empty($widget_id_to_add)) {
-                $response['message'] = 'Widget ID is required.';
-                break;
-            }
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
-            // Only allow adding widgets if 'show all' is OFF
-            if ($current_dashboard_state['show_all_available_widgets']) {
-                $response['message'] = 'Cannot add widgets in "Show All Available Widgets" mode.';
+        case 'create_new_widget_template': // This action now creates the file and relies on discovery
+            $widget_id = $_POST['id'] ?? '';
+            $widget_name = $_POST['name'] ?? '';
+            $widget_icon = $_POST['icon'] ?? 'cube';
+            $widget_width = (float)($_POST['width'] ?? 1.0);
+            $widget_height = (float)($_POST['height'] ?? 1.0);
+
+            if (empty($widget_id) || empty($widget_name)) {
+                $response['message'] = 'Widget ID and Name are required.';
                 break;
             }
 
-            $updated_active_widgets = $dashboardManager->addWidget($widget_id_to_add, $current_dashboard_state['active_widgets']);
-            $current_dashboard_state['active_widgets'] = $updated_active_widgets;
-
-            if ($dashboardManager->saveDashboardState($current_dashboard_state)) {
-                $_SESSION['active_widgets'] = $current_dashboard_state['active_widgets']; // Sync session
-                $response = ['status' => 'success', 'message' => 'Widget added successfully.'];
+            // Use FileManager to create the PHP template file
+            if ($fileManager->createWidgetTemplateFile($widget_id, $widget_name, $widget_icon, $widget_width, $widget_height)) {
+                // The widget will be automatically discovered on next loadDashboardState()
+                // No need to explicitly add to dynamic_widgets.json anymore
+                $response = ['status' => 'success', 'message' => 'Widget template created successfully. Reloading to discover new widget...'];
             } else {
-                $response['message'] = 'Failed to add widget.';
+                $response['message'] = 'Failed to create widget template. It might already exist or permissions are incorrect.';
             }
             break;
 
         case 'update_settings': // Handle global settings update
             $settings_from_post = [
                 'title' => $_POST['dashboard_title'] ?? 'MPS Monitor Dashboard',
-                'site_icon' => $_POST['site_icon'] ?? 'gem', // New: Get site icon from POST
+                'site_icon' => $_POST['site_icon'] ?? 'gem',
                 'accent_color' => $_POST['accent_color'] ?? '#6366f1',
                 'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
                 'blur_amount' => $_POST['blur_amount'] ?? '10px',
@@ -147,20 +148,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'show_all_available_widgets' => isset($_POST['show_all_available_widgets']) && $_POST['show_all_available_widgets'] === '1'
             ];
             
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
-            $old_show_all_state = $current_dashboard_state['show_all_available_widgets'] ?? false;
-
             // Update current $settings array with new values from POST
             $updated_settings = array_merge($current_dashboard_state, $settings_from_post);
             
-            // Special handling if 'show_all_available_widgets' was just turned ON
-            if ($updated_settings['show_all_available_widgets'] && !$old_show_all_state) {
-                $updated_settings['active_widgets'] = $dashboardManager->setAllAvailableWidgetsAsActive();
-            }
+            // Note: 'show_all_available_widgets' now only affects rendering, not the 'is_active' flag
+            // The 'active_widgets' concept is replaced by 'widgets_state' and 'is_active' flag
 
             if ($dashboardManager->saveDashboardState($updated_settings)) {
-                $_SESSION['dashboard_settings'] = $settings_from_post; // Update session for current request
-                $_SESSION['active_widgets'] = $updated_settings['active_widgets']; // Sync active widgets in session
+                $_SESSION['dashboard_settings'] = $updated_settings; // Update session for current request
                 $response = ['status' => 'success', 'message' => 'Settings updated successfully.'];
             } else {
                 $response['message'] = 'Failed to save settings.';
@@ -169,7 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         case 'get_current_settings':
             // This action is for outputting current settings (for debug/export)
-            $current_dashboard_state = $dashboardManager->loadDashboardState();
             $response = ['status' => 'success', 'settings' => $current_dashboard_state];
             break;
 
@@ -182,14 +176,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
 
-            // You might want to add more robust validation here to ensure the imported
-            // settings structure is compatible with your dashboard's expectations.
-            // For now, we'll trust the input given the user's security context.
+            // When importing, we should merge with current state to ensure newly discovered
+            // widgets are not lost if the imported settings are older.
+            // However, for a full "import", we might want to overwrite completely.
+            // Given the "no security concern" context, a full overwrite is simpler.
+            // If merging is desired, a more complex merge logic would be needed here.
 
             if ($dashboardManager->saveDashboardState($imported_settings)) {
                 // After successful import, update session to reflect new state immediately
                 $_SESSION['dashboard_settings'] = $imported_settings;
-                $_SESSION['active_widgets'] = $imported_settings['active_widgets'] ?? [];
                 $response = ['status' => 'success', 'message' => 'Settings imported successfully.'];
             } else {
                 $response['message'] = 'Failed to save imported settings.';
