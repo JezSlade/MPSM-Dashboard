@@ -495,6 +495,13 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         </button>
                     </div>
 
+                    <div class="form-group">
+                        <label>Output Active Widgets (JSON)</label>
+                        <button type="button" class="btn" id="output-active-widgets-json-btn" style="width: 100%;">
+                            <i class="fas fa-list"></i> Show Active Widgets
+                        </button>
+                    </div>
+
                     <!-- Delete Settings JSON Button -->
                     <div class="form-group">
                         <label>Reset Dashboard</label>
