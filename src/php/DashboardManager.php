@@ -3,44 +3,33 @@
 
 class DashboardManager {
     private $dashboardSettingsFile;
-    private $dynamicWidgetsFile;
-    private $availableWidgets;
+    private $availableWidgets; // This now comes from dynamic discovery
     private $defaultDashboardState;
 
-    public function __construct($dashboardSettingsFile, $dynamicWidgetsFile, $availableWidgets) {
+    public function __construct($dashboardSettingsFile, $availableWidgets) {
         $this->dashboardSettingsFile = $dashboardSettingsFile;
-        $this->dynamicWidgetsFile = $dynamicWidgetsFile;
-        $this->availableWidgets = $availableWidgets;
+        $this->availableWidgets = $availableWidgets; // Dynamically discovered widgets
 
         // Define default dashboard state
         $this->defaultDashboardState = [
-            'title' => 'MPS Monitor Dashboard', // Updated default title
-            'site_icon' => 'server', // New: Default site icon
+            'title' => 'MPS Monitor Dashboard',
+            'site_icon' => 'gem',
             'accent_color' => '#6366f1',
             'glass_intensity' => 0.6,
             'blur_amount' => '10px',
             'enable_animations' => true,
             'show_all_available_widgets' => false,
-            'active_widgets' => [
-                // Default widgets with their initial default dimensions (from config.php)
-                /**
-                *['id' => 'stats', 'position' => 1, 'width' => 1.0, 'height' => 1.0],
-                *['id' => 'tasks', 'position' => 2, 'width' => 1.0, 'height' => 1.0],
-                *['id' => 'calendar', 'position' => 3, 'width' => 1.0, 'height' => 1.0],
-                *['id' => 'notes', 'position' => 4, 'width' => 1.0, 'height' => 1.0],
-                *['id' => 'debug_info', 'position' => 6, 'width' => 1.0, 'height' => 1.0],
-                *['id' => 'ide', 'position' => 7, 'width' => 1.0, 'height' => 1.0]
-                */
-            ]
+            'widgets_state' => [] // This will now hold the state of ALL available widgets (active/deactivated)
         ];
     }
 
     /**
-     * Loads dashboard settings and active widgets from the JSON file.
+     * Loads dashboard settings and active/deactivated widget states from the JSON file.
+     * It also synchronizes with newly discovered widgets.
      *
-     * @return array Loaded settings including active_widgets or default state.
+     * @return array Loaded settings including widgets_state or default state.
      */
-    public function loadDashboardState() {
+    public function loadDashboardState(): array {
         $loaded_state = [];
         if (file_exists($this->dashboardSettingsFile)) {
             $json_data = file_get_contents($this->dashboardSettingsFile);
@@ -53,31 +42,45 @@ class DashboardManager {
         // Merge loaded state with defaults to ensure all keys are present
         $final_state = array_replace_recursive($this->defaultDashboardState, $loaded_state);
 
-        // Ensure active_widgets entries have width/height, falling back to config defaults
-        if (isset($final_state['active_widgets']) && is_array($final_state['active_widgets'])) {
-            foreach ($final_state['active_widgets'] as $key => $widget_entry) {
-                $widget_id = $widget_entry['id'];
-                $default_width = (float)($this->availableWidgets[$widget_id]['width'] ?? 1.0);
-                $default_height = (float)($this->availableWidgets[$widget_id]['height'] ?? 1.0);
+        // --- Synchronize widgets_state with currently discovered widgets ---
+        $synced_widgets_state = [];
+        $current_position = 0; // To maintain consistent ordering for active widgets
 
-                $final_state['active_widgets'][$key]['width'] = max(0.5, min(3.0, (float)($widget_entry['width'] ?? $default_width)));
-                $final_state['active_widgets'][$key]['height'] = max(0.5, min(4.0, (float)($widget_entry['height'] ?? $default_height)));
-            }
-        } else {
-            // If active_widgets was missing or not an array, use default ones
-            $final_state['active_widgets'] = $this->defaultDashboardState['active_widgets'];
+        foreach ($this->availableWidgets as $widget_id => $metadata) {
+            $existing_state = $final_state['widgets_state'][$widget_id] ?? null;
+
+            $widget_entry = [
+                'id' => $widget_id,
+                'name' => $metadata['name'],
+                'icon' => $metadata['icon'],
+                // Use existing state if available, otherwise default from metadata
+                'width' => max(0.5, min(3.0, (float)($existing_state['width'] ?? $metadata['width']))),
+                'height' => max(0.5, min(4.0, (float)($existing_state['height'] ?? $metadata['height']))),
+                'is_active' => (bool)($existing_state['is_active'] ?? true), // Default to active if new
+                'position' => (int)($existing_state['position'] ?? $current_position) // Keep existing position or assign new
+            ];
+            $synced_widgets_state[$widget_id] = $widget_entry;
+            $current_position++;
         }
+
+        // Remove any widgets from loaded state that are no longer discovered
+        $final_state['widgets_state'] = array_intersect_key($synced_widgets_state, $this->availableWidgets);
+
+        // Re-sort the widgets_state by position for consistent rendering order
+        uasort($final_state['widgets_state'], function($a, $b) {
+            return $a['position'] <=> $b['position'];
+        });
 
         return $final_state;
     }
 
     /**
-     * Saves the entire dashboard state (settings + active widgets) to the JSON file.
+     * Saves the entire dashboard state (settings + widget states) to the JSON file.
      *
      * @param array $state The complete dashboard state array to save.
      * @return bool True on success, false on failure.
      */
-    public function saveDashboardState(array $state) {
+    public function saveDashboardState(array $state): bool {
         $json_data = json_encode($state, JSON_PRETTY_PRINT);
         if ($json_data === false) {
             error_log("ERROR: saveDashboardState - Failed to encode dashboard state to JSON: " . json_last_error_msg());
@@ -99,142 +102,133 @@ class DashboardManager {
     }
 
     /**
-     * Loads dynamically created widget configurations from dynamic_widgets.json.
-     * @return array An associative array of dynamic widget configurations.
+     * Updates the 'is_active' status of a widget.
+     *
+     * @param string $widget_id The ID of the widget to update.
+     * @param bool $is_active The new active status.
+     * @param array $current_widgets_state The current array of all widget states.
+     * @return array The updated array of widget states.
      */
-    public function loadDynamicWidgets() {
-        if (file_exists($this->dynamicWidgetsFile)) {
-            $json_data = file_get_contents($this->dynamicWidgetsFile);
-            $widgets = json_decode($json_data, true);
-            return is_array($widgets) ? $widgets : [];
+    public function updateWidgetActiveStatus(string $widget_id, bool $is_active, array $current_widgets_state): array {
+        if (isset($current_widgets_state[$widget_id])) {
+            $current_widgets_state[$widget_id]['is_active'] = $is_active;
         }
-        return [];
-    }
-
-    /**
-     * Saves dynamically created widget configurations to dynamic_widgets.json.
-     * @param array $widgets An associative array of dynamic widget configurations.
-     * @return bool True on success, false on failure.
-     */
-    public function saveDynamicWidgets(array $widgets) {
-        $json_data = json_encode($widgets, JSON_PRETTY_PRINT);
-        if ($json_data === false) {
-            error_log("ERROR: saveDynamicWidgets - Failed to encode dynamic widgets to JSON: " . json_last_error_msg());
-            return false;
-        }
-        $result = file_put_contents($this->dynamicWidgetsFile, $json_data);
-        if ($result === false) {
-            error_log("ERROR: saveDynamicWidgets - Failed to write dynamic widgets to file: " . $this->dynamicWidgetsFile);
-        }
-        return $result !== false;
-    }
-
-    /**
-     * Adds a new widget to the active widgets list.
-     * @param string $widget_id The ID of the widget to add.
-     * @param array $current_active_widgets The current array of active widgets.
-     * @return array The updated array of active widgets.
-     */
-    public function addWidget($widget_id, array $current_active_widgets) {
-        $default_width = (float)($this->availableWidgets[$widget_id]['width'] ?? 1.0);
-        $default_height = (float)($this->availableWidgets[$widget_id]['height'] ?? 1.0);
-
-        $new_widget = [
-            'id' => $widget_id,
-            'position' => count($current_active_widgets) + 1,
-            'width' => $default_width,
-            'height' => $default_height
-        ];
-        $current_active_widgets[] = $new_widget;
-        return $current_active_widgets;
-    }
-
-    /**
-     * Removes a widget from the active widgets list by index.
-     * @param int $widget_index The index of the widget to remove.
-     * @param array $current_active_widgets The current array of active widgets.
-     * @return array The updated array of active widgets.
-     */
-    public function removeWidgetByIndex($widget_index, array $current_active_widgets) {
-        if (isset($current_active_widgets[$widget_index])) {
-            unset($current_active_widgets[$widget_index]);
-            return array_values($current_active_widgets); // Re-index array
-        }
-        return $current_active_widgets;
-    }
-
-    /**
-     * Removes a widget from the active widgets list by ID.
-     * @param string $widget_id The ID of the widget to remove.
-     * @param array $current_active_widgets The current array of active widgets.
-     * @return array The updated array of active widgets.
-     */
-    public function removeWidgetById($widget_id, array $current_active_widgets) {
-        $updated_active_widgets = [];
-        foreach ($current_active_widgets as $widget_entry) {
-            if ($widget_entry['id'] !== $widget_id) {
-                $updated_active_widgets[] = $widget_entry;
-            }
-        }
-        return $updated_active_widgets;
+        return $current_widgets_state;
     }
 
     /**
      * Updates the dimensions of a single widget.
-     * @param int $widget_index The index of the widget to update.
+     * @param string $widget_id The ID of the widget to update.
      * @param float $new_width The new width.
      * @param float $new_height The new height.
-     * @param array $current_active_widgets The current array of active widgets.
-     * @return array The updated array of active widgets.
+     * @param array $current_widgets_state The current array of all widget states.
+     * @return array The updated array of widget states.
      */
-    public function updateWidgetDimensions($widget_index, $new_width, $new_height, array $current_active_widgets) {
+    public function updateWidgetDimensions(string $widget_id, float $new_width, float $new_height, array $current_widgets_state): array {
         // Clamp values between 0.5 and 3.0 for width, 0.5 and 4.0 for height
-        $new_width = max(0.5, min(3.0, (float)$new_width));
-        $new_height = max(0.5, min(4.0, (float)$new_height));
+        $new_width = max(0.5, min(3.0, $new_width));
+        $new_height = max(0.5, min(4.0, $new_height));
 
-        if (isset($current_active_widgets[$widget_index])) {
-            $current_active_widgets[$widget_index]['width'] = $new_width;
-            $current_active_widgets[$widget_index]['height'] = $new_height;
+        if (isset($current_widgets_state[$widget_id])) {
+            $current_widgets_state[$widget_id]['width'] = $new_width;
+            $current_widgets_state[$widget_id]['height'] = $new_height;
         }
-        return $current_active_widgets;
+        return $current_widgets_state;
     }
 
     /**
      * Updates the order of active widgets.
-     * @param array $new_order_ids An array of widget IDs in the new desired order.
-     * @param array $current_active_widgets The current array of active widgets.
-     * @return array The updated array of active widgets.
+     * This function now re-assigns 'position' for all widgets, active or not.
+     *
+     * @param array $new_order_ids An array of widget IDs in the new desired order (only active ones are typically passed).
+     * @param array $current_widgets_state The current array of all widget states.
+     * @return array The updated array of widget states.
      */
-    public function updateWidgetOrder(array $new_order_ids, array $current_active_widgets) {
-        $new_active_widgets = [];
+    public function updateWidgetOrder(array $new_order_ids, array $current_widgets_state): array {
+        $ordered_active_widgets = [];
+        $deactivated_widgets = [];
+
+        // Separate active widgets based on new order, and collect deactivated ones
         foreach ($new_order_ids as $ordered_id) {
-            foreach ($current_active_widgets as $old_widget) {
-                if ($old_widget['id'] === $ordered_id) {
-                    $new_active_widgets[] = $old_widget;
-                    break;
-                }
+            if (isset($current_widgets_state[$ordered_id]) && $current_widgets_state[$ordered_id]['is_active']) {
+                $ordered_active_widgets[$ordered_id] = $current_widgets_state[$ordered_id];
             }
         }
-        return $new_active_widgets;
+        foreach ($current_widgets_state as $widget_id => $widget_data) {
+            if (!$widget_data['is_active']) {
+                $deactivated_widgets[$widget_id] = $widget_data;
+            }
+        }
+
+        $final_widgets_state = [];
+        $position = 0;
+
+        // Assign positions to ordered active widgets
+        foreach ($ordered_active_widgets as $widget_id => $widget_data) {
+            $widget_data['position'] = $position++;
+            $final_widgets_state[$widget_id] = $widget_data;
+        }
+
+        // Assign positions to deactivated widgets (append them, maintaining their relative order if possible)
+        // Or simply append them at the end if order isn't critical for deactivated ones
+        foreach ($deactivated_widgets as $widget_id => $widget_data) {
+            $widget_data['position'] = $position++;
+            $final_widgets_state[$widget_id] = $widget_data;
+        }
+        
+        // Re-sort the final state by position to ensure consistency
+        uasort($final_widgets_state, function($a, $b) {
+            return $a['position'] <=> $b['position'];
+        });
+
+        return $final_widgets_state;
     }
 
     /**
-     * Sets the active widgets to all available widgets, sorted alphabetically by ID.
-     * @return array The new array of active widgets.
+     * Adds a new widget template file and updates the dynamic_widgets.json (no longer used for discovery).
+     * This method is now primarily for creating the PHP file. The discovery will pick it up automatically.
+     *
+     * @param string $widget_id The ID of the widget.
+     * @param string $widget_name The display name.
+     * @param string $widget_icon The Font Awesome icon.
+     * @param float $widget_width Default width.
+     * @param float $widget_height Default height.
+     * @return bool True on success, false on failure.
      */
-    public function setAllAvailableWidgetsAsActive() {
-        $new_active_widgets = [];
-        foreach ($this->availableWidgets as $id => $def) {
-            $new_active_widgets[] = [
-                'id' => $id,
-                'position' => count($new_active_widgets) + 1,
-                'width' => (float)($def['width'] ?? 1.0),
-                'height' => (float)($def['height'] ?? 1.0)
-            ];
+    public function createWidgetTemplateFile(string $widget_id, string $widget_name, string $widget_icon, float $widget_width, float $widget_height): bool {
+        $file_path = APP_ROOT . '/widgets/' . $widget_id . '.php';
+
+        if (file_exists($file_path)) {
+            error_log("ERROR: Widget template creation failed - File already exists: " . $file_path);
+            return false;
         }
-        usort($new_active_widgets, function($a, $b) {
-            return strcmp($a['id'], $b['id']);
-        });
-        return $new_active_widgets;
+
+        $template_content = <<<PHP
+<?php
+// Widget Name: {$widget_name}
+// Widget Icon: {$widget_icon}
+// Widget Width: {$widget_width}
+// Widget Height: {$widget_height}
+?>
+<div class="compact-content">
+    <h3>{$widget_name}</h3>
+    <p>This is the compact view of your new widget. Edit <code>widgets/{$widget_id}.php</code> to customize.</p>
+    <p>Current time: <?= date('H:i:s') ?></p>
+</div>
+<div class="expanded-content">
+    <h3>{$widget_name} (Expanded View)</h3>
+    <p>This is the expanded view of your new widget. You can add more detailed content here.</p>
+    <p>This widget is located at: <code>widgets/{$widget_id}.php</code></p>
+    <p>Feel free to add dynamic data, charts, or any other PHP/HTML content.</p>
+    <p>Current time: <?= date('Y-m-d H:i:s') ?></p>
+</div>
+PHP;
+
+        $result = file_put_contents($file_path, $template_content);
+        if ($result === false) {
+            error_log("ERROR: Failed to write new widget template file: " . $file_path);
+            return false;
+        }
+        return true;
     }
 }
