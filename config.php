@@ -6,6 +6,9 @@
 define('DASHBOARD_SETTINGS_FILE', __DIR__ . '/dashboard_settings.json');
 define('DYNAMIC_WIDGETS_FILE', __DIR__ . '/dynamic_widgets.json'); // New: Path for dynamically created widgets
 
+// Define the application root directory for security
+define('APP_ROOT', __DIR__); // APP_ROOT is now defined here, not in index.php
+
 /**
  * All available widgets in the system.
  * Key: unique widget ID (matches filename in widgets/ directory, without .php)
