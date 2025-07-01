@@ -1,28 +1,32 @@
 /* General Variables */
 :root {
-    --primary: #6366f1; /* Indigo 500 */
-    --secondary: #8b5cf6; /* Violet 500 */
-    --accent: #6366f1; /* Default accent, overridden by JS */
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --bg-primary: #1a1a2e; /* Dark blue background */
-    --bg-secondary: #222540; /* Slightly lighter dark blue */
-    --glass-bg: rgba(35, 40, 49, 0.6); /* Default glass background, overridden by JS */
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --shadow-dark: rgba(0, 0, 0, 0.4);
-    --shadow-light: rgba(255, 255, 255, 0.05);
+    --primary: #00bcd4; /* Neon Cyan */
+    --secondary: #e91e63; /* Neon Magenta */
+    --accent: #ffeb3b; /* Neon Yellow - Default accent */
+    --text-primary: #e0e0e0; /* Light text for readability */
+    --text-secondary: #a0a0a0; /* Subtler text */
+    --bg-primary: #0d0d1a; /* Very dark blue/black for main background */
+    --bg-secondary: #1a1a2e; /* Slightly lighter dark blue for secondary backgrounds */
+    --glass-bg: rgba(25, 25, 40, 0.4); /* Darker, more transparent glass */
+    --glass-border: rgba(255, 255, 255, 0.08); /* More subtle glass border */
+    --shadow-dark: rgba(0, 0, 0, 0.6); /* Deeper shadows for glass elements */
+    --shadow-light: rgba(255, 255, 255, 0.02); /* Very subtle light shadow */
+    --neon-glow-primary: 0 0 10px rgba(0, 188, 212, 0.6), 0 0 20px rgba(0, 188, 212, 0.4); /* Cyan glow */
+    --neon-glow-secondary: 0 0 10px rgba(233, 30, 99, 0.6), 0 0 20px rgba(233, 30, 99, 0.4); /* Magenta glow */
+    --neon-glow-accent: 0 0 10px rgba(255, 235, 59, 0.6), 0 0 20px rgba(255, 235, 59, 0.4); /* Yellow glow */
     --transition: all 0.3s ease-in-out;
     --header-height: 60px;
     --sidebar-width: 250px;
     --border-radius-sm: 8px;
     --border-radius-md: 12px;
     --border-radius-lg: 16px;
+    --blur-amount: 10px; /* Increased blur for stronger glass effect */
 
-    /* Status Colors */
-    --success: #10b981; /* Green */
-    --warning: #f59e0b; /* Yellow */
-    --danger: #ef4444; /* Red */
-    --info: #3b82f6; /* Blue */
+    /* Status Colors (adjusted for theme) */
+    --success: #00c853; /* Green, slightly more vibrant */
+    --warning: #ffb300; /* Amber, vibrant */
+    --danger: #d50000; /* Red, deep */
+    --info: #2979ff; /* Blue, bright */
 }
 
 /* Base Styles */
@@ -36,7 +40,50 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    position: relative; /* For potential full-page glows */
 }
+
+/* Optional: Add a subtle background glow to the body */
+body::before {
+    content: '';
+    position: fixed;
+    top: -100px;
+    left: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle at 50% 50%, var(--primary) 0%, transparent 50%);
+    filter: blur(150px);
+    opacity: 0.1;
+    z-index: -1;
+    animation: glow1 15s infinite alternate ease-in-out;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    bottom: -100px;
+    right: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle at 50% 50%, var(--secondary) 0%, transparent 50%);
+    filter: blur(150px);
+    opacity: 0.1;
+    z-index: -1;
+    animation: glow2 18s infinite alternate ease-in-out;
+}
+
+@keyframes glow1 {
+    0% { transform: translate(0, 0); opacity: 0.1; }
+    50% { transform: translate(50px, 50px); opacity: 0.15; }
+    100% { transform: translate(0, 0); opacity: 0.1; }
+}
+
+@keyframes glow2 {
+    0% { transform: translate(0, 0); opacity: 0.1; }
+    50% { transform: translate(-50px, -50px); opacity: 0.15; }
+    100% { transform: translate(0, 0); opacity: 0.1; }
+}
+
 
 /* Dashboard Layout */
 .dashboard {
@@ -57,7 +104,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    box-shadow: 0 2px 10px var(--shadow-dark);
+    box-shadow: 0 2px 20px var(--shadow-dark), var(--neon-glow-primary); /* Add primary neon glow */
     z-index: 100; /* Ensure header is on top */
 }
 
@@ -69,7 +116,8 @@ body {
 
 .logo-icon {
     font-size: 24px;
-    color: var(--accent);
+    color: var(--accent); /* Accent for logo icon */
+    text-shadow: 0 0 5px var(--accent); /* Subtle glow for icon */
 }
 
 .logo-text {
@@ -90,34 +138,37 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    box-shadow: inset 0 0 5px var(--shadow-light);
 }
 
 .header-actions .btn:hover {
     background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 5px var(--accent);
+    box-shadow: inset 0 0 8px var(--shadow-light), var(--neon-glow-accent); /* Accent glow on hover */
+    color: var(--accent);
 }
 
 .header-actions .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: var(--primary); /* Use primary for primary button */
+    border-color: var(--primary);
     color: white;
+    box-shadow: var(--neon-glow-primary); /* Primary neon glow */
 }
 
 .header-actions .btn-primary:hover {
-    background: var(--secondary);
+    background: var(--secondary); /* Transition to secondary on hover */
     border-color: var(--secondary);
-    box-shadow: 0 0 8px var(--accent);
+    box-shadow: var(--neon-glow-secondary); /* Secondary neon glow on hover */
 }
 
 /* Sidebar */
 .sidebar {
     grid-column: 1;
     grid-row: 2;
-    background: var(--bg-secondary);
+    background: var(--bg-secondary); /* Darker solid background */
     border-right: 1px solid var(--glass-border);
     padding: 20px 0;
     overflow-y: auto;
-    box-shadow: 2px 0 10px var(--shadow-dark);
+    box-shadow: 2px 0 15px var(--shadow-dark);
     z-index: 90;
 }
 
@@ -133,6 +184,7 @@ body {
     text-transform: uppercase;
     margin-bottom: 15px;
     letter-spacing: 0.5px;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.1); /* Subtle text shadow */
 }
 
 .nav-item, .widget-item {
@@ -146,18 +198,20 @@ body {
     transition: var(--transition);
     font-size: 15px;
     color: var(--text-primary);
+    background: rgba(0, 0, 0, 0.1); /* Slightly transparent background for items */
 }
 
 .nav-item:hover, .widget-item:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--accent);
+    box-shadow: inset 0 0 5px var(--shadow-light), var(--neon-glow-accent); /* Accent glow on hover */
 }
 
 .nav-item.active {
-    background: var(--accent);
+    background: var(--primary); /* Primary color for active item */
     color: white;
     font-weight: bold;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), var(--neon-glow-primary); /* Primary neon glow for active */
 }
 
 .nav-item.active i {
@@ -175,18 +229,21 @@ body {
 }
 
 .widget-item {
-    background: var(--bg-primary);
+    background: var(--glass-bg); /* Glass background for draggable widgets */
     border: 1px solid var(--glass-border);
     justify-content: flex-start;
+    box-shadow: inset 0 0 5px var(--shadow-light);
 }
 
 .widget-item:hover {
     border-color: var(--accent);
+    box-shadow: inset 0 0 8px var(--shadow-light), var(--neon-glow-accent);
 }
 
 .widget-item.dragging {
-    opacity: 0.5;
+    opacity: 0.6;
     border: 2px dashed var(--accent);
+    box-shadow: var(--neon-glow-accent);
 }
 
 
@@ -195,41 +252,42 @@ body {
     grid-column: 2;
     grid-row: 2;
     display: grid;
-    /* Explicit column count for desktop: 4 full units (8 half-units) */
-    /* Using minmax(0, 1fr) ensures columns can shrink but still distribute space proportionally */
     grid-template-columns: repeat(8, minmax(0, 1fr));
-    grid-auto-flow: dense; /* Fill in empty spaces to optimize layout */
-    /* Flexible row heights. A 0.5 height unit will be approx 100px. */
+    grid-auto-flow: dense;
     grid-template-rows: repeat(auto-fill, minmax(100px, auto));
     gap: 20px;
     padding: 20px;
     overflow-y: auto;
     min-height: calc(100vh - var(--header-height));
-    min-width: 0; /* Important for grid items to shrink correctly */
-    box-sizing: border-box; /* Include padding and border in width */
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 /* Individual Widget Styling */
 .widget {
-    /* --width and --height are now internal grid units (user_value * 2, e.g., 1 for 0.5, 2 for 1.0) */
-    --width: 2; /* Default to 1.0 user unit (2 internal units) */
-    --height: 2; /* Default to 1.0 user unit (2 internal units) */
+    --width: 2;
+    --height: 2;
     
-    /* Use CSS variables for grid spanning */
     grid-column: span var(--width);
     grid-row: span var(--height);
 
     background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur-amount)); /* Apply blur to widgets */
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-md);
-    overflow: hidden; /* Ensures content within stays rounded */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 15px var(--shadow-dark);
+    box-shadow: 0 4px 20px var(--shadow-dark), inset 0 0 10px var(--shadow-light); /* Deeper shadow with inner light */
     transition: var(--transition);
-    position: relative; /* For placeholder positioning */
-    box-sizing: border-box; /* Include padding and border in width */
-    min-width: 0; /* CRITICAL FIX: Allows grid item to shrink below its content's intrinsic minimum size */
+    position: relative;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.widget:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px var(--shadow-dark), var(--neon-glow-accent); /* Accent glow on hover */
 }
 
 .widget-header {
@@ -237,7 +295,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 15px;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.2); /* Darker header within widget */
     border-bottom: 1px solid var(--glass-border);
     color: var(--text-primary);
     font-weight: bold;
@@ -253,6 +311,7 @@ body {
 .widget-title i {
     color: var(--accent);
     font-size: 16px;
+    text-shadow: 0 0 5px var(--accent); /* Subtle icon glow */
 }
 
 .widget-actions {
@@ -277,42 +336,45 @@ body {
 }
 
 .widget-action:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--accent);
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--primary); /* Primary color on hover for actions */
+    box-shadow: 0 0 8px rgba(0, 188, 212, 0.4); /* Cyan glow on hover */
 }
 
 .widget-action.remove-widget.disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    background: none;
+    box-shadow: none;
 }
 
 .widget-content {
-    flex: 1; /* Allows content to take remaining height */
+    flex: 1;
     padding: 15px;
-    overflow: auto; /* Enable scrolling for content if it overflows */
-    display: flex; /* Use flex for compact/expanded content alignment */
+    overflow: auto;
+    display: flex;
     flex-direction: column;
-    justify-content: center; /* Center compact content vertically */
-    align-items: center; /* Center compact content horizontally */
+    justify-content: center;
+    align-items: center;
 }
 
 /* Compact and Expanded Content Views */
 .compact-content {
-    display: flex; /* Default: visible in normal state */
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%; /* Take full height of widget-content */
+    height: 100%;
     width: 100%;
     text-align: center;
 }
 
 .expanded-content {
-    display: none; /* Default: hidden in normal state */
+    display: none;
     flex-direction: column;
-    height: 100%; /* Take full height of widget-content */
+    height: 100%;
     width: 100%;
-    overflow: auto; /* Allow scrolling for expanded content */
+    overflow: auto;
 }
 
 /* When widget is maximized */
@@ -321,16 +383,16 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 90vw; /* Almost full viewport width */
-    height: 90vh; /* Almost full viewport height */
-    max-width: 1200px; /* Max width for large screens */
-    max-height: 800px; /* Max height for large screens */
-    z-index: 1000; /* Bring to front */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border: 2px solid var(--accent);
+    width: 90vw;
+    height: 90vh;
+    max-width: 1200px;
+    max-height: 800px;
+    z-index: 1000;
+    box-shadow: 0 10px 40px var(--shadow-dark), var(--neon-glow-primary), var(--neon-glow-secondary); /* Multi-color glow */
+    border: 2px solid var(--accent); /* More prominent accent border */
     animation: fadeInScale 0.3s ease-out forwards;
-    grid-column: auto !important; /* Override grid placement when maximized */
-    grid-row: auto !important; /* Override grid placement when maximized */
+    grid-column: auto !important;
+    grid-row: auto !important;
 }
 
 .widget.maximized .compact-content {
@@ -338,7 +400,7 @@ body {
 }
 
 .widget.maximized .expanded-content {
-    display: flex; /* Show expanded content when maximized */
+    display: flex;
 }
 
 /* Overlay for maximized widget */
@@ -348,14 +410,14 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.8); /* Darker overlay */
+    backdrop-filter: blur(8px); /* More blur for overlay */
     z-index: 999;
-    display: none; /* Hidden by default */
+    display: none;
 }
 
 .expanded-active .widget-expanded-overlay {
-    display: block; /* Show when a widget is maximized */
+    display: block;
 }
 
 
@@ -363,13 +425,11 @@ body {
 @keyframes fadeInScale {
     from {
         opacity: 0;
-        /* Removed transform: translate(-50%, -50%) to avoid conflict with flexbox centering */
-        transform: scale(0.9);
+        transform: translate(-50%, -50%) scale(0.9); /* Re-added translate for consistency with fixed positioning */
     }
     to {
         opacity: 1;
-        /* Removed transform: translate(-50%, -50%) to avoid conflict with flexbox centering */
-        transform: scale(1);
+        transform: translate(-50%, -50%) scale(1);
     }
 }
 
@@ -377,11 +437,11 @@ body {
 .widget-placeholder {
     width: 100%;
     height: 100%;
-    background-color: rgba(63, 114, 175, 0.1); /* Light blue transparent */
-    border: 2px dashed var(--accent);
+    background-color: rgba(0, 188, 212, 0.1); /* Cyan transparent */
+    border: 2px dashed var(--primary); /* Primary color dashed border */
     border-radius: var(--border-radius-md);
-    display: none; /* Hidden by default */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    display: none;
+    box-sizing: border-box;
 }
 
 
@@ -401,17 +461,17 @@ body {
 .settings-panel {
     position: fixed;
     top: 0;
-    right: -350px; /* Hidden by default */
+    right: -350px;
     width: 350px;
     height: 100%;
-    background: var(--bg-secondary);
+    background: var(--bg-secondary); /* Solid dark background */
     border-left: 1px solid var(--glass-border);
-    box-shadow: -5px 0 15px var(--shadow-dark);
+    box-shadow: -5px 0 20px var(--shadow-dark); /* Deeper shadow */
     z-index: 100;
     transition: right 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
-    padding-bottom: 20px; /* Add padding for scrollable content */
+    padding-bottom: 20px;
 }
 
 .settings-panel.active {
@@ -430,7 +490,8 @@ body {
 .settings-header h2 {
     margin: 0;
     font-size: 18px;
-    color: var(--text-primary);
+    color: var(--accent); /* Accent for settings title */
+    text-shadow: 0 0 5px var(--accent);
 }
 
 .settings-header .btn {
@@ -441,28 +502,35 @@ body {
     cursor: pointer;
 }
 
+.settings-header .btn:hover {
+    color: var(--danger); /* Danger color for close button */
+    text-shadow: 0 0 5px var(--danger);
+}
+
 .settings-form {
-    flex: 1; /* Allows form to take available space and scroll */
-    overflow-y: auto; /* Enable scrolling for form content */
+    flex: 1;
+    overflow-y: auto;
     padding: 20px;
 }
 
 .settings-group {
-    background: var(--bg-primary);
+    background: var(--glass-bg); /* Glass background for setting groups */
+    backdrop-filter: blur(var(--blur-amount) / 2); /* Slightly less blur */
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-md);
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3), 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 .settings-title {
     font-size: 16px;
-    color: var(--accent);
+    color: var(--primary); /* Primary color for section titles */
     margin-top: 0;
     margin-bottom: 15px;
     border-bottom: 1px dashed var(--glass-border);
     padding-bottom: 10px;
+    text-shadow: 0 0 3px var(--primary);
 }
 
 .form-group {
@@ -477,20 +545,21 @@ body {
 }
 
 .form-control {
-    width: calc(100% - 20px); /* Adjust for padding */
+    width: calc(100% - 20px);
     padding: 10px;
-    background: var(--bg-secondary);
+    background: var(--bg-primary); /* Darker background for inputs */
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-sm);
     color: var(--text-primary);
     font-size: 14px;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    box-sizing: border-box;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
 }
 
 .form-control:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 8px var(--neon-glow-accent), inset 0 0 5px var(--accent);
 }
 
 /* Toggle Switch */
@@ -514,9 +583,10 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: #555; /* Darker grey for off state */
     transition: var(--transition);
     border-radius: 20px;
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
 }
 
 .slider:before {
@@ -526,17 +596,20 @@ body {
     width: 16px;
     left: 2px;
     bottom: 2px;
-    background-color: white;
+    background-color: #bbb; /* Lighter grey for thumb */
     transition: var(--transition);
     border-radius: 50%;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 input:checked + .slider {
-    background-color: var(--accent);
+    background-color: var(--primary); /* Primary color for on state */
+    box-shadow: inset 0 0 3px var(--primary), var(--neon-glow-primary);
 }
 
 input:checked + .slider:before {
     transform: translateX(20px);
+    background-color: white; /* White thumb when on */
 }
 
 /* Buttons within settings panel */
@@ -545,17 +618,20 @@ input:checked + .slider:before {
     border-radius: var(--border-radius-sm);
     font-size: 15px;
     font-weight: bold;
+    border: 1px solid transparent; /* Add transparent border for consistency */
 }
 
 .settings-form .btn-danger {
     background: var(--danger);
     border-color: var(--danger);
     color: white;
+    box-shadow: 0 0 10px rgba(213, 0, 0, 0.5); /* Red glow */
 }
 
 .settings-form .btn-danger:hover {
-    background: darken(var(--danger), 10%);
-    border-color: darken(var(--danger), 10%);
+    background: #a00000; /* Darker red */
+    border-color: #a00000;
+    box-shadow: 0 0 15px rgba(213, 0, 0, 0.7);
 }
 
 /* Message Modal */
@@ -565,13 +641,13 @@ input:checked + .slider:before {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    z-index: 1001; /* Above everything */
-    display: flex; /* Always flex to center children */
+    background: rgba(0, 0, 0, 0.75); /* Slightly darker overlay */
+    backdrop-filter: blur(6px);
+    z-index: 1001;
+    display: flex;
     justify-content: center;
     align-items: center;
-    opacity: 0; /* Hidden by default */
+    opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
@@ -582,20 +658,20 @@ input:checked + .slider:before {
 }
 
 .message-modal {
-    background: var(--bg-secondary);
+    background: var(--glass-bg); /* Glass background for modals */
+    backdrop-filter: blur(var(--blur-amount));
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-lg);
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
-    width: 90%; /* Adjusted for better responsiveness */
-    max-width: 500px; /* Max width for typical modals */
+    box-shadow: 0 5px 30px var(--shadow-dark), var(--neon-glow-primary); /* Primary glow for modals */
+    width: 90%;
+    max-width: 500px;
     animation: fadeInScale 0.2s ease-out forwards;
     display: flex;
     flex-direction: column;
-    /* margin: auto;  Removed, flexbox handles centering */
 }
 
 .message-modal.large-modal {
-    max-width: 800px; /* Specific max-width for larger modals like Widget Management */
+    max-width: 800px;
 }
 
 .message-modal-header {
@@ -610,14 +686,15 @@ input:checked + .slider:before {
 .message-modal-header h3 {
     margin: 0;
     font-size: 18px;
-    color: var(--accent);
+    color: var(--primary); /* Primary color for modal titles */
+    text-shadow: 0 0 5px var(--primary);
 }
 
 .message-modal-body {
     padding: 20px;
     color: var(--text-primary);
-    flex-grow: 1; /* Allow body to expand */
-    overflow-y: auto; /* For scrollable content in larger modals */
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
 .message-modal-footer {
@@ -638,26 +715,27 @@ input:checked + .slider:before {
 
 .btn-close-modal:hover {
     color: var(--danger);
+    text-shadow: 0 0 5px var(--danger);
 }
 
 /* Form controls within modals */
 .message-modal .form-control {
-    width: 100%; /* Override default for modal */
+    width: 100%;
     margin-bottom: 10px;
 }
 
 /* IDE Widget Specific Styles */
 .ide-container {
     display: flex;
-    height: 100%; /* Takes full height of expanded-content */
-    background: var(--bg-primary);
+    height: 100%;
+    background: var(--bg-primary); /* Solid dark background for IDE */
     border-radius: var(--border-radius-md);
     overflow: hidden;
 }
 
 .ide-sidebar {
     width: 200px;
-    background: var(--bg-secondary);
+    background: var(--bg-secondary); /* Secondary dark background for sidebar */
     border-right: 1px solid var(--glass-border);
     padding: 10px;
     display: flex;
@@ -696,7 +774,7 @@ input:checked + .slider:before {
 
 .ide-file-tree-item:hover {
     background: rgba(255, 255, 255, 0.08);
-    color: var(--accent);
+    color: var(--primary); /* Primary color on hover */
 }
 
 .ide-file-tree-item i {
@@ -721,13 +799,14 @@ input:checked + .slider:before {
 
 .ide-loading-indicator i {
     margin-right: 5px;
+    color: var(--accent); /* Accent for loading icon */
 }
 
 .ide-editor-area {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    position: relative; /* For status positioning */
+    position: relative;
 }
 
 .ide-editor-header {
@@ -744,6 +823,7 @@ input:checked + .slider:before {
 #ide-current-file-name {
     font-weight: bold;
     flex-grow: 1;
+    color: var(--accent); /* Accent for current file name */
 }
 
 #ide-file-status {
@@ -754,30 +834,31 @@ input:checked + .slider:before {
 }
 
 .ide-status-saved {
-    background-color: rgba(16, 185, 129, 0.2); /* Green transparent */
+    background-color: rgba(0, 200, 83, 0.2); /* Green transparent */
     color: var(--success);
 }
 
 .ide-status-unsaved {
-    background-color: rgba(245, 158, 11, 0.2); /* Yellow transparent */
+    background-color: rgba(255, 179, 0, 0.2); /* Amber transparent */
     color: var(--warning);
 }
 
 .ide-code-editor {
     width: 100%;
     flex-grow: 1;
-    background: #1e1e1e; /* Darker background for code */
+    background: #10101d; /* Even darker background for code editor */
     border: none;
-    color: #d4d4d4; /* Light grey for code */
+    color: #e0e0e0; /* Lighter grey for code for contrast */
     font-family: 'Fira Code', 'Cascadia Code', monospace;
     font-size: 14px;
     padding: 15px;
-    resize: none; /* Disable textarea resize handle */
+    resize: none;
     outline: none;
     line-height: 1.5;
-    white-space: pre; /* Preserve whitespace */
-    word-wrap: normal; /* Prevent word wrapping */
-    overflow-x: auto; /* Enable horizontal scroll for code */
+    white-space: pre;
+    word-wrap: normal;
+    overflow-x: auto;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5); /* Inner shadow for depth */
 }
 
 /* Stats Widget Specific Styles */
@@ -787,12 +868,12 @@ input:checked + .slider:before {
     gap: 15px;
     width: 100%;
     height: 100%;
-    align-content: center; /* Center grid items vertically */
-    justify-content: center; /* Center grid items horizontally */
+    align-content: center;
+    justify-content: center;
 }
 
 .stat-card {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.2); /* Transparent dark background */
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-md);
     padding: 15px;
@@ -802,18 +883,26 @@ input:checked + .slider:before {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3), 0 0 5px rgba(0, 0, 0, 0.3);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4), var(--neon-glow-accent); /* Accent glow on hover */
+    transform: translateY(-2px);
 }
 
 .stat-card i {
     font-size: 24px;
-    color: var(--accent);
+    color: var(--primary); /* Primary color for icons */
+    text-shadow: 0 0 8px var(--primary); /* Neon glow for icons */
 }
 
 .stat-value {
     font-size: 20px;
     font-weight: bold;
     color: var(--text-primary);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
 }
 
 .stat-label {
@@ -826,7 +915,7 @@ input:checked + .slider:before {
 .task-list {
     flex-grow: 1;
     overflow-y: auto;
-    padding-right: 5px; /* For scrollbar */
+    padding-right: 5px;
 }
 
 .task-item {
@@ -835,21 +924,32 @@ input:checked + .slider:before {
     margin-bottom: 10px;
     font-size: 14px;
     color: var(--text-primary);
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-sm);
+    transition: background 0.2s ease;
+}
+
+.task-item:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .task-item input[type="checkbox"] {
     margin-right: 10px;
-    accent-color: var(--accent);
+    accent-color: var(--primary); /* Primary color for checkbox */
+    transform: scale(1.2); /* Slightly larger checkbox */
 }
 
 .task-item.completed label {
     text-decoration: line-through;
     color: var(--text-secondary);
+    opacity: 0.7;
 }
 
 .task-item.urgent {
     color: var(--warning);
     font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 179, 0, 0.4);
 }
 
 .task-input {
@@ -865,20 +965,28 @@ input:checked + .slider:before {
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-sm);
     color: var(--text-primary);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.task-input input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 5px var(--accent), 0 0 5px var(--neon-glow-accent);
 }
 
 .task-input button {
-    background: var(--accent);
+    background: var(--primary); /* Primary button for adding tasks */
     border: none;
     padding: 8px 12px;
     border-radius: var(--border-radius-sm);
     color: white;
     cursor: pointer;
     transition: var(--transition);
+    box-shadow: var(--neon-glow-primary);
 }
 
 .task-input button:hover {
     background: var(--secondary);
+    box-shadow: var(--neon-glow-secondary);
 }
 
 /* Calendar Widget Styles */
@@ -893,7 +1001,8 @@ input:checked + .slider:before {
 .calendar-header h3 {
     margin: 0;
     font-size: 18px;
-    color: var(--accent);
+    color: var(--primary); /* Primary color for calendar month */
+    text-shadow: 0 0 5px var(--primary);
 }
 
 .calendar-header button {
@@ -908,13 +1017,14 @@ input:checked + .slider:before {
 }
 
 .calendar-header button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
 }
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 days a week */
+    grid-template-columns: repeat(7, 1fr);
     gap: 5px;
     font-size: 13px;
     text-align: center;
@@ -929,12 +1039,18 @@ input:checked + .slider:before {
 .day {
     padding: 8px 5px;
     border-radius: 5px;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.15); /* Slightly darker day background */
     color: var(--text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 30px; /* Ensure consistent height */
+    min-height: 30px;
+    transition: background 0.2s ease;
+}
+
+.day:hover:not(.empty):not(.today) {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.05);
 }
 
 .day.empty {
@@ -944,13 +1060,14 @@ input:checked + .slider:before {
 }
 
 .day.today {
-    background: var(--accent);
+    background: var(--primary); /* Primary for today */
     color: white;
     font-weight: bold;
+    box-shadow: var(--neon-glow-primary);
 }
 
 .day.event {
-    border: 1px solid var(--warning);
+    border: 1px solid var(--accent); /* Accent border for events */
     position: relative;
 }
 
@@ -960,8 +1077,9 @@ input:checked + .slider:before {
     bottom: 3px;
     width: 4px;
     height: 4px;
-    background-color: var(--warning);
+    background-color: var(--accent); /* Accent for event dot */
     border-radius: 50%;
+    box-shadow: 0 0 5px var(--accent);
 }
 
 /* Notes Widget Styles */
@@ -971,7 +1089,7 @@ input:checked + .slider:before {
     border-radius: var(--border-radius-sm);
     padding: 15px;
     margin-bottom: 15px;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .note-header {
@@ -984,7 +1102,8 @@ input:checked + .slider:before {
 .note-header h4 {
     margin: 0;
     font-size: 16px;
-    color: var(--accent);
+    color: var(--accent); /* Accent for note title */
+    text-shadow: 0 0 3px var(--accent);
 }
 
 .note-date {
@@ -1015,20 +1134,28 @@ input:checked + .slider:before {
     font-size: 14px;
     min-height: 80px;
     resize: vertical;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.new-note textarea:focus {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 5px var(--accent), 0 0 5px var(--neon-glow-accent);
 }
 
 .new-note button {
-    background: var(--accent);
+    background: var(--primary);
     border: none;
     padding: 10px 15px;
     border-radius: var(--border-radius-sm);
     color: white;
     cursor: pointer;
     transition: var(--transition);
+    box-shadow: var(--neon-glow-primary);
 }
 
 .new-note button:hover {
     background: var(--secondary);
+    box-shadow: var(--neon-glow-secondary);
 }
 
 /* Printers Widget Styles */
@@ -1040,7 +1167,8 @@ input:checked + .slider:before {
 .printers-summary .value {
     font-size: 36px;
     font-weight: bold;
-    color: var(--accent);
+    color: var(--primary); /* Primary for key values */
+    text-shadow: 0 0 10px var(--primary); /* Stronger glow for values */
 }
 
 .printers-summary .label {
@@ -1066,12 +1194,12 @@ input:checked + .slider:before {
     background: rgba(0, 0, 0, 0.1);
 }
 
-.printers-table tr:last-child td {
-    border-bottom: none;
-}
-
 .printers-table tbody tr:hover {
     background: rgba(255, 255, 255, 0.05);
+    color: var(--primary);
+}
+.printers-table tbody tr:hover td {
+    color: var(--primary);
 }
 
 /* Select Customer Widget Styles */
@@ -1080,7 +1208,7 @@ input:checked + .slider:before {
     color: var(--text-primary);
     border-radius: var(--border-radius-md);
     padding: 20px;
-    box-shadow: 0 0 8px var(--shadow-dark);
+    box-shadow: 0 0 10px var(--shadow-dark), inset 0 0 5px var(--shadow-light);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1094,6 +1222,7 @@ input:checked + .slider:before {
     margin-bottom: 10px;
     font-size: 16px;
     color: var(--accent);
+    text-shadow: 0 0 5px var(--accent);
 }
 
 .select-box select {
@@ -1104,14 +1233,23 @@ input:checked + .slider:before {
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-sm);
     font-size: 14px;
-    appearance: none; /* Remove default select arrow */
+    appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23e0e0e0%22%20d%3D%22M287%2C197.6l-131.3%2C131.3c-4.1%2C4.1-9.9%2C6.4-15.8%2C6.4s-11.7-2.3-15.8-6.4L5.4%2C197.6c-8.2-8.2-8.2-21.5%2C0-29.7s21.5-8.2%2C29.7%2C0l116.9%2C116.9l116.9-116.9c8.2-8.2%2C21.5-8.2%2C29.7%2C0S295.2%2C189.4%2C287%2C197.6z%22%2F%3E%3C%2Fsvg%3E');
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23a0a0a0%22%20d%3D%22M287%2C197.6l-131.3%2C131.3c-4.1%2C4.1-9.9%2C6.4-15.8%2C6.4s-11.7-2.3-15.8-6.4L5.4%2C197.6c-8.2-8.2-8.2-21.5%2C0-29.7s21.5-8.2%2C29.7%2C0l116.9%2C116.9l116.9-116.9c8.2-8.2%2C21.5-8.2%2C29.7%2C0S295.2%2C189.4%2C287%2C197.6z%22%2F%3E%3C%2Fsvg%3E'); /* Darker arrow */
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 12px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    transition: var(--transition);
 }
+
+.select-box select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: inset 0 0 5px var(--primary), 0 0 8px var(--neon-glow-primary);
+}
+
 
 /* Widget Management Table */
 .widget-management-table {
@@ -1136,6 +1274,7 @@ input:checked + .slider:before {
 
 .widget-management-table tbody tr:hover {
     background: rgba(255, 255, 255, 0.05);
+    color: var(--primary);
 }
 
 .widget-management-table td i {
@@ -1144,26 +1283,36 @@ input:checked + .slider:before {
 }
 
 .widget-management-table .form-control-small {
-    width: 60px; /* Smaller width for number inputs */
+    width: 60px;
     padding: 5px;
     font-size: 13px;
     text-align: center;
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+.widget-management-table .form-control-small:focus {
+    border-color: var(--primary);
+    box-shadow: inset 0 0 5px var(--primary), 0 0 5px var(--neon-glow-primary);
 }
 
 .widget-management-status {
     font-size: 12px;
     padding: 4px 8px;
     border-radius: 5px;
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(0, 200, 83, 0.2);
     color: var(--success);
 }
 
 .widget-management-status[style*="var(--warning)"] {
-    background: rgba(245, 158, 11, 0.2);
+    background: rgba(255, 179, 0, 0.2);
 }
 
 .widget-management-status[style*="var(--danger)"] {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(213, 0, 0, 0.2);
 }
 
 .btn-deactivate-widget {
@@ -1175,35 +1324,37 @@ input:checked + .slider:before {
     cursor: pointer;
     transition: var(--transition);
     font-size: 12px;
+    box-shadow: 0 0 8px rgba(213, 0, 0, 0.4);
 }
 
 .btn-deactivate-widget:hover {
-    background: darken(var(--danger), 10%);
+    background: #a00000;
+    box-shadow: 0 0 12px rgba(213, 0, 0, 0.6);
 }
 
 /* Responsive Design */
 @media (min-width: 1200px) { /* Desktop */
     .main-content {
-        grid-template-columns: repeat(8, minmax(0, 1fr)); /* 4 full units / 8 half-units */
+        grid-template-columns: repeat(8, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 1199px) and (min-width: 992px) { /* Medium Desktop / Large Tablet */
     .main-content {
-        grid-template-columns: repeat(6, minmax(0, 1fr)); /* 3 full units / 6 half-units */
+        grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 991px) and (min-width: 768px) { /* Small Tablet */
     .main-content {
-        grid-template-columns: repeat(4, minmax(0, 1fr)); /* 2 full units / 4 half-units */
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 767px) { /* Mobile */
     .dashboard {
-        grid-template-columns: 1fr; /* Single column layout */
-        grid-template-rows: var(--header-height) auto 1fr; /* Header, then sidebar, then main content */
+        grid-template-columns: 1fr;
+        grid-template-rows: var(--header-height) auto 1fr;
     }
 
     .header {
@@ -1214,25 +1365,23 @@ input:checked + .slider:before {
     .sidebar {
         grid-column: 1;
         grid-row: 2;
-        width: 100%; /* Full width sidebar */
+        width: 100%;
         border-right: none;
         border-bottom: 1px solid var(--glass-border);
         padding-bottom: 0;
-        max-height: 200px; /* Limit sidebar height on mobile */
+        max-height: 200px;
     }
 
     .main-content {
         grid-column: 1;
         grid-row: 3;
-        grid-template-columns: repeat(2, minmax(0, 1fr)); /* 1 full unit / 2 half-units on mobile */
-        grid-template-rows: auto; /* Auto rows */
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: auto;
         padding: 10px;
     }
 
     .widget {
-        /* On mobile, widgets can still span multiple half-units, but the overall grid is smaller */
-        /* grid-column: span var(--width); will still work as intended relative to the 2-column grid */
-        grid-row: auto; /* Default row span */
+        grid-row: auto;
     }
 
     .settings-panel {
@@ -1250,6 +1399,6 @@ input:checked + .slider:before {
     }
 
     .ide-sidebar {
-        width: 150px; /* Smaller sidebar for IDE on mobile */
+        width: 150px;
     }
 }
