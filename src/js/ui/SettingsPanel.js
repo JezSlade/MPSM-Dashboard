@@ -192,6 +192,7 @@ export function initSettingsPanel() {
             const response = await sendAjaxRequest('api/dashboard.php', 'get_current_settings');
             
             if (response.status === 'success' && response.settings) {
+                // This line is responsible for pretty-printing the JSON
                 const settingsJson = JSON.stringify(response.settings, null, 2); // Pretty print JSON
                 showMessageModal('Current Dashboard Settings', `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; border: 1px solid var(--glass-border); padding: 10px; border-radius: var(--border-radius); background-color: rgba(0,0,0,0.2);">${settingsJson}</pre>`);
             } else {
