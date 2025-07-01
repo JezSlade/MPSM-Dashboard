@@ -22,6 +22,11 @@
     --sidebar-width: 250px;
     --transition: all 0.3s ease-in-out; /* Smooth transitions for UI elements */
     --border-radius: 12px; /* Consistent rounded corners */
+
+    /* Settings Panel Variables for accurate hiding */
+    --settings-panel-base-width: 350px;
+    --settings-panel-padding: 20px;
+    --settings-panel-actual-width: calc(var(--settings-panel-base-width) + (var(--settings-panel-padding) * 2));
 }
 
 /* Base Styles */
@@ -312,6 +317,7 @@ body {
     cursor: default; /* Change cursor when maximized */
     display: flex; /* Ensure flex layout for content */
     flex-direction: column;
+    will-change: transform; /* Hint to browser for optimization */
 }
 
 .widget.maximized .widget-content {
@@ -512,21 +518,22 @@ input:checked + .slider:before {
 .settings-panel {
     position: fixed;
     top: 0;
-    right: -350px; /* Start off-screen */
-    width: 350px;
+    right: 0; /* Align to the right edge */
+    width: var(--settings-panel-base-width); /* Use base width */
     height: 100%;
     background: var(--bg-secondary);
     box-shadow: -10px 0 20px rgba(0, 0, 0, 0.5);
     z-index: 1060;
-    transition: right 0.3s ease-in-out;
+    transform: translateX(var(--settings-panel-actual-width)); /* Hide completely off-screen */
+    transition: transform 0.3s ease-in-out; /* Transition transform */
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: var(--settings-panel-padding); /* Use padding variable */
     overflow-y: auto; /* Allow scrolling for settings content */
 }
 
 .settings-panel.active {
-    right: 0;
+    transform: translateX(0); /* Show it */
 }
 
 .settings-header {
@@ -904,7 +911,7 @@ input:checked + .slider:before {
 
     .settings-panel {
         width: 100%;
-        right: -100%; /* Ensure it slides in from full width */
+        transform: translateX(100%); /* Ensure it slides in from full width */
     }
 
     .widget.maximized {
