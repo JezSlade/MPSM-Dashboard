@@ -226,7 +226,13 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <div class="widget-list">
                     <?php foreach ($available_widgets as $id => $widget): ?>
                     <div class="widget-item" draggable="true" data-widget-id="<?= $id ?>">
-                        <i class="fas fa-<?= $widget['icon'] ?>"></i>
+                        <?php
+$icon = isset($widget['icon']) && preg_match('/^[a-z0-9\-]+$/i', $widget['icon'])
+    ? htmlspecialchars($widget['icon'])
+    : 'cube';
+?>
+<i class="fas fa-<?= $icon ?>"></i>
+
                         <div class="widget-name"><?= $widget['name'] ?></div>
                     </div>
                     <?php endforeach; ?>
