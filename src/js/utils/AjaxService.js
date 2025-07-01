@@ -1,41 +1,52 @@
 // src/js/utils/AjaxService.js
 
 /**
- * Sends an AJAX POST request to a specified endpoint.
- * @param {string} endpoint - The URL of the API endpoint (e.g., 'api/dashboard.php').
- * @param {string} ajaxAction - The specific action for the PHP AJAX handler.
- * @param {Object} data - Data to send with the request.
- * @returns {Promise<Object>} A promise that resolves with the JSON response.
+ * Sends an AJAX request to a specified PHP endpoint.
+ * @param {string} endpoint The URL of the PHP endpoint (e.g., 'api/dashboard.php').
+ * @param {string} action The specific action for the PHP script to perform.
+ * @param {Object} [data={}] Optional data to send with the request.
+ * @returns {Promise<Object>} A promise that resolves with the JSON response from the server.
  */
-export async function sendAjaxRequest(endpoint, ajaxAction, data = {}) {
+export async function sendAjaxRequest(endpoint, action, data = {}) {
     const formData = new FormData();
-    formData.append('ajax_action', ajaxAction);
+    formData.append('ajax_action', action);
+
     for (const key in data) {
-        formData.append(key, data[key]);
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            formData.append(key, data[key]);
+        }
     }
 
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest' // Custom header to identify AJAX requests in PHP
-            },
             body: formData
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            // If HTTP status is not 2xx, throw an error
+            const errorText = await response.text(); // Get raw response text
+            throw new Error(`HTTP error! Status: ${response.status}, Response: ${errorText}`);
         }
-        return await response.json();
+
+        const responseText = await response.text(); // Get response as text first
+        
+        try {
+            const jsonResponse = JSON.parse(responseText); // Attempt to parse as JSON
+            return jsonResponse;
+        } catch (jsonError) {
+            console.error('JSON parsing error:', jsonError);
+            console.error('Raw response text:', responseText);
+            // If JSON parsing fails, return an error object with raw text
+            return {
+                status: 'error',
+                message: `Failed to parse server response as JSON. Raw response: "${responseText.substring(0, 200)}..."`,
+                rawResponse: responseText
+            };
+        }
+
     } catch (error) {
-        console.error('AJAX Error:', error);
-        // Using a global showMessageModal, assuming it's available or imported
-        // For now, let's assume it's imported or passed.
-        // If not, you might need to re-evaluate how errors are displayed.
-        // For this refactor, we'll import it.
-        const MessageModal = await import('../ui/MessageModal.js');
-        MessageModal.showMessageModal('Error', `AJAX request failed: ${error.message}`);
+        console.error('AJAX request failed:', error);
         return { status: 'error', message: error.message };
     }
 }
