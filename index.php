@@ -226,13 +226,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <div class="widget-list">
                     <?php foreach ($available_widgets as $id => $widget): ?>
                     <div class="widget-item" draggable="true" data-widget-id="<?= $id ?>">
-                        <?php
-$icon = isset($widget['icon']) && preg_match('/^[a-z0-9\-]+$/i', $widget['icon'])
-    ? htmlspecialchars($widget['icon'])
-    : 'cube';
-?>
-<i class="fas fa-<?= $icon ?>"></i>
-
+                        <i class="fas fa-<?= $widget['icon'] ?>"></i>
                         <div class="widget-name"><?= $widget['name'] ?></div>
                     </div>
                     <?php endforeach; ?>
@@ -510,3 +504,56 @@ $icon = isset($widget['icon']) && preg_match('/^[a-z0-9\-]+$/i', $widget['icon']
     <script type="module" src="src/js/main.js"></script>
 </body>
 </html>
+
+
+<!-- Injected Analytics Modal -->
+
+<!-- Analytics Modal -->
+<div class="message-modal" id="analytics-modal" style="display: none;">
+    <div class="message-modal-header">
+        <h2>Analytics Dashboard</h2>
+        <button class="btn btn-danger" onclick="closeAnalyticsModal()">×</button>
+    </div>
+    <div class="message-modal-body">
+        <div class="analytics-tabs">
+            <button class="tab-btn" onclick="showAnalyticsTab('usage')">Usage</button>
+            <button class="tab-btn" onclick="showAnalyticsTab('widgets')">Widget Trends</button>
+            <button class="tab-btn" onclick="showAnalyticsTab('api')">API Calls</button>
+            <button class="tab-btn" onclick="showAnalyticsTab('traffic')">Traffic Heatmap</button>
+        </div>
+        <div id="analytics-tab-usage" class="analytics-tab-content">
+            <h3>Usage Statistics</h3>
+            <p>Placeholder chart for user session metrics.</p>
+            <div class="chart-placeholder">[Chart: Session Count]</div>
+        </div>
+        <div id="analytics-tab-widgets" class="analytics-tab-content" style="display: none;">
+            <h3>Widget Usage Trends</h3>
+            <p>Most popular widgets over time.</p>
+            <div class="chart-placeholder">[Chart: Widget Popularity]</div>
+        </div>
+        <div id="analytics-tab-api" class="analytics-tab-content" style="display: none;">
+            <h3>API Calls</h3>
+            <p>Rate and type of API access.</p>
+            <div class="chart-placeholder">[Chart: API Volume]</div>
+        </div>
+        <div id="analytics-tab-traffic" class="analytics-tab-content" style="display: none;">
+            <h3>Traffic Heatmap</h3>
+            <p>Interactive heatmap of user actions.</p>
+            <div class="chart-placeholder">[Map: User Interactions]</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openAnalyticsModal() {
+    document.getElementById('analytics-modal').style.display = 'block';
+}
+function closeAnalyticsModal() {
+    document.getElementById('analytics-modal').style.display = 'none';
+}
+function showAnalyticsTab(id) {
+    const tabs = document.querySelectorAll('.analytics-tab-content');
+    tabs.forEach(tab => tab.style.display = 'none');
+    document.getElementById('analytics-tab-' + id).style.display = 'block';
+}
+</script>
