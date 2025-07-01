@@ -20,13 +20,12 @@ require_once 'helpers.php';
 require_once 'src/php/DashboardManager.php';
 
 // Instantiate DashboardManager
-// IMPORTANT: DYNAMIC_WIDGETS_FILE is no longer a parameter.
-// $available_widgets is now passed directly, which is populated by discover_widgets() in config.php
+// $available_widgets is populated by discover_widgets() in config.php
 $dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, $available_widgets);
 
-// Load current dashboard state (settings + active widgets)
+// Load current dashboard state (settings + widget states)
 $current_dashboard_state = $dashboardManager->loadDashboardState();
-$settings = $current_dashboard_state; // $settings now includes 'widgets_state' with dimensions
+$settings = $current_dashboard_state; // $settings now includes 'widgets_state'
 
 // IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state
 // This ensures session state is synced with persistent state on page load.
@@ -34,21 +33,16 @@ $_SESSION['dashboard_settings'] = $current_dashboard_state;
 
 // The index.php no longer handles POST requests directly for actions.
 // All actions are now handled by dedicated API endpoints via AJAX.
-// This block is left empty as a reminder.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // This part should ideally not be reached for action_type POSTs
     // as AJAX requests are now handled by api/dashboard.php etc.
-    // If a non-AJAX POST comes here, it means a direct form submission
-    // and the page will simply reload with the current state.
-    // For robust handling, you might redirect to GET or show a message.
 }
 
 // Ensure the $settings array used for rendering always reflects the latest state,
 // potentially updated by AJAX and then reloaded via loadDashboardState().
-// This merge ensures default values are applied, then persistent ones, then session ones.
 $settings = array_replace_recursive($dashboardManager->loadDashboardState(), $_SESSION['dashboard_settings'] ?? []);
 
-// Pass available widgets to the view
+// Pass available widgets to the view (used by sidebar Widget Library)
 global $available_widgets; // Ensure $available_widgets from config.php is accessible
 
 ?>
@@ -92,6 +86,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
             <div class="message-modal-body">
                 <form id="widget-dimensions-form">
+                    <!-- Changed from widget_index to widget_id -->
                     <input type="hidden" id="widget-settings-id" name="widget_id">
                     <div class="form-group">
                         <label for="widget-settings-width">Width (Grid Units)</label>
@@ -125,7 +120,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                                 <th>Status</th>
                                 <th>Width</th>
                                 <th>Height</th>
-                                <th>Actions</th>
+                                <th>Active</th>
                             </tr>
                         </thead>
                         <tbody id="widget-management-table-body">
@@ -311,6 +306,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <div class="widget-action action-expand">
                             <i class="fas fa-expand"></i>
                         </div>
+                        <!-- Remove button now triggers deactivation -->
                         <div class="widget-action remove-widget"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                             title="Deactivate widget">

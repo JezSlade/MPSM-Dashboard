@@ -1,126 +1,99 @@
 // src/js/features/WidgetActions.js
 
 import { showMessageModal } from '../ui/MessageModal.js';
-import { showWidgetSettingsModal } from '../ui/WidgetSettingsModal.js';
 import { sendAjaxRequest } from '../utils/AjaxService.js';
-import { initIdeWidget } from './IdeWidget.js'; // Import IDE initialization
-
-const mainContent = document.getElementById('widget-container');
-const expandedOverlay = document.getElementById('widget-expanded-overlay');
-
-// Helper function to toggle widget expansion state
-function toggleWidgetExpansion(widget) {
-    const widgetPlaceholder = widget.querySelector('.widget-placeholder');
-    const expandIcon = widget.querySelector('.action-expand i');
-
-    if (!widget.classList.contains('maximized')) {
-        // MAXIMIZE Logic:
-        if (!widgetPlaceholder) {
-            console.error("Widget placeholder not found!");
-            return;
-        }
-        widgetPlaceholder.dataset.originalParentId = widget.parentNode.id;
-        widgetPlaceholder.dataset.originalIndex = Array.from(widget.parentNode.children).indexOf(widget);
-        widgetPlaceholder.style.display = 'block'; // Make placeholder visible to hold space
-
-        widget.classList.add('maximized');
-        document.body.classList.add('expanded-active');
-        expandedOverlay.classList.add('active');
-        expandedOverlay.appendChild(widget); // Move widget to overlay
-        
-        if (expandIcon) expandIcon.classList.replace('fa-expand', 'fa-compress');
-
-        // NEW: If the expanded widget is the IDE, initialize/refresh its file tree
-        if (widget.dataset.widgetId === 'ide') {
-            initIdeWidget(widget);
-        }
-
-    } else {
-        // MINIMIZE Logic:
-        const originalParent = document.getElementById(widgetPlaceholder.dataset.originalParentId);
-        const originalIndex = parseInt(widgetPlaceholder.dataset.originalIndex);
-
-        if (originalParent && originalParent.children[originalIndex]) {
-            originalParent.insertBefore(widget, originalParent.children[originalIndex]);
-        } else if (originalParent) {
-            originalParent.appendChild(widget);
-        } else {
-            console.error("Original parent not found for widget ID:", widget.id);
-            mainContent.appendChild(widget);
-        }
-
-        widget.classList.remove('maximized');
-        document.body.classList.remove('expanded-active');
-        expandedOverlay.classList.remove('active');
-        if (widgetPlaceholder) {
-            widgetPlaceholder.style.display = 'none';
-        }
-        if (expandIcon) expandIcon.classList.replace('fa-compress', 'fa-expand');
-    }
-}
+import { showWidgetSettingsModal } from '../ui/WidgetSettingsModal.js';
 
 export function initWidgetActions() {
-    // --- Widget Actions (delegated listener on document.body) ---
+    // Delegated event listener for widget actions
     document.body.addEventListener('click', async function(e) {
         const target = e.target.closest('.widget-action');
 
-        if (target) {
-            const widget = target.closest('.widget');
-            if (!widget) return;
+        if (!target) return;
 
-            // Handle Settings Action (Cog Icon) for individual widget
-            if (target.classList.contains('action-settings')) {
-                const widgetName = widget.querySelector('.widget-title span').textContent;
-                const widgetIndex = widget.dataset.widgetIndex;
-                const currentWidth = parseFloat(widget.dataset.currentWidth);
-                const currentHeight = parseFloat(widget.dataset.currentHeight);
+        const widgetElement = target.closest('.widget');
+        if (!widgetElement) return;
 
-                showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight);
+        const widgetId = widgetElement.dataset.widgetId;
+        const widgetName = widgetElement.querySelector('.widget-title span').textContent; // Get name from displayed title
 
-            }
-            // Handle Expand/Shrink Action (Expand Icon)
-            else if (target.classList.contains('action-expand')) {
-                toggleWidgetExpansion(widget);
-            }
-            // Handle Remove Widget Action (Times Icon)
-            else if (target.classList.contains('remove-widget')) {
-                // If the remove button is disabled (due to 'Show All Widgets' mode), do nothing
-                if (target.classList.contains('disabled')) {
-                    showMessageModal('Information', 'This widget cannot be removed in "Show All Widgets" mode.');
-                    return;
+        if (target.classList.contains('action-settings')) {
+            const currentWidth = parseFloat(widgetElement.dataset.currentWidth);
+            const currentHeight = parseFloat(widgetElement.dataset.currentHeight);
+            showWidgetSettingsModal(widgetId, widgetName, currentWidth, currentHeight);
+        } else if (target.classList.contains('action-expand')) {
+            const overlay = document.getElementById('widget-expanded-overlay');
+            if (widgetElement.classList.contains('maximized')) {
+                // Collapse
+                widgetElement.classList.remove('maximized');
+                overlay.classList.remove('active');
+                overlay.style.display = 'none';
+                // Move widget back to its original position (handled by DragDropManager's placeholder)
+                const originalPlaceholder = document.querySelector(`.widget-placeholder[data-original-id="${widgetId}"]`);
+                if (originalPlaceholder && originalPlaceholder.parentNode) {
+                    originalPlaceholder.parentNode.insertBefore(widgetElement, originalPlaceholder);
                 }
+            } else {
+                // Maximize
+                overlay.style.display = 'flex'; // Ensure overlay is visible before transition
+                overlay.classList.add('active');
+                widgetElement.classList.add('maximized');
+                // Temporarily append to body to break out of grid flow for fixed positioning
+                document.body.appendChild(widgetElement);
 
-                const widgetIndex = target.getAttribute('data-index');
-                if (widget.classList.contains('maximized')) {
-                    toggleWidgetExpansion(widget); // Minimize if maximized
-                } else if (widgetIndex !== null && widgetIndex !== undefined) {
-                    showMessageModal(
-                        'Confirm Removal',
-                        'Are you sure you want to remove this widget from the dashboard?',
-                        function() {
-                            // Use AJAX for removal
-                            sendAjaxRequest('api/dashboard.php', 'remove_widget_from_management', { widget_id: widget.dataset.widgetId })
-                                .then(response => {
-                                    if (response.status === 'success') {
-                                        showMessageModal('Success', response.message, () => location.reload(true));
-                                    } else {
-                                        showMessageModal('Error', response.message);
-                                    }
-                                });
-                        }
-                    );
+                // If it's the IDE widget, initialize its content
+                if (widgetId === 'ide') {
+                    // Import IdeWidget dynamically to avoid circular dependencies and only load when needed
+                    const { initIdeWidget } = await import('../features/IdeWidget.js');
+                    initIdeWidget(widgetElement);
                 }
             }
+        } else if (target.classList.contains('remove-widget')) {
+            // This button now deactivates the widget
+            showMessageModal(
+                'Confirm Deactivation',
+                `Are you sure you want to deactivate the widget "${widgetName}"? It will be hidden from the dashboard but can be re-activated via Widget Management.`,
+                async function() {
+                    target.disabled = true; // Disable button during request
+                    target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    const response = await sendAjaxRequest('api/dashboard.php', 'toggle_widget_active_status', {
+                        widget_id: widgetId,
+                        is_active: '0' // Set to inactive
+                    });
+
+                    target.disabled = false;
+                    target.innerHTML = '<i class="fas fa-times"></i>';
+
+                    if (response.status === 'success') {
+                        showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
+                    } else {
+                        showMessageModal('Error', response.message);
+                    }
+                }
+            );
         }
     });
 
-    // Close expanded widget when clicking on the expanded overlay
-    expandedOverlay.addEventListener('click', function(e) {
-        if (e.target === expandedOverlay) {
-            const activeMaximizedWidget = document.querySelector('.widget.maximized');
-            if (activeMaximizedWidget) {
-                toggleWidgetExpansion(activeMaximizedWidget);
+    // Event listener for clicking on the expanded overlay to collapse the widget
+    const widgetExpandedOverlay = document.getElementById('widget-expanded-overlay');
+    if (widgetExpandedOverlay) {
+        widgetExpandedOverlay.addEventListener('click', function(e) {
+            if (e.target === widgetExpandedOverlay) { // Only close if clicking the overlay itself, not the widget
+                const maximizedWidget = document.querySelector('.widget.maximized');
+                if (maximizedWidget) {
+                    maximizedWidget.classList.remove('maximized');
+                    widgetExpandedOverlay.classList.remove('active');
+                    widgetExpandedOverlay.style.display = 'none';
+
+                    // Move widget back to its original position (handled by DragDropManager's placeholder)
+                    const originalId = maximizedWidget.dataset.widgetId;
+                    const originalPlaceholder = document.querySelector(`.widget-placeholder[data-original-id="${originalId}"]`);
+                    if (originalPlaceholder && originalPlaceholder.parentNode) {
+                        originalPlaceholder.parentNode.insertBefore(maximizedWidget, originalPlaceholder);
+                    }
+                }
             }
-        }
-    });
+        });
+    }
 }
