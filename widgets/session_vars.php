@@ -28,7 +28,7 @@ $excluded_keys = ['dashboard_config', 'active_widgets', 'widget_order'];
         <p><em>No relevant session variables set.</em></p>
     <?php endif; ?>
 
-    <h3 class="widget-section-title">Cookies</h3>
+    <h3 class="widget-section-title">Cookieszz</h3>
     <?php if (!empty($_COOKIE)): ?>
         <pre><?= htmlspecialchars(print_r($_COOKIE, true)) ?></pre>
     <?php else: ?>
