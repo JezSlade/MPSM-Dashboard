@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         case 'update_settings': // Handle global settings update
             $settings_from_post = [
-                'title' => $_POST['dashboard_title'] ?? 'Glass Dashboard',
+                'title' => $_POST['dashboard_title'] ?? 'MPS Monitor Dashboard', // Updated default title
                 'accent_color' => $_POST['accent_color'] ?? '#6366f1',
                 'glass_intensity' => (float)($_POST['glass_intensity'] ?? 0.6),
                 'blur_amount' => $_POST['blur_amount'] ?? '10px',
@@ -163,6 +163,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $response = ['status' => 'success', 'message' => 'Settings updated successfully.'];
             } else {
                 $response['message'] = 'Failed to save settings.';
+            }
+            break;
+
+        case 'get_current_settings':
+            // This action is for outputting current settings (for debug/export)
+            $current_dashboard_state = $dashboardManager->loadDashboardState();
+            $response = ['status' => 'success', 'settings' => $current_dashboard_state];
+            break;
+
+        case 'import_settings':
+            $settings_data_json = $_POST['settings_data'] ?? '';
+            $imported_settings = json_decode($settings_data_json, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($imported_settings)) {
+                $response['message'] = 'Invalid JSON format for imported settings.';
+                break;
+            }
+
+            // You might want to add more robust validation here to ensure the imported
+            // settings structure is compatible with your dashboard's expectations.
+            // For now, we'll trust the input given the user's security context.
+
+            if ($dashboardManager->saveDashboardState($imported_settings)) {
+                // After successful import, update session to reflect new state immediately
+                $_SESSION['dashboard_settings'] = $imported_settings;
+                $_SESSION['active_widgets'] = $imported_settings['active_widgets'] ?? [];
+                $response = ['status' => 'success', 'message' => 'Settings imported successfully.'];
+            } else {
+                $response['message'] = 'Failed to save imported settings.';
             }
             break;
 

@@ -238,15 +238,15 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
             <div class="sidebar-section">
                 <div class="section-title">Dashboard Settings</div>
-                <div class="nav-item" id="theme-settings-btn">
-                    <i class="fas fa-palette"></i>
-                    <span>Theme Settings</span>
+                <div class="nav-item" id="general-settings-nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>General Settings</span>
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" id="layout-settings-nav-item">
                     <i class="fas fa-columns"></i>
-                    <span>Layout Options</span>
+                    <span>Layout Settings</span>
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" id="advanced-settings-nav-item">
                     <i class="fas fa-sliders-h"></i>
                     <span>Advanced Settings</span>
                 </div>
@@ -363,111 +363,138 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </button>
         </div>
 
+        <!-- Settings Panel Navigation Tabs -->
+        <div class="settings-tabs">
+            <button class="settings-tab-btn active" data-target="general-settings-section">General</button>
+            <button class="settings-tab-btn" data-target="layout-settings-section">Layout</button>
+            <button class="settings-tab-btn" data-target="advanced-settings-section">Advanced</button>
+        </div>
+
         <form id="global-settings-form" method="post" class="settings-form">
-            <div class="settings-group">
-                <h3 class="settings-title">General Settings</h3>
+            <!-- General Settings Section -->
+            <div class="settings-section active" id="general-settings-section">
+                <div class="settings-group">
+                    <h3 class="settings-title">General Settings</h3>
 
-                <div class="form-group">
-                    <label for="dashboard_title">Dashboard Title</label>
-                    <input type="text" id="dashboard_title" name="dashboard_title"
-                        class="form-control" value="<?= htmlspecialchars($settings['title']) ?>">
+                    <div class="form-group">
+                        <label for="dashboard_title">Dashboard Title</label>
+                        <input type="text" id="dashboard_title" name="dashboard_title"
+                            class="form-control" value="<?= htmlspecialchars($settings['title']) ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accent_color">Accent Color</label>
+                        <input type="color" id="accent_color" name="accent_color"
+                            class="form-control" value="<?= $settings['accent_color'] ?>" style="height: 50px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Enable Animations</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="enable_animations"
+                                <?= $settings['enable_animations'] ? 'checked' : '' ?>>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="accent_color">Accent Color</label>
-                    <input type="color" id="accent_color" name="accent_color"
-                        class="form-control" value="<?= $settings['accent_color'] ?>" style="height: 50px;">
-                </div>
+                <div class="settings-group">
+                    <h3 class="settings-title">Glass Effect</h3>
 
-                <div class="form-group">
-                    <label>Enable Animations</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" name="enable_animations"
-                            <?= $settings['enable_animations'] ? 'checked' : '' ?>>
-                        <span class="slider"></span>
-                    </label>
-                </div>
+                    <div class="form-group">
+                        <label for="glass_intensity">Glass Intensity</label>
+                        <input type="range" id="glass_intensity" name="glass_intensity"
+                            class="form-control" min="0.1" max="0.9" step="0.05"
+                            value="<?= $settings['glass_intensity'] ?>">
+                    </div>
 
-                <!-- NEW: Show All Available Widgets Toggle -->
-                <div class="form-group">
-                    <label>Show All Available Widgets</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" name="show_all_available_widgets" id="show_all_available_widgets"
-                            <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <h3 class="settings-title">Glass Effect</h3>
-
-                <div class="form-group">
-                    <label for="glass_intensity">Glass Intensity</label>
-                    <input type="range" id="glass_intensity" name="glass_intensity"
-                        class="form-control" min="0.1" max="0.9" step="0.05"
-                        value="<?= $settings['glass_intensity'] ?>">
-                </div>
-
-                <div class="form-group">
-                    <label for="blur_amount">Blur Amount</labeSl>
-                    <select id="blur_amount" name="blur_amount" class="form-control">
-                        <option value="5px" <?= $settings['blur_amount'] == '5px' ? 'selected' : '' ?>>Subtle (5px)</option>
-                        <option value="10px" <?= $settings['blur_amount'] == '10px' ? 'selected' : '' ?>>Standard (10px)</option>
-                        <option value="15px" <?= $settings['blur_amount'] == '15px' ? 'selected' : '' ?>>Strong (15px)</option>
-                        <option value="20px" <?= $settings['blur_amount'] == '20px' ? 'selected' : '' ?>>Extra Strong (20px)</option>
-                    </select>
+                    <div class="form-group">
+                        <label for="blur_amount">Blur Amount</labeSl>
+                        <select id="blur_amount" name="blur_amount" class="form-control">
+                            <option value="5px" <?= $settings['blur_amount'] == '5px' ? 'selected' : '' ?>>Subtle (5px)</option>
+                            <option value="10px" <?= $settings['blur_amount'] == '10px' ? 'selected' : '' ?>>Standard (10px)</option>
+                            <option value="15px" <?= $settings['blur_amount'] == '15px' ? 'selected' : '' ?>>Strong (15px)</option>
+                            <option value="20px" <?= $settings['blur_amount'] == '20px' ? 'selected' : '' ?>>Extra Strong (20px)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="settings-group">
-                <h3 class="settings-title">Add Existing Widget</h3>
-
-                <div class="form-group">
-                    <label for="widget_select">Select Widget</label>
-                    <select id="widget_select" name="widget_id" class="form-control">
-                        <?php foreach ($available_widgets as $id => $widget): ?>
-                        <option value="<?= $id ?>"><?= $widget['name'] ?></option>
-                        <?php endforeach; ?>
-                    </select>
+            <!-- Layout Settings Section -->
+            <div class="settings-section" id="layout-settings-section">
+                <div class="settings-group">
+                    <h3 class="settings-title">Widget Layout</h3>
+                    <!-- Show All Available Widgets Toggle -->
+                    <div class="form-group">
+                        <label>Show All Available Widgets</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="show_all_available_widgets" id="show_all_available_widgets"
+                                <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
 
-                <button type="submit" name="add_widget" class="btn btn-primary" id="add-widget-to-dashboard-btn" style="width: 100%;">
-                    <i class="fas fa-plus"></i> Add Widget to Dashboard
-                </button>
-            </div>
-
-            <!-- NEW: Create New Widget Template Button -->
-            <div class="settings-group">
-                <h3 class="settings-title">Create New Widget</h3>
-                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
-                    Generate a new blank widget file ready for your custom code.
-                </p>
-                <button type="button" class="btn btn-primary" id="open-create-widget-modal" style="width: 100%;">
-                    <i class="fas fa-file-code"></i> Create New Widget Template
-                </button>
-            </div>
-
-
-            <div class="settings-group">
-                <h3 class="settings-title">Advanced</h3>
-                <div class="form-group">
-                    <label>Export Configuration</label>
-                    <button class="btn" style="width: 100%;">
-                        <i class="fas fa-download"></i> Download Settings
+                <div class="settings-group">
+                    <h3 class="settings-title">Add Existing Widget</h3>
+                    <div class="form-group">
+                        <label for="widget_select">Select Widget</label>
+                        <select id="widget_select" name="widget_id" class="form-control">
+                            <?php foreach ($available_widgets as $id => $widget): ?>
+                            <option value="<?= $id ?>"><?= $widget['name'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button type="submit" name="add_widget" class="btn btn-primary" id="add-widget-to-dashboard-btn" style="width: 100%;">
+                        <i class="fas fa-plus"></i> Add Widget to Dashboard
                     </button>
                 </div>
 
-                <div class="form-group">
-                    <label>Import Configuration</label>
-                    <input type="file" class="form-control">
-                </div>
-                <!-- NEW: Delete Settings JSON Button -->
-                <div class="form-group">
-                    <label>Reset Dashboard</label>
-                    <button type="button" id="delete-settings-json-btn" class="btn btn-danger" style="width: 100%;">
-                        <i class="fas fa-trash-alt"></i> Delete Settings JSON (Reset All)
+                <!-- Create New Widget Template Button -->
+                <div class="settings-group">
+                    <h3 class="settings-title">Create New Widget</h3>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
+                        Generate a new blank widget file ready for your custom code.
+                    </p>
+                    <button type="button" class="btn btn-primary" id="open-create-widget-modal" style="width: 100%;">
+                        <i class="fas fa-file-code"></i> Create New Widget Template
                     </button>
+                </div>
+            </div>
+
+            <!-- Advanced Settings Section -->
+            <div class="settings-section" id="advanced-settings-section">
+                <div class="settings-group">
+                    <h3 class="settings-title">Advanced Options</h3>
+                    <div class="form-group">
+                        <label>Export Configuration</label>
+                        <button class="btn" id="export-settings-btn" style="width: 100%;">
+                            <i class="fas fa-download"></i> Download Settings
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Import Configuration</label>
+                        <input type="file" class="form-control" id="import-settings-file-input">
+                        <button type="button" class="btn btn-primary" id="import-settings-btn" style="width: 100%; margin-top: 10px;">
+                            <i class="fas fa-upload"></i> Upload Settings
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Output Current Settings (JSON)</label>
+                        <button type="button" class="btn" id="output-settings-json-btn" style="width: 100%;">
+                            <i class="fas fa-code"></i> Show Current Settings
+                        </button>
+                    </div>
+
+                    <!-- Delete Settings JSON Button -->
+                    <div class="form-group">
+                        <label>Reset Dashboard</label>
+                        <button type="button" id="delete-settings-json-btn" class="btn btn-danger" style="width: 100%;">
+                            <i class="fas fa-trash-alt"></i> Delete Settings JSON (Reset All)
+                        </button>
+                    </div>
                 </div>
             </div>
 

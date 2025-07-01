@@ -575,6 +575,60 @@ input:checked + .slider:before {
     transform: none;
 }
 
+/* Settings Tabs */
+.settings-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.settings-tab-btn {
+    flex-grow: 1;
+    padding: 10px 15px;
+    background-color: rgba(25, 25, 40, 0.6);
+    border: 1px solid var(--glass-border);
+    border-bottom: none;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: var(--transition);
+    text-align: center;
+    margin-right: 5px; /* Space between tabs */
+}
+
+.settings-tab-btn:last-child {
+    margin-right: 0;
+}
+
+.settings-tab-btn:hover {
+    background-color: rgba(0, 188, 212, 0.15);
+    color: var(--accent);
+}
+
+.settings-tab-btn.active {
+    background-color: var(--bg-secondary); /* Active tab background */
+    border-color: var(--accent);
+    border-bottom-color: var(--bg-secondary); /* Hide bottom border to merge with section */
+    color: var(--primary);
+    font-weight: bold;
+    box-shadow: 0 -2px 10px rgba(0, 188, 212, 0.3);
+    z-index: 1; /* Bring active tab to front */
+}
+
+/* Settings Sections */
+.settings-section {
+    display: none; /* Hidden by default */
+    flex-direction: column; /* Ensure content flows vertically */
+    flex-grow: 1; /* Take available space */
+    padding-top: 10px; /* Space from tabs */
+}
+
+.settings-section.active {
+    display: flex; /* Show active section */
+}
+
+
 .settings-form {
     flex-grow: 1;
 }
