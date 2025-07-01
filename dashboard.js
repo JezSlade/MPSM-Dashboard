@@ -30,24 +30,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageModalContent = document.getElementById('message-modal-content');
     const closeMessageModalBtn = document.getElementById('close-message-modal');
     const confirmMessageModalBtn = document.getElementById('confirm-message-modal');
-    const cancelMessageModalBtn = document.getElementById('cancel-message-modal'); // New cancel button
 
-    function showMessageModal(title, message, confirmCallback = null, cancelCallback = null) {
-        messageModalTitle.innerHTML = title; // Use innerHTML for potential icons in title
-        messageModalContent.innerHTML = message; // Use innerHTML for potential HTML in message
+    function showMessageModal(title, message, confirmCallback = null) {
+        messageModalTitle.textContent = title;
+        messageModalContent.textContent = message;
         messageModalOverlay.classList.add('active');
-
-        // Show/hide confirm/cancel buttons based on callbacks
-        confirmMessageModalBtn.style.display = confirmCallback ? 'inline-block' : 'none';
-        cancelMessageModalBtn.style.display = cancelCallback ? 'inline-block' : 'none';
 
         // Clear previous event listeners to prevent multiple calls
         const newConfirmBtn = confirmMessageModalBtn.cloneNode(true);
         confirmMessageModalBtn.parentNode.replaceChild(newConfirmBtn, confirmMessageModalBtn);
-        const newCancelBtn = cancelMessageModalBtn.cloneNode(true);
-        cancelMessageModalBtn.parentNode.replaceChild(newCancelBtn, cancelMessageModalBtn);
-        const newCloseBtn = closeMessageModalBtn.cloneNode(true);
-        closeMessageModalBtn.parentNode.replaceChild(newCloseBtn, closeMessageModalBtn);
 
         newConfirmBtn.addEventListener('click', function() {
             messageModalOverlay.classList.remove('active');
@@ -56,21 +47,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        newCancelBtn.addEventListener('click', function() {
-            messageModalOverlay.classList.remove('active');
-            if (cancelCallback) {
-                cancelCallback();
-            }
-        });
-
+        const newCloseBtn = closeMessageModalBtn.cloneNode(true);
+        closeMessageModalBtn.parentNode.replaceChild(newCloseBtn, closeMessageModalBtn);
         newCloseBtn.addEventListener('click', function() {
             messageModalOverlay.classList.remove('active');
         });
     }
 
+
     // --- Widget Settings Modal Elements (for individual widget settings from its header) ---
-    // This modal is now deprecated in favor of the consolidated Widget Management Modal
-    // Keeping the elements and functions for now, but they won't be actively used by the UI.
     const widgetSettingsModalOverlay = document.getElementById('widget-settings-modal-overlay');
     const closeWidgetSettingsModalBtn = document.getElementById('close-widget-settings-modal');
     const widgetSettingsTitle = document.getElementById('widget-settings-modal-title');
@@ -79,68 +64,68 @@ document.addEventListener('DOMContentLoaded', function() {
     const widgetSettingsHeightInput = document.getElementById('widget-settings-height');
     const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
 
-    // Function to show the individual widget settings modal (now largely unused)
+    // Function to show the individual widget settings modal
     function showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight) {
         widgetSettingsTitle.textContent = `Settings for "${widgetName}"`;
         widgetSettingsIndexInput.value = widgetIndex;
         widgetSettingsWidthInput.value = currentWidth;
         widgetSettingsHeightInput.value = currentHeight;
 
-        const showAllWidgetsToggle = document.getElementById('show-all-available-widgets');
+        // Check if "Show All Widgets" mode is active and disable inputs if it is
+        const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
         const isDisabled = showAllWidgetsToggle && showAllWidgetsToggle.checked;
         widgetSettingsWidthInput.disabled = isDisabled;
         widgetSettingsHeightInput.disabled = isDisabled;
         widgetDimensionsForm.querySelector('button[type="submit"]').disabled = isDisabled;
+        widgetDimensionsForm.querySelector('button[type="submit"]').textContent = isDisabled ? 'Disabled in Show All Mode' : 'Save Dimensions';
+
+
         widgetSettingsModalOverlay.classList.add('active');
     }
 
     // Close individual widget settings modal listeners
-    if (closeWidgetSettingsModalBtn) {
-        closeWidgetSettingsModalBtn.addEventListener('click', function() {
+    closeWidgetSettingsModalBtn.addEventListener('click', function() {
+        widgetSettingsModalOverlay.classList.remove('active');
+    });
+    widgetSettingsModalOverlay.addEventListener('click', function(e) {
+        if (e.target === widgetSettingsModalOverlay) {
+            widgetSettingsModalOverlay.classList.remove('active');
+        }
+    });
+
+    // Handle submission of individual widget dimensions form
+    widgetDimensionsForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const widgetIndex = widgetSettingsIndexInput.value;
+        const newWidth = parseFloat(widgetSettingsWidthInput.value); // Parse as float
+        const newHeight = parseFloat(widgetSettingsHeightInput.value); // Parse as float
+
+        // Check if "Show All Widgets" mode is active before submitting
+        const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
+        if (showAllWidgetsToggle && showAllWidgetsToggle.checked) {
+            showMessageModal('Information', 'Widget dimension adjustment is disabled in "Show All Widgets" mode.');
+            widgetSettingsModalOverlay.classList.remove('active'); // Close settings modal
+            return;
+        }
+        
+        // Use AJAX to update a single widget's dimensions
+        sendAjaxRequest('update_single_widget_dimensions', {
+            widget_index: widgetIndex,
+            new_width: newWidth,
+            new_height: newHeight
+        }).then(response => {
+            if (response.status === 'success') {
+                showMessageModal('Success', response.message, () => location.reload()); // Reload on success
+            } else {
+                showMessageModal('Error', response.message);
+            }
             widgetSettingsModalOverlay.classList.remove('active');
         });
-    }
-    if (widgetSettingsModalOverlay) {
-        widgetSettingsModalOverlay.addEventListener('click', function(e) {
-            if (e.target === widgetSettingsModalOverlay) {
-                widgetSettingsModalOverlay.classList.remove('active');
-            }
-        });
-    }
-
-    // Handle submission of individual widget dimensions form (now largely unused)
-    if (widgetDimensionsForm) {
-        widgetDimensionsForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const widgetIndex = widgetSettingsIndexInput.value;
-            const newWidth = parseFloat(widgetSettingsWidthInput.value);
-            const newHeight = parseFloat(widgetSettingsHeightInput.value);
-
-            const showAllWidgetsToggle = document.getElementById('show-all-available-widgets');
-            if (showAllWidgetsToggle && showAllWidgetsToggle.checked) {
-                showMessageModal('Information', 'Widget dimension adjustment is disabled in "Show All Widgets" mode.');
-                widgetSettingsModalOverlay.classList.remove('active');
-                return;
-            }
-            
-            sendAjaxRequest('update_single_widget_dimensions', {
-                widget_index: widgetIndex,
-                new_width: newWidth,
-                new_height: newHeight
-            }).then(response => {
-                if (response.status === 'success') {
-                    showMessageModal('Success', response.message, () => location.reload());
-                } else {
-                    showMessageModal('Error', response.message);
-                }
-                widgetSettingsModalOverlay.classList.remove('active');
-            });
-        });
-    }
+    });
 
 
     // --- Widget Actions (delegated listener on document.body) ---
-    const mainContent = document.querySelector('.grid-stack'); // Changed to .grid-stack
+    const mainContent = document.getElementById('widget-container');
     const expandedOverlay = document.getElementById('widget-expanded-overlay');
 
     document.body.addEventListener('click', function(e) {
@@ -150,224 +135,303 @@ document.addEventListener('DOMContentLoaded', function() {
             const widget = target.closest('.widget');
             if (!widget) return;
 
+            // Handle Settings Action (Cog Icon) for individual widget
+            if (target.classList.contains('action-settings')) {
+                const widgetName = widget.querySelector('.widget-title span').textContent;
+                const widgetIndex = widget.dataset.widgetIndex;
+                const currentWidth = parseFloat(widget.dataset.currentWidth); // Parse as float
+                const currentHeight = parseFloat(widget.dataset.currentHeight); // Parse as float
+
+                showWidgetSettingsModal(widgetName, widgetIndex, currentWidth, currentHeight);
+
+            }
             // Handle Expand/Shrink Action (Expand Icon)
-            if (target.classList.contains('action-expand')) {
+            else if (target.classList.contains('action-expand')) {
                 toggleWidgetExpansion(widget);
+            }
+            // Handle Remove Widget Action (Times Icon)
+            else if (target.classList.contains('remove-widget')) {
+                // If the remove button is disabled (due to 'Show All Widgets' mode), do nothing
+                if (target.classList.contains('disabled')) {
+                    showMessageModal('Information', 'This widget cannot be removed in "Show All Widgets" mode.');
+                    return;
+                }
+
+                const widgetIndex = target.getAttribute('data-index');
+                if (widget.classList.contains('maximized')) {
+                    toggleWidgetExpansion(widget); // Minimize if maximized
+                } else if (widgetIndex !== null && widgetIndex !== undefined) {
+                    showMessageModal(
+                        'Confirm Removal',
+                        'Are you sure you want to remove this widget from the dashboard?',
+                        function() {
+                            submitActionForm('remove_widget', { widget_index: widgetIndex });
+                        }
+                    );
+                }
             }
         }
     });
 
-    // Handle remove button click on the widget header (new direct button)
-    document.body.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.remove-widget-btn');
-        if (removeBtn && removeBtn.closest('.grid-stack-item-content')) {
-            const widget = removeBtn.closest('.grid-stack-item-content');
-            const widgetId = widget.dataset.gsId; // Use data-gs-id for GridStack items
-            const widgetTitle = widget.querySelector('.widget-title span').textContent.trim(); // Get title from span
-
-            showMessageModal(
-                'Confirm Removal',
-                `Are you sure you want to remove "${widgetTitle}" from the dashboard?`,
-                function() {
-                    // Remove from GridStack first
-                    grid.removeWidget(widget.parentNode); // Pass the grid-stack-item element
-                    // Then send AJAX request to persist removal
-                    sendAjaxRequest('remove_widget', { widget_id: widgetId }).then(response => {
-                        if (response.status === 'success') {
-                            showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
-                        } else {
-                            showMessageModal('Error', response.message);
-                        }
-                    });
-                },
-                function() { /* Cancel callback */ }
-            );
-        }
-    });
-
-
-    // Helper function to toggle widget expansion state (for IDE, etc.)
+    // Helper function to toggle widget expansion state
     function toggleWidgetExpansion(widget) {
-        if (!widget) return;
-
-        const gridStackItem = widget.parentNode; // The .grid-stack-item is the actual GridStack element
+        const widgetPlaceholder = widget.querySelector('.widget-placeholder');
+        const expandIcon = widget.querySelector('.action-expand i');
 
         if (!widget.classList.contains('maximized')) {
             // MAXIMIZE Logic:
-            // Store original grid position and size
-            gridStackItem.dataset.originalX = gridStackItem.dataset.gsX;
-            gridStackItem.dataset.originalY = gridStackItem.dataset.gsY;
-            gridStackItem.dataset.originalW = gridStackItem.dataset.gsW;
-            gridStackItem.dataset.originalH = gridStackItem.dataset.gsH;
-
-            // Remove from grid without destroying DOM element
-            grid.removeWidget(gridStackItem, false);
+            // Ensure the placeholder is created and correctly positioned relative to its original parent
+            if (!widgetPlaceholder) {
+                console.error("Widget placeholder not found!");
+                return; // Cannot proceed without placeholder
+            }
+            widgetPlaceholder.dataset.originalParentId = widget.parentNode.id;
+            widgetPlaceholder.dataset.originalIndex = Array.from(widget.parentNode.children).indexOf(widget);
+            widgetPlaceholder.style.display = 'block'; // Make placeholder visible to hold space
 
             widget.classList.add('maximized');
             document.body.classList.add('expanded-active');
             expandedOverlay.classList.add('active');
-            expandedOverlay.appendChild(gridStackItem); // Move grid-stack-item to overlay
+            expandedOverlay.appendChild(widget); // Move widget to overlay
             
-            // If the expanded widget is the IDE, initialize/refresh its file tree
+            if (expandIcon) expandIcon.classList.replace('fa-expand', 'fa-compress');
+
+            // NEW: If the expanded widget is the IDE, initialize/refresh its file tree
             if (widget.dataset.widgetId === 'ide') {
                 initializeIdeWidget(widget);
             }
 
         } else {
             // MINIMIZE Logic:
-            const originalX = parseInt(gridStackItem.dataset.originalX);
-            const originalY = parseInt(gridStackItem.dataset.originalY);
-            const originalW = parseInt(gridStackItem.dataset.originalW);
-            const originalH = parseInt(gridStackItem.dataset.originalH);
+            const originalParent = document.getElementById(widgetPlaceholder.dataset.originalParentId);
+            const originalIndex = parseInt(widgetPlaceholder.dataset.originalIndex);
 
-            // Re-add to grid at original position
-            grid.addWidget(gridStackItem, originalX, originalY, originalW, originalH);
+            if (originalParent && originalParent.children[originalIndex]) {
+                originalParent.insertBefore(widget, originalParent.children[originalIndex]);
+            } else if (originalParent) {
+                originalParent.appendChild(widget);
+            } else {
+                console.error("Original parent not found for widget ID:", widget.id);
+                mainContent.appendChild(widget);
+            }
 
             widget.classList.remove('maximized');
             document.body.classList.remove('expanded-active');
             expandedOverlay.classList.remove('active');
+            if (widgetPlaceholder) { // Check if placeholder exists before trying to hide
+                widgetPlaceholder.style.display = 'none';
+            }
+            if (expandIcon) expandIcon.classList.replace('fa-compress', 'fa-expand');
         }
     }
 
     // Close expanded widget when clicking on the expanded overlay
-    if (expandedOverlay) {
-        expandedOverlay.addEventListener('click', function(e) {
-            if (e.target === expandedOverlay) {
-                const activeMaximizedWidget = document.querySelector('.widget.maximized');
-                if (activeMaximizedWidget) {
-                    toggleWidgetExpansion(activeMaximizedWidget);
-                }
+    expandedOverlay.addEventListener('click', function(e) {
+        if (e.target === expandedOverlay) {
+            const activeMaximizedWidget = document.querySelector('.widget.maximized');
+            if (activeMaximizedWidget) {
+                toggleWidgetExpansion(activeMaximizedWidget);
             }
-        });
-    }
-
-    // --- GridStack.js Initialization and Event Handling ---
-    let grid = null; // Declare grid variable globally or in a scope accessible by event listeners
-
-    function initializeGridStack() {
-        if (grid) {
-            grid.destroy(false); // Destroy existing grid if it exists, don't remove DOM elements
         }
+    });
 
-        grid = GridStack.init({
-            float: true,
-            column: 12, // Use a 12-column grid for finer control (e.g., 0.5 units = 6 columns)
-            cellHeight: '100px', // Base height for a 1.0 height unit
-            margin: 20,
-            disableResize: false,
-            disableDrag: false,
-            handle: '.widget-header', // Drag only by header
-            resizeHandles: 'all' // Resize from all sides
-        });
+    // --- Drag and drop functionality for adding widgets from sidebar ---
+    document.body.addEventListener('dragstart', function(e) {
+        const target = e.target.closest('.widget-item'); // From sidebar
+        if (target) {
+            e.dataTransfer.setData('text/plain', target.dataset.widgetId);
+            e.dataTransfer.effectAllowed = 'copy'; // Indicate copy operation
+        }
+        // Also handle dragstart for reordering existing widgets
+        const widgetOnDashboard = e.target.closest('.widget'); // From dashboard
+        if (widgetOnDashboard && widgetOnDashboard.parentNode === mainContent) { // Ensure it's a direct child of main-content
+            e.dataTransfer.setData('text/plain', widgetOnDashboard.dataset.widgetId);
+            e.dataTransfer.effectAllowed = 'move'; // Indicate move operation
+            widgetOnDashboard.classList.add('dragging'); // Add visual feedback for dragging
+            draggedWidget = widgetOnDashboard; // Store reference to the dragged widget
+        }
+    });
 
-        // Event listener for when widgets are added, removed, or moved
-        grid.on('change', function(event, items) {
-            console.log('GridStack change event:', items);
-            saveWidgetLayout(items);
-        });
+    // Reset dragging class on dragend
+    document.body.addEventListener('dragend', function(e) {
+        if (draggedWidget) {
+            draggedWidget.classList.remove('dragging');
+            draggedWidget = null;
+        }
+    });
 
-        // Add handler for adding widgets from the sidebar to the grid
-        document.querySelectorAll('.widget-item').forEach(item => {
-            item.draggable = true; // Ensure sidebar items are draggable
-        });
 
-        const gridStackEl = document.querySelector('.grid-stack');
-        gridStackEl.addEventListener('dragover', function(e) {
-            e.preventDefault(); // Allow drop
-            e.dataTransfer.dropEffect = 'copy'; // Indicate a copy operation
-            this.classList.add('grid-stack-drag-over'); // Visual feedback
-        });
+    // Drag over main content area for adding new widgets
+    mainContent.addEventListener('dragover', function(e) {
+        e.preventDefault(); // Allow drop
+        const isAddingNewWidget = e.dataTransfer.types.includes('text/plain') && e.dataTransfer.effectAllowed === 'copy';
+        const isReorderingExisting = e.dataTransfer.types.includes('text/plain') && e.dataTransfer.effectAllowed === 'move';
 
-        gridStackEl.addEventListener('dragleave', function() {
-            this.classList.remove('grid-stack-drag-over');
-        });
-
-        gridStackEl.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('grid-stack-drag-over');
-
-            const widgetId = e.dataTransfer.getData('text/plain');
-            if (widgetId) {
-                // Check if the widget is already active on the grid
-                const existingWidget = grid.engine.nodes.find(node => node.id === widgetId);
-                if (existingWidget) {
-                    showMessageModal('Info', `"${widgetId}" is already on the dashboard.`);
-                    return;
+        if (isAddingNewWidget) {
+            this.style.backgroundColor = 'rgba(63, 114, 175, 0.1)'; // Highlight for adding
+        } else if (isReorderingExisting) {
+            // Highlight current target for reordering
+            const targetWidget = e.target.closest('.widget');
+            if (targetWidget && targetWidget !== draggedWidget) {
+                // Determine if dropping before or after the target widget
+                const boundingBox = targetWidget.getBoundingClientRect();
+                const offset = e.clientY - boundingBox.top;
+                if (offset < boundingBox.height / 2) {
+                    targetWidget.style.borderTop = '2px solid var(--accent)';
+                    targetWidget.style.borderBottom = '';
+                } else {
+                    targetWidget.style.borderBottom = '2px solid var(--accent)';
+                    targetWidget.style.borderTop = '';
                 }
-
-                // Get default dimensions from the data attributes of the dragged item from the sidebar
-                const draggedItem = document.querySelector(`.widget-item[data-widget-id="${widgetId}"]`);
-                const defaultWidth = parseFloat(draggedItem.dataset.gsW || 1);
-                const defaultHeight = parseFloat(draggedItem.dataset.gsH || 1);
-
-                // Add widget to the grid. GridStack will try to place it at the drop location,
-                // or find the next available space.
-                const newWidgetNode = grid.addWidget(
-                    `<div class="grid-stack-item" data-gs-id="${widgetId}">
-                        <div class="grid-stack-item-content widget" data-widget-id="${widgetId}">
-                            <div class="widget-header">
-                                <h4 class="widget-title">
-                                    <i class="${draggedItem.querySelector('i').className}"></i>
-                                    <span>${draggedItem.querySelector('.widget-name').textContent}</span>
-                                </h4>
-                                <div class="widget-actions">
-                                    <button class="remove-widget-btn" data-widget-id="${widgetId}" title="Remove from Dashboard"><i class="fas fa-times"></i></button>
-                                </div>
-                            </div>
-                            <div class="widget-content">
-                                <!-- Content will be loaded by PHP on page reload -->
-                                <div style="text-align: center; padding: 20px;">
-                                    <i class="fas fa-spinner fa-spin"></i> Loading widget content...
-                                </div>
-                            </div>
-                        </div>
-                    </div>`,
-                    { w: defaultWidth, h: defaultHeight }
-                );
-
-                // Send AJAX request to PHP to add the widget to the active list persistently
-                sendAjaxRequest('add_widget', { widget_id: widgetId }).then(response => {
-                    if (response.status === 'success') {
-                        // Reload the page to get the actual widget content rendered by PHP
-                        showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
-                    } else {
-                        // If backend fails to add, remove from GridStack frontend
-                        grid.removeWidget(newWidgetNode);
-                        showMessageModal('Error', response.message);
-                    }
-                });
             }
-        });
-    }
-
-    // Call initializeGridStack when DOM is ready
-    initializeGridStack();
-
-
-    // Function to save the current layout of widgets on the dashboard
-    async function saveWidgetLayout(items) {
-        const layoutData = [];
-        grid.engine.nodes.forEach(node => {
-            layoutData.push({
-                id: node.id,
-                x: node.x,
-                y: node.y,
-                width: node.w,
-                height: node.h
+            // Clear previous highlights
+            mainContent.querySelectorAll('.widget').forEach(widget => {
+                if (widget !== targetWidget) {
+                    widget.style.borderTop = '';
+                    widget.style.borderBottom = '';
+                }
             });
+        }
+    });
+
+    mainContent.addEventListener('dragleave', function() {
+        this.style.backgroundColor = ''; // Remove highlight for adding
+        // Clear all reordering highlights
+        mainContent.querySelectorAll('.widget').forEach(widget => {
+            widget.style.borderTop = '';
+            widget.style.borderBottom = '';
+        });
+    });
+
+    // Drop handler for adding new widgets AND reordering existing ones
+    let draggedWidget = null; // Global variable to store the currently dragged widget on the dashboard
+
+    mainContent.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.backgroundColor = ''; // Remove highlight for adding
+        // Clear all reordering highlights
+        mainContent.querySelectorAll('.widget').forEach(widget => {
+            widget.style.borderTop = '';
+            widget.style.borderBottom = '';
         });
 
-        if (layoutData.length > 0) {
-            const response = await sendAjaxRequest('update_widget_layout', {
-                layout: JSON.stringify(layoutData)
+        const widgetId = e.dataTransfer.getData('text/plain');
+        // const newWidgetBtn = document.getElementById('new-widget-btn'); // This button is removed from header
+
+        // Check if it's an "add new widget" drop (from sidebar library)
+        // The disabled check for 'newWidgetBtn' is no longer relevant for drag-and-drop from library
+        // as the library itself is always available.
+        if (e.dataTransfer.effectAllowed === 'copy') {
+            submitActionForm('add_widget', { widget_id: widgetId });
+        } else if (e.dataTransfer.effectAllowed === 'move' && draggedWidget) {
+            // This is a drop for reordering an existing widget
+            const targetWidget = e.target.closest('.widget');
+
+            if (targetWidget && targetWidget !== draggedWidget) {
+                const boundingBox = targetWidget.getBoundingClientRect();
+                const offset = e.clientY - boundingBox.top;
+
+                if (offset < boundingBox.height / 2) {
+                    // Drop before targetWidget
+                    mainContent.insertBefore(draggedWidget, targetWidget);
+                } else {
+                    // Drop after targetWidget
+                    mainContent.insertBefore(draggedWidget, targetWidget.nextSibling);
+                }
+                // Save the new order
+                saveWidgetOrder();
+            } else if (!targetWidget && draggedWidget) {
+                // Dropped into empty space or at the end
+                mainContent.appendChild(draggedWidget);
+                saveWidgetOrder();
+            }
+        }
+    });
+
+    // Function to save the current order of widgets on the dashboard
+    async function saveWidgetOrder() {
+        const orderedWidgetIds = Array.from(mainContent.children)
+                                    .filter(child => child.classList.contains('widget'))
+                                    .map(widget => widget.dataset.widgetId);
+        
+        if (orderedWidgetIds.length > 0) {
+            const response = await sendAjaxRequest('update_widget_order', {
+                order: JSON.stringify(orderedWidgetIds) // Send as JSON string
             });
 
             if (response.status === 'success') {
-                console.log('Widget layout saved successfully.');
+                console.log('Widget order saved successfully.');
+                // Optional: Show a small temporary success message on the dashboard
+                // showMessageModal('Order Saved', 'Widget order updated successfully.', null, 1500);
             } else {
-                console.error('Failed to save widget layout:', response.message);
-                showMessageModal('Error', 'Failed to save widget layout: ' + response.message);
+                console.error('Failed to save widget order:', response.message);
+                showMessageModal('Error', 'Failed to save widget order: ' + response.message);
             }
+        }
+    }
+
+
+    // Helper function to submit POST forms dynamically (for full page reloads)
+    function submitActionForm(actionType, data = {}) {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.style.display = 'none';
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action_type';
+        actionInput.value = actionType;
+        form.appendChild(actionInput);
+
+        for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = key;
+                hiddenInput.value = data[key];
+                form.appendChild(hiddenInput);
+            }
+        }
+
+        document.body.appendChild(form);
+        console.log(`Submitting form for action: ${actionType}`);
+        for (let pair of new FormData(form).entries()) {
+            console.log(`  ${pair[0]}: ${pair[1]}`);
+        }
+        form.submit();
+    }
+
+    // --- AJAX Request Helper ---
+    /**
+     * Sends an AJAX POST request to the server.
+     * @param {string} ajaxAction - The specific action for the PHP AJAX handler.
+     * @param {Object} data - Data to send with the request.
+     * @returns {Promise<Object>} A promise that resolves with the JSON response.
+     */
+    async function sendAjaxRequest(ajaxAction, data = {}) {
+        const formData = new FormData();
+        formData.append('ajax_action', ajaxAction);
+        for (const key in data) {
+            formData.append(key, data[key]);
+        }
+
+        try {
+            const response = await fetch('index.php', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest' // Custom header to identify AJAX requests in PHP
+                },
+                body: formData
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('AJAX Error:', error);
+            showMessageModal('Error', `AJAX request failed: ${error.message}`);
+            return { status: 'error', message: error.message };
         }
     }
 
@@ -589,37 +653,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     dataToSubmit[key] = value;
                 }
             }
-            // Use submitActionForm for full page reload after settings update
             submitActionForm('update_settings', dataToSubmit);
         });
     }
 
-    // Reset Theme to Default button
-    const resetThemeBtn = document.getElementById('reset-theme-btn');
-    if (resetThemeBtn) {
-        resetThemeBtn.addEventListener('click', function() {
-            showMessageModal(
-                'Confirm Theme Reset',
-                'Are you sure you want to reset all theme settings to default?',
-                async function() {
-                    // This will reset title, accent color, glass intensity, blur, animations, header icon
-                    // by deleting the settings JSON and reloading.
-                    const response = await sendAjaxRequest('delete_settings_json');
-                    if (response.status === 'success') {
-                        showMessageModal('Success', response.message + ' Reloading dashboard...', function() {
-                            location.reload(true); // Force a hard reload
-                        });
-                    } else {
-                        showMessageModal('Error', response.message);
-                    }
-                }
-            );
-        });
-    }
-
-
     // Disable/Enable Add Widget button based on 'Show All Widgets' state
-    const showAllWidgetsToggle = document.getElementById('show-all-available-widgets');
+    const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
     const widgetSelect = document.getElementById('widget_select');
     const addWidgetToDashboardBtn = settingsPanel.querySelector('button[name="add_widget"]');
 
@@ -629,8 +668,8 @@ document.addEventListener('DOMContentLoaded', function() {
             widgetSelect.disabled = isDisabled;
             addWidgetToDashboardBtn.disabled = isDisabled;
 
-            // Also update widget settings modal's inputs if it's open (deprecated modal)
-            if (widgetSettingsModalOverlay && widgetSettingsModalOverlay.classList.contains('active')) {
+            // Also update widget settings modal's inputs if it's open
+            if (widgetSettingsModalOverlay.classList.contains('active')) {
                 widgetSettingsWidthInput.disabled = isDisabled;
                 widgetSettingsHeightInput.disabled = isDisabled;
                 widgetDimensionsForm.querySelector('button[type="submit"]').disabled = isDisabled;
@@ -643,7 +682,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showAllWidgetsToggle.addEventListener('change', updateAddRemoveButtonStates);
     }
     updateAddRemoveButtonStates(); // Initial state update on load
-
 
     // --- Delete Settings JSON Button Logic ---
     const deleteSettingsJsonBtn = document.getElementById('delete-settings-json-btn');
@@ -667,194 +705,164 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- Widget Management Panel Logic ---
-    const manageWidgetsBtn = document.getElementById('manage-widgets-btn'); // Changed from nav-item to direct button
-    const widgetManagementModalOverlay = document.getElementById('message-modal-overlay'); // Reusing general message modal
-    const closeWidgetManagementModalBtn = document.getElementById('close-message-modal'); // Reusing general message modal close button
-    const widgetManagementTableBody = document.getElementById('message-modal-content'); // Reusing content area
-    const saveWidgetManagementChangesBtn = document.getElementById('confirm-message-modal'); // Reusing confirm button
+    const widgetManagementNavItem = document.getElementById('widget-management-nav-item');
+    const widgetManagementModalOverlay = document.getElementById('widget-management-modal-overlay');
+    const closeWidgetManagementModalBtn = document.getElementById('close-widget-management-modal');
+    const widgetManagementTableBody = document.getElementById('widget-management-table-body');
+    const saveWidgetManagementChangesBtn = document.getElementById('save-widget-management-changes-btn');
 
-    if (manageWidgetsBtn) {
-        manageWidgetsBtn.addEventListener('click', async function() {
-            // Use the general message modal for widget management
-            showMessageModal(
-                'Widget Management',
-                '<div style="max-height: 400px; overflow-y: auto;"><table class="widget-management-table"><thead><tr><th>ID</th><th>Name</th><th>Icon</th><th>W</th><th>H</th><th>Actions</th></tr></thead><tbody id="widget-management-table-body"><tr><td colspan="6" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading widgets...</td></tr></tbody></table><div class="available-widgets-list" style="margin-top: 20px;"><h4>Available Widgets (Inactive)</h4><p style="text-align: center;">Loading...</p></div></div>',
-                null, // No direct confirm callback for the modal itself, save is handled by specific button
-                null // No direct cancel callback
-            );
-            // Update modal title and buttons for management
-            document.getElementById('message-modal-title').innerHTML = '<i class="fas fa-cogs"></i> Widget Management';
-            document.getElementById('confirm-message-modal').style.display = 'inline-block'; // Show "Save All" button
-            document.getElementById('confirm-message-modal').textContent = 'Save All Changes';
-            document.getElementById('confirm-message-modal').id = 'save-widget-management-changes-btn'; // Change ID temporarily
-            document.getElementById('cancel-message-modal').style.display = 'inline-block'; // Show "Cancel" button
-            document.getElementById('cancel-message-modal').textContent = 'Close';
-            document.getElementById('cancel-message-modal').id = 'close-widget-management-modal-temp'; // Change ID temporarily
+    if (widgetManagementNavItem) {
+        widgetManagementNavItem.addEventListener('click', async function() {
+            widgetManagementModalOverlay.classList.add('active');
+            await loadWidgetManagementTable();
+        });
+    }
 
-            // Re-attach listeners for the new buttons
-            const tempSaveBtn = document.getElementById('save-widget-management-changes-btn');
-            const tempCloseBtn = document.getElementById('close-widget-management-modal-temp');
+    if (closeWidgetManagementModalBtn) {
+        closeWidgetManagementModalBtn.addEventListener('click', function() {
+            widgetManagementModalOverlay.classList.remove('active');
+        });
+    }
 
-            if (tempSaveBtn) {
-                tempSaveBtn.onclick = async function() {
-                    this.disabled = true;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-                    const rows = document.querySelectorAll('#widget-management-table-body tr');
-                    let allSuccess = true;
-                    let messages = [];
-
-                    const layoutUpdates = [];
-
-                    for (const row of rows) {
-                        const widgetId = row.dataset.widgetId;
-                        const nameInput = row.querySelector('.widget-setting-name');
-                        const iconInput = row.querySelector('.widget-setting-icon');
-                        const widthInput = row.querySelector('.widget-setting-width');
-                        const heightInput = row.querySelector('.widget-setting-height');
-                        // const statusSpan = row.querySelector('.widget-management-status'); // Removed status span
-
-                        const newName = nameInput.value;
-                        const newIcon = iconInput.value;
-                        const newWidth = parseFloat(widthInput.value);
-                        const newHeight = parseFloat(heightInput.value);
-
-                        // Collect data for update
-                        layoutUpdates.push({
-                            id: widgetId,
-                            name: newName,
-                            icon: newIcon,
-                            width: newWidth,
-                            height: newHeight
-                        });
-                    }
-
-                    // Send a single AJAX request to update all widget details
-                    const response = await sendAjaxRequest('update_widget_details_batch', {
-                        updates: JSON.stringify(layoutUpdates)
-                    });
-
-                    if (response.status === 'success') {
-                        showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
-                    } else {
-                        showMessageModal('Error', `Failed to save all changes: ${response.message}`);
-                        this.disabled = false;
-                        this.innerHTML = 'Save All Changes';
-                    }
-                };
+    if (widgetManagementModalOverlay) {
+        widgetManagementModalOverlay.addEventListener('click', function(e) {
+            if (e.target === widgetManagementModalOverlay) {
+                widgetManagementModalOverlay.classList.remove('active');
             }
-
-            if (tempCloseBtn) {
-                tempCloseBtn.onclick = function() {
-                    widgetManagementModalOverlay.classList.remove('active');
-                    // Restore original IDs for general message modal buttons
-                    document.getElementById('save-widget-management-changes-btn').id = 'confirm-message-modal';
-                    document.getElementById('close-widget-management-modal-temp').id = 'cancel-message-modal';
-                };
-            }
-
-            await loadWidgetManagementTable(); // Load table content after modal is shown
         });
     }
 
     async function loadWidgetManagementTable() {
-        const tableBody = document.getElementById('widget-management-table-body');
-        const availableWidgetsListDiv = document.querySelector('.available-widgets-list p');
-
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading active widgets...</td></tr>';
-        availableWidgetsListDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading inactive widgets...';
-
-        const response = await sendAjaxRequest('display_widget_settings_modal'); // This AJAX action now returns full HTML
+        widgetManagementTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading widgets...</td></tr>';
         
-        if (response.status === 'success' && response.html) {
-            // Insert the generated HTML directly into the message-modal-content
-            document.getElementById('message-modal-content').innerHTML = response.html;
+        const response = await sendAjaxRequest('get_active_widgets_data');
 
-            // Re-get the table body and available widgets list after HTML insertion
-            const newTableBody = document.getElementById('widget-management-table-body');
-            const newAvailableWidgetsListDiv = document.querySelector('.available-widgets-list');
+        if (response.status === 'success' && response.widgets) {
+            widgetManagementTableBody.innerHTML = ''; // Clear loading message
+            if (response.widgets.length === 0) {
+                widgetManagementTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No active widgets. Add some from Dashboard Settings!</td></tr>';
+            } else {
+                response.widgets.forEach(widget => {
+                    const row = document.createElement('tr');
+                    row.dataset.widgetIndex = widget.index; // Store the original index for saving
+                    row.dataset.widgetId = widget.id; // Store widget ID for deactivation
 
-            // Add event listeners for inputs in the newly loaded table
-            newTableBody.querySelectorAll('.widget-setting-name, .widget-setting-icon, .widget-setting-width, .widget-setting-height').forEach(input => {
-                input.addEventListener('input', function() {
-                    // No need for individual status spans, rely on main save button
-                    document.getElementById('save-widget-management-changes-btn').disabled = false;
+                    row.innerHTML = `
+                        <td><i class="fas fa-${widget.icon}"></i></td>
+                        <td>${widget.name}</td>
+                        <td>Active</td> <!-- All listed here are active -->
+                        <td>
+                            <input type="number" class="widget-width-input form-control-small" value="${widget.width}" min="0.5" max="3" step="0.5" data-original-width="${widget.width}">
+                        </td>
+                        <td>
+                            <input type="number" class="widget-height-input form-control-small" value="${widget.height}" min="0.5" max="4" step="0.5" data-original-height="${widget.height}">
+                        </td>
+                        <td>
+                            <span class="widget-management-status">Saved</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-deactivate-widget" data-widget-id="${widget.id}">
+                                <i class="fas fa-trash-alt"></i> Deactivate
+                            </button>
+                        </td>
+                    `;
+                    widgetManagementTableBody.appendChild(row);
                 });
-            });
 
-            // Add event listeners for 'Remove' buttons in the table
-            newTableBody.querySelectorAll('.remove-widget-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const widgetIdToDeactivate = this.dataset.widgetId;
-                    showMessageModal(
-                        'Confirm Deactivation',
-                        `Are you sure you want to deactivate "${widgetIdToDeactivate}"? It will be removed from your dashboard.`,
-                        async () => {
-                            const response = await sendAjaxRequest('remove_widget', { widget_id: widgetIdToDeactivate });
-                            if (response.status === 'success') {
-                                showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
-                            } else {
-                                showMessageModal('Error', response.message);
+                // Add event listeners for input changes to mark as unsaved
+                widgetManagementTableBody.querySelectorAll('.widget-width-input, .widget-height-input').forEach(input => {
+                    input.addEventListener('input', function() {
+                        const row = this.closest('tr');
+                        const statusSpan = row.querySelector('.widget-management-status');
+                        statusSpan.textContent = 'Unsaved';
+                        statusSpan.style.color = 'var(--warning)';
+                        saveWidgetManagementChangesBtn.disabled = false;
+                    });
+                });
+
+                // Add event listeners for deactivate buttons
+                widgetManagementTableBody.querySelectorAll('.btn-deactivate-widget').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const widgetIdToDeactivate = this.dataset.widgetId;
+                        showMessageModal(
+                            'Confirm Deactivation',
+                            `Are you sure you want to deactivate "${widgetIdToDeactivate}"? It will be removed from your dashboard.`,
+                            async () => {
+                                const response = await sendAjaxRequest('remove_widget_from_management', { widget_id: widgetIdToDeactivate });
+                                if (response.status === 'success') {
+                                    showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
+                                } else {
+                                    showMessageModal('Error', response.message);
+                                }
                             }
-                        },
-                        function() { /* Cancel callback */ }
-                    );
+                        );
+                    });
                 });
-            });
+            }
+        } else {
+            widgetManagementTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 20px;">Error loading widgets: ${response.message}</td></tr>`;
+            showMessageModal('Error', `Failed to load widget data for management: ${response.message}`);
+        }
+        saveWidgetManagementChangesBtn.disabled = true; // Initially disabled
+    }
 
-            // Add event listeners for 'Save' buttons in the table (for individual widget updates)
-            newTableBody.querySelectorAll('.update-widget-details-btn').forEach(button => {
-                button.addEventListener('click', async function() {
-                    const widgetId = this.dataset.widgetId;
-                    const row = this.closest('tr');
-                    const newName = row.querySelector('.widget-setting-name').value;
-                    const newIcon = row.querySelector('.widget-setting-icon').value;
-                    const newWidth = parseFloat(row.querySelector('.widget-setting-width').value);
-                    const newHeight = parseFloat(row.querySelector('.widget-setting-height').value);
+    if (saveWidgetManagementChangesBtn) {
+        saveWidgetManagementChangesBtn.addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-                    this.disabled = true;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            const rows = widgetManagementTableBody.querySelectorAll('tr');
+            let allSuccess = true;
+            let messages = [];
 
-                    const response = await sendAjaxRequest('update_widget_details', {
-                        widget_id: widgetId,
-                        name: newName,
-                        icon: newIcon,
-                        width: newWidth,
-                        height: newHeight
+            for (const row of rows) {
+                const widgetIndex = row.dataset.widgetIndex;
+                const widthInput = row.querySelector('.widget-width-input');
+                const heightInput = row.querySelector('.widget-height-input');
+                const statusSpan = row.querySelector('.widget-management-status');
+
+                const newWidth = parseFloat(widthInput.value); // Parse as float
+                const newHeight = parseFloat(heightInput.value); // Parse as float
+                const originalWidth = parseFloat(widthInput.dataset.originalWidth); // Parse as float
+                const originalHeight = parseFloat(heightInput.dataset.originalHeight); // Parse as float
+
+                // Only save if dimensions have actually changed
+                if (newWidth !== originalWidth || newHeight !== originalHeight) {
+                    statusSpan.textContent = 'Saving...';
+                    statusSpan.style.color = 'var(--info)';
+
+                    const response = await sendAjaxRequest('update_single_widget_dimensions', {
+                        widget_index: widgetIndex,
+                        new_width: newWidth,
+                        new_height: newHeight
                     });
 
                     if (response.status === 'success') {
-                        showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
+                        statusSpan.textContent = 'Saved';
+                        statusSpan.style.color = 'var(--success)';
+                        widthInput.dataset.originalWidth = newWidth; // Update original data
+                        heightInput.dataset.originalHeight = newHeight;
                     } else {
-                        showMessageModal('Error', response.message);
-                        this.disabled = false;
-                        this.innerHTML = '<i class="fas fa-save"></i> Save';
+                        statusSpan.textContent = 'Error';
+                        statusSpan.style.color = 'var(--danger)';
+                        allSuccess = false;
+                        messages.push(`Widget at index ${widgetIndex} failed to save: ${response.message}`);
                     }
-                });
-            });
+                } else {
+                    statusSpan.textContent = 'Saved';
+                    statusSpan.style.color = 'inherit'; // Reset color for unchanged items
+                }
+            }
 
+            this.innerHTML = '<i class="fas fa-save"></i> Save All Widget Changes';
 
-            // Add event listeners for 'Add' buttons in the available widgets list
-            newAvailableWidgetsListDiv.querySelectorAll('.add-widget-btn').forEach(button => {
-                button.addEventListener('click', async function() {
-                    const widgetIdToAdd = this.dataset.widgetId;
-                    const response = await sendAjaxRequest('add_widget', { widget_id: widgetIdToAdd });
-                    if (response.status === 'success') {
-                        showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
-                    } else {
-                        showMessageModal('Error', response.message);
-                    }
-                });
-            });
-
-            document.getElementById('save-widget-management-changes-btn').disabled = true; // Initially disable save all
-        } else {
-            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 20px;">Error loading widgets: ${response.message}</td></tr>`;
-            availableWidgetsListDiv.innerHTML = `<p style="text-align: center; color: var(--danger);">Error loading available widgets: ${response.message}</p>`;
-            showMessageModal('Error', `Failed to load widget data for management: ${response.message}`);
-        }
+            if (allSuccess) {
+                showMessageModal('Success', 'All changes saved. Reloading dashboard...', () => location.reload(true));
+            } else {
+                showMessageModal('Partial Success/Error', 'Some changes could not be saved: ' + messages.join('. ') + ' Reloading dashboard...', () => location.reload(true));
+            }
+        });
     }
-
 
     // --- NEW WIDGET CREATION MODAL LOGIC ---
     const createWidgetModalOverlay = document.getElementById('create-widget-modal-overlay');
@@ -868,9 +876,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset form fields
             createWidgetForm.reset();
             // Set default icon and dimensions (as floats)
-            document.getElementById('new-widget-icon').value = 'fas fa-cube'; // Default icon
-            document.getElementById('new-widget-width').value = '1'; // Default width
-            document.getElementById('new-widget-height').value = '1'; // Default height
+            document.getElementById('new-widget-icon').value = 'cube';
+            document.getElementById('new-widget-width').value = '1.0';
+            document.getElementById('new-widget-height').value = '1.0';
         });
     }
 
@@ -918,52 +926,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await sendAjaxRequest('create_new_widget_template', widgetData);
 
             if (response.status === 'success') {
-                showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true)); // Reload to show new widget in library
+                showMessageModal('Success', response.message, () => location.reload(true)); // Reload to show new widget in library
             } else {
                 showMessageModal('Error', response.message);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-plus"></i> Create Widget Template';
             }
         });
-    }
-
-    // --- AJAX Request Helper ---
-    /**
-     * Sends an AJAX POST request to the server.
-     * @param {string} ajaxAction - The specific action for the PHP AJAX handler.
-     * @param {Object} data - Data to send with the request.
-     * @returns {Promise<Object>} A promise that resolves with the JSON response.
-     */
-    async function sendAjaxRequest(ajaxAction, data = {}) {
-        const formData = new FormData();
-        formData.append('ajax_action', ajaxAction);
-        for (const key in data) {
-            // If data[key] is an object (like the layout array), stringify it
-            if (typeof data[key] === 'object' && data[key] !== null) {
-                formData.append(key, JSON.stringify(data[key]));
-            } else {
-                formData.append(key, data[key]);
-            }
-        }
-
-        try {
-            const response = await fetch('index.php', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Custom header to identify AJAX requests in PHP
-                },
-                body: formData
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('AJAX Error:', error);
-            showMessageModal('Error', `AJAX request failed: ${error.message}`);
-            return { status: 'error', message: error.message };
-        }
     }
 
 });
