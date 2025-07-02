@@ -213,10 +213,10 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </div>
-                <div class="nav-item" onclick="openThemeLibrary()">
+                <div class="nav-item" onclick="openThemeModal()">
                     <i class="fas fa-layer-group"></i>
                     <span>Theme Library</span>
-                </div>
+                </a>
                 <div class="nav-item">
                     <i class="fas fa-users"></i>
                     <span>Users</span>
