@@ -127,6 +127,12 @@ body {
   width: 80%;
   max-width: 900px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  display: none;
+}
+
+.modal.active,
+.theme-modal.active {
+  display: block;
 }
 
 .modal-overlay {
@@ -137,6 +143,11 @@ body {
   height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
   z-index: 999;
+  display: none;
+}
+
+.modal-overlay.active {
+  display: block;
 }
 
 .modal-header {
