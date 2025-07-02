@@ -1,10 +1,17 @@
 <?php
 // widgets/debug_info.php
 
-// Widget configuration
+// Widget Name: Debug Info Stream
+// Widget Icon: fas fa-bug
+// Widget Width: 2.0
+// Widget Height: 2.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'Debug Info Stream',
-    'icon' => 'bug',
+    'icon' => 'bug', // This 'bug' will be overridden by the comment parsing
     'width' => 2,
     'height' => 2
 ];

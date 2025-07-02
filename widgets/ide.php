@@ -1,10 +1,17 @@
 <?php
 // widgets/ide.php
 
-// Widget configuration
+// Widget Name: File Editor (IDE)
+// Widget Icon: fas fa-code
+// Widget Width: 3.0
+// Widget Height: 3.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'File Editor (IDE)',
-    'icon' => 'code',
+    'icon' => 'code', // This 'code' will be overridden by the comment parsing
     'width' => 3,
     'height' => 3
 ];

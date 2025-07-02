@@ -1,9 +1,17 @@
 <?php
 // widgets/calendar.php
 
+// Widget Name: Calendar
+// Widget Icon: fas fa-calendar
+// Widget Width: 1.0
+// Widget Height: 1.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'Calendar',
-    'icon' => 'calendar',
+    'icon' => 'calendar', // This 'calendar' will be overridden by the comment parsing
     'width' => 1,
     'height' => 1
 ];

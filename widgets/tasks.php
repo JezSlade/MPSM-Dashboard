@@ -1,10 +1,17 @@
 <?php
 // widgets/tasks.php
 
-// Widget configuration
+// Widget Name: Task Manager
+// Widget Icon: fas fa-tasks
+// Widget Width: 1.0
+// Widget Height: 2.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'Task Manager',
-    'icon' => 'tasks',
+    'icon' => 'tasks', // This 'tasks' will be overridden by the comment parsing
     'width' => 1,
     'height' => 2
 ];

@@ -1,11 +1,18 @@
 <?php
 // widgets/printers.php
 
-// Widget configuration
+// Widget Name: Printers Status
+// Widget Icon: fas fa-print
+// Widget Width: 1.0
+// Widget Height: 1.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'Printers Status',
-    'icon' => 'print', // Font Awesome icon for printers
-    'width' => 1, // Default size: 1x1
+    'icon' => 'print', // This 'print' will be overridden by the comment parsing
+    'width' => 1,
     'height' => 1
 ];
 

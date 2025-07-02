@@ -1,8 +1,17 @@
 <?php
-// Widget configuration
+// widgets/select_customer.php
+
+// Widget Name: Select Customer
+// Widget Icon: fas fa-users
+// Widget Width: 1.0
+// Widget Height: 1.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name'   => 'Select Customer',
-    'icon'   => 'fa-users',
+    'icon'   => 'fa-users', // This 'fa-users' will be overridden by the comment parsing
     'width'  => 1,
     'height' => 1
 ];

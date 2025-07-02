@@ -13,7 +13,7 @@ class DashboardManager {
         // Define default dashboard state
         $this->defaultDashboardState = [
             'title' => 'MPS Monitor Dashboard',
-            'site_icon' => 'gem',
+            'site_icon' => 'fas fa-gem', // Default site icon now includes 'fas'
             'accent_color' => '#6366f1',
             'glass_intensity' => 0.6,
             'blur_amount' => '10px',
@@ -203,8 +203,11 @@ class DashboardManager {
             return false;
         }
 
+        // MODIFIED: Template content now includes the full Font Awesome class
         $template_content = <<<PHP
 <?php
+// widgets/{$widget_id}.php
+
 // Widget Name: {$widget_name}
 // Widget Icon: {$widget_icon}
 // Widget Width: {$widget_width}

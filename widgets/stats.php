@@ -1,10 +1,17 @@
 <?php
 // widgets/stats.php
 
-// Widget configuration
+// Widget Name: Sales & Revenue
+// Widget Icon: fas fa-chart-line
+// Widget Width: 2.0
+// Widget Height: 1.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'Sales & Revenue',
-    'icon' => 'chart-line',
+    'icon' => 'chart-line', // This 'chart-line' will be overridden by the comment parsing
     'width' => 2,
     'height' => 1
 ];
