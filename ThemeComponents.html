@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Theme Component Library & Icons</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="dashboard.css"> </head>
+<body>
+    <div class="dashboard-container">
+        <main class="main-content">
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <i class="fas fa-icons"></i>
+                        <span>Font Awesome Icons</span>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="search-bar-container">
+                        <input type="text" class="search-input" placeholder="Search icons..." name="search" id="iconSearchInput">
+                        <div class="color-palette">
+                            <div class="color-option active" data-color="default" style="background-color: var(--primary);"></div>
+                            <div class="color-option" data-color="red" style="background-color: #F44336;"></div>
+                            <div class="color-option" data-color="green" style="background-color: #4CAF50;"></div>
+                            <div class="color-option" data-color="yellow" style="background-color: #FFC107;"></div>
+                            <div class="color-option" data-color="magenta" style="background-color: var(--secondary);"></div>
+                        </div>
+                    </div>
+                    <div class="icons-container" id="iconsContainer">
+                        </div>
+                </div>
+            </div>
+
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <i class="fas fa-palette"></i>
+                        <span>Theme Component Library</span>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Buttons</h3>
+                        <button class="btn btn-primary">Primary Button</button>
+                        <button class="btn btn-secondary">Secondary Button</button>
+                        <button class="btn btn-outline">Outline Button</button>
+                        <button class="btn btn-danger">Danger Button</button>
+                        <button class="btn btn-primary flex-row-center">
+                            <i class="fas fa-download mr-2"></i> Download
+                        </button>
+                    </section>
+
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Input Fields</h3>
+                        <input type="text" class="form-control" placeholder="Text Input">
+                        <input type="email" class="form-control" placeholder="Email Input">
+                        <input type="password" class="form-control" placeholder="Password Input">
+                        <select class="form-control">
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                            <option>Option 3</option>
+                        </select>
+                        <label class="checkbox-container">
+                            <input type="checkbox" checked="checked">
+                            <span class="checkmark"></span> Checkbox Label
+                        </label>
+                        <label class="radio-container">
+                            <input type="radio" checked="checked" name="radio">
+                            <span class="radiomark"></span> Radio Label
+                        </label>
+                    </section>
+
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Cards</h3>
+                        <div class="card">
+                            <div class="card-header">Simple Card</div>
+                            <div class="card-body">This is a basic card component. It's used to group related content.</div>
+                        </div>
+                        <div class="card" style="margin-top: 20px;">
+                            <div class="card-header">Card with Icon</div>
+                            <div class="card-body flex-row-center">
+                                <i class="fas fa-info-circle text-2xl mr-3" style="color: var(--accent);"></i>
+                                <span>This card includes an icon for emphasis.</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Badges & Tags</h3>
+                        <span class="badge badge-success">Success</span>
+                        <span class="badge badge-warning">Warning</span>
+                        <span class="badge badge-info">Info</span>
+                        <span class="badge" style="background-color: var(--primary);">Custom Primary</span>
+                        <span class="badge" style="background-color: var(--secondary);">Custom Secondary</span>
+                    </section>
+
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Progress Bars & Loaders</h3>
+                        <p>Default Progress Bar:</p>
+                        <div class="progress-bar"><div class="progress" style="width: 50%;"></div></div>
+                        <p style="margin-top: 20px;">Accent Progress Bar:</p>
+                        <div class="progress-bar"><div class="progress" style="width: 75%; background-color: var(--accent);"></div></div>
+                        <p style="margin-top: 20px;">Loader:</p>
+                        <div class="loader"></div>
+                    </section>
+
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Skeleton Loaders</h3>
+                        <div role="status" class="neomorphic-skeleton">
+                            <div class="neomorphic-skeleton-line" style="width: 80%;"></div>
+                            <div class="neomorphic-skeleton-line" style="width: 60%;"></div>
+                            <div class="neomorphic-skeleton-line" style="width: 90%;"></div>
+                            <div class="neomorphic-skeleton-line" style="width: 70%;"></div>
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="copy-notification" id="copyNotification">
+        Icon class copied to clipboard!
+    </div>
+
+    <script>
+        const fontAwesomeIcons = {
+            'fas fa-home': 'Home', 'fas fa-user': 'User', 'fas fa-search': 'Search',
+            'fas fa-envelope': 'Envelope', 'fas fa-phone': 'Phone', 'fas fa-calendar': 'Calendar',
+            'fas fa-clock': 'Clock', 'fas fa-heart': 'Heart', 'fas fa-star': 'Star',
+            'fas fa-bookmark': 'Bookmark', 'fas fa-thumbs-up': 'Thumbs Up', 'fas fa-thumbs-down': 'Thumbs Down',
+            'fas fa-share': 'Share', 'fas fa-download': 'Download', 'fas fa-upload': 'Upload',
+            'fas fa-print': 'Print', 'fas fa-trash': 'Trash', 'fas fa-edit': 'Edit',
+            'fas fa-save': 'Save', 'fas fa-copy': 'Copy', 'fas fa-cut': 'Cut',
+            'fas fa-paste': 'Paste', 'fas fa-undo': 'Undo', 'fas fa-redo': 'Redo',
+            'fas fa-plus': 'Plus', 'fas fa-minus': 'Minus', 'fas fa-times': 'Times',
+            'fas fa-check': 'Check', 'fas fa-info-circle': 'Info Circle', 'fas fa-exclamation-triangle': 'Exclamation Triangle',
+            'fas fa-question-circle': 'Question Circle', 'fas fa-cog': 'Cog', 'fas fa-bars': 'Bars',
+            'fas fa-th': 'Th', 'fas fa-list': 'List', 'fas fa-tag': 'Tag',
+            'fas fa-shopping-cart': 'Shopping Cart', 'fas fa-credit-card': 'Credit Card', 'fas fa-chart-bar': 'Chart Bar',
+            'fas fa-chart-pie': 'Chart Pie', 'fas fa-map-marker-alt': 'Map Marker Alt', 'fas fa-globe': 'Globe',
+            'fas fa-camera': 'Camera', 'fas fa-image': 'Image', 'fas fa-video': 'Video',
+            'fas fa-music': 'Music', 'fas fa-file': 'File', 'fas fa-folder': 'Folder',
+            'fas fa-lock': 'Lock', 'fas fa-unlock': 'Unlock', 'fas fa-key': 'Key',
+            'fas fa-lightbulb': 'Lightbulb', 'fas fa-bell': 'Bell', 'fas fa-sitemap': 'Sitemap',
+            'fas fa-cloud': 'Cloud', 'fas fa-wifi': 'Wifi', 'fas fa-bluetooth': 'Bluetooth',
+            'fas fa-battery-full': 'Battery Full', 'fas fa-plug': 'Plug', 'fas fa-cogs': 'Cogs',
+            'fas fa-sync-alt': 'Sync Alt', 'fas fa-hourglass-half': 'Hourglass Half', 'fas fa-code': 'Code',
+            'fas fa-terminal': 'Terminal', 'fas fa-bug': 'Bug', 'fas fa-database': 'Database',
+            'fas fa-server': 'Server', 'fas fa-network-wired': 'Network Wired', 'fas fa-ethernet': 'Ethernet',
+            'fas fa-hdd': 'Hdd', 'fas fa-memory': 'Memory', 'fas fa-microchip': 'Microchip',
+            'fas fa-robot': 'Robot', 'fas fa-fingerprint': 'Fingerprint', 'fas fa-shield-alt': 'Shield Alt',
+            'fas fa-car': 'Car', 'fas fa-plane': 'Plane', 'fas fa-ship': 'Ship',
+            'fas fa-truck': 'Truck', 'fas fa-motorcycle': 'Motorcycle', 'fas fa-bicycle': 'Bicycle',
+            'fas fa-bus': 'Bus', 'fas fa-subway': 'Subway', 'fas fa-train': 'Train',
+            'fas fa-taxi': 'Taxi', 'fas fa-truck-pickup': 'Truck Pickup', 'fas fa-trailer': 'Trailer',
+            'fas fa-wrench': 'Wrench', 'fas fa-hammer': 'Hammer', 'fas fa-screwdriver': 'Screwdriver',
+            'fas fa-cut': 'Cut', 'fas fa-ruler': 'Ruler', 'fas fa-compass': 'Compass',
+            'fas fa-brush': 'Brush', 'fas fa-paint-brush': 'Paint Brush', 'fas fa-palette': 'Palette',
+            'fas fa-flask': 'Flask', 'fas fa-atom': 'Atom', 'fas fa-dna': 'Dna',
+            'fas fa-microscope': 'Microscope', 'fas fa-satellite': 'Satellite', 'fas fa-telescope': 'Telescope',
+            'fas fa-rocket': 'Rocket', 'fas fa-space-shuttle': 'Space Shuttle', 'fas fa-meteor': 'Meteor',
+            'fas fa-globe-americas': 'Globe Americas', 'fas fa-globe-asia': 'Globe Asia', 'fas fa-globe-europe': 'Globe Europe',
+            'fas fa-mountain': 'Mountain', 'fas fa-tree': 'Tree', 'fas fa-leaf': 'Leaf',
+            'fas fa-sun': 'Sun', 'fas fa-moon': 'Moon', 'fas fa-cloud-sun': 'Cloud Sun',
+            'fas fa-cloud-moon': 'Cloud Moon', 'fas fa-snowflake': 'Snowflake', 'fas fa-umbrella': 'Umbrella',
+            'fas fa-fire': 'Fire', 'fas fa-water': 'Water', 'fas fa-smog': 'Smog',
+            'fas fa-wind': 'Wind', 'fas fa-brain': 'Brain', 'fas fa-hand-sparkles': 'Hand Sparkles',
+            'fas fa-grin-beam': 'Grin Beam', 'fas fa-poo': 'Poo', 'fas fa-spider': 'Spider',
+            'fas fa-ghost': 'Ghost', 'fas fa-dragon': 'Dragon', 'fas fa-fish': 'Fish',
+            'fas fa-dog': 'Dog', 'fas fa-cat': 'Cat', 'fas fa-dove': 'Dove',
+            'fas fa-crow': 'Crow', 'fas fa-frog': 'Frog', 'fas fa-pastafarianism': 'Pastafarianism',
+            'fas fa-pepper-hot': 'Pepper Hot', 'fas fa-pizza-slice': 'Pizza Slice', 'fas fa-hamburger': 'Hamburger',
+            'fas fa-ice-cream': 'Ice Cream', 'fas fa-cookie-bite': 'Cookie Bite', 'fas fa-coffee': 'Coffee',
+            'fas fa-beer': 'Beer', 'fas fa-wine-glass': 'Wine Glass', 'fas fa-cocktail': 'Cocktail',
+            'fas fa-water': 'Water (duplicate)', 'fas fa-tshirt': 'T-Shirt', 'fas fa-shoe-prints': 'Shoe Prints',
+            'fas fa-socks': 'Socks', 'fas fa-hat-wizard': 'Hat Wizard', 'fas fa-glasses': 'Glasses',
+            'fas fa-tie': 'Tie', 'fas fa-graduation-cap': 'Graduation Cap', 'fas fa-briefcase': 'Briefcase',
+            'fas fa-suitcase': 'Suitcase', 'fas fa-umbrella-beach': 'Umbrella Beach', 'fas fa-faucet': 'Faucet',
+            'fas fa-toilet': 'Toilet', 'fas fa-shower': 'Shower', 'fas fa-bath': 'Bath',
+            'fas fa-door-closed': 'Door Closed', 'fas fa-door-open': 'Door Open', 'fas fa-bed': 'Bed',
+            'fas fa-couch': 'Couch', 'fas fa-chair': 'Chair', 'fas fa-table': 'Table',
+            'fas fa-lamp': 'Lamp', 'fas fa-fan': 'Fan', 'fas fa-tv': 'TV',
+            'fas fa-gamepad': 'Gamepad', 'fas fa-dice': 'Dice', 'fas fa-puzzle-piece': 'Puzzle Piece',
+            'fas fa-chess': 'Chess', 'fas fa-bowling-ball': 'Bowling Ball', 'fas fa-dumbbell': 'Dumbbell',
+            'fas fa-running': 'Running', 'fas fa-swimmer': 'Swimmer', 'fas fa-biking': 'Biking',
+            'fas fa-skating': 'Skating', 'fas fa-skiing': 'Skiing', 'fas fa-snowboarding': 'Snowboarding',
+            'fas fa-baseball-ball': 'Baseball Ball', 'fas fa-basketball-ball': 'Basketball Ball', 'fas fa-football-ball': 'Football Ball',
+            'fas fa-golf-ball': 'Golf Ball', 'fas fa-table-tennis': 'Table Tennis', 'fas fa-volleyball-ball': 'Volleyball Ball',
+            'fas fa-shuttlecock': 'Shuttlecock', 'fas fa-hockey-puck': 'Hockey Puck', 'fas fa-cricket': 'Cricket',
+            'fas fa-quidditch': 'Quidditch', 'fas fa-campground': 'Campground', 'fas fa-mountain-sun': 'Mountain Sun',
+            'fas fa-tent': 'Tent', 'fas fa-person-hiking': 'Person Hiking', 'fas fa-person-biking': 'Person Biking',
+            'fas fa-map': 'Map', 'fas fa-route': 'Route', 'fas fa-plane-departure': 'Plane Departure',
+            'fas fa-plane-arrival': 'Plane Arrival', 'fas fa-luggage-cart': 'Luggage Cart', 'fas fa-hotel': 'Hotel',
+            'fas fa-building': 'Building', 'fas fa-city': 'City', 'fas fa-monument': 'Monument',
+            'fas fa-landmark': 'Landmark', 'fas fa-archway': 'Archway', 'fas fa-bridge': 'Bridge',
+            'fas fa-fountain': 'Fountain', 'fas fa-gopuram': 'Gopuram', 'fas fa-mosque': 'Mosque',
+            'fas fa-church': 'Church', 'fas fa-synagogue': 'Synagogue', 'fas fa-kaaba': 'Kaaba',
+            'fas fa-torii-gate': 'Torii Gate', 'fas fa-yin-yang': 'Yin Yang', 'fas fa-peace': 'Peace',
+            'fas fa-hands-praying': 'Hands Praying', 'fas fa-cross': 'Cross', 'fas fa-star-and-crescent': 'Star and Crescent',
+            'fas fa-dharmachakra': 'Dharmachakra', 'fas fa-ankh': 'Ankh', 'fas fa-atom-alt': 'Atom Alt',
+            'fas fa-infinity': 'Infinity', 'fas fa-gem': 'Gem', 'fas fa-crown': 'Crown',
+            'fas fa-ring': 'Ring', 'fas fa-gift': 'Gift', 'fas fa-box': 'Box',
+            'fas fa-boxes': 'Boxes', 'fas fa-pallet': 'Pallet', 'fas fa-warehouse': 'Warehouse',
+            'fas fa-shipping-fast': 'Shipping Fast', 'fas fa-truck-loading': 'Truck Loading', 'fas fa-truck-moving': 'Truck Moving',
+            'fas fa-dolly': 'Dolly', 'fas fa-pallet-alt': 'Pallet Alt', 'fas fa-box-open': 'Box Open',
+            'fas fa-tape': 'Tape', 'fas fa-ruler-combined': 'Ruler Combined', 'fas fa-compass-alt': 'Compass Alt',
+            'fas fa-location-arrow': 'Location Arrow', 'fas fa-map-pin': 'Map Pin', 'fas fa-directions': 'Directions',
+            'fas fa-road': 'Road', 'fas fa-route-interstate': 'Route Interstate', 'fas fa-sign': 'Sign',
+            'fas fa-traffic-light': 'Traffic Light', 'fas fa-bell-slash': 'Bell Slash', 'fas fa-volume-mute': 'Volume Mute',
+            'fas fa-volume-off': 'Volume Off', 'fas fa-microphone-slash': 'Microphone Slash', 'fas fa-eye-slash': 'Eye Slash',
+            'fas fa-low-vision': 'Low Vision', 'fas fa-closed-captioning': 'Closed Captioning', 'fas fa-ear-deaf': 'Ear Deaf',
+            'fas fa-hands-wash': 'Hands Wash', 'fas fa-hand-holding-medical': 'Hand Holding Medical', 'fas fa-syringe': 'Syringe',
+            'fas fa-pills': 'Pills', 'fas fa-capsules': 'Capsules', 'fas fa-tablets': 'Tablets',
+            'fas fa-first-aid': 'First Aid', 'fas fa-medkit': 'Medkit', 'fas fa-hospital': 'Hospital',
+            'fas fa-clinic-medical': 'Clinic Medical', 'fas fa-house-medical': 'House Medical', 'fas fa-vial': 'Vial',
+            'fas fa-microscope-alt': 'Microscope Alt', 'fas fa-dna-alt': 'Dna Alt', 'fas fa-temperature-high': 'Temperature High',
+            'fas fa-temperature-low': 'Temperature Low', 'fas fa-virus': 'Virus', 'fas fa-virus-slash': 'Virus Slash',
+            'fas fa-viruses': 'Viruses', 'fas fa-bacteria': 'Bacteria', 'fas fa-biohazard': 'Biohazard',
+            'fas fa-head-side-mask': 'Head Side Mask', 'fas fa-lungs-virus': 'Lungs Virus', 'fas fa-hand-holding-heart': 'Hand Holding Heart',
+            'fas fa-heartbeat': 'Heartbeat', 'fas fa-pump-medical': 'Pump Medical', 'fas fa-notes-medical': 'Notes Medical',
+            'fas fa-file-medical': 'File Medical', 'fas fa-prescription': 'Prescription', 'fas fa-prescription-bottle': 'Prescription Bottle',
+            'fas fa-ambulance': 'Ambulance', 'fas fa-truck-medical': 'Truck Medical', 'fas fa-hospital-user': 'Hospital User',
+            'fas fa-procedures': 'Procedures', 'fas fa-bed-pulse': 'Bed Pulse', 'fas fa-weight': 'Weight',
+            'fas fa-person': 'Person', 'fas fa-child': 'Child', 'fas fa-person-dress': 'Person Dress',
+            'fas fa-person-walking': 'Person Walking', 'fas fa-wheelchair': 'Wheelchair', 'fas fa-stethoscope': 'Stethoscope',
+            'fas fa-user-md': 'User Md', 'fas fa-nurse': 'Nurse', 'fas fa-hospital-alt': 'Hospital Alt',
+            'fas fa-building-flag': 'Building Flag', 'fas fa-city-building': 'City Building', 'fas fa-house': 'House',
+            'fas fa-industry': 'Industry', 'fas fa-factory': 'Factory', 'fas fa-warehouse-alt': 'Warehouse Alt',
+            'fas fa-store': 'Store', 'fas fa-shop': 'Shop', 'fas fa-cash-register': 'Cash Register',
+            'fas fa-receipt': 'Receipt', 'fas fa-credit-card-blank': 'Credit Card Blank', 'fas fa-money-bill-wave': 'Money Bill Wave',
+            'fas fa-money-bill-alt': 'Money Bill Alt', 'fas fa-handshake': 'Handshake', 'fas fa-piggy-bank': 'Piggy Bank',
+            'fas fa-chart-line': 'Chart Line', 'fas fa-chart-area': 'Chart Area', 'fas fa-chart-column': 'Chart Column',
+            'fas fa-chart-simple': 'Chart Simple', 'fas fa-circle-dollar-to-slot': 'Circle Dollar To Slot', 'fas fa-sack-dollar': 'Sack Dollar',
+            'fas fa-coins': 'Coins', 'fas fa-piggy-bank-alt': 'Piggy Bank Alt', 'fas fa-wallet': 'Wallet',
+            'fas fa-file-invoice': 'File Invoice', 'fas fa-file-invoice-dollar': 'File Invoice Dollar', 'fas fa-clipboard-list': 'Clipboard List',
+            'fas fa-tasks': 'Tasks', 'fas fa-project-diagram': 'Project Diagram', 'fas fa-sitemap-alt': 'Sitemap Alt',
+            'fas fa-truck-fast': 'Truck Fast', 'fas fa-truck-flatbed': 'Truck Flatbed', 'fas fa-box-tissue': 'Box Tissue',
+            'fas fa-toilet-paper': 'Toilet Paper', 'fas fa-soap': 'Soap', 'fas fa-hand-holding-water': 'Hand Holding Water',
+            'fas fa-faucet-drip': 'Faucet Drip', 'fas fa-dumpster': 'Dumpster', 'fas fa-dumpster-fire': 'Dumpster Fire',
+            'fas fa-recycle': 'Recycle', 'fas fa-tree-city': 'Tree City', 'fas fa-seedling': 'Seedling',
+            'fas fa-solar-panel': 'Solar Panel', 'fas fa-wind-turbine': 'Wind Turbine', 'fas fa-leaf-maple': 'Leaf Maple',
+            'fas fa-globe-stand': 'Globe Stand', 'fas fa-compass-drafting': 'Compass Drafting', 'fas fa-hard-hat': 'Hard Hat',
+            'fas fa-person-digging': 'Person Digging', 'fas fa-road-barrier': 'Road Barrier', 'fas fa-traffic-cone': 'Traffic Cone',
+            'fas fa-cone': 'Cone', 'fas fa-construction': 'Construction', 'fas fa-trowel-bricks': 'Trowel Bricks',
+            'fas fa-helmet-safety': 'Helmet Safety', 'fas fa-fire-extinguisher': 'Fire Extinguisher', 'fas fa-fire-smoke': 'Fire Smoke',
+            'fas fa-house-fire': 'House Fire', 'fas fa-fire-alt': 'Fire Alt', 'fas fa-water-ladder': 'Water Ladder',
+            'fas fa-water-lower': 'Water Lower', 'fas fa-faucet-drip-alt': 'Faucet Drip Alt', 'fas fa-bath-alt': 'Bath Alt',
+            'fas fa-sink': 'Sink', 'fas fa-drain': 'Drain', 'fas fa-hose-fire': 'Hose Fire',
+            'fas fa-sprinkler': 'Sprinkler', 'fas fa-raindrops': 'Raindrops', 'fas fa-cloud-showers-heavy': 'Cloud Showers Heavy',
+            'fas fa-cloud-sun-rain': 'Cloud Sun Rain', 'fas fa-cloud-moon-rain': 'Cloud Moon Rain', 'fas fa-lightning': 'Lightning',
+            'fas fa-tornado': 'Tornado', 'fas fa-hurricane': 'Hurricane', 'fas fa-volcano': 'Volcano',
+            'fas fa-earth-americas': 'Earth Americas', 'fas fa-earth-asia': 'Earth Asia', 'fas fa-earth-europe': 'Earth Europe',
+            'fas fa-globe-ocean': 'Globe Ocean', 'fas fa-mountain-sun-alt': 'Mountain Sun Alt', 'fas fa-tree-deciduous': 'Tree Deciduous',
+            'fas fa-leaf-heart': 'Leaf Heart', 'fas fa-sun-plant-wilt': 'Sun Plant Wilt', 'fas fa-seedling-alt': 'Seedling Alt',
+            'fas fa-seed-of-life': 'Seed Of Life', 'fas fa-atom-simple': 'Atom Simple', 'fas fa-dna-simple': 'Dna Simple',
+            'fas fa-microscope-solid': 'Microscope Solid', 'fas fa-satellite-dish': 'Satellite Dish', 'fas fa-telescope-alt': 'Telescope Alt',
+            'fas fa-rocket-launch': 'Rocket Launch', 'fas fa-space-station': 'Space Station', 'fas fa-meteor-solid': 'Meteor Solid'
+        };
+
+        let currentIconColor = 'var(--primary)'; // Default color
+
+        const iconsContainer = document.getElementById('iconsContainer');
+        const searchInput = document.getElementById('iconSearchInput');
+        const colorPalette = document.querySelector('.color-palette');
+        const copyNotification = document.getElementById('copyNotification');
+
+        function renderIcons(searchTerm = '') {
+            iconsContainer.innerHTML = ''; // Clear existing icons
+            const filteredIcons = Object.keys(fontAwesomeIcons).filter(iconClass => {
+                const iconName = fontAwesomeIcons[iconClass].toLowerCase();
+                return iconClass.toLowerCase().includes(searchTerm.toLowerCase()) || iconName.includes(searchTerm.toLowerCase());
+            });
+
+            if (filteredIcons.length === 0) {
+                iconsContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No icons found for your search.</p>';
+                return;
+            }
+
+            filteredIcons.forEach(iconClass => {
+                const iconName = fontAwesomeIcons[iconClass];
+                const iconItem = document.createElement('div');
+                iconItem.classList.add('icon-item');
+                iconItem.setAttribute('onclick', `copyToClipboard('${iconClass}')`);
+
+                iconItem.innerHTML = `
+                    <i class="${iconClass} icon-display" style="color: ${currentIconColor};"></i>
+                    <div class="icon-class">${iconClass}</div>
+                `;
+                iconsContainer.appendChild(iconItem);
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                showCopyNotification();
+            }).catch(function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        function showCopyNotification() {
+            copyNotification.classList.add('show');
+            setTimeout(() => {
+                copyNotification.classList.remove('show');
+            }, 2000);
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', (event) => {
+            renderIcons(event.target.value);
+        });
+
+        colorPalette.addEventListener('click', (event) => {
+            const targetOption = event.target.closest('.color-option');
+            if (targetOption) {
+                document.querySelectorAll('.color-option').forEach(option => {
+                    option.classList.remove('active');
+                });
+                targetOption.classList.add('active');
+
+                const color = targetOption.dataset.color;
+                switch (color) {
+                    case 'default':
+                        currentIconColor = 'var(--primary)';
+                        break;
+                    case 'red':
+                        currentIconColor = '#F44336';
+                        break;
+                    case 'green':
+                        currentIconColor = '#4CAF50';
+                        break;
+                    case 'yellow':
+                        currentIconColor = '#FFC107';
+                        break;
+                    case 'magenta':
+                        currentIconColor = 'var(--secondary)';
+                        break;
+                    default:
+                        currentIconColor = 'var(--primary)';
+                }
+                renderIcons(searchInput.value);
+            }
+        });
+
+        // Initial render
+        document.addEventListener('DOMContentLoaded', () => {
+            renderIcons();
+        });
+    </script>
+</body>
+</html>

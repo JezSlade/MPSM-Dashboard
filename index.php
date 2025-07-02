@@ -205,7 +205,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </div>
-                <a href="theme_library.html" target="_blank" class="nav-item">
+                <a href="ThemeComponents.html" target="_blank" class="nav-item">
                     <i class="fas fa-layer-group"></i>
                     <span>Theme Library</span>
                 </a>
