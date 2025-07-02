@@ -510,8 +510,9 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     <script type="module" src="src/js/main.js"></script>
 
 <!-- Settings Modal (Canonical Design Reference) -->
-<div id="settings-overlay" class="message-modal-overlay active">
+<div id="settings-overlay" class="message-modal-overlay">
   <div id="settings-panel" class="message-modal large-modal">
+<button id="close-settings" class="modal-close-button" onclick="closeSettingsModal()">×</button>
     <div class="tabs">
       <button class="tab-button" onclick="showTab('design-tab')">Design Components</button>
       <button class="tab-button" onclick="showTab('icons-tab')">Icon Reference</button>
@@ -2919,6 +2920,26 @@ Tailwind's animate-spin utility handles this.
         </section>
 
     </div>
+
+<script>
+function showTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+  document.getElementById(tabId).style.display = 'block';
+}
+
+function closeSettingsModal() {
+  document.getElementById("settings-overlay")?.classList.remove("active");
+}
+
+document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "settings-overlay") {
+    closeSettingsModal();
+  }
+});
+</script>
+
 </body>
 </html>
 
@@ -3318,350 +3339,8 @@ Tailwind's animate-spin utility handles this.
         Icon class copied to clipboard!
     </div>
 
-    <script>
-        const fontAwesomeIcons = {
-            // Solid Icons
-            'fas fa-home': 'Home',
-            'fas fa-user': 'User',
-            'fas fa-search': 'Search',
-            'fas fa-envelope': 'Envelope',
-            'fas fa-phone': 'Phone',
-            'fas fa-calendar': 'Calendar',
-            'fas fa-clock': 'Clock',
-            'fas fa-heart': 'Heart',
-            'fas fa-star': 'Star',
-            'fas fa-bookmark': 'Bookmark',
-            'fas fa-thumbs-up': 'Thumbs Up',
-            'fas fa-thumbs-down': 'Thumbs Down',
-            'fas fa-share': 'Share',
-            'fas fa-download': 'Download',
-            'fas fa-upload': 'Upload',
-            'fas fa-print': 'Print',
-            'fas fa-trash': 'Trash',
-            'fas fa-edit': 'Edit',
-            'fas fa-save': 'Save',
-            'fas fa-copy': 'Copy',
-            'fas fa-cut': 'Cut',
-            'fas fa-paste': 'Paste',
-            'fas fa-undo': 'Undo',
-            'fas fa-redo': 'Redo',
-            'fas fa-plus': 'Plus',
-            'fas fa-minus': 'Minus',
-            'fas fa-times': 'Times',
-            'fas fa-check': 'Check',
-            'fas fa-arrow-left': 'Arrow Left',
-            'fas fa-arrow-right': 'Arrow Right',
-            'fas fa-arrow-up': 'Arrow Up',
-            'fas fa-arrow-down': 'Arrow Down',
-            'fas fa-cog': 'Settings',
-            'fas fa-wrench': 'Wrench',
-            'fas fa-file': 'File',
-            'fas fa-folder': 'Folder',
-            'fas fa-image': 'Image',
-            'fas fa-video': 'Video',
-            'fas fa-music': 'Music',
-            'fas fa-microphone': 'Microphone',
-            'fas fa-camera': 'Camera',
-            'fas fa-map-marker-alt': 'Location',
-            'fas fa-shopping-cart': 'Shopping Cart',
-            'fas fa-credit-card': 'Credit Card',
-            'fas fa-money-bill': 'Money Bill',
-            'fas fa-car': 'Car',
-            'fas fa-plane': 'Plane',
-            'fas fa-train': 'Train',
-            'fas fa-bus': 'Bus',
-            'fas fa-bicycle': 'Bicycle',
-            'fas fa-ship': 'Ship',
-            'fas fa-building': 'Building',
-            'fas fa-hospital': 'Hospital',
-            'fas fa-school': 'School',
-            'fas fa-graduation-cap': 'Graduation Cap',
-            'fas fa-book': 'Book',
-            'fas fa-laptop': 'Laptop',
-            'fas fa-mobile-alt': 'Mobile',
-            'fas fa-tablet-alt': 'Tablet',
-            'fas fa-desktop': 'Desktop',
-            'fas fa-tv': 'TV',
-            'fas fa-gamepad': 'Gamepad',
-            'fas fa-headphones': 'Headphones',
-            'fas fa-keyboard': 'Keyboard',
-            'fas fa-mouse': 'Mouse',
-            'fas fa-battery-full': 'Battery Full',
-            'fas fa-wifi': 'WiFi',
-            'fas fa-signal': 'Signal',
-            'fas fa-bluetooth': 'Bluetooth',
-            'fas fa-cloud': 'Cloud',
-            'fas fa-database': 'Database',
-            'fas fa-server': 'Server',
-            'fas fa-code': 'Code',
-            'fas fa-bug': 'Bug',
-            'fas fa-lock': 'Lock',
-            'fas fa-unlock': 'Unlock',
-            'fas fa-key': 'Key',
-            'fas fa-shield-alt': 'Shield',
-            'fas fa-eye': 'Eye',
-            'fas fa-eye-slash': 'Eye Slash',
+    
 
-            // Regular Icons
-            'far fa-heart': 'Heart (Regular)',
-            'far fa-star': 'Star (Regular)',
-            'far fa-bookmark': 'Bookmark (Regular)',
-            'far fa-thumbs-up': 'Thumbs Up (Regular)',
-            'far fa-thumbs-down': 'Thumbs Down (Regular)',
-            'far fa-clock': 'Clock (Regular)',
-            'far fa-calendar': 'Calendar (Regular)',
-            'far fa-envelope': 'Envelope (Regular)',
-            'far fa-file': 'File (Regular)',
-            'far fa-folder': 'Folder (Regular)',
-            'far fa-image': 'Image (Regular)',
-            'far fa-user': 'User (Regular)',
-            'far fa-eye': 'Eye (Regular)',
-            'far fa-comment': 'Comment (Regular)',
-            'far fa-comments': 'Comments (Regular)',
-            'far fa-bell': 'Bell (Regular)',
-            'far fa-hand-point-up': 'Hand Point Up (Regular)',
-            'far fa-hand-point-down': 'Hand Point Down (Regular)',
-            'far fa-hand-point-left': 'Hand Point Left (Regular)',
-            'far fa-hand-point-right': 'Hand Point Right (Regular)',
-            'far fa-lightbulb': 'Lightbulb (Regular)',
-            'far fa-gem': 'Gem (Regular)',
-            'far fa-moon': 'Moon (Regular)',
-            'far fa-sun': 'Sun (Regular)',
-            'far fa-snowflake': 'Snowflake (Regular)',
-
-            // Brand Icons
-            'fab fa-facebook': 'Facebook',
-            'fab fa-twitter': 'Twitter',
-            'fab fa-instagram': 'Instagram',
-            'fab fa-linkedin': 'LinkedIn',
-            'fab fa-youtube': 'YouTube',
-            'fab fa-github': 'GitHub',
-            'fab fa-google': 'Google',
-            'fab fa-apple': 'Apple',
-            'fab fa-microsoft': 'Microsoft',
-            'fab fa-amazon': 'Amazon',
-            'fab fa-spotify': 'Spotify',
-            'fab fa-paypal': 'PayPal',
-            'fab fa-wordpress': 'WordPress',
-            'fab fa-dropbox': 'Dropbox',
-            'fab fa-skype': 'Skype',
-            'fab fa-slack': 'Slack',
-            'fab fa-discord': 'Discord',
-            'fab fa-whatsapp': 'WhatsApp',
-            'fab fa-telegram': 'Telegram',
-            'fab fa-tiktok': 'TikTok',
-            'fab fa-snapchat': 'Snapchat',
-            'fab fa-pinterest': 'Pinterest',
-            'fab fa-reddit': 'Reddit',
-            'fab fa-twitch': 'Twitch',
-            'fab fa-steam': 'Steam',
-            'fab fa-android': 'Android',
-            'fab fa-firefox': 'Firefox',
-            'fab fa-chrome': 'Chrome',
-            'fab fa-safari': 'Safari',
-            'fab fa-edge': 'Edge',
-            'fab fa-opera': 'Opera'
-        };
-
-        const iconGroupsContainer = document.getElementById('iconGroups');
-        const searchInput = document.getElementById('searchInput');
-        const statsElement = document.getElementById('stats');
-        const totalIconsCountElement = document.getElementById('totalIconsCount');
-        const noResultsElement = document.getElementById('noResults');
-        const colorControls = document.querySelector('.color-controls');
-
-        let currentIconColor = 'var(--primary)'; // Default color
-
-        /**
-         * Copies the given text to the clipboard and shows a notification.
-         * @param {string} text - The text to copy.
-         */
-        function copyToClipboard(text) {
-            document.execCommand('copy'); // Use execCommand for broader compatibility in iframes
-            const tempInput = document.createElement('textarea');
-            tempInput.value = text;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-
-            showCopyNotification();
-        }
-
-        /**
-         * Displays a "copied to clipboard" notification.
-         */
-        function showCopyNotification() {
-            const notification = document.getElementById('copyNotification');
-            notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 2000);
-        }
-
-        /**
-         * Renders the icons based on the search query and current color.
-         * @param {string} searchQuery - The search term.
-         */
-        function renderIcons(searchQuery = '') {
-            const lowerCaseSearchQuery = searchQuery.toLowerCase().trim();
-            let filteredIcons = {};
-
-            if (lowerCaseSearchQuery) {
-                for (const iconClass in fontAwesomeIcons) {
-                    const iconName = fontAwesomeIcons[iconClass];
-                    if (iconName.toLowerCase().includes(lowerCaseSearchQuery) || iconClass.toLowerCase().includes(lowerCaseSearchQuery)) {
-                        filteredIcons[iconClass] = iconName;
-                    }
-                }
-            } else {
-                filteredIcons = { ...fontAwesomeIcons };
-            }
-
-            // Group icons by type
-            const groupedIcons = {
-                'Solid Icons (fas)': {},
-                'Regular Icons (far)': {},
-                'Brand Icons (fab)': {}
-            };
-
-            for (const iconClass in filteredIcons) {
-                const iconName = filteredIcons[iconClass];
-                if (iconClass.startsWith('fas')) {
-                    groupedIcons['Solid Icons (fas)'][iconClass] = iconName;
-                } else if (iconClass.startsWith('far')) {
-                    groupedIcons['Regular Icons (far)'][iconClass] = iconName;
-                } else if (iconClass.startsWith('fab')) {
-                    groupedIcons['Brand Icons (fab)'][iconClass] = iconName;
-                }
-            }
-
-            iconGroupsContainer.innerHTML = ''; // Clear previous icons
-
-            if (Object.keys(filteredIcons).length === 0) {
-                noResultsElement.style.display = 'block';
-                statsElement.style.display = 'none';
-            } else {
-                noResultsElement.style.display = 'none';
-                statsElement.style.display = 'block';
-                totalIconsCountElement.textContent = Object.keys(filteredIcons).length;
-                if (lowerCaseSearchQuery) {
-                    statsElement.querySelector('h3').textContent = `Search Results for "${searchQuery}"`;
-                    statsElement.querySelector('p').innerHTML = `${Object.keys(filteredIcons).length} icons found <a href="#" onclick="clearSearch(); return false;" style="color: var(--primary);">← Clear search</a>`;
-                } else {
-                    statsElement.querySelector('h3').textContent = `Total Icons Available`;
-                    statsElement.querySelector('p').textContent = `${Object.keys(filteredIcons).length} free Font Awesome icons`;
-                }
-
-
-                for (const groupName in groupedIcons) {
-                    const icons = groupedIcons[groupName];
-                    if (Object.keys(icons).length > 0) {
-                        const groupDiv = document.createElement('div');
-                        groupDiv.classList.add('icon-group');
-
-                        const groupTitle = document.createElement('h2');
-                        groupTitle.classList.add('group-title');
-                        groupTitle.innerHTML = `${groupName} <span class="count">${Object.keys(icons).length}</span>`;
-                        groupDiv.appendChild(groupTitle);
-
-                        const iconsGrid = document.createElement('div');
-                        iconsGrid.classList.add('icons-grid');
-
-                        for (const iconClass in icons) {
-                            const iconName = icons[iconClass];
-                            const iconItem = document.createElement('div');
-                            iconItem.classList.add('icon-item');
-                            iconItem.setAttribute('onclick', `copyToClipboard('${iconClass}')`);
-
-                            const iconElement = document.createElement('i');
-                            iconElement.classList.add(...iconClass.split(' '));
-                            iconElement.style.color = currentIconColor; // Apply current color
-                            iconItem.appendChild(iconElement);
-
-                            const nameDiv = document.createElement('div');
-                            nameDiv.classList.add('icon-name');
-                            nameDiv.textContent = iconName;
-                            iconItem.appendChild(nameDiv);
-
-                            const classDiv = document.createElement('div');
-                            classDiv.classList.add('icon-class');
-                            classDiv.textContent = iconClass;
-                            iconItem.appendChild(classDiv);
-
-                            iconsGrid.appendChild(iconItem);
-                        }
-                        groupDiv.appendChild(iconsGrid);
-                        iconGroupsContainer.appendChild(groupDiv);
-                    }
-                }
-            }
-        }
-
-        /**
-         * Clears the search input and re-renders all icons.
-         */
-        function clearSearch() {
-            searchInput.value = '';
-            renderIcons();
-        }
-
-        // Event listener for search input
-        let searchTimeout;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                renderIcons(this.value);
-            }, 300); // Debounce search input
-        });
-
-        // Event listener for color controls
-        colorControls.addEventListener('click', function(event) {
-            const targetOption = event.target.closest('.color-option');
-            if (targetOption) {
-                // Remove active class from all options
-                document.querySelectorAll('.color-option').forEach(option => {
-                    option.classList.remove('active');
-                });
-                // Add active class to the clicked option
-                targetOption.classList.add('active');
-
-                const color = targetOption.dataset.color;
-                switch (color) {
-                    case 'default':
-                        currentIconColor = 'var(--primary)';
-                        break;
-                    case 'red':
-                        currentIconColor = '#F44336';
-                        break;
-                    case 'green':
-                        currentIconColor = '#4CAF50';
-                        break;
-                    case 'yellow':
-                        currentIconColor = '#FFC107';
-                        break;
-                    case 'magenta':
-                        currentIconColor = 'var(--secondary)';
-                        break;
-                    default:
-                        currentIconColor = 'var(--primary)';
-                }
-                // Re-render icons with the new color
-                renderIcons(searchInput.value);
-            }
-        });
-
-        // Initial render of icons when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            renderIcons();
-        });
-    </script>
-</body>
-</html>
-
-    </div>
-  </div>
-</div>
 <script>
 function showTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(tab => {
@@ -3669,6 +3348,44 @@ function showTab(tabId) {
   });
   document.getElementById(tabId).style.display = 'block';
 }
+
+function closeSettingsModal() {
+  document.getElementById("settings-overlay")?.classList.remove("active");
+}
+
+document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "settings-overlay") {
+    closeSettingsModal();
+  }
+});
+</script>
+
+</body>
+</html>
+
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+function showTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+  document.getElementById(tabId).style.display = 'block';
+}
+
+function closeSettingsModal() {
+  document.getElementById("settings-overlay")?.classList.remove("active");
+}
+
+document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "settings-overlay") {
+    closeSettingsModal();
+  }
+});
 </script>
 
 </body>
@@ -3724,34 +3441,7 @@ function showTab(tabId) {
     </div>
 </div>
 
-<script>
-function openThemeModal() {
-    document.getElementById('theme-modal').style.display = 'block';
-}
-function closeThemeModal() {
-    document.getElementById('theme-modal').style.display = 'none';
-}
-</script>
+
 
 <script src="version.js"></script>
-<script>
-window.addEventListener("DOMContentLoaded", () => {
-    if (window.appVersion) {
-        const raw = window.appVersion.split(".").pop();
-        const verInt = parseInt(raw);
-        const v1 = Math.floor(verInt / 100);
-        const v2 = Math.floor((verInt % 100) / 10);
-        const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
-        document.getElementById("ver-1").textContent = v1;
-        document.getElementById("ver-2").textContent = v2;
-        document.getElementById("ver-3").textContent = v3;
-    }
-});
 
-function openThemeModal() {
-    document.getElementById("theme-modal").style.display = 'block';
-}
-function closeThemeModal() {
-    document.getElementById("theme-modal").style.display = 'none';
-}
-</script>
