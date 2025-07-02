@@ -65,7 +65,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     <title><?= htmlspecialchars($settings['title']) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css">
-    <!-- Chart.js CDN for charting widgets -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
         :root {
@@ -87,10 +86,8 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </style>
 </head>
 <body>
-    <!-- New: Overlay for expanded widgets -->
     <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
 
-    <!-- Widget Settings Modal Structure (for single widget dimensions) -->
     <div class="message-modal-overlay" id="widget-settings-modal-overlay">
         <div class="message-modal" id="widget-settings-modal">
             <div class="message-modal-header">
@@ -99,7 +96,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
             <div class="message-modal-body">
                 <form id="widget-dimensions-form">
-                    <!-- Changed from widget_index to widget_id -->
                     <input type="hidden" id="widget-settings-id" name="widget_id">
                     <div class="form-group">
                         <label for="widget-settings-width">Width (Grid Units)</label>
@@ -114,9 +110,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
         </div>
     </div>
-    <!-- END Widget Settings Modal Structure -->
-
-    <!-- NEW: Widget Management Modal Structure (Consolidated Widget Settings) -->
     <div class="message-modal-overlay" id="widget-management-modal-overlay">
         <div class="message-modal large-modal" id="widget-management-modal">
             <div class="message-modal-header">
@@ -137,7 +130,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                             </tr>
                         </thead>
                         <tbody id="widget-management-table-body">
-                            <!-- Widget data will be populated here by JavaScript -->
                             <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading widgets...</td></tr>
                         </tbody>
                     </table>
@@ -148,9 +140,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
         </div>
     </div>
-    <!-- END NEW: Widget Management Modal Structure -->
-
-    <!-- NEW: Create New Widget Modal Structure -->
     <div class="message-modal-overlay" id="create-widget-modal-overlay">
         <div class="message-modal" id="create-widget-modal">
             <div class="message-modal-header">
@@ -186,14 +175,10 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
         </div>
     </div>
-    <!-- END NEW: Create New Widget Modal Structure -->
-
     <div class="dashboard">
-        <!-- Dashboard Header -->
         <header class="header">
             <div class="logo">
                 <div class="logo-icon">
-                    <!-- Use the site_icon setting here -->
                     <i class="fas fa-<?= htmlspecialchars($settings['site_icon'] ?? 'gem') ?>"></i>
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
@@ -213,7 +198,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
         </header>
 
-        <!-- Dashboard Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-section">
                 <div class="section-title">Navigation</div>
@@ -221,10 +205,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </div>
-                <div class="nav-item" onclick="openThemeModal()">
-                    <i class="fas fa-layer-group"></i>
-                    <span>Theme Library</span>
-                </a>
                 <div class="nav-item">
                     <i class="fas fa-users"></i>
                     <span>Users</span>
@@ -264,7 +244,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
         </aside>
 
-        <!-- Main Content Area -->
         <main class="main-content" id="widget-container">
             <?php
             // Filter widgets to render based on 'show_all_available_widgets' and 'is_active'
@@ -296,14 +275,12 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 $current_width_internal = $current_width_user_facing * 2;
                 $current_height_internal = $current_height_user_facing * 2;
             ?>
-            <!-- Widget container, made draggable for reordering -->
             <div class="widget"
                  draggable="true"
                  style="--width: <?= $current_width_internal ?>; --height: <?= $current_height_internal ?>;"
                  data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                  data-current-width="<?= $current_width_user_facing ?>"
                  data-current-height="<?= $current_height_user_facing ?>">
-                <!-- This placeholder div marks the widget's original position in the DOM -->
                 <div class="widget-placeholder" data-original-parent-id="widget-container" data-original-id="<?= htmlspecialchars($widget_id) ?>"></div>
 
                 <div class="widget-header">
@@ -312,7 +289,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <span><?= htmlspecialchars($widget['name']) ?></span>
                     </div>
                     <div class="widget-actions">
-                        <!-- Add data attributes to identify actions -->
                         <div class="widget-action action-settings"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                             data-current-width="<?= $current_width_user_facing ?>"
@@ -323,7 +299,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <div class="widget-action action-expand">
                             <i class="fas fa-expand"></i>
                         </div>
-                        <!-- Remove button now triggers deactivation -->
                         <div class="widget-action remove-widget"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                             title="Deactivate widget">
@@ -339,7 +314,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         </main>
     </div>
 
-    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
     <div class="message-modal-overlay" id="message-modal-overlay">
         <div class="message-modal">
             <div class="message-modal-header">
@@ -356,7 +330,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </div>
 
 
-    <!-- Settings Panel (Global Dashboard Settings) -->
     <div class="overlay" id="settings-overlay"></div>
     <div class="settings-panel" id="settings-panel">
         <div class="settings-header">
@@ -366,7 +339,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </button>
         </div>
 
-        <!-- Settings Panel Navigation Tabs -->
         <div class="settings-tabs">
             <button class="settings-tab-btn active" data-target="general-settings-section">General</button>
             <button class="settings-tab-btn" data-target="layout-settings-section">Layout</button>
@@ -374,7 +346,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         </div>
 
         <form id="global-settings-form" method="post" class="settings-form">
-            <!-- General Settings Section -->
             <div class="settings-section active" id="general-settings-section">
                 <div class="settings-group">
                     <h3 class="settings-title">General Settings</h3>
@@ -429,11 +400,9 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
             </div>
 
-            <!-- Layout Settings Section -->
             <div class="settings-section" id="layout-settings-section">
                 <div class="settings-group">
                     <h3 class="settings-title">Widget Layout</h3>
-                    <!-- Show All Available Widgets Toggle -->
                     <div class="form-group">
                         <label>Show All Available Widgets (Overrides active/inactive status)</label>
                         <label class="toggle-switch">
@@ -454,7 +423,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     </button>
                 </div>
 
-                <!-- Create New Widget Template Button -->
                 <div class="settings-group">
                     <h3 class="settings-title">Create New Widget</h3>
                     <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
@@ -466,7 +434,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
             </div>
 
-            <!-- Advanced Settings Section -->
             <div class="settings-section" id="advanced-settings-section">
                 <div class="settings-group">
                     <h3 class="settings-title">Advanced Options</h3>
@@ -499,7 +466,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         </button>
                     </div>
 
-                    <!-- Delete Settings JSON Button -->
                     <div class="form-group">
                         <label>Reset Dashboard</label>
                         <button type="button" id="delete-settings-json-btn" class="btn btn-danger" style="width: 100%;">
@@ -516,94 +482,22 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </div>
 
     <script type="module" src="src/js/main.js"></script>
-
-<!-- Theme Library Button -->
-<div style="position:fixed;top:20px;right:20px;z-index:999;">
-  <button onclick="openThemeLibrary()" style="padding:10px 20px;border-radius:12px;background-color:#00bcd4;color:white;border:none;box-shadow:0 0 10px #00bcd4;">Theme Library</button>
-</div>
-<script src="src/js/themeLibrary.js"></script>
-
+    <script src="version.js"></script>
+    <script>
+    window.addEventListener("DOMContentLoaded", () => {
+        if (window.appVersion) {
+            const raw = window.appVersion.split(".").pop();
+            const verInt = parseInt(raw);
+            const v1 = Math.floor(verInt / 100);
+            const v2 = Math.floor((verInt % 100) / 10);
+            const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
+            // These elements for ver-1, ver-2, ver-3 are not present in the current HTML.
+            // The version is displayed using a single span for $formattedVersion.
+            // document.getElementById("ver-1").textContent = v1;
+            // document.getElementById("ver-2").textContent = v2;
+            // document.getElementById("ver-3").textContent = v3;
+        }
+    });
+    </script>
 </body>
 </html>
-
-
-
-<!-- Theme Component Library Modal -->
-<div class="message-modal" id="theme-modal" style="display: none;">
-    <div class="message-modal-header">
-        <h2>Theme Component Library</h2>
-        <button class="btn btn-danger" onclick="closeThemeModal()">×</button>
-    </div>
-    <div class="message-modal-body">
-        <section class="theme-demo-block">
-            <h3 class="widget-subtitle">Buttons</h3>
-            <button class="btn btn-primary">Primary Button</button>
-            <button class="btn btn-secondary">Secondary</button>
-            <button class="btn btn-outline">Outline</button>
-            <button class="btn btn-danger">Danger</button>
-        </section>
-
-        <section class="theme-demo-block">
-            <h3 class="widget-subtitle">Input Fields</h3>
-            <input type="text" class="form-control" placeholder="Text input">
-            <input type="password" class="form-control" placeholder="Password">
-            <select class="form-control">
-                <option>Option 1</option>
-                <option>Option 2</option>
-            </select>
-        </section>
-
-        <section class="theme-demo-block">
-            <h3 class="widget-subtitle">Cards</h3>
-            <div class="card">
-                <div class="card-header">Card Title</div>
-                <div class="card-body">This is the body of a neumorphic card.</div>
-            </div>
-        </section>
-
-        <section class="theme-demo-block">
-            <h3 class="widget-subtitle">Badges & Tags</h3>
-            <span class="badge badge-success">Success</span>
-            <span class="badge badge-warning">Warning</span>
-            <span class="badge badge-info">Info</span>
-        </section>
-
-        <section class="theme-demo-block">
-            <h3 class="widget-subtitle">Progress & Loaders</h3>
-            <div class="progress-bar"><div class="progress" style="width: 60%;"></div></div>
-            <div class="loader"></div>
-        </section>
-    </div>
-</div>
-
-<script>
-function openThemeModal() {
-    document.getElementById('theme-modal').style.display = 'block';
-}
-function closeThemeModal() {
-    document.getElementById('theme-modal').style.display = 'none';
-}
-</script>
-
-<script src="version.js"></script>
-<script>
-window.addEventListener("DOMContentLoaded", () => {
-    if (window.appVersion) {
-        const raw = window.appVersion.split(".").pop();
-        const verInt = parseInt(raw);
-        const v1 = Math.floor(verInt / 100);
-        const v2 = Math.floor((verInt % 100) / 10);
-        const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
-        document.getElementById("ver-1").textContent = v1;
-        document.getElementById("ver-2").textContent = v2;
-        document.getElementById("ver-3").textContent = v3;
-    }
-});
-
-function openThemeModal() {
-    document.getElementById("theme-modal").style.display = 'block';
-}
-function closeThemeModal() {
-    document.getElementById("theme-modal").style.display = 'none';
-}
-</script>
