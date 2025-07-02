@@ -213,7 +213,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </div>
-                <div class="nav-item" onclick="openAnalyticsModal()">
+                <div class="nav-item" onclick="openThemeModal()">
                     <i class="fas fa-layer-group"></i>
                     <span>Theme Library</span>
                 </div>
@@ -514,10 +514,10 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
 
 <!-- Theme Component Library Modal -->
-<div class="message-modal" id="analytics-modal" style="display: none;">
+<div class="message-modal" id="theme-modal" style="display: none;">
     <div class="message-modal-header">
         <h2>Theme Component Library</h2>
-        <button class="btn btn-danger" onclick="closeAnalyticsModal()">×</button>
+        <button class="btn btn-danger" onclick="closeThemeModal()">×</button>
     </div>
     <div class="message-modal-body">
         <section class="theme-demo-block">
@@ -562,11 +562,11 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 </div>
 
 <script>
-function openAnalyticsModal() {
-    document.getElementById('analytics-modal').style.display = 'block';
+function openThemeModal() {
+    document.getElementById('theme-modal').style.display = 'block';
 }
-function closeAnalyticsModal() {
-    document.getElementById('analytics-modal').style.display = 'none';
+function closeThemeModal() {
+    document.getElementById('theme-modal').style.display = 'none';
 }
 </script>
 
@@ -584,4 +584,11 @@ window.addEventListener("DOMContentLoaded", () => {
         document.getElementById("ver-3").textContent = v3;
     }
 });
+
+function openThemeModal() {
+    document.getElementById("theme-modal").style.display = 'block';
+}
+function closeThemeModal() {
+    document.getElementById("theme-modal").style.display = 'none';
+}
 </script>
