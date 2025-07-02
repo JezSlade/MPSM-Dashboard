@@ -31,7 +31,7 @@ function render_widget(string $widget_id): string {
  */
 function get_widget_metadata_from_file(string $file_path): array {
     $name = basename($file_path, '.php'); // Default name is filename
-    $icon = 'cube'; // Default icon
+    $icon = 'fas fa-cube'; // Default icon, now including 'fas' prefix
     $width = 1.0; // Default width
     $height = 1.0; // Default height
 
@@ -43,15 +43,16 @@ function get_widget_metadata_from_file(string $file_path): array {
 
         // Look for PHP variable definitions or comments like:
         // // Widget Name: Sales & Revenue
-        // // Widget Icon: chart-line
+        // // Widget Icon: fas fa-chart-line  <-- Now capturing the full class
         // // Widget Width: 2
-        // // Widget Height: 1
+        // // // Widget Height: 1
 
         if (preg_match('/Widget Name:\s*(.+)/i', $content, $matches)) {
             $name = trim($matches[1]);
         }
-        if (preg_match('/Widget Icon:\s*(.+)/i', $content, $matches)) {
-            $icon = trim($matches[1]);
+        // MODIFIED: Capture the full Font Awesome class (e.g., "fas fa-star")
+        if (preg_match('/Widget Icon:\s*(fas|far|fab|fa)\s+fa-[a-z0-9-]+/i', $content, $matches)) {
+            $icon = trim($matches[0]); // Capture the full matched string
         }
         if (preg_match('/Widget Width:\s*([\d.]+)/i', $content, $matches)) {
             $width = (float)trim($matches[1]);
@@ -63,7 +64,7 @@ function get_widget_metadata_from_file(string $file_path): array {
 
     return [
         'name' => $name,
-        'icon' => $icon,
+        'icon' => $icon, // This now contains the full class, e.g., "fas fa-bug"
         'width' => $width,
         'height' => $height
     ];
