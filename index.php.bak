@@ -508,13 +508,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </div>
 
     <script type="module" src="src/js/main.js"></script>
-
-<!-- Theme Library Button -->
-<div style="position:fixed;top:20px;right:20px;z-index:999;">
-  <button onclick="openThemeLibrary()" style="padding:10px 20px;border-radius:12px;background-color:#00bcd4;color:white;border:none;box-shadow:0 0 10px #00bcd4;">Theme Library</button>
-</div>
-<script src="src/js/themeLibrary.js"></script>
-
 </body>
 </html>
 
