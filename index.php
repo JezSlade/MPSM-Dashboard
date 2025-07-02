@@ -2921,21 +2921,19 @@ Tailwind's animate-spin utility handles this.
 
     </div>
 
+
+
+
 <script>
-function showTab(tabId) {
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.style.display = 'none';
-  });
-  document.getElementById(tabId).style.display = 'block';
-}
-
-function closeSettingsModal() {
+document.getElementById("open-theme-modal")?.addEventListener("click", () => {
+  document.getElementById("settings-overlay")?.classList.add("active");
+});
+document.getElementById("close-settings")?.addEventListener("click", () => {
   document.getElementById("settings-overlay")?.classList.remove("active");
-}
-
+});
 document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
   if (e.target.id === "settings-overlay") {
-    closeSettingsModal();
+    document.getElementById("settings-overlay")?.classList.remove("active");
   }
 });
 </script>
@@ -3341,21 +3339,19 @@ document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
 
     
 
+
+
+
 <script>
-function showTab(tabId) {
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.style.display = 'none';
-  });
-  document.getElementById(tabId).style.display = 'block';
-}
-
-function closeSettingsModal() {
+document.getElementById("open-theme-modal")?.addEventListener("click", () => {
+  document.getElementById("settings-overlay")?.classList.add("active");
+});
+document.getElementById("close-settings")?.addEventListener("click", () => {
   document.getElementById("settings-overlay")?.classList.remove("active");
-}
-
+});
 document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
   if (e.target.id === "settings-overlay") {
-    closeSettingsModal();
+    document.getElementById("settings-overlay")?.classList.remove("active");
   }
 });
 </script>
@@ -3369,21 +3365,19 @@ document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
 
 
 
+
+
+
 <script>
-function showTab(tabId) {
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.style.display = 'none';
-  });
-  document.getElementById(tabId).style.display = 'block';
-}
-
-function closeSettingsModal() {
+document.getElementById("open-theme-modal")?.addEventListener("click", () => {
+  document.getElementById("settings-overlay")?.classList.add("active");
+});
+document.getElementById("close-settings")?.addEventListener("click", () => {
   document.getElementById("settings-overlay")?.classList.remove("active");
-}
-
+});
 document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
   if (e.target.id === "settings-overlay") {
-    closeSettingsModal();
+    document.getElementById("settings-overlay")?.classList.remove("active");
   }
 });
 </script>
