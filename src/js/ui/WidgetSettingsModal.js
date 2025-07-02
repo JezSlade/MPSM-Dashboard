@@ -1,267 +1,82 @@
 // src/js/ui/WidgetSettingsModal.js
 
-import AjaxService from '../utils/AjaxService.js';
-import MessageModal from './MessageModal.js';
+import { showMessageModal } from './MessageModal.js';
+import { sendAjaxRequest } from '../utils/AjaxService.js';
+
+const widgetSettingsModalOverlay = document.getElementById('widget-settings-modal-overlay');
+const closeWidgetSettingsModalBtn = document.getElementById('close-widget-settings-modal');
+const widgetSettingsModalTitle = document.getElementById('widget-settings-modal-title');
+const widgetSettingsIdInput = document.getElementById('widget-settings-id'); // Changed from widget-settings-index
+const widgetSettingsWidthInput = document.getElementById('widget-settings-width');
+const widgetSettingsHeightInput = document.getElementById('widget-settings-height');
+const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
 
 /**
- * Manages the modal for adjusting individual widget dimensions and editing code.
+ * Displays the widget settings modal for a specific widget.
+ * @param {string} widgetId - The ID of the widget being configured.
+ * @param {string} widgetName - The display name of the widget.
+ * @param {number} currentWidth - The current width of the widget.
+ * @param {number} currentHeight - The current height of the widget.
  */
-class WidgetSettingsModal {
-    // Corrected constructor parameters to match main.js instantiation
-    constructor(overlayElement, modalElement, titleElement, closeButtonElement, formElement, idInputElement, widthInputElement, heightInputElement, messageModalInstance, ajaxServiceInstance) {
-        this.overlay = overlayElement;
-        this.modal = modalElement;
-        this.titleElement = titleElement;
-        this.closeButton = closeButtonElement;
-        this.form = formElement;
-        this.messageModal = messageModalInstance; // Instance of MessageModal
-        this.ajaxService = ajaxServiceInstance; // Instance of AjaxService
+export function showWidgetSettingsModal(widgetId, widgetName, currentWidth, currentHeight) {
+    widgetSettingsModalTitle.textContent = `${widgetName} Settings`;
+    widgetSettingsIdInput.value = widgetId; // Set the widget ID
+    widgetSettingsWidthInput.value = currentWidth;
+    widgetSettingsHeightInput.value = currentHeight;
 
-        this.widgetIdInput = idInputElement;
-        this.widthInput = widthInputElement;
-        this.heightInput = heightInputElement;
+    // Check if "Show All Available Widgets" is active and disable inputs if so
+    const showAllWidgetsToggle = document.getElementById('show_all_available_widgets');
+    const isDisabled = showAllWidgetsToggle && showAllWidgetsToggle.checked;
 
-        // NEW: Code editor elements
-        this.codeEditorSection = this.modal.querySelector('.widget-code-editor-section');
-        this.codeFileNameDisplay = document.getElementById('widget-code-file-name'); // Still needs getElementById as it's not passed directly
-        this.codeEditorTextarea = document.getElementById('widget-code-editor'); // Still needs getElementById
-        this.loadCodeButton = document.getElementById('load-widget-code-btn'); // Still needs getElementById
-        this.saveCodeButton = document.getElementById('save-widget-code-btn'); // Still needs getElementById
-        this.codeStatusDisplay = document.getElementById('widget-code-status'); // Still needs getElementById
-
-        this.currentWidgetId = null; // Stores the ID of the widget currently being edited
-        this.originalCodeContent = ''; // Stores content when file is loaded for dirty checking
-
-        // Updated null checks to reflect direct element passing
-        if (!this.overlay || !this.modal || !this.titleElement || !this.closeButton || !this.form || !this.widgetIdInput || !this.widthInput || !this.heightInput || !this.codeEditorSection || !this.codeEditorTextarea || !this.loadCodeButton || !this.saveCodeButton || !this.codeStatusDisplay) {
-            console.error("WidgetSettingsModal: One or more required elements not found. Check HTML IDs and main.js instantiation.");
-            // Log specific missing elements for easier debugging
-            if (!this.overlay) console.error("Missing: overlayElement");
-            if (!this.modal) console.error("Missing: modalElement");
-            if (!this.titleElement) console.error("Missing: titleElement");
-            if (!this.closeButton) console.error("Missing: closeButtonElement");
-            if (!this.form) console.error("Missing: formElement");
-            if (!this.widgetIdInput) console.error("Missing: idInputElement");
-            if (!this.widthInput) console.error("Missing: widthInputElement");
-            if (!this.heightInput) console.error("Missing: heightInputElement");
-            if (!this.codeEditorSection) console.error("Missing: .widget-code-editor-section");
-            if (!this.codeEditorTextarea) console.error("Missing: #widget-code-editor");
-            if (!this.loadCodeButton) console.error("Missing: #load-widget-code-btn");
-            if (!this.saveCodeButton) console.error("Missing: #save-widget-code-btn");
-            if (!this.codeStatusDisplay) console.error("Missing: #code-status-display");
-            return;
-        }
-
-        this._addEventListeners();
+    widgetSettingsWidthInput.disabled = isDisabled;
+    widgetSettingsHeightInput.disabled = isDisabled;
+    const submitBtn = widgetDimensionsForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = isDisabled;
+        submitBtn.textContent = isDisabled ? 'Disabled in Show All Mode' : 'Save Dimensions';
     }
 
-    _addEventListeners() {
-        this.closeButton.addEventListener('click', () => this.hide());
-        this.overlay.addEventListener('click', (e) => {
-            if (e.target === this.overlay) {
-                this.hide();
-            }
+    widgetSettingsModalOverlay.classList.add('active');
+}
+
+export function initWidgetSettingsModal() {
+    if (closeWidgetSettingsModalBtn) {
+        closeWidgetSettingsModalBtn.addEventListener('click', function() {
+            widgetSettingsModalOverlay.classList.remove('active');
         });
-        this.form.addEventListener('submit', this._handleDimensionsFormSubmit.bind(this));
-
-        // NEW: Code editor event listeners
-        this.loadCodeButton.addEventListener('click', this._loadWidgetCode.bind(this));
-        this.saveCodeButton.addEventListener('click', this._saveWidgetCode.bind(this));
-        this.codeEditorTextarea.addEventListener('input', this._handleCodeEditorInput.bind(this));
     }
 
-    /**
-     * Shows the widget settings modal and populates it with current widget data.
-     * @param {string} widgetId The ID of the widget being configured.
-     * @param {string} widgetName The display name of the widget.
-     * @param {number} currentWidth The current width of the widget.
-     * @param {number} currentHeight The current height of the widget.
-     */
-    show(widgetId, widgetName, currentWidth, currentHeight) {
-        this.currentWidgetId = widgetId; // Store current widget ID
-        this.titleElement.textContent = `Settings for "${widgetName}"`;
-        this.widgetIdInput.value = currentWidth; // This was incorrect, should be widgetId
-        this.widthInput.value = currentWidth;
-        this.heightInput.value = currentHeight;
+    if (widgetDimensionsForm) {
+        widgetDimensionsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-        // Corrected: Set widgetIdInput.value to widgetId
-        this.widgetIdInput.value = widgetId;
+            const widgetId = widgetSettingsIdInput.value; // Get widget ID
+            const newWidth = parseFloat(widgetSettingsWidthInput.value);
+            const newHeight = parseFloat(widgetSettingsHeightInput.value);
 
+            if (isNaN(newWidth) || isNaN(newHeight)) {
+                showMessageModal('Validation Error', 'Please enter valid numbers for width and height.');
+                return;
+            }
 
-        // Reset code editor state when opening for a new widget
-        this.codeEditorSection.classList.add('hidden'); // Hide editor initially
-        this.codeEditorTextarea.value = '';
-        this.codeFileNameDisplay.textContent = '';
-        this.saveCodeButton.disabled = true;
-        this.codeStatusDisplay.textContent = '';
-        this.originalCodeContent = '';
+            const submitBtn = widgetDimensionsForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-        // Only show code editor for actual widget files (not special ones like 'ide' itself)
-        // You might need a more robust check here if some widgets are not PHP files
-        if (widgetId !== 'ide' && widgetId !== 'font_awesome') { // Exclude IDE and Font Awesome as they are not simple widgets
-             this.codeEditorSection.classList.remove('hidden');
-             this.codeFileNameDisplay.textContent = `widgets/${widgetId}.php`;
-             this._loadWidgetCode(); // Automatically load code when modal opens
-        }
-
-
-        this.overlay.classList.add('show');
-    }
-
-    /**
-     * Hides the widget settings modal.
-     */
-    hide() {
-        // Check for unsaved code changes before hiding
-        if (this.currentWidgetId && this.codeEditorTextarea.value !== this.originalCodeContent && !this.codeEditorSection.classList.contains('hidden')) {
-            this.messageModal.show(
-                'Unsaved Code Changes',
-                'You have unsaved changes in the code editor. Please save or discard them before closing.',
-                false
-            );
-            return; // Prevent closing the modal
-        }
-        this.overlay.classList.remove('show');
-    }
-
-    /**
-     * Handles the form submission for updating widget dimensions.
-     * @param {Event} event The form submit event.
-     */
-    async _handleDimensionsFormSubmit(event) {
-        event.preventDefault();
-
-        const widgetId = this.widgetIdInput.value;
-        const newWidth = parseFloat(this.widthInput.value);
-        const newHeight = parseFloat(this.heightInput.value);
-
-        if (isNaN(newWidth) || isNaN(newHeight) || newWidth <= 0 || newHeight <= 0) {
-            this.messageModal.show('Input Error', 'Please enter valid numbers for width and height.', false);
-            return;
-        }
-
-        try {
-            const response = await AjaxService.request('api/dashboard.php', 'POST', {
-                ajax_action: 'update_widget_dimensions',
-                widget_id: widgetId,
+            const response = await sendAjaxRequest('api/dashboard.php', 'update_single_widget_dimensions', {
+                widget_id: widgetId, // Send widget_id
                 new_width: newWidth,
                 new_height: newHeight
             });
 
-            if (response.status === 'success') {
-                this.messageModal.show('Widget Updated', response.message || 'Widget dimensions updated successfully. Reloading page to apply changes.');
-                this.hide();
-                setTimeout(() => window.location.reload(), 1500);
-            } else {
-                this.messageModal.show('Error', response.message || 'Failed to update widget dimensions.', false);
-            }
-        } catch (error) {
-            this.messageModal.show('Error', `An unexpected error occurred: ${error.message}`, false);
-        }
-    }
-
-    /**
-     * NEW: Loads the code for the currently selected widget into the editor.
-     */
-    async _loadWidgetCode() {
-        if (!this.currentWidgetId) {
-            this.codeStatusDisplay.textContent = 'No widget selected.';
-            return;
-        }
-
-        const filePath = `widgets/${this.currentWidgetId}.php`;
-        this.codeEditorTextarea.value = 'Loading code...';
-        this.codeEditorTextarea.readOnly = true;
-        this.saveCodeButton.disabled = true;
-        this.codeStatusDisplay.textContent = 'Loading...';
-        this.codeStatusDisplay.style.color = 'var(--text-secondary)';
-
-        try {
-            const response = await AjaxService.request('api/ide.php', 'POST', {
-                ajax_action: 'load_file',
-                file_path: filePath
-            });
-
-            if (response.status === 'success' && response.content !== undefined) {
-                this.codeEditorTextarea.value = response.content;
-                this.originalCodeContent = response.content; // Store original for dirty check
-                this.codeEditorTextarea.readOnly = false;
-                this.saveCodeButton.disabled = true; // No changes yet
-                this.codeStatusDisplay.textContent = 'Loaded';
-                this.codeStatusDisplay.style.color = 'var(--success)';
-            } else {
-                this.codeEditorTextarea.value = `Error loading code: ${response.message || 'Unknown error'}`;
-                this.codeEditorTextarea.readOnly = true;
-                this.codeStatusDisplay.textContent = 'Load failed';
-                this.codeStatusDisplay.style.color = 'var(--danger)';
-                this.messageModal.show('Code Load Error', `Failed to load code for ${filePath}: ${response.message || 'Unknown error'}`, false);
-            }
-        } catch (error) {
-            this.codeEditorTextarea.value = `Error: ${error.message}`;
-            this.codeEditorTextarea.readOnly = true;
-            this.codeStatusDisplay.textContent = 'Load failed';
-            this.codeStatusDisplay.style.color = 'var(--danger)';
-            this.messageModal.show('Code Load Error', `An unexpected error occurred while loading code: ${error.message}`, false);
-        }
-    }
-
-    /**
-     * NEW: Saves the code from the editor for the currently selected widget.
-     */
-    async _saveWidgetCode() {
-        if (!this.currentWidgetId) {
-            this.messageModal.show('Save Error', 'No widget selected to save code for.', false);
-            return;
-        }
-
-        const filePath = `widgets/${this.currentWidgetId}.php`;
-        const newContent = this.codeEditorTextarea.value;
-
-        this.saveCodeButton.disabled = true; // Disable while saving
-        this.codeStatusDisplay.textContent = 'Saving...';
-        this.codeStatusDisplay.style.color = 'var(--warning)';
-
-        try {
-            const response = await AjaxService.request('api/ide.php', 'POST', {
-                ajax_action: 'save_file',
-                file_path: filePath,
-                content: newContent
-            });
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Save Dimensions';
 
             if (response.status === 'success') {
-                this.originalCodeContent = newContent; // Update original content after successful save
-                this.saveCodeButton.disabled = true;
-                this.codeStatusDisplay.textContent = 'Saved';
-                this.codeStatusDisplay.style.color = 'var(--success)';
-                this.messageModal.show('Code Saved', response.message || 'Widget code saved successfully.', false);
+                showMessageModal('Success', response.message, () => location.reload(true)); // Reload to apply changes
             } else {
-                this.saveCodeButton.disabled = false; // Re-enable if save failed
-                this.codeStatusDisplay.textContent = 'Save failed';
-                this.codeStatusDisplay.style.color = 'var(--danger)';
-                this.messageModal.show('Code Save Error', `Failed to save code for ${filePath}: ${response.message || 'Unknown error'}`, false);
+                showMessageModal('Error', response.message);
             }
-        } catch (error) {
-            this.saveCodeButton.disabled = false;
-            this.codeStatusDisplay.textContent = 'Save failed';
-            this.codeStatusDisplay.style.color = 'var(--danger)';
-            this.messageModal.show('Code Save Error', `An unexpected error occurred while saving code: ${error.message}`, false);
-        }
-    }
-
-    /**
-     * NEW: Handles input in the code editor to check for unsaved changes.
-     */
-    _handleCodeEditorInput() {
-        if (this.codeEditorTextarea.value !== this.originalCodeContent) {
-            this.saveCodeButton.disabled = false;
-            this.codeStatusDisplay.textContent = 'Unsaved Changes';
-            this.codeStatusDisplay.style.color = 'var(--warning)';
-        } else {
-            this.saveCodeButton.disabled = true;
-            this.codeStatusDisplay.textContent = 'Saved';
-            this.codeStatusDisplay.style.color = 'var(--success)';
-        }
+        });
     }
 }
-
-export default WidgetSettingsModal;

@@ -73,17 +73,15 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             --glass-bg: rgba(35, 40, 49, <?= $settings['glass_intensity'] ?>);
             --blur-amount: <?= $settings['blur_amount'] ?>;
         }
-        /* Widget animations are now controlled by CSS variables and classes */
         .widget {
             transition: <?= $settings['enable_animations'] ? 'var(--transition)' : 'none' ?>;
         }
         .widget:hover {
             <?php if ($settings['enable_animations']): ?>
-            /* These styles are now part of the .widget:hover in dashboard.css */
-            /* transform: translateY(-5px); */
-            /* box-shadow: */
-            /* 12px 12px 24px var(--shadow-dark), */
-            /* -12px -12px 24px rgba(74, 78, 94, 0.1); */
+            transform: translateY(-5px);
+            box-shadow:
+                12px 12px 24px var(--shadow-dark),
+                -12px -12px 24px rgba(74, 78, 94, 0.1);
             <?php endif; ?>
         }
     </style>
@@ -100,39 +98,19 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <button class="btn-close-modal" id="close-widget-settings-modal">&times;</button>
             </div>
             <div class="message-modal-body">
-                <form id="widget-dimensions-form" class="mb-6">
+                <form id="widget-dimensions-form">
                     <!-- Changed from widget_index to widget_id -->
                     <input type="hidden" id="widget-settings-id" name="widget_id">
                     <div class="form-group">
-                        <label for="widget-settings-width" class="form-label">Width (Grid Units)</label>
+                        <label for="widget-settings-width">Width (Grid Units)</label>
                         <input type="number" id="widget-settings-width" name="new_width" min="0.5" max="3" step="0.5" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label for="widget-settings-height" class="form-label">Height (Grid Units)</label>
+                        <label for="widget-settings-height">Height (Grid Units)</label>
                         <input type="number" id="widget-settings-height" name="new_height" min="0.5" max="4" step="0.5" class="form-control">
                     </div>
-                    <button type="submit" class="btn btn-primary ripple-effect" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
                 </form>
-
-                <!-- NEW: Widget Code Editor Section -->
-                <div class="widget-code-editor-section hidden">
-                    <h3 class="settings-title mt-6">Widget Code Editor</h3>
-                    <div class="form-group">
-                        <label for="widget-code-editor" class="form-label">Edit Code for <span id="widget-code-file-name"></span></label>
-                        <textarea id="widget-code-editor" class="form-control" rows="15" style="font-family: monospace;"></textarea>
-                    </div>
-                    <div class="flex gap-2 mt-4">
-                        <button type="button" class="btn btn-secondary ripple-effect flex-grow" id="load-widget-code-btn">
-                            <i class="fas fa-sync-alt mr-2"></i> Load Code
-                        </button>
-                        <button type="button" class="btn btn-primary ripple-effect flex-grow" id="save-widget-code-btn" disabled>
-                            <i class="fas fa-save mr-2"></i> Save Code
-                        </button>
-                    </div>
-                    <p id="widget-code-status" class="text-sm text-center mt-2 text-[var(--text-secondary)]"></p>
-                </div>
-                <!-- END NEW: Widget Code Editor Section -->
-
             </div>
         </div>
     </div>
@@ -166,7 +144,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
             </div>
             <div class="message-modal-footer">
-                <button class="btn btn-primary ripple-effect" id="save-widget-management-changes-btn">Save All Widget Changes</button>
+                <button class="btn btn-primary" id="save-widget-management-changes-btn">Save All Widget Changes</button>
             </div>
         </div>
     </div>
@@ -182,26 +160,27 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             <div class="message-modal-body">
                 <form id="create-widget-form">
                     <div class="form-group">
-                        <label for="new-widget-name" class="form-label">Widget Name</label>
+                        <label for="new-widget-name">Widget Name</label>
                         <input type="text" id="new-widget-name" name="name" class="form-control" placeholder="e.g., My Custom Chart" required>
                     </div>
                     <div class="form-group">
-                        <label for="new-widget-id" class="form-label">Widget ID (lowercase, no spaces, e.g., my_custom_chart)</label>
+                        <label for="new-widget-id">Widget ID (lowercase, no spaces, e.g., my_custom_chart)</label>
                         <input type="text" id="new-widget-id" name="id" class="form-control" placeholder="e.g., my_custom_chart" pattern="^[a-z0-9_]+$" title="Lowercase letters, numbers, and underscores only." required>
                     </div>
                     <div class="form-group">
-                        <label for="new-widget-icon" class="form-label">Font Awesome Icon (e.g., fas fa-chart-bar)</label>
+                        <label for="new-widget-icon">Font Awesome Icon (e.g., fas fa-chart-bar)</label>
+                        <!-- MODIFIED: Placeholder and value now expect full class -->
                         <input type="text" id="new-widget-icon" name="icon" class="form-control" value="fas fa-cube" placeholder="e.g., fas fa-chart-bar">
                     </div>
                     <div class="form-group">
-                        <label for="new-widget-width" class="form-label">Default Width (0.5-3.0 grid units)</label>
+                        <label for="new-widget-width">Default Width (0.5-3.0 grid units)</label>
                         <input type="number" id="new-widget-width" name="width" class="form-control" value="1.0" min="0.5" max="3" step="0.5" required>
                     </div>
                     <div class="form-group">
-                        <label for="new-widget-height" class="form-label">Default Height (0.5-4.0 grid units)</label>
+                        <label for="new-widget-height">Default Height (0.5-4.0 grid units)</label>
                         <input type="number" id="new-widget-height" name="height" class="form-control" value="1.0" min="0.5" max="4" step="0.5" required>
                     </div>
-                    <button type="submit" class="btn btn-primary ripple-effect" style="width: 100%; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
                         <i class="fas fa-plus"></i> Create Widget Template
                     </button>
                 </form>
@@ -216,20 +195,21 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             <div class="logo">
                 <div class="logo-icon">
                     <!-- Use the site_icon setting here -->
+                    <!-- MODIFIED: Use full class for site_icon -->
                     <i class="<?= htmlspecialchars($settings['site_icon'] ?? 'fas fa-gem') ?>"></i>
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
-                <div class="logo-version" id="version-display">
+                <div class="logo-version" style="font-size: 0.75em; color: #bbb; margin-left: 8px;" id="version-display">
                     <strong>v</strong>
                     <?php echo $formattedVersion ?>
                 </div>
             </div>
 
             <div class="header-actions">
-                <button class="btn btn-secondary ripple-effect" id="settings-toggle">
+                <button class="btn" id="settings-toggle">
                     <i class="fas fa-cog"></i> Settings
                 </button>
-                <button class="btn btn-secondary ripple-effect" id="refresh-btn">
+                <button class="btn" id="refresh-btn">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             </div>
@@ -262,7 +242,8 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <div class="section-title">Widget Library</div>
                 <div class="widget-list">
                     <?php foreach ($available_widgets as $id => $widget): ?>
-                    <div class="widget-item ripple-effect" draggable="true" data-widget-id="<?= $id ?>">
+                    <div class="widget-item" draggable="true" data-widget-id="<?= $id ?>">
+                        <!-- MODIFIED: Use full class for widget item icon -->
                         <i class="<?= htmlspecialchars($widget['icon']) ?>"></i>
                         <div class="widget-name"><?= $widget['name'] ?></div>
                     </div>
@@ -331,23 +312,24 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
                 <div class="widget-header">
                     <div class="widget-title">
+                        <!-- MODIFIED: Use full class for widget header icon -->
                         <i class="<?= htmlspecialchars($widget['icon']) ?>"></i>
                         <span><?= htmlspecialchars($widget['name']) ?></span>
                     </div>
                     <div class="widget-actions">
                         <!-- Add data attributes to identify actions -->
-                        <div class="widget-action action-settings ripple-effect"
+                        <div class="widget-action action-settings"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                             data-current-width="<?= $current_width_user_facing ?>"
                             data-current-height="<?= $current_height_user_facing ?>"
                             title="Adjust widget dimensions">
                             <i class="fas fa-cog"></i>
                         </div>
-                        <div class="widget-action action-expand ripple-effect">
+                        <div class="widget-action action-expand">
                             <i class="fas fa-expand"></i>
                         </div>
                         <!-- Remove button now triggers deactivation -->
-                        <div class="widget-action remove-widget ripple-effect"
+                        <div class="widget-action remove-widget"
                             data-widget-id="<?= htmlspecialchars($widget_id) ?>"
                             title="Deactivate widget">
                             <i class="fas fa-times"></i>
@@ -373,7 +355,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <p id="message-modal-content"></p>
             </div>
             <div class="message-modal-footer">
-                <button class="btn btn-primary ripple-effect" id="confirm-message-modal">OK</button>
+                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
             </div>
         </div>
     </div>
@@ -384,7 +366,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     <div class="settings-panel" id="settings-panel">
         <div class="settings-header">
             <h2>Dashboard Settings</h2>
-            <button class="btn btn-secondary btn-icon ripple-effect" id="close-settings">
+            <button class="btn" id="close-settings">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -403,30 +385,31 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <h3 class="settings-title">General Settings</h3>
 
                     <div class="form-group">
-                        <label for="dashboard_title" class="form-label">Dashboard Title</label>
+                        <label for="dashboard_title">Dashboard Title</label>
                         <input type="text" id="dashboard_title" name="dashboard_title"
                             class="form-control" value="<?= htmlspecialchars($settings['title']) ?>">
                     </div>
 
                     <div class="form-group">
-                        <label for="site_icon" class="form-label">Site Icon (Font Awesome class, e.g., fas fa-gem)</label>
+                        <label for="site_icon">Site Icon (Font Awesome class, e.g., fas fa-gem)</label>
+                        <!-- MODIFIED: Value now expects full class -->
                         <input type="text" id="site_icon" name="site_icon"
                             class="form-control" value="<?= htmlspecialchars($settings['site_icon'] ?? 'fas fa-gem') ?>" placeholder="e.g., fas fa-gem">
                     </div>
 
                     <div class="form-group">
-                        <label for="accent_color" class="form-label">Accent Color</label>
+                        <label for="accent_color">Accent Color</label>
                         <input type="color" id="accent_color" name="accent_color"
-                            class="form-control" value="<?= $settings['accent_color'] ?>">
+                            class="form-control" value="<?= $settings['accent_color'] ?>" style="height: 50px;">
                     </div>
 
-                    <div class="form-group-inline">
+                    <div class="form-group">
+                        <label>Enable Animations</label>
                         <label class="toggle-switch">
                             <input type="checkbox" name="enable_animations"
                                 <?= $settings['enable_animations'] ? 'checked' : '' ?>>
                             <span class="slider"></span>
                         </label>
-                        <span class="form-label-inline">Enable Animations</span>
                     </div>
                 </div>
 
@@ -434,14 +417,14 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <h3 class="settings-title">Glass Effect</h3>
 
                     <div class="form-group">
-                        <label for="glass_intensity" class="form-label">Glass Intensity</label>
+                        <label for="glass_intensity">Glass Intensity</label>
                         <input type="range" id="glass_intensity" name="glass_intensity"
                             class="form-control" min="0.1" max="0.9" step="0.05"
                             value="<?= $settings['glass_intensity'] ?>">
                     </div>
 
                     <div class="form-group">
-                        <label for="blur_amount" class="form-label">Blur Amount</label>
+                        <label for="blur_amount">Blur Amount</labeSl>
                         <select id="blur_amount" name="blur_amount" class="form-control">
                             <option value="5px" <?= $settings['blur_amount'] == '5px' ? 'selected' : '' ?>>Subtle (5px)</option>
                             <option value="10px" <?= $settings['blur_amount'] == '10px' ? 'selected' : '' ?>>Standard (10px)</option>
@@ -457,22 +440,22 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <div class="settings-group">
                     <h3 class="settings-title">Widget Layout</h3>
                     <!-- Show All Available Widgets Toggle -->
-                    <div class="form-group-inline">
+                    <div class="form-group">
+                        <label>Show All Available Widgets (Overrides active/inactive status)</label>
                         <label class="toggle-switch">
                             <input type="checkbox" name="show_all_available_widgets" id="show_all_available_widgets"
                                 <?= $settings['show_all_available_widgets'] ? 'checked' : '' ?>>
                             <span class="slider"></span>
                         </label>
-                        <span class="form-label-inline">Show All Available Widgets (Overrides active/inactive status)</span>
                     </div>
                 </div>
 
                 <div class="settings-group">
                     <h3 class="settings-title">Add Existing Widget</h3>
-                    <p class="text-secondary" style="font-size: 14px; margin-bottom: 15px;">
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
                         Use Widget Management to activate/deactivate widgets.
                     </p>
-                    <button type="button" class="btn btn-secondary ripple-effect" style="width: 100%;" disabled>
+                    <button type="button" class="btn" style="width: 100%;" disabled>
                         <i class="fas fa-info-circle"></i> Use Widget Management
                     </button>
                 </div>
@@ -480,10 +463,10 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <!-- Create New Widget Template Button -->
                 <div class="settings-group">
                     <h3 class="settings-title">Create New Widget</h3>
-                    <p class="text-secondary" style="font-size: 14px; margin-bottom: 15px;">
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
                         Generate a new blank widget file ready for your custom code.
                     </p>
-                    <button type="button" class="btn btn-primary ripple-effect" id="open-create-widget-modal" style="width: 100%;">
+                    <button type="button" class="btn btn-primary" id="open-create-widget-modal" style="width: 100%;">
                         <i class="fas fa-file-code"></i> Create New Widget Template
                     </button>
                 </div>
@@ -494,45 +477,45 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <div class="settings-group">
                     <h3 class="settings-title">Advanced Options</h3>
                     <div class="form-group">
-                        <label class="form-label">Export Configuration</label>
-                        <button class="btn btn-secondary ripple-effect" id="export-settings-btn" style="width: 100%;">
+                        <label>Export Configuration</label>
+                        <button class="btn" id="export-settings-btn" style="width: 100%;">
                             <i class="fas fa-download"></i> Download Settings
                         </button>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Import Configuration</label>
-                        <input type="file" class="form-control-file" id="import-settings-file-input">
-                        <button type="button" class="btn btn-primary ripple-effect" id="import-settings-btn" style="width: 100%; margin-top: 10px;">
+                        <label>Import Configuration</label>
+                        <input type="file" class="form-control" id="import-settings-file-input">
+                        <button type="button" class="btn btn-primary" id="import-settings-btn" style="width: 100%; margin-top: 10px;">
                             <i class="fas fa-upload"></i> Upload Settings
                         </button>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Output Current Settings (JSON)</label>
-                        <button type="button" class="btn btn-secondary ripple-effect" id="output-settings-json-btn" style="width: 100%;">
+                        <label>Output Current Settings (JSON)</label>
+                        <button type="button" class="btn" id="output-settings-json-btn" style="width: 100%;">
                             <i class="fas fa-code"></i> Show Current Settings
                         </button>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Output Active Widgets (JSON)</label>
-                        <button type="button" class="btn btn-secondary ripple-effect" id="output-active-widgets-json-btn" style="width: 100%;">
+                        <label>Output Active Widgets (JSON)</label>
+                        <button type="button" class="btn" id="output-active-widgets-json-btn" style="width: 100%;">
                             <i class="fas fa-list"></i> Show Active Widgets
                         </button>
                     </div>
 
                     <!-- Delete Settings JSON Button -->
                     <div class="form-group">
-                        <label class="form-label">Reset Dashboard</label>
-                        <button type="button" id="delete-settings-json-btn" class="btn btn-danger ripple-effect" style="width: 100%;">
+                        <label>Reset Dashboard</label>
+                        <button type="button" id="delete-settings-json-btn" class="btn btn-danger" style="width: 100%;">
                             <i class="fas fa-trash-alt"></i> Delete Settings JSON (Reset All)
                         </button>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" name="update_settings" class="btn btn-primary ripple-effect" style="width: 100%; margin-top: 20px;">
+            <button type="submit" name="update_settings" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
                 <i class="fas fa-save"></i> Save All Settings
             </button>
         </form>
@@ -558,3 +541,67 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </script>
 </body>
 </html>
+
+<?php
+// Commented out the deprecated Theme Component Library Modal HTML and related JS
+// This ensures the structure is preserved but not active in the DOM.
+/*
+<div class="message-modal" id="theme-modal" style="display: none;">
+    <div class="message-modal-header">
+        <h2>Theme Component Library</h2>
+        <button class="btn btn-danger" onclick="closeThemeModal()">×</button>
+    </div>
+    <div class="message-modal-body">
+        <section class="theme-demo-block">
+            <h3 class="widget-subtitle">Buttons</h3>
+            <button class="btn btn-primary">Primary Button</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-outline">Outline</button>
+            <button class="btn btn-danger">Danger</button>
+        </section>
+
+        <section class="theme-demo-block">
+            <h3 class="widget-subtitle">Input Fields</h3>
+            <input type="text" class="form-control" placeholder="Text input">
+            <input type="password" class="form-control" placeholder="Password">
+            <select class="form-control">
+                <option>Option 1</option>
+                <option>Option 2</option>
+            </select>
+        </section>
+
+        <section class="theme-demo-block">
+            <h3 class="widget-subtitle">Cards</h3>
+            <div class="card">
+                <div class="card-header">Card Title</div>
+                <div class="card-body">This is the body of a neumorphic card.</div>
+            </div>
+        </section>
+
+        <section class="theme-demo-block">
+            <h3 class="widget-subtitle">Badges & Tags</h3>
+            <span class="badge badge-success">Success</span>
+            <span class="badge badge-warning">Warning</span>
+            <span class="badge badge-info">Info</span>
+        </section>
+
+        <section class="theme-demo-block">
+            <h3 class="widget-subtitle">Progress & Loaders</h3>
+            <div class="progress-bar"><div class="progress" style="width: 60%;"></div></div>
+            <div class="loader"></div>
+        </section>
+    </div>
+</div>
+
+<script>
+// These functions are no longer active, as the modal is commented out.
+// function openThemeModal() {
+//     document.getElementById('theme-modal').style.display = 'block';
+// }
+// function closeThemeModal() {
+//     document.getElementById('theme-modal').style.display = 'none';
+// }
+</script>
+<script src="src/js/themeLibrary.js"></script>
+*/
+?>
