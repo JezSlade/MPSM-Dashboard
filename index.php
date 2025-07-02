@@ -31,6 +31,16 @@ $settings = $current_dashboard_state; // $settings now includes 'widgets_state'
 // IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state
 // This ensures session state is synced with persistent state on page load.
 $_SESSION['dashboard_settings'] = $current_dashboard_state;
+function formatDashboardVersion($major, $minor, $patch, $build) {
+    return "v{$major}.{$minor}.{$patch}.{$build}";
+}
+
+$major = 12;
+$minor = 4;
+$patch = 7;
+$build = '00';
+$formattedVersion = formatDashboardVersion($major, $minor, $patch, $build);
+
 
 // The index.php no longer handles POST requests directly for actions.
 // All actions are now handled by dedicated API endpoints via AJAX.
@@ -189,9 +199,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
                 <div class="logo-version" style="font-size: 0.75em; color: #bbb; margin-left: 8px;" id="version-display">
                     <strong>v</strong>
-                    <span id="ver-1" class="version-segment">?</span>.
-                    <span id="ver-2" class="version-segment">?</span>.
-                    <span id="ver-3" class="version-segment">?</span>
+                    <?php echo $formattedVersion ?>
                 </div>
             </div>
 
