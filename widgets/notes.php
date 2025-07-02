@@ -5,6 +5,16 @@
 // Widget Icon: fas fa-sticky-note
 // Widget Width: 1.0
 // Widget Height: 1.0
+
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
+$_widget_config = [
+    'name' => 'Quick Notes',
+    'icon' => 'sticky-note', // This 'sticky-note' will be overridden by the comment parsing
+    'width' => 1,
+    'height' => 1
+];
 ?>
 <div class="compact-content">
     <div class="note active">
@@ -42,7 +52,7 @@
         </div>
     </div>
     <div class="new-note">
-        <textarea class="neomorphic-input" placeholder="Start typing a new note..."></textarea>
-        <button class="btn btn-primary ripple-effect">Save Note</button>
+        <textarea placeholder="Start typing a new note..."></textarea>
+        <button>Save Note</button>
     </div>
 </div>

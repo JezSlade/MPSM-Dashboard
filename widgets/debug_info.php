@@ -6,13 +6,25 @@
 // Widget Width: 2.0
 // Widget Height: 2.0
 
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
+$_widget_config = [
+    'name' => 'Debug Info Stream',
+    'icon' => 'bug', // This 'bug' will be overridden by the comment parsing
+    'width' => 2,
+    'height' => 2
+];
+
 // Shared content for both views (time)
-$time_content = '<h4 class="text-xl font-bold text-[var(--accent)] mb-2">Current Time:</h4>';
-$time_content .= '<pre class="neomorphic-card p-3 mb-4 text-sm text-[var(--text-primary)]">' . htmlspecialchars(date('Y-m-d H:i:s')) . '</pre>';
+$time_content = '<h4 style="color: var(--accent); margin-top: 10px; margin-bottom: 5px;">Current Time:</h4>';
+$time_content .= '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); word-break: break-all; white-space: pre-wrap;">';
+$time_content .= htmlspecialchars(date('Y-m-d H:i:s'));
+$time_content .= '</pre>';
 
 // Session data content
-$session_content = '<h4 class="text-xl font-bold text-[var(--accent)] mb-2">$_SESSION Data:</h4>';
-$session_content .= '<pre class="neomorphic-card p-3 mb-4 text-sm text-[var(--text-primary)]">';
+$session_content = '<h4 style="color: var(--accent); margin-top: 10px; margin-bottom: 5px;">$_SESSION Data:</h4>';
+$session_content .= '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); word-break: break-all; white-space: pre-wrap;">';
 if (isset($_SESSION) && !empty($_SESSION)) {
     $display_session = $_SESSION;
     unset($display_session['PHPSESSID']);
@@ -23,8 +35,8 @@ if (isset($_SESSION) && !empty($_SESSION)) {
 $session_content .= '</pre>';
 
 // POST data content
-$post_content = '<h4 class="text-xl font-bold text-[var(--accent)] mb-2">$_POST Data (Last Request):</h4>';
-$post_content .= '<pre class="neomorphic-card p-3 mb-4 text-sm text-[var(--text-primary)]">';
+$post_content = '<h4 style="color: var(--accent); margin-top: 20px; margin-bottom: 5px;">$_POST Data (Last Request):</h4>';
+$post_content .= '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); word-break: break-all; white-space: pre-wrap;">';
 if (isset($_POST) && !empty($_POST)) {
     $post_content .= htmlspecialchars(print_r($_POST, true));
 } else {
@@ -32,7 +44,7 @@ if (isset($_POST) && !empty($_POST)) {
 }
 $post_content .= '</pre>';
 ?>
-<div class="p-4 h-full flex flex-col overflow-y-auto">
+<div style="font-family: monospace; font-size: 12px; max-height: 100%; overflow-y: auto; padding-right: 10px; min-height: 100px;">
     <div class="compact-content">
         <?= $time_content ?>
         <?= $session_content ?>

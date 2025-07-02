@@ -204,7 +204,6 @@ class DashboardManager {
         }
 
         // MODIFIED: Template content now includes the full Font Awesome class
-        // and uses the new standardized compact-content and expanded-content structure
         $template_content = <<<PHP
 <?php
 // widgets/{$widget_id}.php
@@ -215,20 +214,16 @@ class DashboardManager {
 // Widget Height: {$widget_height}
 ?>
 <div class="compact-content">
-    <div class="neomorphic-card p-4 text-center">
-        <h3 class="text-xl font-bold text-[var(--accent)] mb-2">{$widget_name}</h3>
-        <p class="text-sm text-[var(--text-secondary)]">This is the compact view of your new widget. Expand for more details.</p>
-        <p class="text-xs text-[var(--text-secondary)] mt-2">Current time: <?= date('H:i:s') ?></p>
-    </div>
+    <h3>{$widget_name}</h3>
+    <p>This is the compact view of your new widget. Edit <code>widgets/{$widget_id}.php</code> to customize.</p>
+    <p>Current time: <?= date('H:i:s') ?></p>
 </div>
 <div class="expanded-content">
-    <div class="neomorphic-card p-4 h-full flex flex-col">
-        <h3 class="text-xl font-bold text-[var(--accent)] mb-2">{$widget_name} (Expanded View)</h3>
-        <p class="text-sm text-[var(--text-secondary)] mb-4">This is the expanded view of your new widget. You can add more detailed content here.</p>
-        <p class="text-xs text-[var(--text-secondary)] mb-4">This widget is located at: <code>widgets/{$widget_id}.php</code></p>
-        <p class="text-sm text-[var(--text-secondary)] flex-grow">Feel free to add dynamic data, charts, or any other PHP/HTML content.</p>
-        <p class="text-xs text-[var(--text-secondary)] mt-auto">Current time: <?= date('Y-m-d H:i:s') ?></p>
-    </div>
+    <h3>{$widget_name} (Expanded View)</h3>
+    <p>This is the expanded view of your new widget. You can add more detailed content here.</p>
+    <p>This widget is located at: <code>widgets/{$widget_id}.php</code></p>
+    <p>Feel free to add dynamic data, charts, or any other PHP/HTML content.</p>
+    <p>Current time: <?= date('Y-m-d H:i:s') ?></p>
 </div>
 PHP;
 

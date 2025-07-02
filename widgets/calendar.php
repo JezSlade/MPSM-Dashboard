@@ -6,6 +6,16 @@
 // Widget Width: 1.0
 // Widget Height: 1.0
 
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
+$_widget_config = [
+    'name' => 'Calendar',
+    'icon' => 'calendar', // This 'calendar' will be overridden by the comment parsing
+    'width' => 1,
+    'height' => 1
+];
+
 /**
  * Helper function to generate calendar grid HTML.
  * This function is now local to the calendar widget.
@@ -42,38 +52,34 @@ if (!function_exists('generate_calendar')) {
 }
 ?>
 <div class="compact-content">
-    <div class="neomorphic-card p-4 h-full flex flex-col">
-        <div class="calendar-header">
-            <h3><?= date('F Y') ?></h3>
-        </div>
-        <div class="calendar-grid flex-grow">
-            <div class="day-name">Sun</div>
-            <div class="day-name">Mon</div>
-            <div class="day-name">Tue</div>
-            <div class="day-name">Wed</div>
-            <div class="day-name">Thu</div>
-            <div class="day-name">Fri</div>
-            <div class="day-name">Sat</div>
-            <?= generate_calendar() ?>
-        </div>
+    <div class="calendar-header">
+        <h3><?= date('F Y') ?></h3>
+    </div>
+    <div class="calendar-grid">
+        <div class="day-name">Sun</div>
+        <div class="day-name">Mon</div>
+        <div class="day-name">Tue</div>
+        <div class="day-name">Wed</div>
+        <div class="day-name">Thu</div>
+        <div class="day-name">Fri</div>
+        <div class="day-name">Sat</div>
+        <?= generate_calendar() ?>
     </div>
 </div>
 <div class="expanded-content">
-    <div class="neomorphic-card p-4 h-full flex flex-col">
-        <div class="calendar-header">
-            <button class="btn-icon btn-sm ripple-effect"><i class="fas fa-chevron-left"></i></button>
-            <h3><?= date('F Y') ?></h3>
-            <button class="btn-icon btn-sm ripple-effect"><i class="fas fa-chevron-right"></i></button>
-        </div>
-        <div class="calendar-grid flex-grow">
-            <div class="day-name">Sun</div>
-            <div class="day-name">Mon</div>
-            <div class="day-name">Tue</div>
-            <div class="day-name">Wed</div>
-            <div class="day-name">Thu</div>
-            <div class="day-name">Fri</div>
-            <div class="day-name">Sat</div>
-            <?= generate_calendar() ?>
-        </div>
+    <div class="calendar-header">
+        <button><i class="fas fa-chevron-left"></i></button>
+        <h3><?= date('F Y') ?></h3>
+        <button><i class="fas fa-chevron-right"></i></button>
+    </div>
+    <div class="calendar-grid">
+        <div class="day-name">Sun</div>
+        <div class="day-name">Mon</div>
+        <div class="day-name">Tue</div>
+        <div class="day-name">Wed</div>
+        <div class="day-name">Thu</div>
+        <div class="day-name">Fri</div>
+        <div class="day-name">Sat</div>
+        <?= generate_calendar() ?>
     </div>
 </div>
