@@ -536,7 +536,7 @@
             'fas fa-download': 'Download'
         };
 
-        let currentIconColor = 'var(--primary)'; // Default color
+        let currentIconColor = ''; // Initialize as empty string to allow CSS variables to be read
 
         const iconsContainer = document.getElementById('iconsContainer');
         const searchInput = document.getElementById('iconSearchInput');
@@ -600,6 +600,7 @@
                 iconItem.setAttribute('title', `Copy: ${iconClass}`);
                 iconItem.addEventListener('click', () => copyToClipboard(iconClass));
 
+                // Apply the currentIconColor directly
                 iconItem.innerHTML = `
                     <i class="${iconClass} icon-display" style="color: ${currentIconColor};"></i>
                     <div class="icon-class">${iconClass}</div>
@@ -622,9 +623,12 @@
                 targetOption.classList.add('active');
 
                 const color = targetOption.dataset.color;
+                // Get computed style for CSS variables to ensure correct color value
+                const rootStyles = getComputedStyle(document.documentElement);
+
                 switch (color) {
                     case 'default':
-                        currentIconColor = 'var(--primary)';
+                        currentIconColor = rootStyles.getPropertyValue('--primary').trim();
                         break;
                     case 'red':
                         currentIconColor = '#F44336';
@@ -636,10 +640,10 @@
                         currentIconColor = '#FFC107';
                         break;
                     case 'magenta':
-                        currentIconColor = 'var(--secondary)';
+                        currentIconColor = rootStyles.getPropertyValue('--secondary').trim();
                         break;
                     default:
-                        currentIconColor = 'var(--primary)';
+                        currentIconColor = rootStyles.getPropertyValue('--primary').trim();
                 }
                 renderIcons(searchInput.value);
             }
@@ -774,6 +778,9 @@
 
         // Initial render of icons when the page loads
         document.addEventListener('DOMContentLoaded', () => {
+            // Get the default primary color from CSS variables on load
+            const rootStyles = getComputedStyle(document.documentElement);
+            currentIconColor = rootStyles.getPropertyValue('--primary').trim();
             renderIcons();
         });
     </script>
