@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unified Theme Component Library & Icons</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="dashboard.css"> </head>
+    <link rel="stylesheet" href="dashboard.css"> <!-- Link to your main stylesheet -->
+</head>
 <body>
-    <div class="dashboard-container">
-        <main class="main-content">
-            <div class="widget">
+    <div class="theme-library-wrapper">
+        <header class="theme-library-header">
+            <h1 class="theme-library-title"><i class="fas fa-magic"></i> Design System Showcase</h1>
+            <p class="theme-library-subtitle">Explore the beautiful neumorphic components and Font Awesome icons.</p>
+        </header>
+
+        <main class="theme-library-main-content">
+            <!-- Font Awesome Icons Section -->
+            <div class="widget theme-section-card">
                 <div class="widget-header">
                     <div class="widget-title">
                         <i class="fas fa-icons"></i>
@@ -28,11 +35,16 @@
                         </div>
                     </div>
                     <div class="icons-container" id="iconsContainer">
-                        </div>
+                        <!-- Icons will be dynamically loaded here by JavaScript -->
+                    </div>
+                    <div class="copy-notification" id="copyNotification">
+                        Icon class copied to clipboard!
+                    </div>
                 </div>
             </div>
 
-            <div class="widget">
+            <!-- Design Components Section -->
+            <div class="widget theme-section-card">
                 <div class="widget-header">
                     <div class="widget-title">
                         <i class="fas fa-palette"></i>
@@ -40,71 +52,93 @@
                     </div>
                 </div>
                 <div class="widget-content">
+                    <!-- Buttons -->
                     <section class="theme-demo-block">
                         <h3 class="widget-subtitle">Buttons</h3>
-                        <button class="btn btn-primary">Primary Button</button>
-                        <button class="btn btn-secondary">Secondary Button</button>
-                        <button class="btn btn-outline">Outline Button</button>
-                        <button class="btn btn-danger">Danger Button</button>
-                        <button class="btn btn-primary flex-row-center">
-                            <i class="fas fa-download mr-2"></i> Download
-                        </button>
+                        <div class="component-grid">
+                            <button class="btn btn-primary ripple-effect">Primary Button</button>
+                            <button class="btn btn-secondary ripple-effect">Secondary Button</button>
+                            <button class="btn btn-outline ripple-effect">Outline Button</button>
+                            <button class="btn btn-danger ripple-effect">Danger Button</button>
+                            <button class="btn btn-primary btn-icon-text ripple-effect">
+                                <i class="fas fa-download icon-left"></i> Download
+                            </button>
+                        </div>
                     </section>
 
+                    <!-- Input Fields -->
                     <section class="theme-demo-block">
                         <h3 class="widget-subtitle">Input Fields</h3>
-                        <input type="text" class="form-control" placeholder="Text Input">
-                        <input type="email" class="form-control" placeholder="Email Input">
-                        <input type="password" class="form-control" placeholder="Password Input">
-                        <select class="form-control">
-                            <option>Option 1</option>
-                            <option>Option 2</option>
-                            <option>Option 3</option>
-                        </select>
-                        <label class="checkbox-container">
-                            <input type="checkbox" checked="checked">
-                            <span class="checkmark"></span> Checkbox Label
-                        </label>
-                        <label class="radio-container">
-                            <input type="radio" checked="checked" name="radio">
-                            <span class="radiomark"></span> Radio Label
-                        </label>
+                        <div class="component-grid">
+                            <label class="form-label" for="textInput">Text Input:</label>
+                            <input type="text" id="textInput" placeholder="Enter text here" class="form-control">
+
+                            <label class="form-label" for="emailInput">Email Input:</label>
+                            <input type="email" id="emailInput" placeholder="you@example.com" class="form-control">
+
+                            <label class="form-label" for="passwordInput">Password Input:</label>
+                            <input type="password" id="passwordInput" placeholder="Enter password" class="form-control">
+
+                            <label class="form-label" for="selectInput">Dropdown (Select):</label>
+                            <select id="selectInput" class="form-control">
+                                <option>Option 1</option>
+                                <option>Option 2</option>
+                                <option>Option 3</option>
+                            </select>
+
+                            <label class="checkbox-container">
+                                <input type="checkbox" checked="checked">
+                                <span class="checkmark"></span> Checkbox Label
+                            </label>
+                            <label class="radio-container">
+                                <input type="radio" checked="checked" name="radio-group-demo">
+                                <span class="radiomark"></span> Radio Label
+                            </label>
+                        </div>
                     </section>
 
+                    <!-- Cards -->
                     <section class="theme-demo-block">
                         <h3 class="widget-subtitle">Cards</h3>
-                        <div class="card">
-                            <div class="card-header">Simple Card</div>
-                            <div class="card-body">This is a basic card component. It's used to group related content.</div>
-                        </div>
-                        <div class="card" style="margin-top: 20px;">
-                            <div class="card-header">Card with Icon</div>
-                            <div class="card-body flex-row-center">
-                                <i class="fas fa-info-circle text-2xl mr-3" style="color: var(--accent);"></i>
-                                <span>This card includes an icon for emphasis.</span>
+                        <div class="component-grid-2">
+                            <div class="card">
+                                <div class="card-header">Simple Card</div>
+                                <div class="card-body">This is a basic card component. It's used to group related content.</div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">Card with Icon</div>
+                                <div class="card-body card-body-icon">
+                                    <i class="fas fa-info-circle card-icon"></i>
+                                    <span>This card includes an icon for emphasis.</span>
+                                </div>
                             </div>
                         </div>
                     </section>
 
+                    <!-- Badges & Tags -->
                     <section class="theme-demo-block">
                         <h3 class="widget-subtitle">Badges & Tags</h3>
-                        <span class="badge badge-success">Success</span>
-                        <span class="badge badge-warning">Warning</span>
-                        <span class="badge badge-info">Info</span>
-                        <span class="badge" style="background-color: var(--primary);">Custom Primary</span>
-                        <span class="badge" style="background-color: var(--secondary);">Custom Secondary</span>
+                        <div class="component-grid">
+                            <span class="badge badge-success">Success</span>
+                            <span class="badge badge-warning">Warning</span>
+                            <span class="badge badge-info">Info</span>
+                            <span class="badge" style="background-color: var(--primary);">Custom Primary</span>
+                            <span class="badge" style="background-color: var(--secondary);">Custom Secondary</span>
+                        </div>
                     </section>
 
+                    <!-- Progress Bars & Loaders -->
                     <section class="theme-demo-block">
                         <h3 class="widget-subtitle">Progress Bars & Loaders</h3>
-                        <p>Default Progress Bar:</p>
+                        <p class="component-label">Default Progress Bar:</p>
                         <div class="progress-bar"><div class="progress" style="width: 50%;"></div></div>
-                        <p style="margin-top: 20px;">Accent Progress Bar:</p>
+                        <p class="component-label" style="margin-top: 20px;">Accent Progress Bar:</p>
                         <div class="progress-bar"><div class="progress" style="width: 75%; background-color: var(--accent);"></div></div>
-                        <p style="margin-top: 20px;">Loader:</p>
+                        <p class="component-label" style="margin-top: 20px;">Loader:</p>
                         <div class="loader"></div>
                     </section>
 
+                    <!-- Skeleton Loaders -->
                     <section class="theme-demo-block">
                         <h3 class="widget-subtitle">Skeleton Loaders</h3>
                         <div role="status" class="neomorphic-skeleton">
@@ -115,17 +149,336 @@
                             <span class="sr-only">Loading...</span>
                         </div>
                     </section>
+
+                    <!-- Section: Form Elements (from Design_Components.html, re-styled) -->
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Additional Form Elements</h3>
+
+                        <div class="component-grid">
+                            <label class="form-label" for="textarea">Textarea:</label>
+                            <textarea id="textarea" rows="4" placeholder="Your message here..." class="form-control"></textarea>
+
+                            <label class="form-label" for="fileInput">File Input:</label>
+                            <input type="file" id="fileInput" class="form-control-file">
+
+                            <label class="form-label" for="datePicker">Date Picker:</label>
+                            <input type="date" id="datePicker" class="form-control">
+
+                            <label class="form-label" for="timePicker">Time Picker:</label>
+                            <input type="time" id="timePicker" class="form-control">
+
+                            <label class="form-label" for="rangeSlider">Range Slider (Volume):</label>
+                            <input type="range" id="rangeSlider" min="0" max="100" value="50" class="form-control-range">
+
+                            <label class="form-label" for="colorPicker">Color Picker:</label>
+                            <input type="color" id="colorPicker" value="#00bcd4" class="form-control-color">
+
+                            <label class="form-label" for="numberInput">Number Input (Quantity):</label>
+                            <input type="number" id="numberInput" min="0" max="100" value="1" class="form-control">
+
+                            <div class="form-group-inline">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="toggleSwitch">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="form-label-inline">Enable Feature</span>
+                            </div>
+
+                            <label class="form-label" for="designComponentSearchInput">Search Input:</label>
+                            <div class="search-input-group">
+                                <i class="fas fa-search search-input-icon"></i>
+                                <input type="search" id="designComponentSearchInput" placeholder="Search..." class="form-control search-input-field">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Buttons (from Design_Components.html, re-styled) -->
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Advanced Buttons</h3>
+                        <div class="component-grid">
+                            <button class="btn btn-primary btn-lg ripple-effect">Large Primary</button>
+                            <button class="btn btn-secondary btn-sm ripple-effect">Small Secondary</button>
+                            <button class="btn btn-destructive ripple-effect">Destructive Action</button>
+                            <a href="#" class="btn btn-link">Learn More Link</a>
+                            <button class="btn btn-icon ripple-effect">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-group-item">Left</button>
+                                <button type="button" class="btn btn-group-item">Middle</button>
+                                <button type="button" class="btn btn-group-item">Right</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Navigation -->
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Navigation Components</h3>
+                        <div class="component-grid-2">
+                            <div>
+                                <h4 class="component-sub-heading">Navigation Bar</h4>
+                                <nav class="navbar">
+                                    <div class="navbar-logo">App Logo</div>
+                                    <ul class="navbar-nav">
+                                        <li><a href="#" class="navbar-link">Home</a></li>
+                                        <li><a href="#" class="navbar-link">Dashboard</a></li>
+                                        <li><a href="#" class="navbar-link">Settings</a></li>
+                                    </ul>
+                                </nav>
+                            </div>
+                            <div>
+                                <h4 class="component-sub-heading">Sidebar Navigation</h4>
+                                <div class="sidebar-demo">
+                                    <nav>
+                                        <ul class="sidebar-nav">
+                                            <li><a href="#" class="sidebar-nav-item">Dashboard</a></li>
+                                            <li><a href="#" class="sidebar-nav-item">Users</a></li>
+                                            <li><a href="#" class="sidebar-nav-item">Products</a></li>
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="component-grid-2" style="margin-top: 30px;">
+                            <div>
+                                <h4 class="component-sub-heading">Breadcrumbs</h4>
+                                <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+                                    <ol class="breadcrumb-list">
+                                        <li class="breadcrumb-item">
+                                            <a href="#"><i class="fas fa-home breadcrumb-icon"></i> Home</a>
+                                        </li>
+                                        <li class="breadcrumb-item">
+                                            <a href="#">Products</a>
+                                        </li>
+                                        <li class="breadcrumb-item active" aria-current="page">
+                                            <span>Current Product</span>
+                                        </li>
+                                    </ol>
+                                </nav>
+                            </div>
+                            <div>
+                                <h4 class="component-sub-heading">Pagination</h4>
+                                <nav class="pagination-nav" aria-label="Pagination">
+                                    <ul class="pagination-list">
+                                        <li><a href="#" class="pagination-item pagination-prev"><i class="fas fa-chevron-left"></i></a></li>
+                                        <li><a href="#" class="pagination-item">1</a></li>
+                                        <li><a href="#" aria-current="page" class="pagination-item active">2</a></li>
+                                        <li><a href="#" class="pagination-item">3</a></li>
+                                        <li><a href="#" class="pagination-item pagination-next"><i class="fas fa-chevron-right"></i></a></li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                        <div class="component-grid" style="margin-top: 30px;">
+                            <h4 class="component-sub-heading">Tabs</h4>
+                            <div class="tabs-container">
+                                <div class="tabs-buttons">
+                                    <button class="tab-btn active" data-tab-target="#tab-profile">Profile</button>
+                                    <button class="tab-btn" data-tab-target="#tab-dashboard">Dashboard</button>
+                                    <button class="tab-btn" data-tab-target="#tab-settings">Settings</button>
+                                </div>
+                                <div class="tabs-content-wrapper">
+                                    <div id="tab-profile" class="tab-content active">
+                                        <p>This is the content for the Profile tab.</p>
+                                    </div>
+                                    <div id="tab-dashboard" class="tab-content">
+                                        <p>This is the content for the Dashboard tab.</p>
+                                    </div>
+                                    <div id="tab-settings" class="tab-content">
+                                        <p>This is the content for the Settings tab.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Data Display -->
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Data Display Components</h3>
+                        <div class="component-grid-2">
+                            <div>
+                                <h4 class="component-sub-heading">Table</h4>
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Title</th>
+                                                <th>Status</th>
+                                                <th>Role</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>John Doe</td>
+                                                <td>Software Engineer</td>
+                                                <td><span class="badge badge-success">Active</span></td>
+                                                <td>Member</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Jane Smith</td>
+                                                <td>UI/UX Designer</td>
+                                                <td><span class="badge badge-warning">Pending</span></td>
+                                                <td>Admin</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="component-sub-heading">List Group</h4>
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <span>List Item 1</span>
+                                        <a href="#" class="btn btn-link btn-sm">View</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span>List Item 2</span>
+                                        <a href="#" class="btn btn-link btn-sm">View</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span>List Item 3</span>
+                                        <a href="#" class="btn btn-link btn-sm">View</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="component-grid-2" style="margin-top: 30px;">
+                            <div>
+                                <h4 class="component-sub-heading">Avatar</h4>
+                                <div class="avatar-group">
+                                    <img class="avatar-img" src="https://placehold.co/40x40/0d0d1a/00bcd4?text=JD" alt="User Avatar">
+                                    <div class="avatar-initials"><span>TS</span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="component-sub-heading">Rating/Stars</h4>
+                                <div class="rating-stars">
+                                    <span class="star filled"><i class="fas fa-star"></i></span>
+                                    <span class="star filled"><i class="fas fa-star"></i></span>
+                                    <span class="star filled"><i class="fas fa-star"></i></span>
+                                    <span class="star filled"><i class="fas fa-star"></i></span>
+                                    <span class="star empty"><i class="fas fa-star"></i></span>
+                                    <p class="rating-text">4.0 out of 5 stars</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Feedback & Notifications -->
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Feedback & Notifications</h3>
+                        <div class="component-grid">
+                            <div>
+                                <h4 class="component-sub-heading">Alerts</h4>
+                                <div class="alert alert-info" role="alert">
+                                    <i class="fas fa-info-circle alert-icon"></i>
+                                    <div>
+                                        <strong>Info alert!</strong> Change a few things up and try submitting again.
+                                    </div>
+                                </div>
+                                <div class="alert alert-success" role="alert">
+                                    <i class="fas fa-check-circle alert-icon"></i>
+                                    <div>
+                                        <strong>Success alert!</strong> Your action was successful.
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="fas fa-times-circle alert-icon"></i>
+                                    <div>
+                                        <strong>Danger alert!</strong> Something went wrong.
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="component-sub-heading">Toast Notification</h4>
+                                <div id="toast-demo-success" class="toast-notification">
+                                    <div class="toast-icon-wrapper toast-icon-success">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div class="toast-message">Item moved successfully.</div>
+                                    <button type="button" class="toast-close-btn">&times;</button>
+                                </div>
+                                <button class="btn btn-primary ripple-effect" onclick="showToast('toast-demo-success')">Show Success Toast</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Advanced Components -->
+                    <section class="theme-demo-block">
+                        <h3 class="widget-subtitle">Advanced Components</h3>
+                        <div class="component-grid-2">
+                            <div>
+                                <h4 class="component-sub-heading">Dropdown Menu</h4>
+                                <div class="dropdown-wrapper">
+                                    <button class="btn btn-primary dropdown-toggle ripple-effect" id="dropdownButton">
+                                        Options <i class="fas fa-chevron-down icon-right"></i>
+                                    </button>
+                                    <div class="dropdown-menu" id="dropdownMenu">
+                                        <a href="#" class="dropdown-item">Dashboard</a>
+                                        <a href="#" class="dropdown-item">Settings</a>
+                                        <a href="#" class="dropdown-item">Earnings</a>
+                                        <a href="#" class="dropdown-item">Sign out</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="component-sub-heading">Accordion</h4>
+                                <div class="accordion-container">
+                                    <div class="accordion-item">
+                                        <button class="accordion-header active" data-accordion-target="#accordion-body-1">
+                                            <span>What is Lorem Ipsum?</span>
+                                            <i class="fas fa-chevron-down accordion-icon"></i>
+                                        </button>
+                                        <div id="accordion-body-1" class="accordion-body active">
+                                            <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item">
+                                        <button class="accordion-header" data-accordion-target="#accordion-body-2">
+                                            <span>Where does it come from?</span>
+                                            <i class="fas fa-chevron-down accordion-icon"></i>
+                                        </button>
+                                        <div id="accordion-body-2" class="accordion-body">
+                                            <p>Contrary to popular belief, Lorem Ipsum is not simply random text.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="component-grid" style="margin-top: 30px;">
+                            <h4 class="component-sub-heading">Carousel/Image Slider</h4>
+                            <div class="carousel-container" id="default-carousel">
+                                <div class="carousel-wrapper">
+                                    <div class="carousel-item active">
+                                        <img src="https://placehold.co/800x400/0d0d1a/00bcd4?text=Image+1" alt="Slide 1">
+                                    </div>
+                                    <div class="carousel-item">
+                                        <img src="https://placehold.co/800x400/0d0d1a/e91e63?text=Image+2" alt="Slide 2">
+                                    </div>
+                                    <div class="carousel-item">
+                                        <img src="https://placehold.co/800x400/0d0d1a/ffeb3b?text=Image+3" alt="Slide 3">
+                                    </div>
+                                </div>
+                                <div class="carousel-indicators">
+                                    <button class="carousel-indicator active" data-slide-to="0"></button>
+                                    <button class="carousel-indicator" data-slide-to="1"></button>
+                                    <button class="carousel-indicator" data-slide-to="2"></button>
+                                </div>
+                                <button class="carousel-control prev"><i class="fas fa-chevron-left"></i></button>
+                                <button class="carousel-control next"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                    </section>
+
                 </div>
             </div>
         </main>
     </div>
 
-    <div class="copy-notification" id="copyNotification">
-        Icon class copied to clipboard!
-    </div>
-
     <script>
         const fontAwesomeIcons = {
+            // Solid Icons
             'fas fa-home': 'Home', 'fas fa-user': 'User', 'fas fa-search': 'Search',
             'fas fa-envelope': 'Envelope', 'fas fa-phone': 'Phone', 'fas fa-calendar': 'Calendar',
             'fas fa-clock': 'Clock', 'fas fa-heart': 'Heart', 'fas fa-star': 'Star',
@@ -135,128 +488,52 @@
             'fas fa-save': 'Save', 'fas fa-copy': 'Copy', 'fas fa-cut': 'Cut',
             'fas fa-paste': 'Paste', 'fas fa-undo': 'Undo', 'fas fa-redo': 'Redo',
             'fas fa-plus': 'Plus', 'fas fa-minus': 'Minus', 'fas fa-times': 'Times',
-            'fas fa-check': 'Check', 'fas fa-info-circle': 'Info Circle', 'fas fa-exclamation-triangle': 'Exclamation Triangle',
-            'fas fa-question-circle': 'Question Circle', 'fas fa-cog': 'Cog', 'fas fa-bars': 'Bars',
-            'fas fa-th': 'Th', 'fas fa-list': 'List', 'fas fa-tag': 'Tag',
-            'fas fa-shopping-cart': 'Shopping Cart', 'fas fa-credit-card': 'Credit Card', 'fas fa-chart-bar': 'Chart Bar',
-            'fas fa-chart-pie': 'Chart Pie', 'fas fa-map-marker-alt': 'Map Marker Alt', 'fas fa-globe': 'Globe',
-            'fas fa-camera': 'Camera', 'fas fa-image': 'Image', 'fas fa-video': 'Video',
-            'fas fa-music': 'Music', 'fas fa-file': 'File', 'fas fa-folder': 'Folder',
-            'fas fa-lock': 'Lock', 'fas fa-unlock': 'Unlock', 'fas fa-key': 'Key',
-            'fas fa-lightbulb': 'Lightbulb', 'fas fa-bell': 'Bell', 'fas fa-sitemap': 'Sitemap',
-            'fas fa-cloud': 'Cloud', 'fas fa-wifi': 'Wifi', 'fas fa-bluetooth': 'Bluetooth',
-            'fas fa-battery-full': 'Battery Full', 'fas fa-plug': 'Plug', 'fas fa-cogs': 'Cogs',
-            'fas fa-sync-alt': 'Sync Alt', 'fas fa-hourglass-half': 'Hourglass Half', 'fas fa-code': 'Code',
-            'fas fa-terminal': 'Terminal', 'fas fa-bug': 'Bug', 'fas fa-database': 'Database',
-            'fas fa-server': 'Server', 'fas fa-network-wired': 'Network Wired', 'fas fa-ethernet': 'Ethernet',
-            'fas fa-hdd': 'Hdd', 'fas fa-memory': 'Memory', 'fas fa-microchip': 'Microchip',
-            'fas fa-robot': 'Robot', 'fas fa-fingerprint': 'Fingerprint', 'fas fa-shield-alt': 'Shield Alt',
-            'fas fa-car': 'Car', 'fas fa-plane': 'Plane', 'fas fa-ship': 'Ship',
-            'fas fa-truck': 'Truck', 'fas fa-motorcycle': 'Motorcycle', 'fas fa-bicycle': 'Bicycle',
-            'fas fa-bus': 'Bus', 'fas fa-subway': 'Subway', 'fas fa-train': 'Train',
-            'fas fa-taxi': 'Taxi', 'fas fa-truck-pickup': 'Truck Pickup', 'fas fa-trailer': 'Trailer',
-            'fas fa-wrench': 'Wrench', 'fas fa-hammer': 'Hammer', 'fas fa-screwdriver': 'Screwdriver',
-            'fas fa-cut': 'Cut', 'fas fa-ruler': 'Ruler', 'fas fa-compass': 'Compass',
-            'fas fa-brush': 'Brush', 'fas fa-paint-brush': 'Paint Brush', 'fas fa-palette': 'Palette',
-            'fas fa-flask': 'Flask', 'fas fa-atom': 'Atom', 'fas fa-dna': 'Dna',
-            'fas fa-microscope': 'Microscope', 'fas fa-satellite': 'Satellite', 'fas fa-telescope': 'Telescope',
-            'fas fa-rocket': 'Rocket', 'fas fa-space-shuttle': 'Space Shuttle', 'fas fa-meteor': 'Meteor',
-            'fas fa-globe-americas': 'Globe Americas', 'fas fa-globe-asia': 'Globe Asia', 'fas fa-globe-europe': 'Globe Europe',
-            'fas fa-mountain': 'Mountain', 'fas fa-tree': 'Tree', 'fas fa-leaf': 'Leaf',
-            'fas fa-sun': 'Sun', 'fas fa-moon': 'Moon', 'fas fa-cloud-sun': 'Cloud Sun',
-            'fas fa-cloud-moon': 'Cloud Moon', 'fas fa-snowflake': 'Snowflake', 'fas fa-umbrella': 'Umbrella',
-            'fas fa-fire': 'Fire', 'fas fa-water': 'Water', 'fas fa-smog': 'Smog',
-            'fas fa-wind': 'Wind', 'fas fa-brain': 'Brain', 'fas fa-hand-sparkles': 'Hand Sparkles',
-            'fas fa-grin-beam': 'Grin Beam', 'fas fa-poo': 'Poo', 'fas fa-spider': 'Spider',
-            'fas fa-ghost': 'Ghost', 'fas fa-dragon': 'Dragon', 'fas fa-fish': 'Fish',
-            'fas fa-dog': 'Dog', 'fas fa-cat': 'Cat', 'fas fa-dove': 'Dove',
-            'fas fa-crow': 'Crow', 'fas fa-frog': 'Frog', 'fas fa-pastafarianism': 'Pastafarianism',
-            'fas fa-pepper-hot': 'Pepper Hot', 'fas fa-pizza-slice': 'Pizza Slice', 'fas fa-hamburger': 'Hamburger',
-            'fas fa-ice-cream': 'Ice Cream', 'fas fa-cookie-bite': 'Cookie Bite', 'fas fa-coffee': 'Coffee',
-            'fas fa-beer': 'Beer', 'fas fa-wine-glass': 'Wine Glass', 'fas fa-cocktail': 'Cocktail',
-            'fas fa-water': 'Water (duplicate)', 'fas fa-tshirt': 'T-Shirt', 'fas fa-shoe-prints': 'Shoe Prints',
-            'fas fa-socks': 'Socks', 'fas fa-hat-wizard': 'Hat Wizard', 'fas fa-glasses': 'Glasses',
-            'fas fa-tie': 'Tie', 'fas fa-graduation-cap': 'Graduation Cap', 'fas fa-briefcase': 'Briefcase',
-            'fas fa-suitcase': 'Suitcase', 'fas fa-umbrella-beach': 'Umbrella Beach', 'fas fa-faucet': 'Faucet',
-            'fas fa-toilet': 'Toilet', 'fas fa-shower': 'Shower', 'fas fa-bath': 'Bath',
-            'fas fa-door-closed': 'Door Closed', 'fas fa-door-open': 'Door Open', 'fas fa-bed': 'Bed',
-            'fas fa-couch': 'Couch', 'fas fa-chair': 'Chair', 'fas fa-table': 'Table',
-            'fas fa-lamp': 'Lamp', 'fas fa-fan': 'Fan', 'fas fa-tv': 'TV',
-            'fas fa-gamepad': 'Gamepad', 'fas fa-dice': 'Dice', 'fas fa-puzzle-piece': 'Puzzle Piece',
-            'fas fa-chess': 'Chess', 'fas fa-bowling-ball': 'Bowling Ball', 'fas fa-dumbbell': 'Dumbbell',
-            'fas fa-running': 'Running', 'fas fa-swimmer': 'Swimmer', 'fas fa-biking': 'Biking',
-            'fas fa-skating': 'Skating', 'fas fa-skiing': 'Skiing', 'fas fa-snowboarding': 'Snowboarding',
-            'fas fa-baseball-ball': 'Baseball Ball', 'fas fa-basketball-ball': 'Basketball Ball', 'fas fa-football-ball': 'Football Ball',
-            'fas fa-golf-ball': 'Golf Ball', 'fas fa-table-tennis': 'Table Tennis', 'fas fa-volleyball-ball': 'Volleyball Ball',
-            'fas fa-shuttlecock': 'Shuttlecock', 'fas fa-hockey-puck': 'Hockey Puck', 'fas fa-cricket': 'Cricket',
-            'fas fa-quidditch': 'Quidditch', 'fas fa-campground': 'Campground', 'fas fa-mountain-sun': 'Mountain Sun',
-            'fas fa-tent': 'Tent', 'fas fa-person-hiking': 'Person Hiking', 'fas fa-person-biking': 'Person Biking',
-            'fas fa-map': 'Map', 'fas fa-route': 'Route', 'fas fa-plane-departure': 'Plane Departure',
-            'fas fa-plane-arrival': 'Plane Arrival', 'fas fa-luggage-cart': 'Luggage Cart', 'fas fa-hotel': 'Hotel',
-            'fas fa-building': 'Building', 'fas fa-city': 'City', 'fas fa-monument': 'Monument',
-            'fas fa-landmark': 'Landmark', 'fas fa-archway': 'Archway', 'fas fa-bridge': 'Bridge',
-            'fas fa-fountain': 'Fountain', 'fas fa-gopuram': 'Gopuram', 'fas fa-mosque': 'Mosque',
-            'fas fa-church': 'Church', 'fas fa-synagogue': 'Synagogue', 'fas fa-kaaba': 'Kaaba',
-            'fas fa-torii-gate': 'Torii Gate', 'fas fa-yin-yang': 'Yin Yang', 'fas fa-peace': 'Peace',
-            'fas fa-hands-praying': 'Hands Praying', 'fas fa-cross': 'Cross', 'fas fa-star-and-crescent': 'Star and Crescent',
-            'fas fa-dharmachakra': 'Dharmachakra', 'fas fa-ankh': 'Ankh', 'fas fa-atom-alt': 'Atom Alt',
-            'fas fa-infinity': 'Infinity', 'fas fa-gem': 'Gem', 'fas fa-crown': 'Crown',
-            'fas fa-ring': 'Ring', 'fas fa-gift': 'Gift', 'fas fa-box': 'Box',
-            'fas fa-boxes': 'Boxes', 'fas fa-pallet': 'Pallet', 'fas fa-warehouse': 'Warehouse',
-            'fas fa-shipping-fast': 'Shipping Fast', 'fas fa-truck-loading': 'Truck Loading', 'fas fa-truck-moving': 'Truck Moving',
-            'fas fa-dolly': 'Dolly', 'fas fa-pallet-alt': 'Pallet Alt', 'fas fa-box-open': 'Box Open',
-            'fas fa-tape': 'Tape', 'fas fa-ruler-combined': 'Ruler Combined', 'fas fa-compass-alt': 'Compass Alt',
-            'fas fa-location-arrow': 'Location Arrow', 'fas fa-map-pin': 'Map Pin', 'fas fa-directions': 'Directions',
-            'fas fa-road': 'Road', 'fas fa-route-interstate': 'Route Interstate', 'fas fa-sign': 'Sign',
-            'fas fa-traffic-light': 'Traffic Light', 'fas fa-bell-slash': 'Bell Slash', 'fas fa-volume-mute': 'Volume Mute',
-            'fas fa-volume-off': 'Volume Off', 'fas fa-microphone-slash': 'Microphone Slash', 'fas fa-eye-slash': 'Eye Slash',
-            'fas fa-low-vision': 'Low Vision', 'fas fa-closed-captioning': 'Closed Captioning', 'fas fa-ear-deaf': 'Ear Deaf',
-            'fas fa-hands-wash': 'Hands Wash', 'fas fa-hand-holding-medical': 'Hand Holding Medical', 'fas fa-syringe': 'Syringe',
-            'fas fa-pills': 'Pills', 'fas fa-capsules': 'Capsules', 'fas fa-tablets': 'Tablets',
-            'fas fa-first-aid': 'First Aid', 'fas fa-medkit': 'Medkit', 'fas fa-hospital': 'Hospital',
-            'fas fa-clinic-medical': 'Clinic Medical', 'fas fa-house-medical': 'House Medical', 'fas fa-vial': 'Vial',
-            'fas fa-microscope-alt': 'Microscope Alt', 'fas fa-dna-alt': 'Dna Alt', 'fas fa-temperature-high': 'Temperature High',
-            'fas fa-temperature-low': 'Temperature Low', 'fas fa-virus': 'Virus', 'fas fa-virus-slash': 'Virus Slash',
-            'fas fa-viruses': 'Viruses', 'fas fa-bacteria': 'Bacteria', 'fas fa-biohazard': 'Biohazard',
-            'fas fa-head-side-mask': 'Head Side Mask', 'fas fa-lungs-virus': 'Lungs Virus', 'fas fa-hand-holding-heart': 'Hand Holding Heart',
-            'fas fa-heartbeat': 'Heartbeat', 'fas fa-pump-medical': 'Pump Medical', 'fas fa-notes-medical': 'Notes Medical',
-            'fas fa-file-medical': 'File Medical', 'fas fa-prescription': 'Prescription', 'fas fa-prescription-bottle': 'Prescription Bottle',
-            'fas fa-ambulance': 'Ambulance', 'fas fa-truck-medical': 'Truck Medical', 'fas fa-hospital-user': 'Hospital User',
-            'fas fa-procedures': 'Procedures', 'fas fa-bed-pulse': 'Bed Pulse', 'fas fa-weight': 'Weight',
-            'fas fa-person': 'Person', 'fas fa-child': 'Child', 'fas fa-person-dress': 'Person Dress',
-            'fas fa-person-walking': 'Person Walking', 'fas fa-wheelchair': 'Wheelchair', 'fas fa-stethoscope': 'Stethoscope',
-            'fas fa-user-md': 'User Md', 'fas fa-nurse': 'Nurse', 'fas fa-hospital-alt': 'Hospital Alt',
-            'fas fa-building-flag': 'Building Flag', 'fas fa-city-building': 'City Building', 'fas fa-house': 'House',
-            'fas fa-industry': 'Industry', 'fas fa-factory': 'Factory', 'fas fa-warehouse-alt': 'Warehouse Alt',
-            'fas fa-store': 'Store', 'fas fa-shop': 'Shop', 'fas fa-cash-register': 'Cash Register',
-            'fas fa-receipt': 'Receipt', 'fas fa-credit-card-blank': 'Credit Card Blank', 'fas fa-money-bill-wave': 'Money Bill Wave',
-            'fas fa-money-bill-alt': 'Money Bill Alt', 'fas fa-handshake': 'Handshake', 'fas fa-piggy-bank': 'Piggy Bank',
-            'fas fa-chart-line': 'Chart Line', 'fas fa-chart-area': 'Chart Area', 'fas fa-chart-column': 'Chart Column',
-            'fas fa-chart-simple': 'Chart Simple', 'fas fa-circle-dollar-to-slot': 'Circle Dollar To Slot', 'fas fa-sack-dollar': 'Sack Dollar',
-            'fas fa-coins': 'Coins', 'fas fa-piggy-bank-alt': 'Piggy Bank Alt', 'fas fa-wallet': 'Wallet',
-            'fas fa-file-invoice': 'File Invoice', 'fas fa-file-invoice-dollar': 'File Invoice Dollar', 'fas fa-clipboard-list': 'Clipboard List',
-            'fas fa-tasks': 'Tasks', 'fas fa-project-diagram': 'Project Diagram', 'fas fa-sitemap-alt': 'Sitemap Alt',
-            'fas fa-truck-fast': 'Truck Fast', 'fas fa-truck-flatbed': 'Truck Flatbed', 'fas fa-box-tissue': 'Box Tissue',
-            'fas fa-toilet-paper': 'Toilet Paper', 'fas fa-soap': 'Soap', 'fas fa-hand-holding-water': 'Hand Holding Water',
-            'fas fa-faucet-drip': 'Faucet Drip', 'fas fa-dumpster': 'Dumpster', 'fas fa-dumpster-fire': 'Dumpster Fire',
-            'fas fa-recycle': 'Recycle', 'fas fa-tree-city': 'Tree City', 'fas fa-seedling': 'Seedling',
-            'fas fa-solar-panel': 'Solar Panel', 'fas fa-wind-turbine': 'Wind Turbine', 'fas fa-leaf-maple': 'Leaf Maple',
-            'fas fa-globe-stand': 'Globe Stand', 'fas fa-compass-drafting': 'Compass Drafting', 'fas fa-hard-hat': 'Hard Hat',
-            'fas fa-person-digging': 'Person Digging', 'fas fa-road-barrier': 'Road Barrier', 'fas fa-traffic-cone': 'Traffic Cone',
-            'fas fa-cone': 'Cone', 'fas fa-construction': 'Construction', 'fas fa-trowel-bricks': 'Trowel Bricks',
-            'fas fa-helmet-safety': 'Helmet Safety', 'fas fa-fire-extinguisher': 'Fire Extinguisher', 'fas fa-fire-smoke': 'Fire Smoke',
-            'fas fa-house-fire': 'House Fire', 'fas fa-fire-alt': 'Fire Alt', 'fas fa-water-ladder': 'Water Ladder',
-            'fas fa-water-lower': 'Water Lower', 'fas fa-faucet-drip-alt': 'Faucet Drip Alt', 'fas fa-bath-alt': 'Bath Alt',
-            'fas fa-sink': 'Sink', 'fas fa-drain': 'Drain', 'fas fa-hose-fire': 'Hose Fire',
-            'fas fa-sprinkler': 'Sprinkler', 'fas fa-raindrops': 'Raindrops', 'fas fa-cloud-showers-heavy': 'Cloud Showers Heavy',
-            'fas fa-cloud-sun-rain': 'Cloud Sun Rain', 'fas fa-cloud-moon-rain': 'Cloud Moon Rain', 'fas fa-lightning': 'Lightning',
-            'fas fa-tornado': 'Tornado', 'fas fa-hurricane': 'Hurricane', 'fas fa-volcano': 'Volcano',
-            'fas fa-earth-americas': 'Earth Americas', 'fas fa-earth-asia': 'Earth Asia', 'fas fa-earth-europe': 'Earth Europe',
-            'fas fa-globe-ocean': 'Globe Ocean', 'fas fa-mountain-sun-alt': 'Mountain Sun Alt', 'fas fa-tree-deciduous': 'Tree Deciduous',
-            'fas fa-leaf-heart': 'Leaf Heart', 'fas fa-sun-plant-wilt': 'Sun Plant Wilt', 'fas fa-seedling-alt': 'Seedling Alt',
-            'fas fa-seed-of-life': 'Seed Of Life', 'fas fa-atom-simple': 'Atom Simple', 'fas fa-dna-simple': 'Dna Simple',
-            'fas fa-microscope-solid': 'Microscope Solid', 'fas fa-satellite-dish': 'Satellite Dish', 'fas fa-telescope-alt': 'Telescope Alt',
-            'fas fa-rocket-launch': 'Rocket Launch', 'fas fa-space-station': 'Space Station', 'fas fa-meteor-solid': 'Meteor Solid'
+            'fas fa-check': 'Check', 'fas fa-arrow-left': 'Arrow Left', 'fas fa-arrow-right': 'Arrow Right',
+            'fas fa-arrow-up': 'Arrow Up', 'fas fa-arrow-down': 'Arrow Down', 'fas fa-cog': 'Settings',
+            'fas fa-wrench': 'Wrench', 'fas fa-file': 'File', 'fas fa-folder': 'Folder',
+            'fas fa-image': 'Image', 'fas fa-video': 'Video', 'fas fa-music': 'Music',
+            'fas fa-microphone': 'Microphone', 'fas fa-camera': 'Camera', 'fas fa-map-marker-alt': 'Location',
+            'fas fa-shopping-cart': 'Shopping Cart', 'fas fa-credit-card': 'Credit Card', 'fas fa-money-bill': 'Money Bill',
+            'fas fa-car': 'Car', 'fas fa-plane': 'Plane', 'fas fa-train': 'Train',
+            'fas fa-bus': 'Bus', 'fas fa-bicycle': 'Bicycle', 'fas fa-ship': 'Ship',
+            'fas fa-building': 'Building', 'fas fa-hospital': 'Hospital', 'fas fa-school': 'School',
+            'fas fa-graduation-cap': 'Graduation Cap', 'fas fa-book': 'Book', 'fas fa-laptop': 'Laptop',
+            'fas fa-mobile-alt': 'Mobile', 'fas fa-tablet-alt': 'Tablet', 'fas fa-desktop': 'Desktop',
+            'fas fa-tv': 'TV', 'fas fa-gamepad': 'Gamepad', 'fas fa-headphones': 'Headphones',
+            'fas fa-keyboard': 'Keyboard', 'fas fa-mouse': 'Mouse', 'fas fa-battery-full': 'Battery Full',
+            'fas fa-wifi': 'WiFi', 'fas fa-signal': 'Signal', 'fas fa-bluetooth': 'Bluetooth',
+            'fas fa-cloud': 'Cloud', 'fas fa-database': 'Database', 'fas fa-server': 'Server',
+            'fas fa-code': 'Code', 'fas fa-bug': 'Bug', 'fas fa-lock': 'Lock',
+            'fas fa-unlock': 'Unlock', 'fas fa-key': 'Key', 'fas fa-shield-alt': 'Shield',
+            'fas fa-eye': 'Eye', 'fas fa-eye-slash': 'Eye Slash',
+
+            // Regular Icons
+            'far fa-heart': 'Heart (Regular)', 'far fa-star': 'Star (Regular)', 'far fa-bookmark': 'Bookmark (Regular)',
+            'far fa-thumbs-up': 'Thumbs Up (Regular)', 'far fa-thumbs-down': 'Thumbs Down (Regular)', 'far fa-clock': 'Clock (Regular)',
+            'far fa-calendar': 'Calendar (Regular)', 'far fa-envelope': 'Envelope (Regular)', 'far fa-file': 'File (Regular)',
+            'far fa-folder': 'Folder (Regular)', 'far fa-image': 'Image (Regular)', 'far fa-user': 'User (Regular)',
+            'far fa-eye': 'Eye (Regular)', 'far fa-comment': 'Comment (Regular)', 'far fa-comments': 'Comments (Regular)',
+            'far fa-bell': 'Bell (Regular)', 'far fa-hand-point-up': 'Hand Point Up (Regular)', 'far fa-hand-point-down': 'Hand Point Down (Regular)',
+            'far fa-hand-point-left': 'Hand Point Left (Regular)', 'far fa-hand-point-right': 'Hand Point Right (Regular)',
+            'far fa-lightbulb': 'Lightbulb (Regular)', 'far fa-gem': 'Gem (Regular)', 'far fa-moon': 'Moon (Regular)',
+            'far fa-sun': 'Sun (Regular)', 'far fa-snowflake': 'Snowflake (Regular)',
+
+            // Brand Icons
+            'fab fa-facebook': 'Facebook', 'fab fa-twitter': 'Twitter', 'fab fa-instagram': 'Instagram',
+            'fab fa-linkedin': 'LinkedIn', 'fab fa-youtube': 'YouTube', 'fab fa-github': 'GitHub',
+            'fab fa-google': 'Google', 'fab fa-apple': 'Apple', 'fab fa-microsoft': 'Microsoft',
+            'fab fa-amazon': 'Amazon', 'fab fa-spotify': 'Spotify', 'fab fa-paypal': 'PayPal',
+            'fab fa-wordpress': 'WordPress', 'fab fa-dropbox': 'Dropbox', 'fab fa-skype': 'Skype',
+            'fab fa-slack': 'Slack', 'fab fa-discord': 'Discord', 'fab fa-whatsapp': 'WhatsApp',
+            'fab fa-telegram': 'Telegram', 'fab fa-tiktok': 'TikTok', 'fab fa-snapchat': 'Snapchat',
+            'fab fa-pinterest': 'Pinterest', 'fab fa-reddit': 'Reddit', 'fab fa-twitch': 'Twitch',
+            'fab fa-steam': 'Steam', 'fab fa-android': 'Android', 'fab fa-firefox': 'Firefox',
+            'fab fa-chrome': 'Chrome', 'fab fa-safari': 'Safari', 'fab fa-edge': 'Edge',
+            'fab fa-opera': 'Opera',
+            // Additional icons from Design_Components.html that might be useful for search
+            'fas fa-info-circle': 'Info Circle',
+            'fas fa-plus': 'Plus',
+            'fas fa-download': 'Download'
         };
 
         let currentIconColor = 'var(--primary)'; // Default color
@@ -266,40 +543,24 @@
         const colorPalette = document.querySelector('.color-palette');
         const copyNotification = document.getElementById('copyNotification');
 
-        function renderIcons(searchTerm = '') {
-            iconsContainer.innerHTML = ''; // Clear existing icons
-            const filteredIcons = Object.keys(fontAwesomeIcons).filter(iconClass => {
-                const iconName = fontAwesomeIcons[iconClass].toLowerCase();
-                return iconClass.toLowerCase().includes(searchTerm.toLowerCase()) || iconName.includes(searchTerm.toLowerCase());
-            });
-
-            if (filteredIcons.length === 0) {
-                iconsContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No icons found for your search.</p>';
-                return;
-            }
-
-            filteredIcons.forEach(iconClass => {
-                const iconName = fontAwesomeIcons[iconClass];
-                const iconItem = document.createElement('div');
-                iconItem.classList.add('icon-item');
-                iconItem.setAttribute('onclick', `copyToClipboard('${iconClass}')`);
-
-                iconItem.innerHTML = `
-                    <i class="${iconClass} icon-display" style="color: ${currentIconColor};"></i>
-                    <div class="icon-class">${iconClass}</div>
-                `;
-                iconsContainer.appendChild(iconItem);
-            });
-        }
-
+        /**
+         * Copies the given text to the clipboard and shows a notification.
+         * @param {string} text - The text to copy.
+         */
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                showCopyNotification();
-            }).catch(function(err) {
-                console.error('Could not copy text: ', err);
-            });
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showCopyNotification();
         }
 
+        /**
+         * Displays a "copied to clipboard" notification.
+         */
         function showCopyNotification() {
             copyNotification.classList.add('show');
             setTimeout(() => {
@@ -307,7 +568,47 @@
             }, 2000);
         }
 
-        // Event listeners
+        /**
+         * Renders the icons based on the search query and current color.
+         * @param {string} searchQuery - The search term.
+         */
+        function renderIcons(searchQuery = '') {
+            iconsContainer.innerHTML = ''; // Clear existing icons
+            const lowerCaseSearchQuery = searchQuery.toLowerCase().trim();
+            let filteredIcons = {};
+
+            if (lowerCaseSearchQuery) {
+                for (const iconClass in fontAwesomeIcons) {
+                    const iconName = fontAwesomeIcons[iconClass];
+                    if (iconName.toLowerCase().includes(lowerCaseSearchQuery) || iconClass.toLowerCase().includes(lowerCaseSearchQuery)) {
+                        filteredIcons[iconClass] = iconName;
+                    }
+                }
+            } else {
+                filteredIcons = { ...fontAwesomeIcons };
+            }
+
+            if (Object.keys(filteredIcons).length === 0) {
+                iconsContainer.innerHTML = '<p class="no-results-message">No icons found for your search.</p>';
+                return;
+            }
+
+            for (const iconClass in filteredIcons) {
+                const iconName = filteredIcons[iconClass];
+                const iconItem = document.createElement('div');
+                iconItem.classList.add('icon-item');
+                iconItem.setAttribute('title', `Copy: ${iconClass}`);
+                iconItem.addEventListener('click', () => copyToClipboard(iconClass));
+
+                iconItem.innerHTML = `
+                    <i class="${iconClass} icon-display" style="color: ${currentIconColor};"></i>
+                    <div class="icon-class">${iconClass}</div>
+                `;
+                iconsContainer.appendChild(iconItem);
+            }
+        }
+
+        // Event listeners for icon search and color palette
         searchInput.addEventListener('input', (event) => {
             renderIcons(event.target.value);
         });
@@ -344,7 +645,134 @@
             }
         });
 
-        // Initial render
+        // --- Component-specific JavaScript for interactivity ---
+
+        // Ripple Effect for Buttons
+        document.querySelectorAll('.ripple-effect').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const circle = document.createElement('span');
+                const diameter = Math.max(this.clientWidth, this.clientHeight);
+                const radius = diameter / 2;
+
+                circle.style.width = circle.style.height = `${diameter}px`;
+                circle.style.left = `${e.clientX - (this.offsetLeft + radius)}px`;
+                circle.style.top = `${e.clientY - (this.offsetTop + radius)}px`;
+                circle.classList.add('ripple');
+
+                const ripple = this.getElementsByClassName('ripple')[0];
+
+                if (ripple) {
+                    ripple.remove();
+                }
+
+                this.appendChild(circle);
+            });
+        });
+
+        // Tabs functionality
+        document.querySelectorAll('.tabs-buttons .tab-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Deactivate all tabs and content
+                document.querySelectorAll('.tabs-buttons .tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tabs-content-wrapper .tab-content').forEach(content => content.classList.remove('active'));
+
+                // Activate clicked tab and its content
+                this.classList.add('active');
+                const targetId = this.dataset.tabTarget;
+                document.querySelector(targetId).classList.add('active');
+            });
+        });
+
+        // Accordion functionality
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const body = this.nextElementSibling; // The accordion-body div
+                if (body.classList.contains('active')) {
+                    body.classList.remove('active');
+                    this.classList.remove('active');
+                    body.style.maxHeight = null; // Collapse
+                } else {
+                    // Optional: Close other open accordions
+                    document.querySelectorAll('.accordion-body.active').forEach(openBody => {
+                        openBody.classList.remove('active');
+                        openBody.previousElementSibling.classList.remove('active');
+                        openBody.style.maxHeight = null;
+                    });
+
+                    body.classList.add('active');
+                    this.classList.add('active');
+                    body.style.maxHeight = body.scrollHeight + "px"; // Expand
+                }
+            });
+        });
+
+        // Carousel functionality
+        document.querySelectorAll('.carousel-container').forEach(carousel => {
+            let currentSlide = 0;
+            const items = carousel.querySelectorAll('.carousel-item');
+            const indicators = carousel.querySelectorAll('.carousel-indicator');
+            const totalSlides = items.length;
+
+            function showSlide(index) {
+                items.forEach((item, i) => {
+                    item.classList.remove('active');
+                    if (i === index) {
+                        item.classList.add('active');
+                    }
+                });
+                indicators.forEach((indicator, i) => {
+                    indicator.classList.remove('active');
+                    if (i === index) {
+                        indicator.classList.add('active');
+                    }
+                });
+            }
+
+            carousel.querySelector('.carousel-control.next').addEventListener('click', () => {
+                currentSlide = (currentSlide + 1) % totalSlides;
+                showSlide(currentSlide);
+            });
+
+            carousel.querySelector('.carousel-control.prev').addEventListener('click', () => {
+                currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+                showSlide(currentSlide);
+            });
+
+            indicators.forEach((indicator, index) => {
+                indicator.addEventListener('click', () => {
+                    currentSlide = index;
+                    showSlide(currentSlide);
+                });
+            });
+
+            // Auto-advance carousel (optional)
+            // setInterval(() => {
+            //     currentSlide = (currentSlide + 1) % totalSlides;
+            //     showSlide(currentSlide);
+            // }, 5000); // Change slide every 5 seconds
+
+            showSlide(currentSlide); // Initialize first slide
+        });
+
+        // Toast Notification functionality
+        window.showToast = function(toastId) {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000); // Hide after 3 seconds
+            }
+        };
+
+        document.querySelectorAll('.toast-close-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.toast-notification').classList.remove('show');
+            });
+        });
+
+
+        // Initial render of icons when the page loads
         document.addEventListener('DOMContentLoaded', () => {
             renderIcons();
         });
