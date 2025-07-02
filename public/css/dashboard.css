@@ -1034,16 +1034,3 @@ input:checked + .slider:before {
     font-style: italic;
     font-size: 0.9em;
 }
-
-
-.modal-close-button {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 24px;
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  z-index: 9999;
-}
