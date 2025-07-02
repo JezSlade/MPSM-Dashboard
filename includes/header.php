@@ -12,10 +12,8 @@ header("Pragma: no-cache");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 // --- End Cache Control Headers ---
 
-session_start();
 
 // Include configuration and helper functions/classes
-require_once 'config.php';
 require_once 'helpers.php';
 require_once 'src/php/DashboardManager.php';
 require_once 'src/php/FileManager.php'; // Ensure FileManager is included if used for widget creation
