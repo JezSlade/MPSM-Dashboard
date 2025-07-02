@@ -5,23 +5,13 @@
 // Widget Icon: fas fa-code
 // Widget Width: 3.0
 // Widget Height: 3.0
-
-// The $_widget_config array is no longer directly used for metadata extraction
-// by discover_widgets(). It's kept here for backward compatibility or other
-// internal widget logic if needed. The metadata is now parsed from comments.
-$_widget_config = [
-    'name' => 'File Editor (IDE)',
-    'icon' => 'code', // This 'code' will be overridden by the comment parsing
-    'width' => 3,
-    'height' => 3
-];
 ?>
 <div class="compact-content">
-    <div style="text-align: center; padding: 20px;">
-        <p style="font-size: 20px; font-weight: bold; color: var(--accent);">
-            <i class="fas fa-code"></i> File Editor
+    <div class="neomorphic-card p-4 text-center h-full flex flex-col justify-center items-center">
+        <p class="text-2xl font-bold text-[var(--accent)] mb-2">
+            <i class="fas fa-code text-4xl mb-2"></i> File Editor
         </p>
-        <p style="font-size: 14px; color: var(--text-secondary);">
+        <p class="text-sm text-[var(--text-secondary)]">
             Expand to use the integrated code editor.
         </p>
     </div>
@@ -33,7 +23,7 @@ $_widget_config = [
             <span id="ide-current-file-name">No file selected</span>
             <span id="ide-file-status" class="ide-status-saved"></span>
         </div>
-        <button class="btn btn-sm btn-primary" id="ide-save-btn" disabled>
+        <button class="btn btn-sm btn-primary ripple-effect" id="ide-save-btn" disabled>
             <i class="fas fa-save"></i> Save
         </button>
     </div>

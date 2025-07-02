@@ -5,41 +5,41 @@
 // Widget Icon: fas fa-tasks
 // Widget Width: 1.0
 // Widget Height: 2.0
-
-// The $_widget_config array is no longer directly used for metadata extraction
-// by discover_widgets(). It's kept here for backward compatibility or other
-// internal widget logic if needed. The metadata is now parsed from comments.
-$_widget_config = [
-    'name' => 'Task Manager',
-    'icon' => 'tasks', // This 'tasks' will be overridden by the comment parsing
-    'width' => 1,
-    'height' => 2
-];
 ?>
 <div class="compact-content">
-    <h4 style="color: var(--accent); margin-bottom: 10px;">My Tasks</h4>
-    <ul style="list-style: none; padding: 0;">
-        <li style="margin-bottom: 5px; color: var(--text-primary);"><i class="fas fa-check-circle" style="color: var(--success);"></i> Complete report</li>
-        <li style="margin-bottom: 5px; color: var(--text-primary);"><i class="fas fa-hourglass-half" style="color: var(--warning);"></i> Review Q3 budget</li>
-        <li style="margin-bottom: 5px; color: var(--text-primary);"><i class="fas fa-times-circle" style="color: var(--danger);"></i> Call John Doe</li>
-    </ul>
-    <button class="btn btn-sm" style="width: 100%; margin-top: 10px;">View All Tasks</button>
+    <div class="neomorphic-card p-4 h-full flex flex-col">
+        <h4 class="text-xl font-bold text-[var(--accent)] mb-4">My Tasks</h4>
+        <ul class="list-none p-0 m-0 flex-grow">
+            <li class="flex items-center mb-2 text-[var(--text-primary)]">
+                <i class="fas fa-check-circle mr-2 text-[var(--success)]"></i> Complete report
+            </li>
+            <li class="flex items-center mb-2 text-[var(--text-primary)]">
+                <i class="fas fa-hourglass-half mr-2 text-[var(--warning)]"></i> Review Q3 budget
+            </li>
+            <li class="flex items-center mb-2 text-[var(--text-primary)]">
+                <i class="fas fa-times-circle mr-2 text-[var(--danger)]"></i> Call John Doe
+            </li>
+        </ul>
+        <button class="btn btn-sm btn-secondary ripple-effect w-full mt-4">View All Tasks</button>
+    </div>
 </div>
 <div class="expanded-content">
-    <h4 style="color: var(--accent); margin-bottom: 15px;">Full Task List</h4>
-    <p>This expanded view would show a comprehensive list of tasks with filters, due dates, and assignments.</p>
-    <ul style="list-style: none; padding: 0;">
-        <li style="margin-bottom: 8px; color: var(--text-primary);">
-            <strong>Complete Marketing Report</strong> <span style="float: right; color: var(--text-secondary);">Due: 2024-07-15</span><br>
-            <small style="color: var(--text-secondary);">Assigned to: Jane Doe</small>
-        </li>
-        <li style="margin-bottom: 8px; color: var(--text-primary);">
-            <strong>Review Q3 Budget Projections</strong> <span style="float: right; color: var(--text-secondary);">Due: 2024-07-20</span><br>
-            <small style="color: var(--text-secondary);">Assigned to: Self</small>
-        </li>
-        <li style="margin-bottom: 8px; color: var(--text-primary);">
-            <strong>Follow up with John Doe (Client)</strong> <span style="float: right; color: var(--text-secondary);">Due: 2024-07-10</span><br>
-            <small style="color: var(--text-secondary);">Assigned to: Self</small>
-        </li>
-    </ul>
+    <div class="neomorphic-card p-4 h-full flex flex-col">
+        <h4 class="text-xl font-bold text-[var(--accent)] mb-4">Full Task List</h4>
+        <p class="text-sm text-[var(--text-secondary)] mb-4">This expanded view would show a comprehensive list of tasks with filters, due dates, and assignments.</p>
+        <ul class="list-none p-0 m-0 flex-grow">
+            <li class="mb-3 text-[var(--text-primary)]">
+                <strong>Complete Marketing Report</strong> <span class="float-right text-[var(--text-secondary)]">Due: 2024-07-15</span><br>
+                <small class="text-[var(--text-secondary)]">Assigned to: Jane Doe</small>
+            </li>
+            <li class="mb-3 text-[var(--text-primary)]">
+                <strong>Review Q3 Budget Projections</strong> <span class="float-right text-[var(--text-secondary)]">Due: 2024-07-20</span><br>
+                <small class="text-[var(--text-secondary)]">Assigned to: Self</small>
+            </li>
+            <li class="mb-3 text-[var(--text-primary)]">
+                <strong>Follow up with John Doe (Client)</strong> <span class="float-right text-[var(--text-secondary)]">Due: 2024-07-10</span><br>
+                <small class="text-[var(--text-secondary)]">Assigned to: Self</small>
+            </li>
+        </ul>
+    </div>
 </div>
