@@ -77,6 +77,39 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </style>
 </head>
 <body>
+
+<!-- Version Display -->
+<div id="version-display" style="position: absolute; top: 10px; right: 15px; font-size: 0.9em; color: #ccc;">
+  <strong>v</strong>
+  <span id="ver-1" class="version-segment">?</span>.
+  <span id="ver-2" class="version-segment">?</span>.
+  <span id="ver-3" class="version-segment">?</span>
+</div>
+<script src="version.js"></script>
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    if (window.appVersion) {
+      const raw = window.appVersion.split(".").pop(); // 1123
+      const verInt = parseInt(raw);
+      const v1 = Math.floor(verInt / 100);
+      const v2 = Math.floor((verInt % 100) / 10);
+      const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
+      document.getElementById("ver-1").textContent = v1;
+      document.getElementById("ver-2").textContent = v2;
+      document.getElementById("ver-3").textContent = v3;
+    }
+  });
+</script>
+
+
+<!-- Version Display -->
+<div style="position: absolute; top: 10px; right: 15px; font-size: 0.9em; color: #ccc;">
+    <strong>v</strong>
+    <span class="version-segment">1</span>.
+    <span class="version-segment">0</span>.
+    <span class="version-segment">0</span>
+</div>
+
     <!-- New: Overlay for expanded widgets -->
     <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
 
