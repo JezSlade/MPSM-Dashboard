@@ -508,6 +508,23 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </div>
 
     <script type="module" src="src/js/main.js"></script>
+    <script>
+document.getElementById("settings-toggle")?.addEventListener("click", () => {
+  document.getElementById("settings-panel")?.classList.add("active");
+  document.getElementById("settings-overlay")?.style.display = "block";
+});
+document.getElementById("close-settings")?.addEventListener("click", () => {
+  document.getElementById("settings-panel")?.classList.remove("active");
+  document.getElementById("settings-overlay")?.style.display = "none";
+});
+document.getElementById("settings-overlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "settings-overlay") {
+    document.getElementById("settings-panel")?.classList.remove("active");
+    e.target.style.display = "none";
+  }
+});
+</script>
+
 </body>
 </html>
 
