@@ -55,7 +55,7 @@ if (DEBUG_LOG_TO_FILE) {
 }
 
 // Set PHP error reporting and display based on DEBUG_MODE
-if (DEBUG_MODE === true) {
+if (DEBUG_MODE) {
     error_reporting(E_ALL); // Report all PHP errors
     ini_set('display_errors', '1'); // Display errors in browser (for development)
 } else {
