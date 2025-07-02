@@ -7,31 +7,48 @@ import MessageModal from './MessageModal.js';
  * Manages the modal for adjusting individual widget dimensions and editing code.
  */
 class WidgetSettingsModal {
-    constructor(overlayId, modalId, titleId, closeBtnId, formId, messageModal) {
-        this.overlay = document.getElementById(overlayId);
-        this.modal = document.getElementById(modalId);
-        this.titleElement = document.getElementById(titleId);
-        this.closeButton = document.getElementById(closeBtnId);
-        this.form = document.getElementById(formId);
-        this.messageModal = messageModal; // Instance of MessageModal
+    // Corrected constructor parameters to match main.js instantiation
+    constructor(overlayElement, modalElement, titleElement, closeButtonElement, formElement, idInputElement, widthInputElement, heightInputElement, messageModalInstance, ajaxServiceInstance) {
+        this.overlay = overlayElement;
+        this.modal = modalElement;
+        this.titleElement = titleElement;
+        this.closeButton = closeButtonElement;
+        this.form = formElement;
+        this.messageModal = messageModalInstance; // Instance of MessageModal
+        this.ajaxService = ajaxServiceInstance; // Instance of AjaxService
 
-        this.widgetIdInput = document.getElementById('widget-settings-id');
-        this.widthInput = document.getElementById('widget-settings-width');
-        this.heightInput = document.getElementById('widget-settings-height');
+        this.widgetIdInput = idInputElement;
+        this.widthInput = widthInputElement;
+        this.heightInput = heightInputElement;
 
         // NEW: Code editor elements
         this.codeEditorSection = this.modal.querySelector('.widget-code-editor-section');
-        this.codeFileNameDisplay = document.getElementById('widget-code-file-name');
-        this.codeEditorTextarea = document.getElementById('widget-code-editor');
-        this.loadCodeButton = document.getElementById('load-widget-code-btn');
-        this.saveCodeButton = document.getElementById('save-widget-code-btn');
-        this.codeStatusDisplay = document.getElementById('widget-code-status');
+        this.codeFileNameDisplay = document.getElementById('widget-code-file-name'); // Still needs getElementById as it's not passed directly
+        this.codeEditorTextarea = document.getElementById('widget-code-editor'); // Still needs getElementById
+        this.loadCodeButton = document.getElementById('load-widget-code-btn'); // Still needs getElementById
+        this.saveCodeButton = document.getElementById('save-widget-code-btn'); // Still needs getElementById
+        this.codeStatusDisplay = document.getElementById('widget-code-status'); // Still needs getElementById
 
         this.currentWidgetId = null; // Stores the ID of the widget currently being edited
         this.originalCodeContent = ''; // Stores content when file is loaded for dirty checking
 
+        // Updated null checks to reflect direct element passing
         if (!this.overlay || !this.modal || !this.titleElement || !this.closeButton || !this.form || !this.widgetIdInput || !this.widthInput || !this.heightInput || !this.codeEditorSection || !this.codeEditorTextarea || !this.loadCodeButton || !this.saveCodeButton || !this.codeStatusDisplay) {
-            console.error("WidgetSettingsModal: One or more required elements not found for dimensions or code editor.");
+            console.error("WidgetSettingsModal: One or more required elements not found. Check HTML IDs and main.js instantiation.");
+            // Log specific missing elements for easier debugging
+            if (!this.overlay) console.error("Missing: overlayElement");
+            if (!this.modal) console.error("Missing: modalElement");
+            if (!this.titleElement) console.error("Missing: titleElement");
+            if (!this.closeButton) console.error("Missing: closeButtonElement");
+            if (!this.form) console.error("Missing: formElement");
+            if (!this.widgetIdInput) console.error("Missing: idInputElement");
+            if (!this.widthInput) console.error("Missing: widthInputElement");
+            if (!this.heightInput) console.error("Missing: heightInputElement");
+            if (!this.codeEditorSection) console.error("Missing: .widget-code-editor-section");
+            if (!this.codeEditorTextarea) console.error("Missing: #widget-code-editor");
+            if (!this.loadCodeButton) console.error("Missing: #load-widget-code-btn");
+            if (!this.saveCodeButton) console.error("Missing: #save-widget-code-btn");
+            if (!this.codeStatusDisplay) console.error("Missing: #code-status-display");
             return;
         }
 
@@ -63,9 +80,13 @@ class WidgetSettingsModal {
     show(widgetId, widgetName, currentWidth, currentHeight) {
         this.currentWidgetId = widgetId; // Store current widget ID
         this.titleElement.textContent = `Settings for "${widgetName}"`;
-        this.widgetIdInput.value = widgetId;
+        this.widgetIdInput.value = currentWidth; // This was incorrect, should be widgetId
         this.widthInput.value = currentWidth;
         this.heightInput.value = currentHeight;
+
+        // Corrected: Set widgetIdInput.value to widgetId
+        this.widgetIdInput.value = widgetId;
+
 
         // Reset code editor state when opening for a new widget
         this.codeEditorSection.classList.add('hidden'); // Hide editor initially
