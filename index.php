@@ -153,6 +153,10 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             border-left: 1px solid var(--modal-border);
         }
 
+        .settings-panel.open { /* Class to make the panel visible */
+            right: 0;
+        }
+
         .settings-form-content { /* This new class wraps the scrollable form body */
             padding: 20px;
             overflow-y: auto; /* Make this section scrollable */
@@ -164,6 +168,14 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             border-top: 1px solid var(--modal-border);
             background-color: var(--modal-header-bg); /* Match header or modal background */
             flex-shrink: 0; /* Prevent it from shrinking */
+        }
+
+        .overlay { /* Ensure overlay also has a transition for smoother appearance */
+            transition: opacity 0.3s ease;
+        }
+        .overlay.active {
+            display: block; /* Make sure it becomes block when active */
+            opacity: 1;
         }
     </style>
 </head>
@@ -615,27 +627,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
     <script type="module" src="src/js/main.js"></script>
     <script src="version.js"></script>
-    <script>
-    window.addEventListener("DOMContentLoaded", () => {
-        if (window.appVersion) {
-            const versionDisplay = document.getElementById('version-display');
-            if (versionDisplay) {
-                // The PHP-generated version is already displayed.
-                // This JS block was previously attempting to parse a different version string.
-                // If window.appVersion (from version.js) is also needed, its display
-                // logic would need to be integrated here, perhaps for a secondary version display.
-                // For now, it remains as is, not directly affecting the primary PHP-generated version.
-                // const raw = window.appVersion.split(".").pop();
-                // const verInt = parseInt(raw);
-                // const v1 = Math.floor(verInt / 100);
-                // const v2 = Math.floor((verInt % 100) / 10);
-                // const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
-                // Example of how you might display it if needed:
-                // versionDisplay.innerHTML += ` (JS Build: ${window.appVersion})`;
-            }
-        }
-    });
-    </script>
 </body>
 </html>
 
