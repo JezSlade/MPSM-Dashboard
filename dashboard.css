@@ -2400,6 +2400,8 @@ textarea.form-control {
 }
 
 /* IDE Widget Specific Styles */
+/* These styles are also included in ide.php for standalone use,
+   but are kept here for consistency and if ide.php includes dashboard.css */
 .ide-container {
     display: flex;
     flex-direction: column;
@@ -2445,13 +2447,17 @@ textarea.form-control {
     padding: 3px 6px;
     border-radius: 4px;
     background-color: rgba(255, 255, 255, 0.1);
+    color: var(--primary); /* Default status color */
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .ide-status-saved {
+    background-color: rgba(76, 175, 80, 0.2); /* Greenish for saved */
     color: var(--success);
 }
 
 .ide-status-unsaved {
+    background-color: rgba(255, 193, 7, 0.2); /* Yellowish for unsaved */
     color: var(--warning);
 }
 

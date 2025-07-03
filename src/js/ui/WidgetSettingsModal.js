@@ -10,6 +10,7 @@ const widgetSettingsIdInput = document.getElementById('widget-settings-id'); // 
 const widgetSettingsWidthInput = document.getElementById('widget-settings-width');
 const widgetSettingsHeightInput = document.getElementById('widget-settings-height');
 const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
+const openIdeButton = document.getElementById('open-ide-button'); // NEW: Get the IDE button
 
 /**
  * Displays the widget settings modal for a specific widget.
@@ -35,6 +36,19 @@ export function showWidgetSettingsModal(widgetId, widgetName, currentWidth, curr
         submitBtn.disabled = isDisabled;
         submitBtn.textContent = isDisabled ? 'Disabled in Show All Mode' : 'Save Dimensions';
     }
+
+    // NEW: Set up the Open IDE button
+    if (openIdeButton) {
+        // Construct the path to the widget file
+        const widgetFilePath = `widgets/${widgetId}.php`;
+        // Encode the path to be safely passed as a URL parameter
+        const encodedFilePath = encodeURIComponent(widgetFilePath);
+        // Set the href for the button to open the IDE in a new tab
+        openIdeButton.onclick = () => {
+            window.open(`ide.php?file=${encodedFilePath}`, '_blank');
+        };
+    }
+
 
     widgetSettingsModalOverlay.classList.add('active');
 }
