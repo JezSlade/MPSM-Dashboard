@@ -45,25 +45,35 @@ $settings = $current_dashboard_state; // Assign the loaded state to $settings fo
 // in the session when the page is reloaded or initially loaded.
 $_SESSION['dashboard_settings'] = $current_dashboard_state;
 
+// Define the current version numbers for the dashboard.
+// Based on the user's request "v 00.1.2.47", the version segments are reordered and assigned.
+// Here, '00' is treated as the build number, '1' as the major, '2' as the minor, and '47' as the patch.
+// These are static values within this PHP file. For dynamic versioning (e.g., build number rolling over),
+// a more robust system (like reading from a file, database, or build environment variables) would be needed.
+$build_number = '00'; // Corresponds to '00' in v00.1.2.47
+$major_version = 1;    // Corresponds to '1' in v00.1.2.47
+$minor_version = 2;    // Corresponds to '2' in v00.1.2.47
+$patch_version = 47;   // Corresponds to '47' in v00.1.2.47
+
 /**
- * Formats the dashboard version string.
+ * Formats the dashboard version string according to the "build.major.minor.patch" scheme.
  *
+ * @param string $build Build identifier (e.g., '00').
  * @param int $major Major version number.
  * @param int $minor Minor version number.
  * @param int $patch Patch version number.
- * @param string $build Build identifier (e.g., '00', 'beta', 'rc1').
- * @return string Formatted version string (e.g., "v1.0.0.00").
+ * @return string Formatted version string (e.g., "v00.1.2.47").
  */
-function formatDashboardVersion($major, $minor, $patch, $build) {
-    return "v{$major}.{$minor}.{$patch}.{$build}";
+function formatDashboardVersion($build, $major, $minor, $patch) {
+    return "v{$build}.{$major}.{$minor}.{$patch}";
 }
 
-// Define the current version numbers for the dashboard.
-$major = 12;
-$minor = 4;
-$patch = 7;
-$build = '00'; // Placeholder for build number, can be dynamically generated (e.g., from Git commit hash).
-$formattedVersion = formatDashboardVersion($major, $minor, $patch, $build);
+$formattedVersion = formatDashboardVersion(
+    $build_number,
+    $major_version,
+    $minor_version,
+    $patch_version
+);
 
 // The index.php no longer handles POST requests directly for actions.
 // In the refactored architecture, all dashboard actions (saving settings,
@@ -565,16 +575,21 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     <script>
     window.addEventListener("DOMContentLoaded", () => {
         if (window.appVersion) {
-            const raw = window.appVersion.split(".").pop();
-            const verInt = parseInt(raw);
-            const v1 = Math.floor(verInt / 100);
-            const v2 = Math.floor((verInt % 100) / 10);
-            const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
-            // These elements for ver-1, ver-2, ver-3 are not present in the current HTML.
-            // The version is displayed using a single span for $formattedVersion.
-            // document.getElementById("ver-1").textContent = v1;
-            // document.getElementById("ver-2").textContent = v2;
-            // document.getElementById("ver-3").textContent = v3;
+            const versionDisplay = document.getElementById('version-display');
+            if (versionDisplay) {
+                // The PHP-generated version is already displayed.
+                // This JS block was previously attempting to parse a different version string.
+                // If window.appVersion (from version.js) is also needed, its display
+                // logic would need to be integrated here, perhaps for a secondary version display.
+                // For now, it remains as is, not directly affecting the primary PHP-generated version.
+                // const raw = window.appVersion.split(".").pop();
+                // const verInt = parseInt(raw);
+                // const v1 = Math.floor(verInt / 100);
+                // const v2 = Math.floor((verInt % 100) / 10);
+                // const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
+                // Example of how you might display it if needed:
+                // versionDisplay.innerHTML += ` (JS Build: ${window.appVersion})`;
+            }
         }
     });
     </script>
