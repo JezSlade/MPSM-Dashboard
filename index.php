@@ -1,61 +1,96 @@
 <?php
 // PHP Debugging Lines - START
+// Enable all error reporting for development purposes.
+// This helps in identifying and debugging issues quickly.
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
 
 // --- Cache Control Headers ---
+// These headers prevent the browser from caching the page,
+// ensuring that the latest version is always loaded.
+// This is crucial for dynamic dashboards where data changes frequently.
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // A date in the past to ensure expiration.
 // --- End Cache Control Headers ---
 
+// Start the PHP session.
+// Sessions are used to store user-specific data across multiple page requests.
 session_start();
 
-// Include configuration and helper functions/classes
-require_once 'config.php';
-require_once 'helpers.php';
-require_once 'src/php/DashboardManager.php';
-require_once 'src/php/FileManager.php'; // Ensure FileManager is included if used for widget creation
+// Include core configuration and helper functions/classes.
+// These files provide essential settings, utility functions,
+// and the main classes for managing the dashboard's state and file operations.
+require_once 'config.php'; // Contains global constants and widget discovery logic.
+require_once 'helpers.php'; // Provides utility functions like render_widget().
+require_once 'src/php/DashboardManager.php'; // Manages dashboard settings and widget states.
+require_once 'src/php/FileManager.php'; // Handles file operations, especially for widget templates.
 
-// Instantiate DashboardManager
-// $available_widgets is populated by discover_widgets() in config.php
+// Instantiate the DashboardManager.
+// This object is responsible for loading, saving, and managing the dashboard's configuration.
+// $available_widgets is a global variable populated by the discover_widgets() function in config.php.
 $dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, $available_widgets);
 
-// Load current dashboard state (settings + widget states)
+// Load the current dashboard state.
+// This includes global settings (title, accent color, etc.) and the state of all widgets.
 $current_dashboard_state = $dashboardManager->loadDashboardState();
-$settings = $current_dashboard_state; // $settings now includes 'widgets_state'
+$settings = $current_dashboard_state; // Assign the loaded state to $settings for easier access.
 
-// IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state
-// This ensures session state is synced with persistent state on page load.
+// IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state.
+// This step is critical to synchronize the PHP session with the persistent dashboard settings.
+// It ensures that any changes made via AJAX and saved to the JSON file are reflected
+// in the session when the page is reloaded or initially loaded.
 $_SESSION['dashboard_settings'] = $current_dashboard_state;
+
+/**
+ * Formats the dashboard version string.
+ *
+ * @param int $major Major version number.
+ * @param int $minor Minor version number.
+ * @param int $patch Patch version number.
+ * @param string $build Build identifier (e.g., '00', 'beta', 'rc1').
+ * @return string Formatted version string (e.g., "v1.0.0.00").
+ */
 function formatDashboardVersion($major, $minor, $patch, $build) {
     return "v{$major}.{$minor}.{$patch}.{$build}";
 }
 
+// Define the current version numbers for the dashboard.
 $major = 12;
 $minor = 4;
 $patch = 7;
-$build = '00';
+$build = '00'; // Placeholder for build number, can be dynamically generated (e.g., from Git commit hash).
 $formattedVersion = formatDashboardVersion($major, $minor, $patch, $build);
 
-
 // The index.php no longer handles POST requests directly for actions.
-// All actions are now handled by dedicated API endpoints via AJAX.
+// In the refactored architecture, all dashboard actions (saving settings,
+// managing widgets, creating new widgets) are handled by dedicated API endpoints
+// located in the `api/` directory. These endpoints are accessed via AJAX requests
+// from the frontend JavaScript.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // This part should ideally not be reached for action_type POSTs
-    // as AJAX requests are now handled by api/dashboard.php etc.
+    // This block is largely vestigial and should ideally not be reached for
+    // typical dashboard interactions. If it is, it indicates a direct POST
+    // to index.php, which is not the intended flow for dynamic actions.
+    // Any POST requests here would likely be for initial form submissions
+    // or legacy functionalities that should be migrated to AJAX APIs.
+    // For now, it simply prevents any unintended processing.
+    error_log("Received a direct POST request to index.php. All dashboard actions should use AJAX to API endpoints.");
+    // Optionally, you could redirect or return an error here if direct POSTs are strictly forbidden.
 }
 
-// Ensure the $settings array used for rendering always reflects the latest state,
-// potentially updated by AJAX and then reloaded via loadDashboardState().
+// Ensure the $settings array used for rendering always reflects the latest state.
+// This line merges the state loaded from the JSON file with any potential
+// session-based overrides. This is a safeguard to ensure the most up-to-date
+// configuration is used for rendering the HTML.
 $settings = array_replace_recursive($dashboardManager->loadDashboardState(), $_SESSION['dashboard_settings'] ?? []);
 
 // Pass available widgets to the view
-global $available_widgets; // Ensure $available_widgets from config.php is accessible
-
+// The $available_widgets variable contains metadata for all discovered widget templates.
+// It's made global to be accessible throughout the PHP rendering process.
+global $available_widgets; // Ensure $available_widgets from config.php is accessible.
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -63,25 +98,31 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($settings['title']) ?></title>
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main dashboard CSS -->
     <link rel="stylesheet" href="dashboard.css">
     <!-- Chart.js CDN for charting widgets -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
+        /* CSS variables for dynamic styling based on dashboard settings */
         :root {
-            --accent: <?= $settings['accent_color'] ?>;
-            --glass-bg: rgba(35, 40, 49, <?= $settings['glass_intensity'] ?>);
-            --blur-amount: <?= $settings['blur_amount'] ?>;
+            --accent: <?= $settings['accent_color'] ?>; /* Main accent color */
+            --glass-bg: rgba(35, 40, 49, <?= $settings['glass_intensity'] ?>); /* Background color with transparency for glass effect */
+            --blur-amount: <?= $settings['blur_amount'] ?>; /* Blur intensity for glass effect */
+            --transition: all 0.3s ease-in-out; /* Standard transition for animations */
+            /* Define accent-rgb for use in rgba() for shadows/glows */
+            --accent-rgb: <?= implode(',', sscanf($settings['accent_color'], '#%02x%02x%02x')) ?>;
         }
+
+        /* Widget specific styling and animation control */
         .widget {
-            transition: <?= $settings['enable_animations'] ? 'var(--transition)' : 'none' ?>;
+            transition: <?= $settings['enable_animations'] ? 'var(--transition)' : 'none' ?>; /* Apply transition only if animations are enabled */
         }
         .widget:hover {
             <?php if ($settings['enable_animations']): ?>
-            transform: translateY(-5px);
-            box-shadow:
-                12px 12px 24px var(--shadow-dark),
-                -12px -12px 24px rgba(74, 78, 94, 0.1);
+            transform: translateY(-5px); /* Lift effect on hover */
+            box-shadow: 12px 12px 24px var(--shadow-dark), -12px -12px 24px rgba(74, 78, 94, 0.1); /* Enhanced shadow on hover */
             <?php endif; ?>
         }
     </style>
@@ -200,11 +241,9 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
                 <div class="logo-version" style="font-size: 0.75em; color: #bbb; margin-left: 8px;" id="version-display">
-                    <strong>v</strong>
-                    <?php echo $formattedVersion ?>
+                    <strong>v</strong> <?php echo $formattedVersion ?>
                 </div>
             </div>
-
             <div class="header-actions">
                 <button class="btn" id="settings-toggle">
                     <i class="fas fa-cog"></i> Settings
