@@ -20,7 +20,8 @@
 
     --header-height: 60px;
     --sidebar-width: 250px;
-    --sidebar-width-collapsed: 70px; /* New: Width of the sidebar when collapsed */
+    --sidebar-width-collapsed: 0px; /* Changed to 0px for full collapse */
+    --sidebar-toggle-offset: 5px; /* New: Offset for the toggle button from the left edge */
     --transition: all 0.3s ease-in-out; /* Smooth transitions for UI elements */
     --border-radius: 12px; /* Consistent rounded corners */
 
@@ -83,6 +84,7 @@ html {
     height: 100vh;
     overflow: hidden; /* Prevent main scrollbars for fixed layout */
     transition: grid-template-columns 0.3s ease-in-out; /* Smooth transition for sidebar collapse */
+    position: relative; /* Needed for absolute positioning of sidebar-toggle */
 }
 
 .dashboard.collapsed {
@@ -129,35 +131,36 @@ html {
     backdrop-filter: blur(var(--blur-amount));
     border-right: 1px solid var(--glass-border);
     padding: 20px;
-    overflow-y: auto; /* Scrollable sidebar */
+    overflow-y: auto; /* Scrollable sidebar when expanded */
     box-shadow: var(--shadow-dark);
     z-index: 900;
-    position: relative; /* For sidebar toggle button positioning */
     transition: width 0.3s ease-in-out, padding 0.3s ease-in-out; /* Smooth transition for width and padding */
 }
 
 .sidebar.collapsed {
     width: var(--sidebar-width-collapsed); /* Set explicit width for transition */
-    padding: 20px 0; /* Adjust padding for collapsed state */
+    padding: 0; /* Adjust padding for collapsed state */
+    overflow-y: hidden; /* Hide scrollbars when collapsed */
+    border-right: none; /* Remove border when fully collapsed */
 }
 
 /* Sidebar Toggle Button */
 .sidebar-toggle {
-    position: absolute;
+    position: absolute; /* Position relative to .dashboard */
     top: 50%;
-    right: -15px; /* Halfway outside the sidebar */
+    left: calc(var(--sidebar-width) - 15px); /* Position at the right edge of expanded sidebar */
     transform: translateY(-50%);
     width: 30px;
     height: 30px;
     background-color: var(--primary);
     color: var(--bg-primary);
-    border-radius: 50%;
+    border-radius: 50%; /* Full circle */
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
-    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    transition: left 0.3s ease-in-out, background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
     z-index: 1002; /* Ensure it's above main content */
 }
 
@@ -168,6 +171,11 @@ html {
 
 .sidebar-toggle i {
     transition: transform 0.3s ease;
+}
+
+/* When dashboard is collapsed, move the toggle button to the left edge */
+.dashboard.collapsed .sidebar-toggle {
+    left: var(--sidebar-toggle-offset); /* Position at the very left with a small offset */
 }
 
 .dashboard.collapsed .sidebar-toggle i {
@@ -2331,7 +2339,7 @@ textarea.form-control {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background-color: var(--bg-primary); /* Darker header for modals */
+    background-color: var(--bg-primary);
     border-bottom: 1px solid var(--glass-border);
     border-top-left-radius: var(--border-radius);
     border-top-right-radius: var(--border-radius);

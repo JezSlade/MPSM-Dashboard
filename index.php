@@ -392,6 +392,11 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </div>
 
     <div class="dashboard">
+        <!-- Sidebar Toggle Button - Moved outside the sidebar -->
+        <div class="sidebar-toggle" id="sidebar-toggle">
+            <i class="fas fa-chevron-left"></i>
+        </div>
+
         <!-- Dashboard Header -->
         <header class="header">
             <div class="logo">
@@ -417,9 +422,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
         <!-- Dashboard Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-toggle" id="sidebar-toggle">
-                <i class="fas fa-chevron-left"></i>
-            </div>
             <div class="sidebar-section">
                 <div class="section-title">Navigation</div>
                 <div class="nav-item active">
