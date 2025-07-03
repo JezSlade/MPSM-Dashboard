@@ -251,7 +251,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
                 <div class="logo-version" style="font-size: 0.75em; color: #bbb; margin-left: 8px;" id="version-display">
-                    <strong>v</strong> <?php echo $formattedVersion ?>
+                    <?php echo $formattedVersion ?>
                 </div>
             </div>
             <div class="header-actions">
