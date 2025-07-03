@@ -14,6 +14,7 @@ import { initWidgetSettingsModal } from './ui/WidgetSettingsModal.js';
  * and tab navigation.
  */
 function initSettingsPanel() {
+    console.log('[main.js] Initializing SettingsPanel...');
     const settingsPanel = document.getElementById('settings-panel');
     const settingsToggleBtn = document.getElementById('settings-toggle');
     const closeSettingsBtn = document.getElementById('close-settings');
@@ -23,33 +24,38 @@ function initSettingsPanel() {
 
     // Function to open the settings panel
     const openSettingsPanel = () => {
-        settingsPanel.classList.add('open');
-        settingsOverlay.classList.add('active');
+        if (settingsPanel) settingsPanel.classList.add('open');
+        if (settingsOverlay) settingsOverlay.classList.add('active');
         document.body.style.overflow = 'hidden'; // Prevent scrolling body when panel is open
+        console.log('[main.js] SettingsPanel opened.');
     };
 
     // Function to close the settings panel
     const closeSettingsPanel = () => {
-        settingsPanel.classList.remove('open');
-        settingsOverlay.classList.remove('active');
+        if (settingsPanel) settingsPanel.classList.remove('open');
+        if (settingsOverlay) settingsOverlay.classList.remove('active');
         document.body.style.overflow = ''; // Restore body scrolling
+        console.log('[main.js] SettingsPanel closed.');
     };
 
     // Event listeners for opening and closing the panel
     if (settingsToggleBtn) {
         settingsToggleBtn.addEventListener('click', openSettingsPanel);
+        console.log('[main.js] Settings toggle button listener attached.');
     } else {
-        console.warn('Settings toggle button (id="settings-toggle") not found.');
+        console.warn('[main.js] Settings toggle button (id="settings-toggle") not found.');
     }
     if (closeSettingsBtn) {
         closeSettingsBtn.addEventListener('click', closeSettingsPanel);
+        console.log('[main.js] Close settings button listener attached.');
     } else {
-        console.warn('Close settings button (id="close-settings") not found.');
+        console.warn('[main.js] Close settings button (id="close-settings") not found.');
     }
     if (settingsOverlay) {
         settingsOverlay.addEventListener('click', closeSettingsPanel);
+        console.log('[main.js] Settings overlay listener attached.');
     } else {
-        console.warn('Settings overlay (id="settings-overlay") not found.');
+        console.warn('[main.js] Settings overlay (id="settings-overlay") not found.');
     }
 
     // Handle settings tab navigation
@@ -57,6 +63,7 @@ function initSettingsPanel() {
         button.addEventListener('click', function() {
             const targetId = this.dataset.target; // e.g., "general-settings-section"
             const targetSection = document.getElementById(targetId);
+            console.log(`[main.js] Settings tab clicked: ${targetId}`);
 
             if (targetSection) {
                 // Remove 'active' from all tab buttons and sections
@@ -66,22 +73,23 @@ function initSettingsPanel() {
                 // Add 'active' to the clicked tab button and its corresponding section
                 this.classList.add('active');
                 targetSection.classList.add('active');
+                console.log(`[main.js] Activated tab: ${targetId}`);
             } else {
-                console.warn(`Target section for tab "${targetId}" not found.`);
+                console.warn(`[main.js] Target section for tab "${targetId}" not found.`);
             }
         });
     });
 
     // Initialize the first tab as active on load
-    // This ensures one tab is always visible when the panel opens.
     const initialActiveTab = document.querySelector('.settings-tab-btn.active');
     if (initialActiveTab) {
         const targetId = initialActiveTab.dataset.target;
         const targetSection = document.getElementById(targetId);
         if (targetSection) {
             targetSection.classList.add('active');
+            console.log(`[main.js] Initial active tab "${targetId}" activated.`);
         } else {
-            console.warn(`Initial active tab target section "${targetId}" not found.`);
+            console.warn(`[main.js] Initial active tab target section "${targetId}" not found.`);
         }
     } else if (settingsTabButtons.length > 0) {
         // If no active tab is initially set, activate the first one
@@ -90,11 +98,12 @@ function initSettingsPanel() {
         const targetSection = document.getElementById(targetId);
         if (targetSection) {
             targetSection.classList.add('active');
+            console.log(`[main.js] No initial active tab found, activating first tab: ${targetId}`);
         } else {
-            console.warn(`First tab target section "${targetId}" not found.`);
+            console.warn(`[main.js] First tab target section "${targetId}" not found.`);
         }
     } else {
-        console.warn('No settings tab buttons found.');
+        console.warn('[main.js] No settings tab buttons found for initialization.');
     }
 }
 
@@ -103,12 +112,13 @@ function initSettingsPanel() {
  * Persists the sidebar state using localStorage.
  */
 function initSidebarCollapse() {
+    console.log('[main.js] Initializing SidebarCollapse...');
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const dashboard = document.querySelector('.dashboard'); // Assuming .dashboard is the parent that controls layout
 
     if (!sidebar || !sidebarToggle || !dashboard) {
-        console.warn('Sidebar, sidebar toggle, or dashboard element not found. Sidebar collapse not initialized.');
+        console.warn('[main.js] Sidebar, sidebar toggle, or dashboard element not found. Sidebar collapse not initialized.');
         return;
     }
 
@@ -117,6 +127,9 @@ function initSidebarCollapse() {
     if (savedSidebarState === 'true') {
         dashboard.classList.add('collapsed');
         sidebar.classList.add('collapsed');
+        console.log('[main.js] Sidebar restored to collapsed state from localStorage.');
+    } else {
+        console.log('[main.js] Sidebar restored to expanded state or no saved state found.');
     }
 
     sidebarToggle.addEventListener('click', () => {
@@ -126,7 +139,9 @@ function initSidebarCollapse() {
         // Save the new state to localStorage
         const isCollapsed = dashboard.classList.contains('collapsed');
         localStorage.setItem('sidebarCollapsed', isCollapsed);
+        console.log(`[main.js] Sidebar toggle clicked. New state: ${isCollapsed ? 'collapsed' : 'expanded'}. State saved to localStorage.`);
     });
+    console.log('[main.js] Sidebar toggle listener attached.');
 }
 
 
@@ -209,10 +224,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Example of how you might display it if needed:
             // versionDisplay.innerHTML += ` (JS Build: ${window.appVersion})`;
         } else {
-            console.warn('Version display element (id="version-display") not found.');
+            console.warn('[main.js] Version display element (id="version-display") not found.');
         }
     } else {
-        console.warn('window.appVersion not found. Version display from version.js may not be active.');
+        console.warn('[main.js] window.appVersion not found. Version display from version.js may not be active.');
     }
 });
 
@@ -220,9 +235,9 @@ document.addEventListener('DOMContentLoaded', function() {
 const refreshBtn = document.getElementById('refresh-btn');
 if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
-        console.log('Refresh button clicked. Reloading page...');
+        console.log('[main.js] Refresh button clicked. Reloading page...');
         location.reload(true); // Force a hard reload
     });
 } else {
-    console.warn('Refresh button (id="refresh-btn") not found.');
+    console.warn('[main.js] Refresh button (id="refresh-btn") not found.');
 }

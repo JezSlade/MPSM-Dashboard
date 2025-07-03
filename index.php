@@ -297,6 +297,13 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
                 </form>
+                <!-- NEW: Open IDE Button -->
+                <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+                    <label>Edit Widget Source Code</label>
+                    <button type="button" class="btn btn-secondary" id="open-ide-button" style="width: 100%;">
+                        <i class="fas fa-code"></i> Open in IDE
+                    </button>
+                </div>
             </div>
         </div>
     </div>
