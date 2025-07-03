@@ -1546,7 +1546,6 @@ textarea.form-control {
 .toast-notification.show {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
 }
 .toast-icon-wrapper {
     display: flex;
@@ -2194,7 +2193,7 @@ textarea.form-control {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background-color: var(--bg-primary); /* Darker header */
+    background-color: var(--bg-primary);
     border-bottom: 1px solid var(--glass-border);
     flex-shrink: 0; /* Prevent header from shrinking */
 }
@@ -2540,4 +2539,11 @@ textarea.form-control {
     -o-tab-size: 4;
     flex-grow: 1; /* Allow editor to fill available space */
     overflow: auto; /* Ensure editor content is scrollable */
+}
+
+/* Force IDE button visibility - DEBUGGING */
+#open-ide-button {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
