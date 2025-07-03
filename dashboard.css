@@ -20,6 +20,7 @@
 
     --header-height: 60px;
     --sidebar-width: 250px;
+    --sidebar-width-collapsed: 70px; /* New: Width of the sidebar when collapsed */
     --transition: all 0.3s ease-in-out; /* Smooth transitions for UI elements */
     --border-radius: 12px; /* Consistent rounded corners */
 
@@ -77,10 +78,15 @@ html {
 /* Dashboard Layout */
 .dashboard {
     display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-columns: var(--sidebar-width) 1fr; /* Default: sidebar-width */
     grid-template-rows: var(--header-height) 1fr;
     height: 100vh;
     overflow: hidden; /* Prevent main scrollbars for fixed layout */
+    transition: grid-template-columns 0.3s ease-in-out; /* Smooth transition for sidebar collapse */
+}
+
+.dashboard.collapsed {
+    grid-template-columns: var(--sidebar-width-collapsed) 1fr; /* Collapsed: smaller sidebar */
 }
 
 /* Header */
@@ -126,10 +132,60 @@ html {
     overflow-y: auto; /* Scrollable sidebar */
     box-shadow: var(--shadow-dark);
     z-index: 900;
+    position: relative; /* For sidebar toggle button positioning */
+    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out; /* Smooth transition for width and padding */
 }
+
+.sidebar.collapsed {
+    width: var(--sidebar-width-collapsed); /* Set explicit width for transition */
+    padding: 20px 0; /* Adjust padding for collapsed state */
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: absolute;
+    top: 50%;
+    right: -15px; /* Halfway outside the sidebar */
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: var(--primary);
+    color: var(--bg-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    z-index: 1002; /* Ensure it's above main content */
+}
+
+.sidebar-toggle:hover {
+    background-color: color-mix(in srgb, var(--primary) 90%, white);
+    box-shadow: 0 0 15px rgba(0, 188, 212, 0.7);
+}
+
+.sidebar-toggle i {
+    transition: transform 0.3s ease;
+}
+
+.dashboard.collapsed .sidebar-toggle i {
+    transform: rotate(180deg); /* Rotate arrow when collapsed */
+}
+
 
 .sidebar-section {
     margin-bottom: 30px;
+    transition: opacity 0.3s ease; /* Smooth fade for sections */
+}
+
+.dashboard.collapsed .sidebar-section {
+    opacity: 0;
+    pointer-events: none; /* Disable interaction when hidden */
+    height: 0; /* Collapse height */
+    overflow: hidden; /* Hide overflow */
+    margin-bottom: 0; /* Remove margin */
 }
 
 .section-title {
@@ -139,6 +195,9 @@ html {
     margin-bottom: 15px;
     padding-bottom: 5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis */
 }
 
 .nav-item {
@@ -151,6 +210,7 @@ html {
     cursor: pointer;
     transition: var(--transition);
     text-decoration: none; /* For anchor tags */
+    position: relative; /* For tooltip */
 }
 
 .nav-item:hover {
@@ -169,7 +229,32 @@ html {
 .nav-item i {
     margin-right: 15px;
     font-size: 1.1em;
+    transition: margin-right 0.3s ease;
 }
+
+.nav-item span {
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis */
+    transition: opacity 0.3s ease, width 0.3s ease; /* Smooth transition for text */
+}
+
+/* Collapsed sidebar adjustments for nav items */
+.dashboard.collapsed .nav-item {
+    justify-content: center; /* Center icon */
+    padding: 12px 0; /* Adjust padding */
+}
+
+.dashboard.collapsed .nav-item i {
+    margin-right: 0; /* Remove margin */
+}
+
+.dashboard.collapsed .nav-item span {
+    width: 0; /* Collapse text width */
+    opacity: 0; /* Hide text */
+    pointer-events: none; /* Disable text interaction */
+}
+
 
 /* Widget Library */
 .widget-list {
@@ -215,10 +300,20 @@ html {
     font-size: 0.8em;
     color: var(--text-secondary);
     transition: color var(--transition);
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis */
 }
 
-.widget-item:hover .widget-name {
-    color: var(--accent);
+/* Collapsed sidebar adjustments for widget items */
+.dashboard.collapsed .widget-item {
+    width: 100%; /* Single column */
+    padding: 10px 0; /* Adjust padding */
+}
+
+.dashboard.collapsed .widget-item .widget-name {
+    display: none; /* Hide text */
+    opacity: 0; /* Fade out text */
 }
 
 

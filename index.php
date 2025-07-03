@@ -367,7 +367,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <input type="number" id="new-widget-height" name="height" class="form-control" value="1.0" min="0.5" max="4" step="0.5" required>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
-                        <i class="fas fa-plus"></i> Create Widget Template
+                        <i class="fas fa-file-code"></i> Create Widget Template
                     </button>
                 </form>
             </div>
@@ -416,7 +416,10 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         </header>
 
         <!-- Dashboard Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" id="sidebar-toggle">
+                <i class="fas fa-chevron-left"></i>
+            </div>
             <div class="sidebar-section">
                 <div class="section-title">Navigation</div>
                 <div class="nav-item active">
@@ -428,10 +431,11 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <i class="fas fa-layer-group"></i>
                     <span>Theme Library</span>
                 </a>
-                <div class="nav-item">
+                <!-- REMOVED: Users nav item as per request -->
+                <!-- <div class="nav-item">
                     <i class="fas fa-users"></i>
                     <span>Users</span>
-                </div>
+                </div> -->
                 <div class="nav-item" id="widget-management-nav-item">
                     <i class="fas fa-th-large"></i>
                     <span>Widget Management</span>
@@ -462,6 +466,8 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
             </div>
 
+            <!-- REMOVED: Dashboard Settings section as per request -->
+            <!--
             <div class="sidebar-section">
                 <div class="section-title">Dashboard Settings</div>
                 <div class="nav-item" id="general-settings-nav-item">
@@ -477,6 +483,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <span>Advanced Settings</span>
                 </div>
             </div>
+            -->
         </aside>
 
         <!-- Main Content Area -->

@@ -83,16 +83,45 @@ function initSettingsPanel() {
     }
 }
 
+/**
+ * Initializes the sidebar collapse functionality.
+ * Persists the sidebar state using localStorage.
+ */
+function initSidebarCollapse() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const dashboard = document.querySelector('.dashboard'); // Assuming .dashboard is the parent that controls layout
+
+    // Check for saved sidebar state in localStorage
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+    if (savedSidebarState === 'true') {
+        dashboard.classList.add('collapsed');
+        sidebar.classList.add('collapsed');
+    }
+
+    if (sidebarToggle && sidebar && dashboard) {
+        sidebarToggle.addEventListener('click', () => {
+            dashboard.classList.toggle('collapsed');
+            sidebar.classList.toggle('collapsed');
+
+            // Save the new state to localStorage
+            const isCollapsed = dashboard.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        });
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize all UI components and features here
     initMessageModal(); // Initialize the message modal first as others might use it
-    initSettingsPanel(); // Now calls the function defined in this file
+    initSettingsPanel();
     initWidgetManagementModal();
     initCreateWidgetModal(); // Ensure this function exists and is correctly implemented
     initDragDrop();
     initWidgetActions();
     initWidgetSettingsModal(); // Initialize the widget settings modal
+    initSidebarCollapse(); // Initialize sidebar collapse functionality
 
     // Version display logic (from previous request)
     if (window.appVersion) {

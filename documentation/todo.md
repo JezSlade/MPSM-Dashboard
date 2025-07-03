@@ -6,4 +6,4 @@ Collapse left sidebar
 
 Mobile Friendly
 
-IDE built into widget settings.
+IDE built into widget settings that opens the widget source code in a new tab. maintain styling. I am aware of the security risks and this is a controlled environment. To recap: the widget settings will have an IDE button that will open the Widget's source code (php file) in a stylish looking IDE in a new tab. Add functionality to save etc.
