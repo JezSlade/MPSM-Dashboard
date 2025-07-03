@@ -27,6 +27,11 @@
     --settings-panel-base-width: 350px;
     --settings-panel-padding: 20px;
     --settings-panel-actual-width: calc(var(--settings-panel-base-width) + (var(--settings-panel-padding) * 2));
+
+    /* Modal Background and Border for consistency */
+    --modal-bg: var(--bg-secondary); /* Use secondary background for modals */
+    --modal-border: var(--glass-border);
+    --modal-header-bg: var(--bg-primary); /* Use primary background for modal headers/footers */
 }
 
 /* Base Styles */
@@ -38,6 +43,36 @@ body {
     color: var(--text-primary);
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
+
+/* Custom Scrollbar Styles (Less intrusive) */
+/* For Webkit browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+    width: 8px; /* Vertical scrollbar width */
+    height: 8px; /* Horizontal scrollbar height */
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary); /* Track background */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 188, 212, 0.3); /* Thumb color (semi-transparent primary) */
+    border-radius: 10px;
+    border: 1px solid rgba(0, 188, 212, 0.1); /* Subtle border */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary); /* Solid primary on hover */
+    border: 1px solid var(--primary);
+}
+
+/* For Firefox */
+html {
+    scrollbar-color: rgba(0, 188, 212, 0.3) var(--bg-primary); /* thumb color track color */
+    scrollbar-width: thin; /* auto | thin | none */
+}
+
 
 /* Dashboard Layout */
 .dashboard {
@@ -2032,6 +2067,9 @@ textarea.form-control {
 
 /* --- Analytics Modal Patch --- */
 /* Analytics Modal Tab Buttons */
+/* This style block seems to be a remnant or override.
+   The .tab-btn styles above (under "Tabs functionality") are more consistent.
+   Removing this to avoid conflicts and ensure consistency with theme_library.html styles.
 .tab-btn {
     background: var(--widget-bg, #e0e5ec);
     border: none;
@@ -2046,6 +2084,7 @@ textarea.form-control {
 .tab-btn:hover {
     background: var(--highlight, #d1d9e6);
 }
+*/
 
 /* Placeholder for charts inside modal */
 .chart-placeholder {

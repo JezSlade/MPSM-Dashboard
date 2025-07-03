@@ -1,7 +1,5 @@
 // src/js/main.js
 
-// Removed the import for initSettingsPanel from './ui/SettingsPanel.js'
-// as the function is now defined directly in this file.
 import { initMessageModal } from './ui/MessageModal.js';
 import { initWidgetManagementModal } from './ui/WidgetManagementModal.js';
 import { initCreateWidgetModal } from './ui/CreateWidgetModal.js';
@@ -47,26 +45,26 @@ function initSettingsPanel() {
     }
 
     // Handle settings tab navigation
+    // This logic needs to be robust to ensure tabs switch correctly.
     settingsTabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Remove 'active' from all tab buttons and sections
-            settingsTabButtons.forEach(btn => btn.classList.remove('active'));
-            settingsSections.forEach(section => section.classList.remove('active'));
-
-            // Add 'active' to the clicked tab button
-            button.classList.add('active');
-
-            // Show the corresponding section
-            const targetId = button.dataset.target;
+        button.addEventListener('click', function() {
+            const targetId = this.dataset.target; // e.g., "general-settings-section"
             const targetSection = document.getElementById(targetId);
+
             if (targetSection) {
+                // Remove 'active' from all tab buttons and sections
+                settingsTabButtons.forEach(btn => btn.classList.remove('active'));
+                settingsSections.forEach(section => section.classList.remove('active'));
+
+                // Add 'active' to the clicked tab button and its corresponding section
+                this.classList.add('active');
                 targetSection.classList.add('active');
             }
         });
     });
 
     // Initialize the first tab as active on load
-    // Find the currently active tab button (if any)
+    // This ensures one tab is always visible when the panel opens.
     const initialActiveTab = document.querySelector('.settings-tab-btn.active');
     if (initialActiveTab) {
         const targetId = initialActiveTab.dataset.target;
@@ -75,7 +73,7 @@ function initSettingsPanel() {
             targetSection.classList.add('active');
         }
     } else if (settingsTabButtons.length > 0) {
-        // If no active tab is set, activate the first one
+        // If no active tab is initially set, activate the first one
         settingsTabButtons[0].classList.add('active');
         const targetId = settingsTabButtons[0].dataset.target;
         const targetSection = document.getElementById(targetId);
