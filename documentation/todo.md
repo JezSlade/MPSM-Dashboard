@@ -4,7 +4,6 @@ pre api helper files: tables, search, cache
 
 Collapse left sidebar
 
-fix versioning "v v12.4.7.00" -> "v 00.1.2.47 and the digits would roll over in a natural fashion.
 
 start incorporating css from theme_library.html when convenient.
 

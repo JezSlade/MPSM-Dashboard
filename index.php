@@ -135,6 +135,36 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             box-shadow: 12px 12px 24px var(--shadow-dark), -12px -12px 24px rgba(74, 78, 94, 0.1); /* Enhanced shadow on hover */
             <?php endif; ?>
         }
+
+        /* Settings Panel specific styles to ensure save button is always visible */
+        .settings-panel {
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            /* Existing styles for position, width, height, background, etc. */
+            position: fixed;
+            top: 0;
+            right: -400px; /* Hidden by default */
+            width: 380px;
+            height: 100%;
+            background: var(--modal-bg);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+            transition: right 0.3s ease-in-out;
+            z-index: 1001; /* Above overlay */
+            border-left: 1px solid var(--modal-border);
+        }
+
+        .settings-form-content { /* This new class wraps the scrollable form body */
+            padding: 20px;
+            overflow-y: auto; /* Make this section scrollable */
+            flex-grow: 1; /* Allows it to take up available space */
+        }
+
+        .settings-footer { /* New footer for the save button */
+            padding: 15px 20px;
+            border-top: 1px solid var(--modal-border);
+            background-color: var(--modal-header-bg); /* Match header or modal background */
+            flex-shrink: 0; /* Prevent it from shrinking */
+        }
     </style>
 </head>
 <body>
@@ -290,13 +320,24 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             <div class="sidebar-section">
                 <div class="section-title">Widget Library</div>
                 <div class="widget-list">
-                    <?php foreach ($available_widgets as $id => $widget): ?>
+                    <?php
+                    // Get a list of currently active widget IDs
+                    $active_widget_ids = array_keys(array_filter($settings['widgets_state'], function($widget) {
+                        return $widget['is_active'];
+                    }));
+
+                    foreach ($available_widgets as $id => $widget):
+                        // Only display the widget in the library if it's NOT currently active on the dashboard
+                        if (!in_array($id, $active_widget_ids)):
+                    ?>
                     <div class="widget-item" draggable="true" data-widget-id="<?= $id ?>">
-                        <!-- MODIFIED: Use full class for widget item icon -->
                         <i class="<?= htmlspecialchars($widget['icon']) ?>"></i>
                         <div class="widget-name"><?= $widget['name'] ?></div>
                     </div>
-                    <?php endforeach; ?>
+                    <?php
+                        endif;
+                    endforeach;
+                    ?>
                 </div>
             </div>
 
@@ -427,7 +468,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             <button class="settings-tab-btn" data-target="advanced-settings-section">Advanced</button>
         </div>
 
-        <form id="global-settings-form" method="post" class="settings-form">
+        <form id="global-settings-form" method="post" class="settings-form-content">
             <!-- General Settings Section -->
             <div class="settings-section active" id="general-settings-section">
                 <div class="settings-group">
@@ -563,11 +604,13 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     </div>
                 </div>
             </div>
+        </form>
 
-            <button type="submit" name="update_settings" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+        <div class="settings-footer">
+            <button type="submit" form="global-settings-form" class="btn btn-primary" style="width: 100%;">
                 <i class="fas fa-save"></i> Save All Settings
             </button>
-        </form>
+        </div>
     </div>
 
     <script type="module" src="src/js/main.js"></script>
