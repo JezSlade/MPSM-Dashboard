@@ -177,9 +177,102 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             display: block; /* Make sure it becomes block when active */
             opacity: 1;
         }
+
+        /* MODAL OVERLAYS - Ensure they are hidden by default and only become flex when active */
+        .message-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Darker background for modals */
+            backdrop-filter: blur(8px); /* Blur effect for modals */
+            z-index: 2000; /* Higher than settings panel */
+            display: none; /* Crucial: Hidden by default */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .message-modal-overlay.active {
+            display: flex; /* Only show as flex when active */
+            opacity: 1;
+        }
+
+        .message-modal {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            width: 90%;
+            max-width: 500px; /* Standard modal width */
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            display: flex; /* Ensure modal content itself is flex for header/body/footer structure */
+            flex-direction: column;
+            max-height: 90vh; /* Prevent modal from exceeding viewport height */
+        }
+
+        .message-modal-overlay.active .message-modal {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .message-modal.large-modal {
+            max-width: 800px; /* Larger modal for widget management */
+        }
+
+        .message-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: var(--bg-primary); /* Darker header for modals */
+            border-bottom: 1px solid var(--glass-border);
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+        }
+
+        .message-modal-header h3 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.2em;
+        }
+
+        .message-modal-body {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto; /* Make modal body scrollable if content overflows */
+            color: var(--text-primary);
+        }
+
+        .message-modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--glass-border);
+            background-color: var(--bg-primary);
+            border-bottom-left-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
+            text-align: right;
+        }
+
+        .btn-close-modal {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .btn-close-modal:hover {
+            color: var(--danger);
+        }
     </style>
 </head>
 <body>
+    <!-- ALL MODAL OVERLAYS SHOULD BE DIRECT CHILDREN OF BODY -->
+
     <!-- New: Overlay for expanded widgets -->
     <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
 
@@ -281,6 +374,22 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         </div>
     </div>
     <!-- END NEW: Create New Widget Modal Structure -->
+
+    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
+    <div class="message-modal-overlay" id="message-modal-overlay">
+        <div class="message-modal">
+            <div class="message-modal-header">
+                <h3 id="message-modal-title"></h3>
+                <button class="btn-close-modal" id="close-message-modal">&times;</button>
+            </div>
+            <div class="message-modal-body">
+                <p id="message-modal-content"></p>
+            </div>
+            <div class="message-modal-footer">
+                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
+            </div>
+        </div>
+    </div>
 
     <div class="dashboard">
         <!-- Dashboard Header -->
@@ -444,22 +553,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             </div>
             <?php endforeach; ?>
         </main>
-    </div>
-
-    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
-    <div class="message-modal-overlay" id="message-modal-overlay">
-        <div class="message-modal">
-            <div class="message-modal-header">
-                <h3 id="message-modal-title"></h3>
-                <button class="btn-close-modal" id="close-message-modal">&times;</button>
-            </div>
-            <div class="message-modal-body">
-                <p id="message-modal-content"></p>
-            </div>
-            <div class="message-modal-footer">
-                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
-            </div>
-        </div>
     </div>
 
 

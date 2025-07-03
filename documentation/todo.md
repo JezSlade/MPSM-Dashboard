@@ -4,11 +4,6 @@ pre api helper files: tables, search, cache
 
 Collapse left sidebar
 
-
-start incorporating css from theme_library.html when convenient.
-
-Widget Library (on left) should reflect "available" widgets only.
-
-Dashboard Settings too tall, save button on bottom gets cut off
-
 Mobile Friendly
+
+IDE built into widget settings.
