@@ -1,11 +1,13 @@
 // src/js/main.js
 
+// Import necessary modules
 import { initMessageModal } from './ui/MessageModal.js';
 import { initWidgetManagementModal } from './ui/WidgetManagementModal.js';
 import { initCreateWidgetModal } from './ui/CreateWidgetModal.js';
 import { initDragDrop } from './features/DragDropManager.js';
 import { initWidgetActions } from './features/WidgetActions.js';
 import { initWidgetSettingsModal } from './ui/WidgetSettingsModal.js';
+// Note: initSettingsPanel and initSidebarCollapse are defined directly in this file below.
 
 /**
  * Initializes the settings panel functionality, including opening/closing
@@ -36,16 +38,21 @@ function initSettingsPanel() {
     // Event listeners for opening and closing the panel
     if (settingsToggleBtn) {
         settingsToggleBtn.addEventListener('click', openSettingsPanel);
+    } else {
+        console.warn('Settings toggle button (id="settings-toggle") not found.');
     }
     if (closeSettingsBtn) {
         closeSettingsBtn.addEventListener('click', closeSettingsPanel);
+    } else {
+        console.warn('Close settings button (id="close-settings") not found.');
     }
     if (settingsOverlay) {
         settingsOverlay.addEventListener('click', closeSettingsPanel);
+    } else {
+        console.warn('Settings overlay (id="settings-overlay") not found.');
     }
 
     // Handle settings tab navigation
-    // This logic needs to be robust to ensure tabs switch correctly.
     settingsTabButtons.forEach(button => {
         button.addEventListener('click', function() {
             const targetId = this.dataset.target; // e.g., "general-settings-section"
@@ -59,6 +66,8 @@ function initSettingsPanel() {
                 // Add 'active' to the clicked tab button and its corresponding section
                 this.classList.add('active');
                 targetSection.classList.add('active');
+            } else {
+                console.warn(`Target section for tab "${targetId}" not found.`);
             }
         });
     });
@@ -71,6 +80,8 @@ function initSettingsPanel() {
         const targetSection = document.getElementById(targetId);
         if (targetSection) {
             targetSection.classList.add('active');
+        } else {
+            console.warn(`Initial active tab target section "${targetId}" not found.`);
         }
     } else if (settingsTabButtons.length > 0) {
         // If no active tab is initially set, activate the first one
@@ -79,7 +90,11 @@ function initSettingsPanel() {
         const targetSection = document.getElementById(targetId);
         if (targetSection) {
             targetSection.classList.add('active');
+        } else {
+            console.warn(`First tab target section "${targetId}" not found.`);
         }
+    } else {
+        console.warn('No settings tab buttons found.');
     }
 }
 
@@ -92,6 +107,11 @@ function initSidebarCollapse() {
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const dashboard = document.querySelector('.dashboard'); // Assuming .dashboard is the parent that controls layout
 
+    if (!sidebar || !sidebarToggle || !dashboard) {
+        console.warn('Sidebar, sidebar toggle, or dashboard element not found. Sidebar collapse not initialized.');
+        return;
+    }
+
     // Check for saved sidebar state in localStorage
     const savedSidebarState = localStorage.getItem('sidebarCollapsed');
     if (savedSidebarState === 'true') {
@@ -99,29 +119,78 @@ function initSidebarCollapse() {
         sidebar.classList.add('collapsed');
     }
 
-    if (sidebarToggle && sidebar && dashboard) {
-        sidebarToggle.addEventListener('click', () => {
-            dashboard.classList.toggle('collapsed');
-            sidebar.classList.toggle('collapsed');
+    sidebarToggle.addEventListener('click', () => {
+        dashboard.classList.toggle('collapsed');
+        sidebar.classList.toggle('collapsed');
 
-            // Save the new state to localStorage
-            const isCollapsed = dashboard.classList.contains('collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        });
-    }
+        // Save the new state to localStorage
+        const isCollapsed = dashboard.classList.contains('collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+    });
 }
 
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize all UI components and features here
-    initMessageModal(); // Initialize the message modal first as others might use it
-    initSettingsPanel();
-    initWidgetManagementModal();
-    initCreateWidgetModal(); // Ensure this function exists and is correctly implemented
-    initDragDrop();
-    initWidgetActions();
-    initWidgetSettingsModal(); // Initialize the widget settings modal
-    initSidebarCollapse(); // Initialize sidebar collapse functionality
+    console.log('DOMContentLoaded fired. Initializing dashboard features...');
+
+    try {
+        initMessageModal();
+        console.log('MessageModal initialized.');
+    } catch (error) {
+        console.error('Error initializing MessageModal:', error);
+    }
+
+    try {
+        initSettingsPanel(); // This function is defined locally in main.js
+        console.log('SettingsPanel initialized.');
+    } catch (error) {
+        console.error('Error initializing SettingsPanel:', error);
+    }
+
+    try {
+        initWidgetManagementModal();
+        console.log('WidgetManagementModal initialized.');
+    } catch (error) {
+        console.error('Error initializing WidgetManagementModal:', error);
+    }
+
+    try {
+        initCreateWidgetModal();
+        console.log('CreateWidgetModal initialized.');
+    } catch (error) {
+        console.error('Error initializing CreateWidgetModal:', error);
+    }
+
+    try {
+        initDragDrop();
+        console.log('DragDrop initialized.');
+    } catch (error) {
+        console.error('Error initializing DragDrop:', error);
+    }
+
+    try {
+        initWidgetActions();
+        console.log('WidgetActions initialized.');
+    } catch (error) {
+        console.error('Error initializing WidgetActions:', error);
+    }
+
+    try {
+        initWidgetSettingsModal();
+        console.log('WidgetSettingsModal initialized.');
+    } catch (error) {
+        console.error('Error initializing WidgetSettingsModal:', error);
+    }
+
+    try {
+        initSidebarCollapse(); // This function is defined locally in main.js
+        console.log('SidebarCollapse initialized.');
+    } catch (error) {
+        console.error('Error initializing SidebarCollapse:', error);
+    }
+
+    console.log('All dashboard features attempted initialization.');
 
     // Version display logic (from previous request)
     if (window.appVersion) {
@@ -139,7 +208,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
             // Example of how you might display it if needed:
             // versionDisplay.innerHTML += ` (JS Build: ${window.appVersion})`;
+        } else {
+            console.warn('Version display element (id="version-display") not found.');
         }
+    } else {
+        console.warn('window.appVersion not found. Version display from version.js may not be active.');
     }
 });
 
@@ -147,6 +220,9 @@ document.addEventListener('DOMContentLoaded', function() {
 const refreshBtn = document.getElementById('refresh-btn');
 if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
+        console.log('Refresh button clicked. Reloading page...');
         location.reload(true); // Force a hard reload
     });
+} else {
+    console.warn('Refresh button (id="refresh-btn") not found.');
 }
