@@ -6,25 +6,25 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Define APP_ROOT if it's not already defined (e.g., if this file is accessed directly)
+// Define APP_ROOT if it’s not already defined
 if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(__DIR__));
 }
 
 // Include necessary files
-require_once APP_ROOT . '/config.php';                 // For APP_ROOT and other configurations
-require_once APP_ROOT . '/src/php/FileManager.php';    // For file operations
+require_once APP_ROOT . '/config.php';                 
+require_once APP_ROOT . '/src/php/FileManager.php';    
 
 header('Content-Type: application/json');
 
 $fileManager = new FileManager(APP_ROOT);
 
-// Determine the action based on POST or GET request, defaulting to empty string
-$action = (isset($_REQUEST['action']) && is_string($_REQUEST['action']))
-    ? $_REQUEST['action']
+// Determine the action based on front-end’s ajax_action, defaulting to empty string
+$action = (isset($_REQUEST['ajax_action']) && is_string($_REQUEST['ajax_action']))
+    ? $_REQUEST['ajax_action']
     : '';
 
-// If no action provided, default to listing files (so the IDE loads the tree)
+// If no action provided, default to listing files
 if ($action === '') {
     $action = 'list_files';
 }
@@ -35,8 +35,8 @@ $response = ['status' => 'error', 'message' => 'Invalid action or request method
 try {
     switch ($action) {
         case 'list_files':
-            // List the directory tree; 'path' may be passed, otherwise root
-            $path = $_GET['path'] ?? '';
+            // Path may come via GET or POST
+            $path = $_REQUEST['path'] ?? ''; 
             $files = $fileManager->listFiles($path);
             if ($files !== false) {
                 $response = ['status' => 'success', 'data' => $files];
@@ -46,7 +46,7 @@ try {
             break;
 
         case 'read_file':
-            $file_path = $_GET['file'] ?? '';
+            $file_path = $_REQUEST['file'] ?? ''; 
             $content   = $fileManager->readFile($file_path);
             if ($content !== false) {
                 $response = ['status' => 'success', 'data' => $content];
@@ -60,8 +60,8 @@ try {
                 $response = ['status' => 'error', 'message' => 'Save operation requires POST method.'];
                 break;
             }
-            $file_path = $_POST['file']    ?? '';
-            $content   = $_POST['content'] ?? '';
+            $file_path = $_REQUEST['file']    ?? ''; 
+            $content   = $_REQUEST['content'] ?? ''; 
             if (empty($file_path)) {
                 $response = ['status' => 'error', 'message' => 'File path cannot be empty.'];
                 break;
@@ -75,7 +75,7 @@ try {
             break;
 
         default:
-            // htmlspecialchars() always gets a string now
+            // htmlspecialchars() always gets a string
             $response = ['status' => 'error', 'message' => 'Unknown action: ' . htmlspecialchars($action)];
             break;
     }
