@@ -12,16 +12,19 @@ if (!defined('APP_ROOT')) {
 }
 
 // Include necessary files
-require_once APP_ROOT . '/config.php'; // For APP_ROOT and other configurations
-require_once APP_ROOT . '/src/php/FileManager.php'; // For file operations
+require_once APP_ROOT . '/config.php';                 // For APP_ROOT and other configurations
+require_once APP_ROOT . '/src/php/FileManager.php';    // For file operations
 
 header('Content-Type: application/json');
 
 $fileManager = new FileManager(APP_ROOT);
 
-// Determine the action based on POST or GET request
-$action = $_REQUEST['action'] ?? null; // Use $_REQUEST to handle both GET and POST
+// Determine the action based on POST or GET request, defaulting to empty string
+$action = (isset($_REQUEST['action']) && is_string($_REQUEST['action']))
+    ? $_REQUEST['action']
+    : '';
 
+// Default response
 $response = ['status' => 'error', 'message' => 'Invalid action or request method.'];
 
 try {
@@ -38,7 +41,7 @@ try {
 
         case 'read_file':
             $file_path = $_GET['file'] ?? ''; // File to read, relative to APP_ROOT
-            $content = $fileManager->readFile($file_path);
+            $content   = $fileManager->readFile($file_path);
             if ($content !== false) {
                 $response = ['status' => 'success', 'data' => $content];
             } else {
@@ -52,10 +55,10 @@ try {
                 $response = ['status' => 'error', 'message' => 'Save operation requires POST method.'];
                 break;
             }
-            $file_path = $_POST['file'] ?? ''; // File to save, relative to APP_ROOT
-            $content = $_POST['content'] ?? ''; // Content to save
+            $file_path = $_POST['file']    ?? ''; // File to save, relative to APP_ROOT
+            $content   = $_POST['content'] ?? ''; // Content to save
 
-            // Basic validation for file path to ensure it's not empty
+            // Basic validation for file path
             if (empty($file_path)) {
                 $response = ['status' => 'error', 'message' => 'File path cannot be empty.'];
                 break;
@@ -70,14 +73,17 @@ try {
             break;
 
         default:
+            // htmlspecialchars() now always gets a string
             $response = ['status' => 'error', 'message' => 'Unknown action: ' . htmlspecialchars($action)];
             break;
     }
 } catch (Exception $e) {
     error_log("IDE API Error: " . $e->getMessage());
-    $response = ['status' => 'error', 'message' => 'An internal server error occurred: ' . $e->getMessage()];
+    $response = [
+        'status'  => 'error',
+        'message' => 'An internal server error occurred: ' . $e->getMessage()
+    ];
 }
 
 echo json_encode($response);
 exit;
-?>

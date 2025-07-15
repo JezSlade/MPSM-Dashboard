@@ -1,7 +1,7 @@
 ================================================================================
 CODEBASE COMPILATION
 ================================================================================
-Generated on: Thu, Jul  3, 2025  2:51:42 PM
+Generated on: Tue, Jul 15, 2025 11:55:17 AM
 Directory: /c/Users/jez.slade/Desktop/Projects/MPSM-Dashboard
 ================================================================================
 
@@ -897,61 +897,81 @@ FILE: api/ide.php
 <?php
 // api/ide.php
 
-// PHP Debugging Lines - START
+// Enable error reporting for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-// PHP Debugging Lines - END
 
-// Include configuration and classes
-require_once __DIR__ . '/../config.php'; // Adjust path as needed
-require_once __DIR__ . '/../src/php/FileManager.php';
+// Define APP_ROOT if it's not already defined (e.g., if this file is accessed directly)
+if (!defined('APP_ROOT')) {
+    define('APP_ROOT', dirname(__DIR__));
+}
+
+// Include necessary files
+require_once APP_ROOT . '/config.php'; // For APP_ROOT and other configurations
+require_once APP_ROOT . '/src/php/FileManager.php'; // For file operations
 
 header('Content-Type: application/json');
-$response = ['status' => 'error', 'message' => 'Invalid request.'];
 
 $fileManager = new FileManager(APP_ROOT);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $ajax_action = $_POST['ajax_action'] ?? '';
+// Determine the action based on POST or GET request
+$action = $_REQUEST['action'] ?? null; // Use $_REQUEST to handle both GET and POST
 
-    switch ($ajax_action) {
-        case 'ide_list_files':
-            $current_dir = $_POST['path'] ?? '.';
-            $files = $fileManager->listFiles($current_dir);
+$response = ['status' => 'error', 'message' => 'Invalid action or request method.'];
+
+try {
+    switch ($action) {
+        case 'list_files':
+            $path = $_GET['path'] ?? ''; // Path to list, relative to APP_ROOT
+            $files = $fileManager->listFiles($path);
             if ($files !== false) {
-                $response = ['status' => 'success', 'files' => $files, 'current_path' => ($current_dir === '.' ? '' : $current_dir)];
+                $response = ['status' => 'success', 'data' => $files];
             } else {
-                $response['message'] = "Failed to list files or invalid path.";
+                $response = ['status' => 'error', 'message' => 'Failed to list files or invalid path.'];
             }
             break;
 
-        case 'ide_read_file':
-            $file_path = $_POST['path'] ?? '';
+        case 'read_file':
+            $file_path = $_GET['file'] ?? ''; // File to read, relative to APP_ROOT
             $content = $fileManager->readFile($file_path);
             if ($content !== false) {
-                $response = ['status' => 'success', 'content' => $content];
+                $response = ['status' => 'success', 'data' => $content];
             } else {
-                $response['message'] = "Failed to read file or invalid path.";
+                $response = ['status' => 'error', 'message' => 'Failed to read file or invalid file path.'];
             }
             break;
 
-        case 'ide_save_file':
-            $file_path = $_POST['path'] ?? '';
-            $content = $_POST['content'] ?? '';
-            if ($fileManager->saveFile($file_path, $content)) {
+        case 'save_file':
+            // Ensure this is a POST request for saving
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $response = ['status' => 'error', 'message' => 'Save operation requires POST method.'];
+                break;
+            }
+            $file_path = $_POST['file'] ?? ''; // File to save, relative to APP_ROOT
+            $content = $_POST['content'] ?? ''; // Content to save
+
+            // Basic validation for file path to ensure it's not empty
+            if (empty($file_path)) {
+                $response = ['status' => 'error', 'message' => 'File path cannot be empty.'];
+                break;
+            }
+
+            $success = $fileManager->saveFile($file_path, $content);
+            if ($success) {
                 $response = ['status' => 'success', 'message' => 'File saved successfully.'];
             } else {
-                $response['message'] = "Failed to save file. Check permissions or path.";
+                $response = ['status' => 'error', 'message' => 'Failed to save file. Check permissions and path.'];
             }
             break;
 
         default:
-            $response['message'] = 'Unknown IDE AJAX action.';
+            $response = ['status' => 'error', 'message' => 'Unknown action: ' . htmlspecialchars($action)];
             break;
     }
-} else {
-    $response['message'] = 'Invalid request method.';
+} catch (Exception $e) {
+    error_log("IDE API Error: " . $e->getMessage());
+    $response = ['status' => 'error', 'message' => 'An internal server error occurred: ' . $e->getMessage()];
 }
 
 echo json_encode($response);
@@ -1053,11 +1073,33 @@ FILE: config.php
 
 // Define the path to the dashboard settings file
 // This file will store the active widgets and dashboard preferences
-define('DASHBOARD_SETTINGS_FILE', __DIR__ . '/dashboard_settings.json');
+if (!defined('DASHBOARD_SETTINGS_FILE')) {
+    define('DASHBOARD_SETTINGS_FILE', __DIR__ . '/dashboard_settings.json');
+}
 // Removed: define('DYNAMIC_WIDGETS_FILE', __DIR__ . '/dynamic_widgets.json'); // This file is no longer needed for dynamic widget definitions
 
 // Define the application root directory for security
-define('APP_ROOT', __DIR__);
+// IMPORTANT: Use !defined() to prevent "Constant APP_ROOT already defined" warnings
+if (!defined('APP_ROOT')) {
+    define('APP_ROOT', __DIR__);
+}
+
+// Define Dashboard Version Constants
+// These are used for displaying the dashboard version in the UI
+if (!defined('DASHBOARD_VERSION_MAJOR')) {
+    define('DASHBOARD_VERSION_MAJOR', 1);
+}
+if (!defined('DASHBOARD_VERSION_MINOR')) {
+    define('DASHBOARD_VERSION_MINOR', 0);
+}
+if (!defined('DASHBOARD_VERSION_PATCH')) {
+    define('DASHBOARD_VERSION_PATCH', 0);
+}
+// This build number can be dynamically updated, e.g., by CI/CD pipeline
+if (!defined('DASHBOARD_VERSION_BUILD')) {
+    define('DASHBOARD_VERSION_BUILD', 1); // Increment this for each build/deployment
+}
+
 
 // Include helper functions for widget discovery
 require_once APP_ROOT . '/helpers.php';
@@ -1121,6 +1163,8 @@ FILE: dashboard.css
 
     --header-height: 60px;
     --sidebar-width: 250px;
+    --sidebar-width-collapsed: 0px; /* Changed to 0px for full collapse */
+    --sidebar-toggle-offset: 5px; /* New: Offset for the toggle button from the left edge */
     --transition: all 0.3s ease-in-out; /* Smooth transitions for UI elements */
     --border-radius: 12px; /* Consistent rounded corners */
 
@@ -1128,6 +1172,11 @@ FILE: dashboard.css
     --settings-panel-base-width: 350px;
     --settings-panel-padding: 20px;
     --settings-panel-actual-width: calc(var(--settings-panel-base-width) + (var(--settings-panel-padding) * 2));
+
+    /* Modal Background and Border for consistency */
+    --modal-bg: var(--bg-secondary); /* Use secondary background for modals */
+    --modal-border: var(--glass-border);
+    --modal-header-bg: var(--bg-primary); /* Use primary background for modal headers/footers */
 }
 
 /* Base Styles */
@@ -1140,13 +1189,49 @@ body {
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
+/* Custom Scrollbar Styles (Less intrusive) */
+/* For Webkit browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+    width: 8px; /* Vertical scrollbar width */
+    height: 8px; /* Horizontal scrollbar height */
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary); /* Track background */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 188, 212, 0.3); /* Thumb color (semi-transparent primary) */
+    border-radius: 10px;
+    border: 1px solid rgba(0, 188, 212, 0.1); /* Subtle border */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary); /* Solid primary on hover */
+    border: 1px solid var(--primary);
+}
+
+/* For Firefox */
+html {
+    scrollbar-color: rgba(0, 188, 212, 0.3) var(--bg-primary); /* thumb color track color */
+    scrollbar-width: thin; /* auto | thin | none */
+}
+
+
 /* Dashboard Layout */
 .dashboard {
     display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-columns: var(--sidebar-width) 1fr; /* Default: sidebar-width */
     grid-template-rows: var(--header-height) 1fr;
     height: 100vh;
     overflow: hidden; /* Prevent main scrollbars for fixed layout */
+    transition: grid-template-columns 0.3s ease-in-out; /* Smooth transition for sidebar collapse */
+    position: relative; /* Needed for absolute positioning of sidebar-toggle */
+}
+
+.dashboard.collapsed {
+    grid-template-columns: var(--sidebar-width-collapsed) 1fr; /* Collapsed: smaller sidebar */
 }
 
 /* Header */
@@ -1189,13 +1274,69 @@ body {
     backdrop-filter: blur(var(--blur-amount));
     border-right: 1px solid var(--glass-border);
     padding: 20px;
-    overflow-y: auto; /* Scrollable sidebar */
+    overflow-y: auto; /* Scrollable sidebar when expanded */
     box-shadow: var(--shadow-dark);
     z-index: 900;
+    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out; /* Smooth transition for width and padding */
 }
+
+.sidebar.collapsed {
+    width: var(--sidebar-width-collapsed); /* Set explicit width for transition */
+    padding: 0; /* Adjust padding for collapsed state */
+    overflow-y: hidden; /* Hide scrollbars when collapsed */
+    border-right: none; /* Remove border when fully collapsed */
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: absolute; /* Position relative to .dashboard */
+    top: 50%;
+    left: calc(var(--sidebar-width) - 15px); /* Position at the right edge of expanded sidebar */
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: var(--primary);
+    color: var(--bg-primary);
+    border-radius: 50%; /* Full circle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+    transition: left 0.3s ease-in-out, background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    z-index: 1002; /* Ensure it's above main content */
+}
+
+.sidebar-toggle:hover {
+    background-color: color-mix(in srgb, var(--primary) 90%, white);
+    box-shadow: 0 0 15px rgba(0, 188, 212, 0.7);
+}
+
+.sidebar-toggle i {
+    transition: transform 0.3s ease;
+}
+
+/* When dashboard is collapsed, move the toggle button to the left edge */
+.dashboard.collapsed .sidebar-toggle {
+    left: var(--sidebar-toggle-offset); /* Position at the very left with a small offset */
+}
+
+.dashboard.collapsed .sidebar-toggle i {
+    transform: rotate(180deg); /* Rotate arrow when collapsed */
+}
+
 
 .sidebar-section {
     margin-bottom: 30px;
+    transition: opacity 0.3s ease; /* Smooth fade for sections */
+}
+
+.dashboard.collapsed .sidebar-section {
+    opacity: 0;
+    pointer-events: none; /* Disable interaction when hidden */
+    height: 0; /* Collapse height */
+    overflow: hidden; /* Hide overflow */
+    margin-bottom: 0; /* Remove margin */
 }
 
 .section-title {
@@ -1205,6 +1346,9 @@ body {
     margin-bottom: 15px;
     padding-bottom: 5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis */
 }
 
 .nav-item {
@@ -1216,6 +1360,8 @@ body {
     color: var(--text-primary);
     cursor: pointer;
     transition: var(--transition);
+    text-decoration: none; /* For anchor tags */
+    position: relative; /* For tooltip */
 }
 
 .nav-item:hover {
@@ -1234,7 +1380,32 @@ body {
 .nav-item i {
     margin-right: 15px;
     font-size: 1.1em;
+    transition: margin-right 0.3s ease;
 }
+
+.nav-item span {
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis */
+    transition: opacity 0.3s ease, width 0.3s ease; /* Smooth transition for text */
+}
+
+/* Collapsed sidebar adjustments for nav items */
+.dashboard.collapsed .nav-item {
+    justify-content: center; /* Center icon */
+    padding: 12px 0; /* Adjust padding */
+}
+
+.dashboard.collapsed .nav-item i {
+    margin-right: 0; /* Remove margin */
+}
+
+.dashboard.collapsed .nav-item span {
+    width: 0; /* Collapse text width */
+    opacity: 0; /* Hide text */
+    pointer-events: none; /* Disable text interaction */
+}
+
 
 /* Widget Library */
 .widget-list {
@@ -1280,10 +1451,20 @@ body {
     font-size: 0.8em;
     color: var(--text-secondary);
     transition: color var(--transition);
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis */
 }
 
-.widget-item:hover .widget-name {
-    color: var(--accent);
+/* Collapsed sidebar adjustments for widget items */
+.dashboard.collapsed .widget-item {
+    width: 100%; /* Single column */
+    padding: 10px 0; /* Adjust padding */
+}
+
+.dashboard.collapsed .widget-item .widget-name {
+    display: none; /* Hide text */
+    opacity: 0; /* Fade out text */
 }
 
 
@@ -1473,1143 +1654,26 @@ body {
     font-size: 0.9em;
 }
 
-.form-control {
+/* Consolidated .form-control styles */
+.form-control,
+select.form-control,
+textarea.form-control,
+input[type="text"].form-control,
+input[type="email"].form-control,
+input[type="password"].form-control,
+input[type="number"].form-control,
+input[type="date"].form-control,
+input[type="time"].form-control,
+input[type="search"].form-control {
     width: 100%;
-    padding: 10px;
-    border: 1px solid var(--glass-border);
-    background-color: rgba(25, 25, 40, 0.6);
+    padding: 12px 15px; /* Increased padding */
+    border: none; /* No border for neumorphic look */
+    border-radius: 10px; /* Softer rounded corners */
+    background: var(--bg-primary); /* Darker background for inputs */
     color: var(--text-primary);
-    border-radius: var(--border-radius);
-    box-sizing: border-box; /* Include padding in width */
-    transition: border-color var(--transition), box-shadow var(--transition);
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.3);
-}
-
-.form-control-small {
-    width: 80px; /* Smaller width for table inputs */
-    padding: 8px;
-    border: 1px solid var(--glass-border);
-    background-color: rgba(25, 25, 40, 0.6);
-    color: var(--text-primary);
-    border-radius: 8px;
-    box-sizing: border-box;
-    transition: border-color var(--transition), box-shadow var(--transition);
-}
-
-.form-control-small:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.3);
-}
-
-/* Buttons */
-.btn {
-    background-color: var(--primary);
-    color: #fff;
-    padding: 10px 15px;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: var(--transition);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.btn i {
-    margin-right: 8px;
-}
-
-.btn:hover {
-    background-color: var(--accent);
-    box-shadow: 0 0 15px rgba(0, 188, 212, 0.6);
-    transform: translateY(-2px);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-}
-
-.btn-primary:hover {
-    background-color: var(--primary);
-    box-shadow: var(--neon-glow-primary);
-}
-
-.btn-danger {
-    background-color: var(--danger);
-}
-
-.btn-danger:hover {
-    background-color: var(--danger);
-    box-shadow: 0 0 15px rgba(244, 67, 54, 0.6);
-}
-
-.btn:disabled {
-    background-color: #555;
-    cursor: not-allowed;
-    opacity: 0.7;
-    box-shadow: none;
-    transform: none;
-}
-
-.btn-sm {
-    padding: 8px 12px;
-    font-size: 0.8em;
-}
-
-/* Toggle Switch */
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 24px;
-    margin-left: 10px;
-    vertical-align: middle;
-}
-
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 24px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: var(--primary);
-}
-
-input:checked + .slider:before {
-    transform: translateX(16px);
-}
-
-/* Settings Panel Overlay */
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 1050;
-    display: none;
-}
-
-.settings-panel {
-    position: fixed;
-    top: 0;
-    right: 0; /* Align to the right edge */
-    width: var(--settings-panel-base-width); /* Use base width */
-    height: 100%;
-    background: var(--bg-secondary);
-    box-shadow: -10px 0 20px rgba(0, 0, 0, 0.5);
-    z-index: 1060;
-    transform: translateX(var(--settings-panel-actual-width)); /* Hide completely off-screen */
-    transition: transform 0.3s ease-in-out; /* Transition transform */
-    display: flex;
-    flex-direction: column;
-    padding: var(--settings-panel-padding); /* Use padding variable */
-    overflow-y: auto; /* Allow scrolling for settings content */
-}
-
-.settings-panel.active {
-    transform: translateX(0); /* Show it */
-}
-
-.settings-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.settings-header h2 {
-    margin: 0;
-    color: var(--accent);
-    font-size: 1.4em;
-}
-
-.settings-header .btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.5em;
-    padding: 5px;
-}
-
-.settings-header .btn:hover {
-    color: var(--primary);
-    background: none;
-    box-shadow: none;
-    transform: none;
-}
-
-/* Settings Tabs */
-.settings-tabs {
-    display: flex;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.settings-tab-btn {
-    flex-grow: 1;
-    padding: 10px 15px;
-    background-color: rgba(25, 25, 40, 0.6);
-    border: 1px solid var(--glass-border);
-    border-bottom: none;
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: var(--transition);
-    text-align: center;
-    margin-right: 5px; /* Space between tabs */
-}
-
-.settings-tab-btn:last-child {
-    margin-right: 0;
-}
-
-.settings-tab-btn:hover {
-    background-color: rgba(0, 188, 212, 0.15);
-    color: var(--accent);
-}
-
-.settings-tab-btn.active {
-    background-color: var(--bg-secondary); /* Active tab background */
-    border-color: var(--accent);
-    border-bottom-color: var(--bg-secondary); /* Hide bottom border to merge with section */
-    color: var(--primary);
-    font-weight: bold;
-    box-shadow: 0 -2px 10px rgba(0, 188, 212, 0.3);
-    z-index: 1; /* Bring active tab to front */
-}
-
-/* Settings Sections */
-.settings-section {
-    display: none; /* Hidden by default */
-    flex-direction: column; /* Ensure content flows vertically */
-    flex-grow: 1; /* Take available space */
-    padding-top: 10px; /* Space from tabs */
-}
-
-.settings-section.active {
-    display: flex; /* Show active section */
-}
-
-
-.settings-form {
-    flex-grow: 1;
-}
-
-.settings-group {
-    background-color: rgba(25, 25, 40, 0.6);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius);
-    padding: 15px;
-    margin-bottom: 20px;
-    box-shadow: 4px 4px 8px var(--shadow-dark);
-}
-
-.settings-group .settings-title {
-    color: var(--primary);
-    font-size: 1.1em;
-    margin-top: 0;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(0, 188, 212, 0.1);
-}
-
-.settings-group .form-group {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-/* Message Modal */
-.message-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 2000; /* Above settings panel */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-}
-
-.message-modal-overlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-.message-modal {
-    background: var(--bg-secondary);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    width: 90%;
-    max-width: 400px;
-    transform: translateY(-20px);
-    transition: transform 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* For rounded corners */
-}
-
-.message-modal-overlay.active .message-modal {
-    transform: translateY(0);
-}
-
-.message-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.message-modal-header h3 {
-    margin: 0;
-    color: var(--primary);
-    font-size: 1.2em;
-}
-
-.message-modal-body {
-    padding: 20px;
-    color: var(--text-primary);
-    flex-grow: 1;
-    overflow-y: auto;
-}
-
-.message-modal-footer {
-    padding: 15px 20px;
-    border-top: 1px solid var(--glass-border);
-    text-align: right;
-    background-color: rgba(0, 0, 0, 0.2);
-}
-
-.message-modal .btn-close-modal {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.5em;
-    cursor: pointer;
-    transition: color var(--transition);
-}
-
-.message-modal .btn-close-modal:hover {
-    color: var(--danger);
-}
-
-.message-modal.large-modal {
-    max-width: 800px; /* Larger width for widget management */
-}
-
-/* Widget Management Table */
-.widget-management-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 0.9em;
-}
-
-.widget-management-table th,
-.widget-management-table td {
-    padding: 12px 10px;
-    text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
-}
-
-.widget-management-table th {
-    background-color: rgba(0, 0, 0, 0.3);
-    color: var(--accent);
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-.widget-management-table tbody tr:hover {
-    background-color: rgba(0, 188, 212, 0.05);
-}
-
-.widget-management-table .btn-deactivate-widget {
-    padding: 5px 10px;
-    font-size: 0.8em;
-}
-
-.widget-management-status {
-    font-size: 0.8em;
-    color: var(--success); /* Default to saved */
-}
-
-/* IDE Widget Specific Styles */
-.ide-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%; /* Ensure it fills the maximized widget */
-    background-color: #1e1e1e; /* Dark background for code */
-    color: #d4d4d4; /* Light text for code */
-    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    font-size: 0.9em;
-}
-
-.ide-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 15px;
-    background-color: #252526;
-    border-bottom: 1px solid #333;
-    font-size: 0.85em;
-}
-
-.ide-path-display {
-    color: #888;
-    flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.ide-file-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: 15px;
-}
-
-#ide-current-file-name {
-    font-weight: bold;
-    color: var(--primary);
-}
-
-#ide-file-status {
-    font-size: 0.75em;
-    padding: 3px 6px;
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.ide-status-saved {
-    color: var(--success);
-}
-
-.ide-status-unsaved {
-    color: var(--warning);
-}
-
-.ide-content {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden;
-}
-
-.ide-file-tree-panel {
-    width: 250px;
-    background-color: #2d2d30;
-    border-right: 1px solid #333;
-    overflow-y: auto;
-    padding: 10px 0;
-    flex-shrink: 0; /* Prevent shrinking */
-}
-
-.ide-file-tree {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.ide-file-tree-item {
-    padding: 8px 15px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    transition: background-color 0.2s ease;
-}
-
-.ide-file-tree-item:hover {
-    background-color: rgba(0, 188, 212, 0.1);
-}
-
-.ide-file-tree-item i {
-    margin-right: 8px;
-    color: #cccccc;
-}
-
-.ide-file-tree-item span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.ide-item-read-only {
-    opacity: 0.6;
-    cursor: not-allowed;
-    color: #888;
-}
-
-.ide-item-read-only i {
-    color: #888;
-}
-
-.ide-loading-indicator, .ide-error-indicator {
-    text-align: center;
-    padding: 20px;
-    color: #aaa;
-}
-
-.ide-error-indicator {
-    color: var(--danger);
-}
-
-.ide-editor-panel {
-    flex-grow: 1;
-    display: flex;
-    overflow: hidden;
-}
-
-.ide-code-editor {
-    width: 100%;
-    height: 100%;
-    border: none;
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    padding: 15px;
-    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -3px -3px 7px rgba(255,255,255,0.05); /* Inset shadow */
     font-size: 1em;
-    resize: none; /* Disable textarea resize handle */
-    outline: none;
-    line-height: 1.5;
-    tab-size: 4;
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-}
-
-/* Ensure Font Awesome icons are visible - DEBUGGING ADDITION */
-.fas, .far, .fal, .fab, .fa {
-    font-family: "Font Awesome 6 Free" !important; /* Ensure correct font family */
-    font-weight: 900 !important; /* For solid icons (fas) */
-    display: inline-block !important; /* Ensure they are not display: none; */
-    font-size: inherit !important; /* Don't override font size unexpectedly */
-    color: inherit !important; /* Don't override color unexpectedly */
-    text-rendering: auto !important; /* Ensure proper rendering */
-    -webkit-font-smoothing: antialiased !important;
-    -moz-osx-font-smoothing: grayscale !important;
-}
-
-
-/* Responsive Design */
-@media (min-width: 1200px) { /* Desktop */
-    .main-content {
-        grid-template-columns: repeat(8, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 1199px) and (min-width: 992px) { /* Medium Desktop / Large Tablet */
-    .main-content {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 991px) and (min-width: 768px) { /* Small Tablet */
-    .main-content {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 767px) { /* Mobile */
-    .dashboard {
-        grid-template-columns: 1fr;
-        grid-template-rows: var(--header-height) auto 1fr;
-    }
-
-    .header {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .sidebar {
-        grid-column: 1;
-        grid-row: 2;
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--glass-border);
-        position: relative; /* Allow sidebar to collapse/expand */
-        height: auto;
-        max-height: 50vh; /* Limit height on mobile */
-    }
-
-    .main-content {
-        grid-column: 1;
-        grid-row: 3;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Allow more flexible widget sizing */
-    }
-
-    .settings-panel {
-        width: 100%;
-        transform: translateX(100%); /* Ensure it slides in from full width */
-    }
-
-    .widget.maximized {
-        width: 98vw;
-        height: 98vh;
-    }
-
-    .ide-file-tree-panel {
-        width: 150px; /* Smaller file tree on mobile */
-    }
-}
-/* --- Analytics Modal Patch --- */
-
-/* Analytics Modal Tab Buttons */
-.tab-btn {
-    background: var(--widget-bg, #e0e5ec);
-    border: none;
-    padding: 8px 16px;
-    margin: 4px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-    box-shadow: inset 3px 3px 6px #c3c6cb, inset -3px -3px 6px #ffffff;
-    transition: background 0.3s;
-}
-.tab-btn:hover {
-    background: var(--highlight, #d1d9e6);
-}
-
-/* Placeholder for charts inside modal */
-.chart-placeholder {
-    width: 100%;
-    height: 150px;
-    margin-top: 12px;
-    background: #f0f0f3;
-    border-radius: 10px;
-    box-shadow: inset 3px 3px 5px rgba(0,0,0,0.05),
-                inset -3px -3px 5px rgba(255,255,255,0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #999;
-    font-style: italic;
-    font-size: 0.9em;
-}
-/*
- * New styles for Unified Theme Component Library & Icons (theme_library.html)
- * These styles enhance the layout, component appearance, and add interactive effects.
- */
-
-/* --- General Layout for theme_library.html --- */
-.theme-library-wrapper {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: 'Inter', sans-serif; /* Ensure Inter font is used */
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.theme-library-header {
-    text-align: center;
-    margin-bottom: 40px;
-    padding: 30px 20px;
-    background: var(--glass-bg);
-    border-radius: 20px;
-    backdrop-filter: blur(var(--blur-amount));
-    -webkit-backdrop-filter: blur(var(--blur-amount));
-    border: 1px solid var(--glass-border);
-    box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
-}
-
-.theme-library-title {
-    font-size: 2.8em; /* Bigger title */
-    font-weight: 700;
-    color: var(--primary);
-    text-shadow: var(--neon-glow-primary);
-    margin-bottom: 10px;
-}
-
-.theme-library-subtitle {
-    font-size: 1.1em;
-    color: var(--text-secondary);
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-.theme-library-main-content {
-    display: grid;
-    grid-template-columns: 1fr; /* Default to single column */
-    gap: 30px; /* Space between main sections/widgets */
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-@media (min-width: 1024px) { /* Two columns on larger screens */
-    .theme-library-main-content {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.theme-section-card {
-    padding: 30px;
-    border-radius: 20px;
-    background: var(--bg-secondary);
-    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-    border: 1px solid var(--glass-border);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.theme-section-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 12px 12px 24px var(--shadow-dark), -12px -12px 24px var(--shadow-light);
-}
-
-/* --- Font Awesome Icons Section --- */
-.icons-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Larger icon items */
-    gap: 20px; /* More space between icons */
-    padding: 20px;
-    background: var(--bg-primary); /* Slightly darker background for the grid */
-    border-radius: 15px;
-    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3), inset -5px -5px 10px rgba(255,255,255,0.08);
-    max-height: 70vh;
-    overflow-y: auto;
-    border: 1px solid var(--glass-border);
-}
-
-.icon-item {
-    background: var(--bg-secondary);
-    padding: 20px 15px; /* More padding */
-    border-radius: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
-    border: 2px solid transparent; /* Thicker border for active/hover */
-}
-
-.icon-item:hover {
-    transform: translateY(-5px) scale(1.05); /* More pronounced hover */
-    box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
-    border-color: var(--accent); /* Accent color border on hover */
-}
-
-.icon-item:active {
-    box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
-    transform: translateY(0) scale(0.98);
-}
-
-.icon-display {
-    font-size: 3.5em; /* Significantly larger icons */
-    margin-bottom: 15px;
-    color: var(--primary); /* Default icon color */
-    transition: color 0.3s ease-in-out;
-    text-shadow: var(--neon-glow-primary); /* Subtle glow for icons */
-}
-
-.icon-class {
-    font-size: 0.85em; /* Slightly larger text */
-    color: var(--text-secondary);
-    word-break: break-all;
-    user-select: all; /* Allow easy selection for copying */
-}
-
-.search-bar-container {
-    padding: 25px;
-    background: var(--bg-primary); /* Consistent with icon grid background */
-    border-radius: 15px;
-    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3), inset -5px -5px 10px rgba(255,255,255,0.08);
-    margin-bottom: 30px;
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    align-items: center;
-    border: 1px solid var(--glass-border);
-}
-
-.search-input {
-    flex-grow: 1;
-    padding: 15px 20px; /* More padding for a softer look */
-    border: none;
-    border-radius: 10px;
-    background: var(--bg-secondary); /* Lighter background for input field */
-    color: var(--text-primary);
-    box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -3px -3px 7px rgba(255,255,255,0.05);
-    font-size: 1.1em;
-    outline: none;
-    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease;
-    min-width: 250px;
-}
-
-.search-input::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.7;
-}
-
-.search-input:focus {
-    background-color: var(--bg-secondary); /* Keep consistent on focus */
-    box-shadow: inset 3px 3px 7px var(--accent), inset -3px -3px 7px var(--accent); /* Accent glow on focus */
-}
-
-.color-palette {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.color-option {
-    width: 35px; /* Slightly larger color options */
-    height: 35px;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
-    border: 3px solid transparent; /* Thicker border */
-    transition: all 0.2s ease-in-out;
-}
-
-.color-option:hover {
-    transform: scale(1.15); /* More pronounced scale */
-}
-
-.color-option.active {
-    border-color: var(--accent);
-    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light), 0 0 10px var(--accent); /* Stronger active glow */
-}
-
-.copy-notification {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--accent);
-    color: var(--bg-primary);
-    padding: 12px 25px;
-    border-radius: 10px;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
-    z-index: 1000;
-    font-weight: 600;
-}
-
-.copy-notification.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-.no-results-message {
-    color: var(--text-secondary);
-    text-align: center;
-    padding: 30px;
-    font-size: 1.1em;
-}
-
-/* --- Design Components Section --- */
-.theme-demo-block {
-    margin-bottom: 30px; /* Consistent spacing between demo blocks */
-    padding: 30px;
-    border-radius: 15px;
-    background: var(--bg-primary); /* Slightly darker background for individual demo blocks */
-    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3), inset -5px -5px 10px rgba(255,255,255,0.08);
-    border: 1px solid var(--glass-border);
-}
-
-.theme-demo-block .widget-subtitle { /* Targeting the h3 within demo blocks */
-    font-size: 1.8em; /* Slightly larger subtitle */
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 25px;
-    border-bottom: 2px solid var(--glass-border);
-    padding-bottom: 10px;
-    text-shadow: 0 0 5px rgba(0, 188, 212, 0.3); /* Subtle glow */
-}
-
-.component-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    align-items: start; /* Align items to the top */
-}
-
-.component-grid-2 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-    align-items: start;
-}
-
-.component-label {
-    font-size: 1em;
-    color: var(--text-secondary);
-    margin-bottom: 10px;
-    margin-top: 15px;
-}
-
-.component-sub-heading {
-    font-size: 1.4em;
-    color: var(--accent);
-    margin-bottom: 15px;
-    font-weight: 600;
-    text-shadow: 0 0 5px rgba(255, 235, 59, 0.3);
-    border-bottom: 1px dashed var(--glass-border);
-    padding-bottom: 8px;
-}
-
-/* --- Buttons --- */
-.btn {
-    padding: 12px 25px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden; /* For ripple effect */
-    z-index: 1; /* For ripple effect */
-    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    color: var(--bg-primary);
-    text-shadow: 0 0 5px rgba(0,0,0,0.3);
-}
-.btn-primary:hover {
-    background-color: color-mix(in srgb, var(--primary) 90%, white);
-    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-}
-.btn-primary:active {
-    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
-    transform: translateY(1px);
-}
-
-.btn-secondary {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--glass-border);
-}
-.btn-secondary:hover {
-    background-color: color-mix(in srgb, var(--bg-secondary) 80%, white);
-    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-}
-.btn-secondary:active {
-    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
-    transform: translateY(1px);
-}
-
-.btn-outline {
-    background-color: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-}
-.btn-outline:hover {
-    background-color: var(--primary);
-    color: var(--bg-primary);
-    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-}
-.btn-outline:active {
-    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
-    transform: translateY(1px);
-}
-
-.btn-danger {
-    background-color: #dc3545; /* Red color */
-    color: white;
-    text-shadow: 0 0 5px rgba(0,0,0,0.3);
-}
-.btn-danger:hover {
-    background-color: color-mix(in srgb, #dc3545 90%, white);
-    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-}
-.btn-danger:active {
-    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
-    transform: translateY(1px);
-}
-
-.btn-link {
-    background: none;
-    border: none;
-    color: var(--accent);
-    padding: 0;
-    text-decoration: underline;
-    font-weight: 500;
-    transition: color 0.2s ease;
-    box-shadow: none; /* No neumorphic shadow for links */
-}
-.btn-link:hover {
-    color: color-mix(in srgb, var(--accent) 80%, white);
-    text-decoration: none;
-    transform: none;
-    box-shadow: none;
-}
-.btn-link:active {
-    transform: none;
-    box-shadow: none;
-}
-
-.btn-icon {
-    width: 50px; /* Fixed size for icon buttons */
-    height: 50px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%; /* Circular */
-    background-color: var(--bg-secondary);
-    color: var(--primary);
-    font-size: 1.2em;
-    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-}
-.btn-icon:hover {
-    background-color: color-mix(in srgb, var(--bg-secondary) 80%, white);
-    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-    color: var(--accent); /* Change icon color on hover */
-}
-.btn-icon:active {
-    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
-    transform: translateY(1px);
-}
-
-.btn-icon-text {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px; /* Space between icon and text */
-}
-.btn-icon-text .icon-left {
-    margin-right: 0; /* Override default margin */
-}
-
-/* Button Sizes */
-.btn-lg {
-    padding: 15px 30px;
-    font-size: 1.1em;
-}
-.btn-sm {
-    padding: 8px 15px;
-    font-size: 0.9em;
-}
-
-/* Button Group */
-.btn-group {
-    display: inline-flex;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-}
-.btn-group-item {
-    padding: 12px 20px;
-    border: none;
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 600;
-    box-shadow: none; /* Reset individual button shadow */
-    border-right: 1px solid var(--glass-border); /* Separator */
-}
-.btn-group-item:last-child {
-    border-right: none;
-}
-.btn-group-item:hover {
-    background-color: color-mix(in srgb, var(--bg-secondary) 80%, white);
-    color: var(--primary);
-    z-index: 2; /* Bring to front on hover */
-}
-.btn-group-item:active {
-    background-color: color-mix(in srgb, var(--bg-secondary) 70%, white);
-    box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);
-    transform: translateY(0);
-}
-
-/* Ripple Effect */
-.ripple {
-    position: absolute;
-    border-radius: 50%;
-    transform: scale(0);
-    animation: ripple 0.6s linear;
-    background-color: rgba(255, 255, 255, 0.4); /* White ripple */
-    z-index: 0; /* Behind button content */
-}
-
-@keyframes ripple {
-    to {
-        transform: scale(4);
-        opacity: 0;
-    }
-}
-
-/* --- Input Fields --- */
-.form-label {
-    display: block;
-    font-size: 0.9em;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.form-control {
-    width: 100%;
-    padding: 12px 15px;
-    border: none;
-    border-radius: 10px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -3px -3px 7px rgba(255,255,255,0.05);
-    font-size: 1em;
-    outline: none;
+    outline: none; /* Remove default outline */
     transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease;
     box-sizing: border-box; /* Include padding in width */
 }
@@ -2627,6 +1691,23 @@ input:checked + .slider:before {
 textarea.form-control {
     resize: vertical; /* Allow vertical resizing */
     min-height: 80px;
+}
+
+.form-control-small { /* For table inputs, etc. */
+    width: 80px;
+    padding: 8px;
+    border: 1px solid var(--glass-border);
+    background-color: rgba(25, 25, 40, 0.6);
+    color: var(--text-primary);
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.form-control-small:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.3);
 }
 
 /* File Input */
@@ -2861,6 +1942,202 @@ textarea.form-control {
 }
 
 
+/* --- Buttons --- */
+.btn {
+    padding: 12px 25px; /* Increased padding */
+    border-radius: 10px; /* Softer rounded corners */
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600; /* Bolder text */
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden; /* For ripple effect */
+    z-index: 1; /* For ripple effect */
+    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); /* Neumorphic shadow */
+}
+
+.btn i {
+    margin-right: 8px;
+}
+
+.btn:hover {
+    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light); /* More pronounced shadow on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+.btn:active {
+    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light); /* Inset shadow on click */
+    transform: translateY(1px); /* Push down effect */
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--bg-primary); /* Text color contrasting with primary */
+    text-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+.btn-primary:hover {
+    background-color: color-mix(in srgb, var(--primary) 90%, white); /* Slightly lighter on hover */
+    box-shadow: var(--neon-glow-primary); /* Neon glow for primary */
+}
+
+.btn-secondary {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border); /* Subtle border for secondary */
+}
+.btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--bg-secondary) 80%, white);
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary); /* Primary color border */
+}
+.btn-outline:hover {
+    background-color: var(--primary);
+    color: var(--bg-primary);
+}
+
+.btn-danger {
+    background-color: var(--danger); /* Red color */
+    color: white;
+    text-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+.btn-danger:hover {
+    background-color: color-mix(in srgb, var(--danger) 90%, white);
+    box-shadow: 0 0 15px rgba(244, 67, 54, 0.6); /* Red glow */
+}
+
+.btn-destructive { /* Alias for btn-danger, for semantic clarity */
+    background-color: var(--danger);
+    color: white;
+    text-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+.btn-destructive:hover {
+    background-color: color-mix(in srgb, var(--danger) 90%, white);
+    box-shadow: 0 0 15px rgba(244, 67, 54, 0.6);
+}
+.btn-destructive:active {
+    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
+    transform: translateY(1px);
+}
+
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    padding: 0;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    box-shadow: none; /* No neumorphic shadow for links */
+    transform: none; /* No transform for links */
+}
+.btn-link:hover {
+    color: color-mix(in srgb, var(--accent) 80%, white);
+    text-decoration: none;
+}
+.btn-link:active {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-icon {
+    width: 50px; /* Fixed size for icon buttons */
+    height: 50px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Circular */
+    background-color: var(--bg-secondary);
+    color: var(--primary);
+    font-size: 1.2em;
+    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+}
+.btn-icon:hover {
+    background-color: color-mix(in srgb, var(--bg-secondary) 80%, white);
+    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+    color: var(--accent); /* Change icon color on hover */
+}
+.btn-icon:active {
+    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
+    transform: translateY(1px);
+}
+
+.btn-icon-text {
+    display: inline-flex; /* Changed from flex to inline-flex */
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between icon and text */
+}
+.btn-icon-text .icon-left {
+    margin-right: 0; /* Override default margin */
+}
+
+/* Button Sizes */
+.btn-lg {
+    padding: 15px 30px;
+    font-size: 1.1em;
+}
+.btn-sm {
+    padding: 8px 15px;
+    font-size: 0.9em;
+}
+
+/* Button Group */
+.btn-group {
+    display: inline-flex;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+}
+.btn-group-item {
+    padding: 12px 20px;
+    border: none;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    box-shadow: none; /* Reset individual button shadow */
+    border-right: 1px solid var(--glass-border); /* Separator */
+}
+.btn-group-item:last-child {
+    border-right: none;
+}
+.btn-group-item:hover {
+    background-color: color-mix(in srgb, var(--bg-secondary) 80%, white);
+    color: var(--primary);
+    z-index: 2; /* Bring to front on hover */
+}
+.btn-group-item:active {
+    background-color: color-mix(in srgb, var(--bg-secondary) 70%, white);
+    box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);
+    transform: translateY(0);
+}
+
+/* Ripple Effect */
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    background-color: rgba(255, 255, 255, 0.4); /* White ripple */
+    z-index: 0; /* Behind button content */
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+
 /* --- Cards --- */
 .card {
     background: var(--bg-primary);
@@ -2900,8 +2177,32 @@ textarea.form-control {
 }
 
 
-/* --- Badges & Tags (already defined, ensuring consistency) --- */
-/* .badge styles are already in dashboard.css, ensure they are consistent */
+/* --- Badges & Tags --- */
+.badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.badge-success {
+    background-color: var(--success);
+    color: #fff;
+}
+
+.badge-warning {
+    background-color: var(--warning);
+    color: #333; /* Darker text for warning */
+}
+
+.badge-info {
+    background-color: var(--info);
+    color: #fff;
+}
 
 
 /* --- Progress Bars & Loaders --- */
@@ -3388,7 +2689,6 @@ textarea.form-control {
 .toast-notification.show {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
 }
 .toast-icon-wrapper {
     display: flex;
@@ -3616,8 +2916,337 @@ textarea.form-control {
     border-bottom-left-radius: 10px;
 }
 
-/* Responsive adjustments for smaller screens */
-@media (max-width: 768px) {
+/* Theme Library Specific Styles (moved from theme_library.html for uniformity) */
+.theme-library-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.theme-library-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 30px 20px;
+    background: var(--glass-bg);
+    border-radius: 20px;
+    backdrop-filter: blur(var(--blur-amount));
+    -webkit-backdrop-filter: blur(var(--blur-amount));
+    border: 1px solid var(--glass-border);
+    box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+}
+
+.theme-library-title {
+    font-size: 2.8em;
+    font-weight: 700;
+    color: var(--primary);
+    text-shadow: var(--neon-glow-primary);
+    margin-bottom: 10px;
+}
+
+.theme-library-subtitle {
+    font-size: 1.1em;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.theme-library-main-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.theme-section-card {
+    padding: 30px;
+    border-radius: 20px;
+    background: var(--bg-secondary);
+    box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+    border: 1px solid var(--glass-border);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.theme-section-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 12px 12px 24px var(--shadow-dark), -12px -12px 24px var(--shadow-light);
+}
+
+/* Font Awesome Icons Section */
+.icons-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    background: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3), inset -5px -5px 10px rgba(255,255,255,0.08);
+    max-height: 70vh;
+    overflow-y: auto;
+    border: 1px solid var(--glass-border);
+}
+
+.icon-item {
+    background: var(--bg-secondary);
+    padding: 20px 15px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.icon-item:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+    border-color: var(--accent);
+}
+
+.icon-item:active {
+    box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+    transform: translateY(0) scale(0.98);
+}
+
+.icon-display {
+    font-size: 3.5em;
+    margin-bottom: 15px;
+    color: var(--primary);
+    transition: color 0.3s ease-in-out;
+    text-shadow: var(--neon-glow-primary);
+}
+
+.icon-class {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    word-break: break-all;
+    user-select: all;
+}
+
+.search-bar-container {
+    padding: 25px;
+    background: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3), inset -5px -5px 10px rgba(255,255,255,0.08);
+    margin-bottom: 30px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    border: 1px solid var(--glass-border);
+}
+
+.search-input { /* Re-using .form-control styles for consistency */
+    flex-grow: 1;
+    min-width: 250px;
+}
+
+.search-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.search-input:focus {
+    background-color: var(--bg-primary);
+    box-shadow: inset 3px 3px 7px var(--accent), inset -3px -3px 7px var(--accent);
+}
+
+.color-palette {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.color-option {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+    border: 3px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.color-option:hover {
+    transform: scale(1.15);
+}
+
+.color-option.active {
+    border-color: var(--accent);
+    box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light), 0 0 10px var(--accent);
+}
+
+.copy-notification {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--bg-primary);
+    padding: 12px 25px;
+    border-radius: 10px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out, visibility 0.4s ease-in-out;
+    z-index: 1000;
+    font-weight: 600;
+}
+
+.copy-notification.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.no-results-message {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 30px;
+    font-size: 1.1em;
+}
+
+/* Design Components Section */
+.theme-demo-block {
+    margin-bottom: 30px;
+    padding: 30px;
+    border-radius: 15px;
+    background: var(--bg-primary);
+    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3), inset -5px -5px 10px rgba(255,255,255,0.08);
+    border: 1px solid var(--glass-border);
+}
+
+.theme-demo-block .widget-subtitle {
+    font-size: 1.8em;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--glass-border);
+    padding-bottom: 10px;
+    text-shadow: 0 0 5px rgba(0, 188, 212, 0.3);
+}
+
+.component-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.component-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    align-items: start;
+}
+
+.component-label {
+    font-size: 1em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    margin-top: 15px;
+}
+
+.component-sub-heading {
+    font-size: 1.4em;
+    color: var(--accent);
+    margin-bottom: 15px;
+    font-weight: 600;
+    text-shadow: 0 0 5px rgba(255, 235, 59, 0.3);
+    border-bottom: 1px dashed var(--glass-border);
+    padding-bottom: 8px;
+}
+
+/* Ensure Font Awesome icons are visible - DEBUGGING ADDITION */
+.fas, .far, .fal, .fab, .fa {
+    font-family: "Font Awesome 6 Free" !important; /* Ensure correct font family */
+    font-weight: 900 !important; /* For solid icons (fas) */
+    display: inline-block !important; /* Ensure they are not display: none; */
+    font-size: inherit !important; /* Don't override font size unexpectedly */
+    color: inherit !important; /* Don't override color unexpectedly */
+    text-rendering: auto !important; /* Ensure proper rendering */
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+
+/* Responsive Design */
+@media (min-width: 1024px) { /* Desktop for theme library */
+    .theme-library-main-content {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 1200px) { /* Desktop */
+    .main-content {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1199px) and (min-width: 992px) { /* Medium Desktop / Large Tablet */
+    .main-content {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991px) and (min-width: 768px) { /* Small Tablet */
+    .main-content {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) { /* Mobile */
+    .dashboard {
+        grid-template-columns: 1fr;
+        grid-template-rows: var(--header-height) auto 1fr;
+    }
+
+    .header {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .sidebar {
+        grid-column: 1;
+        grid-row: 2;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        position: relative; /* Allow sidebar to collapse/expand */
+        height: auto;
+        max-height: 50vh; /* Limit height on mobile */
+    }
+
+    .main-content {
+        grid-column: 1;
+        grid-row: 3;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Allow more flexible widget sizing */
+    }
+
+    .settings-panel {
+        width: 100%;
+        transform: translateX(100%); /* Ensure it slides in from full width */
+    }
+
+    .widget.maximized {
+        width: 98vw;
+        height: 98vh;
+    }
+
+    .ide-file-tree-panel {
+        width: 150px; /* Smaller file tree on mobile */
+    }
+
+    /* Responsive adjustments for theme_library.html elements */
     .theme-library-header {
         padding: 20px 15px;
     }
@@ -3680,6 +3309,388 @@ textarea.form-control {
         height: 250px;
     }
 }
+
+/* --- Settings Panel Specific Styles --- */
+.settings-panel {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: -400px; /* Hidden by default, adjust to --settings-panel-actual-width later */
+    width: 380px; /* Should be --settings-panel-base-width */
+    height: 100%;
+    background: var(--bg-secondary); /* Use a more opaque background for readability */
+    backdrop-filter: blur(var(--blur-amount)); /* Apply blur */
+    box-shadow: -5px 0 25px rgba(0,0,0,0.5); /* Stronger shadow */
+    transition: right 0.3s ease-in-out;
+    z-index: 1001;
+    border-left: 1px solid var(--glass-border);
+}
+
+.settings-panel.open {
+    right: 0;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--glass-border);
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.settings-header h2 {
+    margin: 0;
+    color: var(--primary);
+    font-size: 1.3em;
+}
+
+/* Settings Panel Navigation Tabs (Styled like theme_library.html tabs-buttons) */
+.settings-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--glass-border);
+    background: var(--bg-primary); /* Slightly lighter background for the tab bar itself */
+    padding: 10px;
+    flex-shrink: 0; /* Prevent tabs from shrinking */
+}
+
+.settings-tab-btn {
+    flex-grow: 1;
+    padding: 12px 15px; /* Adjusted padding */
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.95em; /* Slightly smaller font for tabs */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px; /* Softer rounded corners for tabs */
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    text-align: center; /* Center text in tabs */
+}
+
+.settings-tab-btn:hover {
+    color: var(--primary);
+    background-color: rgba(0, 188, 212, 0.1); /* Subtle hover effect */
+}
+
+.settings-tab-btn.active {
+    color: var(--primary);
+    background-color: var(--bg-secondary); /* Active tab has a distinct background */
+    box-shadow: inset 3px 3px 7px rgba(0,0,0,0.4), inset -3px -3px 7px rgba(255,255,255,0.05);
+    /* No border-radius adjustments for active state to keep it simple and clean */
+    z-index: 2;
+}
+
+.settings-form-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+    /* Ensure content background is consistent with the panel */
+    background-color: var(--bg-secondary);
+}
+
+/* Settings Sections - Crucial for tab functionality */
+.settings-section {
+    display: none; /* Hidden by default */
+    animation: fade-in 0.5s ease-out; /* Smooth transition for content */
+}
+
+.settings-section.active {
+    display: block; /* Only show active section */
+}
+
+.settings-group {
+    margin-bottom: 30px;
+    padding: 20px;
+    border-radius: 10px;
+    background: var(--bg-primary); /* Inner group background */
+    box-shadow: inset 3px 3px 7px rgba(0,0,0,0.3), inset -3px -3px 7px rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+}
+
+.settings-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--accent);
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--glass-border);
+}
+
+.settings-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--glass-border);
+    background-color: var(--bg-primary); /* Match header background */
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* --- MODAL OVERLAYS (Ensuring they are truly hidden when not active) --- */
+.message-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Darker background for modals */
+    backdrop-filter: blur(8px); /* Blur effect for modals */
+    z-index: 2000; /* Higher than settings panel */
+    display: none; /* CRUCIAL: Hidden by default */
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.message-modal-overlay.active {
+    display: flex; /* Only show as flex when active */
+    opacity: 1;
+}
+
+.message-modal {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+    width: 90%;
+    max-width: 500px; /* Standard modal width */
+    /* DEBUG: Temporarily increase max-height to ensure content fits */
+    max-height: 95vh; /* Increased from 90vh */
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    display: flex; /* Ensure modal content itself is flex for header/body/footer structure */
+    flex-direction: column;
+}
+
+.message-modal-overlay.active .message-modal {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.message-modal.large-modal {
+    max-width: 800px; /* Larger modal for widget management */
+}
+
+.message-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--glass-border);
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+.message-modal-header h3 {
+    margin: 0;
+    color: var(--primary);
+    font-size: 1.2em;
+}
+
+.message-modal-body {
+    padding: 20px;
+    flex-grow: 1;
+    overflow-y: auto; /* Make modal body scrollable if content overflows */
+    color: var(--text-primary);
+}
+
+.message-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--glass-border);
+    background-color: var(--bg-primary);
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+    text-align: right;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.8em;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.btn-close-modal:hover {
+    color: var(--danger);
+}
+
+
+/* --- Analytics Modal Patch --- */
+/* Placeholder for charts inside modal */
+.chart-placeholder {
+    width: 100%;
+    height: 150px;
+    margin-top: 12px;
+    background: #f0f0f3;
+    border-radius: 10px;
+    box-shadow: inset 3px 3px 5px rgba(0,0,0,0.05),
+                inset -3px -3px 5px rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+/* IDE Widget Specific Styles */
+/* These styles are also included in ide.php for standalone use,
+   but are kept here for consistency and if ide.php includes dashboard.css */
+.ide-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure it fills the maximized widget */
+    background-color: #1e1e1e; /* Dark background for code */
+    color: #d4d4d4; /* Light text for code */
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.9em;
+}
+
+.ide-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 15px;
+    background-color: #252526;
+    border-bottom: 1px solid #333;
+    font-size: 0.85em;
+}
+
+.ide-path-display {
+    color: #888;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ide-file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 15px;
+}
+
+#ide-current-file-name {
+    font-weight: bold;
+    color: var(--primary);
+}
+
+#ide-file-status {
+    font-size: 0.75em;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--primary); /* Default status color */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.ide-status-saved {
+    background-color: rgba(76, 175, 80, 0.2); /* Greenish for saved */
+    color: var(--success);
+}
+
+.ide-status-unsaved {
+    background-color: rgba(255, 193, 7, 0.2); /* Yellowish for unsaved */
+    color: var(--warning);
+}
+
+.ide-content {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.ide-file-tree-panel {
+    width: 250px;
+    background-color: #2d2d30;
+    border-right: 1px solid #333;
+    overflow-y: auto;
+    padding: 10px 0;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.ide-file-tree {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ide-file-tree-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.ide-file-tree-item:hover {
+    background-color: rgba(0, 188, 212, 0.1);
+}
+
+.ide-file-tree-item i {
+    margin-right: 8px;
+    color: #cccccc;
+}
+
+.ide-file-tree-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ide-loading-indicator, .ide-error-indicator {
+    text-align: center;
+    padding: 20px;
+    color: #aaa;
+}
+
+.ide-error-indicator {
+    color: var(--danger);
+}
+
+.ide-editor-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column; /* Ensure editor and footer stack vertically */
+    overflow: hidden;
+}
+
+.ide-code-editor {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 1em;
+    resize: none; /* Disable textarea resize handle */
+    outline: none;
+    line-height: 1.5;
+    tab-size: 4;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    flex-grow: 1; /* Allow editor to fill available space */
+    overflow: auto; /* Ensure editor content is scrollable */
+}
+
+/* Force IDE button visibility - DEBUGGING */
+#open-ide-button {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
 
 
 ================================================================================
@@ -159730,17 +159741,6 @@ Allow altering default settings in settings (What widgets load by default) I'd l
 
 pre api helper files: tables, search, cache
 
-Collapse left sidebar
-
-fix versioning "v v12.4.7.00" -> "v 00.1.2.47 and the digits would roll over in a natural fashion.
-
-start incorporating css from theme_library.html when convenient.
-
-Widget Library (on left) should reflect "available" widgets only.
-
-Dashboard Settings too tall, save button on bottom gets cut off
-
-Mobile Friendly
 
 
 
@@ -159858,66 +159858,25 @@ function discover_widgets(): array {
 
 
 ================================================================================
-FILE: index.php
+FILE: ide.php
 ================================================================================
 
 <?php
-// PHP Debugging Lines - START
+// ide.php - Standalone IDE for editing widget source code
+
+// Enable error reporting for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-// PHP Debugging Lines - END
 
-// --- Cache Control Headers ---
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
-header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
-// --- End Cache Control Headers ---
-
-session_start();
-
-// Include configuration and helper functions/classes
-require_once 'config.php';
-require_once 'helpers.php';
-require_once 'src/php/DashboardManager.php';
-require_once 'src/php/FileManager.php'; // Ensure FileManager is included if used for widget creation
-
-// Instantiate DashboardManager
-// $available_widgets is populated by discover_widgets() in config.php
-$dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, $available_widgets);
-
-// Load current dashboard state (settings + widget states)
-$current_dashboard_state = $dashboardManager->loadDashboardState();
-$settings = $current_dashboard_state; // $settings now includes 'widgets_state'
-
-// IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state
-// This ensures session state is synced with persistent state on page load.
-$_SESSION['dashboard_settings'] = $current_dashboard_state;
-function formatDashboardVersion($major, $minor, $patch, $build) {
-    return "v{$major}.{$minor}.{$patch}.{$build}";
+// Define APP_ROOT if it's not already defined (e.g., if this file is accessed directly)
+if (!defined('APP_ROOT')) {
+    define('APP_ROOT', dirname(__DIR__));
 }
 
-$major = 12;
-$minor = 4;
-$patch = 7;
-$build = '00';
-$formattedVersion = formatDashboardVersion($major, $minor, $patch, $build);
-
-
-// The index.php no longer handles POST requests directly for actions.
-// All actions are now handled by dedicated API endpoints via AJAX.
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // This part should ideally not be reached for action_type POSTs
-    // as AJAX requests are now handled by api/dashboard.php etc.
-}
-
-// Ensure the $settings array used for rendering always reflects the latest state,
-// potentially updated by AJAX and then reloaded via loadDashboardState().
-$settings = array_replace_recursive($dashboardManager->loadDashboardState(), $_SESSION['dashboard_settings'] ?? []);
-
-// Pass available widgets to the view
-global $available_widgets; // Ensure $available_widgets from config.php is accessible
+// Get the file path from the URL parameter
+$initial_file_path = $_GET['file'] ?? '';
+$initial_file_name = basename($initial_file_path); // Extract just the file name for display
 
 ?>
 <!DOCTYPE html>
@@ -159925,31 +159884,501 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($settings['title']) ?></title>
+    <title>IDE - <?= htmlspecialchars($initial_file_name ?: 'File Editor') ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="dashboard.css">
-    <!-- Chart.js CDN for charting widgets -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="dashboard.css"> <!-- Reuse dashboard styles -->
     <style>
-        :root {
-            --accent: <?= $settings['accent_color'] ?>;
-            --glass-bg: rgba(35, 40, 49, <?= $settings['glass_intensity'] ?>);
-            --blur-amount: <?= $settings['blur_amount'] ?>;
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Prevent body scroll, IDE will handle its own scroll */
+            background-color: var(--bg-primary); /* Use dashboard background */
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
         }
-        .widget {
-            transition: <?= $settings['enable_animations'] ? 'var(--transition)' : 'none' ?>;
+
+        .ide-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background-color: var(--bg-secondary); /* Use secondary background for header */
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0; /* Prevent header from shrinking */
         }
-        .widget:hover {
-            <?php if ($settings['enable_animations']): ?>
-            transform: translateY(-5px);
-            box-shadow:
-                12px 12px 24px var(--shadow-dark),
-                -12px -12px 24px rgba(74, 78, 94, 0.1);
-            <?php endif; ?>
+
+        .ide-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .ide-header h1 i {
+            margin-right: 10px;
+            color: var(--accent);
+        }
+
+        .ide-file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .ide-file-path {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        #ide-current-file-name {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        #ide-file-status {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 8px;
+            background-color: rgba(0, 188, 212, 0.2);
+            color: var(--primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .ide-status-saved {
+            background-color: rgba(76, 175, 80, 0.2); /* Greenish for saved */
+            color: var(--success);
+        }
+
+        .ide-status-unsaved {
+            background-color: rgba(255, 193, 7, 0.2); /* Yellowish for unsaved */
+            color: var(--warning);
+        }
+
+        .ide-content-wrapper {
+            display: flex;
+            flex-grow: 1; /* Take up remaining vertical space */
+            overflow: hidden; /* Manage internal scrolling */
+        }
+
+        .ide-file-tree-panel {
+            width: 280px; /* Fixed width for file tree */
+            background-color: var(--bg-primary);
+            border-right: 1px solid var(--glass-border);
+            overflow-y: auto; /* Scrollable file tree */
+            padding: 15px 0;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .ide-file-tree {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .ide-file-tree-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .ide-file-tree-item:hover {
+            background-color: rgba(0, 188, 212, 0.1);
+            color: var(--accent);
+        }
+
+        .ide-file-tree-item.active {
+            background-color: rgba(0, 188, 212, 0.2);
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .ide-file-tree-item i {
+            margin-right: 10px;
+            font-size: 1.1em;
+        }
+
+        .ide-item-read-only {
+            opacity: 0.6;
+            cursor: not-allowed;
+            color: var(--text-secondary);
+        }
+
+        .ide-item-read-only i {
+            color: var(--text-secondary);
+        }
+
+        .ide-editor-panel {
+            flex-grow: 1; /* Take up remaining horizontal space */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Manage internal scrolling */
+            background-color: #1e1e1e; /* Dark background for editor */
+        }
+
+        .ide-code-editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #1e1e1e; /* Dark background */
+            color: #d4d4d4; /* Light text */
+            padding: 20px;
+            font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; /* Monospace font for code */
+            font-size: 1em;
+            resize: none; /* Disable textarea resize handle */
+            outline: none;
+            line-height: 1.5;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            -o-tab-size: 4;
+            overflow: auto; /* Enable scrolling for editor content */
+        }
+
+        .ide-actions-footer {
+            padding: 10px 20px;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+        }
+
+        .ide-loading-indicator, .ide-error-indicator {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+
+        .ide-error-indicator {
+            color: var(--danger);
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
+    <div class="ide-header">
+        <h1><i class="fas fa-code"></i> Widget IDE</h1>
+        <div class="ide-file-info">
+            <span class="ide-file-path">Current File: <span id="ide-current-file-name"><?= htmlspecialchars($initial_file_path) ?></span></span>
+            <span id="ide-file-status" class="ide-status-saved">Saved</span>
+        </div>
+    </div>
+
+    <div class="ide-content-wrapper">
+        <div class="ide-file-tree-panel">
+            <ul class="ide-file-tree" id="ide-file-tree">
+                <div class="ide-loading-indicator">
+                    <i class="fas fa-spinner fa-spin"></i> Loading files...
+                </div>
+            </ul>
+        </div>
+
+        <div class="ide-editor-panel">
+            <textarea id="ide-code-editor" class="ide-code-editor" spellcheck="false"></textarea>
+            <div class="ide-actions-footer">
+                <button class="btn btn-primary" id="ide-save-button">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Pass initial file path to JavaScript
+        window.initialFilePath = "<?= htmlspecialchars($initial_file_path) ?>";
+    </script>
+    <script type="module" src="src/js/features/IdeWidget.js"></script>
+</body>
+</html>
+
+
+
+================================================================================
+FILE: index.php
+================================================================================
+
+<?php
+// PHP Debugging Lines - START
+// Enable all error reporting for development purposes.
+// This helps in identifying and debugging issues quickly.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
+
+// --- Cache Control Headers ---
+// These headers prevent the browser from caching the page,
+// ensuring that the latest version is always loaded.
+// This is crucial for dynamic dashboards where data changes frequently.
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // A date in the past to ensure expiration.
+// --- End Cache Control Headers ---
+
+// Start the PHP session.
+// Sessions are used to store user-specific data across multiple page requests.
+session_start();
+
+// Include core configuration and helper functions/classes.
+// These files provide essential settings, utility functions,
+// and the main classes for managing the dashboard's state and file operations.
+require_once 'config.php'; // Contains global constants and widget discovery logic.
+require_once 'helpers.php'; // Provides utility functions like render_widget().
+require_once 'src/php/DashboardManager.php'; // Manages dashboard settings and widget states.
+require_once 'src/php/FileManager.php'; // Handles file operations, especially for widget templates.
+
+// Instantiate the DashboardManager.
+// This object is responsible for loading, saving, and managing the dashboard's configuration.
+// $available_widgets is a global variable populated by the discover_widgets() function in config.php.
+$dashboardManager = new DashboardManager(DASHBOARD_SETTINGS_FILE, $available_widgets);
+
+// Load the current dashboard state.
+// This includes global settings (title, accent color, etc.) and the state of all widgets.
+$current_dashboard_state = $dashboardManager->loadDashboardState();
+$settings = $current_dashboard_state; // Assign the loaded state to $settings for easier access.
+
+// IMPORTANT: Initialize $_SESSION['dashboard_settings'] from the loaded state.
+// This step is critical to synchronize the PHP session with the persistent dashboard settings.
+// It ensures that any changes made via AJAX and saved to the JSON file are reflected
+// in the session when the page is reloaded or initially loaded.
+$_SESSION['dashboard_settings'] = $current_dashboard_state;
+
+// Define the current version numbers for the dashboard.
+// Based on the user's request "v 00.1.2.47", the version segments are reordered and assigned.
+// Here, '00' is treated as the build number, '1' as the major, '2' as the minor, and '47' as the patch.
+// These are static values within this PHP file. For dynamic versioning (e.g., build number rolling over),
+// a more robust system (like reading from a file, database, or build environment variables) would be needed.
+$build_number = '00'; // Corresponds to '00' in v00.1.2.47
+$major_version = 1;    // Corresponds to '1' in v00.1.2.47
+$minor_version = 2;    // Corresponds to '2' in v00.1.2.47
+$patch_version = 47;   // Corresponds to '47' in v00.1.2.47
+
+/**
+ * Formats the dashboard version string according to the "build.major.minor.patch" scheme.
+ *
+ * @param string $build Build identifier (e.g., '00').
+ * @param int $major Major version number.
+ * @param int $minor Minor version number.
+ * @param int $patch Patch version number.
+ * @return string Formatted version string (e.g., "v00.1.2.47").
+ */
+function formatDashboardVersion($build, $major, $minor, $patch) {
+    return "v{$build}.{$major}.{$minor}.{$patch}";
+}
+
+$formattedVersion = formatDashboardVersion(
+    $build_number,
+    $major_version,
+    $minor_version,
+    $patch_version
+);
+
+// The index.php no longer handles POST requests directly for actions.
+// In the refactored architecture, all dashboard actions (saving settings,
+// managing widgets, creating new widgets) are handled by dedicated API endpoints
+// located in the `api/` directory. These endpoints are accessed via AJAX requests
+// from the frontend JavaScript.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // This block is largely vestigial and should ideally not be reached for
+    // typical dashboard interactions. If it is, it indicates a direct POST
+    // to index.php, which is not the intended flow for dynamic actions.
+    // Any POST requests here would likely be for initial form submissions
+    // or legacy functionalities that should be migrated to AJAX APIs.
+    // For now, it simply prevents any unintended processing.
+    error_log("Received a direct POST request to index.php. All dashboard actions should use AJAX to API endpoints.");
+    // Optionally, you could redirect or return an error here if direct POSTs are strictly forbidden.
+}
+
+// Ensure the $settings array used for rendering always reflects the latest state.
+// This line merges the state loaded from the JSON file with any potential
+// session-based overrides. This is a safeguard to ensure the most up-to-date
+// configuration is used for rendering the HTML.
+$settings = array_replace_recursive($dashboardManager->loadDashboardState(), $_SESSION['dashboard_settings'] ?? []);
+
+// Pass available widgets to the view
+// The $available_widgets variable contains metadata for all discovered widget templates.
+// It's made global to be accessible throughout the PHP rendering process.
+global $available_widgets; // Ensure $available_widgets from config.php is accessible.
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($settings['title']) ?></title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main dashboard CSS -->
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- Chart.js CDN for charting widgets -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        /* CSS variables for dynamic styling based on dashboard settings */
+        :root {
+            --accent: <?= $settings['accent_color'] ?>; /* Main accent color */
+            --glass-bg: rgba(35, 40, 49, <?= $settings['glass_intensity'] ?>); /* Background color with transparency for glass effect */
+            --blur-amount: <?= $settings['blur_amount'] ?>; /* Blur intensity for glass effect */
+            --transition: all 0.3s ease-in-out; /* Standard transition for animations */
+            /* Define accent-rgb for use in rgba() for shadows/glows */
+            --accent-rgb: <?= implode(',', sscanf($settings['accent_color'], '#%02x%02x%02x')) ?>;
+        }
+
+        /* Widget specific styling and animation control */
+        .widget {
+            transition: <?= $settings['enable_animations'] ? 'var(--transition)' : 'none' ?>; /* Apply transition only if animations are enabled */
+        }
+        .widget:hover {
+            <?php if ($settings['enable_animations']): ?>
+            transform: translateY(-5px); /* Lift effect on hover */
+            box-shadow: 12px 12px 24px var(--shadow-dark), -12px -12px 24px rgba(74, 78, 94, 0.1); /* Enhanced shadow on hover */
+            <?php endif; ?>
+        }
+
+        /* Settings Panel specific styles to ensure save button is always visible */
+        .settings-panel {
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            /* Existing styles for position, width, height, background, etc. */
+            position: fixed;
+            top: 0;
+            right: -400px; /* Hidden by default */
+            width: 380px;
+            height: 100%;
+            background: var(--modal-bg);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+            transition: right 0.3s ease-in-out;
+            z-index: 1001; /* Above overlay */
+            border-left: 1px solid var(--modal-border);
+        }
+
+        .settings-panel.open { /* Class to make the panel visible */
+            right: 0;
+        }
+
+        .settings-form-content { /* This new class wraps the scrollable form body */
+            padding: 20px;
+            overflow-y: auto; /* Make this section scrollable */
+            flex-grow: 1; /* Allows it to take up available space */
+        }
+
+        .settings-footer { /* New footer for the save button */
+            padding: 15px 20px;
+            border-top: 1px solid var(--modal-border);
+            background-color: var(--modal-header-bg); /* Match header or modal background */
+            flex-shrink: 0; /* Prevent it from shrinking */
+        }
+
+        .overlay { /* Ensure overlay also has a transition for smoother appearance */
+            transition: opacity 0.3s ease;
+        }
+        .overlay.active {
+            display: block; /* Make sure it becomes block when active */
+            opacity: 1;
+        }
+
+        /* MODAL OVERLAYS - Ensure they are hidden by default and only become flex when active */
+        .message-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Darker background for modals */
+            backdrop-filter: blur(8px); /* Blur effect for modals */
+            z-index: 2000; /* Higher than settings panel */
+            display: none; /* Crucial: Hidden by default */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .message-modal-overlay.active {
+            display: flex; /* Only show as flex when active */
+            opacity: 1;
+        }
+
+        .message-modal {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            width: 90%;
+            max-width: 500px; /* Standard modal width */
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            display: flex; /* Ensure modal content itself is flex for header/body/footer structure */
+            flex-direction: column;
+            max-height: 90vh; /* Prevent modal from exceeding viewport height */
+        }
+
+        .message-modal-overlay.active .message-modal {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .message-modal.large-modal {
+            max-width: 800px; /* Larger modal for widget management */
+        }
+
+        .message-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: var(--bg-primary); /* Darker header for modals */
+            border-bottom: 1px solid var(--glass-border);
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+        }
+
+        .message-modal-header h3 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.2em;
+        }
+
+        .message-modal-body {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto; /* Make modal body scrollable if content overflows */
+            color: var(--text-primary);
+        }
+
+        .message-modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--glass-border);
+            background-color: var(--bg-primary);
+            border-bottom-left-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
+            text-align: right;
+        }
+
+        .btn-close-modal {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .btn-close-modal:hover {
+            color: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <!-- ALL MODAL OVERLAYS SHOULD BE DIRECT CHILDREN OF BODY -->
+
     <!-- New: Overlay for expanded widgets -->
     <div class="widget-expanded-overlay" id="widget-expanded-overlay"></div>
 
@@ -159974,6 +160403,13 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Dimensions</button>
                 </form>
+                <!-- NEW: Open IDE Button -->
+                <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+                    <label>Edit Widget Source Code</label>
+                    <button type="button" class="btn btn-secondary" id="open-ide-button" style="width: 100%;">
+                        <i class="fas fa-code"></i> Open in IDE
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -160044,7 +160480,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                         <input type="number" id="new-widget-height" name="height" class="form-control" value="1.0" min="0.5" max="4" step="0.5" required>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
-                        <i class="fas fa-plus"></i> Create Widget Template
+                        <i class="fas fa-file-code"></i> Create Widget Template
                     </button>
                 </form>
             </div>
@@ -160052,7 +160488,28 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
     </div>
     <!-- END NEW: Create New Widget Modal Structure -->
 
+    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
+    <div class="message-modal-overlay" id="message-modal-overlay">
+        <div class="message-modal">
+            <div class="message-modal-header">
+                <h3 id="message-modal-title"></h3>
+                <button class="btn-close-modal" id="close-message-modal">&times;</button>
+            </div>
+            <div class="message-modal-body">
+                <p id="message-modal-content"></p>
+            </div>
+            <div class="message-modal-footer">
+                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div class="dashboard">
+        <!-- Sidebar Toggle Button - Moved outside the sidebar -->
+        <div class="sidebar-toggle" id="sidebar-toggle">
+            <i class="fas fa-chevron-left"></i>
+        </div>
+
         <!-- Dashboard Header -->
         <header class="header">
             <div class="logo">
@@ -160063,11 +160520,9 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                 </div>
                 <div class="logo-text"><?= htmlspecialchars($settings['title']) ?></div>
                 <div class="logo-version" style="font-size: 0.75em; color: #bbb; margin-left: 8px;" id="version-display">
-                    <strong>v</strong>
                     <?php echo $formattedVersion ?>
                 </div>
             </div>
-
             <div class="header-actions">
                 <button class="btn" id="settings-toggle">
                     <i class="fas fa-cog"></i> Settings
@@ -160079,7 +160534,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         </header>
 
         <!-- Dashboard Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-section">
                 <div class="section-title">Navigation</div>
                 <div class="nav-item active">
@@ -160091,10 +160546,11 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <i class="fas fa-layer-group"></i>
                     <span>Theme Library</span>
                 </a>
-                <div class="nav-item">
+                <!-- REMOVED: Users nav item as per request -->
+                <!-- <div class="nav-item">
                     <i class="fas fa-users"></i>
                     <span>Users</span>
-                </div>
+                </div> -->
                 <div class="nav-item" id="widget-management-nav-item">
                     <i class="fas fa-th-large"></i>
                     <span>Widget Management</span>
@@ -160104,16 +160560,29 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             <div class="sidebar-section">
                 <div class="section-title">Widget Library</div>
                 <div class="widget-list">
-                    <?php foreach ($available_widgets as $id => $widget): ?>
+                    <?php
+                    // Get a list of currently active widget IDs
+                    $active_widget_ids = array_keys(array_filter($settings['widgets_state'], function($widget) {
+                        return $widget['is_active'];
+                    }));
+
+                    foreach ($available_widgets as $id => $widget):
+                        // Only display the widget in the library if it's NOT currently active on the dashboard
+                        if (!in_array($id, $active_widget_ids)):
+                    ?>
                     <div class="widget-item" draggable="true" data-widget-id="<?= $id ?>">
-                        <!-- MODIFIED: Use full class for widget item icon -->
                         <i class="<?= htmlspecialchars($widget['icon']) ?>"></i>
                         <div class="widget-name"><?= $widget['name'] ?></div>
                     </div>
-                    <?php endforeach; ?>
+                    <?php
+                        endif;
+                    endforeach;
+                    ?>
                 </div>
             </div>
 
+            <!-- REMOVED: Dashboard Settings section as per request -->
+            <!--
             <div class="sidebar-section">
                 <div class="section-title">Dashboard Settings</div>
                 <div class="nav-item" id="general-settings-nav-item">
@@ -160129,6 +160598,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     <span>Advanced Settings</span>
                 </div>
             </div>
+            -->
         </aside>
 
         <!-- Main Content Area -->
@@ -160207,22 +160677,6 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
         </main>
     </div>
 
-    <!-- Simple Message Modal Structure (for general confirmations/alerts) -->
-    <div class="message-modal-overlay" id="message-modal-overlay">
-        <div class="message-modal">
-            <div class="message-modal-header">
-                <h3 id="message-modal-title"></h3>
-                <button class="btn-close-modal" id="close-message-modal">&times;</button>
-            </div>
-            <div class="message-modal-body">
-                <p id="message-modal-content"></p>
-            </div>
-            <div class="message-modal-footer">
-                <button class="btn btn-primary" id="confirm-message-modal">OK</button>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Settings Panel (Global Dashboard Settings) -->
     <div class="overlay" id="settings-overlay"></div>
@@ -160241,7 +160695,7 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
             <button class="settings-tab-btn" data-target="advanced-settings-section">Advanced</button>
         </div>
 
-        <form id="global-settings-form" method="post" class="settings-form">
+        <form id="global-settings-form" method="post" class="settings-form-content">
             <!-- General Settings Section -->
             <div class="settings-section active" id="general-settings-section">
                 <div class="settings-group">
@@ -160377,31 +160831,17 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
                     </div>
                 </div>
             </div>
+        </form>
 
-            <button type="submit" name="update_settings" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+        <div class="settings-footer">
+            <button type="submit" form="global-settings-form" class="btn btn-primary" style="width: 100%;">
                 <i class="fas fa-save"></i> Save All Settings
             </button>
-        </form>
+        </div>
     </div>
 
     <script type="module" src="src/js/main.js"></script>
     <script src="version.js"></script>
-    <script>
-    window.addEventListener("DOMContentLoaded", () => {
-        if (window.appVersion) {
-            const raw = window.appVersion.split(".").pop();
-            const verInt = parseInt(raw);
-            const v1 = Math.floor(verInt / 100);
-            const v2 = Math.floor((verInt % 100) / 10);
-            const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
-            // These elements for ver-1, ver-2, ver-3 are not present in the current HTML.
-            // The version is displayed using a single span for $formattedVersion.
-            // document.getElementById("ver-1").textContent = v1;
-            // document.getElementById("ver-2").textContent = v2;
-            // document.getElementById("ver-3").textContent = v3;
-        }
-    });
-    </script>
 </body>
 </html>
 
@@ -162262,9 +162702,10 @@ let placeholder = null;
 let currentDropTarget = null; // The element over which the draggedWidget is currently hovering
 
 export function initDragDrop() {
+    console.log('[DragDropManager] Initializing drag and drop functionality.');
     const widgetContainer = document.getElementById('widget-container');
     if (!widgetContainer) {
-        console.error("Widget container not found. Drag and drop will not be initialized.");
+        console.error("[DragDropManager] Widget container (id='widget-container') not found. Drag and drop will not be initialized.");
         return;
     }
 
@@ -162289,6 +162730,9 @@ export function initDragDrop() {
 
             widgetContainer.insertBefore(placeholder, draggedWidget);
             setTimeout(() => draggedWidget.style.display = 'none', 0); // Hide original after placeholder is in place
+            console.log(`[DragDropManager] Drag started for widget: ${draggedWidget.dataset.widgetId}`);
+        } else if (targetWidget && targetWidget.classList.contains('maximized')) {
+            console.log('[DragDropManager] Attempted to drag a maximized widget. Dragging disabled.');
         }
     });
 
@@ -162323,43 +162767,54 @@ export function initDragDrop() {
 
             if (referenceNode !== placeholder.nextElementSibling && referenceNode !== placeholder) {
                 widgetContainer.insertBefore(placeholder, referenceNode);
+                // console.log('[DragDropManager] Placeholder moved.'); // Too verbose for continuous logging
             }
         }
     });
 
     widgetContainer.addEventListener('dragleave', function(e) {
         // Optional: handle visual feedback when leaving container
+        // console.log('[DragDropManager] Drag leave event.'); // Can be too verbose
     });
 
     widgetContainer.addEventListener('drop', function(e) {
         e.preventDefault();
+        console.log('[DragDropManager] Drop event occurred.');
         if (draggedWidget && placeholder) {
             draggedWidget.style.display = 'flex'; // Show the dragged widget
             widgetContainer.replaceChild(draggedWidget, placeholder); // Replace placeholder with actual widget
             draggedWidget.classList.remove('dragging');
             saveWidgetOrder(); // Save the new order
+            console.log(`[DragDropManager] Widget ${draggedWidget.dataset.widgetId} dropped and order saved.`);
+        } else {
+            console.warn('[DragDropManager] Drop event: draggedWidget or placeholder was null.');
         }
         resetDragState();
     });
 
     widgetContainer.addEventListener('dragend', function(e) {
+        console.log('[DragDropManager] Drag end event occurred.');
         if (draggedWidget) {
             // If drop didn't happen in a valid drop zone, return widget to original spot
             if (e.dataTransfer.dropEffect === 'none' && placeholder) {
+                console.log('[DragDropManager] Drop effect was "none", attempting to return widget to original position.');
                 draggedWidget.style.display = 'flex';
                 // Try to put it back where the placeholder was, or append if placeholder is gone
                 if (placeholder.parentNode === widgetContainer) {
                     widgetContainer.replaceChild(draggedWidget, placeholder);
                 } else {
                     widgetContainer.appendChild(draggedWidget); // Fallback
+                    console.warn('[DragDropManager] Placeholder parent not widgetContainer, appending as fallback.');
                 }
             } else if (draggedWidget.style.display === 'none') {
                  // If it's still hidden (e.g., dropped outside valid zone, but we want it visible)
+                 console.log('[DragDropManager] Widget still hidden after dragend, forcing display.');
                  draggedWidget.style.display = 'flex';
                  if (placeholder.parentNode === widgetContainer) {
                     widgetContainer.replaceChild(draggedWidget, placeholder);
                 } else {
                     widgetContainer.appendChild(draggedWidget); // Fallback
+                    console.warn('[DragDropManager] Placeholder parent not widgetContainer, appending as fallback.');
                 }
             }
             draggedWidget.classList.remove('dragging');
@@ -162370,68 +162825,91 @@ export function initDragDrop() {
     // --- Dragging from Sidebar Widget Library ---
     const widgetLibrary = document.querySelector('.widget-list');
     if (widgetLibrary) {
+        console.log('[DragDropManager] Widget library found. Setting up dragstart for new widgets.');
         widgetLibrary.addEventListener('dragstart', function(e) {
             const widgetItem = e.target.closest('.widget-item');
             if (widgetItem) {
                 e.dataTransfer.effectAllowed = 'copy';
                 e.dataTransfer.setData('text/plain', widgetItem.dataset.widgetId);
+                console.log(`[DragDropManager] Drag started from library for widget ID: ${widgetItem.dataset.widgetId}`);
             }
         });
+    } else {
+        console.warn('[DragDropManager] Widget library (.widget-list) not found.');
     }
 
     widgetContainer.addEventListener('dragenter', function(e) {
         e.preventDefault(); // Allow drop
         if (e.dataTransfer.types.includes('text/plain')) {
             widgetContainer.classList.add('drag-over'); // Visual feedback
+            // console.log('[DragDropManager] Drag enter on widget container.'); // Too verbose
         }
     });
 
     widgetContainer.addEventListener('dragleave', function(e) {
         if (e.target === widgetContainer) { // Only remove class if leaving the container itself
             widgetContainer.classList.remove('drag-over');
+            // console.log('[DragDropManager] Drag leave on widget container.'); // Too verbose
         }
     });
 
     widgetContainer.addEventListener('drop', async function(e) {
         e.preventDefault();
+        console.log('[DragDropManager] Drop event on widget container (from library or internal).');
         widgetContainer.classList.remove('drag-over');
 
         const widgetId = e.dataTransfer.getData('text/plain');
         if (widgetId && !draggedWidget) { // Ensure it's a new widget from library, not an internal drag
+            console.log(`[DragDropManager] Attempting to add new widget from library: ${widgetId}`);
             // Check if widget already exists on the dashboard (is active)
             const existingWidget = document.querySelector(`.widget[data-widget-id="${widgetId}"]`);
             if (existingWidget) {
+                console.warn(`[DragDropManager] Widget ${widgetId} already exists on dashboard.`);
                 showMessageModal('Widget Exists', `"${widgetId}" is already on your dashboard. You can manage its status in Widget Management.`);
                 return;
             }
 
             // Send AJAX request to add widget
-            const response = await sendAjaxRequest('api/dashboard.php', 'toggle_widget_active_status', {
-                widget_id: widgetId,
-                is_active: '1' // Set to active
-            });
+            try {
+                const response = await sendAjaxRequest('api/dashboard.php', 'toggle_widget_active_status', {
+                    widget_id: widgetId,
+                    is_active: '1' // Set to active
+                });
 
-            if (response.status === 'success') {
-                showMessageModal('Success', response.message + ' Reloading dashboard to add new widget...', () => location.reload(true));
-            } else {
-                showMessageModal('Error', response.message);
+                if (response.status === 'success') {
+                    console.log(`[DragDropManager] Widget ${widgetId} activated successfully. Reloading...`);
+                    showMessageModal('Success', response.message + ' Reloading dashboard to add new widget...', () => location.reload(true));
+                } else {
+                    console.error('[DragDropManager] Error activating widget from library:', response.message, response.rawResponse);
+                    showMessageModal('Error', response.message);
+                }
+            } catch (error) {
+                console.error('[DragDropManager] AJAX request failed when activating widget from library:', error);
+                showMessageModal('Error', 'An unexpected error occurred while adding the widget.');
             }
+        } else if (draggedWidget) {
+            console.log('[DragDropManager] Internal widget drag completed (handled by dragend).');
+        } else {
+            console.warn('[DragDropManager] Drop event occurred without valid widgetId or draggedWidget.');
         }
         resetDragState();
     });
 }
 
 function resetDragState() {
+    console.log('[DragDropManager] Resetting drag state.');
     if (draggedWidget) {
         draggedWidget.classList.remove('dragging');
         draggedWidget.style.display = 'flex'; // Ensure it's visible
     }
     if (placeholder && placeholder.parentNode) {
         placeholder.parentNode.removeChild(placeholder);
+        console.log('[DragDropManager] Placeholder removed.');
     }
     draggedWidget = null;
     placeholder = null;
     currentDropTarget = null;
+    console.log('[DragDropManager] Drag state cleared.');
 }
 
 /**
@@ -162439,25 +162917,30 @@ function resetDragState() {
  * This function now sends the order of all *rendered* widgets.
  */
 async function saveWidgetOrder() {
+    console.log('[DragDropManager] Saving widget order.');
     const widgets = Array.from(document.querySelectorAll('#widget-container .widget'));
     const orderedWidgetIds = widgets.map(widget => widget.dataset.widgetId);
 
     if (orderedWidgetIds.length === 0) {
-        // If no widgets, perhaps clear order or do nothing
-        console.log("No widgets to save order for.");
+        console.log("[DragDropManager] No widgets to save order for.");
         return;
     }
 
-    const response = await sendAjaxRequest('api/dashboard.php', 'update_widget_order', {
-        order: JSON.stringify(orderedWidgetIds)
-    });
+    try {
+        const response = await sendAjaxRequest('api/dashboard.php', 'update_widget_order', {
+            order: JSON.stringify(orderedWidgetIds)
+        });
 
-    if (response.status === 'success') {
-        // No full reload needed if we implement dynamic rendering later
-        console.log("Widget order saved successfully.");
-        // showMessageModal('Success', 'Widget order saved.'); // Optional, can be annoying after every drag
-    } else {
-        showMessageModal('Error', 'Failed to save widget order: ' + response.message);
+        if (response.status === 'success') {
+            console.log("[DragDropManager] Widget order saved successfully.");
+            // showMessageModal('Success', 'Widget order saved.'); // Optional, can be annoying after every drag
+        } else {
+            console.error('[DragDropManager] Failed to save widget order:', response.message, response.rawResponse);
+            showMessageModal('Error', 'Failed to save widget order: ' + response.message);
+        }
+    } catch (error) {
+        console.error('[DragDropManager] AJAX request failed during widget order save:', error);
+        showMessageModal('Error', 'An unexpected error occurred while saving widget order.');
     }
 }
 
@@ -162472,191 +162955,214 @@ FILE: src/js/features/IdeWidget.js
 import { sendAjaxRequest } from '../utils/AjaxService.js';
 import { showMessageModal } from '../ui/MessageModal.js';
 
-let currentEditingFile = null; // Current file being edited in the IDE
+const ideFileTree = document.getElementById('ide-file-tree');
+const ideCodeEditor = document.getElementById('ide-code-editor');
+const ideSaveButton = document.getElementById('ide-save-button');
+const ideCurrentFileName = document.getElementById('ide-current-file-name');
+const ideFileStatus = document.getElementById('ide-file-status');
 
-// Function to update file status (Saved, Unsaved)
-// This function needs `this.ideFileStatus` to be bound to the correct element
-function setFileStatus(status, ideFileStatusEl) {
-    if (!ideFileStatusEl) return; 
+let currentFilePath = '';
+let originalFileContent = '';
+let isUnsaved = false;
 
-    ideFileStatusEl.classList.remove('ide-status-saved', 'ide-status-unsaved');
-    if (status === 'saved') {
-        ideFileStatusEl.textContent = 'Saved';
-        ideFileStatusEl.classList.add('ide-status-saved');
-    } else if (status === 'unsaved') {
-        ideFileStatusEl.textContent = 'Unsaved Changes';
-        ideFileStatusEl.classList.add('ide-status-unsaved');
-    } else {
-        ideFileStatusEl.textContent = ''; // Clear status
+/**
+ * Updates the file status indicator (Saved/Unsaved).
+ * @param {boolean} unsaved True if there are unsaved changes, false otherwise.
+ */
+function updateFileStatus(unsaved) {
+    isUnsaved = unsaved;
+    if (ideFileStatus) {
+        if (unsaved) {
+            ideFileStatus.textContent = 'Unsaved';
+            ideFileStatus.classList.remove('ide-status-saved');
+            ideFileStatus.classList.add('ide-status-unsaved');
+        } else {
+            ideFileStatus.textContent = 'Saved';
+            ideFileStatus.classList.remove('ide-status-unsaved');
+            ideFileStatus.classList.add('ide-status-saved');
+        }
     }
 }
 
-// This internal function helps with re-scoping elements after widget expansion
-async function loadIdeFileTreeInternal(fileTreeEl, pathDisplayEl, codeEditorEl, fileNameDisplayEl, saveBtnEl, fileStatusEl, path) {
-    fileTreeEl.innerHTML = '<li class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</li>';
-    pathDisplayEl.textContent = path === '.' ? '/' : `/${path}`; // Display root as /
+/**
+ * Loads the content of a file into the editor.
+ * @param {string} path The relative path of the file to load.
+ */
+async function loadFileContent(path) {
+    if (isUnsaved && !confirm('You have unsaved changes. Discard them and open new file?')) {
+        return; // User chose not to discard unsaved changes
+    }
 
-    const response = await sendAjaxRequest('api/ide.php', 'ide_list_files', { path: path });
+    currentFilePath = path;
+    ideCurrentFileName.textContent = path; // Update displayed path
+    ideCodeEditor.value = ''; // Clear editor
+    updateFileStatus(false); // Reset status to saved initially
+    ideCodeEditor.disabled = true; // Disable editor while loading
+    ideSaveButton.disabled = true; // Disable save button
 
-    if (response.status === 'success' && response.files) {
-        pathDisplayEl.textContent = response.current_path === '' ? '/' : `/${response.current_path}`;
+    // Show loading indicator
+    ideCodeEditor.placeholder = 'Loading file...';
+    ideFileStatus.textContent = 'Loading...';
+    ideFileStatus.classList.remove('ide-status-saved', 'ide-status-unsaved');
 
-        fileTreeEl.innerHTML = ''; // Clear loading indicator
-        response.files.forEach(item => {
-            const li = document.createElement('li');
-            li.classList.add('ide-file-tree-item');
-            li.dataset.path = item.path;
-            li.dataset.type = item.type;
-            li.dataset.name = item.name; // Store name for display later
+    const response = await sendAjaxRequest('api/ide.php', 'read_file', { file: path });
 
-            let icon = '';
-            if (item.type === 'dir') {
-                icon = '<i class="fas fa-folder"></i>';
-            } else {
-                icon = '<i class="fas fa-file"></i>';
-            }
+    ideCodeEditor.disabled = false; // Enable editor
 
-            li.innerHTML = `${icon} <span>${item.name}</span>`;
-            if (!item.is_writable) {
-                 li.classList.add('ide-item-read-only');
-                 li.title = 'Not writable';
-            }
-
-            fileTreeEl.appendChild(li);
-        });
+    if (response.status === 'success') {
+        originalFileContent = response.data;
+        ideCodeEditor.value = response.data;
+        updateFileStatus(false); // Set to saved
     } else {
-        fileTreeEl.innerHTML = `<li class="ide-error-indicator"><i class="fas fa-exclamation-triangle"></i> Error: ${response.message}</li>`;
-        showMessageModal('IDE Error', `Failed to load files: ${response.message}`);
+        ideCodeEditor.value = `Error loading file: ${response.message}`;
+        ideCodeEditor.placeholder = 'Error loading file.';
+        updateFileStatus(true); // Treat as unsaved error state
+        showMessageModal('Error', `Failed to load file: ${response.message}`);
     }
 }
 
-// Initialize IDE on widget expansion
-export function initIdeWidget(widget) {
-    // Get elements within the *specific* expanded widget
-    const ideFileTreeEl = widget.querySelector('#ide-file-tree');
-    const ideCurrentPathDisplayEl = widget.querySelector('#ide-current-path');
-    const ideCodeEditorEl = widget.querySelector('#ide-code-editor');
-    const ideFileNameDisplayEl = widget.querySelector('#ide-current-file-name');
-    const ideFileStatusEl = widget.querySelector('#ide-file-status');
-    const ideSaveBtnEl = widget.querySelector('#ide-save-btn');
-
-    if (!ideFileTreeEl || !ideCodeEditorEl || !ideSaveBtnEl || !ideFileStatusEl || !ideFileNameDisplayEl || !ideCurrentPathDisplayEl) {
-        console.warn("IDE elements not found inside the expanded widget. Skipping IDE initialization.");
+/**
+ * Saves the current content of the editor to the file.
+ */
+async function saveFileContent() {
+    if (!currentFilePath) {
+        showMessageModal('Error', 'No file selected to save.');
         return;
     }
 
-    // Reset editor state
-    ideCodeEditorEl.value = '';
-    ideCodeEditorEl.readOnly = true;
-    ideFileNameDisplayEl.textContent = 'No file selected';
-    ideSaveBtnEl.disabled = true;
-    setFileStatus('', ideFileStatusEl); // Call setFileStatus with correct context
-    currentEditingFile = null;
+    const newContent = ideCodeEditor.value;
+    if (newContent === originalFileContent) {
+        showMessageModal('Info', 'No changes to save.');
+        updateFileStatus(false);
+        return;
+    }
 
-    // Load root directory initially
-    loadIdeFileTreeInternal(ideFileTreeEl, ideCurrentPathDisplayEl, ideCodeEditorEl, ideFileNameDisplayEl, ideSaveBtnEl, ideFileStatusEl, '.');
+    ideSaveButton.disabled = true;
+    ideSaveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    updateFileStatus(true); // Indicate saving in progress
+
+    const response = await sendAjaxRequest('api/ide.php', 'save_file', {
+        file: currentFilePath,
+        content: newContent
+    });
+
+    ideSaveButton.disabled = false;
+    ideSaveButton.innerHTML = '<i class="fas fa-save"></i> Save';
+
+    if (response.status === 'success') {
+        originalFileContent = newContent; // Update original content after successful save
+        updateFileStatus(false); // Set to saved
+        showMessageModal('Success', response.message);
+    } else {
+        showMessageModal('Error', `Failed to save file: ${response.message}`);
+        // Keep status as unsaved if save failed
+    }
 }
 
-export function initIdeEventListeners() {
-    // Handle file tree clicks (delegated to document.body because IDE widget is dynamic)
-    document.body.addEventListener('click', async function(e) {
-        const item = e.target.closest('.ide-file-tree-item');
-        // Ensure the clicked item is part of an expanded IDE widget
-        if (!item || !item.closest('.widget.maximized[data-widget-id="ide"]')) return;
+/**
+ * Renders the file tree in the sidebar.
+ * @param {string} currentPath The current directory path to list.
+ */
+async function renderFileTree(currentPath) {
+    ideFileTree.innerHTML = `<div class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading tree...</div>`;
 
-        // Re-get elements within the context of the active IDE widget
-        const ideContainer = item.closest('.ide-container');
-        const currentIdeCodeEditor = ideContainer.querySelector('#ide-code-editor');
-        const currentIdeFileNameDisplay = ideContainer.querySelector('#ide-current-file-name');
-        const currentIdeSaveBtn = ideContainer.querySelector('#ide-save-btn');
-        const currentIdeFileStatus = ideContainer.querySelector('#ide-file-status');
-        const currentIdeFileTree = ideContainer.querySelector('#ide-file-tree');
-        const currentIdeCurrentPathDisplay = ideContainer.querySelector('#ide-current-path');
+    const response = await sendAjaxRequest('api/ide.php', 'list_files', { path: currentPath });
 
-        const path = item.dataset.path;
-        const type = item.dataset.type;
-        const isWritable = !item.classList.contains('ide-item-read-only');
+    ideFileTree.innerHTML = ''; // Clear loading indicator
 
-        if (type === 'dir') {
-            loadIdeFileTreeInternal(currentIdeFileTree, currentIdeCurrentPathDisplay, currentIdeCodeEditor, currentIdeFileNameDisplay, currentIdeSaveBtn, currentIdeFileStatus, path);
-            currentEditingFile = null; // Clear current file when navigating directories
-            currentIdeCodeEditor.value = '';
-            currentIdeCodeEditor.readOnly = true;
-            currentIdeFileNameDisplay.textContent = 'No file selected';
-            currentIdeSaveBtn.disabled = true;
-            setFileStatus('', currentIdeFileStatus);
-        } else if (type === 'file') {
-            if (!isWritable) {
-                showMessageModal('Read-Only File', `"${item.dataset.name}" is not writable.`);
-                currentIdeCodeEditor.readOnly = true;
-                currentIdeSaveBtn.disabled = true;
-            } else {
-                currentIdeCodeEditor.readOnly = false;
-                currentIdeSaveBtn.disabled = false;
+    if (response.status === 'success' && Array.isArray(response.data)) {
+        response.data.forEach(item => {
+            const li = document.createElement('li');
+            li.classList.add('ide-file-tree-item');
+            if (item.path === currentFilePath) {
+                li.classList.add('active'); // Highlight active file
+            }
+            if (!item.is_writable && item.type === 'file') {
+                li.classList.add('ide-item-read-only');
+                li.title = 'Read-only file';
             }
 
-            currentIdeFileNameDisplay.textContent = item.dataset.name;
-            setFileStatus('saved', currentIdeFileStatus); // Assume saved until changes are made
+            const iconClass = item.type === 'dir' ? 'fas fa-folder' : 'fas fa-file-code';
+            li.innerHTML = `<i class="${iconClass}"></i><span>${item.name}</span>`;
+            li.dataset.path = item.path;
+            li.dataset.type = item.type;
 
-            const response = await sendAjaxRequest('api/ide.php', 'ide_read_file', { path: path });
-            if (response.status === 'success' && typeof response.content === 'string') {
-                currentIdeCodeEditor.value = response.content;
-                currentEditingFile = path;
-            } else {
-                currentIdeCodeEditor.value = `Error loading file: ${response.message}`;
-                currentEditingFile = null;
-                currentIdeCodeEditor.readOnly = true;
-                currentIdeSaveBtn.disabled = true;
-                setFileStatus('', currentIdeFileStatus);
-                showMessageModal('IDE Error', `Failed to read file: ${response.message}`);
-            }
-        }
-    });
-
-    // Handle editor content changes (mark as unsaved) - delegated
-    document.body.addEventListener('input', function(e) {
-        const editor = e.target.closest('.ide-code-editor');
-        if (editor && editor.closest('.widget.maximized[data-widget-id="ide"]')) {
-            const currentIdeFileStatus = editor.closest('.ide-container').querySelector('#ide-file-status');
-            const currentIdeSaveBtn = editor.closest('.ide-container').querySelector('#ide-save-btn');
-            
-            setFileStatus('unsaved', currentIdeFileStatus);
-            if (currentIdeSaveBtn) currentIdeSaveBtn.disabled = editor.readOnly;
-        }
-    });
-
-    // Handle save button click - delegated
-    document.body.addEventListener('click', async function(e) {
-        const saveBtn = e.target.closest('#ide-save-btn');
-        if (!saveBtn || !saveBtn.closest('.widget.maximized[data-widget-id="ide"]')) return;
-
-        const currentIdeCodeEditor = saveBtn.closest('.ide-container').querySelector('#ide-code-editor');
-        const currentIdeFileStatus = saveBtn.closest('.ide-container').querySelector('#ide-file-status');
-
-        if (!currentEditingFile || currentIdeCodeEditor.readOnly) {
-            showMessageModal('Action Not Allowed', 'No file selected or file is read-only.');
-            return;
-        }
-
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-        const response = await sendAjaxRequest('api/ide.php', 'ide_save_file', {
-            path: currentEditingFile,
-            content: currentIdeCodeEditor.value
+            li.addEventListener('click', () => {
+                if (item.type === 'dir') {
+                    renderFileTree(item.path); // Navigate into directory
+                } else {
+                    if (item.is_writable) {
+                        loadFileContent(item.path); // Load file into editor
+                        // Remove active class from previous and add to current
+                        document.querySelectorAll('.ide-file-tree-item.active').forEach(el => el.classList.remove('active'));
+                        li.classList.add('active');
+                    } else {
+                        showMessageModal('Info', 'This file is read-only and cannot be edited.');
+                        loadFileContent(item.path); // Still load for viewing
+                        document.querySelectorAll('.ide-file-tree-item.active').forEach(el => el.classList.remove('active'));
+                        li.classList.add('active');
+                    }
+                }
+            });
+            ideFileTree.appendChild(li);
         });
+    } else {
+        ideFileTree.innerHTML = `<div class="ide-error-indicator">Error loading file tree: ${response.message}</div>`;
+        showMessageModal('Error', `Failed to load file tree: ${response.message}`);
+    }
+}
 
-        if (response.status === 'success') {
-            setFileStatus('saved', currentIdeFileStatus);
-            showMessageModal('Success', response.message);
-        } else {
-            setFileStatus('unsaved', currentIdeFileStatus); // Remain unsaved if save failed
-            showMessageModal('Error', `Save failed: ${response.message}`);
+/**
+ * Initializes the IDE widget.
+ * This function is called when ide.php is loaded.
+ */
+function initIde() {
+    // Event listener for save button
+    if (ideSaveButton) {
+        ideSaveButton.addEventListener('click', saveFileContent);
+    }
+
+    // Event listener for editor changes to update status
+    if (ideCodeEditor) {
+        ideCodeEditor.addEventListener('input', () => {
+            if (ideCodeEditor.value !== originalFileContent) {
+                updateFileStatus(true);
+            } else {
+                updateFileStatus(false);
+            }
+        });
+    }
+
+    // Initial load:
+    // 1. Render file tree starting from the root or a specific path
+    // 2. Load the initial file specified in the URL (if any)
+    const initialPath = window.initialFilePath || ''; // Get path from PHP variable
+    renderFileTree(initialPath.substring(0, initialPath.lastIndexOf('/')) || ''); // Render tree for parent directory
+    if (initialPath) {
+        loadFileContent(initialPath); // Load the specific file
+    } else {
+        // If no initial file, set a default message in editor
+        ideCodeEditor.value = "// Select a file from the left panel to start editing.";
+        ideCodeEditor.disabled = true;
+        ideSaveButton.disabled = true;
+    }
+
+    // Add a beforeunload listener to warn about unsaved changes
+    window.addEventListener('beforeunload', (event) => {
+        if (isUnsaved) {
+            // Standard way to prompt user for unsaved changes
+            event.preventDefault();
+            event.returnValue = ''; // Required for Chrome
+            return ''; // Required for Firefox
         }
-        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
-        saveBtn.disabled = currentIdeCodeEditor.readOnly; // Keep disabled if read-only
     });
 }
+
+// Initialize the IDE when the DOM is ready
+document.addEventListener('DOMContentLoaded', initIde);
+
+// Export for potential future direct initialization if needed (though ide.php handles it)
+export { initIde };
 
 
 
@@ -162671,71 +163177,96 @@ import { sendAjaxRequest } from '../utils/AjaxService.js';
 import { showWidgetSettingsModal } from '../ui/WidgetSettingsModal.js';
 
 export function initWidgetActions() {
+    console.log('[WidgetActions] Initializing widget action listeners.');
+
     // Delegated event listener for widget actions
     document.body.addEventListener('click', async function(e) {
         const target = e.target.closest('.widget-action');
 
-        if (!target) return;
+        if (!target) return; // Not a widget action button
 
         const widgetElement = target.closest('.widget');
-        if (!widgetElement) return;
+        if (!widgetElement) {
+            console.warn('[WidgetActions] Clicked widget action, but parent widget element not found.');
+            return;
+        }
 
         const widgetId = widgetElement.dataset.widgetId;
         const widgetName = widgetElement.querySelector('.widget-title span').textContent; // Get name from displayed title
+        console.log(`[WidgetActions] Action clicked for widget: ${widgetId}, action target: ${target.className}`);
 
         if (target.classList.contains('action-settings')) {
+            console.log(`[WidgetActions] Settings action clicked for widget: ${widgetId}`);
             const currentWidth = parseFloat(widgetElement.dataset.currentWidth);
             const currentHeight = parseFloat(widgetElement.dataset.currentHeight);
             showWidgetSettingsModal(widgetId, widgetName, currentWidth, currentHeight);
         } else if (target.classList.contains('action-expand')) {
+            console.log(`[WidgetActions] Expand action clicked for widget: ${widgetId}`);
             const overlay = document.getElementById('widget-expanded-overlay');
+            if (!overlay) {
+                console.error('[WidgetActions] Widget expanded overlay not found.');
+                return;
+            }
+
             if (widgetElement.classList.contains('maximized')) {
                 // Collapse
+                console.log(`[WidgetActions] Collapsing widget: ${widgetId}`);
                 widgetElement.classList.remove('maximized');
                 overlay.classList.remove('active');
-                overlay.style.display = 'none';
+                overlay.style.display = 'none'; // Hide overlay immediately after transition for better UX
+
                 // Move widget back to its original position (handled by DragDropManager's placeholder)
-                const originalPlaceholder = document.querySelector(`.widget-placeholder[data-original-id="${widgetId}"]`);
+                const originalId = widgetElement.dataset.widgetId;
+                const originalPlaceholder = document.querySelector(`.widget-placeholder[data-original-id=\"${originalId}\"]`);
                 if (originalPlaceholder && originalPlaceholder.parentNode) {
                     originalPlaceholder.parentNode.insertBefore(widgetElement, originalPlaceholder);
+                    console.log(`[WidgetActions] Widget ${widgetId} moved back to original placeholder position.`);
+                } else {
+                    console.warn(`[WidgetActions] Original placeholder for widget ${widgetId} not found, cannot restore exact position.`);
                 }
             } else {
                 // Maximize
-                overlay.style.display = 'flex'; // Ensure overlay is visible before transition
-                overlay.classList.add('active');
+                console.log(`[WidgetActions] Maximizing widget: ${widgetId}`);
+                // Temporarily hide other widgets to prevent layout shifts during maximization
+                document.querySelectorAll('.widget:not(.maximized)').forEach(otherWidget => {
+                    otherWidget.style.visibility = 'hidden';
+                });
                 widgetElement.classList.add('maximized');
-                // Temporarily append to body to break out of grid flow for fixed positioning
-                document.body.appendChild(widgetElement);
-
-                // If it's the IDE widget, initialize its content
-                if (widgetId === 'ide') {
-                    // Import IdeWidget dynamically to avoid circular dependencies and only load when needed
-                    const { initIdeWidget } = await import('../features/IdeWidget.js');
-                    initIdeWidget(widgetElement);
-                }
+                overlay.style.display = 'flex'; // Show overlay
+                // Use a timeout to ensure display:flex is applied before opacity transition
+                setTimeout(() => {
+                    overlay.classList.add('active');
+                    console.log('[WidgetActions] Widget maximized and overlay active.');
+                }, 10); // Small delay
             }
         } else if (target.classList.contains('remove-widget')) {
-            // This button now deactivates the widget
+            console.log(`[WidgetActions] Remove/Deactivate action clicked for widget: ${widgetId}`);
+            // Confirm with user before deactivating
             showMessageModal(
                 'Confirm Deactivation',
-                `Are you sure you want to deactivate the widget "${widgetName}"? It will be hidden from the dashboard but can be re-activated via Widget Management.`,
-                async function() {
-                    target.disabled = true; // Disable button during request
-                    target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                `Are you sure you want to deactivate the "${widgetName}" widget? It will be removed from the dashboard but can be re-added from Widget Management.`,
+                async () => {
+                    console.log(`[WidgetActions] User confirmed deactivation for widget: ${widgetId}`);
+                    try {
+                        const response = await sendAjaxRequest('api/dashboard.php', 'toggle_widget_active_status', {
+                            widget_id: widgetId,
+                            is_active: '0' // Set to inactive
+                        });
 
-                    const response = await sendAjaxRequest('api/dashboard.php', 'toggle_widget_active_status', {
-                        widget_id: widgetId,
-                        is_active: '0' // Set to inactive
-                    });
-
-                    target.disabled = false;
-                    target.innerHTML = '<i class="fas fa-times"></i>';
-
-                    if (response.status === 'success') {
-                        showMessageModal('Success', response.message + ' Reloading dashboard...', () => location.reload(true));
-                    } else {
-                        showMessageModal('Error', response.message);
+                        if (response.status === 'success') {
+                            console.log(`[WidgetActions] Widget ${widgetId} deactivated successfully. Reloading...`);
+                            showMessageModal('Success', response.message + ' Reloading dashboard to apply changes...', () => location.reload(true));
+                        } else {
+                            console.error('[WidgetActions] Error deactivating widget:', response.message, response.rawResponse);
+                            showMessageModal('Error', response.message);
+                        }
+                    } catch (error) {
+                        console.error('[WidgetActions] AJAX request failed during widget deactivation:', error);
+                        showMessageModal('Error', 'An unexpected error occurred while deactivating the widget.');
                     }
+                },
+                () => {
+                    console.log(`[WidgetActions] User cancelled deactivation for widget: ${widgetId}`);
                 }
             );
         }
@@ -162746,21 +163277,37 @@ export function initWidgetActions() {
     if (widgetExpandedOverlay) {
         widgetExpandedOverlay.addEventListener('click', function(e) {
             if (e.target === widgetExpandedOverlay) { // Only close if clicking the overlay itself, not the widget
+                console.log('[WidgetActions] Expanded overlay clicked. Attempting to collapse maximized widget.');
                 const maximizedWidget = document.querySelector('.widget.maximized');
                 if (maximizedWidget) {
                     maximizedWidget.classList.remove('maximized');
                     widgetExpandedOverlay.classList.remove('active');
-                    widgetExpandedOverlay.style.display = 'none';
+                    // Hide overlay after a short delay to allow transition to complete
+                    setTimeout(() => {
+                        widgetExpandedOverlay.style.display = 'none';
+                        // Restore visibility of other widgets
+                        document.querySelectorAll('.widget:not(.maximized)').forEach(otherWidget => {
+                            otherWidget.style.visibility = 'visible';
+                        });
+                        console.log('[WidgetActions] Maximized widget collapsed and overlay hidden.');
+                    }, 300); // Match CSS transition duration
 
                     // Move widget back to its original position (handled by DragDropManager's placeholder)
                     const originalId = maximizedWidget.dataset.widgetId;
-                    const originalPlaceholder = document.querySelector(`.widget-placeholder[data-original-id="${originalId}"]`);
+                    const originalPlaceholder = document.querySelector(`.widget-placeholder[data-original-id=\"${originalId}\"]`);
                     if (originalPlaceholder && originalPlaceholder.parentNode) {
                         originalPlaceholder.parentNode.insertBefore(maximizedWidget, originalPlaceholder);
+                        console.log(`[WidgetActions] Widget ${originalId} moved back to original placeholder position.`);
+                    } else {
+                        console.warn(`[WidgetActions] Original placeholder for widget ${originalId} not found, cannot restore exact position.`);
                     }
+                } else {
+                    console.warn('[WidgetActions] Overlay clicked but no maximized widget found.');
                 }
             }
         });
+    } else {
+        console.warn('[WidgetActions] Widget expanded overlay (id="widget-expanded-overlay") not found.');
     }
 }
 
@@ -162772,31 +163319,246 @@ FILE: src/js/main.js
 
 // src/js/main.js
 
-import { initSettingsPanel } from './ui/SettingsPanel.js';
-import { initMessageModal } from './ui/MessageModal.js'; // Ensure this is imported if it has an init function
+// Import necessary modules
+import { initMessageModal } from './ui/MessageModal.js';
 import { initWidgetManagementModal } from './ui/WidgetManagementModal.js';
-import { initCreateWidgetModal } from './ui/CreateWidgetModal.js'; // Assuming you have this module
+import { initCreateWidgetModal } from './ui/CreateWidgetModal.js';
 import { initDragDrop } from './features/DragDropManager.js';
 import { initWidgetActions } from './features/WidgetActions.js';
-import { initWidgetSettingsModal } from './ui/WidgetSettingsModal.js'; // New: Initialize widget settings modal
+import { initWidgetSettingsModal } from './ui/WidgetSettingsModal.js';
+// Note: initSettingsPanel and initSidebarCollapse are defined directly in this file below.
+
+/**
+ * Initializes the settings panel functionality, including opening/closing
+ * and tab navigation.
+ */
+function initSettingsPanel() {
+    console.log('[main.js] Initializing SettingsPanel...');
+    const settingsPanel = document.getElementById('settings-panel');
+    const settingsToggleBtn = document.getElementById('settings-toggle');
+    const closeSettingsBtn = document.getElementById('close-settings');
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const settingsTabButtons = document.querySelectorAll('.settings-tab-btn');
+    const settingsSections = document.querySelectorAll('.settings-section');
+
+    // Function to open the settings panel
+    const openSettingsPanel = () => {
+        if (settingsPanel) settingsPanel.classList.add('open');
+        if (settingsOverlay) settingsOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scrolling body when panel is open
+        console.log('[main.js] SettingsPanel opened.');
+    };
+
+    // Function to close the settings panel
+    const closeSettingsPanel = () => {
+        if (settingsPanel) settingsPanel.classList.remove('open');
+        if (settingsOverlay) settingsOverlay.classList.remove('active');
+        document.body.style.overflow = ''; // Restore body scrolling
+        console.log('[main.js] SettingsPanel closed.');
+    };
+
+    // Event listeners for opening and closing the panel
+    if (settingsToggleBtn) {
+        settingsToggleBtn.addEventListener('click', openSettingsPanel);
+        console.log('[main.js] Settings toggle button listener attached.');
+    } else {
+        console.warn('[main.js] Settings toggle button (id="settings-toggle") not found.');
+    }
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', closeSettingsPanel);
+        console.log('[main.js] Close settings button listener attached.');
+    } else {
+        console.warn('[main.js] Close settings button (id="close-settings") not found.');
+    }
+    if (settingsOverlay) {
+        settingsOverlay.addEventListener('click', closeSettingsPanel);
+        console.log('[main.js] Settings overlay listener attached.');
+    } else {
+        console.warn('[main.js] Settings overlay (id="settings-overlay") not found.');
+    }
+
+    // Handle settings tab navigation
+    settingsTabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.dataset.target; // e.g., "general-settings-section"
+            const targetSection = document.getElementById(targetId);
+            console.log(`[main.js] Settings tab clicked: ${targetId}`);
+
+            if (targetSection) {
+                // Remove 'active' from all tab buttons and sections
+                settingsTabButtons.forEach(btn => btn.classList.remove('active'));
+                settingsSections.forEach(section => section.classList.remove('active'));
+
+                // Add 'active' to the clicked tab button and its corresponding section
+                this.classList.add('active');
+                targetSection.classList.add('active');
+                console.log(`[main.js] Activated tab: ${targetId}`);
+            } else {
+                console.warn(`[main.js] Target section for tab "${targetId}" not found.`);
+            }
+        });
+    });
+
+    // Initialize the first tab as active on load
+    const initialActiveTab = document.querySelector('.settings-tab-btn.active');
+    if (initialActiveTab) {
+        const targetId = initialActiveTab.dataset.target;
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) {
+            targetSection.classList.add('active');
+            console.log(`[main.js] Initial active tab "${targetId}" activated.`);
+        } else {
+            console.warn(`[main.js] Initial active tab target section "${targetId}" not found.`);
+        }
+    } else if (settingsTabButtons.length > 0) {
+        // If no active tab is initially set, activate the first one
+        settingsTabButtons[0].classList.add('active');
+        const targetId = settingsTabButtons[0].dataset.target;
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) {
+            targetSection.classList.add('active');
+            console.log(`[main.js] No initial active tab found, activating first tab: ${targetId}`);
+        } else {
+            console.warn(`[main.js] First tab target section "${targetId}" not found.`);
+        }
+    } else {
+        console.warn('[main.js] No settings tab buttons found for initialization.');
+    }
+}
+
+/**
+ * Initializes the sidebar collapse functionality.
+ * Persists the sidebar state using localStorage.
+ */
+function initSidebarCollapse() {
+    console.log('[main.js] Initializing SidebarCollapse...');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const dashboard = document.querySelector('.dashboard'); // Assuming .dashboard is the parent that controls layout
+
+    if (!sidebar || !sidebarToggle || !dashboard) {
+        console.warn('[main.js] Sidebar, sidebar toggle, or dashboard element not found. Sidebar collapse not initialized.');
+        return;
+    }
+
+    // Check for saved sidebar state in localStorage
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+    if (savedSidebarState === 'true') {
+        dashboard.classList.add('collapsed');
+        sidebar.classList.add('collapsed');
+        console.log('[main.js] Sidebar restored to collapsed state from localStorage.');
+    } else {
+        console.log('[main.js] Sidebar restored to expanded state or no saved state found.');
+    }
+
+    sidebarToggle.addEventListener('click', () => {
+        dashboard.classList.toggle('collapsed');
+        sidebar.classList.toggle('collapsed');
+
+        // Save the new state to localStorage
+        const isCollapsed = dashboard.classList.contains('collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+        console.log(`[main.js] Sidebar toggle clicked. New state: ${isCollapsed ? 'collapsed' : 'expanded'}. State saved to localStorage.`);
+    });
+    console.log('[main.js] Sidebar toggle listener attached.');
+}
+
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize all UI components and features here
-    initMessageModal(); // Initialize the message modal first as others might use it
-    initSettingsPanel();
-    initWidgetManagementModal();
-    initCreateWidgetModal(); // Ensure this function exists and is correctly implemented
-    initDragDrop();
-    initWidgetActions();
-    initWidgetSettingsModal(); // Initialize the widget settings modal
+    console.log('DOMContentLoaded fired. Initializing dashboard features...');
+
+    try {
+        initMessageModal();
+        console.log('MessageModal initialized.');
+    } catch (error) {
+        console.error('Error initializing MessageModal:', error);
+    }
+
+    try {
+        initSettingsPanel(); // This function is defined locally in main.js
+        console.log('SettingsPanel initialized.');
+    } catch (error) {
+        console.error('Error initializing SettingsPanel:', error);
+    }
+
+    try {
+        initWidgetManagementModal();
+        console.log('WidgetManagementModal initialized.');
+    } catch (error) {
+        console.error('Error initializing WidgetManagementModal:', error);
+    }
+
+    try {
+        initCreateWidgetModal();
+        console.log('CreateWidgetModal initialized.');
+    } catch (error) {
+        console.error('Error initializing CreateWidgetModal:', error);
+    }
+
+    try {
+        initDragDrop();
+        console.log('DragDrop initialized.');
+    } catch (error) {
+        console.error('Error initializing DragDrop:', error);
+    }
+
+    try {
+        initWidgetActions();
+        console.log('WidgetActions initialized.');
+    } catch (error) {
+        console.error('Error initializing WidgetActions:', error);
+    }
+
+    try {
+        initWidgetSettingsModal();
+        console.log('WidgetSettingsModal initialized.');
+    } catch (error) {
+        console.error('Error initializing WidgetSettingsModal:', error);
+    }
+
+    try {
+        initSidebarCollapse(); // This function is defined locally in main.js
+        console.log('SidebarCollapse initialized.');
+    } catch (error) {
+        console.error('Error initializing SidebarCollapse:', error);
+    }
+
+    console.log('All dashboard features attempted initialization.');
+
+    // Version display logic (from previous request)
+    if (window.appVersion) {
+        const versionDisplay = document.getElementById('version-display');
+        if (versionDisplay) {
+            // The PHP-generated version is already displayed.
+            // This JS block was previously attempting to parse a different version string.
+            // If window.appVersion (from version.js) is also needed, its display
+            // logic would need to be integrated here, perhaps for a secondary version display.
+            // For now, it remains as is, not directly affecting the primary PHP-generated version.
+            // const raw = window.appVersion.split(".").pop();
+            // const verInt = parseInt(raw);
+            // const v1 = Math.floor(verInt / 100);
+            // const v2 = Math.floor((verInt % 100) / 10);
+            // const v3 = verInt % 10 + ((verInt % 100) >= 10 ? 0 : (verInt % 100));
+            // Example of how you might display it if needed:
+            // versionDisplay.innerHTML += ` (JS Build: ${window.appVersion})`;
+        } else {
+            console.warn('[main.js] Version display element (id="version-display") not found.');
+        }
+    } else {
+        console.warn('[main.js] window.appVersion not found. Version display from version.js may not be active.');
+    }
 });
 
 // Refresh button functionality
 const refreshBtn = document.getElementById('refresh-btn');
 if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
+        console.log('[main.js] Refresh button clicked. Reloading page...');
         location.reload(true); // Force a hard reload
     });
+} else {
+    console.warn('[main.js] Refresh button (id="refresh-btn") not found.');
 }
 
 
@@ -163428,10 +164190,11 @@ import { sendAjaxRequest } from '../utils/AjaxService.js';
 const widgetSettingsModalOverlay = document.getElementById('widget-settings-modal-overlay');
 const closeWidgetSettingsModalBtn = document.getElementById('close-widget-settings-modal');
 const widgetSettingsModalTitle = document.getElementById('widget-settings-modal-title');
-const widgetSettingsIdInput = document.getElementById('widget-settings-id'); // Changed from widget-settings-index
+const widgetSettingsIdInput = document.getElementById('widget-settings-id');
 const widgetSettingsWidthInput = document.getElementById('widget-settings-width');
 const widgetSettingsHeightInput = document.getElementById('widget-settings-height');
 const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
+const openIdeButton = document.getElementById('open-ide-button'); // Get the IDE button
 
 /**
  * Displays the widget settings modal for a specific widget.
@@ -163441,6 +164204,14 @@ const widgetDimensionsForm = document.getElementById('widget-dimensions-form');
  * @param {number} currentHeight - The current height of the widget.
  */
 export function showWidgetSettingsModal(widgetId, widgetName, currentWidth, currentHeight) {
+    console.log(`[WidgetSettingsModal] showWidgetSettingsModal called for widget: ${widgetId}, name: ${widgetName}`);
+
+    if (!widgetSettingsModalTitle || !widgetSettingsIdInput || !widgetSettingsWidthInput || !widgetSettingsHeightInput) {
+        console.error('[WidgetSettingsModal] One or more essential modal elements not found.');
+        showMessageModal('Error', 'Widget settings modal elements are missing. Cannot display settings.');
+        return;
+    }
+
     widgetSettingsModalTitle.textContent = `${widgetName} Settings`;
     widgetSettingsIdInput.value = widgetId; // Set the widget ID
     widgetSettingsWidthInput.value = currentWidth;
@@ -163458,48 +164229,95 @@ export function showWidgetSettingsModal(widgetId, widgetName, currentWidth, curr
         submitBtn.textContent = isDisabled ? 'Disabled in Show All Mode' : 'Save Dimensions';
     }
 
-    widgetSettingsModalOverlay.classList.add('active');
+    // Set up the Open IDE button
+    if (openIdeButton) {
+        console.log('[WidgetSettingsModal] Open IDE button found. Setting up click handler.');
+        // Construct the path to the widget file
+        const widgetFilePath = `widgets/${widgetId}.php`;
+        // Encode the path to be safely passed as a URL parameter
+        const encodedFilePath = encodeURIComponent(widgetFilePath);
+        // Set the href for the button to open the IDE in a new tab
+        openIdeButton.onclick = () => {
+            console.log(`[WidgetSettingsModal] Opening IDE for file: ${widgetFilePath}`);
+            window.open(`ide.php?file=${encodedFilePath}`, '_blank');
+        };
+    } else {
+        console.warn('[WidgetSettingsModal] Open IDE button (id="open-ide-button") not found.');
+    }
+
+    if (widgetSettingsModalOverlay) {
+        widgetSettingsModalOverlay.classList.add('active');
+        console.log('[WidgetSettingsModal] Modal overlay activated.');
+    } else {
+        console.error('[WidgetSettingsModal] Modal overlay element not found.');
+    }
 }
 
 export function initWidgetSettingsModal() {
+    console.log('[WidgetSettingsModal] Initializing widget settings modal listeners.');
+
     if (closeWidgetSettingsModalBtn) {
         closeWidgetSettingsModalBtn.addEventListener('click', function() {
+            console.log('[WidgetSettingsModal] Close button clicked. Deactivating modal overlay.');
             widgetSettingsModalOverlay.classList.remove('active');
         });
+    } else {
+        console.warn('[WidgetSettingsModal] Close widget settings modal button not found.');
     }
 
     if (widgetDimensionsForm) {
         widgetDimensionsForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            console.log('[WidgetSettingsModal] Dimensions form submitted.');
 
             const widgetId = widgetSettingsIdInput.value; // Get widget ID
             const newWidth = parseFloat(widgetSettingsWidthInput.value);
             const newHeight = parseFloat(widgetSettingsHeightInput.value);
 
             if (isNaN(newWidth) || isNaN(newHeight)) {
+                console.error('[WidgetSettingsModal] Validation Error: Invalid width or height entered.', {newWidth, newHeight});
                 showMessageModal('Validation Error', 'Please enter valid numbers for width and height.');
                 return;
             }
 
             const submitBtn = widgetDimensionsForm.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                console.log('[WidgetSettingsModal] Save button disabled, showing spinner.');
+            }
 
-            const response = await sendAjaxRequest('api/dashboard.php', 'update_single_widget_dimensions', {
-                widget_id: widgetId, // Send widget_id
-                new_width: newWidth,
-                new_height: newHeight
-            });
+            try {
+                const response = await sendAjaxRequest('api/dashboard.php', 'update_single_widget_dimensions', {
+                    widget_id: widgetId, // Send widget_id
+                    new_width: newWidth,
+                    new_height: newHeight
+                });
 
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Save Dimensions';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Save Dimensions';
+                    console.log('[WidgetSettingsModal] Save button re-enabled.');
+                }
 
-            if (response.status === 'success') {
-                showMessageModal('Success', response.message, () => location.reload(true)); // Reload to apply changes
-            } else {
-                showMessageModal('Error', response.message);
+                if (response.status === 'success') {
+                    console.log('[WidgetSettingsModal] Dimensions updated successfully:', response.message);
+                    showMessageModal('Success', response.message, () => location.reload(true)); // Reload to apply changes
+                } else {
+                    console.error('[WidgetSettingsModal] Error updating dimensions:', response.message, response.rawResponse);
+                    showMessageModal('Error', response.message);
+                }
+            } catch (error) {
+                console.error('[WidgetSettingsModal] AJAX request failed during dimension update:', error);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Save Dimensions';
+                }
+                showMessageModal('Error', 'An unexpected error occurred while saving dimensions.');
             }
         });
+    } else {
+        console.warn('[WidgetSettingsModal] Widget dimensions form not found.');
     }
 }
 
@@ -163519,12 +164337,21 @@ FILE: src/js/utils/AjaxService.js
  * @returns {Promise<Object>} A promise that resolves with the JSON response from the server.
  */
 export async function sendAjaxRequest(endpoint, action, data = {}) {
+    console.log(`[AjaxService] Sending AJAX request to ${endpoint} with action: ${action}`, data);
+
     const formData = new FormData();
     formData.append('ajax_action', action);
 
     for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
-            formData.append(key, data[key]);
+            // If data[key] is an object or array, stringify it
+            if (typeof data[key] === 'object' && data[key] !== null) {
+                formData.append(key, JSON.stringify(data[key]));
+                console.log(`[AjaxService] Appending JSON stringified data: ${key}=${JSON.stringify(data[key])}`);
+            } else {
+                formData.append(key, data[key]);
+                console.log(`[AjaxService] Appending data: ${key}=${data[key]}`);
+            }
         }
     }
 
@@ -163534,20 +164361,25 @@ export async function sendAjaxRequest(endpoint, action, data = {}) {
             body: formData
         });
 
+        console.log(`[AjaxService] Received response from ${endpoint}. Status: ${response.status}`);
+
         if (!response.ok) {
             // If HTTP status is not 2xx, throw an error
             const errorText = await response.text(); // Get raw response text
+            console.error(`[AjaxService] HTTP error! Status: ${response.status}, Raw Response: "${errorText}"`);
             throw new Error(`HTTP error! Status: ${response.status}, Response: ${errorText}`);
         }
 
         const responseText = await response.text(); // Get response as text first
-        
+        console.log(`[AjaxService] Raw response text: "${responseText.substring(0, 500)}..."`); // Log first 500 chars
+
         try {
             const jsonResponse = JSON.parse(responseText); // Attempt to parse as JSON
+            console.log('[AjaxService] Response successfully parsed as JSON.', jsonResponse);
             return jsonResponse;
         } catch (jsonError) {
-            console.error('JSON parsing error:', jsonError);
-            console.error('Raw response text:', responseText);
+            console.error('[AjaxService] JSON parsing error:', jsonError);
+            console.error('[AjaxService] Raw response text that caused error:', responseText);
             // If JSON parsing fails, return an error object with raw text
             return {
                 status: 'error',
@@ -163557,8 +164389,12 @@ export async function sendAjaxRequest(endpoint, action, data = {}) {
         }
 
     } catch (error) {
-        console.error('AJAX request failed:', error);
-        return { status: 'error', message: error.message };
+        console.error('[AjaxService] AJAX request failed:', error);
+        return {
+            status: 'error',
+            message: `AJAX request failed: ${error.message}`,
+            rawError: error
+        };
     }
 }
 
@@ -164845,98 +165681,6 @@ FILE: theme_library.html
 
 
 ================================================================================
-FILE: widgets/calendar.php
-================================================================================
-
-<?php
-// widgets/calendar.php
-
-// Widget Name: Calendar
-// Widget Icon: fas fa-calendar
-// Widget Width: 1.0
-// Widget Height: 1.0
-
-// The $_widget_config array is no longer directly used for metadata extraction
-// by discover_widgets(). It's kept here for backward compatibility or other
-// internal widget logic if needed. The metadata is now parsed from comments.
-$_widget_config = [
-    'name' => 'Calendar',
-    'icon' => 'calendar', // This 'calendar' will be overridden by the comment parsing
-    'width' => 1,
-    'height' => 1
-];
-
-/**
- * Helper function to generate calendar grid HTML.
- * This function is now local to the calendar widget.
- * It's wrapped in function_exists() to prevent redeclaration errors
- * if this file is included multiple times (e.g., by config.php and helpers.php).
- */
-if (!function_exists('generate_calendar')) {
-    function generate_calendar() {
-        $days_in_month = date('t');
-        $first_day = date('w', strtotime(date('Y-m-01')));
-
-        $html = '';
-
-        // Empty days for the first week
-        for ($i = 0; $i < $first_day; $i++) {
-            $html .= '<div class="day empty"></div>';
-        }
-
-        // Days of the month
-        for ($day = 1; $day <= $days_in_month; $day++) {
-            $today = ($day == date('j')) ? ' today' : '';
-            $event = (in_array($day, [7, 10, 17, 24])) ? ' event' : '';
-            $html .= '<div class="day'.$today.$event.'">'.$day.'</div>';
-        }
-
-        // Fill remaining empty days
-        $remaining = 42 - $days_in_month - $first_day;
-        for ($i = 0; $i < $remaining; $i++) {
-            $html .= '<div class="day empty"></div>';
-        }
-
-        return $html;
-    }
-}
-?>
-<div class="compact-content">
-    <div class="calendar-header">
-        <h3><?= date('F Y') ?></h3>
-    </div>
-    <div class="calendar-grid">
-        <div class="day-name">Sun</div>
-        <div class="day-name">Mon</div>
-        <div class="day-name">Tue</div>
-        <div class="day-name">Wed</div>
-        <div class="day-name">Thu</div>
-        <div class="day-name">Fri</div>
-        <div class="day-name">Sat</div>
-        <?= generate_calendar() ?>
-    </div>
-</div>
-<div class="expanded-content">
-    <div class="calendar-header">
-        <button><i class="fas fa-chevron-left"></i></button>
-        <h3><?= date('F Y') ?></h3>
-        <button><i class="fas fa-chevron-right"></i></button>
-    </div>
-    <div class="calendar-grid">
-        <div class="day-name">Sun</div>
-        <div class="day-name">Mon</div>
-        <div class="day-name">Tue</div>
-        <div class="day-name">Wed</div>
-        <div class="day-name">Thu</div>
-        <div class="day-name">Fri</div>
-        <div class="day-name">Sat</div>
-        <?= generate_calendar() ?>
-    </div>
-</div>
-
-
-
-================================================================================
 FILE: widgets/debug_info.php
 ================================================================================
 
@@ -164957,6 +165701,79 @@ $_widget_config = [
     'width' => 2,
     'height' => 2
 ];
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// --- Configuration for Debug Log File ---
+// Define a temporary log file path. Ensure this directory is writable by the web server.
+// For security and clarity, it's often good to place this outside the web root or in a dedicated logs folder.
+// For this example, we'll place it in the same directory as the widget.
+define('DEBUG_LOG_FILE', __DIR__ . '/debug_log.txt');
+define('MAX_LOG_LINES', 100); // Limit the number of lines to display to prevent performance issues
+
+/**
+ * Appends a log message to the debug log file.
+ * This function can be called from anywhere in your PHP code to add messages to the stream.
+ * @param string $message The message to log.
+ * @param string $level The log level (e.g., INFO, WARN, ERROR).
+ */
+function append_debug_log(string $message, string $level = 'INFO') {
+    $timestamp = date('Y-m-d H:i:s');
+    $log_entry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
+
+    // Append to file
+    file_put_contents(DEBUG_LOG_FILE, $log_entry, FILE_APPEND | LOCK_EX);
+
+    // Optional: Trim log file if it gets too large
+    $lines = file(DEBUG_LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (count($lines) > MAX_LOG_LINES * 1.2) { // Trim if it's 20% over the max
+        $lines = array_slice($lines, -MAX_LOG_LINES);
+        file_put_contents(DEBUG_LOG_FILE, implode(PHP_EOL, $lines) . PHP_EOL, LOCK_EX);
+    }
+}
+
+// Example usage (you can remove these or place them in other files for real logging)
+// append_debug_log("Debug widget loaded.", "INFO");
+// append_debug_log("User accessed dashboard.", "INFO");
+// append_debug_log("Attempting to save settings.", "DEBUG");
+// append_debug_log("Simulated error occurred!", "ERROR");
+
+
+// --- Function to retrieve and format log content ---
+function get_debug_log_content(): string {
+    if (!file_exists(DEBUG_LOG_FILE)) {
+        return '<p><em>Debug log file not found.</em></p>';
+    }
+
+    // Read all lines, reverse them to get newest first
+    $lines = file(DEBUG_LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $lines = array_reverse($lines); // Newest log entries first
+    $display_lines = array_slice($lines, 0, MAX_LOG_LINES); // Display only the latest N lines
+
+    if (empty($display_lines)) {
+        return '<p><em>Debug log is empty.</em></p>';
+    }
+
+    $output = '<pre style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); word-break: break-all; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">';
+    foreach ($display_lines as $line) {
+        // Basic highlighting for log levels
+        if (strpos($line, '[ERROR]') !== false) {
+            $output .= '<span style="color: var(--danger);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
+        } elseif (strpos($line, '[WARN]') !== false) {
+            $output .= '<span style="color: var(--warning);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
+        } elseif (strpos($line, '[INFO]') !== false) {
+            $output .= '<span style="color: var(--primary);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
+        } elseif (strpos($line, '[DEBUG]') !== false) {
+            $output .= '<span style="color: var(--text-secondary);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
+        } else {
+            $output .= htmlspecialchars($line) . PHP_EOL;
+        }
+    }
+    $output .= '</pre>';
+    return $output;
+}
 
 // Shared content for both views (time)
 $time_content = '<h4 style="color: var(--accent); margin-top: 10px; margin-bottom: 5px;">Current Time:</h4>';
@@ -164985,14 +165802,20 @@ if (isset($_POST) && !empty($_POST)) {
     $post_content .= 'No POST data received in the last request.';
 }
 $post_content .= '</pre>';
+
+// Debug Log Stream content
+$debug_log_stream_content = '<h4 style="color: var(--accent); margin-top: 20px; margin-bottom: 5px;">Debug Log Stream (Newest First):</h4>';
+$debug_log_stream_content .= get_debug_log_content();
+
 ?>
 <div style="font-family: monospace; font-size: 12px; max-height: 100%; overflow-y: auto; padding-right: 10px; min-height: 100px;">
     <div class="compact-content">
         <?= $time_content ?>
-        <?= $session_content ?>
+        <?= $debug_log_stream_content ?>
     </div>
     <div class="expanded-content">
         <?= $time_content ?>
+        <?= $debug_log_stream_content ?>
         <?= $session_content ?>
         <?= $post_content ?>
     </div>
@@ -165005,63 +165828,6 @@ FILE: widgets/desktop.ini
 ================================================================================
 
 [BINARY FILE - Content not included]
-
-
-
-================================================================================
-FILE: widgets/ide.php
-================================================================================
-
-<?php
-// widgets/ide.php
-
-// Widget Name: File Editor (IDE)
-// Widget Icon: fas fa-code
-// Widget Width: 3.0
-// Widget Height: 3.0
-
-// The $_widget_config array is no longer directly used for metadata extraction
-// by discover_widgets(). It's kept here for backward compatibility or other
-// internal widget logic if needed. The metadata is now parsed from comments.
-$_widget_config = [
-    'name' => 'File Editor (IDE)',
-    'icon' => 'code', // This 'code' will be overridden by the comment parsing
-    'width' => 3,
-    'height' => 3
-];
-?>
-<div class="compact-content">
-    <div style="text-align: center; padding: 20px;">
-        <p style="font-size: 20px; font-weight: bold; color: var(--accent);">
-            <i class="fas fa-code"></i> File Editor
-        </p>
-        <p style="font-size: 14px; color: var(--text-secondary);">
-            Expand to use the integrated code editor.
-        </p>
-    </div>
-</div>
-<div class="expanded-content ide-container">
-    <div class="ide-header">
-        <div class="ide-path-display" id="ide-current-path">/</div>
-        <div class="ide-file-info">
-            <span id="ide-current-file-name">No file selected</span>
-            <span id="ide-file-status" class="ide-status-saved"></span>
-        </div>
-        <button class="btn btn-sm btn-primary" id="ide-save-btn" disabled>
-            <i class="fas fa-save"></i> Save
-        </button>
-    </div>
-    <div class="ide-content">
-        <div class="ide-file-tree-panel">
-            <ul id="ide-file-tree" class="ide-file-tree">
-                <li class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</li>
-            </ul>
-        </div>
-        <div class="ide-editor-panel">
-            <textarea id="ide-code-editor" class="ide-code-editor" spellcheck="false" readonly></textarea>
-        </div>
-    </div>
-</div>
 
 
 
@@ -165507,5 +166273,5 @@ $_widget_config = [
 COMPILATION COMPLETE
 ================================================================================
 Total files processed: 0
-Generated on: Thu, Jul  3, 2025  2:51:58 PM
+Generated on: Tue, Jul 15, 2025 11:55:37 AM
 ================================================================================
