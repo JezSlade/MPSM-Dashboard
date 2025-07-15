@@ -24,13 +24,19 @@ $action = (isset($_REQUEST['action']) && is_string($_REQUEST['action']))
     ? $_REQUEST['action']
     : '';
 
+// If no action provided, default to listing files (so the IDE loads the tree)
+if ($action === '') {
+    $action = 'list_files';
+}
+
 // Default response
 $response = ['status' => 'error', 'message' => 'Invalid action or request method.'];
 
 try {
     switch ($action) {
         case 'list_files':
-            $path = $_GET['path'] ?? ''; // Path to list, relative to APP_ROOT
+            // List the directory tree; 'path' may be passed, otherwise root
+            $path = $_GET['path'] ?? '';
             $files = $fileManager->listFiles($path);
             if ($files !== false) {
                 $response = ['status' => 'success', 'data' => $files];
@@ -40,7 +46,7 @@ try {
             break;
 
         case 'read_file':
-            $file_path = $_GET['file'] ?? ''; // File to read, relative to APP_ROOT
+            $file_path = $_GET['file'] ?? '';
             $content   = $fileManager->readFile($file_path);
             if ($content !== false) {
                 $response = ['status' => 'success', 'data' => $content];
@@ -50,20 +56,16 @@ try {
             break;
 
         case 'save_file':
-            // Ensure this is a POST request for saving
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 $response = ['status' => 'error', 'message' => 'Save operation requires POST method.'];
                 break;
             }
-            $file_path = $_POST['file']    ?? ''; // File to save, relative to APP_ROOT
-            $content   = $_POST['content'] ?? ''; // Content to save
-
-            // Basic validation for file path
+            $file_path = $_POST['file']    ?? '';
+            $content   = $_POST['content'] ?? '';
             if (empty($file_path)) {
                 $response = ['status' => 'error', 'message' => 'File path cannot be empty.'];
                 break;
             }
-
             $success = $fileManager->saveFile($file_path, $content);
             if ($success) {
                 $response = ['status' => 'success', 'message' => 'File saved successfully.'];
@@ -73,7 +75,7 @@ try {
             break;
 
         default:
-            // htmlspecialchars() now always gets a string
+            // htmlspecialchars() always gets a string now
             $response = ['status' => 'error', 'message' => 'Unknown action: ' . htmlspecialchars($action)];
             break;
     }
