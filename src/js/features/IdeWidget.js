@@ -3,11 +3,12 @@
 import { sendAjaxRequest } from '../utils/AjaxService.js';
 import { showMessageModal } from '../ui/MessageModal.js';
 
-const ideFileTree = document.getElementById('ide-file-tree');
-const ideCodeEditor = document.getElementById('ide-code-editor');
-const ideSaveButton = document.getElementById('ide-save-button');
+const ideBreadcrumb    = document.getElementById('ide-breadcrumb');
+const ideFileTree      = document.getElementById('ide-file-tree');
+const ideCodeEditor    = document.getElementById('ide-code-editor');
+const ideSaveButton    = document.getElementById('ide-save-button');
 const ideCurrentFileName = document.getElementById('ide-current-file-name');
-const ideFileStatus = document.getElementById('ide-file-status');
+const ideFileStatus    = document.getElementById('ide-file-status');
 
 let currentFilePath = '';
 let originalFileContent = '';
@@ -108,11 +109,50 @@ async function saveFileContent() {
 }
 
 /**
+ * Render a clickable breadcrumb trail above the file tree.
+ * @param {string} currentPath
+ */
+function renderBreadcrumb(currentPath) {
+    if (!ideBreadcrumb) return;
+
+    // Split path into segments
+    const parts = currentPath.split('/').filter(p => p !== '');
+    const crumbs = [];
+    let cumulative = '';
+
+    // Root crumb
+    crumbs.push(`<span class="breadcrumb-item" data-path="">Root</span>`);
+
+    parts.forEach(part => {
+        cumulative += (cumulative ? '/' : '') + part;
+        crumbs.push(
+            `<span class="breadcrumb-separator">/</span>` +
+            `<span class="breadcrumb-item" data-path="${cumulative}">${part}</span>`
+        );
+    });
+
+    ideBreadcrumb.innerHTML = crumbs.join('');
+
+    // Attach click listeners
+    ideBreadcrumb.querySelectorAll('.breadcrumb-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const path = el.dataset.path;
+            renderFileTree(path);
+        });
+    });
+}
+
+/**
  * Renders the file tree in the sidebar.
  * @param {string} currentPath The current directory path to list.
  */
 async function renderFileTree(currentPath) {
-    ideFileTree.innerHTML = `<div class="ide-loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading tree...</div>`;
+    // Render breadcrumb for navigation
+    renderBreadcrumb(currentPath);
+
+    ideFileTree.innerHTML = `<div class="ide-loading-indicator">
+        <i class="fas fa-spinner fa-spin"></i> Loading tree...
+    </div>`;
 
     const response = await sendAjaxRequest('api/ide.php', 'list_files', { path: currentPath });
 
@@ -141,21 +181,23 @@ async function renderFileTree(currentPath) {
                 } else {
                     if (item.is_writable) {
                         loadFileContent(item.path); // Load file into editor
-                        // Remove active class from previous and add to current
-                        document.querySelectorAll('.ide-file-tree-item.active').forEach(el => el.classList.remove('active'));
-                        li.classList.add('active');
                     } else {
                         showMessageModal('Info', 'This file is read-only and cannot be edited.');
                         loadFileContent(item.path); // Still load for viewing
-                        document.querySelectorAll('.ide-file-tree-item.active').forEach(el => el.classList.remove('active'));
-                        li.classList.add('active');
                     }
+                    // Update active highlight
+                    document.querySelectorAll('.ide-file-tree-item.active')
+                        .forEach(el => el.classList.remove('active'));
+                    li.classList.add('active');
                 }
             });
+
             ideFileTree.appendChild(li);
         });
     } else {
-        ideFileTree.innerHTML = `<div class="ide-error-indicator">Error loading file tree: ${response.message}</div>`;
+        ideFileTree.innerHTML = `<div class="ide-error-indicator">
+            Error loading file tree: ${response.message}
+        </div>`;
         showMessageModal('Error', `Failed to load file tree: ${response.message}`);
     }
 }
@@ -165,12 +207,12 @@ async function renderFileTree(currentPath) {
  * This function is called when ide.php is loaded.
  */
 function initIde() {
-    // Event listener for save button
+    // Save button
     if (ideSaveButton) {
         ideSaveButton.addEventListener('click', saveFileContent);
     }
 
-    // Event listener for editor changes to update status
+    // Editor change => unsaved status
     if (ideCodeEditor) {
         ideCodeEditor.addEventListener('input', () => {
             if (ideCodeEditor.value !== originalFileContent) {
@@ -181,33 +223,29 @@ function initIde() {
         });
     }
 
-    // Initial load:
-    // 1. Render file tree starting from the root or a specific path
-    // 2. Load the initial file specified in the URL (if any)
-    const initialPath = window.initialFilePath || ''; // Get path from PHP variable
-    renderFileTree(initialPath.substring(0, initialPath.lastIndexOf('/')) || ''); // Render tree for parent directory
+    // Initial load
+    const initialPath = window.initialFilePath || '';
+    renderFileTree(initialPath.substring(0, initialPath.lastIndexOf('/')) || '');
     if (initialPath) {
-        loadFileContent(initialPath); // Load the specific file
+        loadFileContent(initialPath);
     } else {
-        // If no initial file, set a default message in editor
         ideCodeEditor.value = "// Select a file from the left panel to start editing.";
         ideCodeEditor.disabled = true;
         ideSaveButton.disabled = true;
     }
 
-    // Add a beforeunload listener to warn about unsaved changes
+    // Warn on unsaved changes
     window.addEventListener('beforeunload', (event) => {
         if (isUnsaved) {
-            // Standard way to prompt user for unsaved changes
             event.preventDefault();
-            event.returnValue = ''; // Required for Chrome
-            return ''; // Required for Firefox
+            event.returnValue = '';
+            return '';
         }
     });
 }
 
-// Initialize the IDE when the DOM is ready
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', initIde);
 
-// Export for potential future direct initialization if needed (though ide.php handles it)
+// Export for external use if needed
 export { initIde };

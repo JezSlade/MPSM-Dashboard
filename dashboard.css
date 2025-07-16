@@ -2547,3 +2547,23 @@ textarea.form-control {
     visibility: visible !important;
     opacity: 1 !important;
 }
+#ide-breadcrumb {
+  padding: 4px 8px;
+  font-size: 0.9em;
+  background: var(--bg-accent);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.breadcrumb-item {
+  cursor: pointer;
+  user-select: none;
+}
+.breadcrumb-item:hover {
+  text-decoration: underline;
+}
+.breadcrumb-separator {
+  user-select: none;
+}
