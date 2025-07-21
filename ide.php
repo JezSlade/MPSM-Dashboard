@@ -1,6 +1,6 @@
 <?php
 /**
- * FULL MPSM DASHBOARD WIDGETS IDE - Fixed Template Syntax (Proper Literal Quotes)
+ * FULL MPSM DASHBOARD WIDGETS IDE - URL File Open + Change Indicator
  */
 
 session_start();
@@ -56,8 +56,6 @@ function create_new_widget($name) {
     $safe = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
     $file = IDE_ROOT . "/$safe.php";
     if (file_exists($file)) return false;
-
-    // FIX: Use HEREDOC for clarity, avoiding complex escaping issues
     $template = <<<PHP
 <?php
 /**
@@ -69,7 +67,6 @@ function render_{$safe}_widget() {
     echo '<div class="widget">{$safe} widget content here</div>';
 }
 PHP;
-
     return file_put_contents($file, $template) !== false;
 }
 
@@ -88,7 +85,8 @@ if (isset($_POST['action'])) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="UTF-8"><title>MPSM Dashboard IDE - Widgets</title>
 <style>
  body{font-family:monospace;background:#1e1e1e;color:#eee;display:flex;height:100vh;margin:0}
@@ -98,12 +96,9 @@ if (isset($_POST['action'])) {
  #file-list{flex:1;overflow:auto;padding:10px}
  #editor{flex:1;display:flex;flex-direction:column}
  #file-content{flex:1;background:#111;color:#0f0;padding:10px;border:none;resize:none}
- .dir,.file{cursor:pointer;padding:3px 5px}
- .dir{font-weight:bold}
- .collapsed>.children{display:none}
- .breadcrumb{padding:5px;background:#333;margin-bottom:5px}
- .breadcrumb span{cursor:pointer;color:#6cf}
-</style></head>
+ .changed-indicator{color:#ff0;font-weight:bold;margin-left:10px}
+</style>
+</head>
 <body>
 <div id="sidebar">
  <div id="sidebar-controls">
@@ -114,19 +109,27 @@ if (isset($_POST['action'])) {
 </div>
 <div id="editor">
  <div class="breadcrumb" id="breadcrumb">Widgets Directory</div>
- <div><button onclick="saveFile()">Save</button> <span id="current-file"></span></div>
+ <div>
+   <button onclick="saveFile()">Save</button>
+   <span id="current-file"></span>
+   <span id="changed-indicator" class="changed-indicator" style="display:none;">File has been changed, please save!</span>
+ </div>
  <textarea id="file-content"></textarea>
 </div>
 <script>
-let currentFile='',allItems=[];
+let currentFile='',allItems=[],initialContent='';
 function loadSidebar(){fetch('',{method:'POST',body:new URLSearchParams({action:'list'})}).then(r=>r.json()).then(d=>{allItems=d;renderSidebar(d,document.getElementById('file-list'))})}
 function renderSidebar(items,c){c.innerHTML='';items.forEach(it=>{const el=document.createElement('div');el.className=it.type;el.textContent=it.name;if(it.type==='file')el.onclick=()=>openFile(it.path);else{el.onclick=()=>toggleDir(el,it);const ch=document.createElement('div');ch.className='children';el.appendChild(ch)}c.appendChild(el)})}
 function filterFiles(q){if(!q){renderSidebar(allItems,document.getElementById('file-list'));return;}q=q.toLowerCase();function filter(i){return i.filter(it=>it.type==='dir'? (it.children=filter(it.children)).length||it.name.toLowerCase().includes(q):it.name.toLowerCase().includes(q))}renderSidebar(filter(JSON.parse(JSON.stringify(allItems))),document.getElementById('file-list'))}
 function toggleDir(el,it){el.classList.toggle('collapsed');renderSidebar(it.children,el.querySelector('.children'))}
-function openFile(p){fetch('',{method:'POST',body:new URLSearchParams({action:'open',file:p})}).then(r=>r.json()).then(d=>{currentFile=p;document.getElementById('file-content').value=d.content||'';document.getElementById('current-file').textContent=p;updateBreadcrumb(p)})}
-function saveFile(){if(!currentFile)return alert('No file selected');fetch('',{method:'POST',body:new URLSearchParams({action:'save',file:currentFile,content:document.getElementById('file-content').value})}).then(r=>r.json()).then(d=>alert(d.success?'Saved! Backup created.':'Error: '+d.error))}
-function updateBreadcrumb(p){const bc=document.getElementById('breadcrumb');bc.innerHTML='Widgets / ';const parts=p.split('/');let full='';parts.forEach((seg,i)=>{if(!seg)return;full+=(i?'/':'')+seg;const s=document.createElement('span');s.textContent=seg;s.onclick=()=>jumpToBreadcrumb(full);bc.appendChild(s);if(i<parts.length-1)bc.appendChild(document.createTextNode(' / '))})}
-function jumpToBreadcrumb(path){const file=allItems.find(it=>it.path===path);if(file&&file.type==='file')openFile(path)}
+function openFile(p){fetch('',{method:'POST',body:new URLSearchParams({action:'open',file:p})}).then(r=>r.json()).then(d=>{currentFile=p;initialContent=d.content||'';document.getElementById('file-content').value=initialContent;document.getElementById('current-file').textContent=p;document.getElementById('changed-indicator').style.display='none';updateBreadcrumb(p)})}
+function saveFile(){if(!currentFile)return alert('No file selected');fetch('',{method:'POST',body:new URLSearchParams({action:'save',file:currentFile,content:document.getElementById('file-content').value})}).then(r=>r.json()).then(d=>{if(d.success){alert('Saved! Backup created.');initialContent=document.getElementById('file-content').value;document.getElementById('changed-indicator').style.display='none';}else alert('Error: '+d.error)})}
+document.getElementById('file-content').addEventListener('input',()=>{if(currentFile&&document.getElementById('file-content').value!==initialContent){document.getElementById('changed-indicator').style.display='inline';}else{document.getElementById('changed-indicator').style.display='none';}});
+function updateBreadcrumb(p){const bc=document.getElementById('breadcrumb');bc.innerHTML='Widgets / '+p}
 function newWidgetPrompt(){const name=prompt('Enter new widget name:');if(!name)return;fetch('',{method:'POST',body:new URLSearchParams({action:'newWidget',name})}).then(r=>r.json()).then(d=>{if(d.success){alert('Widget created');loadSidebar();openFile(name+'.php')}else alert('Widget already exists or error')})}
+// Auto-open file if provided in URL
+const params=new URLSearchParams(window.location.search);if(params.has('file')){openFile(params.get('file').replace('widgets/',''))}
 loadSidebar();
-</script></body></html>
+</script>
+</body>
+</html>
