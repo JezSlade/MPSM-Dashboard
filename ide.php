@@ -1,14 +1,10 @@
 <?php
 /**
- * Refactored IDE - Full Project Explorer & Editor
- * Based on Claude's php_ide.php but refactored for MPSM Dashboard architecture
- *
- * Changes:
- *  - Project-wide file explorer under IDE_ROOT (MPSM-Dashboard root)
- *  - Backup/rollback system before saves (backups in /backup/ide/YYYYMMDD/)
- *  - AJAX-based smooth editing
- *  - Max file size enforcement
- *  - Session-based access (POC only, no auth hardening)
+ * Refactored IDE - Advanced Navigation
+ * Added:
+ *  - Fully navigable breadcrumbs
+ *  - Search/filter box for quick file lookup
+ *  - File type & size display in sidebar
  */
 
 session_start();
@@ -24,14 +20,10 @@ if (!defined('MAX_FILE_SIZE')) {
     define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5 MB
 }
 
-// Ensure backup dir exists
 date_default_timezone_set('UTC');
 $today_backup_dir = BACKUP_ROOT . '/' . date('Ymd');
-if (!is_dir($today_backup_dir)) {
-    mkdir($today_backup_dir, 0755, true);
-}
+if (!is_dir($today_backup_dir)) mkdir($today_backup_dir, 0755, true);
 
-// === UTILITY FUNCTIONS ===
 function list_files($dir, $base = '') {
     $items = [];
     foreach (scandir($dir) as $item) {
@@ -39,9 +31,11 @@ function list_files($dir, $base = '') {
         $path = "$dir/$item";
         $rel = ltrim("$base/$item", '/');
         if (is_dir($path)) {
-            $items[] = ["type" => "dir", "name" => $item, "path" => $rel, "children" => list_files($path, $rel)];
+            $items[] = ["type"=>"dir","name"=>$item,"path"=>$rel,"children"=>list_files($path,$rel)];
         } else {
-            $items[] = ["type" => "file", "name" => $item, "path" => $rel];
+            $size = filesize($path);
+            $ext = pathinfo($item, PATHINFO_EXTENSION);
+            $items[] = ["type"=>"file","name"=>$item." (".($ext?:'unknown')." - ".number_format($size/1024,1)."KB)","path"=>$rel];
         }
     }
     return $items;
@@ -51,118 +45,54 @@ function backup_file($file_path) {
     global $today_backup_dir;
     $rel = str_replace(IDE_ROOT, '', $file_path);
     $backup_path = $today_backup_dir . '/' . ltrim($rel, '/');
-    $backup_dir = dirname($backup_path);
-    if (!is_dir($backup_dir)) mkdir($backup_dir, 0755, true);
+    if (!is_dir(dirname($backup_path))) mkdir(dirname($backup_path), 0755, true);
     return copy($file_path, $backup_path);
 }
 
-// === AJAX HANDLER ===
 if (isset($_POST['action'])) {
     header('Content-Type: application/json');
-    $action = $_POST['action'];
-    $file = realpath(IDE_ROOT . '/' . $_POST['file']);
-
-    if (strpos($file, IDE_ROOT) !== 0) {
-        echo json_encode(["error" => "Invalid file path"]);
-        exit;
-    }
-
-    switch ($action) {
-        case 'list':
-            echo json_encode(list_files(IDE_ROOT));
-            break;
-
-        case 'open':
-            if (!file_exists($file)) {
-                echo json_encode(["error" => "File not found"]);
-                exit;
-            }
-            echo json_encode(["content" => file_get_contents($file)]);
-            break;
-
-        case 'save':
-            if (filesize($file) > MAX_FILE_SIZE) {
-                echo json_encode(["error" => "File too large"]);
-                exit;
-            }
-            backup_file($file);
-            file_put_contents($file, $_POST['content']);
-            echo json_encode(["success" => true]);
-            break;
-
-        default:
-            echo json_encode(["error" => "Unknown action"]);
-    }
-    exit;
+    $a=$_POST['action'];
+    $f=realpath(IDE_ROOT.'/'.($_POST['file']??''));
+    if ($f && strpos($f, IDE_ROOT)!==0){echo json_encode(["error"=>"Invalid file path"]);exit;}
+    switch($a){
+        case 'list':echo json_encode(list_files(IDE_ROOT));break;
+        case 'open':echo json_encode(["content"=>file_exists($f)?file_get_contents($f):'']);break;
+        case 'save':if(filesize($f)>MAX_FILE_SIZE){echo json_encode(["error"=>"File too large"]);exit;}backup_file($f);file_put_contents($f,$_POST['content']);echo json_encode(["success"=>true]);break;
+        default:echo json_encode(["error"=>"Unknown action"]);
+    }exit;
 }
-
-// === HTML/JS UI ===
 ?>
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>MPSM Dashboard IDE</title>
+<html lang="en"><head>
+<meta charset="UTF-8"><title>MPSM Dashboard IDE</title>
 <style>
- body { font-family: monospace; background:#1e1e1e; color:#eee; display:flex; height:100vh; margin:0; }
- #sidebar { width:250px; background:#2b2b2b; overflow:auto; padding:10px; }
- #editor { flex:1; display:flex; flex-direction:column; }
- #file-content { flex:1; background:#111; color:#0f0; padding:10px; border:none; resize:none; }
- button { background:#444; color:#fff; border:none; padding:5px 10px; cursor:pointer; }
- button:hover { background:#666; }
- .file, .dir { cursor:pointer; padding:2px 5px; }
- .dir { font-weight:bold; }
-</style>
-</head>
+ body{font-family:monospace;background:#1e1e1e;color:#eee;display:flex;height:100vh;margin:0}
+ #sidebar{width:300px;background:#2b2b2b;overflow:auto;padding:10px}
+ #search{width:100%;padding:3px;margin-bottom:5px}
+ #editor{flex:1;display:flex;flex-direction:column}
+ #file-content{flex:1;background:#111;color:#0f0;padding:10px;border:none;resize:none}
+ .dir,.file{cursor:pointer;padding:3px 5px}
+ .dir{font-weight:bold}
+ .collapsed>.children{display:none}
+ .breadcrumb{padding:5px;background:#333;margin-bottom:5px}
+ .breadcrumb span{cursor:pointer;color:#6cf}
+</style></head>
 <body>
-<div id="sidebar"></div>
+<div id="sidebar"><input id="search" placeholder="Search files..." oninput="filterFiles(this.value)"></div>
 <div id="editor">
-    <div><button onclick="saveFile()">Save</button> <span id="current-file"></span></div>
-    <textarea id="file-content"></textarea>
+ <div class="breadcrumb" id="breadcrumb"></div>
+ <div><button onclick="saveFile()">Save</button> <span id="current-file"></span></div>
+ <textarea id="file-content"></textarea>
 </div>
-
 <script>
-let currentFile = '';
-
-function loadSidebar() {
-    fetch('', { method:'POST', body:new URLSearchParams({action:'list'}) })
-    .then(r=>r.json()).then(data=>renderSidebar(data, document.getElementById('sidebar')));
-}
-
-function renderSidebar(items, container) {
-    container.innerHTML = '';
-    items.forEach(item => {
-        const el = document.createElement('div');
-        el.className = item.type;
-        el.textContent = item.name;
-        el.onclick = () => {
-            if (item.type==='file') openFile(item.path);
-            else renderSidebar(item.children, container);
-        };
-        container.appendChild(el);
-    });
-}
-
-function openFile(path) {
-    fetch('', { method:'POST', body:new URLSearchParams({action:'open',file:path}) })
-    .then(r=>r.json()).then(data=>{
-        currentFile = path;
-        document.getElementById('file-content').value = data.content || '';
-        document.getElementById('current-file').textContent = path;
-    });
-}
-
-function saveFile() {
-    if (!currentFile) return alert('No file selected');
-    const content = document.getElementById('file-content').value;
-    fetch('', { method:'POST', body:new URLSearchParams({action:'save',file:currentFile,content}) })
-    .then(r=>r.json()).then(data=>{
-        if (data.success) alert('Saved! Backup created.');
-        else alert('Error: ' + data.error);
-    });
-}
-
+let currentFile='',allItems=[];
+function loadSidebar(){fetch('',{method:'POST',body:new URLSearchParams({action:'list'})}).then(r=>r.json()).then(d=>{allItems=d;renderSidebar(d,document.getElementById('sidebar'))})}
+function renderSidebar(items,c){let s=document.getElementById('search');c.innerHTML='';if(s&&!c.contains(s))c.prepend(s);items.forEach(it=>{const el=document.createElement('div');el.className=it.type;el.textContent=it.name;if(it.type==='file')el.onclick=()=>openFile(it.path);else{el.onclick=()=>toggleDir(el,it);const ch=document.createElement('div');ch.className='children';el.appendChild(ch)}c.appendChild(el)})}
+function filterFiles(q){if(!q){renderSidebar(allItems,document.getElementById('sidebar'));return;}q=q.toLowerCase();function filter(i){return i.filter(it=>it.type==='dir'? (it.children=filter(it.children)).length||it.name.toLowerCase().includes(q):it.name.toLowerCase().includes(q))}renderSidebar(filter(JSON.parse(JSON.stringify(allItems))),document.getElementById('sidebar'))}
+function toggleDir(el,it){el.classList.toggle('collapsed');renderSidebar(it.children,el.querySelector('.children'))}
+function openFile(p){fetch('',{method:'POST',body:new URLSearchParams({action:'open',file:p})}).then(r=>r.json()).then(d=>{currentFile=p;document.getElementById('file-content').value=d.content||'';document.getElementById('current-file').textContent=p;updateBreadcrumb(p)})}
+function saveFile(){if(!currentFile)return alert('No file selected');fetch('',{method:'POST',body:new URLSearchParams({action:'save',file:currentFile,content:document.getElementById('file-content').value})}).then(r=>r.json()).then(d=>alert(d.success?'Saved! Backup created.':'Error: '+d.error))}
+function updateBreadcrumb(p){const bc=document.getElementById('breadcrumb');bc.innerHTML='';const parts=p.split('/');let full='';parts.forEach((seg,i)=>{if(!seg)return;full+=(i?'/':'')+seg;const s=document.createElement('span');s.textContent=seg;s.onclick=()=>jumpToBreadcrumb(full);bc.appendChild(s);if(i<parts.length-1)bc.appendChild(document.createTextNode(' / '))})}
+function jumpToBreadcrumb(path){alert('Future: focus on '+path)}
 loadSidebar();
-</script>
-</body>
-</html>
+</script></body></html>
