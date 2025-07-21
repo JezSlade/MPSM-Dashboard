@@ -1,20 +1,17 @@
 <?php
 /**
- * Refactored IDE - Advanced Navigation
- * Added:
- *  - Fully navigable breadcrumbs
- *  - Search/filter box for quick file lookup
- *  - File type & size display in sidebar
+ * Refactored IDE - Restricted to Widgets Directory
+ * Added restriction so all file operations are limited to /widgets directory.
  */
 
 session_start();
 
 // === CONFIGURATION ===
 if (!defined('IDE_ROOT')) {
-    define('IDE_ROOT', dirname(__DIR__));
+    define('IDE_ROOT', dirname(__DIR__) . '/widgets'); // Restrict to widgets folder
 }
 if (!defined('BACKUP_ROOT')) {
-    define('BACKUP_ROOT', IDE_ROOT . '/backup/ide');
+    define('BACKUP_ROOT', IDE_ROOT . '/../backup/ide');
 }
 if (!defined('MAX_FILE_SIZE')) {
     define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5 MB
