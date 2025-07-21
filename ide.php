@@ -1,17 +1,20 @@
 <?php
 /**
- * Refactored IDE - Restricted to Widgets Directory
- * Added restriction so all file operations are limited to /widgets directory.
+ * Refactored IDE - Widgets Directory Fix
+ * Ensure IDE_ROOT points correctly to the widgets folder and handles empty dirs gracefully.
  */
 
 session_start();
 
 // === CONFIGURATION ===
 if (!defined('IDE_ROOT')) {
-    define('IDE_ROOT', dirname(__DIR__) . '/widgets'); // Restrict to widgets folder
+    define('IDE_ROOT', __DIR__ . '/widgets'); // Ensure it uses this script's directory widgets folder
+}
+if (!is_dir(IDE_ROOT)) {
+    mkdir(IDE_ROOT, 0755, true);
 }
 if (!defined('BACKUP_ROOT')) {
-    define('BACKUP_ROOT', IDE_ROOT . '/../backup/ide');
+    define('BACKUP_ROOT', __DIR__ . '/backup/ide');
 }
 if (!defined('MAX_FILE_SIZE')) {
     define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5 MB
@@ -22,6 +25,7 @@ $today_backup_dir = BACKUP_ROOT . '/' . date('Ymd');
 if (!is_dir($today_backup_dir)) mkdir($today_backup_dir, 0755, true);
 
 function list_files($dir, $base = '') {
+    if (!is_dir($dir)) return [];
     $items = [];
     foreach (scandir($dir) as $item) {
         if ($item === '.' || $item === '..') continue;
@@ -61,7 +65,7 @@ if (isset($_POST['action'])) {
 ?>
 <!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>MPSM Dashboard IDE</title>
+<meta charset="UTF-8"><title>MPSM Dashboard IDE - Widgets</title>
 <style>
  body{font-family:monospace;background:#1e1e1e;color:#eee;display:flex;height:100vh;margin:0}
  #sidebar{width:300px;background:#2b2b2b;overflow:auto;padding:10px}
@@ -77,7 +81,7 @@ if (isset($_POST['action'])) {
 <body>
 <div id="sidebar"><input id="search" placeholder="Search files..." oninput="filterFiles(this.value)"></div>
 <div id="editor">
- <div class="breadcrumb" id="breadcrumb"></div>
+ <div class="breadcrumb" id="breadcrumb">Widgets Directory</div>
  <div><button onclick="saveFile()">Save</button> <span id="current-file"></span></div>
  <textarea id="file-content"></textarea>
 </div>
@@ -89,7 +93,7 @@ function filterFiles(q){if(!q){renderSidebar(allItems,document.getElementById('s
 function toggleDir(el,it){el.classList.toggle('collapsed');renderSidebar(it.children,el.querySelector('.children'))}
 function openFile(p){fetch('',{method:'POST',body:new URLSearchParams({action:'open',file:p})}).then(r=>r.json()).then(d=>{currentFile=p;document.getElementById('file-content').value=d.content||'';document.getElementById('current-file').textContent=p;updateBreadcrumb(p)})}
 function saveFile(){if(!currentFile)return alert('No file selected');fetch('',{method:'POST',body:new URLSearchParams({action:'save',file:currentFile,content:document.getElementById('file-content').value})}).then(r=>r.json()).then(d=>alert(d.success?'Saved! Backup created.':'Error: '+d.error))}
-function updateBreadcrumb(p){const bc=document.getElementById('breadcrumb');bc.innerHTML='';const parts=p.split('/');let full='';parts.forEach((seg,i)=>{if(!seg)return;full+=(i?'/':'')+seg;const s=document.createElement('span');s.textContent=seg;s.onclick=()=>jumpToBreadcrumb(full);bc.appendChild(s);if(i<parts.length-1)bc.appendChild(document.createTextNode(' / '))})}
+function updateBreadcrumb(p){const bc=document.getElementById('breadcrumb');bc.innerHTML='Widgets / ';const parts=p.split('/');let full='';parts.forEach((seg,i)=>{if(!seg)return;full+=(i?'/':'')+seg;const s=document.createElement('span');s.textContent=seg;s.onclick=()=>jumpToBreadcrumb(full);bc.appendChild(s);if(i<parts.length-1)bc.appendChild(document.createTextNode(' / '))})}
 function jumpToBreadcrumb(path){alert('Future: focus on '+path)}
 loadSidebar();
 </script></body></html>
