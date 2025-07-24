@@ -1,5 +1,5 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v1.3) - Session Integration for Widget Display
+// PATCHED: mps_monitor/api/get_token.php (v1.5) - Auto-call token on direct GET
 // Backup created at /backup/mps_monitor/api/get_token.php.bak
 
 declare(strict_types=1);
@@ -10,19 +10,9 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 1.3 starting.");
+error_log("DEBUG: get_token.php patched version 1.5 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode([
-        'status' => 'error',
-        'code' => 405,
-        'message' => 'Method Not Allowed. Use POST.'
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    exit;
-}
 
 $appRoot = dirname(__DIR__, 2);
 $configPath = $appRoot . '/mps_monitor/config/mps_config.php';
@@ -73,15 +63,15 @@ try {
             'access_token' => $tokenData['access_token'],
             'token_type' => $tokenData['token_type'] ?? 'bearer',
             'expires_in' => $tokenData['expires_in'] ?? 3600,
-            'refresh_token' => $tokenData['refresh_token'] ?? null
+            'refresh_token' => $tokenData['refresh_token'] ?? null,
+            'fetched_at' => date('Y-m-d H:i:s')
         ]
     ];
 
-    // Store token details in session for session_vars widget
     $_SESSION['mps_token'] = $response['data'];
     $_SESSION['mps_token_timestamp'] = time();
 
-    echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
 } catch (Throwable $e) {
     http_response_code(500);
@@ -93,6 +83,6 @@ try {
         'message' => $msg,
         'file' => $e->getFile(),
         'line' => $e->getLine()
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
 ?>
