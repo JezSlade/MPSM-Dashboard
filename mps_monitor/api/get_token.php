@@ -1,15 +1,16 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v1.2) - Next Patch: Add strict JSON-only output & unified error format
+// PATCHED: mps_monitor/api/get_token.php (v1.3) - Session Integration for Widget Display
 // Backup created at /backup/mps_monitor/api/get_token.php.bak
 
 declare(strict_types=1);
+session_start();
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 1.2 starting.");
+error_log("DEBUG: get_token.php patched version 1.3 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -65,7 +66,7 @@ try {
         throw new Exception('Token response missing access_token');
     }
 
-    echo json_encode([
+    $response = [
         'status' => 'success',
         'code' => 200,
         'data' => [
@@ -74,7 +75,13 @@ try {
             'expires_in' => $tokenData['expires_in'] ?? 3600,
             'refresh_token' => $tokenData['refresh_token'] ?? null
         ]
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ];
+
+    // Store token details in session for session_vars widget
+    $_SESSION['mps_token'] = $response['data'];
+    $_SESSION['mps_token_timestamp'] = time();
+
+    echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
 } catch (Throwable $e) {
     http_response_code(500);
