@@ -1,13 +1,18 @@
 <?php
 // File: /mps_monitor/includes/global_token_handler.php
-// Version: v3.0 - Global Token Handler
+// Version: v3.1 - Fixed missing config include (MPS_API_* constants)
 // ------------------------------------------------------
-// • Provides a universal token retrieval & auto-refresh logic for all widgets.
-// • Ensures every API call has a valid token before execution.
-// • Created as part of Token Patch v3.0.
+// • Added conditional inclusion of mps_config.php to define required constants.
+// • Ensures get_token.php and all token logic have required MPS_API_* values.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Ensure MPS_API_* constants are loaded
+$configPath = dirname(__DIR__) . '/config/mps_config.php';
+if (file_exists($configPath) && !defined('MPS_API_USERNAME')) {
+    require_once $configPath;
 }
 
 function get_valid_mps_token(): array {
