@@ -1,22 +1,13 @@
 <?php
-// PATCHED: get_token.php v2.5 - Final Attempt to Suppress LOG_* Warnings
+// PATCHED: get_token.php v2.6 - Clean Final Version
 // ------------------------------------------------------
-// • Explicitly unsets existing LOG_* before including config to avoid redefinition.
-// • Config is still fully loaded after cleanup.
+// • Removed all logging suppression hacks.
+// • Leaves config as-is; token works correctly.
 
 declare(strict_types=1);
 session_start();
 
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
 header('Content-Type: application/json; charset=utf-8');
-
-// ✅ Explicitly clear any existing LOG_* constants to avoid redefinition warnings
-foreach (["LOG_INFO", "LOG_WARNING", "LOG_DEBUG", "LOG_ERROR", "LOG_SECURITY"] as $const) {
-    if (defined($const)) {
-        runkit_constant_remove($const);
-    }
-}
 
 $configPath = dirname(__DIR__) . '/config/mps_config.php';
 if (!file_exists($configPath)) {
