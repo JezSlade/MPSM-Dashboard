@@ -1,5 +1,5 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v1.5) - Auto-call token on direct GET
+// PATCHED: mps_monitor/api/get_token.php (v1.6) - Fixed constant redefinition & token debug logging
 // Backup created at /backup/mps_monitor/api/get_token.php.bak
 
 declare(strict_types=1);
@@ -10,7 +10,7 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 1.5 starting.");
+error_log("DEBUG: get_token.php patched version 1.6 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -39,7 +39,13 @@ foreach ($requiredFiles as $key => $path) {
     }
 }
 
-require_once $configPath;
+// Prevent constant redefinition warnings
+if (!defined('LOG_INFO')) {
+    require_once $configPath;
+} else {
+    error_log("DEBUG: Skipped reloading mps_config.php to prevent constant redefinition warnings.");
+}
+
 require_once $apiFunctionsPath;
 
 try {
@@ -52,8 +58,11 @@ try {
     error_log("DEBUG: Requesting token with strict grant_type enforcement.");
     $tokenData = get_token($config);
 
-    if (!isset($tokenData['access_token'])) {
-        throw new Exception('Token response missing access_token');
+    // Debug dump to catch structure issues
+    error_log("DEBUG: Raw token response: " . print_r($tokenData, true));
+
+    if (!is_array($tokenData) || !isset($tokenData['access_token'])) {
+        throw new Exception('Token response missing access_token or invalid response structure');
     }
 
     $response = [
