@@ -1,18 +1,36 @@
 <?php
 // PATCHED: widgets/select_customers.php
-// Version: v1.2 - Fixed Missing API Base URL Constant
+// Version: v1.4 - Fixed undefined MPS_API_BASE_URL fallback
 // ------------------------------------------------------
-// • Now ensures MPS_API_BASE_URL is defined by including mps_config.php.
+// • If constant is still undefined after config include, fallback to session/env.
 // • Fully cohesive with get_token.php v2.2 & global_token_handler.php v3.3.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ Ensure API config constants are available
+// ✅ Safe include for API config constants
 $configPath = dirname(__DIR__) . '/mps_monitor/config/mps_config.php';
-if (file_exists($configPath) && !defined('MPS_API_BASE_URL')) {
-    require_once $configPath;
+if (file_exists($configPath)) {
+    if (!defined('LOG_INFO')) define('LOG_INFO', 6);
+    if (!defined('LOG_WARNING')) define('LOG_WARNING', 4);
+    if (!defined('LOG_DEBUG')) define('LOG_DEBUG', 7);
+
+    if (!defined('MPS_API_BASE_URL')) {
+        require_once $configPath;
+    }
+}
+
+// ✅ Fallback if constant still undefined (pull from session/env)
+if (!defined('MPS_API_BASE_URL')) {
+    if (!empty($_SESSION['mps_api_base_url'])) {
+        define('MPS_API_BASE_URL', $_SESSION['mps_api_base_url']);
+    } elseif (getenv('MPS_API_BASE_URL')) {
+        define('MPS_API_BASE_URL', getenv('MPS_API_BASE_URL'));
+    } else {
+        echo '<div class="widget-body"><p><strong>Error:</strong> MPS_API_BASE_URL is not defined anywhere.</p></div>';
+        return;
+    }
 }
 
 // ✅ Include the global token handler
