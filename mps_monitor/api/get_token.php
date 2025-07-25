@@ -1,5 +1,5 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v1.6) - Fixed constant redefinition & token debug logging
+// PATCHED: mps_monitor/api/get_token.php (v1.8) - Correct token acquisition per API_Integration_Guide & Swagger
 // Backup created at /backup/mps_monitor/api/get_token.php.bak
 
 declare(strict_types=1);
@@ -10,64 +10,71 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 1.6 starting.");
+error_log("DEBUG: get_token.php patched version 1.8 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
 
 $appRoot = dirname(__DIR__, 2);
 $configPath = $appRoot . '/mps_monitor/config/mps_config.php';
-$apiFunctionsPath = $appRoot . '/mps_monitor/includes/api_functions.php';
 $envPath = $appRoot . '/.env';
 
-$requiredFiles = [
-    'config' => $configPath,
-    'api_functions' => $apiFunctionsPath,
-    'env' => $envPath
-];
+if (!file_exists($configPath) || !file_exists($envPath)) {
+    http_response_code(500);
+    $msg = "Missing required config or .env";
+    error_log("ERROR: $msg");
+    echo json_encode(['status' => 'error','code' => 500,'message' => $msg]);
+    exit;
+}
 
-foreach ($requiredFiles as $key => $path) {
-    if (!file_exists($path)) {
-        http_response_code(500);
-        $msg = "Missing required $key file at $path";
-        error_log("ERROR: $msg");
-        echo json_encode([
-            'status' => 'error',
-            'code' => 500,
-            'message' => $msg
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        exit;
+require_once $configPath;
+
+// Fallback custom_log
+if (!function_exists('custom_log')) {
+    function custom_log(string $message, string $level = 'INFO'): void
+    {
+        error_log("FALLBACK LOG [{$level}]: {$message}");
     }
 }
 
-// Prevent constant redefinition warnings
-if (!defined('LOG_INFO')) {
-    require_once $configPath;
-} else {
-    error_log("DEBUG: Skipped reloading mps_config.php to prevent constant redefinition warnings.");
-}
-
-require_once $apiFunctionsPath;
-
 try {
-    $config = parse_env_file($envPath);
+    // Per API_Integration_Guide, build proper x-www-form-urlencoded POST request
+    $postFields = http_build_query([
+        'grant_type' => 'password',
+        'username'   => MPS_API_USERNAME,
+        'password'   => MPS_API_PASSWORD
+    ]);
 
-    $config['grant_type'] = 'password';
-    $config['username'] = MPS_API_USERNAME;
-    $config['password'] = MPS_API_PASSWORD;
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => MPS_TOKEN_URL,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $postFields,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/x-www-form-urlencoded'
+        ]
+    ]);
 
-    error_log("DEBUG: Requesting token with strict grant_type enforcement.");
-    $tokenData = get_token($config);
+    $rawResponse = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr  = curl_error($ch);
+    curl_close($ch);
 
-    // Debug dump to catch structure issues
-    error_log("DEBUG: Raw token response: " . print_r($tokenData, true));
+    error_log("DEBUG: Raw token HTTP({$httpCode}) response: {$rawResponse}");
+
+    if ($curlErr) {
+        throw new Exception("cURL error: {$curlErr}");
+    }
+
+    $tokenData = json_decode($rawResponse, true);
 
     if (!is_array($tokenData) || !isset($tokenData['access_token'])) {
-        throw new Exception('Token response missing access_token or invalid response structure');
+        throw new Exception("Invalid token response: " . $rawResponse);
     }
 
     $response = [
         'status' => 'success',
-        'code' => 200,
+        'code' => $httpCode,
         'data' => [
             'access_token' => $tokenData['access_token'],
             'token_type' => $tokenData['token_type'] ?? 'bearer',
