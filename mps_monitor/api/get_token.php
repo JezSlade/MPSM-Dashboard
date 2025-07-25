@@ -1,5 +1,5 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v1.8) - Correct token acquisition per API_Integration_Guide & Swagger
+// PATCHED: mps_monitor/api/get_token.php (v1.9) - Realigned with API_Integration_Guide: client_id & client_secret included
 // Backup created at /backup/mps_monitor/api/get_token.php.bak
 
 declare(strict_types=1);
@@ -10,7 +10,7 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 1.8 starting.");
+error_log("DEBUG: get_token.php patched version 1.9 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -28,7 +28,6 @@ if (!file_exists($configPath) || !file_exists($envPath)) {
 
 require_once $configPath;
 
-// Fallback custom_log
 if (!function_exists('custom_log')) {
     function custom_log(string $message, string $level = 'INFO'): void
     {
@@ -37,11 +36,14 @@ if (!function_exists('custom_log')) {
 }
 
 try {
-    // Per API_Integration_Guide, build proper x-www-form-urlencoded POST request
+    // Per API_Integration_Guide: must include client_id & client_secret for password grant
     $postFields = http_build_query([
-        'grant_type' => 'password',
-        'username'   => MPS_API_USERNAME,
-        'password'   => MPS_API_PASSWORD
+        'grant_type'    => 'password',
+        'username'      => MPS_API_USERNAME,
+        'password'      => MPS_API_PASSWORD,
+        'client_id'     => MPS_API_CLIENT_ID,
+        'client_secret' => MPS_API_SECRET,
+        'scope'         => MPS_API_SCOPE
     ]);
 
     $ch = curl_init();
