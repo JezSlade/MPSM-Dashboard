@@ -1,17 +1,21 @@
 <?php
-// PATCHED: widgets/select_customers.php (v1.0) - Integrated Global Token Handler
-// Backup created at /backup/widgets/select_customers.php.bak
-
-// Widget Name: Select Customers
-// Widget Icon: fas fa-users
-// Widget Width: 4.0
-// Widget Height: 3.0
+// PATCHED: widgets/select_customers.php
+// Version: v1.2 - Fixed Missing API Base URL Constant
+// ------------------------------------------------------
+// • Now ensures MPS_API_BASE_URL is defined by including mps_config.php.
+// • Fully cohesive with get_token.php v2.2 & global_token_handler.php v3.3.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Include global token handler to ensure valid token before API calls
+// ✅ Ensure API config constants are available
+$configPath = dirname(__DIR__) . '/mps_monitor/config/mps_config.php';
+if (file_exists($configPath) && !defined('MPS_API_BASE_URL')) {
+    require_once $configPath;
+}
+
+// ✅ Include the global token handler
 require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
 $token = get_valid_mps_token();
 
@@ -20,10 +24,10 @@ if (empty($token['access_token'])) {
     return;
 }
 
-// Use token to fetch customer list via MPS Monitor API
+// ✅ Fetch customer list from MPS Monitor API
 $customers = [];
 try {
-    $apiUrl = MPS_API_BASE_URL . '/customers';
+    $apiUrl = rtrim(MPS_API_BASE_URL, '/') . '/customers';
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $apiUrl,

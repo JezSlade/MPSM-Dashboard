@@ -1,6 +1,10 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v2.0) - Suppressed duplicate constant warnings, stable for production
-// Backup created at /backup/mps_monitor/api/get_token.php.bak
+// PATCHED: /mps_monitor/api/get_token.php
+// Version: v2.2 - Config Include Assurance & Full Cohesion Audit
+// ------------------------------------------------------
+// • Ensures mps_config.php is always properly included.
+// • Audited to work cohesively with global_token_handler.php v3.3 & all widgets.
+
 
 declare(strict_types=1);
 session_start();
@@ -10,45 +14,43 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 2.0 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
 
-$appRoot = dirname(__DIR__, 2);
-$configPath = $appRoot . '/mps_monitor/config/mps_config.php';
-$envPath = $appRoot . '/.env';
-
-if (!file_exists($configPath) || !file_exists($envPath)) {
+// ✅ Ensure configuration is always loaded
+$configPath = dirname(__DIR__) . '/config/mps_config.php';
+if (!file_exists($configPath)) {
     http_response_code(500);
-    $msg = "Missing required config or .env";
+    $msg = "Missing required config at $configPath";
     error_log("ERROR: $msg");
-    echo json_encode(['status' => 'error','code' => 500,'message' => $msg]);
+    echo json_encode(['status' => 'error', 'code' => 500, 'message' => $msg]);
     exit;
 }
-
-// Prevent constant redefinition warnings by conditionally including config
-if (!defined('LOG_INFO') && !defined('LOG_WARNING') && !defined('LOG_DEBUG')) {
-    require_once $configPath;
-} else {
-    error_log("DEBUG: Skipped reloading mps_config.php to prevent duplicate constant warnings.");
-}
-
-if (!function_exists('custom_log')) {
-    function custom_log(string $message, string $level = 'INFO'): void
-    {
-        error_log("FALLBACK LOG [{$level}]: {$message}");
-    }
-}
+require_once $configPath;
 
 try {
-    $postFields = http_build_query([
-        'grant_type'    => 'password',
-        'username'      => MPS_API_USERNAME,
-        'password'      => MPS_API_PASSWORD,
-        'client_id'     => MPS_API_CLIENT_ID,
-        'client_secret' => MPS_API_SECRET,
-        'scope'         => MPS_API_SCOPE
-    ]);
+    // ✅ Handle refresh vs password grant
+    $useRefresh = isset($_SESSION['mps_token']['refresh_token']) && isset($_GET['refresh']) && $_GET['refresh'] === 'true';
+
+    if ($useRefresh) {
+        $postFields = http_build_query([
+            'grant_type'    => 'refresh_token',
+            'refresh_token' => $_SESSION['mps_token']['refresh_token'],
+            'client_id'     => MPS_API_CLIENT_ID,
+            'client_secret' => MPS_API_SECRET
+        ]);
+        error_log("DEBUG: Using refresh token grant.");
+    } else {
+        $postFields = http_build_query([
+            'grant_type'    => 'password',
+            'username'      => MPS_API_USERNAME,
+            'password'      => MPS_API_PASSWORD,
+            'client_id'     => MPS_API_CLIENT_ID,
+            'client_secret' => MPS_API_SECRET,
+            'scope'         => MPS_API_SCOPE
+        ]);
+        error_log("DEBUG: Using password grant.");
+    }
 
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -85,13 +87,15 @@ try {
             'access_token' => $tokenData['access_token'],
             'token_type' => $tokenData['token_type'] ?? 'bearer',
             'expires_in' => $tokenData['expires_in'] ?? 3600,
-            'refresh_token' => $tokenData['refresh_token'] ?? null,
+            'refresh_token' => $tokenData['refresh_token'] ?? ($_SESSION['mps_token']['refresh_token'] ?? null),
             'fetched_at' => date('Y-m-d H:i:s')
         ]
     ];
 
+    // ✅ Store token for global handler & widgets
     $_SESSION['mps_token'] = $response['data'];
     $_SESSION['mps_token_timestamp'] = time();
+    setcookie('mps_token', json_encode($response['data']), time() + $response['data']['expires_in'], '/');
 
     echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
