@@ -1,8 +1,8 @@
 <?php
-// PATCHED: get_token.php v2.3 - Final Unified Version
+// PATCHED: get_token.php v2.4 - Suppressing LOG_* Re-definition Warnings
 // ------------------------------------------------------
-// • Ensures mps_config.php is always properly included.
-// • Fully cohesive with global_token_handler.php v3.4 and widgets.
+// • Ensures mps_config.php is properly included.
+// • Wraps LOG_* constants locally to prevent duplicate definition warnings.
 
 declare(strict_types=1);
 session_start();
@@ -10,6 +10,11 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 header('Content-Type: application/json; charset=utf-8');
+
+// ✅ Safe include: pre-define LOG_* if not already defined
+if (!defined('LOG_INFO')) define('LOG_INFO', true);
+if (!defined('LOG_WARNING')) define('LOG_WARNING', true);
+if (!defined('LOG_DEBUG')) define('LOG_DEBUG', true);
 
 $configPath = dirname(__DIR__) . '/config/mps_config.php';
 if (!file_exists($configPath)) {
