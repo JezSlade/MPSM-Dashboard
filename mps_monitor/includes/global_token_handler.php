@@ -1,10 +1,9 @@
 <?php
-// File: /mps_monitor/includes/global_token_handler.php
-// Version: v3.3 - Simplified, no redundant config/constant handling
+// PATCHED: global_token_handler.php v3.4 - Final Unified Version
 // ------------------------------------------------------
-// • Assumes API credentials already handled by existing includes (as intended).
-// • Removed unnecessary constant redefinitions and env parsing.
-// • Focuses solely on ensuring valid/auto-refreshed token for widgets.
+// • Config-independent (does not load or define any constants).
+// • Solely responsible for token retrieval and refresh.
+// • Fully cohesive with get_token.php v2.3 and widgets.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -19,7 +18,6 @@ function get_valid_mps_token(): array {
         $elapsed = time() - $timestamp;
         $remaining = max($expiresIn - $elapsed, 0);
 
-        // Auto-refresh silently if <60 seconds remain
         if ($remaining < 60 && !empty($token['refresh_token'])) {
             $refreshUrl = "/mps_monitor/api/get_token.php?refresh=true";
             $refreshResponse = @file_get_contents($refreshUrl);
@@ -33,7 +31,6 @@ function get_valid_mps_token(): array {
             }
         }
     } else {
-        // Force retrieval if no token exists
         $tokenUrl = "/mps_monitor/api/get_token.php";
         $tokenResponse = @file_get_contents($tokenUrl);
         if ($tokenResponse) {

@@ -1,39 +1,19 @@
 <?php
-// PATCHED: widgets/select_customers.php
-// Version: v1.4 - Fixed undefined MPS_API_BASE_URL fallback
+// PATCHED: select_customers.php v1.6 - Final Unified Version
 // ------------------------------------------------------
-// • If constant is still undefined after config include, fallback to session/env.
-// • Fully cohesive with get_token.php v2.2 & global_token_handler.php v3.3.
+// • Uses correct constant MPS_API_BASE from mps_config.php.
+// • Config included only once, no redundant fallbacks.
+// • Fully cohesive with get_token.php v2.3 and global_token_handler.php v3.4.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ Safe include for API config constants
 $configPath = dirname(__DIR__) . '/mps_monitor/config/mps_config.php';
-if (file_exists($configPath)) {
-    if (!defined('LOG_INFO')) define('LOG_INFO', 6);
-    if (!defined('LOG_WARNING')) define('LOG_WARNING', 4);
-    if (!defined('LOG_DEBUG')) define('LOG_DEBUG', 7);
-
-    if (!defined('MPS_API_BASE_URL')) {
-        require_once $configPath;
-    }
+if (file_exists($configPath) && !defined('MPS_API_BASE')) {
+    require_once $configPath;
 }
 
-// ✅ Fallback if constant still undefined (pull from session/env)
-if (!defined('MPS_API_BASE_URL')) {
-    if (!empty($_SESSION['mps_api_base_url'])) {
-        define('MPS_API_BASE_URL', $_SESSION['mps_api_base_url']);
-    } elseif (getenv('MPS_API_BASE_URL')) {
-        define('MPS_API_BASE_URL', getenv('MPS_API_BASE_URL'));
-    } else {
-        echo '<div class="widget-body"><p><strong>Error:</strong> MPS_API_BASE_URL is not defined anywhere.</p></div>';
-        return;
-    }
-}
-
-// ✅ Include the global token handler
 require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
 $token = get_valid_mps_token();
 
@@ -42,10 +22,9 @@ if (empty($token['access_token'])) {
     return;
 }
 
-// ✅ Fetch customer list from MPS Monitor API
 $customers = [];
 try {
-    $apiUrl = rtrim(MPS_API_BASE_URL, '/') . '/customers';
+    $apiUrl = rtrim(MPS_API_BASE, '/') . '/customers';
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $apiUrl,
