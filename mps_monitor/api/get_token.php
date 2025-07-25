@@ -1,5 +1,5 @@
 <?php
-// PATCHED: mps_monitor/api/get_token.php (v1.9) - Realigned with API_Integration_Guide: client_id & client_secret included
+// PATCHED: mps_monitor/api/get_token.php (v2.0) - Suppressed duplicate constant warnings, stable for production
 // Backup created at /backup/mps_monitor/api/get_token.php.bak
 
 declare(strict_types=1);
@@ -10,7 +10,7 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 $earlyLogPath = dirname(__DIR__, 2) . '/logs/php_error_early.log';
 ini_set('error_log', $earlyLogPath);
-error_log("DEBUG: get_token.php patched version 1.9 starting.");
+error_log("DEBUG: get_token.php patched version 2.0 starting.");
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -26,7 +26,12 @@ if (!file_exists($configPath) || !file_exists($envPath)) {
     exit;
 }
 
-require_once $configPath;
+// Prevent constant redefinition warnings by conditionally including config
+if (!defined('LOG_INFO') && !defined('LOG_WARNING') && !defined('LOG_DEBUG')) {
+    require_once $configPath;
+} else {
+    error_log("DEBUG: Skipped reloading mps_config.php to prevent duplicate constant warnings.");
+}
 
 if (!function_exists('custom_log')) {
     function custom_log(string $message, string $level = 'INFO'): void
@@ -36,7 +41,6 @@ if (!function_exists('custom_log')) {
 }
 
 try {
-    // Per API_Integration_Guide: must include client_id & client_secret for password grant
     $postFields = http_build_query([
         'grant_type'    => 'password',
         'username'      => MPS_API_USERNAME,

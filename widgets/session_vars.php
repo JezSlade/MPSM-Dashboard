@@ -1,18 +1,15 @@
 <?php
-// widgets/session_vars.php
+// PATCHED: widgets/session_vars.php (v2.1) - Automatic token refresh logic integrated
+// Backup created at /backup/widgets/session_vars.php.bak
 
-// MODIFIED: Use full Font Awesome class in metadata comment
 // Widget Name: Session Variables
 // Widget Icon: fas fa-bug
 // Widget Width: 2.0
 // Widget Height: 2.0
 
-// The $_widget_config array is no longer directly used for metadata extraction
-// by discover_widgets(). It's kept here for backward compatibility or other
-// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
     'name' => 'Session Variables',
-    'icon' => 'bug', // This 'bug' will be overridden by the comment parsing
+    'icon' => 'bug',
     'width' => 2,
     'height' => 2
 ];
@@ -21,13 +18,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Config: ignore these dashboard/control variables
 $excluded_prefixes = ['dashboard_', 'widget_', 'ui_', 'layout_', 'grid_', 'settings'];
 $excluded_keys = ['active_widgets', 'widget_order', 'dashboard_config'];
 
-/**
- * Determines whether a session key is considered runtime-relevant.
- */
 function is_runtime_variable($key, $excluded_keys, $excluded_prefixes) {
     if (in_array($key, $excluded_keys, true)) {
         return false;
@@ -40,12 +33,46 @@ function is_runtime_variable($key, $excluded_keys, $excluded_prefixes) {
     return true;
 }
 
-// Filter session for runtime variables only
 $runtime_session = [];
 foreach ($_SESSION as $key => $value) {
     if (is_runtime_variable($key, $excluded_keys, $excluded_prefixes)) {
         $runtime_session[$key] = $value;
     }
+}
+
+// Token specific processing with auto-refresh
+$token = $_SESSION['mps_token'] ?? null;
+$timestamp = $_SESSION['mps_token_timestamp'] ?? null;
+$token_info = '';
+
+if ($token && $timestamp) {
+    $expiresIn = (int)$token['expires_in'];
+    $elapsed = time() - $timestamp;
+    $remaining = max($expiresIn - $elapsed, 0);
+
+    // Auto-refresh if less than 60 seconds remaining and refresh_token exists
+    if ($remaining < 60 && !empty($token['refresh_token'])) {
+        $refreshUrl = "/mps_monitor/api/get_token.php?refresh=true";
+        $refreshResponse = @file_get_contents($refreshUrl);
+        if ($refreshResponse) {
+            $decoded = json_decode($refreshResponse, true);
+            if (isset($decoded['data']['access_token'])) {
+                $_SESSION['mps_token'] = $decoded['data'];
+                $_SESSION['mps_token_timestamp'] = time();
+                $token = $_SESSION['mps_token'];
+                $timestamp = $_SESSION['mps_token_timestamp'];
+                $expiresIn = (int)$token['expires_in'];
+                $remaining = $expiresIn;
+            }
+        }
+    }
+
+    $token_info = "<strong>Access Token:</strong> " . htmlspecialchars($token['access_token']) . "<br>"
+        . "<strong>Type:</strong> " . htmlspecialchars($token['token_type']) . "<br>"
+        . "<strong>Expires In:</strong> {$expiresIn} sec<br>"
+        . "<strong>Remaining:</strong> {$remaining} sec<br>"
+        . "<strong>Refresh Token:</strong> " . htmlspecialchars($token['refresh_token']) . "<br>"
+        . "<strong>Fetched At:</strong> " . htmlspecialchars($token['fetched_at']) . "<br>";
 }
 ?>
 
@@ -65,18 +92,9 @@ foreach ($_SESSION as $key => $value) {
     <?php endif; ?>
 
     <h3 class="widget-section-title">Tokens</h3>
-    <?php
-        $token_keys = ['access_token', 'refresh_token', 'mps_token'];
-        $tokens_found = false;
-        foreach ($token_keys as $key) {
-            $value = $_SESSION[$key] ?? $_COOKIE[$key] ?? null;
-            if ($value) {
-                echo "<strong>$key:</strong><br><code>" . htmlspecialchars($value) . "</code><br><br>";
-                $tokens_found = true;
-            }
-        }
-        if (!$tokens_found) {
-            echo "<p><em>No tokens found in session or cookies.</em></p>";
-        }
-    ?>
+    <?php if ($token_info): ?>
+        <?= $token_info ?>
+    <?php else: ?>
+        <p><em>No tokens found in session or cookies.</em></p>
+    <?php endif; ?>
 </div>
