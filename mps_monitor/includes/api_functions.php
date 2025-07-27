@@ -1,15 +1,13 @@
 <?php
-// ✅ Enable detailed PHP error reporting for debugging (remove or disable in production)
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
-
 // mps_monitor/includes/api_functions.php
 // STRICT PATCHED: Added PHP error reporting for debugging 500 errors and ensured parse_env_file is available for api_bootstrap.php dependency
 
 declare(strict_types=1);
 
-
+// ✅ Enable detailed PHP error reporting for debugging (remove or disable in production)
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/mps_config.php';
 require_once __DIR__ . '/../helpers/CacheHelper.php';
