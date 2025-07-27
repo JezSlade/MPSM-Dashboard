@@ -1,8 +1,13 @@
 <?php
 // mps_monitor/includes/api_functions.php
-// STRICT PATCHED: Ensured parse_env_file is available for api_bootstrap.php dependency
+// STRICT PATCHED: Added PHP error reporting for debugging 500 errors and ensured parse_env_file is available for api_bootstrap.php dependency
 
 declare(strict_types=1);
+
+// ✅ Enable detailed PHP error reporting for debugging (remove or disable in production)
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/mps_config.php';
 require_once __DIR__ . '/../helpers/CacheHelper.php';
@@ -16,7 +21,9 @@ if (!function_exists('parse_env_file')) {
     function parse_env_file(string $filePath): array {
         $env = [];
         if (!file_exists($filePath)) {
-            custom_log("Error: .env file not found at " . $filePath, 'ERROR');
+            if (function_exists('custom_log')) {
+                custom_log("Error: .env file not found at " . $filePath, 'ERROR');
+            }
             return $env;
         }
         $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -29,7 +36,9 @@ if (!function_exists('parse_env_file')) {
                 $env[$key] = $value;
             }
         }
-        custom_log('Parsed .env file.', 'DEBUG');
+        if (function_exists('custom_log')) {
+            custom_log('Parsed .env file.', 'DEBUG');
+        }
         return $env;
     }
 }
@@ -42,32 +51,44 @@ function call_mps_api(string $path, string $method = 'GET', array $data = []) {
 
 // ✅ PATCHED TO USE GET AS REQUIRED BY SWAGGER
 function get_all_customers(array $filters = []) {
-    custom_log('Calling GetCustomers via api_functions (GET method, Swagger compliant).', 'INFO');
+    if (function_exists('custom_log')) {
+        custom_log('Calling GetCustomers via api_functions (GET method, Swagger compliant).', 'INFO');
+    }
     return call_mps_api('Customer/GetCustomers', 'GET', $filters);
 }
 
 function create_customer(array $model) {
-    custom_log('Calling CreateCustomer via api_functions.', 'INFO');
+    if (function_exists('custom_log')) {
+        custom_log('Calling CreateCustomer via api_functions.', 'INFO');
+    }
     return call_mps_api('Customer/CreateCustomer', 'POST', $model);
 }
 
 function update_customer(array $model) {
-    custom_log('Calling UpdateCustomer via api_functions.', 'INFO');
+    if (function_exists('custom_log')) {
+        custom_log('Calling UpdateCustomer via api_functions.', 'INFO');
+    }
     return call_mps_api('Customer/UpdateCustomer', 'POST', $model);
 }
 
 function get_devices(array $filters = []) {
-    custom_log('Calling GetDevices via api_functions.', 'INFO');
+    if (function_exists('custom_log')) {
+        custom_log('Calling GetDevices via api_functions.', 'INFO');
+    }
     return call_mps_api('Device/GetDevices', 'POST', $filters);
 }
 
 function get_device_counters(array $filters = []) {
-    custom_log('Calling GetDeviceCounters via api_functions.', 'INFO');
+    if (function_exists('custom_log')) {
+        custom_log('Calling GetDeviceCounters via api_functions.', 'INFO');
+    }
     return call_mps_api('Device/GetDeviceCounters', 'POST', $filters);
 }
 
 function get_alerts(array $filters = []) {
-    custom_log('Calling GetAlerts via api_functions.', 'INFO');
+    if (function_exists('custom_log')) {
+        custom_log('Calling GetAlerts via api_functions.', 'INFO');
+    }
     return call_mps_api('Alert/GetAlerts', 'POST', $filters);
 }
 ?>
