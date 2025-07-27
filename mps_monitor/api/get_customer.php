@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 /**
  * get_customers.php
  * Retrieves a list of all customers from MPS Monitor.
@@ -7,9 +10,7 @@
  * ✅ Endpoint verified against Swagger.json and API_Integration_Guide.md
  */
 // ✅ Enable detailed PHP error reporting for debugging (remove or disable in production)
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+
 
 $method   = 'GET';
 $path     = 'Customer/GetCustomers';
