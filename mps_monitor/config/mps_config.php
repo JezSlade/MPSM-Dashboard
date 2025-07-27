@@ -1,9 +1,7 @@
 <?php // mps_monitor/config/mps_config.php
+// STRICT HOTFIX: Ensure no output or whitespace before declare(strict_types=1);
 declare(strict_types=1);
-// ✅ Enable detailed PHP error reporting for debugging (remove or disable in production)
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+
 /**
  * MPS Monitor-specific configuration values.
  * Restored original structure with !defined() guards added only where necessary
