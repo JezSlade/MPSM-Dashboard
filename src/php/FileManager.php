@@ -1,6 +1,6 @@
 <?php
 // src/php/FileManager.php
-include_once __DIR__ . '/includes/logger.php';
+include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 class FileManager {
     private $appRoot;
 

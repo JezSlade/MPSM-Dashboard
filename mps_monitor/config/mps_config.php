@@ -1,7 +1,7 @@
 <?php // mps_monitor/config/mps_config.php
 // STRICT HOTFIX: Ensure no output or whitespace before declare(strict_types=1);
 declare(strict_types=1);
-include_once __DIR__ . '/includes/logger.php';
+include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 /**
  * MPS Monitor-specific configuration values.
  * Restored original structure with !defined() guards added only where necessary

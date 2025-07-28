@@ -1,6 +1,6 @@
 <?php // mps_monitor/helpers/CacheHelper.php
 declare(strict_types=1);
-include_once __DIR__ . '/includes/logger.php';
+include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 /**
  * Robust Caching Helper for PHP CMS
  * Handles multiple API endpoints with flexible TTL and automatic cleanup.
