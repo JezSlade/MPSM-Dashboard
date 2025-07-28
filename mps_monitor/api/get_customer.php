@@ -2,24 +2,34 @@
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
+
 /**
- * get_customers.php
+ * get_customer.php
  * Retrieves a list of all customers from MPS Monitor.
  *
- * ✅ Compliant with Ai_Patch_Validation_Protocol.md
- * ✅ Endpoint verified against Swagger.json and API_Integration_Guide.md
+ * ✅ Fully aligned with Swagger and SDK
+ * ✅ POST method with correct body
  */
-// ✅ Enable detailed PHP error reporting for debugging (remove or disable in production)
 
+$method = 'POST';
+$path = 'Customer/GetCustomers';
+$useCache = true; // Enables caching
 
-$method   = 'GET';
-$path     = 'Customer/GetCustomers';
-$useCache = true; // Enables caching as per API guide
+$body = [
+    "DealerCode"    => "NY06AGDWUQ",
+    "Code"          => null,
+    "HasHpSds"      => null,
+    "FilterText"    => null,
+    "PageNumber"    => 1,
+    "PageRows"      => 2147483647,
+    "SortColumn"    => "Id",
+    "SortOrder"     => "Asc" // Note: must be 'Asc' or 'Desc'
+];
 
 require __DIR__ . '/../includes/api_bootstrap.php';
 
-// api_bootstrap.php handles:
-// - OAuth token (already functional per changelog)
-// - Redis caching (if enabled)
-// - cURL request to API_BASE_URL
-// - Emission of JSON response
+// api_bootstrap.php will:
+// - handle token loading and refresh
+// - invoke the API using $method, $path, $body
+// - emit the JSON response to client
+?>
