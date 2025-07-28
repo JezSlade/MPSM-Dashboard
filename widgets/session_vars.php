@@ -11,7 +11,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
 get_valid_mps_token();
 
-include_once dirname(__DIR__) . '/theme/theme_library.html';
+include_once dirname(__DIR__) . 'theme_library.html';
 
 // Apply inline style to override drag-priority wrappers
 echo "<div class='container p-4' style='user-select: text;'>";
