@@ -1,45 +1,49 @@
 <?php
-// PATCHED: session_vars.php v2.3 - Token Display and Global Exposure
+// PATCHED: session_vars.php v3.3 - Font Awesome Icons Applied
 // ------------------------------------------------------
-// • Displays runtime session variables, cookies, and token info.
-// • Ensures $token is globally accessible after loading.
+// • Accordion layout with FA icons instead of emoji
+// • Keeps neumorphic aesthetic and sorting intact
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ Include the global token handler
 require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
-global $token;
-$token = get_valid_mps_token();
+get_valid_mps_token();
 
-// Display Token Info
-if (is_array($token)) {
-    echo "<h3>🔐 MPS Token</h3>";
-    echo "<pre>" . print_r($token, true) . "</pre>";
-} else {
-    echo "<p style='color:red;'>⚠️ Token unavailable or invalid</p>";
-}
+include_once dirname(__DIR__) . '/theme/theme_library.html';
+echo "<div class='container p-4'>";
 
-// Display all runtime $_SESSION variables (excluding dashboard controls)
-$excluded_prefixes = ['dashboard_', 'widget_', 'ui_', 'layout_', 'grid_', 'settings'];
-$excluded_keys = ['active_widgets', 'widget_order', 'dashboard_config'];
+// 🔐 MPS Token Card
+echo "<div class='card shadow-xl mb-4 bg-dark text-light'>";
+    echo "<div class='card-header bg-gradient text-info fw-bold'>"
+        . "<i class='fa fa-key me-2'></i>MPS Token"
+        . "</div>";
+    echo "<div class='card-body'><pre class='text-success small'>";
+    print_r($GLOBALS['token'] ?? '⚠️ Token unavailable');
+    echo "</pre></div>";
+echo "</div>";
 
-function is_runtime_variable($key, $excluded_keys, $excluded_prefixes) {
-    if (in_array($key, $excluded_keys, true)) return false;
-    foreach ($excluded_prefixes as $prefix) {
-        if (stripos($key, $prefix) === 0) return false;
-    }
-    return true;
-}
-
-echo "<h3>📦 Session Variables</h3><pre>";
+// 📦 All Session Variables - Accordion Group
+ksort($_SESSION);
+echo "<div class='accordion' id='sessionAccordion'>";
+$index = 0;
 foreach ($_SESSION as $key => $value) {
-    if (is_runtime_variable($key, $excluded_keys, $excluded_prefixes)) {
-        echo "$key => ";
-        print_r($value);
-        echo "\n";
-    }
+    $collapseId = 'collapse' . $index++;
+    echo "<div class='accordion-item bg-glassmorph mb-2 rounded-3xl shadow'>";
+        echo "<h2 class='accordion-header' id='heading$collapseId'>";
+            echo "<button class='accordion-button collapsed bg-zinc-900 text-cyan-300 fw-semibold' type='button' data-bs-toggle='collapse' data-bs-target='#$collapseId' aria-expanded='false' aria-controls='$collapseId'>";
+            echo "<i class='fa fa-database me-2'></i>$key";
+            echo "</button>";
+        echo "</h2>";
+        echo "<div id='$collapseId' class='accordion-collapse collapse' aria-labelledby='heading$collapseId' data-bs-parent='#sessionAccordion'>";
+            echo "<div class='accordion-body bg-zinc-800 text-warning small rounded-bottom-3xl'>";
+                echo "<pre class='overflow-x-auto'>";
+                print_r($value);
+                echo "</pre>";
+            echo "</div>";
+        echo "</div>";
+    echo "</div>";
 }
-echo "</pre>";
+echo "</div></div>";
 ?>

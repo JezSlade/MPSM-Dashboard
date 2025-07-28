@@ -23,7 +23,7 @@ $body = [
     "PageNumber"    => 1,
     "PageRows"      => 2147483647,
     "SortColumn"    => "Id",
-    "SortOrder"     => "Asc" // Note: must be 'Asc' or 'Desc'
+    "SortOrder"     => 0
 ];
 
 require __DIR__ . '/../includes/api_bootstrap.php';

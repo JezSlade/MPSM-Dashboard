@@ -393,4 +393,37 @@ SDS Service Request count(14) :
     "Id": "afHJW0XD5DZDz9chXcpY5znmx5pwEnWGVne8QKhbV501"
   },
 ```
-# Next
+# Get Supplies:
+```
+{
+  "Url": "DealerSupply/List",
+  "Request": {
+    "ColorType": null,
+    "Language": null,
+    "Code": "NY06AGDWUQ",
+    "FilterText": null,
+    "PageNumber": 1,
+    "PageRows": 50,
+    "SortColumn": "Id",
+    "SortOrder": 0
+  },
+  "Method": "GET"
+}
+```
+```
+Supplies count(50) : 
+ [
+  {
+    "PartNumber": "841925RV",
+    "Description": "Black Toner",
+    "DescriptionLocalized": "Black Toner",
+    "SupplyType": 3,
+    "ColorType": 2,
+    "MaintenanceKitType": null,
+    "MaintenanceKitColor": null,
+    "Duration": 12500,
+    "IsInherited": true,
+    "Id": "rzzZz2QesdGJacyHQ5YnBw2"
+  }
+  ```
+  
