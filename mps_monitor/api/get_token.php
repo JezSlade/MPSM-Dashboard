@@ -3,7 +3,7 @@
 // ------------------------------------------------------
 // • Removed all logging suppression hacks.
 // • Leaves config as-is; token works correctly.
-
+include_once __DIR__ . '/includes/logger.php';
 declare(strict_types=1);
 session_start();
 

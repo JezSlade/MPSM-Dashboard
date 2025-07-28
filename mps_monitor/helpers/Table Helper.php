@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 // /includes/table_helper.php
-
+include_once __DIR__ . '/includes/logger.php';
 /**
  * Renders a searchable, sortable, pageable data table from any array of rows.
  * This function generates the necessary HTML and JavaScript for a dynamic table.

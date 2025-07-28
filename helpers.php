@@ -1,4 +1,5 @@
 <?php
+include_once __DIR__ . '/includes/logger.php';
 // helpers.php
 
 /**
