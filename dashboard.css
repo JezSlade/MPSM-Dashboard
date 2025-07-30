@@ -35,7 +35,10 @@
     --modal-border: var(--glass-border);
     --modal-header-bg: var(--bg-primary); /* Use primary background for modal headers/footers */
 }
-
+/* Enable text selection on all widgets */
+.widget, .widget * {
+  user-select: text !important;
+}
 /* Base Styles */
 body {
     font-family: 'Inter', sans-serif;
