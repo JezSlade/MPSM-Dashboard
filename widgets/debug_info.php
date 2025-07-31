@@ -40,11 +40,11 @@ if (!function_exists('append_debug_log')) {
 
 function render_debug_info_widget() {
     ob_start();
-    echo "<div class=\"compact-content\">";
+    echo "<div class=\"compact-content\" style=\"display:none;\">";
     echo "  <div class=\"text-muted\">Debug Info Stream (Compact)</div>";
     echo "</div>";
 
-    echo "<div class=\"expanded-content\" style=\"height:100%; overflow:auto; padding:10px;\">";
+    echo "<div class=\"expanded-content\" style=\"display:block; height:100%; overflow:auto; padding:10px;\">";
     echo "  <pre style=\"font-size:0.9em; color:#ccc;\">";
     if (file_exists(DEBUG_LOG_FILE)) {
         echo htmlspecialchars(file_get_contents(DEBUG_LOG_FILE));
