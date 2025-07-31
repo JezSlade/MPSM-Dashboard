@@ -38,13 +38,22 @@ if (!function_exists('append_debug_log')) {
     }
 }
 
-function get_debug_log_widget(): string {
-    $log = file_exists(DEBUG_LOG_FILE) ? file_get_contents(DEBUG_LOG_FILE) : '';
-    $html  = "<div style=\"height:100%; overflow:auto; padding:10px;\">";
-    $html .= "<pre style=\"font-size:0.9em; color:#ccc;\">";
-    $html .= htmlspecialchars($log);
-    $html .= "</pre></div>";
-    return $html;
+function render_debug_info_widget() {
+    ob_start();
+    echo "<div class=\"compact-content\">";
+    echo "  <div class=\"text-muted\">Debug Info Stream (Compact)</div>";
+    echo "</div>";
+
+    echo "<div class=\"expanded-content\" style=\"height:100%; overflow:auto; padding:10px;\">";
+    echo "  <pre style=\"font-size:0.9em; color:#ccc;\">";
+    if (file_exists(DEBUG_LOG_FILE)) {
+        echo htmlspecialchars(file_get_contents(DEBUG_LOG_FILE));
+    } else {
+        echo "No debug log found.";
+    }
+    echo "  </pre>";
+    echo "</div>";
+    return ob_get_clean();
 }
 ?>
-<?= get_debug_log_widget() ?>
+<?= render_debug_info_widget() ?>
