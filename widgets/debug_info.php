@@ -17,8 +17,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-define('DEBUG_LOG_FILE', __DIR__ . '/debug_log.txt');
-define('MAX_LOG_LINES', 100);
+if (!defined('DEBUG_LOG_FILE')) {
+    define('DEBUG_LOG_FILE', __DIR__ . '/debug_log.txt');
+}
+if (!defined('MAX_LOG_LINES')) {
+    define('MAX_LOG_LINES', 100);
+}
 
 if (!function_exists('append_debug_log')) {
     function append_debug_log(string $message, string $level = 'INFO') {
