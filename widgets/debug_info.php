@@ -49,4 +49,3 @@ function get_debug_log_content(): string {
 echo "<div style='height:100%; overflow:auto; padding:10px;'>";
 echo "<pre style='font-size:0.9em; color:#ccc;'>" . htmlspecialchars(get_debug_log_content()) . "</pre>";
 echo "</div>";
-fvads
