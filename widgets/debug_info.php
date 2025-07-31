@@ -17,43 +17,30 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!defined('DEBUG_LOG_FILE')) {
-    define('DEBUG_LOG_FILE', __DIR__ . '/debug_log.txt');
-}
-if (!defined('MAX_LOG_LINES')) {
-    define('MAX_LOG_LINES', 100);
-}
-
-if (!function_exists('append_debug_log')) {
-    function append_debug_log(string $message, string $level = 'INFO') {
-        $timestamp = date('Y-m-d H:i:s');
-        $log_entry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
-        file_put_contents(DEBUG_LOG_FILE, $log_entry, FILE_APPEND | LOCK_EX);
-
-        $lines = file(DEBUG_LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if (count($lines) > MAX_LOG_LINES * 1.2) {
-            $lines = array_slice($lines, -MAX_LOG_LINES);
-            file_put_contents(DEBUG_LOG_FILE, implode(PHP_EOL, $lines) . PHP_EOL, LOCK_EX);
-        }
-    }
-}
+require_once __DIR__ . '/../includes/logger.php';
 
 function render_debug_info_widget() {
+    $log_file = __DIR__ . '/../logs/debug.log';
     ob_start();
+
     echo "<div class=\"compact-content\" style=\"display:none;\">";
     echo "  <div class=\"text-muted\">Debug Info Stream (Compact)</div>";
     echo "</div>";
 
     echo "<div class=\"expanded-content\" style=\"display:block; height:100%; overflow:auto; padding:10px;\">";
     echo "  <pre style=\"font-size:0.9em; color:#ccc;\">";
-    if (file_exists(DEBUG_LOG_FILE)) {
-        echo htmlspecialchars(file_get_contents(DEBUG_LOG_FILE));
+
+    if (file_exists($log_file) && strpos($log_file, '.php') === false) {
+        echo htmlspecialchars(file_get_contents($log_file));
     } else {
-        echo "No debug log found.";
+        echo "No debug log found or file path invalid.";
     }
+
     echo "  </pre>";
     echo "</div>";
+
     return ob_get_clean();
 }
+
 ?>
 <?= render_debug_info_widget() ?>
