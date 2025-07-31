@@ -38,15 +38,13 @@ if (!function_exists('append_debug_log')) {
     }
 }
 
-function get_debug_log_content(): string {
-    if (!file_exists(DEBUG_LOG_FILE)) {
-        return "";
-    }
-    return file_get_contents(DEBUG_LOG_FILE);
+function get_debug_log_widget(): string {
+    $log = file_exists(DEBUG_LOG_FILE) ? file_get_contents(DEBUG_LOG_FILE) : '';
+    $html  = "<div style=\"height:100%; overflow:auto; padding:10px;\">";
+    $html .= "<pre style=\"font-size:0.9em; color:#ccc;\">";
+    $html .= htmlspecialchars($log);
+    $html .= "</pre></div>";
+    return $html;
 }
-
-echo "<div style=\"height:100%; overflow:auto; padding:10px;\">";
-echo "<pre style=\"font-size:0.9em; color:#ccc;\">";
-echo htmlspecialchars(get_debug_log_content());
-echo "</pre>";
-echo "</div>";
+?>
+<?= get_debug_log_widget() ?>
