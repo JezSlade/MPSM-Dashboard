@@ -55,5 +55,5 @@ function render_debug_info_widget() {
     echo "</div>";
     return ob_get_clean();
 }
-
-echo render_debug_info_widget();
+?>
+<?= render_debug_info_widget() ?>
