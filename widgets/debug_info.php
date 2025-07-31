@@ -44,3 +44,9 @@ function get_debug_log_content(): string {
     }
     return file_get_contents(DEBUG_LOG_FILE);
 }
+
+// Render the log content inside a scrollable <pre>
+echo "<div style='height:100%; overflow:auto; padding:10px;'>";
+echo "<pre style='font-size:0.9em; color:#ccc;'>" . htmlspecialchars(get_debug_log_content()) . "</pre>";
+echo "</div>";
+fvads
