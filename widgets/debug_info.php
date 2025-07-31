@@ -16,6 +16,7 @@ $_widget_config = [
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+date_default_timezone_set('America/New_York');
 
 require_once __DIR__ . '/../includes/logger.php';
 
