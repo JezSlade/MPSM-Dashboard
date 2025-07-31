@@ -20,85 +20,23 @@ if (session_status() === PHP_SESSION_NONE) {
 define('DEBUG_LOG_FILE', __DIR__ . '/debug_log.txt');
 define('MAX_LOG_LINES', 100);
 
-function append_debug_log(string $message, string $level = 'INFO') {
-    $timestamp = date('Y-m-d H:i:s');
-    $log_entry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
-    file_put_contents(DEBUG_LOG_FILE, $log_entry, FILE_APPEND | LOCK_EX);
+if (!function_exists('append_debug_log')) {
+    function append_debug_log(string $message, string $level = 'INFO') {
+        $timestamp = date('Y-m-d H:i:s');
+        $log_entry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
+        file_put_contents(DEBUG_LOG_FILE, $log_entry, FILE_APPEND | LOCK_EX);
 
-    $lines = file(DEBUG_LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    if (count($lines) > MAX_LOG_LINES * 1.2) {
-        $lines = array_slice($lines, -MAX_LOG_LINES);
-        file_put_contents(DEBUG_LOG_FILE, implode(PHP_EOL, $lines) . PHP_EOL, LOCK_EX);
+        $lines = file(DEBUG_LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (count($lines) > MAX_LOG_LINES * 1.2) {
+            $lines = array_slice($lines, -MAX_LOG_LINES);
+            file_put_contents(DEBUG_LOG_FILE, implode(PHP_EOL, $lines) . PHP_EOL, LOCK_EX);
+        }
     }
 }
 
 function get_debug_log_content(): string {
     if (!file_exists(DEBUG_LOG_FILE)) {
-        return '<p><em>Debug log file not found.</em></p>';
+        return "";
     }
-    $lines = file(DEBUG_LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $lines = array_reverse($lines);
-    $display_lines = array_slice($lines, 0, MAX_LOG_LINES);
-
-    if (empty($display_lines)) {
-        return '<p><em>Debug log is empty.</em></p>';
-    }
-
-    $output = '<pre style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); word-break: break-all; white-space: pre-wrap; max-height: 240px; overflow-y: auto;">';
-    foreach ($display_lines as $line) {
-        if (strpos($line, '[ERROR]') !== false) {
-            $output .= '<span style="color: var(--danger);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
-        } elseif (strpos($line, '[WARN]') !== false) {
-            $output .= '<span style="color: var(--warning);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
-        } elseif (strpos($line, '[INFO]') !== false) {
-            $output .= '<span style="color: var(--primary);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
-        } elseif (strpos($line, '[DEBUG]') !== false) {
-            $output .= '<span style="color: var(--text-secondary);">' . htmlspecialchars($line) . '</span>' . PHP_EOL;
-        } else {
-            $output .= htmlspecialchars($line) . PHP_EOL;
-        }
-    }
-    $output .= '</pre>';
-    return $output;
+    return file_get_contents(DEBUG_LOG_FILE);
 }
-
-$time_content = '<h4 style="color: var(--accent); margin-top: 10px; margin-bottom: 5px;">Current Time:</h4>';
-$time_content .= '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">';
-$time_content .= htmlspecialchars(date('Y-m-d H:i:s'));
-$time_content .= '</pre>';
-
-$session_content = '<h4 style="color: var(--accent); margin-top: 10px; margin-bottom: 5px;">$_SESSION Data:</h4>';
-$session_content .= '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">';
-if (isset($_SESSION) && !empty($_SESSION)) {
-    $display_session = $_SESSION;
-    unset($display_session['PHPSESSID']);
-    $session_content .= htmlspecialchars(print_r($display_session, true));
-} else {
-    $session_content .= 'Session is empty or not started.';
-}
-$session_content .= '</pre>';
-
-$post_content = '<h4 style="color: var(--accent); margin-top: 20px; margin-bottom: 5px;">$_POST Data (Last Request):</h4>';
-$post_content .= '<pre style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">';
-if (isset($_POST) && !empty($_POST)) {
-    $post_content .= htmlspecialchars(print_r($_POST, true));
-} else {
-    $post_content .= 'No POST data received in the last request.';
-}
-$post_content .= '</pre>';
-
-$debug_log_stream_content = '<h4 style="color: var(--accent); margin-top: 20px; margin-bottom: 5px;">Debug Log Stream (Newest First):</h4>';
-$debug_log_stream_content .= get_debug_log_content();
-?>
-<div style="font-family: monospace; font-size: 12px; max-height: 100%; overflow-y: auto; padding-right: 10px; min-height: 100px;">
-  <div class="compact-content">
-    <?= $time_content ?>
-    <?= $debug_log_stream_content ?>
-  </div>
-  <div class="expanded-content">
-    <?= $time_content ?>
-    <?= $debug_log_stream_content ?>
-    <?= $session_content ?>
-    <?= $post_content ?>
-  </div>
-</div>
