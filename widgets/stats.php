@@ -1,49 +1,62 @@
 <?php
 // widgets/stats.php
 
-// Widget Name: Visitor Stats
-// Widget Icon: fas fa-users
+// Widget Name: Sales & Revenue
+// Widget Icon: fas fa-chart-line
 // Widget Width: 2.0
-// Widget Height: 2.0
+// Widget Height: 1.0
 
+// The $_widget_config array is no longer directly used for metadata extraction
+// by discover_widgets(). It's kept here for backward compatibility or other
+// internal widget logic if needed. The metadata is now parsed from comments.
 $_widget_config = [
-    'name' => 'Visitor Stats',
-    'icon' => 'users',
+    'name' => 'Sales & Revenue',
+    'icon' => 'chart-line', // This 'chart-line' will be overridden by the comment parsing
     'width' => 2,
-    'height' => 2
+    'height' => 1
 ];
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-function render_stats_widget() {
-    $logPath = __DIR__ . '/../logs/uuid_visits.log';
-    $unique = 0;
-    $total = 0;
-    if (file_exists($logPath)) {
-        $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $uuids = [];
-        foreach ($lines as $line) {
-            [$uuid] = explode('|', $line);
-            $uuids[$uuid] = true;
-            $total++;
-        }
-        $unique = count($uuids);
-    }
-
-    ob_start();
-    echo "<div class=\"compact-content\" style=\"display:none;\">";
-    echo "  <div class=\"text-muted\">Unique: " . htmlspecialchars((string)$unique) . ", Total: " . htmlspecialchars((string)$total) . "</div>";
-    echo "</div>";
-
-    echo "<div class=\"expanded-content\" style=\"display:block;\">";
-    echo "  <h3>Visitor Stats</h3>";
-    echo "  <p><strong>Unique Visitors:</strong> " . htmlspecialchars((string)$unique) . "</p>";
-    echo "  <p><strong>Total Visits:</strong> " . htmlspecialchars((string)$total) . "</p>";
-    echo "</div>";
-    return ob_get_clean();
-}
-
 ?>
-<?php echo render_stats_widget(); ?>
+<div class="compact-content">
+    <div style="text-align: center; padding: 10px;">
+        <h4 style="color: var(--accent); margin-bottom: 5px;">Total Sales</h4>
+        <p style="font-size: 2em; font-weight: bold; color: var(--text-primary);">$12,345</p>
+        <p style="font-size: 0.9em; color: var(--text-secondary);">+5% from last month</p>
+    </div>
+</div>
+<div class="expanded-content">
+    <h4 style="color: var(--accent); margin-bottom: 15px;">Detailed Sales & Revenue</h4>
+    <p>This section would display a more detailed chart or table of sales data.</p>
+    <p>Example: Monthly sales trends, top-selling products, revenue breakdown.</p>
+    <canvas id="salesChart" width="400" height="200"></canvas>
+    <script>
+        // Basic Chart.js example (requires Chart.js library to be loaded globally)
+        // For production, consider loading Chart.js via a module or directly in index.php
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('salesChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Sales',
+                            data: [1200, 1900, 3000, 5000, 2300, 3000],
+                            backgroundColor: 'rgba(0, 188, 212, 0.6)',
+                            borderColor: 'rgba(0, 188, 212, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</div>
