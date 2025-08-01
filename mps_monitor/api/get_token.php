@@ -1,4 +1,7 @@
 <?php
+// USAGE: This script is auto-called by get_valid_mps_token() for refreshing tokens.
+// Do not call this directly. Use global_token_handler.php instead.
+
 // PATCHED: get_token.php v2.6 - Clean Final Version
 // ------------------------------------------------------
 // • Removed all logging suppression hacks.
