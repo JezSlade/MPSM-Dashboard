@@ -21,6 +21,14 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // A date in the past to ensur
 // Sessions are used to store user-specific data across multiple page requests.
 session_start();
 
+// PHP Debugging Lines - START
+// Enable all error reporting for development purposes.
+// This helps in identifying and debugging issues quickly.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
+
 // Include core configuration and helper functions/classes.
 // These files provide essential settings, utility functions,
 // and the main classes for managing the dashboard's state and file operations.

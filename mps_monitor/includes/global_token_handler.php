@@ -9,6 +9,10 @@
 // • Ensures token refreshes before expiry
 // • Centralized logic for all API calls
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // PHP Debugging Lines - START
 // Enable all error reporting for development purposes.
 // This helps in identifying and debugging issues quickly.
@@ -16,10 +20,6 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 function get_valid_mps_token(): array {
     global $token;
