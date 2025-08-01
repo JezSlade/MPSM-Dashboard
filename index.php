@@ -736,6 +736,22 @@ global $available_widgets; // Ensure $available_widgets from config.php is acces
 
     <script type="module" src="src/js/main.js"></script>
     <script src="version.js"></script>
+<!-- Visitor Stats -->
+<div id="visitor-stats" style="padding: 10px; font-size: 0.9em; opacity: 0.7;">
+    Loading visitor stats...
+</div>
+<script>
+fetch('track_counter.php')
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('visitor-stats').innerText =
+      `Total visits: ${data.total} | Unique users: ${data.unique}`;
+  })
+  .catch(err => {
+    document.getElementById('visitor-stats').innerText = 'Visitor stats unavailable';
+  });
+</script>
+
 </body>
 </html>
 
