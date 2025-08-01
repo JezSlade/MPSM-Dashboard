@@ -18,7 +18,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
-
+/*
 header('Content-Type: application/json; charset=utf-8');
 
 $configPath = dirname(__DIR__) . '/config/mps_config.php';
