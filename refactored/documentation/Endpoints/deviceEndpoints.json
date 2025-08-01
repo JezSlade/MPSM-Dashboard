@@ -1,0 +1,1548 @@
+  {
+     "/Device/Get": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns a device by request parameters",
+        "operationId": "Device/Get",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetByIdRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetDeviceAdditionalInfos": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/GetDeviceAdditionalInfos",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ListResultResponse[DeviceAdditionalInfoDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetLfpCounters": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/GetLfpCounters",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ListResultResponse[DeviceLfpCounterDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetDeviceGapInfos": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/GetDeviceGapInfos",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ListResultResponse[DeviceGapInfoDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetSuppliesDetailsSummary": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Get toners and photoconductors forecast details for a specific device",
+        "operationId": "Device/GetSuppliesDetailsSummary",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceSuppliesSummaryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetSuppliesDetails": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns a device by request parameters",
+        "operationId": "Device/GetSuppliesDetails",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceSuppliesDetailsDto]"
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/Device/GetSuppliesDetailsInfo": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Gets current forecast and history consumable details for a specific device, consumable and consumable color type",
+        "operationId": "Device/GetSuppliesDetailsInfo",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "supplyType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ManteinanceKit",
+              "PhotoConductor",
+              "Toner"
+            ]
+          },
+          {
+            "name": "colorType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "NotAvailable",
+              "Black",
+              "Cyan",
+              "Magenta",
+              "Yellow",
+              "Black1",
+              "Black2",
+              "Black3"
+            ]
+          },
+          {
+            "name": "idMaintenanceKitType",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "idMaintenanceKitColor",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "idMaintenanceKitDescription",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceSuppliesDetailsInfoDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetZebraSuppliesDetailsSummary": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/GetZebraSuppliesDetailsSummary",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[ZebraDeviceSuppliesSummaryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Offline/Get": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns an offline device by request parameters",
+        "operationId": "Device/Offline/Get",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetByIdRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Offline/Create": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns an offline device by request parameters",
+        "operationId": "Device/Offline/Create",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OfflineDeviceRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/GetDetailedInformations": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns  device detailed Informations by request parameters",
+        "operationId": "Device/GetDetailedInformations",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDeviceDetailsRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDetailsDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/List": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation gets lists of devices paged and filtered",
+        "operationId": "Device/List",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDevicesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[DeviceListDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/MaintenanceAlerts/List": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns a list of maintenanceAlert device.",
+        "operationId": "Device/MaintenanceAlerts/List",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "idInstalledProduct",
+            "in": "query",
+            "description": "Gets or sets the installedproduct",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filterByOpened",
+            "in": "query",
+            "description": "Gets or sets the FilterByOpened",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "filterByClosed",
+            "in": "query",
+            "description": "Gets or sets the FilterByClosed",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "filterByPanelMessageAlertConfiguration",
+            "in": "query",
+            "description": "Gets or sets the FilterByPanelMessageAlertConfiguration",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "filterText",
+            "in": "query",
+            "description": "Gets or sets the filter text.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "description": "Gets or sets the page number.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageRows",
+            "in": "query",
+            "description": "Gets or sets the page rows.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "description": "Gets or sets the sort column.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "description": "Gets or sets the sort order.",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "Asc",
+              "Desc"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[MaintenanceAlertDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Offline/List": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation gets lists of offline devices paged and filtered",
+        "operationId": "Device/Offline/List",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDevicesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[DeviceListDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ExplorerDataAffinities/List": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns a list of DeviceExplorerDataAffinities filtered by idDevice",
+        "operationId": "Device/ExplorerDataAffinities/List",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ListResultResponse[DeviceExplorerDataAffinityDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListMeterReads": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation gets lists of meter reads daily from eXplorer",
+        "operationId": "Device/ListMeterReads",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDevicesMeterReadsRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[DeviceListMeterReadsDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListLevelsDataHistory": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/ListLevelsDataHistory",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetLevelsDataHistoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ListResultResponse[LevelsDataHistoryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListSuppliesDataHistory": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/ListSuppliesDataHistory",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDeviceDataHistoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[SuppliesDataHistoryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListMetersDataHistory": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/ListMetersDataHistory",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDeviceDataHistoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[MetersDataHistoryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListMaintenanceKitMessagesDataHistory": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/ListMaintenanceKitMessagesDataHistory",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDeviceDataHistoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[MaintenanceKitMessagesDataHistoryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListErrorsMessagesDataHistory": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/ListErrorsMessagesDataHistory",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDeviceDataHistoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[ErrorsMessagesDataHistoryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ListAttributesDataHistory": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "operationId": "Device/ListAttributesDataHistory",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetDeviceDataHistoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[AttributesDataHistoryDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Update": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Update Device",
+        "operationId": "Device/Update",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateDeviceRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/UpdateDeviceSerialNumber": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Update Device Serial Number",
+        "operationId": "Device/UpdateDeviceSerialNumber",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateDeviceSerialNumberRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/UpdateSupplySetAssociation": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Associate the device with a project linked to a DealerSupplySet",
+        "operationId": "Device/UpdateSupplySetAssociation",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateDeviceSupplySetAssociationRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Delete": {
+      "delete": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation deletes a device",
+        "operationId": "Device/Delete",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Gets or sets the identifier.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/ResetWorkflowMode": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation reset the workflow mode of a device",
+        "operationId": "Device/ResetWorkflowMode",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetByIdRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/AssignOfficeToDevicesByDeviceId": {
+      "put": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Assign an office to some devices by  DeviceId",
+        "operationId": "Device/AssignOfficeToDevicesByDeviceId",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "The request.",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AssignOfficeToDevicesByDeviceIdRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[AssignOfficeToDevicesRejectedDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/AssignOfficeToDevicesBySerialNumber": {
+      "put": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Assign an office to some devices by  SerialNumber",
+        "operationId": "Device/AssignOfficeToDevicesBySerialNumber",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "The request.",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AssignOfficeToDevicesBySerialNumberRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[AssignOfficeToDevicesRejectedDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/UpdateDevicesBySerialNumbers": {
+      "put": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Update Devices By Serial Numbers",
+        "operationId": "Device/UpdateDevicesBySerialNumbers",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "The request.",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateDevicesBySerialNumbersRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[UpdateDevicesBySerialNumbersRejectedDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Deleted/Restore": {
+      "put": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation restore a device",
+        "operationId": "Device/Deleted/Restore",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetByIdRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/BaseResponse"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Deleted/ListByDealer": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation gets lists of devices paged and filtered by dealer",
+        "operationId": "Device/Deleted/ListByDealer",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "dealerCode",
+            "in": "query",
+            "description": "Gets or sets the dealer code.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filterText",
+            "in": "query",
+            "description": "Gets or sets the filter text.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "description": "Gets or sets the page number.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageRows",
+            "in": "query",
+            "description": "Gets or sets the page rows.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "description": "Gets or sets the sort column.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "description": "Gets or sets the sort order.",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "Asc",
+              "Desc"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[InstalledProductDeletedDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/Deleted/List": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "This operation gets lists of devices paged and filtered",
+        "operationId": "Device/Deleted/List",
+        "consumes": [],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+        "parameters": [
+          {
+            "name": "customerCode",
+            "in": "query",
+            "description": "Gets or sets the customer code.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "dealerCode",
+            "in": "query",
+            "description": "Gets or sets the dealer code.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filterText",
+            "in": "query",
+            "description": "Gets or sets the filter text.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "description": "Gets or sets the page number.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageRows",
+            "in": "query",
+            "description": "Gets or sets the page rows.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "description": "Gets or sets the sort column.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "description": "Gets or sets the sort order.",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "Asc",
+              "Desc"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PagedResultResponse[InstalledProductDeletedDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/Device/SharpFSS/Create": {
+      "post": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Returns a new SharpFSS Offline device by request parameters",
+        "operationId": "Device/SharpFSS/Create",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml",
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "text/json",
+          "application/xml",
+          "text/xml"
+        ],
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SharpFSSDeviceRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SingleResultResponse[DeviceDto]"
+            }
+          }
+        },
+        "deprecated": false
+      }
+    },
