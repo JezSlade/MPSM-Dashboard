@@ -7,6 +7,9 @@
 // • Removed all logging suppression hacks.
 // • Leaves config as-is; token works correctly.
 
+printf(format: "This is a clean final version of get_token.php.\n");
+
+/*
 include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 declare(strict_types=1);
 session_start();
@@ -18,7 +21,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // PHP Debugging Lines - END
-/*
+
 header('Content-Type: application/json; charset=utf-8');
 
 $configPath = dirname(__DIR__) . '/config/mps_config.php';
