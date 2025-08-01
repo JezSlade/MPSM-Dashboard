@@ -6,6 +6,15 @@
 // ------------------------------------------------------
 // • Removed all logging suppression hacks.
 // • Leaves config as-is; token works correctly.
+
+// PHP Debugging Lines - START
+// Enable all error reporting for development purposes.
+// This helps in identifying and debugging issues quickly.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
+
 include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 declare(strict_types=1);
 session_start();
