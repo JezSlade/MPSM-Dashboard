@@ -7,9 +7,6 @@
 // • Removed all logging suppression hacks.
 // • Leaves config as-is; token works correctly.
 
-printf(format: "This is a clean final version of get_token.php.\n");
-
-/*
 include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 declare(strict_types=1);
 session_start();

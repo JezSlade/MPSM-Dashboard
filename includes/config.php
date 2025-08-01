@@ -1,6 +1,14 @@
 <?php
 // config.php
 
+// PHP Debugging Lines - START
+// Enable all error reporting for development purposes.
+// This helps in identifying and debugging issues quickly.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
+
 // Define the path to the dashboard settings file
 if (!defined('DASHBOARD_SETTINGS_FILE')) {
     define('DASHBOARD_SETTINGS_FILE', __DIR__ . '/dashboard_settings.json');
