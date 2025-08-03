@@ -1,5 +1,14 @@
 <?php
 
+require_once __DIR__ . '/../includes/global_token_handler.php';
+
+$tokenData = get_valid_mps_token();
+$accessToken = $tokenData['access_token'] ?? null;
+
+if (!$accessToken) {
+    echo json_encode(['error' => 'Unable to retrieve valid access token.']);
+    exit;
+}
 // Load .env manually
 $dotenvPath = __DIR__ . '/../../../.env';
 if (file_exists($dotenvPath)) {
