@@ -9,7 +9,9 @@ error_reporting(E_ALL);
 // PHP Debugging Lines - END
 
 include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
-// helpers.php
+
+// 🔐 Token Initialization for all modules
+require_once __DIR__ . '/mps_monitor/includes/global_token_handler.php';
 
 /**
  * Renders the content of a specific widget file.
