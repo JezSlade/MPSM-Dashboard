@@ -1,58 +1,46 @@
 <?php
 
-require_once __DIR__ . '/../config/mps_config.php';
-require_once __DIR__ . '/../helpers/CacheHelper.php';
-
-$curl = curl_init();
-
-$payload = http_build_query([
-  'grant_type'    => 'client_credentials',
-  'client_id'     => CLIENT_ID,
-  'client_secret' => CLIENT_SECRET,
-  'scope'         => $_ENV['SCOPE'] ?? 'account'
-]);
-
-$logFile = '/tmp/token_trace.log';
-file_put_contents($logFile, "\n=== TOKEN REQUEST TRACE ===\n", FILE_APPEND);
-file_put_contents($logFile, "URL: " . API_BASE_URL . "/Token\n", FILE_APPEND);
-file_put_contents($logFile, "Payload: $payload\n", FILE_APPEND);
-file_put_contents($logFile, "ENV: " . json_encode($_ENV) . "\n", FILE_APPEND);
-
-curl_setopt_array($curl, [
-  CURLOPT_URL            => API_BASE_URL . '/Token',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING       => '',
-  CURLOPT_MAXREDIRS      => 10,
-  CURLOPT_TIMEOUT        => 30,
-  CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST  => 'POST',
-  CURLOPT_POSTFIELDS     => $payload,
-  CURLOPT_HTTPHEADER     => [
-    'Content-Type: application/x-www-form-urlencoded'
-  ],
-]);
-
-$response = curl_exec($curl);
-$err      = curl_error($curl);
-$httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
-curl_close($curl);
-
-file_put_contents($logFile, "HTTP Code: $httpcode\n", FILE_APPEND);
-file_put_contents($logFile, "Curl Error: $err\n", FILE_APPEND);
-file_put_contents($logFile, "Response: $response\n", FILE_APPEND);
-
-if ($err) {
-  http_response_code(500);
-  echo json_encode(['error' => 'Curl Error', 'message' => $err]);
-  exit;
+// Load .env manually
+$dotenvPath = __DIR__ . '/../../../.env';
+if (file_exists($dotenvPath)) {
+  $lines = file($dotenvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+  foreach ($lines as $line) {
+    if (strpos(trim($line), '#') === 0) continue;
+    list($name, $value) = explode('=', $line, 2);
+    $_ENV[trim($name)] = trim($value);
+  }
 }
 
-if ($httpcode >= 400) {
-  http_response_code($httpcode);
-  echo json_encode(['error' => 'API Error', 'status' => $httpcode, 'response' => $response]);
-  exit;
+// Define expected constants
+if (!defined('API_BASE_URL')) {
+  define('API_BASE_URL', $_ENV['API_BASE_URL'] ?? '');
+}
+if (!defined('USERNAME')) {
+  define('USERNAME', $_ENV['USERNAME'] ?? '');
+}
+if (!defined('PASSWORD')) {
+  define('PASSWORD', $_ENV['PASSWORD'] ?? '');
+}
+if (!defined('CLIENT_ID')) {
+  define('CLIENT_ID', $_ENV['CLIENT_ID'] ?? '');
+}
+if (!defined('CLIENT_SECRET')) {
+  define('CLIENT_SECRET', $_ENV['CLIENT_SECRET'] ?? '');
 }
 
-header('Content-Type: application/json');
-echo $response;
+// Validate critical values
+$missing = [];
+if (empty(API_BASE_URL)) $missing[] = 'API_BASE_URL';
+if (empty(CLIENT_ID)) $missing[] = 'CLIENT_ID';
+if (empty(CLIENT_SECRET)) $missing[] = 'CLIENT_SECRET';
+
+if (!empty($missing)) {
+  if (!headers_sent()) {
+    http_response_code(500);
+  }
+  echo json_encode([
+    'error' => 'Missing required configuration values.',
+    'missing' => $missing
+  ]);
+  exit;
+}
