@@ -6,9 +6,10 @@ require_once __DIR__ . '/../helpers/CacheHelper.php';
 $curl = curl_init();
 
 $payload = http_build_query([
-  'grant_type' => 'password',
-  'username'   => USERNAME,
-  'password'   => PASSWORD,
+  'grant_type'    => 'client_credentials',
+  'client_id'     => CLIENT_ID,
+  'client_secret' => CLIENT_SECRET,
+  'scope'         => $_ENV['SCOPE'] ?? 'account'
 ]);
 
 $logFile = '/tmp/token_trace.log';
