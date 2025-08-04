@@ -6,17 +6,21 @@ function getAccessToken() {
   $curl = curl_init();
 
   $payload = http_build_query([
-    'grant_type' => 'password',
-    'username'   => USERNAME,
-    'password'   => PASSWORD,
+    'client_id'     => CLIENT_ID,
+    'client_secret' => CLIENT_SECRET,
+    'grant_type'    => 'password',
+    'username'      => USERNAME,
+    'password'      => PASSWORD,
+    'scope'         => 'account'
   ]);
 
   curl_setopt_array($curl, [
-    CURLOPT_URL            => API_BASE_URL . '/Token',
+    CURLOPT_URL            => API_BASE_URL . '/token',
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_ENCODING       => '',
     CURLOPT_MAXREDIRS      => 10,
     CURLOPT_TIMEOUT        => 30,
+    CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
     CURLOPT_CUSTOMREQUEST  => 'POST',
     CURLOPT_POSTFIELDS     => $payload,
