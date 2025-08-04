@@ -18,6 +18,11 @@ try {
     echo '<div class="widget-body"><p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p></div>';
     return;
 }
+echo "<pre>";
+print_r($customers);
+echo "</pre>";
+exit;
+
 ?>
 <div class="widget-body">
     <h3 class="widget-section-title">Select Customers</h3>
