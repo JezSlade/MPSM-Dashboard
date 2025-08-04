@@ -7,17 +7,21 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../bootstrap.php';
 
-$customers = [];
-try {
-    $customers = ApiCaller::request('POST', '/Customer/GetCustomers');
+$customers = ApiCaller::request('POST', '/Customer/GetCustomers', [
+    'Url' => 'Customer/GetCustomers',
+    'Request' => [
+        'DealerCode' => 'NY06AGDWUQ',
+        'Code' => null,
+        'HasHpSds' => null,
+        'FilterText' => null,
+        'PageNumber' => 1,
+        'PageRows' => 2147483647,
+        'SortColumn' => 'Id',
+        'SortOrder' => 0
+    ],
+    'Method' => 'POST'
+]);
 
-    if (!is_array($customers)) {
-        throw new Exception('Unexpected API response structure');
-    }
-} catch (Throwable $e) {
-    echo '<div class="widget-body"><p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p></div>';
-    return;
-}
 echo "<pre>";
 print_r($customers);
 echo "</pre>";
