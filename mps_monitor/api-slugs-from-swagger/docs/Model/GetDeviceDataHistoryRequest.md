@@ -1,0 +1,17 @@
+# # GetDeviceDataHistoryRequest
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**device_id** | **string** | Gets or sets device Id. |
+**from_date** | **\DateTime** | Gets or sets the date from. |
+**to_date** | **\DateTime** | Gets or sets the date to. |
+**show_no_changes** | **bool** | Gets or sets a value indicating whether [show no changes]. | [optional]
+**filter_text** | **string** | Gets or sets the filter text. | [optional]
+**page_number** | **int** | Gets or sets the page number. |
+**page_rows** | **int** | Gets or sets the page rows. |
+**sort_column** | **string** | Gets or sets the sort column. |
+**sort_order** | **string** | Gets or sets the sort order. |
+
+[[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

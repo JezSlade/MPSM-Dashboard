@@ -1,0 +1,13 @@
+# # SupportSparePartDto
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**code** | **string** |  | [optional]
+**description** | **string** |  | [optional]
+**dealer_id** | **string** |  | [optional]
+**is_deleted** | **bool** |  | [optional]
+**id** | **string** | Gets or sets the identifier. | [optional]
+
+[[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

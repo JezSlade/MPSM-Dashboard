@@ -1,0 +1,48 @@
+# # DealerPreferencesDto
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**preferences_map** | **string[]** | Gets or sets the preferences map. | [optional]
+**has_supply_list** | **bool** | Gets a value indicating whether this instance has supply list. | [optional] [readonly]
+**has_manage_ink** | **bool** | Gets a value indicating whether this instance has manage ink. | [optional] [readonly]
+**has_customer_contract** | **bool** | Gets a value indicating whether this instance has customer contract. | [optional] [readonly]
+**has_customer_office** | **bool** | Gets a value indicating whether this instance has customer office. | [optional] [readonly]
+**has_customer_project** | **bool** | Gets a value indicating whether this instance has customer project. | [optional] [readonly]
+**has_customer_cost_center** | **bool** | Gets a value indicating whether this instance has customer cost center. | [optional] [readonly]
+**has_customer_report** | **bool** | Gets a value indicating whether this instance has customer report. | [optional] [readonly]
+**has_alert_management** | **bool** | Gets a value indicating whether this instance has alert management. | [optional] [readonly]
+**has_notification_template_base** | **bool** | Gets a value indicating whether this instance has notification template base. | [optional] [readonly]
+**has_notification_mode_callback** | **bool** | Gets a value indicating whether this instance has notification mode callback. | [optional] [readonly]
+**has_device_update_with_managed_flag** | **bool** | Gets a value indicating whether this instance has device update with managed flag. | [optional] [readonly]
+**has_detailed_counters_tags** | **bool** | Gets a value indicating whether this instance has detailed counters tags. | [optional] [readonly]
+**has_project_batch_delivery** | **bool** | Gets a value indicating whether this instance has project batch delivery. | [optional] [readonly]
+**has_customer_batch_delivery** | **bool** | Gets a value indicating whether this instance has customer batch delivery. | [optional] [readonly]
+**has_customer_bill_book** | **bool** | Gets a value indicating whether this instance has customer bill book. | [optional] [readonly]
+**has_customer_project_volumes** | **bool** | Gets a value indicating whether this instance has customer project volumes. | [optional] [readonly]
+**has_logistic_integration** | **bool** | Gets a value indicating whether this instance has logistic integration. | [optional] [readonly]
+**has_erp_integration** | **bool** | Gets a value indicating whether this instance has erp integration. | [optional] [readonly]
+**has_white_label** | **bool** | Gets a value indicating whether this instance has white label. | [optional] [readonly]
+**enable_pages_days_limits** | **bool** | Gets a value indicating whether [enable pages days limits]. | [optional] [readonly]
+**has_new_alert_limits** | **bool** | Gets a value indicating whether this instance has new alert limits. | [optional] [readonly]
+**has_device_detail_widget** | **bool** | Gets a value indicating whether this instance has device detail widget. | [optional] [readonly]
+**has_free_search_offline_devices** | **bool** | Gets a value indicating whether this instance has free search offline devices. | [optional] [readonly]
+**has_standard_models** | **bool** | Gets a value indicating whether this instance has standard models. | [optional] [readonly]
+**has_remote_offline_counters** | **bool** | Gets a value indicating whether this instance has remote offline counters. | [optional] [readonly]
+**has_la_scan_pc** | **bool** |  | [optional] [readonly]
+**has_lahp_proxy** | **bool** |  | [optional] [readonly]
+**has_la_kodak_alaris** | **bool** |  | [optional] [readonly]
+**has_customer_devices_batch_operations** | **bool** |  | [optional] [readonly]
+**has_supply_suggestion** | **bool** |  | [optional] [readonly]
+**has_epson_ers** | **bool** |  | [optional] [readonly]
+**has_epson_usb** | **bool** |  | [optional] [readonly]
+**has_sharp_fss** | **bool** |  | [optional] [readonly]
+**has_customer_groups** | **bool** |  | [optional] [readonly]
+**has_specify_counter_on_shipping_creation** | **bool** |  | [optional] [readonly]
+**has_hp_sds_print_quality_app** | **bool** |  | [optional] [readonly]
+**automatically_use_standard_models_supply_sets** | **bool** |  | [optional] [readonly]
+**automatically_associate_new_devices_to_standard_supply_sets** | **bool** |  | [optional] [readonly]
+**has_sds_massive_set_device_credentials** | **bool** | Gets a value indicating whether this instance has SDS massive set device credentials. | [optional] [readonly]
+
+[[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

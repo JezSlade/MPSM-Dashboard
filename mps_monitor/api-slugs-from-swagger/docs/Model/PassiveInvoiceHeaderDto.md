@@ -1,0 +1,47 @@
+# # PassiveInvoiceHeaderDto
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**is_credit** | **bool** | True means credit (money from issuer to recipient) | [optional]
+**status** | **string** | Status | [optional]
+**id_recipient** | **string** | Id Recipient | [optional]
+**recipient_code** | **string** | Recipient Code | [optional]
+**recipient_vat_number** | **string** | Recipient Vat Number | [optional]
+**recipient_description** | **string** | Recipient Description | [optional]
+**issuer_company** | [**\OpenAPI\Client\Model\CompanyDto**](CompanyDto.md) |  | [optional]
+**issuer_vat_number** | **string** | Issuer Vat Number | [optional]
+**issuer_description** | **string** | Issuer Description | [optional]
+**issuer_address** | **string** | Issuer Address | [optional]
+**issuer_zip_code** | **string** | Issuer Zip Code | [optional]
+**issuer_city** | **string** | Issuer City | [optional]
+**issuer_province** | **string** | Issuer Province | [optional]
+**issuer_country** | [**\OpenAPI\Client\Model\CountryDto**](CountryDto.md) |  | [optional]
+**invoice_number** | **string** | Invoice Number | [optional]
+**issue_date** | **\DateTime** | Issue Date | [optional]
+**received_date** | **\DateTime** | Received Date | [optional]
+**invoice_heading** | **string** | Invoice Heading | [optional]
+**net_amount** | **float** | Net Amount | [optional]
+**tax** | **float** | Tax | [optional]
+**total** | **float** | Total | [optional]
+**net_amount_currency** | **float** | Net Amount, in the Currency, if set | [optional]
+**tax_currency** | **float** | Tax, in the Currency, if set | [optional]
+**total_currency** | **float** | Total, in the Currency, if set | [optional]
+**is_to_pay** | **bool** | True if the invoice is to pay | [optional]
+**is_paid** | **bool** | True if the invoice is paid | [optional]
+**payment_date** | **\DateTime** | The date of payment, if managed | [optional]
+**currency** | [**\OpenAPI\Client\Model\CurrencyDto**](CurrencyDto.md) |  | [optional]
+**invoice_category** | [**\OpenAPI\Client\Model\InvoiceCategoryDto**](InvoiceCategoryDto.md) |  | [optional]
+**alternative_invoice_category** | [**\OpenAPI\Client\Model\InvoiceCategoryDto**](InvoiceCategoryDto.md) |  | [optional]
+**sdi_document_type** | **string** | The Invoice SDI Document type | [optional]
+**attachments** | [**\OpenAPI\Client\Model\PassiveInvoiceAttachmentDto[]**](PassiveInvoiceAttachmentDto.md) | Attachments files | [optional]
+**uploaded_attachments** | [**\OpenAPI\Client\Model\FileInfoDto[]**](FileInfoDto.md) | Gets or sets the uploaded attachments. | [optional]
+**passive_invoice_rows** | [**\OpenAPI\Client\Model\PassiveInvoiceRowDto[]**](PassiveInvoiceRowDto.md) | Rows | [optional]
+**passive_invoice_payment_conditions** | [**\OpenAPI\Client\Model\PassiveInvoicePaymentConditionDto[]**](PassiveInvoicePaymentConditionDto.md) | Rows | [optional]
+**issuer_info** | **string** | Issuer Info | [optional] [readonly]
+**recipient_info** | **string** | Recipient Info | [optional] [readonly]
+**id_passive_invoice** | **int** | Reference to the original sdi.PassiveInvoice, if the invoice comes from SDI. | [optional]
+**id** | **string** | Gets or sets the identifier. | [optional]
+
+[[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

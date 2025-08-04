@@ -1,0 +1,45 @@
+# # BillingDriverDto
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**is_billing** | **bool** | True if it will produce only real invoices, False if it will produce only proforma invoices | [optional]
+**has_proforma** | **bool** | True if the real invoice will also have a proforma | [optional]
+**is_active** | **bool** | True if the Billing Driver is active, that is it will produce invoices | [optional]
+**issuer** | [**\OpenAPI\Client\Model\DealerDto**](DealerDto.md) |  | [optional]
+**recipient** | [**\OpenAPI\Client\Model\DealerDto**](DealerDto.md) |  | [optional]
+**recipient_customer** | [**\OpenAPI\Client\Model\CustomerDto**](CustomerDto.md) |  | [optional]
+**bill_to** | [**\OpenAPI\Client\Model\CompanyDto**](CompanyDto.md) |  | [optional]
+**invoice_template** | **string** | The invoice template | [optional]
+**invoice_media_types** | **string** | The invoice media types (pdf, xls, ...) | [optional]
+**day_of_month** | **int** | The day of month when the invoice will be generated | [optional]
+**months** | **string** | The months when the invoice will be generated | [optional]
+**hour** | **int** | The hour when the invoice will be generated | [optional]
+**email** | **string** | The email where the invoice will be sent | [optional]
+**email_proforma** | **string** | The email where the proforma will be sent, in addition to dealers account emails | [optional]
+**is_mail_to_send** | **bool** | True if the invoice will be sent to email | [optional]
+**subject** | **string** | The email subject | [optional]
+**subject_proforma** | **string** | The proforma subject | [optional]
+**invoice_heading** | **string** | The invoice description | [optional]
+**body** | **string** | The invoice email body | [optional]
+**body_proforma** | **string** | The proforma email body | [optional]
+**payment_type** | **string** | The invoice Payment Type | [optional]
+**payment_term** | **string** | The invoice Payment Term | [optional]
+**financial_discount_rate** | **float** | Financial Discount Rate | [optional]
+**tax_rate_code** | **string** | Tax Rate Code | [optional]
+**is_dealer_tax_rate** | **bool** | True if the Tax Rate Code refers to a Dealer Tax Rate Code | [optional]
+**tax_rate_reason** | **string** | Tax Rate Reason | [optional]
+**tax_rate_reason_type** | **string** | Tax Rate Reason Type | [optional]
+**tax_rate_reason_text_reference** | **string** | Tax Rate Reason Text Reference | [optional]
+**tax_rate_reason_date_reference** | **\DateTime** | Tax Rate Reason Date Reference | [optional]
+**language** | **string** | The invoice language | [optional]
+**currency** | [**\OpenAPI\Client\Model\CurrencyDto**](CurrencyDto.md) |  | [optional]
+**sales_agent** | [**\OpenAPI\Client\Model\AccountDto**](AccountDto.md) |  | [optional]
+**issuer_bank** | [**\OpenAPI\Client\Model\DealerBankAccountDto**](DealerBankAccountDto.md) |  | [optional]
+**contract_billable_services** | [**\OpenAPI\Client\Model\ContractBillableServiceDto[]**](ContractBillableServiceDto.md) | The Contract Billable Services list | [optional]
+**custom_field_values** | [**\OpenAPI\Client\Model\CustomFieldValueDto[]**](CustomFieldValueDto.md) | Gets or sets the custom fields | [optional]
+**number_of_devices** | **int** | Number of devices | [optional]
+**id** | **string** | Gets or sets the identifier. | [optional]
+
+[[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)
