@@ -1,11 +1,12 @@
 <?php
-// PATCHED: session_vars.php v4.0 – TokenManager Integration
+// PATCHED: session_vars.php v5.0 – Unified Bootstrap Integration
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../backend/core/TokenManager.php';
+require_once __DIR__ . '/../bootstrap.php';
+
 $token = TokenManager::getToken();
 
 // Apply inline style to override drag-priority wrappers
@@ -42,4 +43,3 @@ foreach ($_SESSION as $key => $value) {
     echo "</div>";
 }
 echo "</div></div>";
-?>
