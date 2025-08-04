@@ -1,13 +1,14 @@
 <?php
-// PATCHED: session_vars.php v3.4 - Selectable Text Hotfix
+// PATCHED: session_vars.php v4.0 – TokenManager Integration
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once dirname(__DIR__) . '/backend/includes/global_token_handler.php';
-get_valid_mps_token();
+require_once dirname(__DIR__) . '/../backend/core/TokenManager.php';
+$token = TokenManager::getToken();
 
+// Apply inline style to override drag-priority wrappers
 echo "<div class='container p-4' style='user-select: text;'>";
 
 // 🔐 MPS Token Card
@@ -16,7 +17,7 @@ echo "<div class='card shadow-xl mb-4 bg-dark text-light'>";
         . "<i class='fa fa-key me-2'></i>MPS Token"
         . "</div>";
     echo "<div class='card-body'><pre class='text-success small' style='user-select: text;'>";
-    print_r($GLOBALS['token'] ?? '⚠️ Token unavailable');
+    echo htmlspecialchars($token);
     echo "</pre></div>";
 echo "</div>";
 

@@ -10,8 +10,9 @@ error_reporting(E_ALL);
 
 include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 
-// 🔐 Token Initialization for all modules
-require_once __DIR__ . '/backend/includes/global_token_handler.php';
+// 🔐 Token Initialization for all modules (NEW)
+require_once __DIR__ . '/backend/core/TokenManager.php';
+$token = TokenManager::getToken();
 
 /**
  * Renders the content of a specific widget file.

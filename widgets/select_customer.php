@@ -1,32 +1,27 @@
 <?php
-// PATCHED: select_customers.php v1.6 - Final Unified Version
+// PATCHED: select_customers.php v2.0 – TokenManager Integration
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$configPath = dirname(__DIR__) . '/backend/config/mps_config.php';
-if (file_exists($configPath) && !defined('MPS_API_BASE')) {
-    require_once $configPath;
-}
+require_once dirname(__DIR__) . '/../backend/core/TokenManager.php';
+$token = TokenManager::getToken();
 
-require_once dirname(__DIR__) . '/backend/includes/global_token_handler.php';
-$token = get_valid_mps_token();
-
-if (empty($token['access_token'])) {
+if (empty($token)) {
     echo '<div class="widget-body"><p><strong>Error:</strong> Unable to retrieve valid token.</p></div>';
     return;
 }
 
 $customers = [];
 try {
-    $apiUrl = rtrim(MPS_API_BASE, '/') . '/customers';
+    $apiUrl = 'https://api.mpsmonitor.com/customers'; // Replace with env-configured URL if available
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $apiUrl,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $token['access_token'],
+            'Authorization: Bearer ' . $token,
             'Content-Type: application/json'
         ]
     ]);
