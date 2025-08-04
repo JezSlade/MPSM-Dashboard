@@ -1,7 +1,7 @@
 <?php
 class EnvLoader
 {
-    private const ENV_PATH = __DIR__ . '/../.env';
+    private const ENV_PATH = __DIR__ . '/../../.env';
 
     public static function load(): array
     {
