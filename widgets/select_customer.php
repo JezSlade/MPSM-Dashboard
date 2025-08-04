@@ -1,20 +1,16 @@
 <?php
 // PATCHED: select_customers.php v1.6 - Final Unified Version
-// ------------------------------------------------------
-// • Uses correct constant MPS_API_BASE from mps_config.php.
-// • Config included only once, no redundant fallbacks.
-// • Fully cohesive with get_token.php v2.3 and global_token_handler.php v3.4.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$configPath = dirname(__DIR__) . '/mps_monitor/config/mps_config.php';
+$configPath = dirname(__DIR__) . '/backend/config/mps_config.php';
 if (file_exists($configPath) && !defined('MPS_API_BASE')) {
     require_once $configPath;
 }
 
-require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
+require_once dirname(__DIR__) . '/backend/includes/global_token_handler.php';
 $token = get_valid_mps_token();
 
 if (empty($token['access_token'])) {
@@ -58,7 +54,6 @@ try {
     return;
 }
 ?>
-
 <div class="widget-body">
     <h3 class="widget-section-title">Select Customers</h3>
     <?php if (!empty($customers)): ?>

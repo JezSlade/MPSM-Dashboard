@@ -1,19 +1,13 @@
 <?php
 // PATCHED: session_vars.php v3.4 - Selectable Text Hotfix
-// ------------------------------------------------------
-// • Enables text selection inside widgets (override drag priority)
-// • Required for copying token/session values
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
+require_once dirname(__DIR__) . '/backend/includes/global_token_handler.php';
 get_valid_mps_token();
 
-# include_once dirname(__DIR__) . '/theme_library.html';
-
-// Apply inline style to override drag-priority wrappers
 echo "<div class='container p-4' style='user-select: text;'>";
 
 // 🔐 MPS Token Card
@@ -26,7 +20,6 @@ echo "<div class='card shadow-xl mb-4 bg-dark text-light'>";
     echo "</pre></div>";
 echo "</div>";
 
-// 📦 All Session Variables - Accordion Group
 ksort($_SESSION);
 echo "<div class='accordion' id='sessionAccordion' style='user-select: text;'>";
 $index = 0;

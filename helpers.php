@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 include_once $_SERVER['DOCUMENT_ROOT'] . '/includes/logger.php';
 
 // 🔐 Token Initialization for all modules
-require_once __DIR__ . '/mps_monitor/includes/global_token_handler.php';
+require_once __DIR__ . '/backend/includes/global_token_handler.php';
 
 /**
  * Renders the content of a specific widget file.
@@ -53,18 +53,11 @@ function get_widget_metadata_from_file(string $file_path): array {
         $content = fread($handle, 2048); // Read first 2KB - usually enough for metadata comments
         fclose($handle);
 
-        // Look for PHP variable definitions or comments like:
-        // // Widget Name: Sales & Revenue
-        // // Widget Icon: fas fa-chart-line  <-- Now capturing the full class
-        // // Widget Width: 2
-        // // // Widget Height: 1
-
         if (preg_match('/Widget Name:\s*(.+)/i', $content, $matches)) {
             $name = trim($matches[1]);
         }
-        // MODIFIED: Capture the full Font Awesome class (e.g., "fas fa-star")
         if (preg_match('/Widget Icon:\s*(fas|far|fab|fa)\s+fa-[a-z0-9-]+/i', $content, $matches)) {
-            $icon = trim($matches[0]); // Capture the full matched string
+            $icon = trim($matches[0]);
         }
         if (preg_match('/Widget Width:\s*([\d.]+)/i', $content, $matches)) {
             $width = (float)trim($matches[1]);
@@ -76,17 +69,12 @@ function get_widget_metadata_from_file(string $file_path): array {
 
     return [
         'name' => $name,
-        'icon' => $icon, // This now contains the full class, e.g., "fas fa-bug"
+        'icon' => $icon,
         'width' => $width,
         'height' => $height
     ];
 }
 
-/**
- * Scans the widgets/ directory and returns a list of all available widgets with their metadata.
- *
- * @return array An associative array of available widgets, keyed by widget ID (filename without .php).
- */
 function discover_widgets(): array {
     $widgets_dir = APP_ROOT . '/widgets/';
     $available_widgets = [];
@@ -103,13 +91,10 @@ function discover_widgets(): array {
             $file_path = $widgets_dir . $file;
             $metadata = get_widget_metadata_from_file($file_path);
             $available_widgets[$widget_id] = $metadata;
-            // --- DEBUGGING LINE ---
             error_log("Widget metadata for {$widget_id}: " . print_r($metadata, true));
-            // --- END DEBUGGING LINE ---
         }
     }
 
-    // Sort widgets alphabetically by name for consistent display
     uasort($available_widgets, function($a, $b) {
         return strcmp($a['name'], $b['name']);
     });
