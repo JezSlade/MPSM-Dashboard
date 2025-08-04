@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once dirname(__DIR__) . '/../backend/core/TokenManager.php';
+require_once __DIR__ . '/../backend/core/TokenManager.php';
 $token = TokenManager::getToken();
 
 // Apply inline style to override drag-priority wrappers
