@@ -7,15 +7,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../bootstrap.php';
 
-$customers = ApiCaller::request('POST', '/Customer/GetCustomers', [
+$customers = ApiCaller::request('POST', '', [
     'Url' => 'Customer/GetCustomers',
     'Request' => [
         'DealerCode' => 'NY06AGDWUQ',
-        'Code' => null,
-        'HasHpSds' => null,
-        'FilterText' => null,
         'PageNumber' => 1,
-        'PageRows' => 2147483647,
+        'PageRows' => 100,
         'SortColumn' => 'Id',
         'SortOrder' => 0
     ],
