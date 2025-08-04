@@ -9,7 +9,7 @@ require_once __DIR__ . '/../bootstrap.php';
 
 $customers = [];
 try {
-    $customers = ApiCaller::request('GET', '/customers');
+    $customers = ApiCaller::request('GET', '/Customer/GetCustomers');
 
     if (!is_array($customers)) {
         throw new Exception('Unexpected API response structure');
