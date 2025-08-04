@@ -1,5 +1,11 @@
 <?php
-// PATCHED: select_customers.php v3.0 – Bootstrap Integrated
+// PHP Debugging Lines - START
+// Enable all error reporting for development purposes.
+// This helps in identifying and debugging issues quickly.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
