@@ -1,44 +1,57 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Allow direct access to setup.php to avoid redirect loops
     RewriteCond %{REQUEST_URI} ^/setup.php$ [NC]
     RewriteRule ^ - [L]
 
-    RewriteCond %{REQUEST_URI} ^/backend/api/ [NC]
+    # NEW RULE: Exclude the mps_monitor/api/ directory from being rewritten
+    # This ensures your API endpoints are directly accessible.
+    RewriteCond %{REQUEST_URI} ^/mps_monitor/api/ [NC]
     RewriteRule ^ - [L]
 
+    # Force HTTPS
     RewriteCond %{HTTPS} off
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+    # Redirect all requests to index.php if not a real file or directory
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L]
 
+    # Protect sensitive files
     <FilesMatch "(\.env|\.htaccess|composer\.json|composer\.lock)$">
         Require all denied
     </FilesMatch>
 </IfModule>
 
 <IfModule mod_headers.c>
+    # Security headers
     Header always set Strict-TransportSecurity "max-age=31536000; includeSubDomains"
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "DENY"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+    # Remove server signature
     Header unset X-Powered-By
     ServerSignature Off
 </IfModule>
 
+# Disable directory listing
 Options -Indexes
 
+# Compress responses
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
 </IfModule>
 
+# Cache control
 <FilesMatch "\.(jpg|jpeg|png|gif|js|css|woff2)$">
     Header set Cache-Control "max-age=31536000, public"
 </FilesMatch>
 
+# Protect database directory
 <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/db">
     Require all denied
     <FilesMatch "\.db$">
@@ -46,6 +59,7 @@ Options -Indexes
     </FilesMatch>
 </Directory>
 
+# Error documents
 ErrorDocument 403 /error.php?code=403
 ErrorDocument 404 /error.php?code=404
 ErrorDocument 500 /error.php?code=500

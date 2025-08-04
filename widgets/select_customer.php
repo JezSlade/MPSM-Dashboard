@@ -1,36 +1,64 @@
 <?php
-// PHP Debugging Lines - START
-// Enable all error reporting for development purposes.
-// This helps in identifying and debugging issues quickly.
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-// PHP Debugging Lines - END
+// PATCHED: select_customers.php v1.6 - Final Unified Version
+// ------------------------------------------------------
+// • Uses correct constant MPS_API_BASE from mps_config.php.
+// • Config included only once, no redundant fallbacks.
+// • Fully cohesive with get_token.php v2.3 and global_token_handler.php v3.4.
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../bootstrap.php';
+$configPath = dirname(__DIR__) . '/mps_monitor/config/mps_config.php';
+if (file_exists($configPath) && !defined('MPS_API_BASE')) {
+    require_once $configPath;
+}
 
-$customers = ApiCaller::request('POST', '', [
-    'Url' => 'Customer/GetCustomers',
-    'Request' => [
-        'DealerCode' => 'NY06AGDWUQ',
-        'PageNumber' => 1,
-        'PageRows' => 100,
-        'SortColumn' => 'Id',
-        'SortOrder' => 0
-    ],
-    'Method' => 'POST'
-]);
+require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
+$token = get_valid_mps_token();
 
-echo "<pre>";
-print_r($customers);
-echo "</pre>";
-exit;
+if (empty($token['access_token'])) {
+    echo '<div class="widget-body"><p><strong>Error:</strong> Unable to retrieve valid token.</p></div>';
+    return;
+}
 
+$customers = [];
+try {
+    $apiUrl = rtrim(MPS_API_BASE, '/') . '/customers';
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $apiUrl,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token['access_token'],
+            'Content-Type: application/json'
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    if ($curlErr) {
+        throw new Exception('cURL Error: ' . $curlErr);
+    }
+    if ($httpCode !== 200) {
+        throw new Exception('API returned HTTP ' . $httpCode . ': ' . $response);
+    }
+
+    $decoded = json_decode($response, true);
+    if (isset($decoded['data']) && is_array($decoded['data'])) {
+        $customers = $decoded['data'];
+    } else {
+        throw new Exception('Invalid API response structure: ' . $response);
+    }
+} catch (Throwable $e) {
+    echo '<div class="widget-body"><p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p></div>';
+    return;
+}
 ?>
+
 <div class="widget-body">
     <h3 class="widget-section-title">Select Customers</h3>
     <?php if (!empty($customers)): ?>

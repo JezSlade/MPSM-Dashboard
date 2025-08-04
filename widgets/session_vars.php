@@ -1,19 +1,17 @@
 <?php
-// PHP Debugging Lines - START
-// Enable all error reporting for development purposes.
-// This helps in identifying and debugging issues quickly.
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-// PHP Debugging Lines - END
+// PATCHED: session_vars.php v3.4 - Selectable Text Hotfix
+// ------------------------------------------------------
+// • Enables text selection inside widgets (override drag priority)
+// • Required for copying token/session values
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../bootstrap.php';
+require_once dirname(__DIR__) . '/mps_monitor/includes/global_token_handler.php';
+get_valid_mps_token();
 
-$token = TokenManager::getToken();
+# include_once dirname(__DIR__) . '/theme_library.html';
 
 // Apply inline style to override drag-priority wrappers
 echo "<div class='container p-4' style='user-select: text;'>";
@@ -24,10 +22,11 @@ echo "<div class='card shadow-xl mb-4 bg-dark text-light'>";
         . "<i class='fa fa-key me-2'></i>MPS Token"
         . "</div>";
     echo "<div class='card-body'><pre class='text-success small' style='user-select: text;'>";
-    echo htmlspecialchars($token);
+    print_r($GLOBALS['token'] ?? '⚠️ Token unavailable');
     echo "</pre></div>";
 echo "</div>";
 
+// 📦 All Session Variables - Accordion Group
 ksort($_SESSION);
 echo "<div class='accordion' id='sessionAccordion' style='user-select: text;'>";
 $index = 0;
@@ -49,3 +48,4 @@ foreach ($_SESSION as $key => $value) {
     echo "</div>";
 }
 echo "</div></div>";
+?>
