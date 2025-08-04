@@ -42,3 +42,8 @@ function getAccessToken() {
   $result = json_decode($response, true);
   return $result;
 }
+
+// Alias added for compatibility with widgets expecting get_valid_mps_token
+function get_valid_mps_token() {
+  return getAccessToken();
+}
