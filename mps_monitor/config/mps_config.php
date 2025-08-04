@@ -1,5 +1,9 @@
 <?php
-
+// This helps in identifying and debugging issues quickly.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// PHP Debugging Lines - END
 // Load .env manually
 $dotenvPath = __DIR__ . '/../../../.env';
 if (file_exists($dotenvPath)) {
