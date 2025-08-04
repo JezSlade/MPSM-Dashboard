@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../core/TokenManager.php';
+require_once __DIR__ . '/../bootstrap.php';
 
 try {
     $token = TokenManager::getToken();
