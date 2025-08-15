@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en" data-ui="root" class="cms-root">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-ui="app-title">Ultra‑Light CMS Dashboard • Wireframe</title>
+  <style>
+    :root { /* THEME HOOKS: override freely */
+      --cms-bg: #0f1216;
+      --cms-panel: #151a21;
+      --cms-muted: #808894;
+      --cms-text: #e9eef5;
+      --cms-accent: #4aa3ff;
+      --cms-border: #232a34;
+      --cms-ok: #2ecc71;
+      --cms-warn: #f39c12;
+      --cms-err: #e74c3c;
+      --cms-radius: 14px;
+      --cms-gap: 12px;
+      --cms-pad: 12px;
+      --cms-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      --cms-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --cms-col: 300px; /* grid column width */
+      --cms-row: 190px; /* grid row height */
+      --cms-z-overlay: 50;
+    }
+    html, body { height: 100%; }
+    body[data-ui="app-body"] { margin:0; background:var(--cms-bg); color:var(--cms-text); font-family:var(--cms-font); }
+
+    /* App Shell */
+    .cms-app { display:grid; grid-template-rows: auto 1fr; min-height: 100%; }
+    .cms-toolbar { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--cms-border); background:var(--cms-panel); position:sticky; top:0; z-index:var(--cms-z-overlay); }
+    .cms-toolbar__title { font-weight:700; letter-spacing:.3px; }
+    .cms-toolbar__spacer { flex:1; }
+    .cms-btn { all:unset; cursor:pointer; padding:8px 12px; border:1px solid var(--cms-border); border-radius:10px; background:#0e1319; color:var(--cms-text); font-size:14px; line-height:1; user-select:none; }
+    .cms-btn[data-variant="primary"]{ background:var(--cms-accent); color:#051422; }
+    .cms-btn[disabled]{ opacity:.5; cursor:not-allowed; }
+    .cms-sep { width:1px; height:26px; background:var(--cms-border); }
+
+    /* Layout */
+    .cms-main { display:grid; grid-template-columns: 1fr 360px; gap:var(--cms-gap); padding: var(--cms-gap); }
+    .cms-dashboard-wrap { min-width:0; }
+
+    /* Dashboard Grid */
+    .cms-dashboard { display:grid; grid-template-columns: repeat(auto-fit, minmax(var(--cms-col), 1fr)); grid-auto-rows: var(--cms-row); gap: var(--cms-gap); align-content:start; }
+    .cms-dashboard[data-state="empty"]::after{ content:"No widgets yet. Use ‘New Widget’."; color:var(--cms-muted); border:1px dashed var(--cms-border); border-radius:var(--cms-radius); display:grid; place-items:center; height:180px; }
+
+    /* Widget */
+    .cms-widget { display:grid; grid-template-rows: auto 1fr; background:var(--cms-panel); border:1px solid var(--cms-border); border-radius:var(--cms-radius); overflow:hidden; position:relative; min-height:var(--cms-row); }
+    .cms-widget[aria-grabbed="true"]{ outline: 2px dashed var(--cms-accent); outline-offset:-2px; }
+    .cms-widget[data-size-w]{ grid-column: span var(--w, 1); }
+    .cms-widget[data-size-h]{ grid-row: span var(--h, 1); }
+    .cms-widget__header { display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--cms-border); background:linear-gradient(180deg, #11161d, #0c1117); cursor:grab; user-select:none; }
+    .cms-widget__title { font-weight:600; font-size:14px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cms-widget__tools { display:flex; gap:6px; }
+    .cms-iconbtn { all:unset; cursor:pointer; width:28px; height:26px; display:grid; place-items:center; border:1px solid var(--cms-border); border-radius:8px; color:var(--cms-muted); }
+    .cms-iconbtn:hover { color:var(--cms-text); background:#0b0f14; }
+    .cms-widget__body { position:relative; overflow:hidden; }
+    .cms-widget__frame { width:100%; height:100%; border:0; background:#0c1116; }
+    .cms-widget__overlay { position:absolute; inset:0; pointer-events:none; border:2px dashed transparent; }
+
+    /* Drag placeholder */
+    .cms-widget--ghost { opacity:.6; filter:saturate(.7); }
+
+    /* Inspector / Form */
+    .cms-panel { background:var(--cms-panel); border:1px solid var(--cms-border); border-radius:var(--cms-radius); padding:var(--cms-pad); display:grid; gap:var(--cms-gap); align-content:start; }
+    .cms-panel__title { font-weight:700; }
+    .cms-form { display:grid; gap:8px; }
+    .cms-field { display:grid; gap:4px; }
+    .cms-label { font-size:12px; color:var(--cms-muted); }
+    .cms-input, .cms-textarea, .cms-select { width:100%; box-sizing:border-box; background:#0b0f14; color:var(--cms-text); border:1px solid var(--cms-border); border-radius:10px; padding:8px 10px; font-family:var(--cms-font); font-size:14px; }
+    .cms-textarea { min-height:90px; resize:vertical; }
+    .cms-grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+
+    /* Docs */
+    .cms-docs { font-size:13px; line-height:1.45; color:#cbd5e1; }
+    .cms-docs code { font-family:var(--cms-code); font-size:12px; background:#0c1218; padding:2px 6px; border-radius:6px; }
+    .cms-docs pre { background:#0c1218; padding:10px; border-radius:10px; overflow:auto; }
+    .cms-details { border:1px solid var(--cms-border); border-radius:var(--cms-radius); padding:10px; background:#0b0f14; }
+    .cms-details summary { cursor:pointer; font-weight:600; }
+
+    @media (max-width: 1000px){
+      .cms-main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-ui="app-body" class="cms-app">
+  <!-- Toolbar -->
+  <header class="cms-toolbar" data-ui="toolbar">
+    <div class="cms-toolbar__title" data-ui="brand">CMS Dashboard • Wireframe</div>
+    <div class="cms-toolbar__spacer"></div>
+    <button class="cms-btn" data-action="new" data-ui="btn-new">New Widget</button>
+    <button class="cms-btn" data-action="save" data-ui="btn-save">Save</button>
+    <button class="cms-btn" data-action="load-sample" data-ui="btn-load-sample">Load Sample</button>
+    <div class="cms-sep" aria-hidden="true"></div>
+    <button class="cms-btn" data-action="clear" data-ui="btn-clear">Clear</button>
+  </header>
+
+  <!-- Main Area: Dashboard + Inspector/Docs -->
+  <main class="cms-main" data-ui="main">
+    <section class="cms-dashboard-wrap" data-ui="dashboard-wrap">
+      <div class="cms-dashboard" data-ui="dashboard" data-state="empty" aria-live="polite"></div>
+    </section>
+
+    <aside class="cms-panel" data-ui="inspector">
+      <div class="cms-panel__title" data-ui="inspector-title">Widget Inspector</div>
+      <form class="cms-form" data-ui="form">
+        <!-- 10 common fields scaffold -->
+        <div class="cms-field"><label class="cms-label" for="f-id">ID</label><input class="cms-input" id="f-id" name="id" placeholder="auto or custom"></div>
+        <div class="cms-field"><label class="cms-label" for="f-title">Title</label><input class="cms-input" id="f-title" name="title" required></div>
+        <div class="cms-field"><label class="cms-label" for="f-desc">Description</label><textarea class="cms-textarea" id="f-desc" name="description"></textarea></div>
+        <div class="cms-grid-2">
+          <div class="cms-field"><label class="cms-label" for="f-type">Content Type</label>
+            <select class="cms-select" id="f-type" name="contentType">
+              <option value="html">Inline HTML</option>
+              <option value="url">URL (iframe)</option>
+              <option value="server">Server (fetch HTML)</option>
+            </select>
+          </div>
+          <div class="cms-field"><label class="cms-label" for="f-refresh">Refresh (ms)</label><input class="cms-input" id="f-refresh" name="refreshInterval" type="number" min="0" value="0"></div>
+        </div>
+        <div class="cms-field"><label class="cms-label" for="f-content">Inline HTML Content</label><textarea class="cms-textarea" id="f-content" name="content" placeholder="<h3>Hello</h3>"></textarea></div>
+        <div class="cms-field"><label class="cms-label" for="f-url">Content URL (for url/server)</label><input class="cms-input" id="f-url" name="contentUrl" placeholder="https://example.com/widget"></div>
+        <div class="cms-grid-2">
+          <div class="cms-field"><label class="cms-label" for="f-wu">Width (grid spans)</label><input class="cms-input" id="f-wu" name="widthUnits" type="number" min="1" max="4" value="1"></div>
+          <div class="cms-field"><label class="cms-label" for="f-hu">Height (grid spans)</label><input class="cms-input" id="f-hu" name="heightUnits" type="number" min="1" max="4" value="1"></div>
+        </div>
+        <div class="cms-field"><label class="cms-label" for="f-tags">Tags (comma list)</label><input class="cms-input" id="f-tags" name="tags" placeholder="sales, realtime"></div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="cms-btn" data-action="create">Create</button>
+          <button class="cms-btn" data-action="update" disabled>Update</button>
+          <button class="cms-btn" data-action="delete" disabled>Delete</button>
+          <div class="cms-sep"></div>
+          <button class="cms-btn" data-action="preview">Preview</button>
+        </div>
+        <iframe class="cms-widget__frame" data-ui="preview" title="Preview" style="height:220px;border-radius:10px;"></iframe>
+      </form>
+
+      <section class="cms-docs" data-ui="docs">
+        <details class="cms-details" open>
+          <summary>Documentation (Architecture • OOP • Extensibility)</summary>
+          <div style="padding-top:10px">
+            <p><strong>Mission</strong> — ultra‑light, zero‑dependency CMS dashboard skeleton adhering to OOP/SOLID/DRY. Everything is deliberately minimal, explicit, and scalable.</p>
+            <h4>Concepts</h4>
+            <ul>
+              <li><code>WidgetModel</code> — 10-field domain object (id, title, description, contentType, content, contentUrl, refreshInterval, widthUnits, heightUnits, tags).</li>
+              <li><code>WidgetRepository</code> (interface) — persistence strategy. <code>LocalStorageWidgetRepository</code> (default). <code>ApiWidgetRepository</code> (REST-ready stub).</li>
+              <li><code>DashboardService</code> — business logic (CRUD, order, refresh scheduling).</li>
+              <li><code>DashboardView</code> — renders grid; delegates drag/reorder to <code>DragManager</code>.</li>
+              <li><code>DragManager</code> — handle-only (widget header) reordering; persists order.</li>
+              <li><code>EventBus</code> — tiny pub/sub decoupling UI & domain.</li>
+            </ul>
+            <h4>Storage & Order</h4>
+            <p>Default persistence key <code>cms.widgets.v1</code> in <code>localStorage</code>. Order is preserved by the array index and re-saved on drop.</p>
+            <h4>Content Hooks</h4>
+            <p>Three modes: <code>html</code> (inline srcdoc), <code>url</code> (iframe src), <code>server</code> (fetch HTML from PHP and render via srcdoc). Use the <em>Content URL</em> to point at your PHP endpoint. CORS must be allowed.</p>
+            <h4>Scalability</h4>
+            <ul>
+              <li>OOP boundaries allow swapping repos, views, or policies without touching others.</li>
+              <li>UI is skeletal; all nodes carry BEMish classes and <code>data-ui</code> hooks for theming.</li>
+              <li>No implicit globals; everything is namespaced within the module.</li>
+            </ul>
+            <h4>Directory (suggested)</h4>
+            <pre>public/
+  index.html  ← this file
+api/
+  index.php   ← tiny router
+  WidgetsController.php
+  Domain/
+    Widget.php
+    WidgetRepository.php (interface)
+  Infra/
+    FileWidgetRepository.php
+  data/widgets.json
+            </pre>
+            <h4>REST (later)</h4>
+            <p>When ready, switch <code>repo</code> from <code>LocalStorageWidgetRepository</code> to <code>ApiWidgetRepository</code> with your base URL. Endpoints documented below.</p>
+          </div>
+        </details>
+
+        <details class="cms-details">
+          <summary>Backend Scaffold (PHP • basic CRUD • zero deps)</summary>
+<pre><code>// api/index.php
+&lt;?php
+require __DIR__ . '/WidgetsController.php';
+$path = $_SERVER['REQUEST_URI'];
+$method = $_SERVER['REQUEST_METHOD'];
+$controller = new WidgetsController();
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+if ($method === 'OPTIONS') { http_response_code(204); exit; }
+
+if (preg_match('#^/api/widgets/?$#', $path)) {
+  if ($method === 'GET') echo json_encode($controller->index());
+  elseif ($method === 'POST') echo json_encode($controller->store(json_decode(file_get_contents('php://input'), true)));
+  else http_response_code(405);
+} elseif (preg_match('#^/api/widgets/([\w-]+)/?$#', $path, $m)) {
+  $id = $m[1];
+  if ($method === 'GET') echo json_encode($controller->show($id));
+  elseif ($method === 'PUT') echo json_encode($controller->update($id, json_decode(file_get_contents('php://input'), true)));
+  elseif ($method === 'DELETE') echo json_encode($controller->destroy($id));
+  else http_response_code(405);
+} else { http_response_code(404); echo json_encode(['error' =&gt; 'Not found']); }
+</code></pre>
+<pre><code>// api/Domain/Widget.php
+&lt;?php
+class Widget {
+  public string $id;
+  public string $title;
+  public string $description;
+  public string $contentType;
+  public string $content;
+  public string $contentUrl;
+  public int $refreshInterval;
+  public int $widthUnits;
+  public int $heightUnits;
+  public array $tags;
+  public static function fromArray(array $d): self {
+    $w = new self();
+    $w-&gt;id = $d['id'] ?? uniqid('w_', true);
+    $w-&gt;title = $d['title'] ?? '';
+    $w-&gt;description = $d['description'] ?? '';
+    $w-&gt;contentType = $d['contentType'] ?? 'html';
+    $w-&gt;content = $d['content'] ?? '';
+    $w-&gt;contentUrl = $d['contentUrl'] ?? '';
+    $w-&gt;refreshInterval = intval($d['refreshInterval'] ?? 0);
+    $w-&gt;widthUnits = max(1, intval($d['widthUnits'] ?? 1));
+    $w-&gt;heightUnits = max(1, intval($d['heightUnits'] ?? 1));
+    $w-&gt;tags = $d['tags'] ?? [];
+    return $w;
+  }
+  public function toArray(): array { return get_object_vars($this); }
+}
+</code></pre>
+<pre><code>// api/Domain/WidgetRepository.php (interface)
+&lt;?php
+interface WidgetRepository {
+  /** @return array */
+  public function all(): array;
+  public function find(string $id): ?array;
+  public function create(array $data): array;
+  public function update(string $id, array $data): array;
+  public function delete(string $id): bool;
+}
+</code></pre>
+<pre><code>// api/Infra/FileWidgetRepository.php
+&lt;?php
+require __DIR__ . '/../Domain/WidgetRepository.php';
+require __DIR__ . '/../Domain/Widget.php';
+class FileWidgetRepository implements WidgetRepository {
+  private string $file;
+  public function __construct(string $file){ $this-&gt;file = $file; if(!file_exists($file)) file_put_contents($file, json_encode([])); }
+  private function load(): array { return json_decode(file_get_contents($this-&gt;file), true) ?: []; }
+  private function save(array $rows): void { file_put_contents($this-&gt;file, json_encode(array_values($rows), JSON_PRETTY_PRINT)); }
+  public function all(): array { return $this-&gt;load(); }
+  public function find(string $id): ?array { foreach($this-&gt;load() as $w){ if($w['id'] === $id) return $w; } return null; }
+  public function create(array $data): array { $rows = $this-&gt;load(); $w = Widget::fromArray($data)-&gt;toArray(); $rows[] = $w; $this-&gt;save($rows); return $w; }
+  public function update(string $id, array $data): array { $rows = $this-&gt;load(); foreach($rows as &$w){ if($w['id'] === $id){ $w = array_merge($w, $data); break; } } $this-&gt;save($rows); return $this-&gt;find($id); }
+  public function delete(string $id): bool { $rows = array_filter($this-&gt;load(), fn($w) =&gt; $w['id'] !== $id); $this-&gt;save($rows); return true; }
+}
+</code></pre>
+<pre><code>// api/WidgetsController.php
+&lt;?php
+require __DIR__ . '/Infra/FileWidgetRepository.php';
+class WidgetsController {
+  private WidgetRepository $repo;
+  public function __construct(){ $this-&gt;repo = new FileWidgetRepository(__DIR__ . '/data/widgets.json'); }
+  public function index(){ return $this-&gt;repo-&gt;all(); }
+  public function show(string $id){ return $this-&gt;repo-&gt;find($id) ?? ['error' =&gt; 'Not found']; }
+  public function store(array $data){ return $this-&gt;repo-&gt;create($data); }
+  public function update(string $id, array $data){ return $this-&gt;repo-&gt;update($id, $data); }
+  public function destroy(string $id){ return ['ok' =&gt; $this-&gt;repo-&gt;delete($id)]; }
+}
+</code></pre>
+<p>Place a simple PHP endpoint that returns raw HTML for <code>contentType=server</code> (e.g., <code>/api/render.php?id=...</code>) if you prefer server-side composition.</p>
+        </details>
+
+        <details class="cms-details">
+          <summary>Usage Notes & Conventions</summary>
+          <ul>
+            <li>Drag by the widget header to reorder. Order is persisted.</li>
+            <li>The inspector updates when you select a widget via the header’s ✎ button.</li>
+            <li><em>Preview</em> renders the current form values into the panel iframe.</li>
+            <li>All elements carry semantic classes & <code>data-ui</code> hooks for styling/test automation.</li>
+          </ul>
+        </details>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module">
+  // ==============================
+  // Ultra-Light CMS Dashboard Core
+  // Zero deps • OOP • SOLID • DRY
+  // ==============================
+  (function(){
+    "use strict";
+
+    // ---------- Utilities
+    class Ids { static new(prefix='w'){ return `${prefix}_${Math.random().toString(36).slice(2,10)}`; } }
+    class Dom {
+      static el(q,root=document){ return root.querySelector(q); }
+      static els(q,root=document){ return Array.from(root.querySelectorAll(q)); }
+      static create(tag, attrs={}){ const n=document.createElement(tag); for(const[k,v] of Object.entries(attrs)){ if(k==='text') n.textContent=v; else if(k==='html') n.innerHTML=v; else n.setAttribute(k,v);} return n; }
+    }
+    class EventBus { constructor(){ this.m=new Map(); } on(t,h){ if(!this.m.has(t)) this.m.set(t,[]); this.m.get(t).push(h); return ()=>this.off(t,h);} off(t,h){ const a=this.m.get(t)||[]; const i=a.indexOf(h); if(i>=0) a.splice(i,1); } emit(t,p){ (this.m.get(t)||[]).forEach(h=>h(p)); } }
+
+    // ---------- Domain
+    class WidgetModel { // 10 common fields
+      constructor({id,title,description,contentType,content,contentUrl,refreshInterval,widthUnits,heightUnits,tags}){
+        this.id = id || Ids.new();
+        this.title = title || '';
+        this.description = description || '';
+        this.contentType = contentType || 'html';
+        this.content = content || '';
+        this.contentUrl = contentUrl || '';
+        this.refreshInterval = Number(refreshInterval||0);
+        this.widthUnits = Number(widthUnits||1);
+        this.heightUnits = Number(heightUnits||1);
+        this.tags = Array.isArray(tags) ? tags : (typeof tags==='string' ? tags.split(',').map(s=>s.trim()).filter(Boolean) : []);
+      }
+      clone(){ return new WidgetModel(JSON.parse(JSON.stringify(this))); }
+      toJSON(){ return { id:this.id, title:this.title, description:this.description, contentType:this.contentType, content:this.content, contentUrl:this.contentUrl, refreshInterval:this.refreshInterval, widthUnits:this.widthUnits, heightUnits:this.heightUnits, tags:this.tags }; }
+    }
+
+    // ---------- Repositories (Strategy)
+    class WidgetRepository { /* interface */ all(){throw 'not impl';} saveAll(w){throw 'not impl';} }
+    class LocalStorageWidgetRepository extends WidgetRepository {
+      constructor(key='cms.widgets.v1'){ super(); this.key=key; }
+      all(){ const arr = JSON.parse(localStorage.getItem(this.key) || '[]'); return arr.map(o=>new WidgetModel(o)); }
+      saveAll(widgets){ localStorage.setItem(this.key, JSON.stringify(widgets.map(w=>w.toJSON()))); }
+      clear(){ localStorage.removeItem(this.key); }
+    }
+    class ApiWidgetRepository extends WidgetRepository { // not used by default; swap in when REST ready
+      constructor(baseUrl='/api/widgets'){ super(); this.base=baseUrl; }
+      async all(){ const r=await fetch(this.base); const j=await r.json(); return j.map(o=>new WidgetModel(o)); }
+      async create(w){ const r=await fetch(this.base,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(w.toJSON())}); return new WidgetModel(await r.json()); }
+      async update(w){ const r=await fetch(`${this.base}/${encodeURIComponent(w.id)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(w.toJSON())}); return new WidgetModel(await r.json()); }
+      async delete(id){ await fetch(`${this.base}/${encodeURIComponent(id)}`,{method:'DELETE'}); }
+      // saveAll not efficient over REST; here for compatibility (bulk replace)
+      async saveAll(widgets){ // naive: delete all then create — replace with proper batch when backend ready
+        console.warn('ApiWidgetRepository.saveAll: naive bulk replace');
+        const current = await this.all();
+        await Promise.all(current.map(w=>this.delete(w.id)));
+        for(const w of widgets) await this.create(w);
+      }
+    }
+
+    // ---------- Services
+    class DashboardService {
+      constructor(repo, bus){ this.repo=repo; this.bus=bus; this.widgets = []; this.timers = new Map(); }
+      load(){ const w=this.repo.all(); this.widgets = w; this.bus.emit('widgets:changed', this.widgets.map(x=>x.clone())); this._reschedule(); return this.widgets; }
+      setAll(widgets){ this.widgets = widgets; this.repo.saveAll(this.widgets); this.bus.emit('widgets:changed', this.widgets.map(x=>x.clone())); this._reschedule(); }
+      add(widget){ this.widgets.push(widget); this.setAll(this.widgets); }
+      update(id, patch){ const i=this.widgets.findIndex(w=>w.id===id); if(i>=0){ Object.assign(this.widgets[i], patch); this.setAll(this.widgets); } }
+      remove(id){ this.widgets = this.widgets.filter(w=>w.id!==id); this.setAll(this.widgets); }
+      reorder(newOrderIds){ const idToW = new Map(this.widgets.map(w=>[w.id,w])); this.widgets = newOrderIds.map(id=>idToW.get(id)).filter(Boolean); this.setAll(this.widgets); }
+      _reschedule(){ // refresh content timers
+        for(const [id,tid] of this.timers) clearInterval(tid);
+        this.timers.clear();
+        for(const w of this.widgets){ if(w.refreshInterval>0){ const tid=setInterval(()=>this.bus.emit('widget:refresh', w.id), w.refreshInterval); this.timers.set(w.id, tid);} }
+      }
+    }
+
+    // ---------- Rendering
+    class DashboardView {
+      constructor(rootEl, bus){ this.root=rootEl; this.bus=bus; this.drag = new DragManager(rootEl, bus); this.cardMap = new Map(); this.bus.on('widgets:changed', ws=>this.render(ws)); this.bus.on('widget:refresh', id=>this.refresh(id)); }
+      render(widgets){ this.root.innerHTML=''; this.root.dataset.state = widgets.length? 'ready':'empty';
+        for(const w of widgets){ const card = this._renderWidget(w); this.cardMap.set(w.id, card); this.root.appendChild(card); }
+        this.drag.bind();
+      }
+      _renderWidget(w){
+        const card = Dom.create('article', { class:'cms-widget', 'data-ui':'widget', 'data-id':w.id, 'data-size-w':'','data-size-h':'' });
+        card.style.setProperty('--w', String(Math.max(1, w.widthUnits||1)));
+        card.style.setProperty('--h', String(Math.max(1, w.heightUnits||1)));
+        const head = Dom.create('header', { class:'cms-widget__header', 'data-ui':'widget-header' });
+        const title = Dom.create('div', { class:'cms-widget__title', 'data-ui':'widget-title', text:w.title||'(untitled)' });
+        const tools = Dom.create('div', { class:'cms-widget__tools', 'data-ui':'widget-tools' });
+        const btnEdit = Dom.create('button', { class:'cms-iconbtn', 'data-action':'edit', title:'Edit' }); btnEdit.innerHTML='✎';
+        const btnDel = Dom.create('button', { class:'cms-iconbtn', 'data-action':'del', title:'Delete' }); btnDel.innerHTML='✕';
+        tools.append(btnEdit, btnDel);
+        head.append(title, tools);
+        const body = Dom.create('div', { class:'cms-widget__body', 'data-ui':'widget-body' });
+        const frame = Dom.create('iframe', { class:'cms-widget__frame', 'data-ui':'widget-frame', title:`${w.title||'widget'} preview` });
+        const overlay = Dom.create('div', { class:'cms-widget__overlay', 'data-ui':'widget-overlay' });
+        body.append(frame, overlay);
+        card.append(head, body);
+        head.addEventListener('mousedown', e=>{ // handle-only drag activation
+          if(e.target===btnEdit || e.target===btnDel) return; // ignore buttons
+          card.setAttribute('draggable','true'); card.setAttribute('aria-grabbed','true');
+        });
+        head.addEventListener('mouseup', ()=>{ card.removeAttribute('draggable'); card.removeAttribute('aria-grabbed'); });
+        btnDel.addEventListener('click', ()=> this.bus.emit('ui:delete', w.id));
+        btnEdit.addEventListener('click', ()=> this.bus.emit('ui:edit', w.id));
+        this._mountContent(w, frame);
+        return card;
+      }
+      _mountContent(w, frame){
+        if(w.contentType==='html'){ frame.srcdoc = w.content || '<div style="padding:10px;font-family:sans-serif;color:#cbd5e1">(empty)</div>'; }
+        else if(w.contentType==='url'){ frame.removeAttribute('srcdoc'); frame.src = w.contentUrl || 'about:blank'; }
+        else if(w.contentType==='server'){ fetch(w.contentUrl, { cache:'no-store' }).then(r=>r.text()).then(html=>{ frame.srcdoc = html; }).catch(()=>{ frame.srcdoc = '<div style="font:14px sans-serif; color:#e74c3c; padding:10px">Failed to load server content.</div>'; }); }
+      }
+      refresh(id){ const card=this.cardMap.get(id); if(!card) return; const frame = Dom.el('[data-ui="widget-frame"]', card); const w = app.service.widgets.find(x=>x.id===id); if(w) this._mountContent(w, frame); }
+      getOrder(){ return Dom.els('.cms-widget', this.root).map(el=>el.getAttribute('data-id')); }
+    }
+
+    // ---------- Drag & Drop (header handle only)
+    class DragManager {
+      constructor(container, bus){ this.container=container; this.bus=bus; this.bound=false; }
+      bind(){ if(this.bound) return; this.bound=true; const c=this.container;
+        c.addEventListener('dragstart', e=>{ const card=e.target.closest('.cms-widget'); if(!card) return; card.classList.add('cms-widget--ghost'); e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain', card.dataset.id); });
+        c.addEventListener('dragend', e=>{ const card=e.target.closest('.cms-widget'); if(card){ card.classList.remove('cms-widget--ghost'); card.removeAttribute('draggable'); card.removeAttribute('aria-grabbed'); } });
+        c.addEventListener('dragover', e=>{ e.preventDefault(); const after = this._getDragAfterElement(e.clientY, e.clientX); const dragging = Dom.el('.cms-widget--ghost', c); if(!dragging) return; if(after==null){ c.appendChild(dragging); } else { c.insertBefore(dragging, after); } });
+        c.addEventListener('drop', ()=>{ const order = Dom.els('.cms-widget', c).map(el=>el.dataset.id); this.bus.emit('dnd:reordered', order); });
+      }
+      _getDragAfterElement(mouseY, mouseX){ const els=[...Dom.els('.cms-widget:not(.cms-widget--ghost)', this.container)];
+        // Heuristic: choose nearest by vertical position then horizontal
+        let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+        for(const el of els){ const r = el.getBoundingClientRect(); const offset = mouseY - r.top - r.height/2; if(offset<0 && offset>closest.offset){ closest = { offset, element: el }; } }
+        return closest.element;
+      }
+    }
+
+    // ---------- Inspector Controller
+    class InspectorController {
+      constructor(formEl, previewFrame, bus){ this.form=formEl; this.preview=previewFrame; this.bus=bus; this.currentId=null; this._bind(); }
+      _bind(){ this.form.addEventListener('submit', e=>e.preventDefault());
+        this.form.addEventListener('click', e=>{
+          const btn = e.target.closest('[data-action]'); if(!btn) return;
+          const action = btn.getAttribute('data-action');
+          if(action==='create'){ const w=this._read(); if(!w.title) return alert('Title required'); app.service.add(w); this._reset(); }
+          if(action==='update'){ if(!this.currentId) return; const w=this._read(); app.service.update(this.currentId, w.toJSON()); this._reset(); }
+          if(action==='delete'){ if(!this.currentId) return; app.service.remove(this.currentId); this._reset(); }
+          if(action==='preview'){ const w=this._read(); this._preview(w); }
+        });
+        this.bus.on('ui:edit', id=>{ const w=app.service.widgets.find(x=>x.id===id); if(!w) return; this._load(w); });
+      }
+      _read(){ const fd = new FormData(this.form); const obj = Object.fromEntries(fd.entries());
+        const w = new WidgetModel({
+          id: obj.id || undefined,
+          title: obj.title,
+          description: obj.description,
+          contentType: obj.contentType,
+          content: obj.content,
+          contentUrl: obj.contentUrl,
+          refreshInterval: Number(obj.refreshInterval||0),
+          widthUnits: Number(obj.widthUnits||1),
+          heightUnits: Number(obj.heightUnits||1),
+          tags: (obj.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
+        });
+        return w;
+      }
+      _load(w){ this.currentId = w.id; this.form.querySelector('[data-action="update"]').disabled=false; this.form.querySelector('[data-action="delete"]').disabled=false; this.form.querySelector('[data-action="create"]').disabled=true;
+        this.form.id.value = w.id; this.form.title.value = w.title; this.form.description.value = w.description; this.form.contentType.value = w.contentType; this.form.content.value = w.content; this.form.contentUrl.value = w.contentUrl; this.form.refreshInterval.value = w.refreshInterval; this.form.widthUnits.value = w.widthUnits; this.form.heightUnits.value = w.heightUnits; this.form.tags.value = w.tags.join(', ');
+        this._preview(w);
+      }
+      _reset(){ this.currentId=null; this.form.reset(); this.form.querySelector('[data-action="update"]').disabled=true; this.form.querySelector('[data-action="delete"]').disabled=true; this.form.querySelector('[data-action="create"]').disabled=false; this.preview.removeAttribute('src'); this.preview.srcdoc=''; }
+      _preview(w){ if(w.contentType==='html'){ this.preview.srcdoc = w.content || '<div style="padding:10px;font:14px sans-serif; color:#cbd5e1">(empty)</div>'; }
+        else if(w.contentType==='url'){ this.preview.removeAttribute('srcdoc'); this.preview.src = w.contentUrl || 'about:blank'; }
+        else if(w.contentType==='server'){ fetch(w.contentUrl,{cache:'no-store'}).then(r=>r.text()).then(html=>{ this.preview.srcdoc=html; }).catch(()=>{ this.preview.srcdoc='<div style="padding:10px;color:#e74c3c">Server content failed to load.</div>';}); }
+      }
+    }
+
+    // ---------- App Facade
+    const app = {
+      bus: new EventBus(),
+      repo: new LocalStorageWidgetRepository(), // swap to new ApiWidgetRepository('/api/widgets') when ready
+      service: null,
+      view: null,
+      inspector: null,
+      init(){
+        this.service = new DashboardService(this.repo, this.bus);
+        this.view = new DashboardView(Dom.el('[data-ui="dashboard"]'), this.bus);
+        this.inspector = new InspectorController(Dom.el('[data-ui="form"]'), Dom.el('[data-ui="preview"]'), this.bus);
+        // Toolbar actions
+        Dom.el('[data-ui="btn-new"]').addEventListener('click', ()=>{ this.inspector._reset(); Dom.el('#f-title').focus(); });
+        Dom.el('[data-ui="btn-save"]').addEventListener('click', ()=>{ this.repo.saveAll(this.service.widgets); alert('Saved to localStorage.'); });
+        Dom.el('[data-ui="btn-clear"]').addEventListener('click', ()=>{ if(confirm('Clear all widgets?')){ this.repo.clear(); this.service.setAll([]); } });
+        Dom.el('[data-ui="btn-load-sample"]').addEventListener('click', ()=>{
+          const samples = [
+            new WidgetModel({ title:'Inline HTML', contentType:'html', content:'<div style="padding:10px"><h3>Inline</h3><p>This is inline HTML.</p></div>', widthUnits:1, heightUnits:1, tags:['demo'] }),
+            new WidgetModel({ title:'External URL', contentType:'url', contentUrl:'https://example.com', widthUnits:2, heightUnits:1, tags:['demo','url'] }),
+            new WidgetModel({ title:'Server HTML (fetch)', contentType:'server', contentUrl:'/api/render.php?id=demo', widthUnits:1, heightUnits:1, tags:['server'] })
+          ];
+          this.service.setAll(samples);
+        });
+        // DnD reorder
+        this.bus.on('dnd:reordered', order=>{ this.service.reorder(order); });
+        // Delete
+        this.bus.on('ui:delete', id=>{ if(confirm('Delete widget?')) this.service.remove(id); });
+        // Boot
+        this.service.load();
+      }
+    };
+    window.app = app; // expose for debugging
+    app.init();
+  })();
+  </script>
+</body>
+</html>
