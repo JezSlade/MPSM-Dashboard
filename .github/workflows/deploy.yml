@@ -44,7 +44,7 @@ jobs:
           server-dir: /
           state-name: .ftp-deploy-sync-state.json
           dry-run: false
-          dangerous-clean-slate: true
+          dangerous-clean-slate: false
           exclude: |
             **/.git/**
             **/.github/**

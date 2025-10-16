@@ -285,6 +285,20 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
         button:hover {
             background: #00357d;
         }
+        .example-btn {
+            background: #fff;
+            color: #004aad;
+            border: 2px solid #004aad;
+            padding: 0.65rem 1rem;
+            text-align: left;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .example-btn:hover {
+            background: #004aad;
+            color: #fff;
+            transform: translateX(4px);
+        }
         .error {
             color: #b71c1c;
             margin-bottom: 1rem;
@@ -312,8 +326,45 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
             pre {
                 background: #0b1120;
             }
+            .example-btn {
+                background: #1f2937;
+                color: #60a5fa;
+                border-color: #60a5fa;
+            }
+            .example-btn:hover {
+                background: #60a5fa;
+                color: #111827;
+            }
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const actionInput = document.getElementById('action');
+            const paramsTextarea = document.getElementById('params');
+            const exampleButtons = document.querySelectorAll('.example-btn');
+
+            exampleButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const action = this.getAttribute('data-action');
+                    const params = this.getAttribute('data-params');
+
+                    actionInput.value = action;
+
+                    // Pretty format the JSON
+                    try {
+                        const paramsObj = JSON.parse(params);
+                        paramsTextarea.value = JSON.stringify(paramsObj, null, 4);
+                    } catch (e) {
+                        paramsTextarea.value = params;
+                    }
+
+                    // Scroll to form
+                    actionInput.focus();
+                    actionInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -402,16 +453,53 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
         <section class="card">
             <h2>/query Test Harness</h2>
             <p class="meta">Test any of the 544 available operations from the canonical swagger.</p>
+
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #004aad;">
+                <h3 style="margin-top: 0; font-size: 1rem;">📋 Example Queries</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 0.75rem;">Click any example to load it into the form:</p>
+                <div style="display: grid; gap: 0.5rem;">
+                    <button type="button" class="example-btn" data-action="healthCheck" data-params="{}">
+                        🔍 Health Check - Test engine connectivity
+                    </button>
+                    <button type="button" class="example-btn" data-action="Account/GetProfile" data-params="{}">
+                        👤 Get Account Profile - Current authenticated user
+                    </button>
+                    <button type="button" class="example-btn" data-action="Dealer/Get" data-params='{"code": "DEALER001"}'>
+                        🏢 Get Dealer - Fetch dealer info by code
+                    </button>
+                    <button type="button" class="example-btn" data-action="Dealer/GetDealers" data-params='{"request": {"pageNumber": 1, "pageSize": 10, "sortField": "name", "sortDirection": "Asc"}}'>
+                        🏢 List Dealers - Get first 10 dealers sorted by name
+                    </button>
+                    <button type="button" class="example-btn" data-action="Customer/Get" data-params='{"code": "CUST001"}'>
+                        🏪 Get Customer - Fetch customer by code
+                    </button>
+                    <button type="button" class="example-btn" data-action="Customer/GetCustomers" data-params='{"request": {"dealerCode": "DEALER001", "pageNumber": 1, "pageSize": 10}}'>
+                        🏪 List Customers - Get customers for a dealer
+                    </button>
+                    <button type="button" class="example-btn" data-action="Device/List" data-params='{"request": {"pageNumber": 1, "pageSize": 10}}'>
+                        🖨️ List Devices - Get first 10 devices
+                    </button>
+                    <button type="button" class="example-btn" data-action="Device/Get" data-params='{"id": "device-id-here"}'>
+                        🖨️ Get Device - Fetch specific device by ID
+                    </button>
+                    <button type="button" class="example-btn" data-action="Explorer/Device" data-params='{"request": {"pageNumber": 1, "pageSize": 5}}'>
+                        🔎 Explorer Device - Advanced device search
+                    </button>
+                    <button type="button" class="example-btn" data-action="Explorer/Customer" data-params='{"request": {"pageNumber": 1, "pageSize": 5}}'>
+                        🔎 Explorer Customer - Advanced customer search
+                    </button>
+                </div>
+            </div>
+
             <?php if ($testError): ?>
                 <p class="error"><?= h($testError) ?></p>
             <?php endif; ?>
-            <form method="post" novalidate>
-                <label for="action">Action</label>
-                <input type="text" id="action" name="action" value="<?= h($defaultAction) ?>" placeholder="e.g. healthCheck" required>
+            <form method="post" novalidate id="queryForm">
+                <label for="action">Action <span style="font-weight: normal; color: #666;">(or click an example above)</span></label>
+                <input type="text" id="action" name="action" value="<?= h($defaultAction) ?>" placeholder="e.g. Account/GetProfile" required>
 
-                <label for="params">Params (JSON)</label>
-                <textarea id="params" name="params" rows="8" placeholder="{&quot;id&quot;:123}">
-<?= h($defaultParams) ?></textarea>
+                <label for="params">Params (JSON) <span style="font-weight: normal; color: #666;">(leave empty {} for no params)</span></label>
+                <textarea id="params" name="params" rows="8" placeholder='{"key": "value"}'><?= h($defaultParams) ?></textarea>
 
                 <button type="submit">Send Request</button>
             </form>
