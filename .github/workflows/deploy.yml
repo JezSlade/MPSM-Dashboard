@@ -36,8 +36,30 @@ jobs:
           local-dir: ./
           server-dir: /
           exclude: |
+            .git*
             .git/
             .github/
+            .gitignore
+            .env.example
+            node_modules/
+            *.log
+            **/logs/*.log
+            .vscode/
+            .idea/
+            *.md
+            README.md
+            LICENSE
+            package*.json
+            composer.*
+            phpunit.xml
+            .phpunit.result.cache
+            tests/
+            mps-api/test_*.php
+            mps-api/verify_*.py
+            **/__pycache__/
+            *.pyc
+            .DS_Store
+            Thumbs.db
           log-level: verbose
 
       - name: 📜 Deployment Completed Report

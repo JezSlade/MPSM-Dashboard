@@ -1,27 +1,39 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Allow direct access to setup.php to avoid redirect loops
-    RewriteCond %{REQUEST_URI} ^/setup.php$ [NC]
+    # Force HTTPS (do this first)
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Protect sensitive files and directories
+    RewriteRule ^\.env$ - [F,L]
+    RewriteRule ^\.git - [F,L]
+    RewriteRule ^\.github - [F,L]
+    RewriteRule ^db/ - [F,L]
+    RewriteRule ^logs/ - [F,L]
+    RewriteRule ^\.canonical/ - [F,L]
+
+    # Allow direct access to setup.php
+    RewriteCond %{REQUEST_URI} ^/setup\.php$ [NC]
     RewriteRule ^ - [L]
 
-    # Route MPS Monitor API Engine requests to its internal router
+    # Allow direct access to documentation files (markdown)
+    RewriteCond %{REQUEST_URI} \.(md|txt)$ [NC]
+    RewriteRule ^ - [L]
+
+    # MPS API Engine routing - delegate to mps-api/index.php
     RewriteCond %{REQUEST_URI} ^/mps-api/ [NC]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^mps-api/(.*)$ mps-api/index.php [L,QSA]
 
-    # Force HTTPS
-    RewriteCond %{HTTPS} off
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-    # Redirect all requests to index.php if not a real file or directory
+    # Root index.php for all other non-file/directory requests
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L]
 
-    # Protect sensitive files
-    <FilesMatch "(\.env|\.htaccess|composer\.json|composer\.lock)$">
+    # Additional file protection via FilesMatch
+    <FilesMatch "(\.env.*|\.htaccess|composer\.(json|lock)|config\.php)$">
         Require all denied
     </FilesMatch>
 </IfModule>

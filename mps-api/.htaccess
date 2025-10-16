@@ -1,0 +1,54 @@
+# MPS API Engine - Directory Protection and Routing
+# This file ensures all requests to /mps-api/* are routed through index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /mps-api/
+
+    # Deny direct access to sensitive files
+    <FilesMatch "(config\.php|\.env|SwaggerActionRegistry\.php|engine\.php|\.log)$">
+        Require all denied
+    </FilesMatch>
+
+    # Allow direct access to index.php (to avoid redirect loop)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} /index\.php$ [NC]
+    RewriteRule ^ - [L]
+
+    # Block access to logs directory
+    RewriteRule ^logs/ - [F,L]
+
+    # Route all other requests to index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Additional security
+<IfModule mod_headers.c>
+    # Security headers for API responses
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Protect logs directory
+<DirectoryMatch "^.*/logs">
+    Require all denied
+</DirectoryMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect .canonical directory from direct access
+<DirectoryMatch "^.*/.canonical">
+    Require all denied
+</DirectoryMatch>
+
+# But allow reading swagger.json through the engine
+<Files "Swagger.json">
+    # Only accessible through engine, not directly
+    <If "%{REQUEST_URI} =~ m#/mps-api/swagger\.json$#">
+        Require all granted
+    </If>
+</Files>

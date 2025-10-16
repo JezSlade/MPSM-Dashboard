@@ -197,7 +197,7 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPS Monitor API Engine Landing</title>
+    <title>MPS Monitor Dashboard - Engine Monitor</title>
     <style>
         :root {
             color-scheme: light dark;
@@ -318,8 +318,9 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
 <body>
     <div class="container">
         <header>
-            <h1>MPS Monitor API Engine</h1>
-            <p class="meta">Base URL: <code><?= h($engineBaseUrl) ?></code></p>
+            <h1>MPS Monitor Dashboard</h1>
+            <p style="font-size: 1.1rem; color: #666;">Engine Status & Testing Interface</p>
+            <p class="meta">Engine URL: <code><?= h($engineBaseUrl) ?></code></p>
         </header>
 
         <section class="card">
@@ -342,8 +343,25 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
                 <dd><?= h($healthResult['error']) ?: 'None' ?></dd>
             </dl>
             <?php if ($healthData !== null): ?>
-                <h3>Response</h3>
-                <pre><?= h(pretty_json($healthResult['body'])) ?></pre>
+                <h3>Engine Info</h3>
+                <dl>
+                    <?php if (isset($healthData['action_count'])): ?>
+                        <dt>Available Operations</dt>
+                        <dd><strong><?= h((string)$healthData['action_count']) ?></strong> operations from canonical swagger</dd>
+                    <?php endif; ?>
+                    <?php if (isset($healthData['version'])): ?>
+                        <dt>Engine Version</dt>
+                        <dd><?= h($healthData['version']) ?></dd>
+                    <?php endif; ?>
+                    <?php if (isset($healthData['service'])): ?>
+                        <dt>Service</dt>
+                        <dd><?= h($healthData['service']) ?></dd>
+                    <?php endif; ?>
+                </dl>
+                <details>
+                    <summary style="cursor: pointer; font-weight: 600; margin-top: 1rem;">View Full Response</summary>
+                    <pre><?= h(pretty_json($healthResult['body'])) ?></pre>
+                </details>
             <?php elseif ($healthResult['body']): ?>
                 <h3>Raw Response</h3>
                 <pre><?= h($healthResult['body']) ?></pre>
@@ -351,8 +369,39 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
         </section>
 
         <section class="card">
+            <h2>Quick Links</h2>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="<?= h($engineBaseUrl) ?>" target="_blank" style="color: #004aad; text-decoration: none;">
+                        📡 Engine Root (JSON API)
+                    </a>
+                </li>
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="<?= h($engineBaseUrl) ?>/endpoints" target="_blank" style="color: #004aad; text-decoration: none;">
+                        📋 All Available Endpoints (544 operations)
+                    </a>
+                </li>
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="<?= h($engineBaseUrl) ?>/swagger.json" target="_blank" style="color: #004aad; text-decoration: none;">
+                        📄 Canonical Swagger Specification
+                    </a>
+                </li>
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="mps-api/QUICK_START.md" target="_blank" style="color: #004aad; text-decoration: none;">
+                        🚀 Quick Start Guide
+                    </a>
+                </li>
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="mps-api/USAGE_EXAMPLES.md" target="_blank" style="color: #004aad; text-decoration: none;">
+                        📚 Usage Examples
+                    </a>
+                </li>
+            </ul>
+        </section>
+
+        <section class="card">
             <h2>/query Test Harness</h2>
-            <p class="meta">Submit any supported action to verify engine behaviour.</p>
+            <p class="meta">Test any of the 544 available operations from the canonical swagger.</p>
             <?php if ($testError): ?>
                 <p class="error"><?= h($testError) ?></p>
             <?php endif; ?>
