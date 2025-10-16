@@ -473,25 +473,25 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
                     <button type="button" class="example-btn" data-action="Dealer/Get" data-params='{"request": {"Code": "DEMO"}}'>
                         🏢 Get Dealer - Fetch dealer by code (Code: DEMO)
                     </button>
-                    <button type="button" class="example-btn" data-action="Dealer/GetDealers" data-params='{"request": {"PageNumber": 1, "PageRows": 10, "SortField": "Name", "SortDirection": "Asc"}}'>
+                    <button type="button" class="example-btn" data-action="Dealer/GetDealers" data-params='{"request": {"PageNumber": 1, "PageRows": 10, "SortColumn": "Name", "SortOrder": "Asc"}}'>
                         🏢 List Dealers - Get first 10 dealers sorted by name
                     </button>
-                    <button type="button" class="example-btn" data-action="Customer/GetCustomers" data-params='{"request": {"FilterDealerId": 1, "PageNumber": 1, "PageRows": 10}}'>
+                    <button type="button" class="example-btn" data-action="Customer/GetCustomers" data-params='{"request": {"FilterDealerId": 1, "PageNumber": 1, "PageRows": 10, "SortColumn": "Name", "SortOrder": "Asc"}}'>
                         🏪 List Customers - Get customers for dealer ID 1
                     </button>
                     <button type="button" class="example-btn" data-action="Device/Get" data-params='{"request": {"FilterDeviceId": 1}}'>
                         🖨️ Get Device - Fetch device by ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="InstalledProduct/GetInstalledProducts" data-params='{"request": {"PageNumber": 1, "PageRows": 10}}'>
+                    <button type="button" class="example-btn" data-action="InstalledProduct/GetInstalledProducts" data-params='{"request": {"PageNumber": 1, "PageRows": 10, "SortColumn": "ProductName", "SortOrder": "Asc"}}'>
                         📦 List Installed Products - Get first 10 products
                     </button>
                     <button type="button" class="example-btn" data-action="Explorer/GetExplorerDatas" data-params='{"dealerId": 1, "clusterId": 0, "pageNumber": 1, "pageRows": 5}'>
                         🔎 Explorer Data - Get explorer data for dealer ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="Counter/Device/List" data-params='{"request": {"FilterDeviceId": 1, "PageNumber": 1, "PageRows": 10}}'>
+                    <button type="button" class="example-btn" data-action="Counter/Device/List" data-params='{"request": {"FilterDeviceId": 1, "PageNumber": 1, "PageRows": 10, "SortColumn": "DateRead", "SortOrder": "Desc"}}'>
                         📊 Device Counters - Get counter data for device ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="Supply/GetSupplies" data-params='{"request": {"PageNumber": 1, "PageRows": 10}}'>
+                    <button type="button" class="example-btn" data-action="Supply/GetSupplies" data-params='{"request": {"PageNumber": 1, "PageRows": 10, "SortColumn": "Name", "SortOrder": "Asc"}}'>
                         🎨 List Supplies - Get supply inventory (first 10)
                     </button>
                 </div>
