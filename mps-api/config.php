@@ -18,16 +18,34 @@ if (!defined('MPS_ENGINE_ACCESS')) {
  * Load .env file and return configuration array with file locking
  */
 function loadEnvironment() {
-    $envPath = __DIR__ . '/.env';
-    
-    if (!file_exists($envPath)) {
-        throw new Exception('.env file not found at: ' . $envPath);
+    $paths = [];
+
+    $override = getenv('MPS_ENGINE_ENV_PATH');
+    if ($override) {
+        $paths[] = $override;
     }
-    
-    if (!is_readable($envPath)) {
-        throw new Exception('.env file not readable: ' . $envPath);
+
+    // Prefer the canonical root-level .env (project root)
+    $paths[] = dirname(__DIR__) . '/.env';
+
+    // Allow parent directories (e.g., when engine deployed deeper)
+    $paths[] = dirname(__DIR__, 2) . '/.env';
+
+    // Legacy location inside the engine directory
+    $paths[] = __DIR__ . '/.env';
+
+    $envPath = null;
+    foreach ($paths as $candidate) {
+        if ($candidate && file_exists($candidate) && is_readable($candidate)) {
+            $envPath = $candidate;
+            break;
+        }
     }
-    
+
+    if ($envPath === null) {
+        throw new Exception('.env file not found in expected locations');
+    }
+
     // Open file with shared lock for reading
     $handle = fopen($envPath, 'r');
     if ($handle === false) {
@@ -101,51 +119,60 @@ function loadEnvironment() {
 /**
  * Validate configuration has required fields
  */
-function validateConfig($config) {
-    if (!is_array($config)) {
-        throw new Exception('Configuration must be an array');
+function validateConfig(array $config): array {
+    if (empty($config['MPS_BASE_URL']) && !empty($config['API_BASE_URL'])) {
+        $config['MPS_BASE_URL'] = $config['API_BASE_URL'];
     }
-    
-    $required = ['MPS_BASE_URL', 'MPS_API_KEY'];
-    $missing = [];
-    
-    foreach ($required as $key) {
-        if (!isset($config[$key]) || trim($config[$key]) === '') {
-            $missing[] = $key;
-        }
+
+    if (empty($config['TOKEN_URL']) && !empty($config['MPS_TOKEN_URL'])) {
+        $config['TOKEN_URL'] = $config['MPS_TOKEN_URL'];
     }
-    
-    if (!empty($missing)) {
-        throw new Exception('Missing required configuration: ' . implode(', ', $missing));
+
+    if (empty($config['MPS_BASE_URL'])) {
+        throw new Exception('Missing required configuration: MPS_BASE_URL (or API_BASE_URL)');
     }
-    
-    // Validate URL format
+
     if (!filter_var($config['MPS_BASE_URL'], FILTER_VALIDATE_URL)) {
         throw new Exception('MPS_BASE_URL must be a valid URL');
     }
-    
-    // Validate URL uses HTTPS in production
+
     $parsedUrl = parse_url($config['MPS_BASE_URL']);
     if (isset($parsedUrl['scheme']) && $parsedUrl['scheme'] !== 'https') {
-        // Log warning but don't fail (allow HTTP for local dev)
         error_log('Warning: MPS_BASE_URL should use HTTPS in production');
     }
-    
-    // Validate API key is not obviously a placeholder
-    $invalidKeys = ['your_api_key_here', 'your_actual_api_key', 'test', 'demo', 'placeholder'];
-    $apiKeyLower = strtolower($config['MPS_API_KEY']);
-    foreach ($invalidKeys as $invalid) {
-        if (strpos($apiKeyLower, $invalid) !== false) {
-            throw new Exception('MPS_API_KEY appears to be a placeholder value');
+
+    $hasApiKey = !empty($config['MPS_API_KEY']);
+    $oauthKeys = ['TOKEN_URL', 'CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE'];
+    $missingOauth = [];
+    foreach ($oauthKeys as $key) {
+        if (empty($config[$key])) {
+            $missingOauth[] = $key;
         }
     }
-    
-    // Validate API key minimum length
-    if (strlen($config['MPS_API_KEY']) < 10) {
-        throw new Exception('MPS_API_KEY is too short (minimum 10 characters)');
+
+    if (!$hasApiKey && !empty($missingOauth)) {
+        throw new Exception('Missing authentication configuration: provide either MPS_API_KEY or complete OAuth password grant variables (' . implode(', ', $oauthKeys) . ').');
     }
-    
-    return true;
+
+    if ($hasApiKey) {
+        $invalidKeys = ['your_api_key_here', 'your_actual_api_key', 'test', 'demo', 'placeholder'];
+        $apiKeyLower = strtolower($config['MPS_API_KEY']);
+        foreach ($invalidKeys as $invalid) {
+            if (strpos($apiKeyLower, $invalid) !== false) {
+                throw new Exception('MPS_API_KEY appears to be a placeholder value');
+            }
+        }
+
+        if (strlen($config['MPS_API_KEY']) < 10) {
+            throw new Exception('MPS_API_KEY is too short (minimum 10 characters)');
+        }
+
+        $config['AUTH_MODE'] = 'api_key';
+    } else {
+        $config['AUTH_MODE'] = 'oauth_password';
+    }
+
+    return $config;
 }
 
 /**
@@ -195,7 +222,7 @@ function setDefaults($config) {
 // Main configuration loading logic
 try {
     $config = loadEnvironment();
-    validateConfig($config);
+    $config = validateConfig($config);
     $config = setDefaults($config);
     
     return $config;

@@ -353,6 +353,31 @@ function sanitizeInput($input, $type = 'string') {
     return $input;
 }
 
+function statusFromEngineResult(array $result): int {
+    if (!isset($result['success']) || $result['success'] === true) {
+        return 200;
+    }
+
+    if (isset($result['http_code']) && is_numeric($result['http_code']) && $result['http_code'] >= 100) {
+        return (int) $result['http_code'];
+    }
+
+    $code = $result['error_code'] ?? null;
+    switch ($code) {
+        case MPSMonitorEngine::ERR_VALIDATION:
+            return 400;
+        case MPSMonitorEngine::ERR_NETWORK:
+            return 502;
+        case MPSMonitorEngine::ERR_CONFIG:
+        case MPSMonitorEngine::ERR_INTERNAL:
+            return 500;
+        case MPSMonitorEngine::ERR_API:
+            return 502;
+        default:
+            return 400;
+    }
+}
+
 // Main routing logic with comprehensive error handling
 try {
     $engine = MPSMonitorEngine::getInstance();
@@ -362,12 +387,20 @@ try {
     
     // Route: Health check / Root
     if ($path === '/' || $path === '') {
+        $registry = SwaggerActionRegistry::getInstance();
+        $operations = $registry->listOperations();
+        $sampleActions = array_slice(array_map(function ($op) {
+            return $op['action'];
+        }, $operations), 0, 10);
+
         sendResponse([
             'status' => 'online',
             'service' => 'MPS Monitors API Engine',
             'version' => '1.1.0',
             'timestamp' => date('c'),
             'base_path' => $basePath,
+            'action_count' => count($operations),
+            'sample_actions' => $sampleActions,
             'endpoints' => [
                 'health' => $basePath . '/health',
                 'endpoints' => $basePath . '/endpoints',
@@ -386,18 +419,32 @@ try {
     
     // Route: Available endpoints
     if ($path === '/endpoints') {
-        $endpoints = $engine->getAvailableEndpoints();
+        $registry = SwaggerActionRegistry::getInstance();
+        $operations = array_map(function (array $op) {
+            return [
+                'action' => $op['action'],
+                'method' => $op['method'],
+                'path' => '/' . ltrim($op['path'], '/'),
+                'summary' => $op['summary'],
+                'aliases' => $op['aliases'],
+            ];
+        }, $registry->listOperations());
+        $groups = $engine->getAvailableEndpoints();
+
         sendResponse([
             'success' => true,
             'base_url' => $basePath,
-            'endpoints' => $endpoints,
+            'count' => count($operations),
+            'operations' => $operations,
+            'groups' => $groups['groups'] ?? [],
             'documentation' => $basePath . '/swagger.json'
         ]);
     }
     
     // Route: Swagger JSON
     if ($path === '/swagger.json') {
-        $swaggerPath = __DIR__ . '/swagger.json';
+        $registry = SwaggerActionRegistry::getInstance();
+        $swaggerPath = $registry->getSpecPath();
         if (!file_exists($swaggerPath)) {
             sendResponse(['error' => 'Swagger documentation not found'], 404);
         }
@@ -425,152 +472,32 @@ try {
     // Route: Main query endpoint (ChatGPT Actions primary)
     if ($path === '/query' && $method === 'POST') {
         $body = getRequestBody();
-        
-        // Validate required fields
         validateRequiredFields($body, ['action']);
-        
-        $action = sanitizeInput($body['action'], 'string');
-        $params = sanitizeInput($body['params'] ?? [], 'array');
-        
-        // Validate action format
-        if (!preg_match('/^[a-zA-Z]+$/', $action)) {
+
+        $action = is_string($body['action']) ? trim($body['action']) : '';
+        if ($action === '') {
             sendResponse([
                 'success' => false,
-                'error' => 'Invalid action format'
+                'error' => 'Action name is required.'
             ], 400);
         }
-        
-        // Route to appropriate engine method
-        switch ($action) {
-            case 'getMonitors':
-                $result = $engine->getMonitors($params);
-                break;
-                
-            case 'getMonitor':
-                validateRequiredFields($params, ['id']);
-                $result = $engine->getMonitor($params['id']);
-                break;
-                
-            case 'createMonitor':
-                validateRequiredFields($params, ['name', 'url']);
-                $result = $engine->createMonitor($params);
-                break;
-                
-            case 'updateMonitor':
-                validateRequiredFields($params, ['id']);
-                $monitorId = $params['id'];
-                unset($params['id']);
-                $result = $engine->updateMonitor($monitorId, $params);
-                break;
-                
-            case 'deleteMonitor':
-                validateRequiredFields($params, ['id']);
-                $result = $engine->deleteMonitor($params['id']);
-                break;
-                
-            case 'getAlerts':
-                $result = $engine->getAlerts($params);
-                break;
-                
-            case 'getStatistics':
-                validateRequiredFields($params, ['id']);
-                $period = $params['period'] ?? '24h';
-                $result = $engine->getStatistics($params['id'], $period);
-                break;
-                
-            case 'healthCheck':
-                $result = $engine->healthCheck();
-                break;
-                
-            default:
-                sendResponse([
-                    'success' => false,
-                    'error' => 'Unknown action: ' . $action,
-                    'available_actions' => [
-                        'getMonitors', 'getMonitor', 'createMonitor', 
-                        'updateMonitor', 'deleteMonitor', 'getAlerts', 
-                        'getStatistics', 'healthCheck'
-                    ]
-                ], 400);
+
+        $params = $body['params'] ?? [];
+        if (!is_array($params)) {
+            sendResponse([
+                'success' => false,
+                'error' => 'Params must be an object.'
+            ], 400);
         }
-        
-        sendResponse($result);
-    }
-    
-    // Route: Direct monitor access
-    if (preg_match('#^/monitors(/(.+))?$#', $path, $matches)) {
-        $monitorId = isset($matches[2]) ? $matches[2] : null;
-        
-        // Security: Validate monitor ID if present
-        if ($monitorId !== null && !preg_match('/^[a-zA-Z0-9_-]+$/', $monitorId)) {
-            logSecurityEvent('Invalid monitor ID format', [
-                'id' => $monitorId,
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-            ]);
-            sendResponse(['error' => 'Invalid monitor ID format'], 400);
-        }
-        
-        if ($monitorId && $method === 'GET') {
-            $result = $engine->getMonitor($monitorId);
+
+        if (strcasecmp($action, 'healthCheck') === 0) {
+            $result = $engine->healthCheck();
             sendResponse($result);
-        } elseif (!$monitorId && $method === 'GET') {
-            // Sanitize GET parameters
-            $filters = [];
-            foreach ($_GET as $key => $value) {
-                if (preg_match('/^[a-zA-Z_]+$/', $key)) {
-                    $filters[$key] = sanitizeInput($value, 'string');
-                }
-            }
-            $result = $engine->getMonitors($filters);
-            sendResponse($result);
-        } elseif (!$monitorId && $method === 'POST') {
-            $data = getRequestBody();
-            validateRequiredFields($data, ['name', 'url']);
-            $result = $engine->createMonitor($data);
-            sendResponse($result, 201);
-        } elseif ($monitorId && $method === 'PUT') {
-            $data = getRequestBody();
-            if (empty($data)) {
-                sendResponse(['error' => 'No update data provided'], 400);
-            }
-            $result = $engine->updateMonitor($monitorId, $data);
-            sendResponse($result);
-        } elseif ($monitorId && $method === 'DELETE') {
-            $result = $engine->deleteMonitor($monitorId);
-            sendResponse($result);
-        } else {
-            sendResponse(['error' => 'Invalid monitor endpoint combination'], 400);
         }
-    }
-    
-    // Route: Alerts
-    if ($path === '/alerts' && $method === 'GET') {
-        $filters = [];
-        foreach ($_GET as $key => $value) {
-            if (preg_match('/^[a-zA-Z_]+$/', $key)) {
-                $filters[$key] = sanitizeInput($value, 'string');
-            }
-        }
-        $result = $engine->getAlerts($filters);
-        sendResponse($result);
-    }
-    
-    // Route: Statistics
-    if (preg_match('#^/monitors/(.+)/statistics$#', $path, $matches)) {
-        $monitorId = $matches[1];
-        
-        // Security: Validate monitor ID
-        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $monitorId)) {
-            logSecurityEvent('Invalid monitor ID in statistics request', [
-                'id' => $monitorId,
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-            ]);
-            sendResponse(['error' => 'Invalid monitor ID format'], 400);
-        }
-        
-        $period = isset($_GET['period']) ? sanitizeInput($_GET['period'], 'string') : '24h';
-        $result = $engine->getStatistics($monitorId, $period);
-        sendResponse($result);
+
+        $result = $engine->dispatchAction($action, $params);
+        $status = statusFromEngineResult($result);
+        sendResponse($result, $status);
     }
     
     // 404 - Route not found

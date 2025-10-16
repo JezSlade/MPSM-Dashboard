@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/SwaggerActionRegistry.php';
 /**
  * MPS Monitors API Engine
  * 
@@ -14,6 +15,11 @@ class MPSMonitorEngine {
     private static $config = null;
     private static $instance = null;
     private static $requestCount = 0;
+    private static $authMode = 'api_key';
+    private static $accessToken = null;
+    private static $accessTokenExpiresAt = 0;
+    private static $lastAuthError = null;
+    private static $actionRegistry = null;
     
     // Error codes
     const ERR_CONFIG = 1000;
@@ -40,6 +46,10 @@ class MPSMonitorEngine {
     private function __construct() {
         if (self::$config === null) {
             self::loadConfig();
+        }
+
+        if (self::$actionRegistry === null) {
+            self::$actionRegistry = SwaggerActionRegistry::getInstance();
         }
     }
     
@@ -85,31 +95,34 @@ class MPSMonitorEngine {
         }
         
         // Validate required configuration
-        $required = ['MPS_BASE_URL', 'MPS_API_KEY'];
-        $missing = [];
-        
-        foreach ($required as $key) {
-            if (empty(self::$config[$key])) {
-                $missing[] = $key;
-            }
-        }
-        
-        if (!empty($missing)) {
-            $message = "Missing required configuration: " . implode(', ', $missing);
-            self::logError($message, self::ERR_CONFIG);
-            throw new Exception($message, self::ERR_CONFIG);
-        }
-        
-        // Validate URL format
-        if (!filter_var(self::$config['MPS_BASE_URL'], FILTER_VALIDATE_URL)) {
-            self::logError('Invalid MPS_BASE_URL format', self::ERR_CONFIG);
+        if (empty(self::$config['MPS_BASE_URL']) || !filter_var(self::$config['MPS_BASE_URL'], FILTER_VALIDATE_URL)) {
+            self::logError('Invalid or missing MPS_BASE_URL', self::ERR_CONFIG);
             throw new Exception('Invalid MPS_BASE_URL format', self::ERR_CONFIG);
         }
-        
-        // Validate API key format (not empty, reasonable length)
-        if (strlen(self::$config['MPS_API_KEY']) < 10) {
-            self::logError('MPS_API_KEY appears invalid (too short)', self::ERR_CONFIG);
-            throw new Exception('MPS_API_KEY appears invalid', self::ERR_CONFIG);
+
+        self::$authMode = self::$config['AUTH_MODE'] ?? 'api_key';
+
+        if (self::$authMode === 'api_key') {
+            if (empty(self::$config['MPS_API_KEY']) || strlen(self::$config['MPS_API_KEY']) < 10) {
+                self::logError('MPS_API_KEY appears invalid or missing', self::ERR_CONFIG);
+                throw new Exception('MPS_API_KEY appears invalid', self::ERR_CONFIG);
+            }
+        } elseif (self::$authMode === 'oauth_password') {
+            $oauthRequired = ['TOKEN_URL', 'CLIENT_ID', 'CLIENT_SECRET', 'USERNAME', 'PASSWORD', 'SCOPE'];
+            $missingOauth = [];
+            foreach ($oauthRequired as $key) {
+                if (empty(self::$config[$key])) {
+                    $missingOauth[] = $key;
+                }
+            }
+            if (!empty($missingOauth)) {
+                $message = 'Missing OAuth configuration values: ' . implode(', ', $missingOauth);
+                self::logError($message, self::ERR_CONFIG);
+                throw new Exception($message, self::ERR_CONFIG);
+            }
+        } else {
+            self::logError('Unknown AUTH_MODE: ' . self::$authMode, self::ERR_CONFIG);
+            throw new Exception('Unsupported authentication mode: ' . self::$authMode, self::ERR_CONFIG);
         }
         
         // Set defaults with validation
@@ -137,7 +150,7 @@ class MPSMonitorEngine {
      * @param array $queryParams URL query parameters
      * @return array Response data
      */
-    public function makeRequest($endpoint, $method = 'GET', $data = [], $queryParams = []) {
+    public function makeRequest($endpoint, $method = 'GET', $data = [], $queryParams = [], array $options = []) {
         // Validate inputs
         if (empty($endpoint) || !is_string($endpoint)) {
             return $this->errorResponse('Invalid endpoint', self::ERR_VALIDATION);
@@ -169,6 +182,11 @@ class MPSMonitorEngine {
             self::logError("Invalid URL generated: {$url}", self::ERR_VALIDATION);
             return $this->errorResponse('Invalid request URL', self::ERR_VALIDATION);
         }
+
+        $contentType = $options['contentType'] ?? null;
+        $additionalHeaders = $options['headers'] ?? [];
+        $rawBody = $options['rawBody'] ?? false;
+        $forceBody = $options['forceBody'] ?? false;
         
         // Increment request counter
         self::$requestCount++;
@@ -181,7 +199,7 @@ class MPSMonitorEngine {
                 'params' => $queryParams
             ]);
         }
-        
+
         // Attempt request with retry logic
         $maxRetries = self::$config['MPS_MAX_RETRIES'];
         $attempt = 0;
@@ -190,7 +208,17 @@ class MPSMonitorEngine {
         while ($attempt < $maxRetries) {
             $attempt++;
             
-            $result = $this->executeRequest($url, $method, $data, $requestId, $attempt);
+            $authCheck = $this->prepareAuthorization();
+            if ($authCheck !== true) {
+                return $authCheck;
+            }
+            
+            $result = $this->executeRequest($url, $method, $data, $requestId, $attempt, [
+                'contentType' => $contentType,
+                'headers' => $additionalHeaders,
+                'rawBody' => $rawBody,
+                'forceBody' => $forceBody,
+            ]);
             
             // Success - return immediately
             if ($result['success']) {
@@ -218,7 +246,128 @@ class MPSMonitorEngine {
         self::logError("Request {$requestId} failed after {$attempt} attempts", self::ERR_NETWORK);
         return $lastError;
     }
-    
+
+    /**
+     * Dispatch an action defined in the swagger specification.
+     *
+     * @param string $action
+     * @param array $params
+     * @return array
+     */
+    public function dispatchAction(string $action, array $params = [])
+    {
+        if (self::$actionRegistry === null) {
+            self::$actionRegistry = SwaggerActionRegistry::getInstance();
+        }
+
+        if (empty($action)) {
+            return $this->errorResponse('Action name is required.', self::ERR_VALIDATION);
+        }
+
+        $operation = self::$actionRegistry->getOperation($action);
+        if ($operation === null) {
+            return $this->errorResponse("Unknown action: {$action}", self::ERR_VALIDATION);
+        }
+
+        if (!is_array($params)) {
+            return $this->errorResponse('Params must be an object.', self::ERR_VALIDATION);
+        }
+
+        $endpoint = ltrim($operation['path'], '/');
+        $remaining = $params;
+        $query = [];
+        $headers = [];
+        $body = [];
+
+        // Resolve path parameters
+        foreach ($operation['pathParams'] as $name => $meta) {
+            if (!array_key_exists($name, $remaining)) {
+                return $this->errorResponse("Missing required path parameter: {$name}", self::ERR_VALIDATION);
+            }
+            $value = $remaining[$name];
+            $endpoint = preg_replace('/{' . preg_quote($name, '/') . '}/', rawurlencode((string) $value), $endpoint);
+            unset($remaining[$name]);
+        }
+
+        if (strpos($endpoint, '{') !== false) {
+            return $this->errorResponse('Missing path parameter values for action ' . $operation['action'], self::ERR_VALIDATION);
+        }
+
+        // Resolve query parameters
+        foreach ($operation['queryParams'] as $name => $meta) {
+            if (array_key_exists($name, $remaining)) {
+                $query[$name] = $remaining[$name];
+                unset($remaining[$name]);
+            } elseif (!empty($meta['required'])) {
+                return $this->errorResponse("Missing required query parameter: {$name}", self::ERR_VALIDATION);
+            }
+        }
+
+        // Resolve header parameters
+        foreach ($operation['headerParams'] as $name => $meta) {
+            if (array_key_exists($name, $remaining)) {
+                $headers[$name] = $remaining[$name];
+                unset($remaining[$name]);
+            } elseif (!empty($meta['required'])) {
+                return $this->errorResponse("Missing required header parameter: {$name}", self::ERR_VALIDATION);
+            }
+        }
+
+        $contentType = $this->determineContentType($operation['consumes'] ?? []);
+
+        if ($operation['hasBody']) {
+            if (!empty($operation['formParams'])) {
+                $formData = [];
+                foreach ($operation['formParams'] as $name => $meta) {
+                    if (array_key_exists($name, $remaining)) {
+                        $formData[$name] = $remaining[$name];
+                        unset($remaining[$name]);
+                    } elseif (!empty($meta['required'])) {
+                        return $this->errorResponse("Missing required form parameter: {$name}", self::ERR_VALIDATION);
+                    }
+                }
+                $body = $formData;
+                if ($contentType === null || stripos($contentType, 'json') !== false) {
+                    $contentType = 'application/x-www-form-urlencoded';
+                }
+            } else {
+                if (!empty($operation['bodyParam']) && array_key_exists($operation['bodyParam'], $params)) {
+                    $body = $params[$operation['bodyParam']];
+                    unset($remaining[$operation['bodyParam']]);
+                } else {
+                    $body = $remaining;
+                }
+            }
+        }
+
+        if ($operation['hasBody'] === false && !empty($remaining)) {
+            $query = array_merge($query, $remaining);
+            $remaining = [];
+        }
+
+        if ($operation['hasBody'] && empty($body) && !empty($remaining)) {
+            $body = $remaining;
+            $remaining = [];
+        }
+
+        if (!is_array($body) && !is_string($body) && !is_object($body)) {
+            $body = (array) $body;
+        }
+
+        if ($operation['hasBody'] === false) {
+            $body = [];
+        } elseif (is_array($body) && empty($body) && empty($operation['formParams'])) {
+            $body = new stdClass();
+        }
+
+        $options = [
+            'headers' => $headers,
+            'contentType' => $contentType,
+        ];
+
+        return $this->makeRequest($endpoint, $operation['method'], $body, $query, $options);
+    }
+
     /**
      * Execute single HTTP request
      * 
@@ -229,23 +378,65 @@ class MPSMonitorEngine {
      * @param int $attempt Attempt number
      * @return array Response
      */
-    private function executeRequest($url, $method, $data, $requestId, $attempt) {
+    private function executeRequest($url, $method, $data, $requestId, $attempt, array $options = []) {
         $ch = curl_init();
-        
+
         if ($ch === false) {
             return $this->errorResponse('Failed to initialize cURL', self::ERR_NETWORK);
         }
-        
-        // Build headers
-        $headers = [
-            'Authorization: Bearer ' . self::$config['MPS_API_KEY'],
-            'Content-Type: application/json',
-            'Accept: application/json',
-            'User-Agent: MPS-API-Engine/1.1.0',
-            'X-Request-ID: ' . $requestId,
-            'X-Attempt: ' . $attempt
-        ];
-        
+
+        $contentType = $options['contentType'] ?? null;
+        $rawBody = $options['rawBody'] ?? false;
+        $forceBody = $options['forceBody'] ?? false;
+        $additionalHeaders = $options['headers'] ?? [];
+
+        $sendBody = $forceBody;
+        if (!$sendBody) {
+            if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+                $sendBody = true;
+            } elseif ($method === 'DELETE' && !empty($data)) {
+                $sendBody = true;
+            } elseif (!empty($data) && is_string($data)) {
+                $sendBody = true;
+            }
+        }
+
+        if ($sendBody && $contentType === null && !$rawBody) {
+            $contentType = 'application/json';
+        }
+
+        // Normalize additional headers
+        $headersAssoc = [];
+        $headersAssoc['Accept'] = 'application/json';
+        if ($contentType) {
+            $headersAssoc['Content-Type'] = $contentType;
+        }
+        $headersAssoc['User-Agent'] = 'MPS-API-Engine/1.1.0';
+        $headersAssoc['X-Request-ID'] = $requestId;
+        $headersAssoc['X-Attempt'] = $attempt;
+
+        if (is_array($additionalHeaders)) {
+            foreach ($additionalHeaders as $key => $value) {
+                if (is_int($key)) {
+                    $parts = explode(':', $value, 2);
+                    if (count($parts) === 2) {
+                        $headersAssoc[trim($parts[0])] = trim($parts[1]);
+                    }
+                } else {
+                    $headersAssoc[$key] = $value;
+                }
+            }
+        }
+
+        if (!isset($headersAssoc['Authorization'])) {
+            $headersAssoc['Authorization'] = $this->getAuthorizationHeader();
+        }
+
+        $headers = [];
+        foreach ($headersAssoc as $name => $value) {
+            $headers[] = $name . ': ' . $value;
+        }
+
         // Set common options
         $curlOptions = [
             CURLOPT_URL => $url,
@@ -253,36 +444,42 @@ class MPSMonitorEngine {
             CURLOPT_TIMEOUT => self::$config['MPS_TIMEOUT'],
             CURLOPT_CONNECTTIMEOUT => self::$config['MPS_CONNECT_TIMEOUT'],
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_FOLLOWLOCATION => false, // Don't follow redirects automatically
+            CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_MAXREDIRS => 0,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_ENCODING => '', // Accept all encodings
-            CURLOPT_FAILONERROR => false, // Handle errors manually
+            CURLOPT_ENCODING => '',
+            CURLOPT_FAILONERROR => false,
         ];
-        
-        // Set method-specific options
+
         switch ($method) {
             case 'POST':
                 $curlOptions[CURLOPT_POST] = true;
-                $curlOptions[CURLOPT_POSTFIELDS] = json_encode($data);
                 break;
             case 'PUT':
-                $curlOptions[CURLOPT_CUSTOMREQUEST] = 'PUT';
-                $curlOptions[CURLOPT_POSTFIELDS] = json_encode($data);
-                break;
             case 'DELETE':
-                $curlOptions[CURLOPT_CUSTOMREQUEST] = 'DELETE';
-                if (!empty($data)) {
-                    $curlOptions[CURLOPT_POSTFIELDS] = json_encode($data);
-                }
-                break;
             case 'PATCH':
-                $curlOptions[CURLOPT_CUSTOMREQUEST] = 'PATCH';
-                $curlOptions[CURLOPT_POSTFIELDS] = json_encode($data);
+                $curlOptions[CURLOPT_CUSTOMREQUEST] = $method;
                 break;
         }
-        
+
+        if ($sendBody) {
+            $payload = null;
+            if ($rawBody && is_string($data)) {
+                $payload = $data;
+            } else {
+                if ($contentType === 'application/x-www-form-urlencoded') {
+                    $payload = is_array($data) ? http_build_query($data) : (string) $data;
+                } else {
+                    $payload = json_encode($data);
+                }
+            }
+
+            if ($payload !== null) {
+                $curlOptions[CURLOPT_POSTFIELDS] = $payload;
+            }
+        }
+
         curl_setopt_array($ch, $curlOptions);
         
         // Execute request
@@ -294,7 +491,6 @@ class MPSMonitorEngine {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlErrno = curl_errno($ch);
         $curlError = curl_error($ch);
-        $info = curl_getinfo($ch);
         
         curl_close($ch);
         
@@ -358,6 +554,22 @@ class MPSMonitorEngine {
                 'response_size' => strlen($response)
             ]);
         }
+
+        if ($httpCode === 401) {
+            if (self::$authMode === 'oauth_password') {
+                $this->clearAccessToken();
+            }
+            $errorMsg = $decoded['message'] ?? $decoded['error'] ?? 'Unauthorized';
+            return [
+                'success' => false,
+                'error' => $errorMsg,
+                'error_code' => self::ERR_API,
+                'http_code' => $httpCode,
+                'raw_response' => self::$config['MPS_DEBUG'] ? $decoded : null,
+                'request_id' => $requestId,
+                'retryable' => self::$authMode === 'oauth_password'
+            ];
+        }
         
         // Success responses (2xx)
         if ($httpCode >= 200 && $httpCode < 300) {
@@ -374,7 +586,7 @@ class MPSMonitorEngine {
         if ($httpCode >= 300 && $httpCode < 400) {
             return $this->errorResponse('Unexpected redirect from API', self::ERR_API, [
                 'http_code' => $httpCode,
-                'location' => $info['redirect_url'] ?? null,
+                'location' => null,
                 'request_id' => $requestId,
                 'retryable' => false
             ]);
@@ -426,6 +638,147 @@ class MPSMonitorEngine {
             'request_id' => $requestId,
             'retryable' => false
         ]);
+    }
+
+    private function determineContentType(array $consumes): ?string
+    {
+        if (empty($consumes)) {
+            return null;
+        }
+
+        foreach ($consumes as $type) {
+            if (stripos($type, 'json') !== false) {
+                return 'application/json';
+            }
+        }
+
+        foreach ($consumes as $type) {
+            if (stripos($type, 'form') !== false || stripos($type, 'urlencoded') !== false) {
+                return 'application/x-www-form-urlencoded';
+            }
+        }
+
+        return $consumes[0];
+    }
+
+    /**
+     * Ensure authentication is ready before dispatching a request.
+     *
+     * @return true|array true on success or error response array
+     */
+    private function prepareAuthorization() {
+        if (self::$authMode === 'api_key') {
+            return true;
+        }
+
+        $token = $this->ensureAccessToken();
+        if ($token === null) {
+            self::logError('Failed to obtain OAuth access token', self::ERR_INTERNAL, [
+                'error_detail' => self::$lastAuthError
+            ]);
+            return $this->errorResponse('Failed to obtain access token', self::ERR_INTERNAL, [
+                'auth_error' => self::$lastAuthError
+            ]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Build the Authorization header value.
+     */
+    private function getAuthorizationHeader(): string {
+        if (self::$authMode === 'api_key') {
+            return 'Bearer ' . self::$config['MPS_API_KEY'];
+        }
+
+        return 'Bearer ' . (self::$accessToken ?? '');
+    }
+
+    /**
+     * Ensure a valid access token is loaded in memory.
+     */
+    private function ensureAccessToken(): ?string {
+        if (self::$accessToken && (self::$accessTokenExpiresAt - 60) > time()) {
+            return self::$accessToken;
+        }
+
+        return $this->fetchAccessToken();
+    }
+
+    /**
+     * Request a fresh access token using password grant.
+     */
+    private function fetchAccessToken(): ?string {
+        self::$lastAuthError = null;
+
+        $payload = http_build_query([
+            'grant_type' => 'password',
+            'client_id' => self::$config['CLIENT_ID'],
+            'client_secret' => self::$config['CLIENT_SECRET'],
+            'username' => self::$config['USERNAME'],
+            'password' => self::$config['PASSWORD'],
+            'scope' => self::$config['SCOPE']
+        ]);
+
+        $ch = curl_init(self::$config['TOKEN_URL']);
+        if ($ch === false) {
+            self::$lastAuthError = 'Failed to initialize token request';
+            return null;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_TIMEOUT => self::$config['MPS_TIMEOUT'],
+            CURLOPT_CONNECTTIMEOUT => self::$config['MPS_CONNECT_TIMEOUT'],
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/x-www-form-urlencoded',
+                'Accept: application/json'
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErrno = curl_errno($ch);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false || $curlErrno !== 0) {
+            self::$lastAuthError = $curlError ?: 'Token request failed';
+            return null;
+        }
+
+        $decoded = json_decode($response, true);
+        if ($httpCode < 200 || $httpCode >= 300) {
+            self::$lastAuthError = $decoded['error_description'] ?? $decoded['error'] ?? ('Token request failed (HTTP ' . $httpCode . ')');
+            return null;
+        }
+
+        if (!is_array($decoded) || empty($decoded['access_token'])) {
+            self::$lastAuthError = $decoded['error_description'] ?? $decoded['error'] ?? 'Invalid token response';
+            return null;
+        }
+
+        $expiresIn = (int)($decoded['expires_in'] ?? 3600);
+        if ($expiresIn < 60) {
+            $expiresIn = 60;
+        }
+
+        self::$accessToken = $decoded['access_token'];
+        self::$accessTokenExpiresAt = time() + $expiresIn;
+        self::$lastAuthError = null;
+
+        return self::$accessToken;
+    }
+
+    /**
+     * Clear cached access token forcing renewal on next request.
+     */
+    private function clearAccessToken(): void {
+        self::$accessToken = null;
+        self::$accessTokenExpiresAt = 0;
     }
     
     /**
@@ -627,23 +980,36 @@ class MPSMonitorEngine {
      * Get available endpoints
      */
     public function getAvailableEndpoints() {
+        if (self::$actionRegistry === null) {
+            self::$actionRegistry = SwaggerActionRegistry::getInstance();
+        }
+
+        $operations = self::$actionRegistry->listOperations();
+        $grouped = [];
+
+        foreach ($operations as $operation) {
+            $category = $operation['action'];
+            if (strpos($category, '/') !== false) {
+                $category = substr($category, 0, strpos($category, '/'));
+            } else {
+                $category = 'general';
+            }
+
+            $category = strtolower($category);
+
+            $grouped[$category][] = [
+                'action' => $operation['action'],
+                'method' => $operation['method'],
+                'path' => '/' . ltrim($operation['path'], '/'),
+                'summary' => $operation['summary'],
+            ];
+        }
+
+        ksort($grouped);
+
         return [
-            'monitors' => [
-                'GET /monitors' => 'List all monitors',
-                'GET /monitors/{id}' => 'Get specific monitor',
-                'POST /monitors' => 'Create monitor',
-                'PUT /monitors/{id}' => 'Update monitor',
-                'DELETE /monitors/{id}' => 'Delete monitor'
-            ],
-            'alerts' => [
-                'GET /alerts' => 'List alerts'
-            ],
-            'statistics' => [
-                'GET /monitors/{id}/statistics' => 'Get monitor statistics'
-            ],
-            'health' => [
-                'GET /health' => 'Health check'
-            ]
+            'count' => count($operations),
+            'groups' => $grouped
         ];
     }
     
@@ -776,6 +1142,12 @@ class MPSMonitorEngine {
             $sanitized = self::$config;
             if (isset($sanitized['MPS_API_KEY'])) {
                 $sanitized['MPS_API_KEY'] = '***HIDDEN***';
+            }
+            if (isset($sanitized['CLIENT_SECRET'])) {
+                $sanitized['CLIENT_SECRET'] = '***HIDDEN***';
+            }
+            if (isset($sanitized['PASSWORD'])) {
+                $sanitized['PASSWORD'] = '***HIDDEN***';
             }
             return $sanitized;
         }

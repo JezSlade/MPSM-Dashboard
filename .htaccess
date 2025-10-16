@@ -5,10 +5,11 @@
     RewriteCond %{REQUEST_URI} ^/setup.php$ [NC]
     RewriteRule ^ - [L]
 
-    # NEW RULE: Exclude the mps_monitor/api/ directory from being rewritten
-    # This ensures your API endpoints are directly accessible.
-    RewriteCond %{REQUEST_URI} ^/mps_monitor/api/ [NC]
-    RewriteRule ^ - [L]
+    # Route MPS Monitor API Engine requests to its internal router
+    RewriteCond %{REQUEST_URI} ^/mps-api/ [NC]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^mps-api/(.*)$ mps-api/index.php [L,QSA]
 
     # Force HTTPS
     RewriteCond %{HTTPS} off
