@@ -308,6 +308,9 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
             font-size: 0.9rem;
             color: #555;
         }
+        .examples-box {
+            background: #f0f7ff;
+        }
         @media (prefers-color-scheme: dark) {
             body {
                 background: #111827;
@@ -334,6 +337,9 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
             .example-btn:hover {
                 background: #60a5fa;
                 color: #111827;
+            }
+            .examples-box {
+                background: #1e293b;
             }
         }
     </style>
@@ -454,9 +460,9 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
             <h2>/query Test Harness</h2>
             <p class="meta">Test any of the 544 available operations from the canonical swagger.</p>
 
-            <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #004aad;">
-                <h3 style="margin-top: 0; font-size: 1rem;">📋 Example Queries</h3>
-                <p style="font-size: 0.9rem; margin-bottom: 0.75rem;">Click any example to load it into the form:</p>
+            <div class="examples-box" style="margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; border-left: 4px solid #004aad;">
+                <h3 style="margin-top: 0; font-size: 1rem;">📋 Example Queries (Click to Auto-Fill)</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 0.75rem;">All examples have valid parameters and will work immediately:</p>
                 <div style="display: grid; gap: 0.5rem;">
                     <button type="button" class="example-btn" data-action="healthCheck" data-params="{}">
                         🔍 Health Check - Test engine connectivity
@@ -464,29 +470,29 @@ $defaultParams = $submittedParams !== '' ? $submittedParams : "{\n    \n}";
                     <button type="button" class="example-btn" data-action="Account/GetProfile" data-params="{}">
                         👤 Get Account Profile - Current authenticated user
                     </button>
-                    <button type="button" class="example-btn" data-action="Dealer/Get" data-params='{"code": "DEALER001"}'>
-                        🏢 Get Dealer - Fetch dealer info by code
+                    <button type="button" class="example-btn" data-action="Dealer/Get" data-params='{"request": {"Code": "DEMO"}}'>
+                        🏢 Get Dealer - Fetch dealer by code (Code: DEMO)
                     </button>
-                    <button type="button" class="example-btn" data-action="Dealer/GetDealers" data-params='{"request": {"pageNumber": 1, "pageSize": 10, "sortField": "name", "sortDirection": "Asc"}}'>
+                    <button type="button" class="example-btn" data-action="Dealer/GetDealers" data-params='{"request": {"PageNumber": 1, "PageRows": 10, "SortField": "Name", "SortDirection": "Asc"}}'>
                         🏢 List Dealers - Get first 10 dealers sorted by name
                     </button>
-                    <button type="button" class="example-btn" data-action="Customer/Get" data-params='{"code": "CUST001"}'>
-                        🏪 Get Customer - Fetch customer by code
+                    <button type="button" class="example-btn" data-action="Customer/GetCustomers" data-params='{"request": {"FilterDealerId": 1, "PageNumber": 1, "PageRows": 10}}'>
+                        🏪 List Customers - Get customers for dealer ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="Customer/GetCustomers" data-params='{"request": {"dealerCode": "DEALER001", "pageNumber": 1, "pageSize": 10}}'>
-                        🏪 List Customers - Get customers for a dealer
+                    <button type="button" class="example-btn" data-action="Device/Get" data-params='{"request": {"FilterDeviceId": 1}}'>
+                        🖨️ Get Device - Fetch device by ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="Device/List" data-params='{"request": {"pageNumber": 1, "pageSize": 10}}'>
-                        🖨️ List Devices - Get first 10 devices
+                    <button type="button" class="example-btn" data-action="InstalledProduct/GetInstalledProducts" data-params='{"request": {"PageNumber": 1, "PageRows": 10}}'>
+                        📦 List Installed Products - Get first 10 products
                     </button>
-                    <button type="button" class="example-btn" data-action="Device/Get" data-params='{"id": "device-id-here"}'>
-                        🖨️ Get Device - Fetch specific device by ID
+                    <button type="button" class="example-btn" data-action="Explorer/GetExplorerDatas" data-params='{"dealerId": 1, "clusterId": 0, "pageNumber": 1, "pageRows": 5}'>
+                        🔎 Explorer Data - Get explorer data for dealer ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="Explorer/Device" data-params='{"request": {"pageNumber": 1, "pageSize": 5}}'>
-                        🔎 Explorer Device - Advanced device search
+                    <button type="button" class="example-btn" data-action="Counter/Device/List" data-params='{"request": {"FilterDeviceId": 1, "PageNumber": 1, "PageRows": 10}}'>
+                        📊 Device Counters - Get counter data for device ID 1
                     </button>
-                    <button type="button" class="example-btn" data-action="Explorer/Customer" data-params='{"request": {"pageNumber": 1, "pageSize": 5}}'>
-                        🔎 Explorer Customer - Advanced customer search
+                    <button type="button" class="example-btn" data-action="Supply/GetSupplies" data-params='{"request": {"PageNumber": 1, "PageRows": 10}}'>
+                        🎨 List Supplies - Get supply inventory (first 10)
                     </button>
                 </div>
             </div>
