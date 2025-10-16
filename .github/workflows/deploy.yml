@@ -23,6 +23,13 @@ jobs:
           echo "Listing files before deployment:"
           ls -la
           echo "------"
+          echo "Checking for problematic files:"
+          find . -name "*.log" -o -name ".ftp-deploy-sync-state.json" || true
+          echo "------"
+          echo "Key files that SHOULD be deployed:"
+          ls -la index.php .htaccess .env 2>/dev/null || echo "Some files missing"
+          ls -la mps-api/index.php mps-api/engine.php mps-api/.htaccess 2>/dev/null || echo "Some API files missing"
+          echo "------"
 
       - name: 🚀 Deploy Website via FTP
         id: ftp
@@ -35,31 +42,32 @@ jobs:
           port: 21
           local-dir: ./
           server-dir: /
+          state-name: .ftp-deploy-sync-state.json
+          dry-run: false
+          dangerous-clean-slate: false
           exclude: |
-            .git*
-            .git/
-            .github/
-            .gitignore
-            .env.example
-            node_modules/
-            *.log
-            **/logs/*.log
-            .vscode/
-            .idea/
-            *.md
-            README.md
-            LICENSE
-            package*.json
-            composer.*
-            phpunit.xml
-            .phpunit.result.cache
-            tests/
+            **/.git/**
+            **/.github/**
+            **/.gitignore
+            **/.vscode/**
+            **/.idea/**
+            **/.DS_Store
+            **/Thumbs.db
+            **/node_modules/**
+            **/tests/**
+            **/__pycache__/**
+            **/*.pyc
+            **/.env.example
+            **/package*.json
+            **/composer.json
+            **/composer.lock
+            **/phpunit.xml
+            **/.phpunit.result.cache
             mps-api/test_*.php
             mps-api/verify_*.py
-            **/__pycache__/
-            *.pyc
-            .DS_Store
-            Thumbs.db
+            **/*.log
+            .claude/**
+            .ftp-deploy-sync-state.json
           log-level: verbose
 
       - name: 📜 Deployment Completed Report
