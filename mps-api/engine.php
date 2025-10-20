@@ -20,7 +20,8 @@ class MPSMonitorEngine {
     private static $accessTokenExpiresAt = 0;
     private static $lastAuthError = null;
     private static $actionRegistry = null;
-    
+    private static $payloadTemplates = null;
+
     // Error codes
     const ERR_CONFIG = 1000;
     const ERR_NETWORK = 2000;
@@ -140,7 +141,43 @@ class MPSMonitorEngine {
             self::$config['MPS_CONNECT_TIMEOUT'] = 10;
         }
     }
-    
+
+    /**
+     * Load payload templates from discovered API patterns
+     * Templates provide working parameter defaults from API discovery phase
+     */
+    private static function loadPayloadTemplates() {
+        $templatePath = __DIR__ . '/payload_templates.php';
+
+        if (!file_exists($templatePath)) {
+            self::logDebug('Payload templates file not found - using basic defaults only');
+            self::$payloadTemplates = [];
+            return;
+        }
+
+        try {
+            // Define constant to allow template file to load
+            if (!defined('MPS_ENGINE_ACCESS')) {
+                define('MPS_ENGINE_ACCESS', true);
+            }
+
+            $templates = require $templatePath;
+
+            if (!is_array($templates)) {
+                self::logWarning('Payload templates must return array - ignoring');
+                self::$payloadTemplates = [];
+                return;
+            }
+
+            self::$payloadTemplates = $templates;
+            self::logDebug('Loaded ' . count($templates) . ' payload templates');
+
+        } catch (Exception $e) {
+            self::logWarning('Failed to load payload templates: ' . $e->getMessage());
+            self::$payloadTemplates = [];
+        }
+    }
+
     /**
      * Make API request to MPS Monitors with retry logic and comprehensive error handling
      * 
@@ -271,6 +308,41 @@ class MPSMonitorEngine {
 
         if (!is_array($params)) {
             return $this->errorResponse('Params must be an object.', self::ERR_VALIDATION);
+        }
+
+        // Load payload templates if not already loaded
+        if (self::$payloadTemplates === null) {
+            self::loadPayloadTemplates();
+        }
+
+        // Merge discovered payload template if available
+        if (isset(self::$payloadTemplates[$action])) {
+            $template = self::$payloadTemplates[$action];
+
+            if (self::$config['MPS_DEBUG']) {
+                self::logDebug("Using payload template for action: {$action}");
+            }
+
+            // Merge template parameters with user-provided params
+            // User params always override template values
+            foreach (['query', 'path', 'body'] as $paramType) {
+                if (isset($template[$paramType]) && is_array($template[$paramType])) {
+                    foreach ($template[$paramType] as $key => $templateValue) {
+                        // Only use template value if user didn't provide one
+                        if (!array_key_exists($key, $params)) {
+                            // Apply smart substitution for template values
+                            $substitutedValue = $this->substituteTemplateValue($key, $templateValue);
+                            if ($substitutedValue !== null) {
+                                $params[$key] = $substitutedValue;
+
+                                if (self::$config['MPS_DEBUG']) {
+                                    self::logDebug("Template: Adding '{$key}' = " . json_encode($substitutedValue));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         $endpoint = ltrim($operation['path'], '/');
@@ -939,6 +1011,80 @@ class MPSMonitorEngine {
      * @param string $paramType Parameter type (string, integer, etc.)
      * @return mixed|null Default value or null if no default available
      */
+    /**
+     * Apply smart substitutions to template values
+     * Converts null placeholders to actual config values or sensible defaults
+     *
+     * @param string $paramName Parameter name
+     * @param mixed $templateValue Value from template (often null)
+     * @return mixed Substituted value or original if no substitution needed
+     */
+    private function substituteTemplateValue($paramName, $templateValue) {
+        // If template already has a concrete value, use it as-is
+        if ($templateValue !== null) {
+            return $templateValue;
+        }
+
+        // For null template values, try to substitute with intelligent defaults
+        $paramLower = strtolower($paramName);
+
+        // Dealer information
+        if ($paramLower === 'code' || $paramLower === 'dealercode' || $paramLower === 'dealer_code') {
+            return self::$config['DEALER_CODE'] ?? null;
+        }
+
+        if ($paramLower === 'dealerid' || $paramLower === 'dealer_id') {
+            return self::$config['DEALER_ID'] ?? null;
+        }
+
+        // Customer information
+        if ($paramLower === 'customercode' || $paramLower === 'customer_code') {
+            return self::$config['CUSTOMER_CODE'] ?? null;
+        }
+
+        if ($paramLower === 'customerid' || $paramLower === 'customer_id') {
+            return self::$config['CUSTOMER_ID'] ?? null;
+        }
+
+        // Date parameters - use reasonable date ranges
+        if (strpos($paramLower, 'fromdate') !== false || strpos($paramLower, 'startdate') !== false) {
+            // Default to 30 days ago
+            return date('Y-m-d', strtotime('-30 days'));
+        }
+
+        if (strpos($paramLower, 'todate') !== false || strpos($paramLower, 'enddate') !== false) {
+            // Default to today
+            return date('Y-m-d');
+        }
+
+        // Pagination defaults
+        if ($paramLower === 'page' || $paramLower === 'pagenumber') {
+            return 1;
+        }
+
+        if ($paramLower === 'pagesize' || $paramLower === 'pagerows' || $paramLower === 'limit' || $paramLower === 'per_page') {
+            return 50;
+        }
+
+        // Sort defaults
+        if ($paramLower === 'sortorder') {
+            return 'Asc';
+        }
+
+        if ($paramLower === 'sortcolumn') {
+            return 'Name'; // Safe default for most list endpoints
+        }
+
+        // Industry standard repair (mentioned by user)
+        if ($paramLower === 'repairtype' || $paramLower === 'repair_type') {
+            return 'Standard';
+        }
+
+        // Keep null if no substitution rule found
+        // This allows required parameter validation to trigger if truly needed
+        return null;
+    }
+
     private function getDefaultParameterValue($paramName, $paramType = 'string') {
         $paramLower = strtolower($paramName);
 
