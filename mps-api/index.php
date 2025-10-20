@@ -20,6 +20,9 @@ define('MPS_ENGINE_ACCESS', true);
 // Capture start time for performance metrics
 define('REQUEST_START_TIME', microtime(true));
 
+// Load engine early (required for all routes except diagnostics)
+require_once __DIR__ . '/engine.php';
+
 // Error handling configuration
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
