@@ -1,15 +1,24 @@
 <?php
 /**
- * MPS Monitors API Engine - Main Entry Point
- * 
- * Subdirectory-safe router for API requests
- * Optimized for ChatGPT Actions and Dashboard integration
- * 
- * @version 1.1.0 - Enhanced security and error handling
+ * MPS Monitors API Engine - Main Entry Point with Advanced Diagnostics
+ *
+ * Version 1.1.0 - Enhanced error handling, diagnostics, and troubleshooting
+ * Domain: https://mpsm.resolutionsbydesign.us
+ *
+ * Features:
+ * - Comprehensive diagnostic information
+ * - Detailed error reporting (respects debug mode)
+ * - System health checks
+ * - OAuth status monitoring
+ * - File system verification
+ * - Performance metrics
  */
 
 // Security constant for includes
 define('MPS_ENGINE_ACCESS', true);
+
+// Capture start time for performance metrics
+define('REQUEST_START_TIME', microtime(true));
 
 // Error handling configuration
 error_reporting(E_ALL);
@@ -24,30 +33,314 @@ if (!is_dir($logDir)) {
 }
 ini_set('error_log', $logDir . '/php_errors_' . date('Y-m-d') . '.log');
 
+// Global error storage for diagnostics
+$GLOBALS['startup_errors'] = [];
+$GLOBALS['startup_warnings'] = [];
+
+// Custom error handler to capture all errors
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    $error = [
+        'type' => $errno,
+        'message' => $errstr,
+        'file' => $errfile,
+        'line' => $errline,
+        'time' => date('Y-m-d H:i:s')
+    ];
+
+    if ($errno === E_WARNING || $errno === E_USER_WARNING) {
+        $GLOBALS['startup_warnings'][] = $error;
+    } else {
+        $GLOBALS['startup_errors'][] = $error;
+    }
+
+    // Log to file
+    error_log(sprintf('[%s] %s in %s:%d',
+        date('Y-m-d H:i:s'), $errstr, $errfile, $errline));
+
+    return false; // Allow default error handler to run
+});
+
 // Request size limit (protect against memory exhaustion)
 define('MAX_REQUEST_SIZE', 1048576); // 1MB
 
 // Rate limiting (simple implementation)
 define('MAX_REQUESTS_PER_MINUTE', 60);
 
+/**
+ * System Diagnostics - Check environment and dependencies
+ */
+function getSystemDiagnostics() {
+    $diag = [
+        'timestamp' => date('c'),
+        'php' => [
+            'version' => phpversion(),
+            'sapi' => php_sapi_name(),
+            'os' => PHP_OS,
+            'extensions' => [
+                'curl' => extension_loaded('curl'),
+                'json' => extension_loaded('json'),
+                'mbstring' => extension_loaded('mbstring'),
+                'openssl' => extension_loaded('openssl'),
+            ],
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+            'display_errors' => ini_get('display_errors'),
+            'error_log' => ini_get('error_log'),
+        ],
+        'server' => [
+            'software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'protocol' => $_SERVER['SERVER_PROTOCOL'] ?? 'Unknown',
+            'method' => $_SERVER['REQUEST_METHOD'] ?? 'Unknown',
+            'uri' => $_SERVER['REQUEST_URI'] ?? 'Unknown',
+            'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        ],
+        'filesystem' => [
+            'current_dir' => __DIR__,
+            'writable' => is_writable(__DIR__),
+            'logs_dir_exists' => is_dir(__DIR__ . '/logs'),
+            'logs_dir_writable' => is_writable(__DIR__ . '/logs'),
+        ],
+        'files' => [
+            'index.php' => file_exists(__DIR__ . '/index.php'),
+            'engine.php' => file_exists(__DIR__ . '/engine.php'),
+            'SwaggerActionRegistry.php' => file_exists(__DIR__ . '/SwaggerActionRegistry.php'),
+            'Swagger.json' => file_exists(__DIR__ . '/Swagger.json'),
+            '.env' => file_exists(__DIR__ . '/.env'),
+        ],
+        'file_sizes' => [],
+        'file_permissions' => [],
+    ];
+
+    // Get file sizes and permissions
+    foreach ($diag['files'] as $file => $exists) {
+        $path = __DIR__ . '/' . $file;
+        if ($exists) {
+            $diag['file_sizes'][$file] = filesize($path);
+            $diag['file_permissions'][$file] = substr(sprintf('%o', fileperms($path)), -4);
+        }
+    }
+
+    // Check Swagger.json validity
+    if ($diag['files']['Swagger.json']) {
+        $swaggerContent = @file_get_contents(__DIR__ . '/Swagger.json');
+        if ($swaggerContent !== false) {
+            $swaggerData = @json_decode($swaggerContent, true);
+            $diag['swagger'] = [
+                'valid_json' => (json_last_error() === JSON_ERROR_NONE),
+                'size_bytes' => strlen($swaggerContent),
+                'has_paths' => isset($swaggerData['paths']),
+                'path_count' => isset($swaggerData['paths']) ? count($swaggerData['paths']) : 0,
+            ];
+        } else {
+            $diag['swagger'] = ['error' => 'Failed to read Swagger.json'];
+        }
+    }
+
+    // Check .env file
+    if ($diag['files']['.env']) {
+        $envContent = @file_get_contents(__DIR__ . '/.env');
+        if ($envContent !== false) {
+            $lines = explode("\n", $envContent);
+            $configKeys = [];
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line) || strpos($line, '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    $parts = explode('=', $line, 2);
+                    $key = trim($parts[0]);
+                    $configKeys[] = $key;
+                }
+            }
+            $diag['env_config'] = [
+                'readable' => true,
+                'line_count' => count($lines),
+                'config_keys_found' => $configKeys,
+                'has_required' => [
+                    'CLIENT_ID' => in_array('CLIENT_ID', $configKeys),
+                    'CLIENT_SECRET' => in_array('CLIENT_SECRET', $configKeys),
+                    'USERNAME' => in_array('USERNAME', $configKeys),
+                    'PASSWORD' => in_array('PASSWORD', $configKeys),
+                    'DEALER_CODE' => in_array('DEALER_CODE', $configKeys),
+                    'API_BASE_URL' => in_array('API_BASE_URL', $configKeys),
+                ]
+            ];
+        } else {
+            $diag['env_config'] = ['error' => 'Failed to read .env file'];
+        }
+    } else {
+        $diag['env_config'] = ['error' => '.env file not found'];
+    }
+
+    return $diag;
+}
+
+/**
+ * Engine Diagnostics - Test engine initialization
+ */
+function getEngineDiagnostics() {
+    $diag = [
+        'initialization' => 'not_attempted',
+        'error' => null,
+        'engine_loaded' => false,
+        'registry_loaded' => false,
+    ];
+
+    try {
+        // Try to load engine
+        if (file_exists(__DIR__ . '/engine.php')) {
+            require_once __DIR__ . '/engine.php';
+            $diag['engine_loaded'] = class_exists('MPSMonitorEngine');
+
+            if ($diag['engine_loaded']) {
+                try {
+                    $engine = MPSMonitorEngine::getInstance();
+                    $diag['initialization'] = 'success';
+
+                    // Get engine stats
+                    $stats = MPSMonitorEngine::getStats();
+                    $diag['stats'] = $stats;
+
+                    // Try health check
+                    try {
+                        $health = $engine->healthCheck();
+                        $diag['health'] = $health;
+                    } catch (Exception $e) {
+                        $diag['health_error'] = [
+                            'message' => $e->getMessage(),
+                            'code' => $e->getCode(),
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                        ];
+                    }
+                } catch (Exception $e) {
+                    $diag['initialization'] = 'failed';
+                    $diag['error'] = [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString(),
+                    ];
+                }
+            }
+        } else {
+            $diag['error'] = 'engine.php file not found';
+        }
+
+        // Try to load registry
+        if (file_exists(__DIR__ . '/SwaggerActionRegistry.php')) {
+            require_once __DIR__ . '/SwaggerActionRegistry.php';
+            $diag['registry_loaded'] = class_exists('SwaggerActionRegistry');
+
+            if ($diag['registry_loaded']) {
+                try {
+                    $registry = SwaggerActionRegistry::getInstance();
+                    $operations = $registry->listOperations();
+                    $diag['registry_operations'] = count($operations);
+                } catch (Exception $e) {
+                    $diag['registry_error'] = [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                    ];
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        $diag['initialization'] = 'critical_error';
+        $diag['error'] = [
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ];
+    }
+
+    return $diag;
+}
+
+/**
+ * Send JSON response with comprehensive error information
+ */
+function sendResponse($data, $statusCode = 200) {
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Add standard response fields
+    if (!isset($data['timestamp'])) {
+        $data['timestamp'] = date('c');
+    }
+
+    // Add performance metrics
+    if (defined('REQUEST_START_TIME')) {
+        $data['performance'] = [
+            'duration_ms' => round((microtime(true) - REQUEST_START_TIME) * 1000, 2),
+            'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+        ];
+    }
+
+    // Check debug mode
+    $isDebug = (getenv('MPS_DEBUG') === 'true' || getenv('MPS_DEBUG') === '1');
+
+    // Add diagnostics in debug mode or on errors
+    if ($isDebug || $statusCode >= 400) {
+        if (!empty($GLOBALS['startup_errors'])) {
+            $data['startup_errors'] = $GLOBALS['startup_errors'];
+        }
+        if (!empty($GLOBALS['startup_warnings']) && $isDebug) {
+            $data['startup_warnings'] = $GLOBALS['startup_warnings'];
+        }
+    }
+
+    // Sanitize error messages in production (hide internal details)
+    if (!$isDebug && isset($data['error']) && is_string($data['error'])) {
+        // Remove file paths and line numbers from error messages
+        $data['error'] = preg_replace('/in \/.*\.php on line \d+/', '', $data['error']);
+        $data['error'] = preg_replace('/\/[^ ]+\.php/', 'file.php', $data['error']);
+
+        // Remove sensitive context in production
+        unset($data['error_detail']);
+        unset($data['raw_response']);
+        unset($data['context']);
+        unset($data['startup_errors']);
+        unset($data['startup_warnings']);
+    }
+
+    // Encode JSON with error handling
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    if ($json === false) {
+        // JSON encoding failed
+        $jsonError = json_last_error_msg();
+        error_log("JSON encoding error: {$jsonError}");
+
+        http_response_code(500);
+        $json = json_encode([
+            'success' => false,
+            'error' => 'Internal server error',
+            'timestamp' => date('c')
+        ]);
+    }
+
+    echo $json;
+    exit;
+}
+
 // Validate request size before processing
 $contentLength = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
 if ($contentLength > MAX_REQUEST_SIZE) {
-    http_response_code(413);
-    header('Content-Type: application/json');
-    echo json_encode([
+    sendResponse([
         'success' => false,
         'error' => 'Request too large',
         'max_size' => MAX_REQUEST_SIZE
-    ]);
-    exit;
+    ], 413);
 }
 
 // Simple rate limiting (file-based)
 function checkRateLimit() {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $rateLimitFile = __DIR__ . '/logs/ratelimit_' . date('Y-m-d-H-i') . '.log';
-    
+
     // Clean up old rate limit files (older than 2 minutes)
     $files = glob(__DIR__ . '/logs/ratelimit_*.log');
     $twoMinutesAgo = time() - 120;
@@ -56,25 +349,21 @@ function checkRateLimit() {
             @unlink($file);
         }
     }
-    
+
     // Count requests from this IP in the current minute
     if (file_exists($rateLimitFile)) {
         $contents = file_get_contents($rateLimitFile);
         $requests = substr_count($contents, $ip);
-        
+
         if ($requests >= MAX_REQUESTS_PER_MINUTE) {
-            http_response_code(429);
-            header('Content-Type: application/json');
-            header('Retry-After: 60');
-            echo json_encode([
+            sendResponse([
                 'success' => false,
                 'error' => 'Rate limit exceeded',
                 'retry_after' => 60
-            ]);
-            exit;
+            ], 429);
         }
     }
-    
+
     // Log this request
     @file_put_contents($rateLimitFile, $ip . "\n", FILE_APPEND | LOCK_EX);
 }
@@ -85,14 +374,11 @@ checkRateLimit();
 // Validate request method
 $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
 if (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods)) {
-    http_response_code(405);
-    header('Content-Type: application/json');
-    header('Allow: ' . implode(', ', $allowedMethods));
-    echo json_encode([
+    sendResponse([
         'success' => false,
-        'error' => 'Method not allowed'
-    ]);
-    exit;
+        'error' => 'Method not allowed',
+        'allowed_methods' => $allowedMethods
+    ], 405);
 }
 
 // CORS Headers (configure for production)
@@ -109,7 +395,6 @@ if ($allowedOrigins[0] === '*') {
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Request-ID');
 header('Access-Control-Max-Age: 86400');
-header('Content-Type: application/json; charset=utf-8');
 
 // Security headers
 header('X-Content-Type-Options: nosniff');
@@ -122,9 +407,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
-// Load engine
-require_once __DIR__ . '/engine.php';
 
 /**
  * Get base path for subdirectory deployment
@@ -140,96 +422,44 @@ function getBasePath() {
 function getRequestPath() {
     $basePath = getBasePath();
     $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    
+
     if ($requestUri === false || $requestUri === null) {
         return '/';
     }
-    
+
     // Security: Decode and validate path
     $requestUri = rawurldecode($requestUri);
-    
+
     // Security: Block path traversal attempts
     if (strpos($requestUri, '..') !== false) {
         logSecurityEvent('Path traversal attempt detected', [
             'uri' => $_SERVER['REQUEST_URI'],
             'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
         ]);
-        http_response_code(400);
         sendResponse(['error' => 'Invalid path'], 400);
     }
-    
+
     // Security: Block null bytes
     if (strpos($requestUri, "\0") !== false) {
         logSecurityEvent('Null byte injection attempt', [
             'uri' => $_SERVER['REQUEST_URI'],
             'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
         ]);
-        http_response_code(400);
         sendResponse(['error' => 'Invalid path'], 400);
     }
-    
+
     // Remove base path from request URI
     if ($basePath !== '' && strpos($requestUri, $basePath) === 0) {
         $requestUri = substr($requestUri, strlen($basePath));
     }
-    
-    return '/' . trim($requestUri, '/');
-}
 
-/**
- * Send JSON response with proper headers and error handling
- */
-function sendResponse($data, $statusCode = 200) {
-    // Validate status code
-    if (!is_int($statusCode) || $statusCode < 100 || $statusCode > 599) {
-        $statusCode = 500;
-    }
-    
-    http_response_code($statusCode);
-    
-    // Add standard response fields
-    if (!isset($data['timestamp'])) {
-        $data['timestamp'] = date('c');
-    }
-    
-    // Sanitize error messages in production (hide internal details)
-    $isProduction = (getenv('MPS_DEBUG') !== 'true');
-    if ($isProduction && isset($data['error']) && is_string($data['error'])) {
-        // Remove file paths and line numbers from error messages
-        $data['error'] = preg_replace('/in \/.*\.php on line \d+/', '', $data['error']);
-        $data['error'] = preg_replace('/\/[^ ]+\.php/', 'file.php', $data['error']);
-        
-        // Remove sensitive context in production
-        unset($data['error_detail']);
-        unset($data['raw_response']);
-        unset($data['context']);
-    }
-    
-    // Encode JSON with error handling
-    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    
-    if ($json === false) {
-        // JSON encoding failed
-        $jsonError = json_last_error_msg();
-        error_log("JSON encoding error: {$jsonError}");
-        
-        http_response_code(500);
-        $json = json_encode([
-            'success' => false,
-            'error' => 'Internal server error',
-            'timestamp' => date('c')
-        ]);
-    }
-    
-    echo $json;
-    exit;
+    return '/' . trim($requestUri, '/');
 }
 
 /**
  * Get request body with size validation and error handling
  */
 function getRequestBody() {
-    // Check content type
     $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
     if (strpos($contentType, 'application/json') === false && $_SERVER['REQUEST_METHOD'] !== 'GET') {
         logSecurityEvent('Invalid content type', [
@@ -237,15 +467,15 @@ function getRequestBody() {
             'method' => $_SERVER['REQUEST_METHOD']
         ]);
     }
-    
+
     // Read input with size limit
     $body = '';
     $input = fopen('php://input', 'r');
-    
+
     if ($input === false) {
         return [];
     }
-    
+
     $bytesRead = 0;
     while (!feof($input) && $bytesRead < MAX_REQUEST_SIZE) {
         $chunk = fread($input, 8192);
@@ -254,39 +484,36 @@ function getRequestBody() {
         }
         $body .= $chunk;
         $bytesRead += strlen($chunk);
-        
-        // Check if exceeded limit
+
         if ($bytesRead >= MAX_REQUEST_SIZE) {
             fclose($input);
-            http_response_code(413);
             sendResponse(['error' => 'Request body too large'], 413);
         }
     }
-    
+
     fclose($input);
-    
+
     if (empty($body)) {
         return [];
     }
-    
+
     // Parse JSON
     $decoded = json_decode($body, true);
-    
+
     if (json_last_error() !== JSON_ERROR_NONE) {
         $error = json_last_error_msg();
         logSecurityEvent('Invalid JSON in request', [
             'error' => $error,
             'body_preview' => substr($body, 0, 100)
         ]);
-        
-        http_response_code(400);
+
         sendResponse([
             'success' => false,
             'error' => 'Invalid JSON in request body',
             'detail' => $error
         ], 400);
     }
-    
+
     return $decoded ?? [];
 }
 
@@ -295,13 +522,13 @@ function getRequestBody() {
  */
 function validateRequiredFields($data, $requiredFields) {
     $missing = [];
-    
+
     foreach ($requiredFields as $field) {
         if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) {
             $missing[] = $field;
         }
     }
-    
+
     if (!empty($missing)) {
         sendResponse([
             'success' => false,
@@ -309,7 +536,7 @@ function validateRequiredFields($data, $requiredFields) {
             'required_fields' => $requiredFields
         ], 400);
     }
-    
+
     return true;
 }
 
@@ -321,36 +548,17 @@ function logSecurityEvent($message, $context = []) {
     if (!is_dir($logDir)) {
         return;
     }
-    
+
     $logFile = $logDir . '/security_' . date('Y-m-d') . '.log';
     $timestamp = date('Y-m-d H:i:s');
-    
+
     $logEntry = "[{$timestamp}] SECURITY: {$message}";
     if (!empty($context)) {
         $logEntry .= ' | ' . json_encode($context, JSON_UNESCAPED_SLASHES);
     }
     $logEntry .= "\n";
-    
-    @file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
-}
 
-/**
- * Sanitize user input
- */
-function sanitizeInput($input, $type = 'string') {
-    if ($type === 'string') {
-        return is_string($input) ? trim($input) : '';
-    }
-    if ($type === 'int') {
-        return (int)$input;
-    }
-    if ($type === 'bool') {
-        return (bool)$input;
-    }
-    if ($type === 'array') {
-        return is_array($input) ? $input : [];
-    }
-    return $input;
+    @file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 }
 
 function statusFromEngineResult(array $result): int {
@@ -380,11 +588,38 @@ function statusFromEngineResult(array $result): int {
 
 // Main routing logic with comprehensive error handling
 try {
-    $engine = MPSMonitorEngine::getInstance();
     $method = $_SERVER['REQUEST_METHOD'];
     $path = getRequestPath();
     $basePath = getBasePath();
-    
+
+    // Route: Diagnostics (always available, even if engine fails)
+    if ($path === '/diagnostics' || $path === '/debug') {
+        $isDebug = (getenv('MPS_DEBUG') === 'true' || getenv('MPS_DEBUG') === '1');
+
+        $response = [
+            'status' => 'diagnostics',
+            'debug_mode' => $isDebug,
+            'system' => getSystemDiagnostics(),
+            'engine' => getEngineDiagnostics(),
+        ];
+
+        // Add recent logs if in debug mode
+        if ($isDebug) {
+            $errorLog = __DIR__ . '/logs/php_errors_' . date('Y-m-d') . '.log';
+            if (file_exists($errorLog)) {
+                $logLines = @file($errorLog, FILE_IGNORE_NEW_LINES);
+                if ($logLines !== false) {
+                    $response['recent_errors'] = array_slice($logLines, -20);
+                }
+            }
+        }
+
+        sendResponse($response, 200);
+    }
+
+    // Load engine (required for all other routes)
+    $engine = MPSMonitorEngine::getInstance();
+
     // Route: Health check / Root
     if ($path === '/' || $path === '') {
         $registry = SwaggerActionRegistry::getInstance();
@@ -397,12 +632,18 @@ try {
             'status' => 'online',
             'service' => 'MPS Monitors API Engine',
             'version' => '1.1.0',
+            'fixes_applied' => [
+                'oauth_all_endpoints' => true,
+                'smart_parameter_population' => true,
+                'mpsm_response_validation' => true,
+            ],
             'timestamp' => date('c'),
             'base_path' => $basePath,
             'action_count' => count($operations),
             'sample_actions' => $sampleActions,
             'endpoints' => [
                 'health' => $basePath . '/health',
+                'diagnostics' => $basePath . '/diagnostics',
                 'endpoints' => $basePath . '/endpoints',
                 'query' => $basePath . '/query',
                 'swagger' => $basePath . '/swagger.json'
@@ -410,13 +651,13 @@ try {
             'stats' => MPSMonitorEngine::getStats()
         ]);
     }
-    
+
     // Route: Health check
     if ($path === '/health') {
         $health = $engine->healthCheck();
         sendResponse($health);
     }
-    
+
     // Route: Available endpoints
     if ($path === '/endpoints') {
         $registry = SwaggerActionRegistry::getInstance();
@@ -440,7 +681,7 @@ try {
             'documentation' => $basePath . '/swagger.json'
         ]);
     }
-    
+
     // Route: Swagger JSON
     if ($path === '/swagger.json') {
         $registry = SwaggerActionRegistry::getInstance();
@@ -448,27 +689,27 @@ try {
         if (!file_exists($swaggerPath)) {
             sendResponse(['error' => 'Swagger documentation not found'], 404);
         }
-        
+
         if (!is_readable($swaggerPath)) {
             sendResponse(['error' => 'Swagger documentation not readable'], 500);
         }
-        
+
         $swagger = file_get_contents($swaggerPath);
         if ($swagger === false) {
             sendResponse(['error' => 'Failed to read swagger documentation'], 500);
         }
-        
+
         // Validate JSON
         $decoded = json_decode($swagger);
         if (json_last_error() !== JSON_ERROR_NONE) {
             sendResponse(['error' => 'Invalid swagger JSON'], 500);
         }
-        
+
         header('Content-Type: application/json');
         echo $swagger;
         exit;
     }
-    
+
     // Route: Main query endpoint (ChatGPT Actions primary)
     if ($path === '/query' && $method === 'POST') {
         $body = getRequestBody();
@@ -499,31 +740,66 @@ try {
         $status = statusFromEngineResult($result);
         sendResponse($result, $status);
     }
-    
+
     // 404 - Route not found
     sendResponse([
         'error' => 'Endpoint not found',
         'path' => $path,
         'method' => $method,
-        'available_endpoints' => $basePath . '/endpoints',
+        'available_endpoints' => [
+            'root' => $basePath . '/',
+            'health' => $basePath . '/health',
+            'diagnostics' => $basePath . '/diagnostics',
+            'endpoints' => $basePath . '/endpoints',
+            'query' => $basePath . '/query',
+            'swagger' => $basePath . '/swagger.json'
+        ],
         'documentation' => $basePath . '/swagger.json'
     ], 404);
-    
+
 } catch (Exception $e) {
     // Log exception
     $errorCode = $e->getCode() ?: 500;
     $errorMessage = $e->getMessage();
-    
+
     error_log("Unhandled exception [{$errorCode}]: {$errorMessage}");
     error_log("Stack trace: " . $e->getTraceAsString());
-    
-    // Send user-friendly error
-    $isProduction = (getenv('MPS_DEBUG') !== 'true');
-    
-    sendResponse([
+
+    // Send comprehensive error in debug mode
+    $isDebug = (getenv('MPS_DEBUG') === 'true' || getenv('MPS_DEBUG') === '1');
+
+    $response = [
         'success' => false,
-        'error' => $isProduction ? 'Internal server error' : $errorMessage,
+        'error' => $isDebug ? $errorMessage : 'Internal server error',
         'error_code' => $errorCode,
         'timestamp' => date('c')
+    ];
+
+    if ($isDebug) {
+        $response['exception'] = [
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => explode("\n", $e->getTraceAsString()),
+        ];
+        $response['system'] = getSystemDiagnostics();
+    }
+
+    sendResponse($response, 500);
+} catch (Throwable $e) {
+    // Catch any PHP 7+ errors
+    error_log("Critical error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+
+    $isDebug = (getenv('MPS_DEBUG') === 'true' || getenv('MPS_DEBUG') === '1');
+
+    sendResponse([
+        'success' => false,
+        'error' => $isDebug ? $e->getMessage() : 'Critical server error',
+        'error_code' => 500,
+        'type' => get_class($e),
+        'file' => $isDebug ? $e->getFile() : null,
+        'line' => $isDebug ? $e->getLine() : null,
     ], 500);
 }
