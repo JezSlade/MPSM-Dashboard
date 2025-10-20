@@ -1268,20 +1268,39 @@ class MPSMonitorEngine {
             'php_version' => PHP_VERSION,
             'request_count' => self::$requestCount,
         ];
-        
+
         try {
-            $result = $this->makeRequest('health', 'GET');
+            // Use a real working endpoint to test connectivity
+            // AlertLimit/Dealer/Get is a simple GET endpoint that works with just dealer code
+            $result = $this->dispatchAction('AlertLimit/Dealer/Get', []);
             $diagnostics['response_time'] = round((microtime(true) - $startTime) * 1000, 2) . 'ms';
             $diagnostics['api_reachable'] = true;
             $diagnostics['api_response'] = $result['success'];
-            
-            return array_merge($result, $diagnostics);
+            $diagnostics['test_endpoint'] = 'AlertLimit/Dealer/Get';
+
+            // Return simplified health status (not full dealer data)
+            return [
+                'success' => $result['success'],
+                'status' => $result['success'] ? 'healthy' : 'degraded',
+                'message' => $result['success'] ? 'API connection successful' : 'API returned error',
+                'timestamp' => $diagnostics['timestamp'],
+                'engine_version' => $diagnostics['engine_version'],
+                'php_version' => $diagnostics['php_version'],
+                'response_time' => $diagnostics['response_time'],
+                'api_reachable' => $diagnostics['api_reachable'],
+                'api_response' => $diagnostics['api_response'],
+                'test_endpoint' => $diagnostics['test_endpoint'],
+            ];
         } catch (Exception $e) {
             $diagnostics['response_time'] = round((microtime(true) - $startTime) * 1000, 2) . 'ms';
             $diagnostics['api_reachable'] = false;
             $diagnostics['error'] = $e->getMessage();
-            
-            return array_merge(['success' => false], $diagnostics);
+
+            return array_merge([
+                'success' => false,
+                'status' => 'unhealthy',
+                'message' => 'Health check failed'
+            ], $diagnostics);
         }
     }
     
