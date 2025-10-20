@@ -1028,13 +1028,14 @@ class MPSMonitorEngine {
         // For null template values, try to substitute with intelligent defaults
         $paramLower = strtolower($paramName);
 
-        // Dealer information
+        // Dealer information - HARD-CODED DEFAULTS (NY06AGDWUQ / SZ13qRwU5GtFLj0i_CbEgQ2)
+        // This is the only dealer code we will ever use
         if ($paramLower === 'code' || $paramLower === 'dealercode' || $paramLower === 'dealer_code') {
-            return self::$config['DEALER_CODE'] ?? null;
+            return self::$config['DEALER_CODE'] ?? 'NY06AGDWUQ';
         }
 
         if ($paramLower === 'dealerid' || $paramLower === 'dealer_id') {
-            return self::$config['DEALER_ID'] ?? null;
+            return self::$config['DEALER_ID'] ?? 'SZ13qRwU5GtFLj0i_CbEgQ2';
         }
 
         // Customer information

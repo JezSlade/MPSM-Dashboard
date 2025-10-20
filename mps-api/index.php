@@ -678,6 +678,7 @@ try {
                 'oauth_all_endpoints' => true,
                 'smart_parameter_population' => true,
                 'mpsm_response_validation' => true,
+                'hard_coded_dealer_defaults' => true,
             ],
             'timestamp' => date('c'),
             'base_path' => $basePath,
@@ -688,9 +689,25 @@ try {
                 'diagnostics' => $basePath . '/diagnostics',
                 'endpoints' => $basePath . '/endpoints',
                 'query' => $basePath . '/query',
-                'swagger' => $basePath . '/swagger.json'
+                'swagger' => $basePath . '/swagger.json',
+                'chatgpt_integration' => $basePath . '/chatgpt-schema'
             ],
-            'stats' => MPSMonitorEngine::getStats()
+            'stats' => MPSMonitorEngine::getStats(),
+            'api_interaction_data' => [
+                'oauth_endpoint' => getenv('TOKEN_URL') ?: 'https://api.abassetmanagement.com/api3/token',
+                'api_base_url' => getenv('API_BASE_URL') ?: 'https://api.abassetmanagement.com/api3/',
+                'auth_method' => 'OAuth 2.0 Password Grant',
+                'dealer_code' => 'NY06AGDWUQ',
+                'dealer_id' => 'SZ13qRwU5GtFLj0i_CbEgQ2',
+                'request_format' => 'POST ' . $basePath . '/query with {"action": "ActionName", "params": {...}}',
+                'payload_templates' => '158 discovered endpoint patterns loaded',
+            ],
+            'chatgpt_integration' => [
+                'status' => 'ready',
+                'schema_endpoint' => $basePath . '/chatgpt-schema',
+                'query_endpoint' => $basePath . '/query',
+                'documentation' => 'See /chatgpt-schema for full OpenAPI schema'
+            ]
         ]);
     }
 
@@ -750,6 +767,236 @@ try {
         header('Content-Type: application/json');
         echo $swagger;
         exit;
+    }
+
+    // Route: ChatGPT Custom API Integration Schema
+    if ($path === '/chatgpt-schema') {
+        $schema = [
+            'openapi' => '3.1.0',
+            'info' => [
+                'title' => 'MPS Monitors API',
+                'description' => 'MPS Monitors API integration for ChatGPT Custom Actions. Provides access to 544 MPSM API endpoints with automatic OAuth authentication and smart parameter population.',
+                'version' => '1.1.0'
+            ],
+            'servers' => [
+                [
+                    'url' => 'https://mpsm.resolutionsbydesign.us/mps-api',
+                    'description' => 'Production MPS API Engine'
+                ]
+            ],
+            'paths' => [
+                '/query' => [
+                    'post' => [
+                        'summary' => 'Execute any MPSM API action',
+                        'description' => 'Universal endpoint for all 544 MPSM API actions. Automatically handles OAuth authentication, parameter population, and response formatting.',
+                        'operationId' => 'executeAction',
+                        'requestBody' => [
+                            'required' => true,
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'required' => ['action'],
+                                        'properties' => [
+                                            'action' => [
+                                                'type' => 'string',
+                                                'description' => 'The API action to execute (e.g., "AlertLimit/Dealer/Get", "ApiClient/List", "CustomField/List")',
+                                                'example' => 'AlertLimit/Dealer/Get'
+                                            ],
+                                            'params' => [
+                                                'type' => 'object',
+                                                'description' => 'Parameters for the action. Most parameters are auto-populated from templates. Dealer code (NY06AGDWUQ) is always used.',
+                                                'additionalProperties' => true,
+                                                'example' => []
+                                            ]
+                                        ]
+                                    ],
+                                    'examples' => [
+                                        'get_dealer_alert_limits' => [
+                                            'summary' => 'Get dealer alert limits',
+                                            'value' => [
+                                                'action' => 'AlertLimit/Dealer/Get',
+                                                'params' => []
+                                            ]
+                                        ],
+                                        'list_api_clients' => [
+                                            'summary' => 'List API clients',
+                                            'value' => [
+                                                'action' => 'ApiClient/List',
+                                                'params' => []
+                                            ]
+                                        ],
+                                        'list_custom_fields' => [
+                                            'summary' => 'List custom fields',
+                                            'value' => [
+                                                'action' => 'CustomField/List',
+                                                'params' => []
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ],
+                        'responses' => [
+                            '200' => [
+                                'description' => 'Successful response',
+                                'content' => [
+                                    'application/json' => [
+                                        'schema' => [
+                                            'type' => 'object',
+                                            'properties' => [
+                                                'success' => [
+                                                    'type' => 'boolean',
+                                                    'description' => 'Whether the request was successful'
+                                                ],
+                                                'data' => [
+                                                    'description' => 'The response data from the API',
+                                                    'oneOf' => [
+                                                        ['type' => 'object'],
+                                                        ['type' => 'array']
+                                                    ]
+                                                ],
+                                                'http_code' => [
+                                                    'type' => 'integer',
+                                                    'description' => 'HTTP status code from upstream API'
+                                                ],
+                                                'timestamp' => [
+                                                    'type' => 'string',
+                                                    'format' => 'date-time'
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                '/health' => [
+                    'get' => [
+                        'summary' => 'Health check',
+                        'description' => 'Verify API engine and MPSM API connectivity',
+                        'operationId' => 'healthCheck',
+                        'responses' => [
+                            '200' => [
+                                'description' => 'Health status',
+                                'content' => [
+                                    'application/json' => [
+                                        'schema' => [
+                                            'type' => 'object',
+                                            'properties' => [
+                                                'success' => ['type' => 'boolean'],
+                                                'status' => [
+                                                    'type' => 'string',
+                                                    'enum' => ['healthy', 'degraded', 'unhealthy']
+                                                ],
+                                                'message' => ['type' => 'string']
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                '/endpoints' => [
+                    'get' => [
+                        'summary' => 'List all available actions',
+                        'description' => 'Get a complete list of all 544 MPSM API actions',
+                        'operationId' => 'listEndpoints',
+                        'responses' => [
+                            '200' => [
+                                'description' => 'List of endpoints',
+                                'content' => [
+                                    'application/json' => [
+                                        'schema' => [
+                                            'type' => 'object',
+                                            'properties' => [
+                                                'success' => ['type' => 'boolean'],
+                                                'count' => ['type' => 'integer'],
+                                                'operations' => [
+                                                    'type' => 'array',
+                                                    'items' => [
+                                                        'type' => 'object',
+                                                        'properties' => [
+                                                            'action' => ['type' => 'string'],
+                                                            'method' => ['type' => 'string'],
+                                                            'path' => ['type' => 'string'],
+                                                            'summary' => ['type' => 'string']
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'components' => [
+                'securitySchemes' => [
+                    'none' => [
+                        'type' => 'http',
+                        'scheme' => 'bearer',
+                        'description' => 'OAuth is handled automatically by the engine. No authentication required for this API.'
+                    ]
+                ]
+            ],
+            'x-implementation-guide' => [
+                'dealer_defaults' => [
+                    'dealer_code' => 'NY06AGDWUQ',
+                    'dealer_id' => 'SZ13qRwU5GtFLj0i_CbEgQ2',
+                    'note' => 'These values are hard-coded and automatically used for all requests'
+                ],
+                'auto_population' => [
+                    'enabled' => true,
+                    'templates_loaded' => 158,
+                    'description' => 'The engine automatically populates required parameters based on discovered working patterns',
+                    'examples' => [
+                        'dealer_codes' => 'Automatically filled from config',
+                        'pagination' => 'pageNumber: 1, pageSize: 50',
+                        'sorting' => 'sortOrder: Asc, sortColumn: Name',
+                        'dates' => 'fromDate: -30 days, toDate: today'
+                    ]
+                ],
+                'usage_examples' => [
+                    [
+                        'description' => 'Get dealer alert limits (no params needed)',
+                        'request' => [
+                            'action' => 'AlertLimit/Dealer/Get',
+                            'params' => []
+                        ]
+                    ],
+                    [
+                        'description' => 'List API clients with pagination',
+                        'request' => [
+                            'action' => 'ApiClient/List',
+                            'params' => []
+                        ]
+                    ],
+                    [
+                        'description' => 'Override default page size',
+                        'request' => [
+                            'action' => 'ApiClient/List',
+                            'params' => [
+                                'pageRows' => 100
+                            ]
+                        ]
+                    ]
+                ],
+                'chatgpt_setup' => [
+                    'step_1' => 'In ChatGPT, go to "Explore GPTs" > "Create"',
+                    'step_2' => 'Configure > Actions > Import from URL',
+                    'step_3' => 'Enter: https://mpsm.resolutionsbydesign.us/mps-api/chatgpt-schema',
+                    'step_4' => 'Authentication: None (handled automatically)',
+                    'step_5' => 'Test with: "Get dealer alert limits"'
+                ]
+            ]
+        ];
+
+        sendResponse($schema, 200);
     }
 
     // Route: Main query endpoint (ChatGPT Actions primary)
