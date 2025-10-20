@@ -310,8 +310,15 @@ class SwaggerActionRegistry
         if (isset($schema['$ref'])) {
             $ref = $schema['$ref'];
 
+            // Handle circular references gracefully by returning a placeholder
             if (isset($visited[$ref])) {
-                throw new RuntimeException('Circular schema reference detected: ' . $ref);
+                // Circular reference detected - return a simple placeholder to break the cycle
+                // This allows the schema to load without infinite recursion
+                return [
+                    'type' => 'object',
+                    'description' => 'Circular reference: ' . $ref,
+                    'x-circular-ref' => $ref
+                ];
             }
 
             if (isset($this->resolvedSchemaCache[$ref])) {

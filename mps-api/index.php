@@ -104,7 +104,7 @@ function getSystemDiagnostics() {
             'index.php' => file_exists(__DIR__ . '/index.php'),
             'engine.php' => file_exists(__DIR__ . '/engine.php'),
             'SwaggerActionRegistry.php' => file_exists(__DIR__ . '/SwaggerActionRegistry.php'),
-            'Swagger.json' => file_exists(__DIR__ . '/Swagger.json'),
+            'Swagger.json' => file_exists(__DIR__ . '/Swagger.json') || file_exists(__DIR__ . '/swagger.json'),
             '.env' => file_exists(__DIR__ . '/.env'),
         ],
         'file_sizes' => [],
@@ -120,12 +120,15 @@ function getSystemDiagnostics() {
         }
     }
 
-    // Check Swagger.json validity
+    // Check Swagger.json validity (case-insensitive)
     if ($diag['files']['Swagger.json']) {
-        $swaggerContent = @file_get_contents(__DIR__ . '/Swagger.json');
+        // Check both uppercase and lowercase versions
+        $swaggerPath = file_exists(__DIR__ . '/Swagger.json') ? __DIR__ . '/Swagger.json' : __DIR__ . '/swagger.json';
+        $swaggerContent = @file_get_contents($swaggerPath);
         if ($swaggerContent !== false) {
             $swaggerData = @json_decode($swaggerContent, true);
             $diag['swagger'] = [
+                'file_used' => basename($swaggerPath),
                 'valid_json' => (json_last_error() === JSON_ERROR_NONE),
                 'size_bytes' => strlen($swaggerContent),
                 'has_paths' => isset($swaggerData['paths']),
@@ -593,6 +596,7 @@ try {
     $basePath = getBasePath();
 
     // Route: Diagnostics (always available, even if engine fails)
+    // ALWAYS shows full diagnostic data - no debug mode needed for troubleshooting
     if ($path === '/diagnostics' || $path === '/debug') {
         $isDebug = (getenv('MPS_DEBUG') === 'true' || getenv('MPS_DEBUG') === '1');
 
@@ -603,14 +607,32 @@ try {
             'engine' => getEngineDiagnostics(),
         ];
 
-        // Add recent logs if in debug mode
-        if ($isDebug) {
-            $errorLog = __DIR__ . '/logs/php_errors_' . date('Y-m-d') . '.log';
-            if (file_exists($errorLog)) {
-                $logLines = @file($errorLog, FILE_IGNORE_NEW_LINES);
-                if ($logLines !== false) {
-                    $response['recent_errors'] = array_slice($logLines, -20);
-                }
+        // ALWAYS add recent error logs for troubleshooting (not just in debug mode)
+        $errorLog = __DIR__ . '/logs/php_errors_' . date('Y-m-d') . '.log';
+        if (file_exists($errorLog)) {
+            $logLines = @file($errorLog, FILE_IGNORE_NEW_LINES);
+            if ($logLines !== false && count($logLines) > 0) {
+                $response['recent_errors'] = array_slice($logLines, -50); // Last 50 lines
+            }
+        }
+
+        // Check for .env.example to help with setup
+        if (!$response['system']['files']['.env'] && file_exists(__DIR__ . '/.env.example')) {
+            $response['setup_help'] = [
+                'message' => '.env file is missing - copy from .env.example',
+                'command' => 'cp .env.example .env && nano .env'
+            ];
+        }
+
+        // Check for Swagger.json in parent directory
+        if (!$response['system']['files']['Swagger.json']) {
+            $parentSwagger = dirname(__DIR__) . '/Swagger.json';
+            $response['file_search'] = [
+                'checking_parent_directory' => $parentSwagger,
+                'exists_in_parent' => file_exists($parentSwagger)
+            ];
+            if (file_exists($parentSwagger)) {
+                $response['setup_help']['swagger_location'] = 'Swagger.json found in parent directory - copy to mps-api/';
             }
         }
 
