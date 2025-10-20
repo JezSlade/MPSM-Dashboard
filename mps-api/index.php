@@ -640,7 +640,23 @@ try {
     }
 
     // Load engine (required for all other routes)
-    $engine = MPSMonitorEngine::getInstance();
+    try {
+        $engine = MPSMonitorEngine::getInstance();
+    } catch (Throwable $e) {
+        // Engine failed to load - send detailed error
+        sendResponse([
+            'success' => false,
+            'error' => 'Failed to initialize API engine',
+            'error_code' => 500,
+            'details' => [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => explode("\n", $e->getTraceAsString())
+            ],
+            'suggestion' => 'Check /diagnostics endpoint for full system status'
+        ], 500);
+    }
 
     // Route: Health check / Root
     if ($path === '/' || $path === '') {
