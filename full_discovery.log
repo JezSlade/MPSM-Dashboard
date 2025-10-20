@@ -1,0 +1,20 @@
+Discovering endpoints from C:\Users\jez.slade\Desktop\Projects\MPSM-Dashboard\Swagger.json...
+Discovered 544 endpoints:
+  - 142 lookup/list endpoints (domain seeds)
+  - 209 read operations
+  - 335 write operations
+
+Endpoint matrix saved to C:\Users\jez.slade\Desktop\Projects\MPSM-Dashboard\output\endpoints.json
+Summary by tag saved to C:\Users\jez.slade\Desktop\Projects\MPSM-Dashboard\output\endpoints_by_tag.json
+
+Top tags:
+  - Explorer: 73 endpoints
+  - Dealer: 34 endpoints
+  - Device: 34 endpoints
+  - SdsDeviceApi: 34 endpoints
+  - AlertLimit2Api: 23 endpoints
+  - Account: 22 endpoints
+  - Customer: 19 endpoints
+  - SdsCustomerApi: 16 endpoints
+  - Office: 15 endpoints
+  - Counter: 14 endpoints

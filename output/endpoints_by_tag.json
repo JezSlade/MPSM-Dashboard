@@ -1,0 +1,2423 @@
+{
+  "Account": {
+    "count": 22,
+    "endpoints": [
+      {
+        "path": "/Account/GetProfile",
+        "method": "GET"
+      },
+      {
+        "path": "/Account/GetPsk2faData",
+        "method": "GET"
+      },
+      {
+        "path": "/Account/GetPsk2faDataForAccount",
+        "method": "GET"
+      },
+      {
+        "path": "/Account/GetPsk2faDataForProfile",
+        "method": "GET"
+      },
+      {
+        "path": "/Account/ChangeLanguage",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/ChangePassword",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Account/Delete2fa",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Account/DeleteProfile2fa",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Account/Enable2faForAccount",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/Enable2faForProfile",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/GetAccount",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/GetAccounts",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/Logout",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/RefreshAuthCookie",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/ResetPassword",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/ResetPasswordVerifyToken",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/SendOtpEmailForAccount",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/SetPreferredDealer",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/Update",
+        "method": "POST"
+      },
+      {
+        "path": "/Account/UpdateProfile",
+        "method": "POST"
+      }
+    ]
+  },
+  "AlertLimit2Api": {
+    "count": 23,
+    "endpoints": [
+      {
+        "path": "/AlertLimit2/Customer/GetDefault",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Customer/GetProduct",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Customer/GetProductList",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/GetDefault",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/GetProduct",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/GetProductList",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/GetAllLimits",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Device/GetDefault",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit2/Customer/CreateDefault",
+        "method": "POST"
+      },
+      {
+        "path": "/AlertLimit2/Customer/CreateProduct",
+        "method": "POST"
+      },
+      {
+        "path": "/AlertLimit2/Customer/DeleteDefaultForConsumable",
+        "method": "DELETE"
+      },
+      {
+        "path": "/AlertLimit2/Customer/DeleteProduct",
+        "method": "DELETE"
+      },
+      {
+        "path": "/AlertLimit2/Customer/UpdateDefault",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit2/Customer/UpdateProduct",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/CreateDefault",
+        "method": "POST"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/CreateProduct",
+        "method": "POST"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/DeleteProduct",
+        "method": "DELETE"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/UpdateDefault",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit2/Dealer/UpdateProduct",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit2/Device/CreateDefault",
+        "method": "POST"
+      },
+      {
+        "path": "/AlertLimit2/Device/DeleteDefaultForConsumable",
+        "method": "DELETE"
+      },
+      {
+        "path": "/AlertLimit2/Device/UpdateDefault",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit2/DisableAlertLimits",
+        "method": "POST"
+      }
+    ]
+  },
+  "AlertLimitApi": {
+    "count": 11,
+    "endpoints": [
+      {
+        "path": "/AlertLimit/Customer/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit/Customer/Product/List",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit/Dealer/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit/Device/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/AlertLimit/Customer/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/AlertLimit/Customer/Product/Delete",
+        "method": "POST"
+      },
+      {
+        "path": "/AlertLimit/Customer/Product/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit/Customer/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit/Dealer/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/AlertLimit/Device/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/AlertLimit/Device/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Analytics": {
+    "count": 2,
+    "endpoints": [
+      {
+        "path": "/Analytics/GetReportFileResult",
+        "method": "GET"
+      },
+      {
+        "path": "/Analytics/GetReportResult",
+        "method": "GET"
+      }
+    ]
+  },
+  "ApiClientApi": {
+    "count": 10,
+    "endpoints": [
+      {
+        "path": "/ApiClient/Account/List",
+        "method": "GET"
+      },
+      {
+        "path": "/ApiClient/List",
+        "method": "GET"
+      },
+      {
+        "path": "/ApiClient/Account/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/ApiClient/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/ApiClient/Account/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/ApiClient/Account/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/ApiClient/Account/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/ApiClient/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/ApiClient/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/ApiClient/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "AzureADApi": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/azuread/GetCustomerAzureSettings",
+        "method": "GET"
+      },
+      {
+        "path": "/azuread/GetDealerAzureSettings",
+        "method": "GET"
+      },
+      {
+        "path": "/azuread/GetChallengeUrlRedirect",
+        "method": "GET"
+      },
+      {
+        "path": "/azuread/CreateAzureDomain",
+        "method": "POST"
+      },
+      {
+        "path": "/azuread/UpdateAzureDomain",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Billing": {
+    "count": 8,
+    "endpoints": [
+      {
+        "path": "/Billing/GetInvoiceCategories",
+        "method": "GET"
+      },
+      {
+        "path": "/Billing/GetCustomerInvoice",
+        "method": "POST"
+      },
+      {
+        "path": "/Billing/GetCustomerInvoicesList",
+        "method": "POST"
+      },
+      {
+        "path": "/Billing/GetCustomersContracts",
+        "method": "POST"
+      },
+      {
+        "path": "/Billing/GetCustomersInvoicesList",
+        "method": "POST"
+      },
+      {
+        "path": "/Billing/GetDealerInvoice",
+        "method": "POST"
+      },
+      {
+        "path": "/Billing/GetDealerInvoicesList",
+        "method": "POST"
+      },
+      {
+        "path": "/Billing/UpdateCustomerInvoice",
+        "method": "PATCH"
+      }
+    ]
+  },
+  "CommunicationApi": {
+    "count": 1,
+    "endpoints": [
+      {
+        "path": "/Communication/GetPortalReleaseNotes",
+        "method": "GET"
+      }
+    ]
+  },
+  "ConsumableApi": {
+    "count": 1,
+    "endpoints": [
+      {
+        "path": "/Consumable/List",
+        "method": "POST"
+      }
+    ]
+  },
+  "CostCenter": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/CostCenter/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/CostCenter/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/CostCenter/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/CostCenter/List",
+        "method": "POST"
+      },
+      {
+        "path": "/CostCenter/Update",
+        "method": "POST"
+      }
+    ]
+  },
+  "Counter": {
+    "count": 14,
+    "endpoints": [
+      {
+        "path": "/Counter/Device/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Counter/ListMaintenanceKitCounters",
+        "method": "GET"
+      },
+      {
+        "path": "/Counter/Catalog/Suggestions",
+        "method": "GET"
+      },
+      {
+        "path": "/Counter/Device/Export",
+        "method": "GET"
+      },
+      {
+        "path": "/Counter/Catalog/Export",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/Catalog/List",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/Catalog/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Counter/Device/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Counter/Device/Update",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/Device/UpdateCounterDetailTag",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/List",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/ListBlended",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/ListDetailed",
+        "method": "POST"
+      },
+      {
+        "path": "/Counter/UploadOfflineDeviceCounters",
+        "method": "POST"
+      }
+    ]
+  },
+  "CustomFieldApi": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/CustomField/List",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomField/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomField/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/CustomField/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/CustomField/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Customer": {
+    "count": 19,
+    "endpoints": [
+      {
+        "path": "/Customer/Accessories/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/AdvancedOptions/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/AlertSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/CustomerServicesStatus/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/EpsonSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/EpsonUSBCustomerId/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/eXplorerSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Customer/AdvancedOptions/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Customer/AlertSettings/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Customer/CreateCustomer",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/DeleteCustomer",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/EpsonSettings/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Customer/GetCustomer",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/GetCustomerByCode",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/GetCustomers",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/GetEmailExplorerInstallationToCustomer",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/SendEXplorerInvitation",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/UpdateCustomer",
+        "method": "POST"
+      },
+      {
+        "path": "/Customer/eXplorerSettings/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "CustomerCredentialsApi": {
+    "count": 1,
+    "endpoints": [
+      {
+        "path": "/CustomerCredentials/Delete",
+        "method": "DELETE"
+      }
+    ]
+  },
+  "CustomerDashboard": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/CustomerDashboard",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomerDashboard/Pages",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomerDashboard/Connectors",
+        "method": "POST"
+      },
+      {
+        "path": "/CustomerDashboard/Devices",
+        "method": "POST"
+      },
+      {
+        "path": "/CustomerDashboard/Get",
+        "method": "POST"
+      }
+    ]
+  },
+  "CustomerNotificationApi": {
+    "count": 8,
+    "endpoints": [
+      {
+        "path": "/CustomerNotification/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomerNotification/GetNotificationPlaceholders",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomerNotification/GetSampleNotification",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomerNotification/List",
+        "method": "GET"
+      },
+      {
+        "path": "/CustomerNotification/ApplyDealerTemplate",
+        "method": "PUT"
+      },
+      {
+        "path": "/CustomerNotification/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/CustomerNotification/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/CustomerNotification/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Dealer": {
+    "count": 34,
+    "endpoints": [
+      {
+        "path": "/Dealer/AccountingSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/AdvancedOptions/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/AlertLimitOptions/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/AlertSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/Customizations/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/DealerServicesStatus/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/DemoRequest/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/DemoRequest/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/DistributorSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/ExportDealerTagsHierarchy",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/GetDealerHierarchy",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/GetDealerTagsHierarchy",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/Onboarding/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/RemoteOfflineCountersSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/eXplorerSettings/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/AccountingSettings/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/AlertSettings/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/Customizations/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/DeclineDemoRequest",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/DistributorSettings/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/GetDealer",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/GetDealerByCode",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/GetDealerSupportTicketConfiguration",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/GetDealers",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/GetDealersInfo",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/GetDealersWithoutContract",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/Onboarding/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/PostponeDemoExpiration",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/RemoteOfflineCountersSettings/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/SaveDealerTagsHierarchy",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Dealer/UpdateDealerSupportTicketConfiguration",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/eXplorerSettings/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "DealerCounterBlendApi": {
+    "count": 7,
+    "endpoints": [
+      {
+        "path": "/Dealer/CounterBlend/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/CounterBlend/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/CounterBlend/Search",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/CounterBlend/ClearCounter",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Dealer/CounterBlend/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/CounterBlend/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Dealer/CounterBlend/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "DealerCounterBlendToStandardApi": {
+    "count": 6,
+    "endpoints": [
+      {
+        "path": "/Dealer/CounterBlendToStandard/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/CounterBlendToStandard/GetByDevice",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/CounterBlendToStandard/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Dealer/CounterBlendToStandard/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Dealer/CounterBlendToStandard/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Dealer/CounterBlendToStandard/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "DealerNotificationApi": {
+    "count": 10,
+    "endpoints": [
+      {
+        "path": "/DealerNotification/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerNotification/GetNotificationPlaceholders",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerNotification/GetSampleNotification",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerNotification/List",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerNotification/Template/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerNotification/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerNotification/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/DealerNotification/RemoveMailAddressFromCustomers",
+        "method": "PUT"
+      },
+      {
+        "path": "/DealerNotification/Template/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/DealerNotification/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "DealerProduct": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/DealerProduct/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerProduct/List",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerProduct/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerProduct/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/DealerProduct/Edit",
+        "method": "PUT"
+      }
+    ]
+  },
+  "DealerSupply": {
+    "count": 11,
+    "endpoints": [
+      {
+        "path": "/DealerSupply/Count",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupply/Export",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupply/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupply/List",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupply/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupply/CreateFromProjectVolumes",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupply/CreateFromStandardSupply",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupply/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/DealerSupply/ListSuggested",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupply/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/DealerSupply/UploadSupplies",
+        "method": "POST"
+      }
+    ]
+  },
+  "DealerSupplyPriceListingApi": {
+    "count": 7,
+    "endpoints": [
+      {
+        "path": "/DealerSupplyPriceListing/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplyPriceListing/List",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplyPriceListing/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupplyPriceListing/Customer/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupplyPriceListing/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/DealerSupplyPriceListing/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/DealerSupplyPriceListing/UpdateByCustomer",
+        "method": "PUT"
+      }
+    ]
+  },
+  "DealerSupplySetApi": {
+    "count": 14,
+    "endpoints": [
+      {
+        "path": "/DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/Count",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/Export",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/ExportExcel",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/List",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/ListDealerSupplySetFromStandardModels",
+        "method": "GET"
+      },
+      {
+        "path": "/DealerSupplySet/CreateFromProjectVolumes",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupplySet/CreateFromStandardModels",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupplySet/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/DealerSupplySet/Import",
+        "method": "POST"
+      },
+      {
+        "path": "/DealerSupplySet/SaveSupplySet",
+        "method": "PUT"
+      },
+      {
+        "path": "/DealerSupplySet/UploadSupplySet",
+        "method": "POST"
+      }
+    ]
+  },
+  "Device": {
+    "count": 34,
+    "endpoints": [
+      {
+        "path": "/Device/Deleted/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/Deleted/ListByDealer",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/ExplorerDataAffinities/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/MaintenanceAlerts/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetDeviceAdditionalInfos",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetDeviceGapInfos",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetLfpCounters",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetSuppliesDetails",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetSuppliesDetailsInfo",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetSuppliesDetailsSummary",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/GetZebraSuppliesDetailsSummary",
+        "method": "GET"
+      },
+      {
+        "path": "/Device/AssignOfficeToDevicesByDeviceId",
+        "method": "PUT"
+      },
+      {
+        "path": "/Device/AssignOfficeToDevicesBySerialNumber",
+        "method": "PUT"
+      },
+      {
+        "path": "/Device/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Device/Deleted/Restore",
+        "method": "PUT"
+      },
+      {
+        "path": "/Device/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/GetDetailedInformations",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/List",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListAttributesDataHistory",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListErrorsMessagesDataHistory",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListLevelsDataHistory",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListMaintenanceKitMessagesDataHistory",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListMeterReads",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListMetersDataHistory",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ListSuppliesDataHistory",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/Offline/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/Offline/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/Offline/List",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/ResetWorkflowMode",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/SharpFSS/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/Update",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/UpdateDeviceSerialNumber",
+        "method": "POST"
+      },
+      {
+        "path": "/Device/UpdateDevicesBySerialNumbers",
+        "method": "PUT"
+      },
+      {
+        "path": "/Device/UpdateSupplySetAssociation",
+        "method": "POST"
+      }
+    ]
+  },
+  "Explorer": {
+    "count": 73,
+    "endpoints": [
+      {
+        "path": "/Explorer/Cluster/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Configuration/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/ExplorerDataCommand/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/ExplorerDataInfo/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/License/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Staging/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/AgentVersions",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Cluster/AutoClusters",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Cluster/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Configuration/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Configuration/GetTestTableVersions",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/DataLogs",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/DataPings",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Dca4ClientVersions",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/Dca4MonitorVersions",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/DownloadLogs",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetClusterCounters",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetConnectorEndpoints",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetConnectors",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetDca4Otp",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetDcaCurrentVersion",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetDcaReleaseNotes",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetEndpointsLink",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetExplorerDatas",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetExplorerSetupLink",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/GetJamcSetupLink",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/RequestSendLogs",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/ServiceVersions",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/V3/ReleaseNotes",
+        "method": "GET"
+      },
+      {
+        "path": "/Explorer/AbortRequestSendLogs",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/AbortUpdateAgent",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/AbortUpdateDca4Client",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/AbortUpdateDca4Monitor",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/AbortUpdateService",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/AutomaticUpdate",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/ClearOidRegistry",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Cluster/AddSlaveToCluster",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Cluster/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Cluster/Delete",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Configuration/Copy",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/Configuration/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Configuration/CreateFromTicket",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Configuration/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Explorer/Configuration/ScanImmediate",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/Configuration/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/DeleteExplorerData",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/DeleteExplorerDataExplorerData",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Hostname/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Hostname/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Explorer/Hostname/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/ImmediateScanDca4",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Intervals/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/License/Generate",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Schedule/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Schedule/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Explorer/Schedule/Update",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/SendGetOrWalk",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/SendGetOrWalkByPrinter",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/SendHpLfpXml",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/SendHpLfpXmlByPrinter",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/SendPing",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/SetDcaLogLevel",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/SetPollingService",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/Staging/Activate",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Staging/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Explorer/Subnet/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Explorer/Subnet/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Explorer/Subnet/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/UpdateAgent",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/UpdateDca4Client",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/UpdateDca4Monitor",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/UpdateService",
+        "method": "PUT"
+      },
+      {
+        "path": "/Explorer/WorkingDays/Update",
+        "method": "POST"
+      }
+    ]
+  },
+  "IntegrationsApi": {
+    "count": 13,
+    "endpoints": [
+      {
+        "path": "/Integrations/GetJoinedCustomers",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/GetJoinedDevices",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/GetLogisticPlaceholders",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/GetNew",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/eautomate/GetEAutomateLog",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/eautomate/runjoin",
+        "method": "GET"
+      },
+      {
+        "path": "/Integrations/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Integrations/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Integrations/ToServ/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Integrations/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Integrations/VantageOnline/Create",
+        "method": "POST"
+      }
+    ]
+  },
+  "Office": {
+    "count": 15,
+    "endpoints": [
+      {
+        "path": "/Office/OfficeFloor/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Office/OfficeFloor/GetPin",
+        "method": "GET"
+      },
+      {
+        "path": "/Office/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Office/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/List",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/OfficeFloor/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/OfficeFloor/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Office/OfficeFloor/DeletePin",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Office/OfficeFloor/SavePin",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/OfficeFloor/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/Office/Subnet/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/Subnet/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Office/Update",
+        "method": "POST"
+      },
+      {
+        "path": "/Office/UploadOffices",
+        "method": "POST"
+      }
+    ]
+  },
+  "OktaApi": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/okta/GetCustomerOktaSettings",
+        "method": "GET"
+      },
+      {
+        "path": "/okta/GetDealerOktaSettings",
+        "method": "GET"
+      },
+      {
+        "path": "/okta/GetDomainRedirect",
+        "method": "GET"
+      },
+      {
+        "path": "/okta/CreateOktaDomain",
+        "method": "POST"
+      },
+      {
+        "path": "/okta/UpdateOktaDomain",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Order": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/Orders/GetOrderAdditionalInfo",
+        "method": "GET"
+      },
+      {
+        "path": "/Orders/GetOrderLineStatuses",
+        "method": "GET"
+      },
+      {
+        "path": "/Orders/GetOrderLines",
+        "method": "GET"
+      },
+      {
+        "path": "/Orders/GetOrderProofOfDelivery",
+        "method": "GET"
+      },
+      {
+        "path": "/Orders/GetOrders",
+        "method": "GET"
+      }
+    ]
+  },
+  "PanelMessageAlertApi": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/PanelMessageAlert/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/PanelMessageAlert/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/PanelMessageAlert/GetErrorCodes",
+        "method": "POST"
+      },
+      {
+        "path": "/PanelMessageAlert/List",
+        "method": "POST"
+      },
+      {
+        "path": "/PanelMessageAlert/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Product": {
+    "count": 9,
+    "endpoints": [
+      {
+        "path": "/Product/Customer/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/Dealer/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/Dealer/ListBrands",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/Dealer/ListModels",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/GetBrands",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/GetModels",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/GetSnmpDiscoveryBrands",
+        "method": "GET"
+      },
+      {
+        "path": "/Product/GetProduct",
+        "method": "POST"
+      },
+      {
+        "path": "/Product/GetProducts",
+        "method": "POST"
+      }
+    ]
+  },
+  "Project": {
+    "count": 9,
+    "endpoints": [
+      {
+        "path": "/Project/GetContractFile",
+        "method": "GET"
+      },
+      {
+        "path": "/Project/GetDetail",
+        "method": "GET"
+      },
+      {
+        "path": "/Project/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Project/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Project/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/Project/List",
+        "method": "POST"
+      },
+      {
+        "path": "/Project/ManageDevicesAssociation",
+        "method": "PUT"
+      },
+      {
+        "path": "/Project/SetRelatedDevicesAlertGenerator",
+        "method": "PUT"
+      },
+      {
+        "path": "/Project/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "RoleApi": {
+    "count": 7,
+    "endpoints": [
+      {
+        "path": "/Role/GetAllCapabilities",
+        "method": "GET"
+      },
+      {
+        "path": "/Role/List",
+        "method": "GET"
+      },
+      {
+        "path": "/Role/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Role/Copy",
+        "method": "POST"
+      },
+      {
+        "path": "/Role/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/Role/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/Role/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "Saga": {
+    "count": 6,
+    "endpoints": [
+      {
+        "path": "/Saga/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/Saga/GetSagaOperationLogMessage",
+        "method": "GET"
+      },
+      {
+        "path": "/Saga/GetSagaOperationLogFile",
+        "method": "POST"
+      },
+      {
+        "path": "/Saga/GetSagaOperationLogList",
+        "method": "POST"
+      },
+      {
+        "path": "/Saga/GetSagaOperationsList",
+        "method": "POST"
+      },
+      {
+        "path": "/Saga/List",
+        "method": "POST"
+      }
+    ]
+  },
+  "SdsActionApi": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/SdsAction/GetDeviceAction",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsAction/GetDeviceActions",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsAction/GetDeviceActionsDashboard",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsAction/ChangeDeviceActionStatus",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsAction/DeleteDeviceAction",
+        "method": "DELETE"
+      }
+    ]
+  },
+  "SdsConnectorApi": {
+    "count": 13,
+    "endpoints": [
+      {
+        "path": "/SdsConnector/DownloadLog",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsConnector/GetConnector",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsConnector/GetConnectors",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsConnector/GetJamcConnectors",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsConnector/GetLogs",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsConnector/GetWppConnectors",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsConnector/Associate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsConnector/DeleteLog",
+        "method": "DELETE"
+      },
+      {
+        "path": "/SdsConnector/Download",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsConnector/Install",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsConnector/Register",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsConnector/RetrieveLog",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsConnector/Unregister",
+        "method": "POST"
+      }
+    ]
+  },
+  "SdsCustomerApi": {
+    "count": 16,
+    "endpoints": [
+      {
+        "path": "/SdsCustomer/GetAssessTemplate",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsCustomer/GetAssessTemplates",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsCustomer/GetCredential",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsCustomer/GetCustomerOperation",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsCustomer/GetCustomerOperations",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsCustomer/GetNewAssessTemplate",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsCustomer/Activate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsCustomer/CreateAssessTemplate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsCustomer/Deactivate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsCustomer/DeleteAssessTemplate",
+        "method": "DELETE"
+      },
+      {
+        "path": "/SdsCustomer/DeleteCredential",
+        "method": "DELETE"
+      },
+      {
+        "path": "/SdsCustomer/RunOperation",
+        "method": "PUT"
+      },
+      {
+        "path": "/SdsCustomer/SetCredential",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsCustomer/Update",
+        "method": "PATCH"
+      },
+      {
+        "path": "/SdsCustomer/UpdateAssessTemplate",
+        "method": "PUT"
+      },
+      {
+        "path": "/SdsCustomer/UploadVJamcDevices",
+        "method": "POST"
+      }
+    ]
+  },
+  "SdsDeviceApi": {
+    "count": 34,
+    "endpoints": [
+      {
+        "path": "/SdsDevice/GetAssessTemplate",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetConfigItems",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetCounters",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetDeviceOperation",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetDeviceRemoteEws",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetDevicesOperations",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetOnDeviceServices",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetSupplyDetails",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/GetZendeskTicketInfo",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsDevice/AbortDeviceReboot",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/AbortDeviceUpdateFirmware",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/AssessAndRemediate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/CheckDeviceOperation",
+        "method": "PUT"
+      },
+      {
+        "path": "/SdsDevice/CopyPolicy",
+        "method": "PUT"
+      },
+      {
+        "path": "/SdsDevice/DeleteDeviceCredential",
+        "method": "DELETE"
+      },
+      {
+        "path": "/SdsDevice/GetDevicesWithFirmwareOutOfDate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/HideEarlyReplacement",
+        "method": "PUT"
+      },
+      {
+        "path": "/SdsDevice/ListSdsAssessAndRemediate",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/ListSdsCredentials",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/ListSdsMessageSuppression",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/ListSdsRapa",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/ListSdsReboot",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/PerformPrintQualityDiagnostics",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/RemoveFromCloudDCA",
+        "method": "DELETE"
+      },
+      {
+        "path": "/SdsDevice/RemoveFromSDS",
+        "method": "DELETE"
+      },
+      {
+        "path": "/SdsDevice/RetrieveDeviceData",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/SendPanelMessage",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/SetDeviceConfigData",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/SetDeviceCredential",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/SetDeviceUpdateFirmware",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/SetDevicesReboot",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/SetOnDeviceServices",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/UpdateConfigItems",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsDevice/UpdateDevicesFirmware",
+        "method": "PUT"
+      }
+    ]
+  },
+  "SdsEventApi": {
+    "count": 2,
+    "endpoints": [
+      {
+        "path": "/SdsEvent/GetDeviceEvent",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsEvent/GetDeviceEvents",
+        "method": "GET"
+      }
+    ]
+  },
+  "SdsScanApi": {
+    "count": 5,
+    "endpoints": [
+      {
+        "path": "/SdsScan/ScanDevice",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsScan/ScanImmediate",
+        "method": "GET"
+      },
+      {
+        "path": "/SdsScan/ScanConnectors",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsScan/ScanCustomer",
+        "method": "POST"
+      },
+      {
+        "path": "/SdsScan/ScanDevices",
+        "method": "POST"
+      }
+    ]
+  },
+  "ShippedSupply": {
+    "count": 8,
+    "endpoints": [
+      {
+        "path": "/ShippedSupply/CreateInAdvance",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/CreateOnAlert",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/CreateStock",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/List",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/Log",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/MassiveUpdate",
+        "method": "POST"
+      },
+      {
+        "path": "/ShippedSupply/Update",
+        "method": "POST"
+      }
+    ]
+  },
+  "StandardProduct": {
+    "count": 10,
+    "endpoints": [
+      {
+        "path": "/StandardProduct/ListDevicesInOperation",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/ListOperations",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/ListStandardProducts",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/GetExcelReport",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/GetOperation",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/GetProductsToAssociate",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/GetStandardProductsSummary",
+        "method": "GET"
+      },
+      {
+        "path": "/StandardProduct/CreateOrUpdateOperation",
+        "method": "POST"
+      },
+      {
+        "path": "/StandardProduct/ProcessOperation",
+        "method": "POST"
+      },
+      {
+        "path": "/StandardProduct/RollbackOperation",
+        "method": "POST"
+      }
+    ]
+  },
+  "SupplyAlert": {
+    "count": 9,
+    "endpoints": [
+      {
+        "path": "/SupplyAlert/GetAvailableMaintenanceKitColors",
+        "method": "GET"
+      },
+      {
+        "path": "/SupplyAlert/GetAvailableMaintenanceKitTypes",
+        "method": "GET"
+      },
+      {
+        "path": "/SupplyAlert/GetAvailableSuppliesForADevice",
+        "method": "GET"
+      },
+      {
+        "path": "/SupplyAlert/Get",
+        "method": "POST"
+      },
+      {
+        "path": "/SupplyAlert/List",
+        "method": "POST"
+      },
+      {
+        "path": "/SupplyAlert/ListByOffice",
+        "method": "POST"
+      },
+      {
+        "path": "/SupplyAlert/MassiveUpdate",
+        "method": "POST"
+      },
+      {
+        "path": "/SupplyAlert/PostponeAlert",
+        "method": "PUT"
+      },
+      {
+        "path": "/SupplyAlert/Update",
+        "method": "POST"
+      }
+    ]
+  },
+  "Ticket": {
+    "count": 7,
+    "endpoints": [
+      {
+        "path": "/Ticket/GetAttachment",
+        "method": "GET"
+      },
+      {
+        "path": "/Ticket/GetTicket",
+        "method": "GET"
+      },
+      {
+        "path": "/Ticket/GetTicketByNumber",
+        "method": "GET"
+      },
+      {
+        "path": "/Ticket/GetTickets",
+        "method": "GET"
+      },
+      {
+        "path": "/Ticket/CreateTicket",
+        "method": "POST"
+      },
+      {
+        "path": "/Ticket/CreateTicketChild",
+        "method": "POST"
+      },
+      {
+        "path": "/Ticket/GetSubTypesByCategories",
+        "method": "POST"
+      }
+    ]
+  },
+  "TraceVolume": {
+    "count": 8,
+    "endpoints": [
+      {
+        "path": "/TraceVolume/List",
+        "method": "GET"
+      },
+      {
+        "path": "/TraceVolume/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/TraceVolume/CloseEvent",
+        "method": "POST"
+      },
+      {
+        "path": "/TraceVolume/Create",
+        "method": "POST"
+      },
+      {
+        "path": "/TraceVolume/CreateManualEvent",
+        "method": "POST"
+      },
+      {
+        "path": "/TraceVolume/Delete",
+        "method": "DELETE"
+      },
+      {
+        "path": "/TraceVolume/ResetEvents",
+        "method": "PUT"
+      },
+      {
+        "path": "/TraceVolume/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "TradingPartnerApi": {
+    "count": 3,
+    "endpoints": [
+      {
+        "path": "/TradingPartner/List",
+        "method": "GET"
+      },
+      {
+        "path": "/TradingPartner/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/TradingPartner/Update",
+        "method": "PUT"
+      }
+    ]
+  },
+  "WhiteLabel": {
+    "count": 6,
+    "endpoints": [
+      {
+        "path": "/WhiteLabel/Get",
+        "method": "GET"
+      },
+      {
+        "path": "/WhiteLabel/GetWhiteLabelCustomizationByUrl",
+        "method": "GET"
+      },
+      {
+        "path": "/WhiteLabel/GetWhitelabelPlaceholders",
+        "method": "GET"
+      },
+      {
+        "path": "/WhiteLabel/Update",
+        "method": "PUT"
+      },
+      {
+        "path": "/WhiteLabel/UpdateDcaLicenses",
+        "method": "PUT"
+      },
+      {
+        "path": "/WhiteLabel/UpdateTemplates",
+        "method": "PUT"
+      }
+    ]
+  },
+  "ZebraDeviceApi": {
+    "count": 3,
+    "endpoints": [
+      {
+        "path": "/ZebraDevice/SetDevicesReboot",
+        "method": "POST"
+      },
+      {
+        "path": "/ZebraDevice/SetDevicesUpdateFirmware",
+        "method": "POST"
+      },
+      {
+        "path": "/ZebraDevice/SetZebraSettings",
+        "method": "POST"
+      }
+    ]
+  }
+}

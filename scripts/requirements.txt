@@ -1,0 +1,5 @@
+# Requirements for API Discovery Scripts
+# All scripts use only Python standard library where possible
+# Only PyYAML is needed for YAML output generation
+
+PyYAML>=6.0

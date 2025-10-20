@@ -282,11 +282,22 @@ class MPSMonitorEngine {
         // Resolve path parameters
         foreach ($operation['pathParams'] as $name => $meta) {
             if (!array_key_exists($name, $remaining)) {
-                return $this->errorResponse("Missing required path parameter: {$name}", self::ERR_VALIDATION);
+                // Try to get default value for path parameters too
+                $defaultValue = $this->getDefaultParameterValue($name, $meta['type'] ?? 'string');
+
+                if ($defaultValue !== null) {
+                    $value = $defaultValue;
+                    if (self::$config['MPS_DEBUG']) {
+                        self::logDebug("Auto-populated required path parameter '{$name}' with default value");
+                    }
+                } else {
+                    return $this->errorResponse("Missing required path parameter: {$name}", self::ERR_VALIDATION);
+                }
+            } else {
+                $value = $remaining[$name];
+                unset($remaining[$name]);
             }
-            $value = $remaining[$name];
             $endpoint = preg_replace('/{' . preg_quote($name, '/') . '}/', rawurlencode((string) $value), $endpoint);
-            unset($remaining[$name]);
         }
 
         if (strpos($endpoint, '{') !== false) {
@@ -299,7 +310,18 @@ class MPSMonitorEngine {
                 $query[$name] = $remaining[$name];
                 unset($remaining[$name]);
             } elseif (!empty($meta['required'])) {
-                return $this->errorResponse("Missing required query parameter: {$name}", self::ERR_VALIDATION);
+                // Try to get default value before erroring
+                $defaultValue = $this->getDefaultParameterValue($name, $meta['type'] ?? 'string');
+
+                if ($defaultValue !== null) {
+                    $query[$name] = $defaultValue;
+                    // Log that we auto-populated (only in debug mode)
+                    if (self::$config['MPS_DEBUG']) {
+                        self::logDebug("Auto-populated required parameter '{$name}' with default value");
+                    }
+                } else {
+                    return $this->errorResponse("Missing required query parameter: {$name}", self::ERR_VALIDATION);
+                }
             }
         }
 
@@ -573,9 +595,33 @@ class MPSMonitorEngine {
         
         // Success responses (2xx)
         if ($httpCode >= 200 && $httpCode < 300) {
+            // Validate MPSM-specific response format
+            $validation = $this->validateMPSMResponse($decoded, $httpCode);
+
+            if (!$validation['valid']) {
+                // MPSM returned 200 but indicated an error via IsValid field
+                self::logError("MPSM API Error: {$validation['error']}", self::ERR_API, [
+                    'request_id' => $requestId,
+                    'url' => $url,
+                    'method' => $method,
+                    'error_details' => $validation['details']
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $validation['error'],
+                    'error_code' => self::ERR_API,
+                    'http_code' => $httpCode,
+                    'raw_response' => self::$config['MPS_DEBUG'] ? $validation['details'] : null,
+                    'request_id' => $requestId,
+                    'retryable' => false
+                ];
+            }
+
+            // Valid response - return the validated data
             return [
                 'success' => true,
-                'data' => $decoded,
+                'data' => $validation['data'],
                 'http_code' => $httpCode,
                 'request_id' => $requestId,
                 'duration_ms' => $duration
@@ -811,8 +857,125 @@ class MPSMonitorEngine {
     }
     
     /**
+     * Validate MPSM API response format.
+     * MPSM API returns HTTP 200 even for errors - must check IsValid field.
+     *
+     * @param mixed $responseData Parsed response data
+     * @param int $httpStatus HTTP status code
+     * @return array ['valid' => bool, 'data' => mixed, 'error' => string|null, 'details' => array|null]
+     */
+    private function validateMPSMResponse($responseData, $httpStatus) {
+        // If not 200, it's a real HTTP error
+        if ($httpStatus !== 200) {
+            return [
+                'valid' => false,
+                'error' => "HTTP {$httpStatus} error",
+                'details' => $responseData,
+                'data' => null
+            ];
+        }
+
+        // Check for MPSM-specific response structure
+        if (!is_array($responseData)) {
+            // Might be raw data (non-MPSM endpoint)
+            return [
+                'valid' => true,
+                'data' => $responseData,
+                'error' => null,
+                'details' => null
+            ];
+        }
+
+        // Check for IsValid field (MPSM standard response format)
+        if (isset($responseData['IsValid'])) {
+            if ($responseData['IsValid'] === false) {
+                // Extract errors from Errors array
+                $errors = $responseData['Errors'] ?? [];
+                $errorMessages = [];
+
+                foreach ($errors as $error) {
+                    if (isset($error['Description'])) {
+                        $errorMessages[] = $error['Description'];
+                    } elseif (isset($error['Code'])) {
+                        $errorMessages[] = $error['Code'];
+                    }
+                }
+
+                $errorString = !empty($errorMessages)
+                    ? implode('; ', $errorMessages)
+                    : 'Request failed';
+
+                return [
+                    'valid' => false,
+                    'error' => $errorString,
+                    'details' => $errors,
+                    'data' => null
+                ];
+            }
+
+            // Valid response - extract Result field if present
+            return [
+                'valid' => true,
+                'data' => $responseData['Result'] ?? $responseData,
+                'error' => null,
+                'details' => null
+            ];
+        }
+
+        // No IsValid field - assume valid and return as-is
+        return [
+            'valid' => true,
+            'data' => $responseData,
+            'error' => null,
+            'details' => null
+        ];
+    }
+
+    /**
+     * Get default value for a parameter based on its name and context.
+     * Auto-populates dealer codes, customer codes, and pagination defaults.
+     *
+     * @param string $paramName Parameter name
+     * @param string $paramType Parameter type (string, integer, etc.)
+     * @return mixed|null Default value or null if no default available
+     */
+    private function getDefaultParameterValue($paramName, $paramType = 'string') {
+        $paramLower = strtolower($paramName);
+
+        // Auto-populate dealer information
+        if ($paramLower === 'code' || $paramLower === 'dealercode' || $paramLower === 'dealer_code') {
+            return self::$config['DEALER_CODE'] ?? null;
+        }
+
+        if ($paramLower === 'dealerid' || $paramLower === 'dealer_id') {
+            return self::$config['DEALER_ID'] ?? null;
+        }
+
+        // Auto-populate customer information (if available in config)
+        if ($paramLower === 'customercode' || $paramLower === 'customer_code') {
+            return self::$config['CUSTOMER_CODE'] ?? null;
+        }
+
+        if ($paramLower === 'customerid' || $paramLower === 'customer_id') {
+            return self::$config['CUSTOMER_ID'] ?? null;
+        }
+
+        // Pagination defaults
+        if ($paramLower === 'page' || $paramLower === 'pagenumber') {
+            return 1;
+        }
+
+        if ($paramLower === 'pagesize' || $paramLower === 'limit' || $paramLower === 'per_page') {
+            return 50;
+        }
+
+        // No default available
+        return null;
+    }
+
+    /**
      * Create standardized error response
-     * 
+     *
      * @param string $message Error message
      * @param int $errorCode Error code
      * @param array $context Additional context

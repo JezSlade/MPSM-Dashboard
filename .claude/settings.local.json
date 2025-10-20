@@ -5,7 +5,12 @@
       "Bash(python -m json.tool:*)",
       "Bash(python:*)",
       "Bash(php:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(tasklist)",
+      "Bash(findstr python)",
+      "Bash(tee ../full_discovery.log)",
+      "Bash(tee test_enhanced.log)",
+      "Bash(tee ../full_discovery_fixed.log)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,7302 @@
+- path: /AlertLimit/Customer/Get
+  method: GET
+  operation_id: AlertLimit/Customer/Get
+  summary: Get customer Alert Limit settings
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 1872
+- path: /AlertLimit/Customer/Product/List
+  method: GET
+  operation_id: AlertLimit/Customer/Product/List
+  summary: Get dealers Alert Limit settings
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 560
+- path: /AlertLimit/Dealer/Get
+  method: GET
+  operation_id: AlertLimit/Dealer/Get
+  summary: Get dealers Alert Limit settings
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 554
+- path: /AlertLimit2/Customer/GetDefault
+  method: GET
+  operation_id: AlertLimit2/Customer/GetDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 511
+- path: /AlertLimit2/Customer/GetProduct
+  method: GET
+  operation_id: AlertLimit2/Customer/GetProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 585
+- path: /AlertLimit2/Customer/GetProductList
+  method: GET
+  operation_id: AlertLimit2/Customer/GetProductList
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 562
+- path: /AlertLimit2/Dealer/GetDefault
+  method: GET
+  operation_id: AlertLimit2/Dealer/GetDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 378
+- path: /AlertLimit2/Dealer/GetProduct
+  method: GET
+  operation_id: AlertLimit2/Dealer/GetProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 404
+- path: /AlertLimit2/Dealer/GetProductList
+  method: GET
+  operation_id: AlertLimit2/Dealer/GetProductList
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 520
+- path: /AlertLimit2/GetAllLimits
+  method: GET
+  operation_id: AlertLimit2/GetAllLimits
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 569
+- path: /ApiClient/Account/List
+  method: GET
+  operation_id: ApiClient/Account/List
+  summary: Get Api user list
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 476
+- path: /ApiClient/List
+  method: GET
+  operation_id: ApiClient/List
+  summary: Get Api Clients for Dealer.
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 573
+- path: /Counter/Device/List
+  method: GET
+  operation_id: Counter/Device/List
+  summary: Returns detailed counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      fromDate: null
+      toDate: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 566
+- path: /Counter/ListMaintenanceKitCounters
+  method: GET
+  operation_id: Counter/ListMaintenanceKitCounters
+  summary: Returns maintenance kit counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 536
+- path: /CustomField/List
+  method: GET
+  operation_id: CustomField/List
+  summary: Returns the list of Custom Fields configured by the dealer
+  tags:
+  - CustomFieldApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 550
+- path: /Customer/Accessories/Get
+  method: GET
+  operation_id: Customer/Accessories/Get
+  summary: Gets the dealer alert settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 491
+- path: /Customer/AdvancedOptions/Get
+  method: GET
+  operation_id: Customer/AdvancedOptions/Get
+  summary: Gets the customer advanced options
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 520
+- path: /Customer/AlertSettings/Get
+  method: GET
+  operation_id: Customer/AlertSettings/Get
+  summary: Gets the dealer alert settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 570
+- path: /Customer/CustomerServicesStatus/Get
+  method: GET
+  operation_id: Customer/CustomerServicesStatus/Get
+  summary: Gets the customer services status.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 512
+- path: /Customer/EpsonSettings/Get
+  method: GET
+  operation_id: Customer/EpsonSettings/Get
+  summary: Gets the epson ERS and USB settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 516
+- path: /Customer/EpsonUSBCustomerId/Get
+  method: GET
+  operation_id: Customer/EpsonUSBCustomerId/Get
+  summary: Get a new Epson USB customer ID for the email subject
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 507
+- path: /Customer/eXplorerSettings/Get
+  method: GET
+  operation_id: Customer/eXplorerSettings/Get
+  summary: Gets the customer eXplorer settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 511
+- path: /CustomerDashboard
+  method: GET
+  operation_id: CustomerDashboard
+  summary: Gets the customer's dashboard.
+  tags:
+  - CustomerDashboard
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 535
+- path: /CustomerDashboard/Pages
+  method: GET
+  operation_id: CustomerDashboard/Pages
+  summary: ''
+  tags:
+  - CustomerDashboard
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 530
+- path: /CustomerNotification/Get
+  method: GET
+  operation_id: CustomerNotification/Get
+  summary: Get notification
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 562
+- path: /CustomerNotification/GetNotificationPlaceholders
+  method: GET
+  operation_id: CustomerNotification/GetNotificationPlaceholders
+  summary: Get notification placeholders
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 563
+- path: /CustomerNotification/GetSampleNotification
+  method: GET
+  operation_id: CustomerNotification/GetSampleNotification
+  summary: Get sample notification
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 499
+- path: /CustomerNotification/List
+  method: GET
+  operation_id: CustomerNotification/List
+  summary: GetNotificationList
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 555
+- path: /Dealer/AccountingSettings/Get
+  method: GET
+  operation_id: Dealer/AccountingSettings/Get
+  summary: Gets the dealer accounting settings.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 528
+- path: /Dealer/AdvancedOptions/Get
+  method: GET
+  operation_id: Dealer/AdvancedOptions/Get
+  summary: Gets the dealer advanced options
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 555
+- path: /Dealer/AlertLimitOptions/Get
+  method: GET
+  operation_id: Dealer/AlertLimitOptions/Get
+  summary: Gets the alert limit options.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 533
+- path: /Dealer/AlertSettings/Get
+  method: GET
+  operation_id: Dealer/AlertSettings/Get
+  summary: Gets the dealer alert settings
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 506
+- path: /Dealer/CounterBlend/Get
+  method: GET
+  operation_id: Dealer/CounterBlend/Get
+  summary: Return a counter blend
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 539
+- path: /Dealer/CounterBlend/List
+  method: GET
+  operation_id: Dealer/CounterBlend/List
+  summary: Returns list of dealer counters detailed tags
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 486
+- path: /Dealer/CounterBlend/Search
+  method: GET
+  operation_id: Dealer/CounterBlend/Search
+  summary: Search form available counters detailed TAG
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 513
+- path: /Dealer/CounterBlendToStandard/Get
+  method: GET
+  operation_id: Dealer/CounterBlendToStandard/Get
+  summary: Gets the specified request.
+  tags:
+  - DealerCounterBlendToStandardApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /Dealer/CounterBlendToStandard/GetByDevice
+  method: GET
+  operation_id: Dealer/CounterBlendToStandard/GetByDevice
+  summary: Gets the by device.
+  tags:
+  - DealerCounterBlendToStandardApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 549
+- path: /Dealer/CounterBlendToStandard/List
+  method: GET
+  operation_id: Dealer/CounterBlendToStandard/List
+  summary: Lists the specified request.
+  tags:
+  - DealerCounterBlendToStandardApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 551
+- path: /Dealer/Customizations/Get
+  method: GET
+  operation_id: Dealer/Customizations/Get
+  summary: Gets the dealer customizations.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 517
+- path: /Dealer/DealerServicesStatus/Get
+  method: GET
+  operation_id: Dealer/DealerServicesStatus/Get
+  summary: Gets the dealer services status.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 545
+- path: /Dealer/DemoRequest/Get
+  method: GET
+  operation_id: Dealer/DemoRequest/Get
+  summary: GetDemoRequest
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Dealer/DemoRequest/List
+  method: GET
+  operation_id: Dealer/DemoRequest/List
+  summary: GetDemoRequests
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Dealer/DistributorSettings/Get
+  method: GET
+  operation_id: Dealer/DistributorSettings/Get
+  summary: Get the Distributor dealer settings
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 510
+- path: /Dealer/ExportDealerTagsHierarchy
+  method: GET
+  operation_id: Dealer/ExportDealerTagsHierarchy
+  summary: ''
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 538
+- path: /Dealer/GetDealerHierarchy
+  method: GET
+  operation_id: Dealer/GetDealerHierarchy
+  summary: Gets the dealer.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 550
+- path: /Dealer/GetDealerTagsHierarchy
+  method: GET
+  operation_id: Dealer/GetDealerTagsHierarchy
+  summary: ''
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 525
+- path: /Dealer/Onboarding/Get
+  method: GET
+  operation_id: Dealer/Onboarding/Get
+  summary: Get the dealer onboarding survey
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 537
+- path: /Dealer/RemoteOfflineCountersSettings/Get
+  method: GET
+  operation_id: Dealer/RemoteOfflineCountersSettings/Get
+  summary: Gets the dealer remote offline counters settings.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 508
+- path: /Dealer/eXplorerSettings/Get
+  method: GET
+  operation_id: Dealer/eXplorerSettings/Get
+  summary: Gets the dealer eXplorer settings
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 498
+- path: /DealerNotification/Get
+  method: GET
+  operation_id: DealerNotification/Get
+  summary: Get notification
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 526
+- path: /DealerNotification/GetNotificationPlaceholders
+  method: GET
+  operation_id: DealerNotification/GetNotificationPlaceholders
+  summary: Get notification placeholders
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 520
+- path: /DealerNotification/GetSampleNotification
+  method: GET
+  operation_id: DealerNotification/GetSampleNotification
+  summary: Get sample notification
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 490
+- path: /DealerNotification/List
+  method: GET
+  operation_id: DealerNotification/List
+  summary: ''
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 549
+- path: /DealerNotification/Template/Get
+  method: GET
+  operation_id: DealerNotification/Template/Get
+  summary: Get the dealer template base
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 528
+- path: /DealerProduct/Get
+  method: GET
+  operation_id: DealerProduct/Get
+  summary: Gets the specified request.
+  tags:
+  - DealerProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 510
+- path: /DealerProduct/List
+  method: GET
+  operation_id: DealerProduct/List
+  summary: Gets the dealer list
+  tags:
+  - DealerProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 543
+- path: /DealerSupply/Count
+  method: GET
+  operation_id: DealerSupply/Count
+  summary: Returns list of dealer supplies count
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 489
+- path: /DealerSupply/Export
+  method: GET
+  operation_id: DealerSupply/Export
+  summary: Returns list of dealer supplies
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 531
+- path: /DealerSupply/Get
+  method: GET
+  operation_id: DealerSupply/Get
+  summary: Gets the dealer supply.
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 418
+- path: /DealerSupply/List
+  method: GET
+  operation_id: DealerSupply/List
+  summary: Returns list of dealer supplies
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 618
+- path: /DealerSupplyPriceListing/Get
+  method: GET
+  operation_id: DealerSupplyPriceListing/Get
+  summary: Get tradingPartnerSupplyListing
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 551
+- path: /DealerSupplyPriceListing/List
+  method: GET
+  operation_id: DealerSupplyPriceListing/List
+  summary: Get tradingPartnerSuppliesListing
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 517
+- path: /DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts
+  method: GET
+  operation_id: DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts
+  summary: Automatically associate the devices (ONLY with a specific model) to a specific
+    SupplySet (the customer is optional)
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 483
+- path: /DealerSupplySet/Count
+  method: GET
+  operation_id: DealerSupplySet/Count
+  summary: Gets the Dealer Supplies set count.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 484
+- path: /DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations
+  method: GET
+  operation_id: DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations
+  summary: Count the devices affected by the association of a supply set (the customer
+    is optional)
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 544
+- path: /DealerSupplySet/Export
+  method: GET
+  operation_id: DealerSupplySet/Export
+  summary: Deletes the specified supply set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 522
+- path: /DealerSupplySet/ExportExcel
+  method: GET
+  operation_id: DealerSupplySet/ExportExcel
+  summary: Deletes the specified supply set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 513
+- path: /DealerSupplySet/Get
+  method: GET
+  operation_id: DealerSupplySet/Get
+  summary: Gets the Dealer Supply Set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 546
+- path: /DealerSupplySet/List
+  method: GET
+  operation_id: DealerSupplySet/List
+  summary: Gets the Dealer Supplies set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 480
+- path: /DealerSupplySet/ListDealerSupplySetFromStandardModels
+  method: GET
+  operation_id: DealerSupplySet/ListDealerSupplySetFromStandardModels
+  summary: Gets the Supplies set creatable from standard model.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 539
+- path: /Device/Deleted/List
+  method: GET
+  operation_id: Device/Deleted/List
+  summary: This operation gets lists of devices paged and filtered
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 514
+- path: /Device/Deleted/ListByDealer
+  method: GET
+  operation_id: Device/Deleted/ListByDealer
+  summary: This operation gets lists of devices paged and filtered by dealer
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /Device/ExplorerDataAffinities/List
+  method: GET
+  operation_id: Device/ExplorerDataAffinities/List
+  summary: Returns a list of DeviceExplorerDataAffinities filtered by idDevice
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 542
+- path: /Device/MaintenanceAlerts/List
+  method: GET
+  operation_id: Device/MaintenanceAlerts/List
+  summary: Returns a list of maintenanceAlert device.
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 557
+- path: /Explorer/Cluster/List
+  method: GET
+  operation_id: Explorer/Cluster/List
+  summary: This operation gets explorer clusters from all dealer customer
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 546
+- path: /Explorer/Configuration/List
+  method: GET
+  operation_id: Explorer/Configuration/List
+  summary: Returns eXplorer Configurations
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 528
+- path: /Explorer/ExplorerDataCommand/List
+  method: GET
+  operation_id: Explorer/ExplorerDataCommand/List
+  summary: This operation gets explorer command list
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      id: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 541
+- path: /Explorer/ExplorerDataInfo/List
+  method: GET
+  operation_id: Explorer/ExplorerDataInfo/List
+  summary: This operation gets explorer environment infos
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 496
+- path: /Explorer/License/List
+  method: GET
+  operation_id: Explorer/License/List
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 524
+- path: /Explorer/Staging/List
+  method: GET
+  operation_id: Explorer/Staging/List
+  summary: Get the staging connector list for a customer
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 538
+- path: /Integrations/GetJoinedCustomers
+  method: GET
+  operation_id: Integrations/GetJoinedCustomers
+  summary: Get current joined customers summary
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 535
+- path: /Integrations/List
+  method: GET
+  operation_id: Integrations/List
+  summary: List of available and configured integration
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 528
+- path: /Office/OfficeFloor/List
+  method: GET
+  operation_id: Office/OfficeFloor/List
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 504
+- path: /Product/Customer/List
+  method: GET
+  operation_id: Product/Customer/List
+  summary: Get the products of the Customer
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 548
+- path: /Product/Dealer/List
+  method: GET
+  operation_id: Product/Dealer/List
+  summary: Get the products of the Dealer
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 487
+- path: /Product/Dealer/ListBrands
+  method: GET
+  operation_id: Product/Dealer/ListBrands
+  summary: Get the brands of the Dealer
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 533
+- path: /Product/Dealer/ListModels
+  method: GET
+  operation_id: Product/Dealer/ListModels
+  summary: Ge the models of the Dealer
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 532
+- path: /Role/GetAllCapabilities
+  method: GET
+  operation_id: Role/GetAllCapabilities
+  summary: Get the all available capabilities
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      isForAccount: null
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 559
+- path: /Role/List
+  method: GET
+  operation_id: Role/List
+  summary: Get the list of available capability sets (roles)
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 545
+- path: /SdsCustomer/GetAssessTemplate
+  method: GET
+  operation_id: SdsCustomer/GetAssessTemplate
+  summary: ''
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 554
+- path: /SdsCustomer/GetAssessTemplates
+  method: GET
+  operation_id: SdsCustomer/GetAssessTemplates
+  summary: ''
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 505
+- path: /SdsCustomer/GetCredential
+  method: GET
+  operation_id: SdsCustomer/GetCredential
+  summary: Gets the credential.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 407
+- path: /SdsCustomer/GetCustomerOperation
+  method: GET
+  operation_id: SdsCustomer/GetCustomerOperation
+  summary: Gets the customer operation.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 553
+- path: /SdsCustomer/GetCustomerOperations
+  method: GET
+  operation_id: SdsCustomer/GetCustomerOperations
+  summary: Gets the customer operations.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 435
+- path: /SdsCustomer/GetNewAssessTemplate
+  method: GET
+  operation_id: SdsCustomer/GetNewAssessTemplate
+  summary: ''
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 536
+- path: /StandardProduct/ListDevicesInOperation
+  method: GET
+  operation_id: StandardProduct/ListDevicesInOperation
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 553
+- path: /StandardProduct/ListOperations
+  method: GET
+  operation_id: StandardProduct/ListOperations
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 514
+- path: /StandardProduct/ListStandardProducts
+  method: GET
+  operation_id: StandardProduct/ListStandardProducts
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 516
+- path: /TraceVolume/List
+  method: GET
+  operation_id: TraceVolume/List
+  summary: Returns a list of TraceVolume by device
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 530
+- path: /TradingPartner/List
+  method: GET
+  operation_id: TradingPartner/List
+  summary: Get tradingPartner
+  tags:
+  - TradingPartnerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 544
+- path: /azuread/GetCustomerAzureSettings
+  method: GET
+  operation_id: azuread/GetCustomerAzureSettings
+  summary: Get Azure Ad customer configuration
+  tags:
+  - AzureADApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 496
+- path: /azuread/GetDealerAzureSettings
+  method: GET
+  operation_id: azuread/GetDealerAzureSettings
+  summary: Get Azure Ad configuration
+  tags:
+  - AzureADApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 500
+- path: /okta/GetCustomerOktaSettings
+  method: GET
+  operation_id: okta/GetCustomerOktaSettings
+  summary: Get the Okta settings for the customer
+  tags:
+  - OktaApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 484
+- path: /okta/GetDealerOktaSettings
+  method: GET
+  operation_id: okta/GetDealerOktaSettings
+  summary: Get the Okta settings for the dealer
+  tags:
+  - OktaApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 509
+- path: /Account/GetProfile
+  method: GET
+  operation_id: Account/GetProfile
+  summary: Gets profile of current authenticated user.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 519
+- path: /Account/GetPsk2faData
+  method: GET
+  operation_id: Account/GetPsk2faData
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      platform: MpsMonitor
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 581
+- path: /Account/GetPsk2faDataForAccount
+  method: GET
+  operation_id: Account/GetPsk2faDataForAccount
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 532
+- path: /Account/GetPsk2faDataForProfile
+  method: GET
+  operation_id: Account/GetPsk2faDataForProfile
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 603
+- path: /AlertLimit/Device/Get
+  method: GET
+  operation_id: AlertLimit/Device/Get
+  summary: Get device Alert Limit settings
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 509
+- path: /AlertLimit2/Device/GetDefault
+  method: GET
+  operation_id: AlertLimit2/Device/GetDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 508
+- path: /Analytics/GetReportFileResult
+  method: GET
+  operation_id: Analytics/GetReportFileResult
+  summary: Get result as file (Excel, CSV) from a saved report.
+  tags:
+  - Analytics
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      idReport: null
+      reportFormat: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 474
+- path: /Analytics/GetReportResult
+  method: GET
+  operation_id: Analytics/GetReportResult
+  summary: Get result from a saved report.
+  tags:
+  - Analytics
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      idReport: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 565
+- path: /ApiClient/Account/Get
+  method: GET
+  operation_id: ApiClient/Account/Get
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 511
+- path: /ApiClient/Get
+  method: GET
+  operation_id: ApiClient/Get
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /Billing/GetInvoiceCategories
+  method: GET
+  operation_id: Billing/GetInvoiceCategories
+  summary: Get Invoice Categories
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 568
+- path: /Communication/GetPortalReleaseNotes
+  method: GET
+  operation_id: Communication/GetPortalReleaseNotes
+  summary: Get Portal Release Notes
+  tags:
+  - CommunicationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 607
+- path: /Counter/Catalog/Suggestions
+  method: GET
+  operation_id: Counter/Catalog/Suggestions
+  summary: ''
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Counter/Device/Export
+  method: GET
+  operation_id: Counter/Device/Export
+  summary: Export detailed counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      fromDate: null
+      toDate: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 541
+- path: /CustomField/Get
+  method: GET
+  operation_id: CustomField/Get
+  summary: Returns a Custom Fields by Id
+  tags:
+  - CustomFieldApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 556
+- path: /Device/GetDeviceAdditionalInfos
+  method: GET
+  operation_id: Device/GetDeviceAdditionalInfos
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 625
+- path: /Device/GetDeviceGapInfos
+  method: GET
+  operation_id: Device/GetDeviceGapInfos
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 575
+- path: /Device/GetLfpCounters
+  method: GET
+  operation_id: Device/GetLfpCounters
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 574
+- path: /Device/GetSuppliesDetails
+  method: GET
+  operation_id: Device/GetSuppliesDetails
+  summary: Returns a device by request parameters
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 531
+- path: /Device/GetSuppliesDetailsInfo
+  method: GET
+  operation_id: Device/GetSuppliesDetailsInfo
+  summary: Gets current forecast and history consumable details for a specific device,
+    consumable and consumable color type
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 545
+- path: /Device/GetSuppliesDetailsSummary
+  method: GET
+  operation_id: Device/GetSuppliesDetailsSummary
+  summary: Get toners and photoconductors forecast details for a specific device
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 479
+- path: /Device/GetZebraSuppliesDetailsSummary
+  method: GET
+  operation_id: Device/GetZebraSuppliesDetailsSummary
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 497
+- path: /Explorer/AgentVersions
+  method: GET
+  operation_id: Explorer/AgentVersions
+  summary: Get Agent Versions
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Explorer/Cluster/AutoClusters
+  method: GET
+  operation_id: Explorer/Cluster/AutoClusters
+  summary: This operation suggests explorer clusters from all dealer customer
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 501
+- path: /Explorer/Cluster/Get
+  method: GET
+  operation_id: Explorer/Cluster/Get
+  summary: This operation gets an explorer cluster
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 497
+- path: /Explorer/Configuration/Get
+  method: GET
+  operation_id: Explorer/Configuration/Get
+  summary: Returns eXplorer configuration with subnets and schedules
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      configurationId: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 634
+- path: /Explorer/Configuration/GetTestTableVersions
+  method: GET
+  operation_id: Explorer/Configuration/GetTestTableVersions
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 550
+- path: /Explorer/DataLogs
+  method: GET
+  operation_id: Explorer/DataLogs
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Explorer/DataPings
+  method: GET
+  operation_id: Explorer/DataPings
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 1437
+- path: /Explorer/Dca4ClientVersions
+  method: GET
+  operation_id: Explorer/Dca4ClientVersions
+  summary: Get Agent Versions
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Explorer/Dca4MonitorVersions
+  method: GET
+  operation_id: Explorer/Dca4MonitorVersions
+  summary: Get Service Versions
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Explorer/DownloadLogs
+  method: GET
+  operation_id: Explorer/DownloadLogs
+  summary: This operation gets explorer data and clusters
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 504
+- path: /Explorer/GetClusterCounters
+  method: GET
+  operation_id: Explorer/GetClusterCounters
+  summary: Returns a customer's cluster counters (number of clusters, masters and
+    slaves)
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 504
+- path: /Explorer/GetConnectorEndpoints
+  method: GET
+  operation_id: Explorer/GetConnectorEndpoints
+  summary: This operations gets the required web endpoints for a specific connector
+    or group of connectors
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 533
+- path: /Explorer/GetConnectors
+  method: GET
+  operation_id: Explorer/GetConnectors
+  summary: This operation gets explorer data and clusters
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 537
+- path: /Explorer/GetDca4Otp
+  method: GET
+  operation_id: Explorer/GetDca4Otp
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 536
+- path: /Explorer/GetDcaCurrentVersion
+  method: GET
+  operation_id: Explorer/GetDcaCurrentVersion
+  summary: Get the release table versions of a specific DCA
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 562
+- path: /Explorer/GetDcaReleaseNotes
+  method: GET
+  operation_id: Explorer/GetDcaReleaseNotes
+  summary: Get the release table versions of a specific DCA
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 590
+- path: /Explorer/GetEndpointsLink
+  method: GET
+  operation_id: Explorer/GetEndpointsLink
+  summary: Get Endpoints Link
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      platform: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 385
+- path: /Explorer/GetExplorerDatas
+  method: GET
+  operation_id: Explorer/GetExplorerDatas
+  summary: This operation gets explorer data from all dealer customer
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 499
+- path: /Explorer/GetExplorerSetupLink
+  method: GET
+  operation_id: Explorer/GetExplorerSetupLink
+  summary: Get Explorer Setup Link
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 527
+- path: /Explorer/GetJamcSetupLink
+  method: GET
+  operation_id: Explorer/GetJamcSetupLink
+  summary: Get Jamc Setup Link
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      customerCode: null
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 568
+- path: /Explorer/RequestSendLogs
+  method: GET
+  operation_id: Explorer/RequestSendLogs
+  summary: This operation gets explorer data and clusters
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 539
+- path: /Explorer/ServiceVersions
+  method: GET
+  operation_id: Explorer/ServiceVersions
+  summary: Get Service Versions
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Explorer/V3/ReleaseNotes
+  method: GET
+  operation_id: Explorer/V3/ReleaseNotes
+  summary: Get the eXplorer V3 Release Notes
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 1023
+- path: /Integrations/Get
+  method: GET
+  operation_id: Integrations/Get
+  summary: Get an integration configuration
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 507
+- path: /Integrations/GetJoinedDevices
+  method: GET
+  operation_id: Integrations/GetJoinedDevices
+  summary: Get current joined devices summary
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /Integrations/GetLogisticPlaceholders
+  method: GET
+  operation_id: Integrations/GetLogisticPlaceholders
+  summary: Get logistic placeholders
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 504
+- path: /Integrations/GetNew
+  method: GET
+  operation_id: Integrations/GetNew
+  summary: Get a new integration configuration
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 511
+- path: /Integrations/eautomate/GetEAutomateLog
+  method: GET
+  operation_id: Integrations/eautomate/GetEAutomateLog
+  summary: Gets the top 10 recent eAutomate log entries.
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 552
+- path: /Integrations/eautomate/runjoin
+  method: GET
+  operation_id: Integrations/eautomate/runjoin
+  summary: Runs eAutomate devices join
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 734
+- path: /Office/OfficeFloor/GetPin
+  method: GET
+  operation_id: Office/OfficeFloor/GetPin
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 417
+- path: /Orders/GetOrderAdditionalInfo
+  method: GET
+  operation_id: Orders/GetOrderAdditionalInfo
+  summary: Gets the dealers list
+  tags:
+  - Order
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Orders/GetOrderLineStatuses
+  method: GET
+  operation_id: Orders/GetOrderLineStatuses
+  summary: Gets the dealers list
+  tags:
+  - Order
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 1354
+- path: /Orders/GetOrderLines
+  method: GET
+  operation_id: Orders/GetOrderLines
+  summary: Gets the dealers list
+  tags:
+  - Order
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Orders/GetOrderProofOfDelivery
+  method: GET
+  operation_id: Orders/GetOrderProofOfDelivery
+  summary: Gets the dealers list
+  tags:
+  - Order
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Orders/GetOrders
+  method: GET
+  operation_id: Orders/GetOrders
+  summary: Gets the dealers list
+  tags:
+  - Order
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Product/GetBrands
+  method: GET
+  operation_id: Product/GetBrands
+  summary: Gets the brands related to all dealers
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 542
+- path: /Product/GetModels
+  method: GET
+  operation_id: Product/GetModels
+  summary: Gets the models related to all dealers
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 535
+- path: /Product/GetSnmpDiscoveryBrands
+  method: GET
+  operation_id: Product/GetSnmpDiscoveryBrands
+  summary: Gets the Snmp discovery brands
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 504
+- path: /Project/GetContractFile
+  method: GET
+  operation_id: Project/GetContractFile
+  summary: Gets the project contract file.
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 534
+- path: /Project/GetDetail
+  method: GET
+  operation_id: Project/GetDetail
+  summary: Gets the project.
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 502
+- path: /Role/Get
+  method: GET
+  operation_id: Role/Get
+  summary: Get a capability set role by Id and Dealer Code
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /Saga/Get
+  method: GET
+  operation_id: Saga/Get
+  summary: Gets the saga details.
+  tags:
+  - Saga
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Saga/GetSagaOperationLogMessage
+  method: GET
+  operation_id: Saga/GetSagaOperationLogMessage
+  summary: Downloads the message from saga operation log.
+  tags:
+  - Saga
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /SdsAction/GetDeviceAction
+  method: GET
+  operation_id: SdsAction/GetDeviceAction
+  summary: Gets the device action.
+  tags:
+  - SdsActionApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 545
+- path: /SdsAction/GetDeviceActions
+  method: GET
+  operation_id: SdsAction/GetDeviceActions
+  summary: Gets the device actions.
+  tags:
+  - SdsActionApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 515
+- path: /SdsAction/GetDeviceActionsDashboard
+  method: GET
+  operation_id: SdsAction/GetDeviceActionsDashboard
+  summary: Gets the device actions dashboard.
+  tags:
+  - SdsActionApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 520
+- path: /SdsConnector/DownloadLog
+  method: GET
+  operation_id: SdsConnector/DownloadLog
+  summary: Download the log from SDS Cloud.
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 500
+    message: server_error
+- path: /SdsConnector/GetConnector
+  method: GET
+  operation_id: SdsConnector/GetConnector
+  summary: Get a connector.
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 696
+- path: /SdsConnector/GetConnectors
+  method: GET
+  operation_id: SdsConnector/GetConnectors
+  summary: Gets the connectors.
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 580
+- path: /SdsConnector/GetJamcConnectors
+  method: GET
+  operation_id: SdsConnector/GetJamcConnectors
+  summary: Gets the jamc connectors.
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 590
+- path: /SdsConnector/GetLogs
+  method: GET
+  operation_id: SdsConnector/GetLogs
+  summary: Invoke the log request to the JAMC
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /SdsConnector/GetWppConnectors
+  method: GET
+  operation_id: SdsConnector/GetWppConnectors
+  summary: Gets the wpp connectors.
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 555
+- path: /SdsDevice/GetAssessTemplate
+  method: GET
+  operation_id: SdsDevice/GetAssessTemplate
+  summary: ''
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 540
+- path: /SdsDevice/GetConfigItems
+  method: GET
+  operation_id: SdsDevice/GetConfigItems
+  summary: Gets the configuration items.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 502
+- path: /SdsDevice/GetCounters
+  method: GET
+  operation_id: SdsDevice/GetCounters
+  summary: Gets the counters.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 550
+- path: /SdsDevice/GetDeviceOperation
+  method: GET
+  operation_id: SdsDevice/GetDeviceOperation
+  summary: Gets the device operation.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 543
+- path: /SdsDevice/GetDeviceRemoteEws
+  method: GET
+  operation_id: SdsDevice/GetDeviceRemoteEws
+  summary: Gets the device remote ews.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 482
+- path: /SdsDevice/GetDevicesOperations
+  method: GET
+  operation_id: SdsDevice/GetDevicesOperations
+  summary: Gets the devices operations.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      pageNumber: null
+      pageRows: null
+      sortColumn: null
+      sortOrder: Asc
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 552
+- path: /SdsDevice/GetOnDeviceServices
+  method: GET
+  operation_id: SdsDevice/GetOnDeviceServices
+  summary: Gets the on device services.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 563
+- path: /SdsDevice/GetSupplyDetails
+  method: GET
+  operation_id: SdsDevice/GetSupplyDetails
+  summary: Gets the supply details.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 546
+- path: /SdsDevice/GetZendeskTicketInfo
+  method: GET
+  operation_id: SdsDevice/GetZendeskTicketInfo
+  summary: ''
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 527
+- path: /SdsEvent/GetDeviceEvent
+  method: GET
+  operation_id: SdsEvent/GetDeviceEvent
+  summary: Gets the device event.
+  tags:
+  - SdsEventApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 562
+- path: /SdsEvent/GetDeviceEvents
+  method: GET
+  operation_id: SdsEvent/GetDeviceEvents
+  summary: ''
+  tags:
+  - SdsEventApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 629
+- path: /SdsScan/ScanDevice
+  method: GET
+  operation_id: SdsScan/ScanDevice
+  summary: Retrieve saved SDS CLOUD device data
+  tags:
+  - SdsScanApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 554
+- path: /SdsScan/ScanImmediate
+  method: GET
+  operation_id: SdsScan/ScanImmediate
+  summary: Retrieve all updated SDS device data. The operation will take about 20
+    minutes
+  tags:
+  - SdsScanApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 487
+- path: /StandardProduct/GetExcelReport
+  method: GET
+  operation_id: StandardProduct/GetExcelReport
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 574
+- path: /StandardProduct/GetOperation
+  method: GET
+  operation_id: StandardProduct/GetOperation
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 543
+- path: /StandardProduct/GetProductsToAssociate
+  method: GET
+  operation_id: StandardProduct/GetProductsToAssociate
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 562
+- path: /StandardProduct/GetStandardProductsSummary
+  method: GET
+  operation_id: StandardProduct/GetStandardProductsSummary
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 487
+- path: /SupplyAlert/GetAvailableMaintenanceKitColors
+  method: GET
+  operation_id: SupplyAlert/GetAvailableMaintenanceKitColors
+  summary: Gets available Maintenance kit colors
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 542
+- path: /SupplyAlert/GetAvailableMaintenanceKitTypes
+  method: GET
+  operation_id: SupplyAlert/GetAvailableMaintenanceKitTypes
+  summary: Gets available Maintenance kit types
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 607
+- path: /SupplyAlert/GetAvailableSuppliesForADevice
+  method: GET
+  operation_id: SupplyAlert/GetAvailableSuppliesForADevice
+  summary: Gets available supplies for a device
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      deviceId: null
+      supplyType: ManteinanceKit
+      colorType: NotAvailable
+      maintenanceKitTypeId: null
+      maintenanceKitColorId: null
+      warning: null
+      language: Italiano
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 586
+- path: /Ticket/GetAttachment
+  method: GET
+  operation_id: Ticket/GetAttachment
+  summary: Gets the attachment.
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Ticket/GetTicket
+  method: GET
+  operation_id: Ticket/GetTicket
+  summary: Gets the ticket.
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Ticket/GetTicketByNumber
+  method: GET
+  operation_id: Ticket/GetTicketByNumber
+  summary: Gets the ticket.
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /Ticket/GetTickets
+  method: GET
+  operation_id: Ticket/GetTickets
+  summary: Gets the tickets.
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 403
+    message: ''
+- path: /TraceVolume/Get
+  method: GET
+  operation_id: TraceVolume/Get
+  summary: Gets a specific trace volume by its id
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 560
+- path: /TradingPartner/Get
+  method: GET
+  operation_id: TradingPartner/Get
+  summary: Get tradingPartner
+  tags:
+  - TradingPartnerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      dealerCode: null
+      id: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 509
+- path: /WhiteLabel/Get
+  method: GET
+  operation_id: WhiteLabel/Get
+  summary: Get the white label.
+  tags:
+  - WhiteLabel
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query:
+      code: null
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 609
+- path: /WhiteLabel/GetWhiteLabelCustomizationByUrl
+  method: GET
+  operation_id: WhiteLabel/GetWhiteLabelCustomizationByUrl
+  summary: Get the whitelabel customizations by the caller URL
+  tags:
+  - WhiteLabel
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 522
+- path: /WhiteLabel/GetWhitelabelPlaceholders
+  method: GET
+  operation_id: WhiteLabel/GetWhitelabelPlaceholders
+  summary: Get whitelabel placeholders
+  tags:
+  - WhiteLabel
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: discovered
+  params:
+    query: {}
+  payload_template: null
+  success:
+    status: 200
+    latency_ms: 505
+- path: /azuread/GetChallengeUrlRedirect
+  method: GET
+  operation_id: azuread/GetChallengeUrlRedirect
+  summary: Returns the login url based on the domain specified.
+  tags:
+  - AzureADApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 500
+    message: server_error
+- path: /okta/GetDomainRedirect
+  method: GET
+  operation_id: okta/GetDomainRedirect
+  summary: Returns the Okta login url based on the domain specified.
+  tags:
+  - OktaApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: error
+  attempts: 12
+  last_error:
+    status: 500
+    message: server_error
+- path: /Account/ChangeLanguage
+  method: POST
+  operation_id: Account/ChangeLanguage
+  summary: Change language
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/ChangePassword
+  method: POST
+  operation_id: Account/ChangePassword
+  summary: Changes the password of the connected account
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Create
+  method: POST
+  operation_id: Account/Create
+  summary: Create an account
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Delete
+  method: DELETE
+  operation_id: Account/Delete
+  summary: This operation deletes an account
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Delete2fa
+  method: DELETE
+  operation_id: Account/Delete2fa
+  summary: This operation deletes the two factor authentication for a user
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/DeleteProfile2fa
+  method: DELETE
+  operation_id: Account/DeleteProfile2fa
+  summary: This operation deletes the two factor authentication for a user
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Enable2faForAccount
+  method: POST
+  operation_id: Account/Enable2faForAccount
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Enable2faForProfile
+  method: POST
+  operation_id: Account/Enable2faForProfile
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/GetAccount
+  method: POST
+  operation_id: Account/GetAccount
+  summary: Gets the account.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/GetAccounts
+  method: POST
+  operation_id: Account/GetAccounts
+  summary: Gets the accounts.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Logout
+  method: POST
+  operation_id: Account/Logout
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/RefreshAuthCookie
+  method: POST
+  operation_id: Account/RefreshAuthCookie
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/ResetPassword
+  method: POST
+  operation_id: Account/ResetPassword
+  summary: Resets the password.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/ResetPasswordVerifyToken
+  method: POST
+  operation_id: Account/ResetPasswordVerifyToken
+  summary: Verify the Resets password auth token.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/SendOtpEmailForAccount
+  method: POST
+  operation_id: Account/SendOtpEmailForAccount
+  summary: ''
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/SetPreferredDealer
+  method: POST
+  operation_id: Account/SetPreferredDealer
+  summary: Gets profile of current authenticated account.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/Update
+  method: POST
+  operation_id: Account/Update
+  summary: Update an account
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Account/UpdateProfile
+  method: POST
+  operation_id: Account/UpdateProfile
+  summary: Update profile of current authenticated user.
+  tags:
+  - Account
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Customer/Delete
+  method: DELETE
+  operation_id: AlertLimit/Customer/Delete
+  summary: Delete Alert limits
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Customer/Product/Delete
+  method: POST
+  operation_id: AlertLimit/Customer/Product/Delete
+  summary: ''
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Customer/Product/Update
+  method: PUT
+  operation_id: AlertLimit/Customer/Product/Update
+  summary: Set Alert limits for a specified Customer and Product
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Customer/Update
+  method: PUT
+  operation_id: AlertLimit/Customer/Update
+  summary: Set Alert limits for a specified Customer
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Dealer/Update
+  method: PUT
+  operation_id: AlertLimit/Dealer/Update
+  summary: Set Alert limits for a specified dealer
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Device/Delete
+  method: DELETE
+  operation_id: AlertLimit/Device/Delete
+  summary: ''
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit/Device/Update
+  method: PUT
+  operation_id: AlertLimit/Device/Update
+  summary: Set Alert limits for a specified Customer and Product
+  tags:
+  - AlertLimitApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Customer/CreateDefault
+  method: POST
+  operation_id: AlertLimit2/Customer/CreateDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Customer/CreateProduct
+  method: POST
+  operation_id: AlertLimit2/Customer/CreateProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Customer/DeleteDefaultForConsumable
+  method: DELETE
+  operation_id: AlertLimit2/Customer/DeleteDefaultForConsumable
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Customer/DeleteProduct
+  method: DELETE
+  operation_id: AlertLimit2/Customer/DeleteProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Customer/UpdateDefault
+  method: PUT
+  operation_id: AlertLimit2/Customer/UpdateDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Customer/UpdateProduct
+  method: PUT
+  operation_id: AlertLimit2/Customer/UpdateProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Dealer/CreateDefault
+  method: POST
+  operation_id: AlertLimit2/Dealer/CreateDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Dealer/CreateProduct
+  method: POST
+  operation_id: AlertLimit2/Dealer/CreateProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Dealer/DeleteProduct
+  method: DELETE
+  operation_id: AlertLimit2/Dealer/DeleteProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Dealer/UpdateDefault
+  method: PUT
+  operation_id: AlertLimit2/Dealer/UpdateDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Dealer/UpdateProduct
+  method: PUT
+  operation_id: AlertLimit2/Dealer/UpdateProduct
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Device/CreateDefault
+  method: POST
+  operation_id: AlertLimit2/Device/CreateDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Device/DeleteDefaultForConsumable
+  method: DELETE
+  operation_id: AlertLimit2/Device/DeleteDefaultForConsumable
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/Device/UpdateDefault
+  method: PUT
+  operation_id: AlertLimit2/Device/UpdateDefault
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /AlertLimit2/DisableAlertLimits
+  method: POST
+  operation_id: AlertLimit2/DisableAlertLimits
+  summary: ''
+  tags:
+  - AlertLimit2Api
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ApiClient/Account/Create
+  method: POST
+  operation_id: ApiClient/Account/Create
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ApiClient/Account/Delete
+  method: DELETE
+  operation_id: ApiClient/Account/Delete
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ApiClient/Account/Update
+  method: PUT
+  operation_id: ApiClient/Account/Update
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ApiClient/Create
+  method: POST
+  operation_id: ApiClient/Create
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ApiClient/Delete
+  method: DELETE
+  operation_id: ApiClient/Delete
+  summary: Delete Api Client
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ApiClient/Update
+  method: PUT
+  operation_id: ApiClient/Update
+  summary: GEt Api Client Detail
+  tags:
+  - ApiClientApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/GetCustomerInvoice
+  method: POST
+  operation_id: Billing/GetCustomerInvoice
+  summary: Gets the customer invoice Header and Rows
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/GetCustomerInvoicesList
+  method: POST
+  operation_id: Billing/GetCustomerInvoicesList
+  summary: Gets the customer invoices.
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/GetCustomersContracts
+  method: POST
+  operation_id: Billing/GetCustomersContracts
+  summary: Gets the customers contracts.
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/GetCustomersInvoicesList
+  method: POST
+  operation_id: Billing/GetCustomersInvoicesList
+  summary: Gets the customers invoices.
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/GetDealerInvoice
+  method: POST
+  operation_id: Billing/GetDealerInvoice
+  summary: Gets the invoice Header and Rows.
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/GetDealerInvoicesList
+  method: POST
+  operation_id: Billing/GetDealerInvoicesList
+  summary: Gets the dealer to dealer invoices.
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Billing/UpdateCustomerInvoice
+  method: PATCH
+  operation_id: Billing/UpdateCustomerInvoice
+  summary: Update Customer Invoice
+  tags:
+  - Billing
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Consumable/List
+  method: POST
+  operation_id: Consumable/List
+  summary: List all devices consumables
+  tags:
+  - ConsumableApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CostCenter/Create
+  method: POST
+  operation_id: CostCenter/Create
+  summary: Creates the office.
+  tags:
+  - CostCenter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CostCenter/Delete
+  method: DELETE
+  operation_id: CostCenter/Delete
+  summary: Delete  office.
+  tags:
+  - CostCenter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CostCenter/Get
+  method: POST
+  operation_id: CostCenter/Get
+  summary: Gets the office.
+  tags:
+  - CostCenter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CostCenter/List
+  method: POST
+  operation_id: CostCenter/List
+  summary: Gets the offices.
+  tags:
+  - CostCenter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CostCenter/Update
+  method: POST
+  operation_id: CostCenter/Update
+  summary: Updates the office.
+  tags:
+  - CostCenter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/Catalog/Export
+  method: POST
+  operation_id: Counter/Catalog/Export
+  summary: ''
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/Catalog/List
+  method: POST
+  operation_id: Counter/Catalog/List
+  summary: ''
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/Catalog/Update
+  method: PUT
+  operation_id: Counter/Catalog/Update
+  summary: ''
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/Device/Delete
+  method: DELETE
+  operation_id: Counter/Device/Delete
+  summary: delete device counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/Device/Update
+  method: POST
+  operation_id: Counter/Device/Update
+  summary: Insert Update device counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/Device/UpdateCounterDetailTag
+  method: POST
+  operation_id: Counter/Device/UpdateCounterDetailTag
+  summary: Insert Update device counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/List
+  method: POST
+  operation_id: Counter/List
+  summary: Returns counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/ListBlended
+  method: POST
+  operation_id: Counter/ListBlended
+  summary: Returns blended counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/ListDetailed
+  method: POST
+  operation_id: Counter/ListDetailed
+  summary: Returns detailed counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Counter/UploadOfflineDeviceCounters
+  method: POST
+  operation_id: Counter/UploadOfflineDeviceCounters
+  summary: Upload offline device counters
+  tags:
+  - Counter
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomField/Create
+  method: POST
+  operation_id: CustomField/Create
+  summary: Create a custom Field
+  tags:
+  - CustomFieldApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomField/Delete
+  method: DELETE
+  operation_id: CustomField/Delete
+  summary: Delete a custom Field
+  tags:
+  - CustomFieldApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomField/Update
+  method: PUT
+  operation_id: CustomField/Update
+  summary: Update a custom field
+  tags:
+  - CustomFieldApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/AdvancedOptions/Update
+  method: PUT
+  operation_id: Customer/AdvancedOptions/Update
+  summary: Set the customer advanced options
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/AlertSettings/Update
+  method: PUT
+  operation_id: Customer/AlertSettings/Update
+  summary: set the dealer alert settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/CreateCustomer
+  method: POST
+  operation_id: Customer/CreateCustomer
+  summary: Creates the customer.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/DeleteCustomer
+  method: POST
+  operation_id: Customer/DeleteCustomer
+  summary: Delete customer
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/EpsonSettings/Update
+  method: PUT
+  operation_id: Customer/EpsonSettings/Update
+  summary: set the customer epsons settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/GetCustomer
+  method: POST
+  operation_id: Customer/GetCustomer
+  summary: Gets the customer.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/GetCustomerByCode
+  method: POST
+  operation_id: Customer/GetCustomerByCode
+  summary: Gets the customer.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/GetCustomers
+  method: POST
+  operation_id: Customer/GetCustomers
+  summary: Gets the customers.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/GetEmailExplorerInstallationToCustomer
+  method: POST
+  operation_id: Customer/GetEmailExplorerInstallationToCustomer
+  summary: Returns the mail parts (subjet and body) of the email to be sent to the
+    customer for eXplorer installation.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/SendEXplorerInvitation
+  method: POST
+  operation_id: Customer/SendEXplorerInvitation
+  summary: Sends the e xplorer invitation.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/UpdateCustomer
+  method: POST
+  operation_id: Customer/UpdateCustomer
+  summary: Update the customer.
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Customer/eXplorerSettings/Update
+  method: PUT
+  operation_id: Customer/eXplorerSettings/Update
+  summary: set the customer eXplorer settings
+  tags:
+  - Customer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerCredentials/Delete
+  method: DELETE
+  operation_id: CustomerCredentials/Delete
+  summary: Delete credentials set
+  tags:
+  - CustomerCredentialsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerDashboard/Connectors
+  method: POST
+  operation_id: CustomerDashboard/Connectors
+  summary: ''
+  tags:
+  - CustomerDashboard
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerDashboard/Devices
+  method: POST
+  operation_id: CustomerDashboard/Devices
+  summary: ''
+  tags:
+  - CustomerDashboard
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerDashboard/Get
+  method: POST
+  operation_id: CustomerDashboard/Get
+  summary: Gets the customer's dashboard.
+  tags:
+  - CustomerDashboard
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerNotification/ApplyDealerTemplate
+  method: PUT
+  operation_id: CustomerNotification/ApplyDealerTemplate
+  summary: Apply a dealer template to the customer notification
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerNotification/Create
+  method: POST
+  operation_id: CustomerNotification/Create
+  summary: Create a customer notification
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerNotification/Delete
+  method: DELETE
+  operation_id: CustomerNotification/Delete
+  summary: Create a customer notification
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /CustomerNotification/Update
+  method: PUT
+  operation_id: CustomerNotification/Update
+  summary: Get notification
+  tags:
+  - CustomerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/AccountingSettings/Update
+  method: PUT
+  operation_id: Dealer/AccountingSettings/Update
+  summary: set the dealer accounting settings.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/AlertSettings/Update
+  method: PUT
+  operation_id: Dealer/AlertSettings/Update
+  summary: set the dealer alert settings
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlend/ClearCounter
+  method: DELETE
+  operation_id: Dealer/CounterBlend/ClearCounter
+  summary: Clear the counter readings for a specific blend counter
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlend/Create
+  method: POST
+  operation_id: Dealer/CounterBlend/Create
+  summary: Create the counter blend Field and related  descriptions
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlend/Delete
+  method: DELETE
+  operation_id: Dealer/CounterBlend/Delete
+  summary: Delete the Dealer counter blend field
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlend/Update
+  method: PUT
+  operation_id: Dealer/CounterBlend/Update
+  summary: Update the counter blend Field and related  descriptions
+  tags:
+  - DealerCounterBlendApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlendToStandard/Create
+  method: POST
+  operation_id: Dealer/CounterBlendToStandard/Create
+  summary: Creates the specified request.
+  tags:
+  - DealerCounterBlendToStandardApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlendToStandard/Delete
+  method: DELETE
+  operation_id: Dealer/CounterBlendToStandard/Delete
+  summary: Deletes the specified request.
+  tags:
+  - DealerCounterBlendToStandardApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/CounterBlendToStandard/Update
+  method: PUT
+  operation_id: Dealer/CounterBlendToStandard/Update
+  summary: Updates the specified request.
+  tags:
+  - DealerCounterBlendToStandardApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/Customizations/Update
+  method: PUT
+  operation_id: Dealer/Customizations/Update
+  summary: set the dealer customizations.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/DeclineDemoRequest
+  method: PUT
+  operation_id: Dealer/DeclineDemoRequest
+  summary: Decline demo request
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/DistributorSettings/Update
+  method: PUT
+  operation_id: Dealer/DistributorSettings/Update
+  summary: Set the Distributor dealer settings
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/Get
+  method: POST
+  operation_id: Dealer/Get
+  summary: Gets the dealer.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/GetDealer
+  method: POST
+  operation_id: Dealer/GetDealer
+  summary: Gets the dealer.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/GetDealerByCode
+  method: POST
+  operation_id: Dealer/GetDealerByCode
+  summary: Gets the dealer.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/GetDealerSupportTicketConfiguration
+  method: POST
+  operation_id: Dealer/GetDealerSupportTicketConfiguration
+  summary: Gets the dealer support ticket configuration.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/GetDealers
+  method: POST
+  operation_id: Dealer/GetDealers
+  summary: Gets the dealers list
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/GetDealersInfo
+  method: POST
+  operation_id: Dealer/GetDealersInfo
+  summary: Get the dealers list with contract, preferences infos
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/GetDealersWithoutContract
+  method: POST
+  operation_id: Dealer/GetDealersWithoutContract
+  summary: Gets the dealers that do not have a contract.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/Onboarding/Update
+  method: PUT
+  operation_id: Dealer/Onboarding/Update
+  summary: Update the dealer onboarding survey
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/PostponeDemoExpiration
+  method: PUT
+  operation_id: Dealer/PostponeDemoExpiration
+  summary: Postpones the demo expiration.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/RemoteOfflineCountersSettings/Update
+  method: PUT
+  operation_id: Dealer/RemoteOfflineCountersSettings/Update
+  summary: set the dealer remote offline counters settings.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/SaveDealerTagsHierarchy
+  method: POST
+  operation_id: Dealer/SaveDealerTagsHierarchy
+  summary: ''
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/Update
+  method: PUT
+  operation_id: Dealer/Update
+  summary: Update dealer main data
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/UpdateDealerSupportTicketConfiguration
+  method: POST
+  operation_id: Dealer/UpdateDealerSupportTicketConfiguration
+  summary: Updates the dealer support ticket configuration.
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Dealer/eXplorerSettings/Update
+  method: PUT
+  operation_id: Dealer/eXplorerSettings/Update
+  summary: set the dealer eXplorer settings
+  tags:
+  - Dealer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerNotification/Create
+  method: POST
+  operation_id: DealerNotification/Create
+  summary: Create a dealer notification
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerNotification/Delete
+  method: DELETE
+  operation_id: DealerNotification/Delete
+  summary: Create a dealer notification
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerNotification/RemoveMailAddressFromCustomers
+  method: PUT
+  operation_id: DealerNotification/RemoveMailAddressFromCustomers
+  summary: Remove EMail Address From Customers notifications fields
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerNotification/Template/Update
+  method: PUT
+  operation_id: DealerNotification/Template/Update
+  summary: Update the dealer template base
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerNotification/Update
+  method: PUT
+  operation_id: DealerNotification/Update
+  summary: Get notification
+  tags:
+  - DealerNotificationApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerProduct/Create
+  method: POST
+  operation_id: DealerProduct/Create
+  summary: create the dealerProductReplacement
+  tags:
+  - DealerProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerProduct/Delete
+  method: DELETE
+  operation_id: DealerProduct/Delete
+  summary: Delete DealerProductReplacement
+  tags:
+  - DealerProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerProduct/Edit
+  method: PUT
+  operation_id: DealerProduct/Edit
+  summary: Edit the dealerProductReplacement
+  tags:
+  - DealerProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/Create
+  method: POST
+  operation_id: DealerSupply/Create
+  summary: Create the dealer supply.
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/CreateFromProjectVolumes
+  method: POST
+  operation_id: DealerSupply/CreateFromProjectVolumes
+  summary: Create from project volumes
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/CreateFromStandardSupply
+  method: POST
+  operation_id: DealerSupply/CreateFromStandardSupply
+  summary: Create the dealer supply from the standardSupply.
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/Delete
+  method: DELETE
+  operation_id: DealerSupply/Delete
+  summary: Deletes the specified supply.
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/ListSuggested
+  method: POST
+  operation_id: DealerSupply/ListSuggested
+  summary: Returns list of suggested standard supplies for the given product ids
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/Update
+  method: PUT
+  operation_id: DealerSupply/Update
+  summary: Update the dealer supply.
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupply/UploadSupplies
+  method: POST
+  operation_id: DealerSupply/UploadSupplies
+  summary: Gets the dealer supply.
+  tags:
+  - DealerSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplyPriceListing/Create
+  method: POST
+  operation_id: DealerSupplyPriceListing/Create
+  summary: Create the tradingPartnerSupplyListing
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplyPriceListing/Customer/Create
+  method: POST
+  operation_id: DealerSupplyPriceListing/Customer/Create
+  summary: Create the tradingPartnerSupplyListing for customer
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplyPriceListing/Delete
+  method: DELETE
+  operation_id: DealerSupplyPriceListing/Delete
+  summary: Deletes the specified Trading Partner.
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplyPriceListing/Update
+  method: PUT
+  operation_id: DealerSupplyPriceListing/Update
+  summary: Create the tradingPartnerSupplyListing
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplyPriceListing/UpdateByCustomer
+  method: PUT
+  operation_id: DealerSupplyPriceListing/UpdateByCustomer
+  summary: Create the tradingPartnerSupplyListing
+  tags:
+  - DealerSupplyPriceListingApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplySet/CreateFromProjectVolumes
+  method: POST
+  operation_id: DealerSupplySet/CreateFromProjectVolumes
+  summary: Create from project volumes
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplySet/CreateFromStandardModels
+  method: POST
+  operation_id: DealerSupplySet/CreateFromStandardModels
+  summary: Create from standard models
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplySet/Delete
+  method: DELETE
+  operation_id: DealerSupplySet/Delete
+  summary: Deletes the specified supply set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplySet/Import
+  method: POST
+  operation_id: DealerSupplySet/Import
+  summary: Deletes the specified supply set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplySet/SaveSupplySet
+  method: PUT
+  operation_id: DealerSupplySet/SaveSupplySet
+  summary: Saves the supply set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /DealerSupplySet/UploadSupplySet
+  method: POST
+  operation_id: DealerSupplySet/UploadSupplySet
+  summary: Gets the dealer supply set.
+  tags:
+  - DealerSupplySetApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/AssignOfficeToDevicesByDeviceId
+  method: PUT
+  operation_id: Device/AssignOfficeToDevicesByDeviceId
+  summary: Assign an office to some devices by  DeviceId
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/AssignOfficeToDevicesBySerialNumber
+  method: PUT
+  operation_id: Device/AssignOfficeToDevicesBySerialNumber
+  summary: Assign an office to some devices by  SerialNumber
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Delete
+  method: DELETE
+  operation_id: Device/Delete
+  summary: This operation deletes a device
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Deleted/Restore
+  method: PUT
+  operation_id: Device/Deleted/Restore
+  summary: This operation restore a device
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Get
+  method: POST
+  operation_id: Device/Get
+  summary: Returns a device by request parameters
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/GetDetailedInformations
+  method: POST
+  operation_id: Device/GetDetailedInformations
+  summary: Returns  device detailed Informations by request parameters
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/List
+  method: POST
+  operation_id: Device/List
+  summary: This operation gets lists of devices paged and filtered
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListAttributesDataHistory
+  method: POST
+  operation_id: Device/ListAttributesDataHistory
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListErrorsMessagesDataHistory
+  method: POST
+  operation_id: Device/ListErrorsMessagesDataHistory
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListLevelsDataHistory
+  method: POST
+  operation_id: Device/ListLevelsDataHistory
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListMaintenanceKitMessagesDataHistory
+  method: POST
+  operation_id: Device/ListMaintenanceKitMessagesDataHistory
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListMeterReads
+  method: POST
+  operation_id: Device/ListMeterReads
+  summary: This operation gets lists of meter reads daily from eXplorer
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListMetersDataHistory
+  method: POST
+  operation_id: Device/ListMetersDataHistory
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ListSuppliesDataHistory
+  method: POST
+  operation_id: Device/ListSuppliesDataHistory
+  summary: ''
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Offline/Create
+  method: POST
+  operation_id: Device/Offline/Create
+  summary: Returns an offline device by request parameters
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Offline/Get
+  method: POST
+  operation_id: Device/Offline/Get
+  summary: Returns an offline device by request parameters
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Offline/List
+  method: POST
+  operation_id: Device/Offline/List
+  summary: This operation gets lists of offline devices paged and filtered
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/ResetWorkflowMode
+  method: POST
+  operation_id: Device/ResetWorkflowMode
+  summary: This operation reset the workflow mode of a device
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/SharpFSS/Create
+  method: POST
+  operation_id: Device/SharpFSS/Create
+  summary: Returns a new SharpFSS Offline device by request parameters
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/Update
+  method: POST
+  operation_id: Device/Update
+  summary: Update Device
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/UpdateDeviceSerialNumber
+  method: POST
+  operation_id: Device/UpdateDeviceSerialNumber
+  summary: Update Device Serial Number
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/UpdateDevicesBySerialNumbers
+  method: PUT
+  operation_id: Device/UpdateDevicesBySerialNumbers
+  summary: Update Devices By Serial Numbers
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Device/UpdateSupplySetAssociation
+  method: POST
+  operation_id: Device/UpdateSupplySetAssociation
+  summary: Associate the device with a project linked to a DealerSupplySet
+  tags:
+  - Device
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/AbortRequestSendLogs
+  method: PUT
+  operation_id: Explorer/AbortRequestSendLogs
+  summary: Abort request send logs
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/AbortUpdateAgent
+  method: PUT
+  operation_id: Explorer/AbortUpdateAgent
+  summary: Abort Update Agent
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/AbortUpdateDca4Client
+  method: PUT
+  operation_id: Explorer/AbortUpdateDca4Client
+  summary: Abort Update Service
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/AbortUpdateDca4Monitor
+  method: PUT
+  operation_id: Explorer/AbortUpdateDca4Monitor
+  summary: Abort Update Agent
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/AbortUpdateService
+  method: PUT
+  operation_id: Explorer/AbortUpdateService
+  summary: Abort Update Service
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/AutomaticUpdate
+  method: PUT
+  operation_id: Explorer/AutomaticUpdate
+  summary: Explorer Enable\Disable Automatic Update
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/ClearOidRegistry
+  method: POST
+  operation_id: Explorer/ClearOidRegistry
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Cluster/AddSlaveToCluster
+  method: POST
+  operation_id: Explorer/Cluster/AddSlaveToCluster
+  summary: Add a Slave to a Cluster
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Cluster/Create
+  method: POST
+  operation_id: Explorer/Cluster/Create
+  summary: Create Explorer Cluster
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Cluster/Delete
+  method: POST
+  operation_id: Explorer/Cluster/Delete
+  summary: This operation deletes an explorer cluster
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Configuration/Copy
+  method: PUT
+  operation_id: Explorer/Configuration/Copy
+  summary: Copy Explorer Configuration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Configuration/Create
+  method: POST
+  operation_id: Explorer/Configuration/Create
+  summary: Update Explorer Configuration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Configuration/CreateFromTicket
+  method: POST
+  operation_id: Explorer/Configuration/CreateFromTicket
+  summary: Create Explore Configuration from ticket
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Configuration/Delete
+  method: DELETE
+  operation_id: Explorer/Configuration/Delete
+  summary: Delete Explorer Configuration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Configuration/ScanImmediate
+  method: PUT
+  operation_id: Explorer/Configuration/ScanImmediate
+  summary: Update Explorer Configuration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Configuration/Update
+  method: PUT
+  operation_id: Explorer/Configuration/Update
+  summary: Update Explorer Configuration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/DeleteExplorerData
+  method: POST
+  operation_id: Explorer/DeleteExplorerData
+  summary: This operation delete explorer data entry
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/DeleteExplorerDataExplorerData
+  method: POST
+  operation_id: Explorer/DeleteExplorerDataExplorerData
+  summary: This operation delete explorer data entry
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Hostname/Create
+  method: POST
+  operation_id: Explorer/Hostname/Create
+  summary: Create eXplorer hostname
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Hostname/Delete
+  method: DELETE
+  operation_id: Explorer/Hostname/Delete
+  summary: Delete eXplorer hostname
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Hostname/Update
+  method: PUT
+  operation_id: Explorer/Hostname/Update
+  summary: Update eXplorer subnet
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/ImmediateScanDca4
+  method: POST
+  operation_id: Explorer/ImmediateScanDca4
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Intervals/Update
+  method: PUT
+  operation_id: Explorer/Intervals/Update
+  summary: Updates the explorer interval.
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/License/Generate
+  method: POST
+  operation_id: Explorer/License/Generate
+  summary: Generate an Explorer License
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Schedule/Create
+  method: POST
+  operation_id: Explorer/Schedule/Create
+  summary: Create schedule on explorerconfiguration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Schedule/Delete
+  method: DELETE
+  operation_id: Explorer/Schedule/Delete
+  summary: Delete schedule on explorerconfiguration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Schedule/Update
+  method: POST
+  operation_id: Explorer/Schedule/Update
+  summary: Update schedule on explorerconfiguration
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SendGetOrWalk
+  method: POST
+  operation_id: Explorer/SendGetOrWalk
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SendGetOrWalkByPrinter
+  method: POST
+  operation_id: Explorer/SendGetOrWalkByPrinter
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SendHpLfpXml
+  method: POST
+  operation_id: Explorer/SendHpLfpXml
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SendHpLfpXmlByPrinter
+  method: POST
+  operation_id: Explorer/SendHpLfpXmlByPrinter
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SendPing
+  method: POST
+  operation_id: Explorer/SendPing
+  summary: ''
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SetDcaLogLevel
+  method: PUT
+  operation_id: Explorer/SetDcaLogLevel
+  summary: This operation set the DCA log level
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/SetPollingService
+  method: PUT
+  operation_id: Explorer/SetPollingService
+  summary: Abort Update Service
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Staging/Activate
+  method: POST
+  operation_id: Explorer/Staging/Activate
+  summary: Activate a staging connector
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Staging/Delete
+  method: DELETE
+  operation_id: Explorer/Staging/Delete
+  summary: Activate a staging connector
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Subnet/Create
+  method: POST
+  operation_id: Explorer/Subnet/Create
+  summary: Create eXplorer subnet
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Subnet/Delete
+  method: DELETE
+  operation_id: Explorer/Subnet/Delete
+  summary: Delete eXplorer subnet
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/Subnet/Update
+  method: PUT
+  operation_id: Explorer/Subnet/Update
+  summary: Update eXplorer subnet
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/UpdateAgent
+  method: PUT
+  operation_id: Explorer/UpdateAgent
+  summary: Explorer Update Agent
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/UpdateDca4Client
+  method: PUT
+  operation_id: Explorer/UpdateDca4Client
+  summary: Explorer Update Agent
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/UpdateDca4Monitor
+  method: PUT
+  operation_id: Explorer/UpdateDca4Monitor
+  summary: Explorer Update Service
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/UpdateService
+  method: PUT
+  operation_id: Explorer/UpdateService
+  summary: Explorer Update Service
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Explorer/WorkingDays/Update
+  method: POST
+  operation_id: Explorer/WorkingDays/Update
+  summary: Update configuration working days
+  tags:
+  - Explorer
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Integrations/Create
+  method: POST
+  operation_id: Integrations/Create
+  summary: Create an integration configuration
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Integrations/Delete
+  method: DELETE
+  operation_id: Integrations/Delete
+  summary: Delete an integration configuration
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Integrations/ToServ/Create
+  method: POST
+  operation_id: Integrations/ToServ/Create
+  summary: Create an integration configuration for 2serv
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Integrations/Update
+  method: PUT
+  operation_id: Integrations/Update
+  summary: Update an integration configuration
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Integrations/VantageOnline/Create
+  method: POST
+  operation_id: Integrations/VantageOnline/Create
+  summary: Create an integration configuration for VantageOnline
+  tags:
+  - IntegrationsApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/Create
+  method: POST
+  operation_id: Office/Create
+  summary: Creates the office.
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/Delete
+  method: DELETE
+  operation_id: Office/Delete
+  summary: Delete  office.
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/Get
+  method: POST
+  operation_id: Office/Get
+  summary: Gets the office.
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/List
+  method: POST
+  operation_id: Office/List
+  summary: Gets the offices.
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/OfficeFloor/Create
+  method: POST
+  operation_id: Office/OfficeFloor/Create
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/OfficeFloor/Delete
+  method: DELETE
+  operation_id: Office/OfficeFloor/Delete
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/OfficeFloor/DeletePin
+  method: DELETE
+  operation_id: Office/OfficeFloor/DeletePin
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/OfficeFloor/SavePin
+  method: POST
+  operation_id: Office/OfficeFloor/SavePin
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/OfficeFloor/Update
+  method: PUT
+  operation_id: Office/OfficeFloor/Update
+  summary: ''
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/Subnet/Create
+  method: POST
+  operation_id: Office/Subnet/Create
+  summary: Create office subnet
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/Subnet/Delete
+  method: DELETE
+  operation_id: Office/Subnet/Delete
+  summary: Delete office subnet
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/Update
+  method: POST
+  operation_id: Office/Update
+  summary: Updates the office.
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Office/UploadOffices
+  method: POST
+  operation_id: Office/UploadOffices
+  summary: Upload Offices
+  tags:
+  - Office
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /PanelMessageAlert/Create
+  method: POST
+  operation_id: PanelMessageAlert/Create
+  summary: Create the PanelMessage alert configuration
+  tags:
+  - PanelMessageAlertApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /PanelMessageAlert/Delete
+  method: DELETE
+  operation_id: PanelMessageAlert/Delete
+  summary: Deletes the specified panel message alert configuration
+  tags:
+  - PanelMessageAlertApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /PanelMessageAlert/GetErrorCodes
+  method: POST
+  operation_id: PanelMessageAlert/GetErrorCodes
+  summary: Gets available panel message codes
+  tags:
+  - PanelMessageAlertApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /PanelMessageAlert/List
+  method: POST
+  operation_id: PanelMessageAlert/List
+  summary: Returns a list of panel message alert configurations.
+  tags:
+  - PanelMessageAlertApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /PanelMessageAlert/Update
+  method: PUT
+  operation_id: PanelMessageAlert/Update
+  summary: Edit the PanelMessage alert configuration
+  tags:
+  - PanelMessageAlertApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Product/GetProduct
+  method: POST
+  operation_id: Product/GetProduct
+  summary: Gets the product by id
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Product/GetProducts
+  method: POST
+  operation_id: Product/GetProducts
+  summary: Gets the products related to all dealers
+  tags:
+  - Product
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/Create
+  method: POST
+  operation_id: Project/Create
+  summary: Create the project
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/Delete
+  method: DELETE
+  operation_id: Project/Delete
+  summary: Delete  project
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/Get
+  method: POST
+  operation_id: Project/Get
+  summary: ''
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/List
+  method: POST
+  operation_id: Project/List
+  summary: Gets the projects.
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/ManageDevicesAssociation
+  method: PUT
+  operation_id: Project/ManageDevicesAssociation
+  summary: Associate devices to project
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/SetRelatedDevicesAlertGenerator
+  method: PUT
+  operation_id: Project/SetRelatedDevicesAlertGenerator
+  summary: Set Related Devices AlertGenerator
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Project/Update
+  method: PUT
+  operation_id: Project/Update
+  summary: Updates the project.
+  tags:
+  - Project
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Role/Copy
+  method: POST
+  operation_id: Role/Copy
+  summary: Copies the specified request.
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Role/Create
+  method: POST
+  operation_id: Role/Create
+  summary: Create a custom capability set (custom role)
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Role/Delete
+  method: DELETE
+  operation_id: Role/Delete
+  summary: Delete a custom capability set (custom role)
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Role/Update
+  method: PUT
+  operation_id: Role/Update
+  summary: Update a custom capability set (custom role)
+  tags:
+  - RoleApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Saga/GetSagaOperationLogFile
+  method: POST
+  operation_id: Saga/GetSagaOperationLogFile
+  summary: Gets the Saga Operation Log file
+  tags:
+  - Saga
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Saga/GetSagaOperationLogList
+  method: POST
+  operation_id: Saga/GetSagaOperationLogList
+  summary: Gets the saga operation log list.
+  tags:
+  - Saga
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Saga/GetSagaOperationsList
+  method: POST
+  operation_id: Saga/GetSagaOperationsList
+  summary: Gets the saga operations list.
+  tags:
+  - Saga
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Saga/List
+  method: POST
+  operation_id: Saga/List
+  summary: Gets the saga list.
+  tags:
+  - Saga
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsAction/ChangeDeviceActionStatus
+  method: POST
+  operation_id: SdsAction/ChangeDeviceActionStatus
+  summary: Changes the device action status.
+  tags:
+  - SdsActionApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsAction/DeleteDeviceAction
+  method: DELETE
+  operation_id: SdsAction/DeleteDeviceAction
+  summary: ''
+  tags:
+  - SdsActionApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/Associate
+  method: POST
+  operation_id: SdsConnector/Associate
+  summary: ''
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/DeleteLog
+  method: DELETE
+  operation_id: SdsConnector/DeleteLog
+  summary: Delete the log from SDS Cloud
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/Download
+  method: POST
+  operation_id: SdsConnector/Download
+  summary: Download the JAMC connector
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/Install
+  method: POST
+  operation_id: SdsConnector/Install
+  summary: Install JAMC connector
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/Register
+  method: POST
+  operation_id: SdsConnector/Register
+  summary: Register the JAMC connector
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/RetrieveLog
+  method: POST
+  operation_id: SdsConnector/RetrieveLog
+  summary: Retrieves the log list from SDS Cloud
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsConnector/Unregister
+  method: POST
+  operation_id: SdsConnector/Unregister
+  summary: Unregister the JAMC connector
+  tags:
+  - SdsConnectorApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/Activate
+  method: POST
+  operation_id: SdsCustomer/Activate
+  summary: Sets the credential.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/CreateAssessTemplate
+  method: POST
+  operation_id: SdsCustomer/CreateAssessTemplate
+  summary: ''
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/Deactivate
+  method: POST
+  operation_id: SdsCustomer/Deactivate
+  summary: Deactivate Customer.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/DeleteAssessTemplate
+  method: DELETE
+  operation_id: SdsCustomer/DeleteAssessTemplate
+  summary: ''
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/DeleteCredential
+  method: DELETE
+  operation_id: SdsCustomer/DeleteCredential
+  summary: Deletes the credential.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/RunOperation
+  method: PUT
+  operation_id: SdsCustomer/RunOperation
+  summary: Run again a specific SDS operation by id
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/SetCredential
+  method: POST
+  operation_id: SdsCustomer/SetCredential
+  summary: Sets the credential.
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/Update
+  method: PATCH
+  operation_id: SdsCustomer/Update
+  summary: Update Customer Jam settings
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/UpdateAssessTemplate
+  method: PUT
+  operation_id: SdsCustomer/UpdateAssessTemplate
+  summary: ''
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsCustomer/UploadVJamcDevices
+  method: POST
+  operation_id: SdsCustomer/UploadVJamcDevices
+  summary: Upload the WPP payload file to onboard WPP SDS devices
+  tags:
+  - SdsCustomerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/AbortDeviceReboot
+  method: POST
+  operation_id: SdsDevice/AbortDeviceReboot
+  summary: Abort a scheduled device reboot.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/AbortDeviceUpdateFirmware
+  method: POST
+  operation_id: SdsDevice/AbortDeviceUpdateFirmware
+  summary: Abort a scheduled firmware upgrade.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/AssessAndRemediate
+  method: POST
+  operation_id: SdsDevice/AssessAndRemediate
+  summary: Run an Assess and Remediate operation
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/CheckDeviceOperation
+  method: PUT
+  operation_id: SdsDevice/CheckDeviceOperation
+  summary: CheckDeviceOperation
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/CopyPolicy
+  method: PUT
+  operation_id: SdsDevice/CopyPolicy
+  summary: Copy device config items to a new policy entity
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/DeleteDeviceCredential
+  method: DELETE
+  operation_id: SdsDevice/DeleteDeviceCredential
+  summary: Deletes the device credential.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/GetDevicesWithFirmwareOutOfDate
+  method: POST
+  operation_id: SdsDevice/GetDevicesWithFirmwareOutOfDate
+  summary: Gets the devices with firmware out of date.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/HideEarlyReplacement
+  method: PUT
+  operation_id: SdsDevice/HideEarlyReplacement
+  summary: Hides the supply detail.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/ListSdsAssessAndRemediate
+  method: POST
+  operation_id: SdsDevice/ListSdsAssessAndRemediate
+  summary: ''
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/ListSdsCredentials
+  method: POST
+  operation_id: SdsDevice/ListSdsCredentials
+  summary: ''
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/ListSdsMessageSuppression
+  method: POST
+  operation_id: SdsDevice/ListSdsMessageSuppression
+  summary: This operation gets lists of devices with Message suppression paged and
+    filtered
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/ListSdsRapa
+  method: POST
+  operation_id: SdsDevice/ListSdsRapa
+  summary: ''
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/ListSdsReboot
+  method: POST
+  operation_id: SdsDevice/ListSdsReboot
+  summary: ''
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/PerformPrintQualityDiagnostics
+  method: POST
+  operation_id: SdsDevice/PerformPrintQualityDiagnostics
+  summary: Perform a Print Quality Diagnostics operation on this device
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/RemoveFromCloudDCA
+  method: DELETE
+  operation_id: SdsDevice/RemoveFromCloudDCA
+  summary: Remove a device from HP SDS
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/RemoveFromSDS
+  method: DELETE
+  operation_id: SdsDevice/RemoveFromSDS
+  summary: Remove a device from HP SDS
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/RetrieveDeviceData
+  method: POST
+  operation_id: SdsDevice/RetrieveDeviceData
+  summary: Retrieves the device data.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/SendPanelMessage
+  method: POST
+  operation_id: SdsDevice/SendPanelMessage
+  summary: Send a message to the printer panel
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/SetDeviceConfigData
+  method: POST
+  operation_id: SdsDevice/SetDeviceConfigData
+  summary: Sets the device configuration data.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/SetDeviceCredential
+  method: POST
+  operation_id: SdsDevice/SetDeviceCredential
+  summary: Sets the device credential.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/SetDeviceUpdateFirmware
+  method: POST
+  operation_id: SdsDevice/SetDeviceUpdateFirmware
+  summary: Sets the device update firmware.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/SetDevicesReboot
+  method: POST
+  operation_id: SdsDevice/SetDevicesReboot
+  summary: Set the devices specified to reboot at a specific date.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/SetOnDeviceServices
+  method: POST
+  operation_id: SdsDevice/SetOnDeviceServices
+  summary: Sets the device user interface attributes.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/UpdateConfigItems
+  method: POST
+  operation_id: SdsDevice/UpdateConfigItems
+  summary: Retrieves the device data.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsDevice/UpdateDevicesFirmware
+  method: PUT
+  operation_id: SdsDevice/UpdateDevicesFirmware
+  summary: Updates the devices firmware.
+  tags:
+  - SdsDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsScan/ScanConnectors
+  method: POST
+  operation_id: SdsScan/ScanConnectors
+  summary: Retrieve saved SDS CLOUD customer data
+  tags:
+  - SdsScanApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsScan/ScanCustomer
+  method: POST
+  operation_id: SdsScan/ScanCustomer
+  summary: Retrieve saved SDS CLOUD customer data
+  tags:
+  - SdsScanApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SdsScan/ScanDevices
+  method: POST
+  operation_id: SdsScan/ScanDevices
+  summary: Run an SDS Scan on a specific customer
+  tags:
+  - SdsScanApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/CreateInAdvance
+  method: POST
+  operation_id: ShippedSupply/CreateInAdvance
+  summary: Creates a shipped supply entry for a device (and alert).
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/CreateOnAlert
+  method: POST
+  operation_id: ShippedSupply/CreateOnAlert
+  summary: Creates a shipped supply entry for a device (and alert).
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/CreateStock
+  method: POST
+  operation_id: ShippedSupply/CreateStock
+  summary: Creates a shipped supply entry for a device (and alert).
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/Get
+  method: POST
+  operation_id: ShippedSupply/Get
+  summary: Gets the specified request.
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/List
+  method: POST
+  operation_id: ShippedSupply/List
+  summary: Lists the specified request.
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/Log
+  method: POST
+  operation_id: ShippedSupply/Log
+  summary: Gets the log.
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/MassiveUpdate
+  method: POST
+  operation_id: ShippedSupply/MassiveUpdate
+  summary: Update massive supply alerts
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ShippedSupply/Update
+  method: POST
+  operation_id: ShippedSupply/Update
+  summary: Updates the specified request.
+  tags:
+  - ShippedSupply
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /StandardProduct/CreateOrUpdateOperation
+  method: POST
+  operation_id: StandardProduct/CreateOrUpdateOperation
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /StandardProduct/ProcessOperation
+  method: POST
+  operation_id: StandardProduct/ProcessOperation
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /StandardProduct/RollbackOperation
+  method: POST
+  operation_id: StandardProduct/RollbackOperation
+  summary: ''
+  tags:
+  - StandardProduct
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SupplyAlert/Get
+  method: POST
+  operation_id: SupplyAlert/Get
+  summary: Gets a specific alert by its id
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SupplyAlert/List
+  method: POST
+  operation_id: SupplyAlert/List
+  summary: Returns a list of opened alerts (not installed yet).
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SupplyAlert/ListByOffice
+  method: POST
+  operation_id: SupplyAlert/ListByOffice
+  summary: Returns a list of opened alerts (not installed yet) by customer.
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SupplyAlert/MassiveUpdate
+  method: POST
+  operation_id: SupplyAlert/MassiveUpdate
+  summary: Update massive supply alerts
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SupplyAlert/PostponeAlert
+  method: PUT
+  operation_id: SupplyAlert/PostponeAlert
+  summary: Postpone an alert until percentage
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /SupplyAlert/Update
+  method: POST
+  operation_id: SupplyAlert/Update
+  summary: Updates a supply alert
+  tags:
+  - SupplyAlert
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Ticket/CreateTicket
+  method: POST
+  operation_id: Ticket/CreateTicket
+  summary: Create the ticket
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Ticket/CreateTicketChild
+  method: POST
+  operation_id: Ticket/CreateTicketChild
+  summary: Create the ticket
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /Ticket/GetSubTypesByCategories
+  method: POST
+  operation_id: Ticket/GetSubTypesByCategories
+  summary: Returns the categories and subtypes gerarchy
+  tags:
+  - Ticket
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TraceVolume/CloseEvent
+  method: POST
+  operation_id: TraceVolume/CloseEvent
+  summary: Close a TraceVolume configuration event
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TraceVolume/Create
+  method: POST
+  operation_id: TraceVolume/Create
+  summary: Create the TraceVolume alert configuration
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TraceVolume/CreateManualEvent
+  method: POST
+  operation_id: TraceVolume/CreateManualEvent
+  summary: Create a manual TraceVolume configuration event
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TraceVolume/Delete
+  method: DELETE
+  operation_id: TraceVolume/Delete
+  summary: Set a specific trace volume to deleted
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TraceVolume/ResetEvents
+  method: PUT
+  operation_id: TraceVolume/ResetEvents
+  summary: Reset the TraceVolume configuration events and set a new one
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TraceVolume/Update
+  method: PUT
+  operation_id: TraceVolume/Update
+  summary: Update the TraceVolume alert configuration
+  tags:
+  - TraceVolume
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /TradingPartner/Update
+  method: PUT
+  operation_id: TradingPartner/Update
+  summary: Create the tradingPartner
+  tags:
+  - TradingPartnerApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /WhiteLabel/Update
+  method: PUT
+  operation_id: WhiteLabel/Update
+  summary: "TResponse\r\n            Update the white label"
+  tags:
+  - WhiteLabel
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /WhiteLabel/UpdateDcaLicenses
+  method: PUT
+  operation_id: WhiteLabel/UpdateDcaLicenses
+  summary: Update a DCA licence text
+  tags:
+  - WhiteLabel
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /WhiteLabel/UpdateTemplates
+  method: PUT
+  operation_id: WhiteLabel/UpdateTemplates
+  summary: Updates and email template
+  tags:
+  - WhiteLabel
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ZebraDevice/SetDevicesReboot
+  method: POST
+  operation_id: ZebraDevice/SetDevicesReboot
+  summary: Reboot zebra devices
+  tags:
+  - ZebraDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ZebraDevice/SetDevicesUpdateFirmware
+  method: POST
+  operation_id: ZebraDevice/SetDevicesUpdateFirmware
+  summary: Update firmware for zebra devices
+  tags:
+  - ZebraDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /ZebraDevice/SetZebraSettings
+  method: POST
+  operation_id: ZebraDevice/SetZebraSettings
+  summary: Sets the zebra settings.
+  tags:
+  - ZebraDeviceApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /azuread/CreateAzureDomain
+  method: POST
+  operation_id: azuread/CreateAzureDomain
+  summary: Create the azure domain configuration.
+  tags:
+  - AzureADApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /azuread/UpdateAzureDomain
+  method: PUT
+  operation_id: azuread/UpdateAzureDomain
+  summary: Update the azure domain configuration.
+  tags:
+  - AzureADApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /okta/CreateOktaDomain
+  method: POST
+  operation_id: okta/CreateOktaDomain
+  summary: Create the Okta domain configuration.
+  tags:
+  - OktaApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
+- path: /okta/UpdateOktaDomain
+  method: PUT
+  operation_id: okta/UpdateOktaDomain
+  summary: Update the Okta domain configuration.
+  tags:
+  - OktaApi
+  auth:
+    scheme: bearer
+    header: Authorization
+  status: skipped
+  skip_reason: write_prohibited
