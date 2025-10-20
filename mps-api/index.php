@@ -107,6 +107,7 @@ function getSystemDiagnostics() {
             'index.php' => file_exists(__DIR__ . '/index.php'),
             'engine.php' => file_exists(__DIR__ . '/engine.php'),
             'SwaggerActionRegistry.php' => file_exists(__DIR__ . '/SwaggerActionRegistry.php'),
+            'payload_templates.php' => file_exists(__DIR__ . '/payload_templates.php'),
             'Swagger.json' => file_exists(__DIR__ . '/Swagger.json') || file_exists(__DIR__ . '/swagger.json'),
             '.env' => file_exists(__DIR__ . '/.env'),
         ],
