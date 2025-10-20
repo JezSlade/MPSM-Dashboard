@@ -45,6 +45,8 @@ jobs:
           state-name: .ftp-deploy-sync-state.json
           dry-run: false
           dangerous-clean-slate: false
+          # NOTE: .env files ARE deployed (not in exclude list)
+          # This includes mps-api/.env with OAuth credentials
           exclude: |
             **/.git/**
             **/.github/**
