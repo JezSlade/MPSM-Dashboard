@@ -361,6 +361,7 @@ return [
     ],
     "Device/Deleted/List" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -369,6 +370,7 @@ return [
     ],
     "Device/Deleted/ListByDealer" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -768,6 +770,11 @@ return [
         "query" => [
             "dealerCode" => null,
             "id" => null,
+        ],
+    ],
+    "Integrations/GetJoinedCustomers" => [
+        "query" => [
+            "dealerCode" => null,
         ],
     ],
     "Office/OfficeFloor/GetPin" => [
