@@ -948,7 +948,7 @@ try {
                 ]
             ],
             'components' => [
-                'schemas' => []
+                'schemas' => new stdClass()
             ],
             'x-implementation-guide' => [
                 'dealer_defaults' => [
