@@ -49,6 +49,21 @@ class SwaggerActionRegistry
     }
 
     /**
+     * Resolve a schema (or $ref) into a fully merged structure for default generation.
+     *
+     * @param array $schema
+     * @return array
+     */
+    public function resolveSchemaFor(array $schema): array
+    {
+        if (empty($schema)) {
+            return [];
+        }
+
+        return $this->resolveSchema($schema);
+    }
+
+    /**
      * Retrieve metadata for an action.
      *
      * @param string $actionName
@@ -496,4 +511,3 @@ class SwaggerActionRegistry
         return array_unique($aliases);
     }
 }
-
