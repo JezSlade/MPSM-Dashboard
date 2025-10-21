@@ -1054,7 +1054,19 @@ class MPSMonitorEngine {
 
         // Dealer information - HARD-CODED DEFAULTS (NY06AGDWUQ / SZ13qRwU5GtFLj0i_CbEgQ2)
         // This is the only dealer code we will ever use
-        if ($paramLower === 'code' || $paramLower === 'dealercode' || $paramLower === 'dealer_code') {
+        if ($paramLower === 'dealercode' || $paramLower === 'dealer_code') {
+            return self::$config['DEALER_CODE'] ?? 'NY06AGDWUQ';
+        }
+
+        if ($paramLower === 'code') {
+            if (stripos($action, 'Customer') !== false) {
+                $seed = DomainSeeder::getSeedFor('customerCode');
+                if ($seed !== null) {
+                    return $seed;
+                }
+                return self::$config['CUSTOMER_CODE'] ?? null;
+            }
+
             return self::$config['DEALER_CODE'] ?? 'NY06AGDWUQ';
         }
 
