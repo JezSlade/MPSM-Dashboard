@@ -819,7 +819,7 @@ try {
                                                 'type' => 'object',
                                                 'description' => 'Parameters for the action. Most parameters are auto-populated from templates. Dealer code (NY06AGDWUQ) is always used.',
                                                 'additionalProperties' => true,
-                                                'example' => []
+                                                'example' => new stdClass()
                                             ]
                                         ]
                                     ],
@@ -828,21 +828,21 @@ try {
                                             'summary' => 'Get dealer alert limits',
                                             'value' => [
                                                 'action' => 'AlertLimit/Dealer/Get',
-                                                'params' => []
+                                                'params' => new stdClass()
                                             ]
                                         ],
                                         'list_api_clients' => [
                                             'summary' => 'List API clients',
                                             'value' => [
                                                 'action' => 'ApiClient/List',
-                                                'params' => []
+                                                'params' => new stdClass()
                                             ]
                                         ],
                                         'list_custom_fields' => [
                                             'summary' => 'List custom fields',
                                             'value' => [
                                                 'action' => 'CustomField/List',
-                                                'params' => []
+                                                'params' => new stdClass()
                                             ]
                                         ]
                                     ]
