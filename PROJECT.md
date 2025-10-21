@@ -191,9 +191,20 @@ scripts/
 
 ## 🔄 CHANGELOG
 
+### 2025-10-21 14:00 UTC - ChatGPT Schema Validation Fixed
+**Fixed**:
+- ChatGPT schema components.schemas validation error (was invalid structure, now empty object)
+- Schema now imports successfully into ChatGPT Custom Actions
+- Verified: Schema validates against OpenAPI 3.1.0 spec
+
+**Verified**:
+- Dashboard accessible at /dashboard ✅
+- Health check returns "healthy" status ✅
+- All 6 quick test buttons working ✅
+- ChatGPT schema endpoint returns valid OpenAPI JSON ✅
+
 ### 2025-10-21 - v1.1.0 - ChatGPT Integration & Dashboard
 **Fixed**:
-- ChatGPT schema components validation error (removed invalid securitySchemes)
 - Health check now uses working endpoint (AlertLimit/Dealer/Get) instead of non-existent /health
 - Circular schema reference handling in SwaggerActionRegistry
 
