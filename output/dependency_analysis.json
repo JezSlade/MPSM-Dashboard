@@ -1,0 +1,5654 @@
+{
+  "summary": {
+    "no_deps": [
+      "Account/GetPsk2faDataForProfile",
+      "Account/GetPsk2faDataForAccount",
+      "CustomerNotification/GetNotificationPlaceholders",
+      "DealerNotification/GetNotificationPlaceholders",
+      "Device/MaintenanceAlerts/List",
+      "Integrations/GetLogisticPlaceholders",
+      "Orders/GetOrderLineStatuses",
+      "Orders/GetOrderAdditionalInfo",
+      "Orders/GetOrderProofOfDelivery",
+      "Product/GetBrands",
+      "Product/GetSnmpDiscoveryBrands",
+      "Product/GetModels",
+      "StandardProduct/ListStandardProducts",
+      "Ticket/GetTicketByNumber",
+      "WhiteLabel/GetWhitelabelPlaceholders"
+    ],
+    "dealer_only": [
+      "AlertLimit2/Dealer/GetDefault",
+      "AlertLimit2/Dealer/GetProductList",
+      "AlertLimit2/Customer/GetDefault",
+      "AlertLimit2/Customer/GetProductList",
+      "AlertLimit/Dealer/Get",
+      "AlertLimit/Customer/Get",
+      "AlertLimit/Customer/Product/List",
+      "ApiClient/List",
+      "azuread/GetDealerAzureSettings",
+      "azuread/GetCustomerAzureSettings",
+      "Customer/AlertSettings/Get",
+      "Customer/Accessories/Get",
+      "Customer/AdvancedOptions/Get",
+      "Customer/CustomerServicesStatus/Get",
+      "Customer/eXplorerSettings/Get",
+      "Customer/EpsonSettings/Get",
+      "Customer/EpsonUSBCustomerId/Get",
+      "CustomerDashboard",
+      "CustomerDashboard/Pages",
+      "CustomerNotification/List",
+      "CustomField/List",
+      "Dealer/Customizations/Get",
+      "Dealer/AccountingSettings/Get",
+      "Dealer/RemoteOfflineCountersSettings/Get",
+      "Dealer/DistributorSettings/Get",
+      "Dealer/DealerServicesStatus/Get",
+      "Dealer/AlertSettings/Get",
+      "Dealer/eXplorerSettings/Get",
+      "Dealer/AdvancedOptions/Get",
+      "Dealer/AlertLimitOptions/Get",
+      "Dealer/GetDealerHierarchy",
+      "Dealer/DemoRequest/List",
+      "Dealer/Onboarding/Get",
+      "Dealer/GetDealerTagsHierarchy",
+      "Dealer/ExportDealerTagsHierarchy",
+      "Dealer/CounterBlend/List",
+      "Dealer/CounterBlend/Search",
+      "Dealer/CounterBlendToStandard/List",
+      "DealerNotification/Template/Get",
+      "DealerNotification/List",
+      "DealerProduct/List",
+      "DealerSupply/List",
+      "DealerSupply/Count",
+      "DealerSupply/Export",
+      "DealerSupplySet/Count",
+      "DealerSupplySet/ExportExcel",
+      "DealerSupplySet/Export",
+      "DealerSupplySet/ListDealerSupplySetFromStandardModels",
+      "Device/Deleted/ListByDealer",
+      "Explorer/GetClusterCounters",
+      "Explorer/GetConnectorEndpoints",
+      "Explorer/Staging/List",
+      "Explorer/GetDcaReleaseNotes",
+      "Explorer/GetDcaCurrentVersion",
+      "Integrations/List",
+      "Integrations/GetNew",
+      "okta/GetDealerOktaSettings",
+      "okta/GetCustomerOktaSettings",
+      "Product/Dealer/List",
+      "Product/Dealer/ListBrands",
+      "Product/Dealer/ListModels",
+      "SdsCustomer/GetAssessTemplates",
+      "StandardProduct/GetStandardProductsSummary",
+      "StandardProduct/GetProductsToAssociate",
+      "StandardProduct/ListDevicesInOperation",
+      "TradingPartner/List",
+      "WhiteLabel/Get"
+    ],
+    "customer_required": [
+      "AlertLimit2/GetAllLimits",
+      "AlertLimit2/Customer/GetProduct",
+      "DealerSupplyPriceListing/List",
+      "DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts",
+      "DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations",
+      "Device/Deleted/List",
+      "Explorer/Cluster/List",
+      "Explorer/ExplorerDataInfo/List",
+      "Explorer/ExplorerDataCommand/List",
+      "Explorer/Cluster/AutoClusters",
+      "Explorer/GetExplorerDatas",
+      "Explorer/GetConnectors",
+      "Explorer/GetExplorerSetupLink",
+      "Explorer/GetJamcSetupLink",
+      "Explorer/License/List",
+      "Explorer/Configuration/List",
+      "Explorer/Configuration/Get",
+      "Integrations/GetJoinedCustomers",
+      "Integrations/GetJoinedDevices",
+      "Integrations/eautomate/runjoin",
+      "Integrations/eautomate/GetEAutomateLog",
+      "Orders/GetOrders",
+      "Product/Customer/List",
+      "Role/List",
+      "SdsAction/GetDeviceActions",
+      "SdsConnector/GetConnectors",
+      "SdsConnector/GetJamcConnectors",
+      "SdsConnector/GetWppConnectors",
+      "SdsConnector/GetLogs",
+      "SdsConnector/DownloadLog",
+      "SdsCustomer/GetCustomerOperations",
+      "SdsCustomer/GetCustomerOperation",
+      "SdsCustomer/GetAssessTemplate",
+      "StandardProduct/ListOperations",
+      "StandardProduct/GetOperation",
+      "Ticket/GetTickets"
+    ],
+    "device_required": [
+      "AlertLimit2/Device/GetDefault",
+      "AlertLimit/Device/Get",
+      "Counter/Device/List",
+      "Counter/Device/Export",
+      "Dealer/CounterBlendToStandard/GetByDevice",
+      "Device/GetDeviceAdditionalInfos",
+      "Device/GetLfpCounters",
+      "Device/GetDeviceGapInfos",
+      "Device/GetSuppliesDetailsSummary",
+      "Device/GetSuppliesDetails",
+      "Device/GetSuppliesDetailsInfo",
+      "Device/GetZebraSuppliesDetailsSummary",
+      "Device/ExplorerDataAffinities/List",
+      "SdsAction/GetDeviceActionsDashboard",
+      "SdsAction/GetDeviceAction",
+      "SdsDevice/GetOnDeviceServices",
+      "SdsDevice/GetDeviceOperation",
+      "SdsDevice/GetDevicesOperations",
+      "SdsDevice/GetDeviceRemoteEws",
+      "SdsDevice/GetSupplyDetails",
+      "SdsDevice/GetConfigItems",
+      "SdsDevice/GetZendeskTicketInfo",
+      "SdsDevice/GetCounters",
+      "SdsDevice/GetAssessTemplate",
+      "SdsEvent/GetDeviceEvents",
+      "SdsEvent/GetDeviceEvent",
+      "SdsScan/ScanDevice",
+      "SupplyAlert/GetAvailableSuppliesForADevice"
+    ],
+    "complex_deps": [
+      "Account/GetPsk2faData",
+      "AlertLimit2/Dealer/GetProduct",
+      "Analytics/GetReportResult",
+      "Analytics/GetReportFileResult",
+      "ApiClient/Get",
+      "ApiClient/Account/List",
+      "ApiClient/Account/Get",
+      "azuread/GetChallengeUrlRedirect",
+      "Counter/ListMaintenanceKitCounters",
+      "CustomerNotification/Get",
+      "CustomerNotification/GetSampleNotification",
+      "CustomField/Get",
+      "Dealer/DemoRequest/Get",
+      "Dealer/CounterBlend/Get",
+      "Dealer/CounterBlendToStandard/Get",
+      "DealerNotification/Get",
+      "DealerNotification/GetSampleNotification",
+      "DealerProduct/Get",
+      "DealerSupply/Get",
+      "DealerSupplyPriceListing/Get",
+      "DealerSupplySet/List",
+      "DealerSupplySet/Get",
+      "Explorer/Cluster/Get",
+      "Explorer/GetEndpointsLink",
+      "Explorer/Configuration/GetTestTableVersions",
+      "Explorer/RequestSendLogs",
+      "Explorer/DownloadLogs",
+      "Explorer/DataPings",
+      "Explorer/DataLogs",
+      "Explorer/AgentVersions",
+      "Explorer/ServiceVersions",
+      "Explorer/Dca4ClientVersions",
+      "Explorer/Dca4MonitorVersions",
+      "Explorer/GetDca4Otp",
+      "Integrations/Get",
+      "Office/OfficeFloor/List",
+      "Office/OfficeFloor/GetPin",
+      "okta/GetDomainRedirect",
+      "Orders/GetOrderLines",
+      "Project/GetDetail",
+      "Project/GetContractFile",
+      "Role/Get",
+      "Role/GetAllCapabilities",
+      "Saga/Get",
+      "Saga/GetSagaOperationLogMessage",
+      "SdsConnector/GetConnector",
+      "SdsCustomer/GetCredential",
+      "SdsScan/ScanImmediate",
+      "StandardProduct/GetExcelReport",
+      "Ticket/GetTicket",
+      "Ticket/GetAttachment",
+      "TraceVolume/List",
+      "TraceVolume/Get",
+      "TradingPartner/Get"
+    ]
+  },
+  "details": {
+    "Account/GetPsk2faData": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "platform"
+      ],
+      "all_params": [
+        {
+          "name": "platform",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Account/GetPsk2faDataForProfile": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "platform",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Account/GetPsk2faDataForAccount": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "platform",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "userName",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "password",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "psk2fa",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/GetAllLimits": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "deviceId"
+      ],
+      "all_params": [
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "deviceId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "productId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "alertLimitSource",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Dealer/GetDefault": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Dealer/GetProductList": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Dealer/GetProduct": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Customer/GetDefault": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Customer/GetProductList": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Customer/GetProduct": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit2/Device/GetDefault": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit/Dealer/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit/Customer/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit/Customer/Product/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "AlertLimit/Device/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Analytics/GetReportResult": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "idReport"
+      ],
+      "all_params": [
+        {
+          "name": "idReport",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        }
+      ]
+    },
+    "Analytics/GetReportFileResult": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "idReport",
+        "reportFormat"
+      ],
+      "all_params": [
+        {
+          "name": "idReport",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "reportFormat",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "ApiClient/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "ApiClient/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "ApiClient/Account/List": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "ApiClient/Account/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "azuread/GetChallengeUrlRedirect": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "name"
+      ],
+      "all_params": [
+        {
+          "name": "returnUrl",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "azuread/GetDealerAzureSettings": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "azuread/GetCustomerAzureSettings": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Counter/Device/List": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [
+        "fromDate",
+        "toDate"
+      ],
+      "all_params": [
+        {
+          "name": "fromDate",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "toDate",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Counter/Device/Export": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [
+        "fromDate",
+        "toDate"
+      ],
+      "all_params": [
+        {
+          "name": "exportToCsv",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "fromDate",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "toDate",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Counter/ListMaintenanceKitCounters": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/AlertSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/Accessories/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/AdvancedOptions/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/CustomerServicesStatus/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/eXplorerSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/EpsonSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Customer/EpsonUSBCustomerId/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomerDashboard": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomerDashboard/Pages": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomerNotification/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "notificationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "notificationMode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isActive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomerNotification/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomerNotification/GetSampleNotification": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomerNotification/GetNotificationPlaceholders": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "notificationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "notificationMode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomField/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "CustomField/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/Customizations/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/AccountingSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/RemoteOfflineCountersSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/DistributorSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/DealerServicesStatus/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/AlertSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/eXplorerSettings/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/AdvancedOptions/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/AlertLimitOptions/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/GetDealerHierarchy": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/DemoRequest/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "isActive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isDeclined",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/DemoRequest/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/Onboarding/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/GetDealerTagsHierarchy": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/ExportDealerTagsHierarchy": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/CounterBlend/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "brand",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "source",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/CounterBlend/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/CounterBlend/Search": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "brand",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "source",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/CounterBlendToStandard/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/CounterBlendToStandard/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Dealer/CounterBlendToStandard/GetByDevice": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerNotification/Template/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerNotification/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "notificationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "notificationMode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isActive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerNotification/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerNotification/GetSampleNotification": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerNotification/GetNotificationPlaceholders": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "notificationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "notificationMode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerProduct/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerProduct/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupply/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "colorType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "color",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "supplyType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupply/Count": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupply/Export": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "colorType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "color",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "supplyType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupply/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "code",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplyPriceListing/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplyPriceListing/List": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "partNumber",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "supplyType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "colorType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "showOnlyActive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "hasDevicesToAssociate"
+      ],
+      "all_params": [
+        {
+          "name": "brand",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "model",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "hasDevicesToAssociate",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isStandard",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/Count": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/ExportExcel": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/Export": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "idDealerSupplySet",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "idCustomer",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "idDealerSupplySet",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "idCustomer",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "DealerSupplySet/ListDealerSupplySetFromStandardModels": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetDeviceAdditionalInfos": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetLfpCounters": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetDeviceGapInfos": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetSuppliesDetailsSummary": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetSuppliesDetails": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetSuppliesDetailsInfo": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "supplyType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "colorType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "idMaintenanceKitType",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "idMaintenanceKitColor",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "idMaintenanceKitDescription",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/GetZebraSuppliesDetailsSummary": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/MaintenanceAlerts/List": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "idInstalledProduct",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterByOpened",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "filterByClosed",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "filterByPanelMessageAlertConfiguration",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/ExplorerDataAffinities/List": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/Deleted/ListByDealer": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Device/Deleted/List": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Cluster/List": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "filterDealerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/ExplorerDataInfo/List": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/ExplorerDataCommand/List": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetClusterCounters": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Cluster/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Cluster/AutoClusters": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "listType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterDealerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "searchKey",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sDSOnly",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isClustered",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isV4",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isEmbedded",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "communicationStatus",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterDealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "hasConfiguration",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetExplorerDatas": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "listType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterDealerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "searchKey",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sDSOnly",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isClustered",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isV4",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isEmbedded",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "communicationStatus",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterDealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "hasConfiguration",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetConnectorEndpoints": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetConnectors": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "listType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterDealerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerCodes",
+          "required": false,
+          "type": "array",
+          "in": "query"
+        },
+        {
+          "name": "searchKey",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sDSOnly",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isClustered",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isV4",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isEmbedded",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "communicationStatus",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterDealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterCustomerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "hasConfiguration",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetExplorerSetupLink": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isDcaV4",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "platform",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetEndpointsLink": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "platform"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "platform",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetJamcSetupLink": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isDcaV4",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "platform",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/License/List": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Staging/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Configuration/List": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "explorerDataIdentifier",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Configuration/Get": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "configurationId"
+      ],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "configurationId",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Configuration/GetTestTableVersions": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/RequestSendLogs": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "sendLogFull",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "sendCheckUrls",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/DownloadLogs": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/DataPings": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/DataLogs": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/AgentVersions": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/ServiceVersions": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Dca4ClientVersions": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/Dca4MonitorVersions": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetDcaReleaseNotes": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetDcaCurrentVersion": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Explorer/GetDca4Otp": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "isActive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isForDelivery",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isForMeters",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isUpdateSupplies",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isForNotification",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/GetLogisticPlaceholders": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/GetNew": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerGatewayType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "topic",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/GetJoinedCustomers": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/GetJoinedDevices": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/eautomate/runjoin": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Integrations/eautomate/GetEAutomateLog": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Office/OfficeFloor/List": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Office/OfficeFloor/GetPin": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "okta/GetDomainRedirect": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "oktaDomain"
+      ],
+      "all_params": [
+        {
+          "name": "oktaDomain",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "okta/GetDealerOktaSettings": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "okta/GetCustomerOktaSettings": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Orders/GetOrders": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "request.pageNumber",
+        "request.pageRows",
+        "request.sortColumn",
+        "request.sortOrder"
+      ],
+      "all_params": [
+        {
+          "name": "request.dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.purchaseOrderId",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.serialNumber",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.fromDate",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.toDate",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.status",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Orders/GetOrderLines": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "request.pageNumber",
+        "request.pageRows",
+        "request.sortColumn",
+        "request.sortOrder"
+      ],
+      "all_params": [
+        {
+          "name": "request.dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.orderId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.fromDate",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.toDate",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.status",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.provideAllRows",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "request.sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "request.sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Orders/GetOrderLineStatuses": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "request.orderId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Orders/GetOrderAdditionalInfo": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "request.orderId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Orders/GetOrderProofOfDelivery": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "request.orderId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/GetBrands": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/GetSnmpDiscoveryBrands": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/GetModels": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "brand",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/Dealer/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "brand",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/Dealer/ListBrands": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/Dealer/ListModels": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "brand",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Product/Customer/List": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Project/GetDetail": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Project/GetContractFile": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Role/List": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "showOnlyRolesForCustomer",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Role/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Role/GetAllCapabilities": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "isForAccount"
+      ],
+      "all_params": [
+        {
+          "name": "isForAccount",
+          "required": true,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Saga/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Saga/GetSagaOperationLogMessage": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsAction/GetDeviceActions": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "deviceId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "state",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isOpen",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "severity",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isPredictive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "actionType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsAction/GetDeviceActionsDashboard": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "deviceId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "group",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "state",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isOpen",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "severity",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "actionType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isPredictive",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsAction/GetDeviceAction": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsConnector/GetConnectors": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerfilter",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "includeNotRegistered",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "severityFilter",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsConnector/GetJamcConnectors": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsConnector/GetWppConnectors": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsConnector/GetConnector": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsConnector/GetLogs": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "connectorId",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsConnector/DownloadLog": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "connectorId",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsCustomer/GetCredential": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsCustomer/GetCustomerOperations": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "operationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "operationStatus",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsCustomer/GetCustomerOperation": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "operationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsCustomer/GetAssessTemplates": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsCustomer/GetAssessTemplate": {
+      "requires_dealer": false,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetOnDeviceServices": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetDeviceOperation": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "deviceId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "operationType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetDevicesOperations": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "deviceId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetDeviceRemoteEws": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetSupplyDetails": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "supplyType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetConfigItems": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetZendeskTicketInfo": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetCounters": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsDevice/GetAssessTemplate": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsEvent/GetDeviceEvents": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "deviceId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dateFrom",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "eventType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsEvent/GetDeviceEvent": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsScan/ScanImmediate": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SdsScan/ScanDevice": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/GetStandardProductsSummary": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/GetProductsToAssociate": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/ListStandardProducts": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/ListOperations": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/GetOperation": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "customerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/ListDevicesInOperation": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "operationId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "StandardProduct/GetExcelReport": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "SupplyAlert/GetAvailableSuppliesForADevice": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": true,
+      "requires_other": [
+        "supplyType",
+        "colorType",
+        "maintenanceKitTypeId",
+        "maintenanceKitColorId",
+        "warning",
+        "language"
+      ],
+      "all_params": [
+        {
+          "name": "deviceId",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "supplyType",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "colorType",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "maintenanceKitTypeId",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "maintenanceKitColorId",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "warning",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "language",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "showOnlyCurrentSuppliesInUse",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        }
+      ]
+    },
+    "Ticket/GetTickets": {
+      "requires_dealer": true,
+      "requires_customer": true,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "customerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "dealerId",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "serialAssetNumber",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "ipAddress",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "resolve",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "idTicket",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "category",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "isFeatureRequest",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isParked",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isFlagged",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "isWaitingThirdLevel",
+          "required": false,
+          "type": "boolean",
+          "in": "query"
+        },
+        {
+          "name": "subType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "priority",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "openedFrom",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "openedTo",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "ownerName",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "assignedTo",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "ticketType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "oberonTicket",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sdsTicket",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Ticket/GetTicket": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "Ticket/GetTicketByNumber": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "ticketNumber",
+          "required": false,
+          "type": "integer",
+          "in": "query"
+        }
+      ]
+    },
+    "Ticket/GetAttachment": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "attachmentName",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "TraceVolume/List": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "TraceVolume/Get": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "TradingPartner/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [
+        "id"
+      ],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "TradingPartner/List": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "dealerCode",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "filterText",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "pageNumber",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "pageRows",
+          "required": true,
+          "type": "integer",
+          "in": "query"
+        },
+        {
+          "name": "sortColumn",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        },
+        {
+          "name": "sortOrder",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "WhiteLabel/Get": {
+      "requires_dealer": true,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "code",
+          "required": true,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    },
+    "WhiteLabel/GetWhitelabelPlaceholders": {
+      "requires_dealer": false,
+      "requires_customer": false,
+      "requires_device": false,
+      "requires_other": [],
+      "all_params": [
+        {
+          "name": "portalEmailTemplateType",
+          "required": false,
+          "type": "string",
+          "in": "query"
+        }
+      ]
+    }
+  }
+}

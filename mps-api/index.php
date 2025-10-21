@@ -717,6 +717,17 @@ try {
         sendResponse($health);
     }
 
+    // Route: Domain seeds (for diagnostics)
+    if ($path === '/seeds') {
+        $seeds = $engine->getDomainSeeds();
+        sendResponse([
+            'success' => true,
+            'seeds' => $seeds,
+            'count' => count($seeds),
+            'timestamp' => date('c')
+        ]);
+    }
+
     // Route: Dashboard (HTML interface)
     if ($path === '/dashboard' || $path === '/dashboard.html') {
         $dashboardFile = __DIR__ . '/dashboard.html';

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/SwaggerActionRegistry.php';
+require_once __DIR__ . '/DomainSeeder.php';
 /**
  * MPS Monitors API Engine
  * 
@@ -21,6 +22,8 @@ class MPSMonitorEngine {
     private static $lastAuthError = null;
     private static $actionRegistry = null;
     private static $payloadTemplates = null;
+    private static $domainSeeds = null;
+    private static $seedsCollected = false;
 
     // Error codes
     const ERR_CONFIG = 1000;
@@ -313,6 +316,21 @@ class MPSMonitorEngine {
         // Load payload templates if not already loaded
         if (self::$payloadTemplates === null) {
             self::loadPayloadTemplates();
+        }
+
+        // Initialize domain seeds on first request (lazy loading)
+        // Skip seed collection for seed-collecting actions to avoid recursion
+        $skipSeedInit = in_array($action, [
+            'Integrations/GetJoinedCustomers',
+            'ApiClient/List',
+            'Role/List',
+            'CustomField/List',
+            'Product/GetBrands',
+            'Product/GetModels'
+        ]);
+
+        if (!self::$seedsCollected && !$skipSeedInit) {
+            $this->initializeDomainSeeds();
         }
 
         // Merge discovered payload template if available
@@ -1038,13 +1056,38 @@ class MPSMonitorEngine {
             return self::$config['DEALER_ID'] ?? 'SZ13qRwU5GtFLj0i_CbEgQ2';
         }
 
-        // Customer information
+        // Customer information - try domain seeds first
         if ($paramLower === 'customercode' || $paramLower === 'customer_code') {
+            // Try domain seeds first
+            if (self::$domainSeeds !== null) {
+                $seed = DomainSeeder::getSeedFor('customerCode');
+                if ($seed !== null) {
+                    return $seed;
+                }
+            }
             return self::$config['CUSTOMER_CODE'] ?? null;
         }
 
         if ($paramLower === 'customerid' || $paramLower === 'customer_id') {
+            // Try domain seeds first
+            if (self::$domainSeeds !== null) {
+                $seed = DomainSeeder::getSeedFor('customerId');
+                if ($seed !== null) {
+                    return $seed;
+                }
+            }
             return self::$config['CUSTOMER_ID'] ?? null;
+        }
+
+        // Device ID - try domain seeds
+        if ($paramLower === 'id' || $paramLower === 'deviceid' || $paramLower === 'device_id') {
+            if (self::$domainSeeds !== null) {
+                $seed = DomainSeeder::getSeedFor('id');
+                if ($seed !== null) {
+                    return $seed;
+                }
+            }
+            return null;
         }
 
         // Date parameters - use reasonable date ranges
@@ -1258,6 +1301,43 @@ class MPSMonitorEngine {
         return $this->makeRequest("monitors/{$monitorId}/statistics", 'GET', [], ['period' => $period]);
     }
     
+    /**
+     * Initialize domain seeds by calling prerequisite endpoints
+     */
+    private function initializeDomainSeeds() {
+        if (self::$seedsCollected) {
+            return; // Already collected
+        }
+
+        try {
+            DomainSeeder::init($this);
+            $result = DomainSeeder::collectSeeds();
+
+            if ($result['success']) {
+                self::$domainSeeds = DomainSeeder::getSeeds();
+                self::$seedsCollected = true;
+
+                if (self::$config['MPS_DEBUG']) {
+                    self::logDebug('Domain seeds collected: ' . json_encode(self::$domainSeeds));
+                }
+            }
+        } catch (Exception $e) {
+            self::logWarning('Failed to collect domain seeds: ' . $e->getMessage());
+            self::$domainSeeds = [];
+            self::$seedsCollected = true; // Don't keep retrying
+        }
+    }
+
+    /**
+     * Get domain seeds (for diagnostics/testing)
+     */
+    public function getDomainSeeds() {
+        if (!self::$seedsCollected) {
+            $this->initializeDomainSeeds();
+        }
+        return self::$domainSeeds ?? [];
+    }
+
     /**
      * Health check with detailed diagnostics
      */
