@@ -1,0 +1,276 @@
+When calling the MPS API, use ONLY these verified working actions:
+
+
+Account:
+  - Account/GetProfile
+  - Account/GetPsk2faData
+  - Account/GetPsk2faDataForAccount
+  - Account/GetPsk2faDataForProfile
+
+AlertLimit:
+  - AlertLimit/Customer/Get
+  - AlertLimit/Customer/Product/List
+  - AlertLimit/Dealer/Get
+  - AlertLimit/Device/Get
+
+AlertLimit2:
+  - AlertLimit2/Customer/GetDefault
+  - AlertLimit2/Customer/GetProduct
+  - AlertLimit2/Customer/GetProductList
+  - AlertLimit2/Dealer/GetDefault
+  - AlertLimit2/Dealer/GetProduct
+  - AlertLimit2/Dealer/GetProductList
+  - AlertLimit2/Device/GetDefault
+  - AlertLimit2/GetAllLimits
+
+Analytics:
+  - Analytics/GetReportFileResult
+  - Analytics/GetReportResult
+
+ApiClient:
+  - ApiClient/Account/Get
+  - ApiClient/Account/List
+  - ApiClient/Get
+  - ApiClient/List
+
+Billing:
+  - Billing/GetInvoiceCategories
+
+Communication:
+  - Communication/GetPortalReleaseNotes
+
+Counter:
+  - Counter/Device/Export
+  - Counter/Device/List
+  - Counter/ListMaintenanceKitCounters
+
+CustomField:
+  - CustomField/Get
+  - CustomField/List
+
+Customer:
+  - Customer/Accessories/Get
+  - Customer/AdvancedOptions/Get
+  - Customer/AlertSettings/Get
+  - Customer/CustomerServicesStatus/Get
+  - Customer/EpsonSettings/Get
+  - Customer/EpsonUSBCustomerId/Get
+  - Customer/eXplorerSettings/Get
+
+CustomerDashboard:
+  - CustomerDashboard/Pages
+
+CustomerNotification:
+  - CustomerNotification/Get
+  - CustomerNotification/GetNotificationPlaceholders
+  - CustomerNotification/GetSampleNotification
+  - CustomerNotification/List
+
+Dealer:
+  - Dealer/AccountingSettings/Get
+  - Dealer/AdvancedOptions/Get
+  - Dealer/AlertLimitOptions/Get
+  - Dealer/AlertSettings/Get
+  - Dealer/CounterBlend/Get
+  - Dealer/CounterBlend/List
+  - Dealer/CounterBlend/Search
+  - Dealer/CounterBlendToStandard/Get
+  - Dealer/CounterBlendToStandard/GetByDevice
+  - Dealer/CounterBlendToStandard/List
+  - Dealer/Customizations/Get
+  - Dealer/DealerServicesStatus/Get
+  - Dealer/DistributorSettings/Get
+  - Dealer/ExportDealerTagsHierarchy
+  - Dealer/GetDealerHierarchy
+  - Dealer/GetDealerTagsHierarchy
+  - Dealer/Onboarding/Get
+  - Dealer/RemoteOfflineCountersSettings/Get
+  - Dealer/eXplorerSettings/Get
+
+DealerNotification:
+  - DealerNotification/Get
+  - DealerNotification/GetNotificationPlaceholders
+  - DealerNotification/GetSampleNotification
+  - DealerNotification/List
+  - DealerNotification/Template/Get
+
+DealerProduct:
+  - DealerProduct/Get
+  - DealerProduct/List
+
+DealerSupply:
+  - DealerSupply/Count
+  - DealerSupply/Export
+  - DealerSupply/Get
+  - DealerSupply/List
+
+DealerSupplyPriceListing:
+  - DealerSupplyPriceListing/Get
+  - DealerSupplyPriceListing/List
+
+DealerSupplySet:
+  - DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts
+  - DealerSupplySet/Count
+  - DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations
+  - DealerSupplySet/Export
+  - DealerSupplySet/ExportExcel
+  - DealerSupplySet/Get
+  - DealerSupplySet/List
+  - DealerSupplySet/ListDealerSupplySetFromStandardModels
+
+Device:
+  - Device/Deleted/List
+  - Device/Deleted/ListByDealer
+  - Device/ExplorerDataAffinities/List
+  - Device/GetDeviceAdditionalInfos
+  - Device/GetDeviceGapInfos
+  - Device/GetLfpCounters
+  - Device/GetSuppliesDetails
+  - Device/GetSuppliesDetailsInfo
+  - Device/GetSuppliesDetailsSummary
+  - Device/GetZebraSuppliesDetailsSummary
+  - Device/MaintenanceAlerts/List
+
+Explorer:
+  - Explorer/Cluster/AutoClusters
+  - Explorer/Cluster/Get
+  - Explorer/Cluster/List
+  - Explorer/Configuration/Get
+  - Explorer/Configuration/GetTestTableVersions
+  - Explorer/Configuration/List
+  - Explorer/DataPings
+  - Explorer/DownloadLogs
+  - Explorer/ExplorerDataCommand/List
+  - Explorer/ExplorerDataInfo/List
+  - Explorer/GetClusterCounters
+  - Explorer/GetConnectorEndpoints
+  - Explorer/GetConnectors
+  - Explorer/GetDca4Otp
+  - Explorer/GetDcaCurrentVersion
+  - Explorer/GetDcaReleaseNotes
+  - Explorer/GetEndpointsLink
+  - Explorer/GetExplorerDatas
+  - Explorer/GetExplorerSetupLink
+  - Explorer/GetJamcSetupLink
+  - Explorer/License/List
+  - Explorer/RequestSendLogs
+  - Explorer/Staging/List
+  - Explorer/V3/ReleaseNotes
+
+General:
+  - CustomerDashboard
+
+Integrations:
+  - Integrations/Get
+  - Integrations/GetJoinedCustomers
+  - Integrations/GetJoinedDevices
+  - Integrations/GetLogisticPlaceholders
+  - Integrations/GetNew
+  - Integrations/List
+  - Integrations/eautomate/GetEAutomateLog
+  - Integrations/eautomate/runjoin
+
+Office:
+  - Office/OfficeFloor/GetPin
+  - Office/OfficeFloor/List
+
+Orders:
+  - Orders/GetOrderLineStatuses
+
+Product:
+  - Product/Customer/List
+  - Product/Dealer/List
+  - Product/Dealer/ListBrands
+  - Product/Dealer/ListModels
+  - Product/GetBrands
+  - Product/GetModels
+  - Product/GetSnmpDiscoveryBrands
+
+Project:
+  - Project/GetContractFile
+  - Project/GetDetail
+
+Role:
+  - Role/Get
+  - Role/GetAllCapabilities
+  - Role/List
+
+SdsAction:
+  - SdsAction/GetDeviceAction
+  - SdsAction/GetDeviceActions
+  - SdsAction/GetDeviceActionsDashboard
+
+SdsConnector:
+  - SdsConnector/GetConnector
+  - SdsConnector/GetConnectors
+  - SdsConnector/GetJamcConnectors
+  - SdsConnector/GetLogs
+  - SdsConnector/GetWppConnectors
+
+SdsCustomer:
+  - SdsCustomer/GetAssessTemplate
+  - SdsCustomer/GetAssessTemplates
+  - SdsCustomer/GetCredential
+  - SdsCustomer/GetCustomerOperation
+  - SdsCustomer/GetCustomerOperations
+  - SdsCustomer/GetNewAssessTemplate
+
+SdsDevice:
+  - SdsDevice/GetAssessTemplate
+  - SdsDevice/GetConfigItems
+  - SdsDevice/GetCounters
+  - SdsDevice/GetDeviceOperation
+  - SdsDevice/GetDeviceRemoteEws
+  - SdsDevice/GetDevicesOperations
+  - SdsDevice/GetOnDeviceServices
+  - SdsDevice/GetSupplyDetails
+  - SdsDevice/GetZendeskTicketInfo
+
+SdsEvent:
+  - SdsEvent/GetDeviceEvent
+  - SdsEvent/GetDeviceEvents
+
+SdsScan:
+  - SdsScan/ScanDevice
+  - SdsScan/ScanImmediate
+
+StandardProduct:
+  - StandardProduct/GetExcelReport
+  - StandardProduct/GetOperation
+  - StandardProduct/GetProductsToAssociate
+  - StandardProduct/GetStandardProductsSummary
+  - StandardProduct/ListDevicesInOperation
+  - StandardProduct/ListOperations
+  - StandardProduct/ListStandardProducts
+
+SupplyAlert:
+  - SupplyAlert/GetAvailableMaintenanceKitColors
+  - SupplyAlert/GetAvailableMaintenanceKitTypes
+  - SupplyAlert/GetAvailableSuppliesForADevice
+
+TraceVolume:
+  - TraceVolume/Get
+  - TraceVolume/List
+
+TradingPartner:
+  - TradingPartner/Get
+  - TradingPartner/List
+
+WhiteLabel:
+  - WhiteLabel/Get
+  - WhiteLabel/GetWhiteLabelCustomizationByUrl
+  - WhiteLabel/GetWhitelabelPlaceholders
+
+azuread:
+  - azuread/GetCustomerAzureSettings
+  - azuread/GetDealerAzureSettings
+
+okta:
+  - okta/GetCustomerOktaSettings
+  - okta/GetDealerOktaSettings
+
+
+Total: 188 working actions
+
+All actions require dealer code NY06AGDWUQ (auto-populated).
+Most actions need no additional parameters.

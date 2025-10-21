@@ -1,0 +1,1130 @@
+[
+  {
+    "action": "Account/GetProfile",
+    "summary": "Gets profile of current authenticated user.",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Account/GetPsk2faData",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Account/GetPsk2faDataForAccount",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Account/GetPsk2faDataForProfile",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "AlertLimit/Customer/Get",
+    "summary": "Get customer Alert Limit settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit/Customer/Product/List",
+    "summary": "Get dealers Alert Limit settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit/Dealer/Get",
+    "summary": "Get dealers Alert Limit settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit/Device/Get",
+    "summary": "Get device Alert Limit settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit2/Customer/GetDefault",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit2/Customer/GetProduct",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit2/Customer/GetProductList",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "AlertLimit2/Dealer/GetDefault",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit2/Dealer/GetProduct",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit2/Dealer/GetProductList",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "AlertLimit2/Device/GetDefault",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "AlertLimit2/GetAllLimits",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Analytics/GetReportFileResult",
+    "summary": "Get result as file (Excel, CSV) from a saved report.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Analytics/GetReportResult",
+    "summary": "Get result from a saved report.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "ApiClient/Account/Get",
+    "summary": "GEt Api Client Detail",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "ApiClient/Account/List",
+    "summary": "Get Api user list",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "ApiClient/Get",
+    "summary": "GEt Api Client Detail",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "ApiClient/List",
+    "summary": "Get Api Clients for Dealer.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Billing/GetInvoiceCategories",
+    "summary": "Get Invoice Categories",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Communication/GetPortalReleaseNotes",
+    "summary": "Get Portal Release Notes",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Counter/Device/Export",
+    "summary": "Export detailed counters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Counter/Device/List",
+    "summary": "Returns detailed counters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Counter/ListMaintenanceKitCounters",
+    "summary": "Returns maintenance kit counters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomField/Get",
+    "summary": "Returns a Custom Fields by Id",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomField/List",
+    "summary": "Returns the list of Custom Fields configured by the dealer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/Accessories/Get",
+    "summary": "Gets the dealer alert settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/AdvancedOptions/Get",
+    "summary": "Gets the customer advanced options",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/AlertSettings/Get",
+    "summary": "Gets the dealer alert settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/CustomerServicesStatus/Get",
+    "summary": "Gets the customer services status.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/EpsonSettings/Get",
+    "summary": "Gets the epson ERS and USB settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/EpsonUSBCustomerId/Get",
+    "summary": "Get a new Epson USB customer ID for the email subject",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Customer/eXplorerSettings/Get",
+    "summary": "Gets the customer eXplorer settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomerDashboard",
+    "summary": "Gets the customer's dashboard.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomerDashboard/Pages",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomerNotification/Get",
+    "summary": "Get notification",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomerNotification/GetNotificationPlaceholders",
+    "summary": "Get notification placeholders",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "CustomerNotification/GetSampleNotification",
+    "summary": "Get sample notification",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "CustomerNotification/List",
+    "summary": "GetNotificationList",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/AccountingSettings/Get",
+    "summary": "Gets the dealer accounting settings.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/AdvancedOptions/Get",
+    "summary": "Gets the dealer advanced options",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/AlertLimitOptions/Get",
+    "summary": "Gets the alert limit options.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/AlertSettings/Get",
+    "summary": "Gets the dealer alert settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/CounterBlend/Get",
+    "summary": "Return a counter blend",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/CounterBlend/List",
+    "summary": "Returns list of dealer counters detailed tags",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/CounterBlend/Search",
+    "summary": "Search form available counters detailed TAG",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/CounterBlendToStandard/Get",
+    "summary": "Gets the specified request.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/CounterBlendToStandard/GetByDevice",
+    "summary": "Gets the by device.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/CounterBlendToStandard/List",
+    "summary": "Lists the specified request.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/Customizations/Get",
+    "summary": "Gets the dealer customizations.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/DealerServicesStatus/Get",
+    "summary": "Gets the dealer services status.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/DistributorSettings/Get",
+    "summary": "Get the Distributor dealer settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/ExportDealerTagsHierarchy",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/GetDealerHierarchy",
+    "summary": "Gets the dealer.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/GetDealerTagsHierarchy",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/Onboarding/Get",
+    "summary": "Get the dealer onboarding survey",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/RemoteOfflineCountersSettings/Get",
+    "summary": "Gets the dealer remote offline counters settings.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Dealer/eXplorerSettings/Get",
+    "summary": "Gets the dealer eXplorer settings",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerNotification/Get",
+    "summary": "Get notification",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerNotification/GetNotificationPlaceholders",
+    "summary": "Get notification placeholders",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "DealerNotification/GetSampleNotification",
+    "summary": "Get sample notification",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerNotification/List",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerNotification/Template/Get",
+    "summary": "Get the dealer template base",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerProduct/Get",
+    "summary": "Gets the specified request.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerProduct/List",
+    "summary": "Gets the dealer list",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupply/Count",
+    "summary": "Returns list of dealer supplies count",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupply/Export",
+    "summary": "Returns list of dealer supplies",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupply/Get",
+    "summary": "Gets the dealer supply.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupply/List",
+    "summary": "Returns list of dealer supplies",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplyPriceListing/Get",
+    "summary": "Get tradingPartnerSupplyListing",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplyPriceListing/List",
+    "summary": "Get tradingPartnerSuppliesListing",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts",
+    "summary": "Automatically associate the devices (ONLY with a specific model) to a specific SupplySet (the customer is optional)",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "DealerSupplySet/Count",
+    "summary": "Gets the Dealer Supplies set count.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations",
+    "summary": "Count the devices affected by the association of a supply set (the customer is optional)",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "DealerSupplySet/Export",
+    "summary": "Deletes the specified supply set.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplySet/ExportExcel",
+    "summary": "Deletes the specified supply set.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplySet/Get",
+    "summary": "Gets the Dealer Supply Set.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplySet/List",
+    "summary": "Gets the Dealer Supplies set.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "DealerSupplySet/ListDealerSupplySetFromStandardModels",
+    "summary": "Gets the Supplies set creatable from standard model.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/Deleted/List",
+    "summary": "This operation gets lists of devices paged and filtered",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/Deleted/ListByDealer",
+    "summary": "This operation gets lists of devices paged and filtered by dealer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/ExplorerDataAffinities/List",
+    "summary": "Returns a list of DeviceExplorerDataAffinities filtered by idDevice",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetDeviceAdditionalInfos",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetDeviceGapInfos",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetLfpCounters",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetSuppliesDetails",
+    "summary": "Returns a device by request parameters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetSuppliesDetailsInfo",
+    "summary": "Gets current forecast and history consumable details for a specific device, consumable and consumable color type",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetSuppliesDetailsSummary",
+    "summary": "Get toners and photoconductors forecast details for a specific device",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/GetZebraSuppliesDetailsSummary",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Device/MaintenanceAlerts/List",
+    "summary": "Returns a list of maintenanceAlert device.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Cluster/AutoClusters",
+    "summary": "This operation suggests explorer clusters from all dealer customer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Cluster/Get",
+    "summary": "This operation gets an explorer cluster",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Cluster/List",
+    "summary": "This operation gets explorer clusters from all dealer customer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Configuration/Get",
+    "summary": "Returns eXplorer configuration with subnets and schedules",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Configuration/GetTestTableVersions",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Configuration/List",
+    "summary": "Returns eXplorer Configurations",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/DataPings",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/DownloadLogs",
+    "summary": "This operation gets explorer data and clusters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/ExplorerDataCommand/List",
+    "summary": "This operation gets explorer command list",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/ExplorerDataInfo/List",
+    "summary": "This operation gets explorer environment infos",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetClusterCounters",
+    "summary": "Returns a customer's cluster counters (number of clusters, masters and slaves)",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetConnectorEndpoints",
+    "summary": "This operations gets the required web endpoints for a specific connector or group of connectors",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetConnectors",
+    "summary": "This operation gets explorer data and clusters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetDca4Otp",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetDcaCurrentVersion",
+    "summary": "Get the release table versions of a specific DCA",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetDcaReleaseNotes",
+    "summary": "Get the release table versions of a specific DCA",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetEndpointsLink",
+    "summary": "Get Endpoints Link",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetExplorerDatas",
+    "summary": "This operation gets explorer data from all dealer customer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetExplorerSetupLink",
+    "summary": "Get Explorer Setup Link",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/GetJamcSetupLink",
+    "summary": "Get Jamc Setup Link",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/License/List",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/RequestSendLogs",
+    "summary": "This operation gets explorer data and clusters",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/Staging/List",
+    "summary": "Get the staging connector list for a customer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Explorer/V3/ReleaseNotes",
+    "summary": "Get the eXplorer V3 Release Notes",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Integrations/Get",
+    "summary": "Get an integration configuration",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Integrations/GetJoinedCustomers",
+    "summary": "Get current joined customers summary",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Integrations/GetJoinedDevices",
+    "summary": "Get current joined devices summary",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Integrations/GetLogisticPlaceholders",
+    "summary": "Get logistic placeholders",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Integrations/GetNew",
+    "summary": "Get a new integration configuration",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Integrations/List",
+    "summary": "List of available and configured integration",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Integrations/eautomate/GetEAutomateLog",
+    "summary": "Gets the top 10 recent eAutomate log entries.",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Integrations/eautomate/runjoin",
+    "summary": "Runs eAutomate devices join",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Office/OfficeFloor/GetPin",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Office/OfficeFloor/List",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Orders/GetOrderLineStatuses",
+    "summary": "Gets the dealers list",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "Product/Customer/List",
+    "summary": "Get the products of the Customer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Product/Dealer/List",
+    "summary": "Get the products of the Dealer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Product/Dealer/ListBrands",
+    "summary": "Get the brands of the Dealer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Product/Dealer/ListModels",
+    "summary": "Ge the models of the Dealer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Product/GetBrands",
+    "summary": "Gets the brands related to all dealers",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Product/GetModels",
+    "summary": "Gets the models related to all dealers",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Product/GetSnmpDiscoveryBrands",
+    "summary": "Gets the Snmp discovery brands",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Project/GetContractFile",
+    "summary": "Gets the project contract file.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Project/GetDetail",
+    "summary": "Gets the project.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Role/Get",
+    "summary": "Get a capability set role by Id and Dealer Code",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Role/GetAllCapabilities",
+    "summary": "Get the all available capabilities",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "Role/List",
+    "summary": "Get the list of available capability sets (roles)",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsAction/GetDeviceAction",
+    "summary": "Gets the device action.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsAction/GetDeviceActions",
+    "summary": "Gets the device actions.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsAction/GetDeviceActionsDashboard",
+    "summary": "Gets the device actions dashboard.",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SdsConnector/GetConnector",
+    "summary": "Get a connector.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsConnector/GetConnectors",
+    "summary": "Gets the connectors.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsConnector/GetJamcConnectors",
+    "summary": "Gets the jamc connectors.",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SdsConnector/GetLogs",
+    "summary": "Invoke the log request to the JAMC",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SdsConnector/GetWppConnectors",
+    "summary": "Gets the wpp connectors.",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SdsCustomer/GetAssessTemplate",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsCustomer/GetAssessTemplates",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsCustomer/GetCredential",
+    "summary": "Gets the credential.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsCustomer/GetCustomerOperation",
+    "summary": "Gets the customer operation.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsCustomer/GetCustomerOperations",
+    "summary": "Gets the customer operations.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsCustomer/GetNewAssessTemplate",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SdsDevice/GetAssessTemplate",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetConfigItems",
+    "summary": "Gets the configuration items.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetCounters",
+    "summary": "Gets the counters.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetDeviceOperation",
+    "summary": "Gets the device operation.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetDeviceRemoteEws",
+    "summary": "Gets the device remote ews.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetDevicesOperations",
+    "summary": "Gets the devices operations.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetOnDeviceServices",
+    "summary": "Gets the on device services.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetSupplyDetails",
+    "summary": "Gets the supply details.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsDevice/GetZendeskTicketInfo",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsEvent/GetDeviceEvent",
+    "summary": "Gets the device event.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsEvent/GetDeviceEvents",
+    "summary": "",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SdsScan/ScanDevice",
+    "summary": "Retrieve saved SDS CLOUD device data",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SdsScan/ScanImmediate",
+    "summary": "Retrieve all updated SDS device data. The operation will take about 20 minutes",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/GetExcelReport",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/GetOperation",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/GetProductsToAssociate",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/GetStandardProductsSummary",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/ListDevicesInOperation",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/ListOperations",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "StandardProduct/ListStandardProducts",
+    "summary": "",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "SupplyAlert/GetAvailableMaintenanceKitColors",
+    "summary": "Gets available Maintenance kit colors",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SupplyAlert/GetAvailableMaintenanceKitTypes",
+    "summary": "Gets available Maintenance kit types",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "SupplyAlert/GetAvailableSuppliesForADevice",
+    "summary": "Gets available supplies for a device",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "TraceVolume/Get",
+    "summary": "Gets a specific trace volume by its id",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "TraceVolume/List",
+    "summary": "Returns a list of TraceVolume by device",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "TradingPartner/Get",
+    "summary": "Get tradingPartner",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "TradingPartner/List",
+    "summary": "Get tradingPartner",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "WhiteLabel/Get",
+    "summary": "Get the white label.",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "WhiteLabel/GetWhiteLabelCustomizationByUrl",
+    "summary": "Get the whitelabel customizations by the caller URL",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "WhiteLabel/GetWhitelabelPlaceholders",
+    "summary": "Get whitelabel placeholders",
+    "method": "GET",
+    "requires_params": false
+  },
+  {
+    "action": "azuread/GetCustomerAzureSettings",
+    "summary": "Get Azure Ad customer configuration",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "azuread/GetDealerAzureSettings",
+    "summary": "Get Azure Ad configuration",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "okta/GetCustomerOktaSettings",
+    "summary": "Get the Okta settings for the customer",
+    "method": "GET",
+    "requires_params": true
+  },
+  {
+    "action": "okta/GetDealerOktaSettings",
+    "summary": "Get the Okta settings for the dealer",
+    "method": "GET",
+    "requires_params": true
+  }
+]
