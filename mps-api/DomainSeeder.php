@@ -26,53 +26,47 @@ class DomainSeeder {
 
     /**
      * Collect all domain seeds
+     * OPTIMIZED: Only calls essential endpoints, fails fast
      */
     public static function collectSeeds() {
         $startTime = microtime(true);
         $collected = [];
 
-        // TIER 1: Seed endpoints (no dependencies)
-        $tier1 = [
-            'Product/GetBrands',
-            'Product/GetModels',
-            'Role/GetAllCapabilities',
-            'Orders/GetOrderLineStatuses',
+        // MINIMAL SEED COLLECTION: Only call what's absolutely necessary
+        // Priority order: fastest endpoints first, most valuable data first
+        $seedEndpoints = [
+            // CRITICAL: This endpoint returns actual device data with customer codes!
+            // Device/Deleted/ListByDealer - dealerCode is optional, pagination required
+            // This will give us real customer codes from devices
+            'Device/Deleted/ListByDealer',  // ~1s, provides customer codes from devices
+
+            // Fast supplementary data
+            'ApiClient/List',  // ~500ms, provides client IDs
         ];
 
-        // TIER 2: Dealer-only endpoints (provides customer codes, integration IDs, etc.)
-        $tier2 = [
-            'Integrations/GetJoinedCustomers',  // Get customer statistics
-            'ApiClient/List',                    // Get API client IDs
-            'Role/List',                         // Get role codes
-            'CustomField/List',                  // Get custom field IDs
-        ];
+        // Execute seed collection with timeout protection
+        $maxExecutionTime = 5; // 5 seconds max for seed collection
+        $startCollectionTime = microtime(true);
 
-        // Execute TIER 1
-        foreach ($tier1 as $action) {
-            try {
-                $result = self::$engine->dispatchAction($action, []);
-                if ($result['success']) {
-                    self::processSeedData($action, $result['data']);
-                    $collected[$action] = 'success';
-                } else {
-                    $collected[$action] = 'failed: ' . $result['error'];
-                }
-            } catch (Exception $e) {
-                $collected[$action] = 'exception: ' . $e->getMessage();
+        foreach ($seedEndpoints as $action) {
+            // Check if we're approaching timeout
+            $elapsed = microtime(true) - $startCollectionTime;
+            if ($elapsed > $maxExecutionTime) {
+                $collected['timeout'] = 'Seed collection stopped after ' . round($elapsed, 2) . 's';
+                break;
             }
-        }
 
-        // Execute TIER 2
-        foreach ($tier2 as $action) {
             try {
                 $result = self::$engine->dispatchAction($action, []);
                 if ($result['success']) {
                     self::processSeedData($action, $result['data']);
                     $collected[$action] = 'success';
                 } else {
-                    $collected[$action] = 'failed: ' . $result['error'];
+                    // Don't fail completely on one endpoint error
+                    $collected[$action] = 'failed: ' . ($result['error'] ?? 'unknown');
                 }
             } catch (Exception $e) {
+                // Log but continue
                 $collected[$action] = 'exception: ' . $e->getMessage();
             }
         }
@@ -84,7 +78,8 @@ class DomainSeeder {
             'duration_ms' => $duration,
             'collected' => $collected,
             'seed_count' => count(self::$seeds),
-            'seeds' => self::$seeds
+            'seeds' => self::$seeds,
+            'note' => 'Optimized collection - only essential endpoints called'
         ];
     }
 

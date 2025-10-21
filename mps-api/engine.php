@@ -321,8 +321,9 @@ class MPSMonitorEngine {
         // Initialize domain seeds on first request (lazy loading)
         // Skip seed collection for seed-collecting actions to avoid recursion
         $skipSeedInit = in_array($action, [
+            'Device/Deleted/ListByDealer',  // Primary seed source - devices with customer codes
+            'ApiClient/List',                // Secondary seed source
             'Integrations/GetJoinedCustomers',
-            'ApiClient/List',
             'Role/List',
             'CustomField/List',
             'Product/GetBrands',
