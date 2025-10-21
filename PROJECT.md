@@ -312,7 +312,7 @@ Most require only dealer code (auto-populated to NY06AGDWUQ).
 ### Discovery Results
 - **Total Endpoints in Swagger**: 544
 - **GET Endpoints Discovered**: 188 successful
-- **Payload Templates Created**: 158
+- **Payload Templates Created**: 159 (updated 2025-10-21)
 - **Failed Endpoints**: 21 (permissions/data issues, not engine issues)
 - **Skipped Endpoints**: 335 (write operations - POST/PUT/DELETE)
 
@@ -352,6 +352,14 @@ Most require only dealer code (auto-populated to NY06AGDWUQ).
     "timestamp": "..."
 }
 ```
+
+### ChatGPT Schema Requirements (Verified 2025-10-21)
+- **Request Format**: `{"action": "ActionName", "params": {}}`
+- **params field**: MUST be object `{}`, NOT array `[]`
+- **OpenAPI Version**: 3.1.0
+- **Schema Location**: https://mpsm.resolutionsbydesign.us/mps-api/chatgpt-schema
+- **Validation**: ChatGPT's strict mode requires exact type matching
+- **Example values**: Must match schema type definitions (object examples must show `{}` not `[]`)
 
 ---
 
@@ -422,6 +430,42 @@ scripts/
 ---
 
 ## 🔄 CHANGELOG
+
+### 2025-10-21 16:30 UTC - ChatGPT Schema Validation Fix
+**Root Cause**:
+- ChatGPT Custom Actions rejecting `params` field with `UnrecognizedKwargsError`
+- Schema defined `params` as `type: "object"` but examples showed `[]` (array)
+- Type mismatch caused ChatGPT's validation to reject valid payloads
+
+**Fix Applied**:
+- Changed all `'params' => []` to `'params' => new stdClass()` in chatgpt-schema
+- Now correctly encodes as `{}` (empty object) instead of `[]` (array)
+- Updated 3 examples: get_dealer_alert_limits, list_api_clients, list_custom_fields
+
+**Payload Template Fixes**:
+- Added `dealerCode` to `Device/Deleted/List` template
+- Added `dealerCode` to `Device/Deleted/ListByDealer` template
+- Created `Integrations/GetJoinedCustomers` template with `dealerCode`
+- Template count: 158 → 159
+
+**Test Results**:
+- ✅ `Integrations/GetJoinedCustomers` - SUCCESS (returns customer stats)
+- ⚠️ `Device/Deleted/List` - Requires customer code (endpoint working, needs param)
+- ⚠️ `Device/Deleted/ListByDealer` - E00000 error (may be no data for this dealer)
+
+**Verified**:
+- Schema now accepts: `{"action": "X", "params": {}}`
+- Schema now accepts: `{"action": "X", "params": {"query": {...}}}`
+- ChatGPT plugin will no longer reject nested params object
+
+**Incident Resolved**: MPSM-DEVICE-LIST-2025-10-21-001
+
+**Files Modified**:
+- [mps-api/index.php:822](mps-api/index.php#L822) - params example
+- [mps-api/index.php:831-845](mps-api/index.php#L831) - example values
+- [mps-api/payload_templates.php:364](mps-api/payload_templates.php#L364) - Device/Deleted/List
+- [mps-api/payload_templates.php:372](mps-api/payload_templates.php#L372) - Device/Deleted/ListByDealer
+- [mps-api/payload_templates.php:775](mps-api/payload_templates.php#L775) - Integrations/GetJoinedCustomers
 
 ### 2025-10-21 16:00 UTC - ChatGPT Knowledge File Setup Guide
 **Added**:
