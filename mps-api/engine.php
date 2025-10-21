@@ -1122,7 +1122,7 @@ class MPSMonitorEngine {
         }
 
         if ($paramLower === 'sortcolumn') {
-            return 'Name'; // Safe default for most list endpoints
+            return 'Id'; // Default to primary identifier for list sorting
         }
 
         // Industry standard repair (mentioned by user)
