@@ -717,6 +717,18 @@ try {
         sendResponse($health);
     }
 
+    // Route: Dashboard (HTML interface)
+    if ($path === '/dashboard' || $path === '/dashboard.html') {
+        $dashboardFile = __DIR__ . '/dashboard.html';
+        if (file_exists($dashboardFile)) {
+            header('Content-Type: text/html');
+            readfile($dashboardFile);
+            exit;
+        } else {
+            sendResponse(['error' => 'Dashboard not found'], 404);
+        }
+    }
+
     // Route: Available endpoints
     if ($path === '/endpoints') {
         $registry = SwaggerActionRegistry::getInstance();
