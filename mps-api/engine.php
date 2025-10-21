@@ -355,7 +355,7 @@ class MPSMonitorEngine {
                         // Only use template value if user didn't provide one
                         if (!array_key_exists($key, $params)) {
                             // Apply smart substitution for template values
-                            $substitutedValue = $this->substituteTemplateValue($key, $templateValue);
+                            $substitutedValue = $this->substituteTemplateValue($action, $key, $templateValue);
                             if ($substitutedValue !== null) {
                                 $params[$key] = $substitutedValue;
 
@@ -1043,7 +1043,7 @@ class MPSMonitorEngine {
      * @param mixed $templateValue Value from template (often null)
      * @return mixed Substituted value or original if no substitution needed
      */
-    private function substituteTemplateValue($paramName, $templateValue) {
+    private function substituteTemplateValue(string $action, $paramName, $templateValue) {
         // If template already has a concrete value, use it as-is
         if ($templateValue !== null) {
             return $templateValue;
@@ -1122,7 +1122,17 @@ class MPSMonitorEngine {
         }
 
         if ($paramLower === 'sortcolumn') {
-            return 'Id'; // Default to primary identifier for list sorting
+            $sortDefaults = [
+                'DealerProduct/List' => 'Id',
+                'Product/Dealer/ListBrands' => 'Brand',
+                'Product/Dealer/ListModels' => 'Model',
+            ];
+
+            if (isset($sortDefaults[$action])) {
+                return $sortDefaults[$action];
+            }
+
+            return 'Id'; // Fallback for general list endpoints
         }
 
         // Industry standard repair (mentioned by user)
