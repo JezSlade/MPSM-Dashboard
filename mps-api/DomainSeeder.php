@@ -87,14 +87,27 @@ class DomainSeeder {
      * Process seed data and extract useful IDs/codes
      */
     private static function processSeedData($action, $data) {
-        if (is_array($data)) {
+        if (is_object($data)) {
+            $data = (array)$data;
+        }
+
+        if (!is_array($data)) {
+            return;
+        }
+
+        if (self::isAssoc($data)) {
+            self::extractIds($data);
             foreach ($data as $item) {
-                if (is_array($item)) {
-                    self::extractIds($item);
+                if (is_array($item) || is_object($item)) {
+                    self::processSeedData($action, $item);
                 }
             }
-        } elseif (is_object($data) || is_array($data)) {
-            self::extractIds((array)$data);
+        } else {
+            foreach ($data as $item) {
+                if (is_array($item) || is_object($item)) {
+                    self::processSeedData($action, $item);
+                }
+            }
         }
     }
 
@@ -102,11 +115,19 @@ class DomainSeeder {
      * Extract IDs and codes from data
      */
     private static function extractIds($item) {
+        if (is_object($item)) {
+            $item = (array)$item;
+        }
+
+        if (!is_array($item)) {
+            return;
+        }
+
         // Extract customer codes
-        if (isset($item['CustomerCode']) && $item['CustomerCode']) {
+        if (isset($item['CustomerCode']) && !self::isNullEquivalent($item['CustomerCode'])) {
             self::addSeed('customerCodes', $item['CustomerCode']);
         }
-        if (isset($item['Code']) && $item['Code'] && is_string($item['Code'])) {
+        if (isset($item['Code']) && is_string($item['Code']) && !self::isNullEquivalent($item['Code'])) {
             // Could be customer code, role code, etc.
             if (strlen($item['Code']) > 5) { // Likely a customer code
                 self::addSeed('customerCodes', $item['Code']);
@@ -114,20 +135,20 @@ class DomainSeeder {
         }
 
         // Extract device IDs
-        if (isset($item['DeviceId']) && $item['DeviceId']) {
+        if (isset($item['DeviceId']) && !self::isNullEquivalent($item['DeviceId'])) {
             self::addSeed('deviceIds', $item['DeviceId']);
         }
-        if (isset($item['Id']) && $item['Id'] && is_string($item['Id'])) {
+        if (isset($item['Id']) && is_string($item['Id']) && !self::isNullEquivalent($item['Id'])) {
             self::addSeed('genericIds', $item['Id']);
         }
 
         // Extract integration IDs
-        if (isset($item['IntegrationId']) && $item['IntegrationId']) {
+        if (isset($item['IntegrationId']) && !self::isNullEquivalent($item['IntegrationId'])) {
             self::addSeed('integrationIds', $item['IntegrationId']);
         }
 
         // Extract role codes
-        if (isset($item['RoleCode']) && $item['RoleCode']) {
+        if (isset($item['RoleCode']) && !self::isNullEquivalent($item['RoleCode'])) {
             self::addSeed('roleCodes', $item['RoleCode']);
         }
     }
@@ -136,6 +157,10 @@ class DomainSeeder {
      * Add seed to collection
      */
     private static function addSeed($category, $value) {
+        if (self::isNullEquivalent($value)) {
+            return;
+        }
+
         if (!isset(self::$seeds[$category])) {
             self::$seeds[$category] = [];
         }
@@ -186,5 +211,28 @@ class DomainSeeder {
      */
     public static function hasSeeds() {
         return count(self::$seeds) > 0;
+    }
+
+    private static function isAssoc(array $array): bool {
+        return array_keys($array) !== range(0, count($array) - 1);
+    }
+
+    private static function isNullEquivalent($value): bool {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value, " \t\n\r\0\x0B\"'");
+            if ($trimmed === '') {
+                return true;
+            }
+            $lower = strtolower($trimmed);
+            if ($lower === 'null' || $lower === 'undefined') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
