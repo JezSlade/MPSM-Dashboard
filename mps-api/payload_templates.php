@@ -277,6 +277,7 @@ return [
     ],
     "DealerProduct/List" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -299,6 +300,7 @@ return [
     ],
     "DealerSupply/Get" => [
         "query" => [
+            "dealerCode" => null,
             "id" => null,
         ],
     ],
@@ -348,6 +350,7 @@ return [
     ],
     "DealerSupplySet/List" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -449,6 +452,7 @@ return [
     ],
     "Product/Customer/List" => [
         "query" => [
+            "code" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -466,6 +470,7 @@ return [
     ],
     "Product/Dealer/ListBrands" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -474,6 +479,7 @@ return [
     ],
     "Product/Dealer/ListModels" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -530,6 +536,7 @@ return [
     ],
     "StandardProduct/ListDevicesInOperation" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -538,6 +545,7 @@ return [
     ],
     "StandardProduct/ListOperations" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -738,6 +746,7 @@ return [
     ],
     "Explorer/GetEndpointsLink" => [
         "query" => [
+            "dealerCode" => null,
             "platform" => null,
         ],
     ],
@@ -829,6 +838,7 @@ return [
     ],
     "SdsAction/GetDeviceActions" => [
         "query" => [
+            "dealerCode" => null,
             "pageNumber" => null,
             "pageRows" => null,
             "sortColumn" => null,
@@ -919,6 +929,7 @@ return [
     ],
     "StandardProduct/GetOperation" => [
         "query" => [
+            "dealerCode" => null,
             "id" => null,
         ],
     ],
