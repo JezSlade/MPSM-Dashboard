@@ -948,13 +948,7 @@ try {
                 ]
             ],
             'components' => [
-                'securitySchemes' => [
-                    'none' => [
-                        'type' => 'http',
-                        'scheme' => 'bearer',
-                        'description' => 'OAuth is handled automatically by the engine. No authentication required for this API.'
-                    ]
-                ]
+                'schemas' => []
             ],
             'x-implementation-guide' => [
                 'dealer_defaults' => [
