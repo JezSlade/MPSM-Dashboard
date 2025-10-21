@@ -1366,10 +1366,17 @@ class MPSMonitorEngine {
 
             if ($result['success']) {
                 self::$domainSeeds = DomainSeeder::getSeeds();
-                self::$seedsCollected = true;
+                if (!empty(self::$domainSeeds)) {
+                    self::$seedsCollected = true;
 
-                if (self::$config['MPS_DEBUG']) {
-                    self::logDebug('Domain seeds collected: ' . json_encode(self::$domainSeeds));
+                    if (self::$config['MPS_DEBUG']) {
+                        self::logDebug('Domain seeds collected: ' . json_encode(self::$domainSeeds));
+                    }
+                } else {
+                    self::$seedsCollected = false;
+                    if (self::$config['MPS_DEBUG']) {
+                        self::logDebug('Domain seed collection returned no usable data, will retry on next request.');
+                    }
                 }
             }
         } catch (Exception $e) {
