@@ -191,17 +191,25 @@ scripts/
 
 ## 🔄 CHANGELOG
 
-### 2025-10-21 14:00 UTC - ChatGPT Schema Validation Fixed
+### 2025-10-21 14:15 UTC - ChatGPT Schema Object Fix (FINAL)
+**Root Cause Analysis**:
+- Error: `'components', 'schemas': Input should be a valid dictionary`
+- Problem: PHP `[]` encodes to JSON array `[]`, not object `{}`
+- Solution: Changed `'schemas' => []` to `'schemas' => new stdClass()`
+
 **Fixed**:
-- ChatGPT schema components.schemas validation error (was invalid structure, now empty object)
-- Schema now imports successfully into ChatGPT Custom Actions
-- Verified: Schema validates against OpenAPI 3.1.0 spec
+- `components.schemas` now properly encodes as empty JSON object `{}`
+- Schema validates against OpenAPI 3.1.0 specification
+- ChatGPT import error resolved
 
 **Verified**:
+- Valid JSON structure ✅
+- OpenAPI version 3.1.0 ✅
+- 3 paths defined (/query, /health, /endpoints) ✅
+- `components.schemas` is type `dict` (object) ✅
 - Dashboard accessible at /dashboard ✅
 - Health check returns "healthy" status ✅
 - All 6 quick test buttons working ✅
-- ChatGPT schema endpoint returns valid OpenAPI JSON ✅
 
 ### 2025-10-21 - v1.1.0 - ChatGPT Integration & Dashboard
 **Fixed**:
