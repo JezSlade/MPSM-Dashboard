@@ -313,6 +313,9 @@ class MPSMonitorEngine {
             return $this->errorResponse('Params must be an object.', self::ERR_VALIDATION);
         }
 
+        // Normalize incoming params (strip placeholder strings like "null")
+        $params = $this->sanitizeParameters($params);
+
         // Load payload templates if not already loaded
         if (self::$payloadTemplates === null) {
             self::loadPayloadTemplates();
@@ -347,6 +350,8 @@ class MPSMonitorEngine {
             foreach (['query', 'path', 'body'] as $paramType) {
                 if (isset($template[$paramType]) && is_array($template[$paramType])) {
                     foreach ($template[$paramType] as $key => $templateValue) {
+                        $templateValue = $this->normalizeTemplateValue($templateValue);
+
                         // Only use template value if user didn't provide one
                         if (!array_key_exists($key, $params)) {
                             // Apply smart substitution for template values
@@ -1186,6 +1191,51 @@ class MPSMonitorEngine {
         }
         
         return $response;
+    }
+
+    /**
+     * Determine if a value represents an empty placeholder from discovery.
+     */
+    private function isPlaceholderValue($value): bool {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value, " \t\n\r\0\x0B\"'");
+            if ($trimmed === '') {
+                return false; // treat empty string as intentional
+            }
+
+            $lower = strtolower($trimmed);
+            if ($lower === 'null' || $lower === 'undefined') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Convert placeholder discovery values into null.
+     */
+    private function normalizeTemplateValue($value) {
+        return $this->isPlaceholderValue($value) ? null : $value;
+    }
+
+    /**
+     * Remove placeholder values from params to allow default auto-population.
+     */
+    private function sanitizeParameters(array $params): array {
+        foreach ($params as $key => $value) {
+            if (is_array($value)) {
+                $params[$key] = $this->sanitizeParameters($value);
+            } elseif ($this->isPlaceholderValue($value)) {
+                unset($params[$key]);
+            }
+        }
+
+        return $params;
     }
     
     /**
