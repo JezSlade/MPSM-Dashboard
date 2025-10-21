@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/SwaggerActionRegistry.php';
 require_once __DIR__ . '/DomainSeeder.php';
-require_once __DIR__ . '/EndpointCatalog.php';
 /**
  * MPS Monitors API Engine
  * 
@@ -324,8 +323,6 @@ class MPSMonitorEngine {
         $skipSeedInit = in_array($action, [
             'Device/Deleted/ListByDealer',  // Primary seed source - devices with customer codes
             'ApiClient/List',                // Secondary seed source
-            'Account/GetAccounts',
-            'Customer/List',
             'Integrations/GetJoinedCustomers',
             'Role/List',
             'CustomField/List',
@@ -351,7 +348,7 @@ class MPSMonitorEngine {
                 if (isset($template[$paramType]) && is_array($template[$paramType])) {
                     foreach ($template[$paramType] as $key => $templateValue) {
                         // Only use template value if user didn't provide one
-                        if (!array_key_exists($key, $params) || $this->isNullEquivalent($params[$key])) {
+                        if (!array_key_exists($key, $params)) {
                             // Apply smart substitution for template values
                             $substitutedValue = $this->substituteTemplateValue($key, $templateValue);
                             if ($substitutedValue !== null) {
@@ -368,14 +365,14 @@ class MPSMonitorEngine {
         }
 
         $endpoint = ltrim($operation['path'], '/');
-        $remaining = $this->sanitizeParameterBag($params);
+        $remaining = $params;
         $query = [];
         $headers = [];
         $body = [];
 
         // Resolve path parameters
         foreach ($operation['pathParams'] as $name => $meta) {
-            if (!array_key_exists($name, $remaining) || $this->isNullEquivalent($remaining[$name])) {
+            if (!array_key_exists($name, $remaining)) {
                 // Try to get default value for path parameters too
                 $defaultValue = $this->getDefaultParameterValue($name, $meta['type'] ?? 'string');
 
@@ -401,9 +398,7 @@ class MPSMonitorEngine {
         // Resolve query parameters
         foreach ($operation['queryParams'] as $name => $meta) {
             if (array_key_exists($name, $remaining)) {
-                if (!$this->isNullEquivalent($remaining[$name])) {
-                    $query[$name] = $remaining[$name];
-                }
+                $query[$name] = $remaining[$name];
                 unset($remaining[$name]);
             } elseif (!empty($meta['required'])) {
                 // Try to get default value before erroring
@@ -438,9 +433,7 @@ class MPSMonitorEngine {
                 $formData = [];
                 foreach ($operation['formParams'] as $name => $meta) {
                     if (array_key_exists($name, $remaining)) {
-                        if (!$this->isNullEquivalent($remaining[$name])) {
-                            $formData[$name] = $remaining[$name];
-                        }
+                        $formData[$name] = $remaining[$name];
                         unset($remaining[$name]);
                     } elseif (!empty($meta['required'])) {
                         return $this->errorResponse("Missing required form parameter: {$name}", self::ERR_VALIDATION);
@@ -468,18 +461,6 @@ class MPSMonitorEngine {
         if ($operation['hasBody'] && empty($body) && !empty($remaining)) {
             $body = $remaining;
             $remaining = [];
-        }
-
-        if (is_array($body)) {
-            $body = $this->sanitizeParameterBag($body);
-
-            if ($operation['hasBody']) {
-                $resolvedSchema = self::$actionRegistry->resolveSchemaFor($operation['bodySchema'] ?? []);
-                if (!empty($resolvedSchema)) {
-                    $body = $this->applySchemaDefaults($body, $resolvedSchema);
-                    $body = $this->sanitizeParameterBag($body);
-                }
-            }
         }
 
         if (!is_array($body) && !is_string($body) && !is_object($body)) {
@@ -1059,7 +1040,7 @@ class MPSMonitorEngine {
      */
     private function substituteTemplateValue($paramName, $templateValue) {
         // If template already has a concrete value, use it as-is
-        if ($templateValue !== null && !$this->isNullEquivalent($templateValue)) {
+        if ($templateValue !== null) {
             return $templateValue;
         }
 
@@ -1205,162 +1186,6 @@ class MPSMonitorEngine {
         }
         
         return $response;
-    }
-
-    /**
-     * Determine if a value is effectively null/empty in the context of MPS API params.
-     */
-    private function isNullEquivalent($value): bool {
-        if ($value === null) {
-            return true;
-        }
-
-        if (is_string($value)) {
-            $trimmed = trim($value);
-            if ($trimmed === '' || strcasecmp($trimmed, 'null') === 0 || strcasecmp($trimmed, 'undefined') === 0) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Recursively strip null-equivalent values from parameter arrays.
-     */
-    private function sanitizeParameterBag(array $params): array {
-        foreach ($params as $key => $value) {
-            if (is_array($value)) {
-                $params[$key] = $this->sanitizeParameterBag($value);
-                if ($params[$key] === []) {
-                    unset($params[$key]);
-                }
-            } elseif ($this->isNullEquivalent($value)) {
-                unset($params[$key]);
-            }
-        }
-
-        return $params;
-    }
-
-    /**
-     * Populate missing required fields in request bodies based on schema definitions.
-     */
-    private function applySchemaDefaults(array $body, array $schema): array {
-        if (empty($schema)) {
-            return $body;
-        }
-
-        $type = $schema['type'] ?? null;
-        if ($type !== 'object') {
-            return $body;
-        }
-
-        $properties = $schema['properties'] ?? [];
-        $required = $schema['required'] ?? [];
-
-        foreach ($properties as $name => $definition) {
-            $valueExists = array_key_exists($name, $body) && !$this->isNullEquivalent($body[$name]);
-
-            if ($valueExists && is_array($body[$name])) {
-                $body[$name] = $this->applySchemaDefaults($body[$name], $definition);
-                $valueExists = !empty($body[$name]) || $body[$name] === 0 || $body[$name] === '0';
-            }
-
-            if ($valueExists) {
-                continue;
-            }
-
-            $default = $this->defaultValueForSchemaProperty($name, $definition);
-            if ($default !== null || in_array($name, $required, true)) {
-                if ($default === null && isset($definition['type']) && $definition['type'] === 'object') {
-                    $default = $this->applySchemaDefaults([], $definition);
-                }
-                if ($default === null && isset($definition['type']) && $definition['type'] === 'array') {
-                    $default = [];
-                }
-
-                if ($default !== null) {
-                    $body[$name] = $default;
-                }
-            }
-        }
-
-        return $body;
-    }
-
-    /**
-     * Provide reasonable default values for schema properties commonly required by the API.
-     */
-    private function defaultValueForSchemaProperty(string $name, array $definition) {
-        $lower = strtolower($name);
-        $type = $definition['type'] ?? null;
-
-        if (isset($definition['default'])) {
-            return $definition['default'];
-        }
-
-        if (isset($definition['enum']) && is_array($definition['enum']) && !empty($definition['enum'])) {
-            if ($lower === 'sortorder' && in_array('Asc', $definition['enum'], true)) {
-                return 'Asc';
-            }
-            return $definition['enum'][0];
-        }
-
-        if ($lower === 'dealercode' || $lower === 'dealer_code') {
-            return self::$config['DEALER_CODE'] ?? null;
-        }
-
-        if ($lower === 'dealerid' || $lower === 'dealer_id') {
-            return self::$config['DEALER_ID'] ?? null;
-        }
-
-        if ($lower === 'customercode' || $lower === 'customer_code') {
-            return DomainSeeder::getSeedFor('customerCode') ?? (self::$config['CUSTOMER_CODE'] ?? null);
-        }
-
-        if ($lower === 'customerid' || $lower === 'customer_id') {
-            return DomainSeeder::getSeedFor('customerId') ?? (self::$config['CUSTOMER_ID'] ?? null);
-        }
-
-        if ($lower === 'sortcolumn') {
-            return 'Name';
-        }
-
-        if ($lower === 'sortorder') {
-            return 'Asc';
-        }
-
-        if ($type === 'integer') {
-            if (strpos($lower, 'pagenumber') !== false || strpos($lower, 'page') === 0) {
-                return 1;
-            }
-            if (strpos($lower, 'pagerows') !== false || strpos($lower, 'pagesize') !== false) {
-                return 50;
-            }
-            if (isset($definition['minimum'])) {
-                return max((int)$definition['minimum'], 1);
-            }
-            return 1;
-        }
-
-        if ($type === 'number') {
-            return isset($definition['minimum']) ? (float)$definition['minimum'] : 0.0;
-        }
-
-        if ($type === 'boolean') {
-            return false;
-        }
-
-        if ($type === 'array') {
-            return [];
-        }
-
-        if ($type === 'object') {
-            return $this->applySchemaDefaults([], $definition);
-        }
-
-        return null;
     }
     
     /**

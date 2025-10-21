@@ -42,8 +42,6 @@ class DomainSeeder {
 
             // Fast supplementary data
             'ApiClient/List',  // ~500ms, provides client IDs
-            'Account/GetAccounts', // Provides dealer/account context
-            'Customer/List',       // Provides live customer codes
         ];
 
         // Execute seed collection with timeout protection
@@ -90,22 +88,13 @@ class DomainSeeder {
      */
     private static function processSeedData($action, $data) {
         if (is_array($data)) {
-            if (self::isAssoc($data)) {
-                self::extractIds($data);
-                foreach ($data as $item) {
-                    if (is_array($item) || is_object($item)) {
-                        self::processSeedData($action, $item);
-                    }
-                }
-            } else {
-                foreach ($data as $item) {
-                    if (is_array($item) || is_object($item)) {
-                        self::processSeedData($action, $item);
-                    }
+            foreach ($data as $item) {
+                if (is_array($item)) {
+                    self::extractIds($item);
                 }
             }
-        } elseif (is_object($data)) {
-            self::processSeedData($action, (array)$data);
+        } elseif (is_object($data) || is_array($data)) {
+            self::extractIds((array)$data);
         }
     }
 
@@ -114,10 +103,10 @@ class DomainSeeder {
      */
     private static function extractIds($item) {
         // Extract customer codes
-        if (isset($item['CustomerCode']) && !self::isNullEquivalent($item['CustomerCode'])) {
+        if (isset($item['CustomerCode']) && $item['CustomerCode']) {
             self::addSeed('customerCodes', $item['CustomerCode']);
         }
-        if (isset($item['Code']) && !self::isNullEquivalent($item['Code']) && is_string($item['Code'])) {
+        if (isset($item['Code']) && $item['Code'] && is_string($item['Code'])) {
             // Could be customer code, role code, etc.
             if (strlen($item['Code']) > 5) { // Likely a customer code
                 self::addSeed('customerCodes', $item['Code']);
@@ -125,20 +114,20 @@ class DomainSeeder {
         }
 
         // Extract device IDs
-        if (isset($item['DeviceId']) && !self::isNullEquivalent($item['DeviceId'])) {
+        if (isset($item['DeviceId']) && $item['DeviceId']) {
             self::addSeed('deviceIds', $item['DeviceId']);
         }
-        if (isset($item['Id']) && !self::isNullEquivalent($item['Id']) && is_string($item['Id'])) {
+        if (isset($item['Id']) && $item['Id'] && is_string($item['Id'])) {
             self::addSeed('genericIds', $item['Id']);
         }
 
         // Extract integration IDs
-        if (isset($item['IntegrationId']) && !self::isNullEquivalent($item['IntegrationId'])) {
+        if (isset($item['IntegrationId']) && $item['IntegrationId']) {
             self::addSeed('integrationIds', $item['IntegrationId']);
         }
 
         // Extract role codes
-        if (isset($item['RoleCode']) && !self::isNullEquivalent($item['RoleCode'])) {
+        if (isset($item['RoleCode']) && $item['RoleCode']) {
             self::addSeed('roleCodes', $item['RoleCode']);
         }
     }
@@ -147,31 +136,12 @@ class DomainSeeder {
      * Add seed to collection
      */
     private static function addSeed($category, $value) {
-        if (self::isNullEquivalent($value)) {
-            return;
-        }
-
         if (!isset(self::$seeds[$category])) {
             self::$seeds[$category] = [];
         }
         if (!in_array($value, self::$seeds[$category])) {
             self::$seeds[$category][] = $value;
         }
-    }
-
-    private static function isNullEquivalent($value): bool {
-        if ($value === null) {
-            return true;
-        }
-
-        if (is_string($value)) {
-            $trimmed = trim($value);
-            if ($trimmed === '' || strcasecmp($trimmed, 'null') === 0 || strcasecmp($trimmed, 'undefined') === 0) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -216,9 +186,5 @@ class DomainSeeder {
      */
     public static function hasSeeds() {
         return count(self::$seeds) > 0;
-    }
-
-    private static function isAssoc(array $array): bool {
-        return array_keys($array) !== range(0, count($array) - 1);
     }
 }
