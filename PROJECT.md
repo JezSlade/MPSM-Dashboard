@@ -423,6 +423,33 @@ scripts/
 
 ## 🔄 CHANGELOG
 
+### 2025-10-21 16:00 UTC - ChatGPT Knowledge File Setup Guide
+**Added**:
+- Created `output/CHATGPT_SETUP_INSTRUCTIONS.md` - Complete setup guide for ChatGPT Custom GPT
+- Documented which knowledge files to upload (5 required, 2 optional, 3 to exclude)
+- Created comprehensive GPT instruction block (~200 lines) for ChatGPT instructions section
+- Added knowledge file usage patterns (how GPT should use each file)
+- Added common user request patterns and troubleshooting guide
+- Updated PROJECT.md with ChatGPT integration setup section
+
+**Knowledge File Guidance**:
+- ✅ REQUIRED: working_actions_list.txt, working_actions.json, chatgpt_instructions.txt, endpoint_reference.yaml, payload_templates.json
+- ⚠️ OPTIONAL: curl_recipes.md, domain_seeds.json
+- ❌ EXCLUDE: endpoints.json (too large), endpoints_by_tag.json, probe_results.json
+
+**GPT Instructions Include**:
+- Core rules (only use verified actions, never guess)
+- How to use each knowledge file
+- Common user request patterns
+- Parameter guidelines (when to use empty params vs custom)
+- Troubleshooting guide (handling errors, empty data)
+- Quick reference of top 20 most useful actions
+
+**Issue Resolved**:
+- User can now configure ChatGPT Custom GPT with complete guidance
+- GPT will know exactly which knowledge files to reference for different tasks
+- Prevents ChatGPT from being overwhelmed by redundant/too-large files
+
 ### 2025-10-21 15:30 UTC - Complete Action List Documented
 **Added**:
 - Extracted all 188 working actions from discovery results
@@ -515,12 +542,48 @@ curl -X POST https://mpsm.resolutionsbydesign.us/mps-api/query \
   -d '{"action":"AlertLimit/Dealer/Get","params":{}}'
 ```
 
-### ChatGPT Integration
+### ChatGPT Custom GPT Setup
+
+**Complete setup guide**: `output/CHATGPT_SETUP_INSTRUCTIONS.md`
+
+#### Quick Setup
 1. ChatGPT → Explore GPTs → Create
 2. Configure → Actions → Import from URL
 3. URL: `https://mpsm.resolutionsbydesign.us/mps-api/chatgpt-schema`
 4. Authentication: None
-5. Test: "Get dealer alert limits"
+5. Upload knowledge files (see below)
+6. Add custom instructions (see output/CHATGPT_SETUP_INSTRUCTIONS.md)
+7. Test: "Get dealer alert limits"
+
+#### Knowledge Files to Upload
+Upload these files from `output/` directory as knowledge base:
+
+**✅ REQUIRED**:
+- `working_actions_list.txt` - Complete list of 188 verified actions
+- `working_actions.json` - Full action details (summaries, methods, params)
+- `chatgpt_instructions.txt` - Action list organized by category
+- `endpoint_reference.yaml` - Complete discovery results with payloads
+- `payload_templates.json` - 158 discovered working payload patterns
+
+**⚠️ OPTIONAL** (only if needed for debugging):
+- `curl_recipes.md` - Example curl commands
+- `domain_seeds.json` - Customer/dealer IDs for dependent calls
+
+**❌ EXCLUDE** (too large or redundant):
+- `endpoints.json` - All 544 endpoints (many don't work)
+- `endpoints_by_tag.json` - Organizational only
+- `probe_results.json` - Raw test data
+
+#### Custom GPT Instructions
+See complete instruction block in `output/CHATGPT_SETUP_INSTRUCTIONS.md`
+
+**Key points for GPT**:
+- ONLY use actions from `working_actions_list.txt` (188 verified actions)
+- NEVER guess or invent action names
+- All requests go to: `POST https://mpsm.resolutionsbydesign.us/mps-api/query`
+- Dealer code NY06AGDWUQ is auto-populated (never needs to be specified)
+- Most actions work with empty params: `{"action": "ActionName", "params": {}}`
+- Empty arrays and "Access denied" are NORMAL responses (not errors)
 
 ---
 
@@ -542,10 +605,12 @@ curl -X POST https://mpsm.resolutionsbydesign.us/mps-api/query \
 
 - [ ] Implement domain seeding (get customer codes from one endpoint, use in another)
 - [ ] Add caching layer for frequently-used endpoints
-- [ ] Create ChatGPT custom instructions template
-- [ ] Document all 188 working endpoints with examples
+- [x] Create ChatGPT custom instructions template (COMPLETED - see output/CHATGPT_SETUP_INSTRUCTIONS.md)
+- [x] Document all 188 working endpoints with examples (COMPLETED - see PROJECT.md TRUTHS section)
 - [ ] Add retry logic for transient failures
 - [ ] Implement rate limiting protection
+- [ ] Test ChatGPT Custom GPT with all 188 actions
+- [ ] Create example queries for common use cases
 
 ---
 
