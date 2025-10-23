@@ -345,18 +345,16 @@ const MPSApi = (function() {
         const customerMap = new Map();
 
         for (const device of allDevices) {
-            if (device.Customer && device.Customer.Code) {
-                const code = device.Customer.Code;
-                const name = device.Customer.Description || 'Unknown';
-                const id = device.Customer.Id;
+            if (device.CustomerCode) {
+                const code = device.CustomerCode;
+                const name = device.CustomerDescription || 'Unknown';
+                const id = device.CustomerId;
 
                 if (!customerMap.has(code)) {
                     customerMap.set(code, {
                         code: code,
                         name: name,
                         id: id,
-                        countryCode: device.Customer.CountryCode,
-                        countryName: device.Customer.CountryName,
                         deviceCount: 0
                     });
                     customers.push(customerMap.get(code));
