@@ -19,6 +19,7 @@ const MPSApi = (function() {
     // Runtime settings (set from admin panel)
     let settings = {
         dealerCode: 'NY06AGDWUQ',
+        dealerId: 'SZ13qRwU5GtFLj0i_CbEgQ2', // Dealer ID for Device/List
         customerCode: 'W9OPXL0YDK', // Default: Cape Fear Valley Med Ctr
         customerId: '0xUi5WEYLzOCrZ8ILowOvA2', // Customer ID
         customerName: 'CAPE FEAR VALLEY MED CTR.',
@@ -121,32 +122,30 @@ const MPSApi = (function() {
     /**
      * Get devices for customer with pagination
      */
-    async function getDevicesByCustomer(customerCode) {
+    async function getDevicesByCustomer(customerCode, customerId) {
         const code = customerCode || settings.customerCode;
-        if (!code) {
-            throw new Error('Customer code not set');
+        const id = customerId || settings.customerId;
+
+        if (!code || !id) {
+            throw new Error('Customer code and ID not set');
         }
 
-        // Fetch all pages of devices (paginated API)
+        // Fetch all pages of ACTIVE devices (paginated API)
         const allDevices = [];
         let pageNumber = 1;
         const pageRows = 100; // Max items per page
         let hasMore = true;
 
         while (hasMore && pageNumber <= 50) { // Safety limit: 50 pages max (5000 devices)
-            const devices = await makeRequest('Device/Deleted/ListByDealer', {
-                dealerCode: settings.dealerCode,
+            const devices = await makeRequest('Device/List', {
+                FilterDealerId: settings.dealerId,
+                FilterCustomerId: id,
                 pageNumber: pageNumber,
                 pageRows: pageRows
             }, { skipCache: true });
 
             if (devices && devices.length > 0) {
-                // Filter by customer if specified
-                const filtered = code
-                    ? devices.filter(d => d.Customer && d.Customer.Code === code)
-                    : devices;
-
-                allDevices.push(...filtered);
+                allDevices.push(...devices);
 
                 // Check if we got a full page (meaning there might be more)
                 hasMore = devices.length === pageRows;
@@ -315,15 +314,15 @@ const MPSApi = (function() {
      * Discover customer by name or get all customers (with pagination)
      */
     async function discoverCustomerByName(searchName) {
-        // Fetch ALL pages of devices to get ALL customers
+        // Fetch ALL pages of ACTIVE devices to get ALL customers
         const allDevices = [];
         let pageNumber = 1;
         const pageRows = 100;
         let hasMore = true;
 
         while (hasMore && pageNumber <= 50) {
-            const devices = await makeRequest('Device/Deleted/ListByDealer', {
-                dealerCode: settings.dealerCode,
+            const devices = await makeRequest('Device/List', {
+                FilterDealerId: settings.dealerId,
                 pageNumber: pageNumber,
                 pageRows: pageRows
             }, { skipCache: true });
