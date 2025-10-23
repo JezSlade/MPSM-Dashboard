@@ -791,3 +791,213 @@ body {
     background-color: var(--danger-color);
     color: white;
 }
+
+/* Table Utilities - Reusable Components */
+.table-container {
+    width: 100%;
+}
+
+.table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table-info {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.table-pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-size-select {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.btn-page {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.btn-page:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    min-width: 100px;
+    text-align: center;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-secondary);
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    user-select: none;
+}
+
+.data-table thead th.sortable {
+    cursor: pointer;
+}
+
+.data-table thead th.sortable:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--bg-secondary);
+}
+
+.data-table tbody td {
+    padding: 0.75rem;
+}
+
+/* Toner Level Color Coding */
+.toner-level {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.toner-level.level-high {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.toner-level.level-low {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.toner-level.level-critical {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+[data-theme="dark"] .toner-level.level-high {
+    background-color: #155724;
+    color: #d4edda;
+}
+
+[data-theme="dark"] .toner-level.level-low {
+    background-color: #856404;
+    color: #fff3cd;
+}
+
+[data-theme="dark"] .toner-level.level-critical {
+    background-color: #721c24;
+    color: #f8d7da;
+}
+
+/* Expandable Card Sections */
+.card-header-expandable {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-header-expandable h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.btn-expand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btn-expand:hover {
+    background-color: var(--bg-secondary);
+}
+
+.expand-icon {
+    font-size: 0.75rem;
+    transition: transform 0.3s;
+}
+
+.card-snapshot {
+    padding: 1rem;
+}
+
+.card-details {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Snapshot Grid */
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.snapshot-item {
+    text-align: center;
+}
+
+.snapshot-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+.snapshot-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
