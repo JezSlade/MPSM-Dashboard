@@ -186,6 +186,7 @@
     <div id="toast-container"></div>
 
     <!-- Scripts -->
+    <script src="assets/js/table-utils.js"></script>
     <script src="assets/js/api.js"></script>
     <script src="assets/js/app.js"></script>
 </body>
