@@ -161,10 +161,10 @@ body {
     color: var(--danger-color);
 }
 
-/* Dashboard Grid */
+/* Dashboard Grid - Vertical List Layout */
 .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -208,8 +208,13 @@ body {
 
 .card-body {
     padding: 1.5rem;
-    max-height: 400px;
+    max-height: 600px;
     overflow-y: auto;
+}
+
+/* Printers card should be taller */
+.card-printers .card-body {
+    max-height: 800px;
 }
 
 /* Printer List */

@@ -119,7 +119,7 @@ const MPSApi = (function() {
     }
 
     /**
-     * Get devices for customer
+     * Get devices for customer with pagination
      */
     async function getDevicesByCustomer(customerCode) {
         const code = customerCode || settings.customerCode;
@@ -127,10 +127,36 @@ const MPSApi = (function() {
             throw new Error('Customer code not set');
         }
 
-        // Try to get deleted devices list (this endpoint works)
-        return makeRequest('Device/Deleted/ListByDealer', {
-            dealerCode: settings.dealerCode
-        });
+        // Fetch all pages of devices (paginated API)
+        const allDevices = [];
+        let pageNumber = 1;
+        const pageRows = 100; // Max items per page
+        let hasMore = true;
+
+        while (hasMore && pageNumber <= 50) { // Safety limit: 50 pages max (5000 devices)
+            const devices = await makeRequest('Device/Deleted/ListByDealer', {
+                dealerCode: settings.dealerCode,
+                pageNumber: pageNumber,
+                pageRows: pageRows
+            }, { skipCache: true });
+
+            if (devices && devices.length > 0) {
+                // Filter by customer if specified
+                const filtered = code
+                    ? devices.filter(d => d.Customer && d.Customer.Code === code)
+                    : devices;
+
+                allDevices.push(...filtered);
+
+                // Check if we got a full page (meaning there might be more)
+                hasMore = devices.length === pageRows;
+                pageNumber++;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        return allDevices;
     }
 
     /**
@@ -286,23 +312,40 @@ const MPSApi = (function() {
     }
 
     /**
-     * Discover customer by name or get all customers
+     * Discover customer by name or get all customers (with pagination)
      */
     async function discoverCustomerByName(searchName) {
-        // Get devices and extract customer codes with names
-        const devices = await makeRequest('Device/Deleted/ListByDealer', {
-            dealerCode: settings.dealerCode
-        });
+        // Fetch ALL pages of devices to get ALL customers
+        const allDevices = [];
+        let pageNumber = 1;
+        const pageRows = 100;
+        let hasMore = true;
 
-        if (!devices || !Array.isArray(devices)) {
+        while (hasMore && pageNumber <= 50) {
+            const devices = await makeRequest('Device/Deleted/ListByDealer', {
+                dealerCode: settings.dealerCode,
+                pageNumber: pageNumber,
+                pageRows: pageRows
+            }, { skipCache: true });
+
+            if (devices && devices.length > 0) {
+                allDevices.push(...devices);
+                hasMore = devices.length === pageRows;
+                pageNumber++;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        if (!allDevices || allDevices.length === 0) {
             throw new Error('No customer data available');
         }
 
-        // Build customer list from devices
+        // Build customer list from ALL devices
         const customers = [];
         const customerMap = new Map();
 
-        for (const device of devices) {
+        for (const device of allDevices) {
             if (device.Customer && device.Customer.Code) {
                 const code = device.Customer.Code;
                 const name = device.Customer.Description || 'Unknown';
@@ -314,10 +357,14 @@ const MPSApi = (function() {
                         name: name,
                         id: id,
                         countryCode: device.Customer.CountryCode,
-                        countryName: device.Customer.CountryName
+                        countryName: device.Customer.CountryName,
+                        deviceCount: 0
                     });
                     customers.push(customerMap.get(code));
                 }
+
+                // Count devices per customer
+                customerMap.get(code).deviceCount++;
             }
         }
 

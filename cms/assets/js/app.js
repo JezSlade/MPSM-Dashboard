@@ -479,7 +479,7 @@
     }
 
     /**
-     * Open device detail modal
+     * Open device detail modal with comprehensive data from all endpoints
      */
     async function openDeviceModal(deviceId) {
         const modal = document.getElementById('device-modal');
@@ -497,13 +497,176 @@
         // Show modal
         modal.classList.add('active');
         title.textContent = device.AssetNumber || device.SerialNumber || 'Device Details';
-        body.innerHTML = '<div class="loading">Loading device details...</div>';
+        body.innerHTML = '<div class="loading">Loading comprehensive device details...</div>';
 
         try {
-            // Render basic device info
-            body.innerHTML = `
+            // Fetch additional device data from multiple endpoints
+            const deviceDataPromises = [
+                MPSApi.request('Device/GetDeviceAdditionalInfos', { deviceId: deviceId }).catch(() => null),
+                MPSApi.request('Device/GetSuppliesDetails', { deviceId: deviceId }).catch(() => null),
+                MPSApi.request('Device/GetSuppliesDetailsInfo', { deviceId: deviceId }).catch(() => null),
+                MPSApi.request('Device/GetSuppliesDetailsSummary', { deviceId: deviceId }).catch(() => null),
+                MPSApi.request('Counter/Device/List', { deviceId: deviceId }).catch(() => null),
+                MPSApi.request('Device/GetDeviceGapInfos', { deviceId: deviceId }).catch(() => null)
+            ];
+
+            const [additionalInfo, suppliesDetails, suppliesInfo, suppliesSummary, counters, gapInfo] = await Promise.all(deviceDataPromises);
+
+            // Build comprehensive device view
+            let html = `
                 <div class="device-detail-section">
                     <h3>Device Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Asset Number</div>
+                            <div class="detail-value">${device.AssetNumber || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Serial Number</div>
+                            <div class="detail-value">${device.SerialNumber || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">System Name</div>
+                            <div class="detail-value">${device.SystemName || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Model</div>
+                            <div class="detail-value">${device.Product?.Model || 'Unknown'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Brand</div>
+                            <div class="detail-value">${device.Product?.Brand || 'Unknown'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Product ID</div>
+                            <div class="detail-value">${device.Product?.Id || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">IP Address</div>
+                            <div class="detail-value">${device.IpAddress || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">MAC Address</div>
+                            <div class="detail-value">${device.MacAddress || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Firmware</div>
+                            <div class="detail-value">${device.Firmware || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="device-detail-section">
+                    <h3>Customer Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Customer</div>
+                            <div class="detail-value">${device.Customer?.Description || 'Unknown'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Customer Code</div>
+                            <div class="detail-value">${device.Customer?.Code || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Customer ID</div>
+                            <div class="detail-value">${device.Customer?.Id || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Country</div>
+                            <div class="detail-value">${device.Customer?.CountryName || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">External Identifier</div>
+                            <div class="detail-value">${device.Customer?.ExternalIdentifier || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="device-detail-section">
+                    <h3>Status & Activity</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Last Ping</div>
+                            <div class="detail-value">${device.LastPingUtc ? formatDate(device.LastPingUtc) : 'Never'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Deleted On</div>
+                            <div class="detail-value">${device.DeletedOn ? formatDate(device.DeletedOn) : 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Account</div>
+                            <div class="detail-value">${device.Account || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Device ID</div>
+                            <div class="detail-value">${device.Id || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add additional info if available
+            if (additionalInfo) {
+                html += `
+                    <div class="device-detail-section">
+                        <h3>Additional Information</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Full Data</div>
+                                <div class="detail-value"><pre style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">${JSON.stringify(additionalInfo, null, 2)}</pre></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add supplies info if available
+            if (suppliesSummary || suppliesDetails || suppliesInfo) {
+                html += `<div class="device-detail-section"><h3>Supply Information</h3>`;
+
+                if (suppliesSummary) {
+                    html += `<h4>Supply Summary</h4><pre style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">${JSON.stringify(suppliesSummary, null, 2)}</pre>`;
+                }
+
+                if (suppliesDetails) {
+                    html += `<h4>Supply Details</h4><pre style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">${JSON.stringify(suppliesDetails, null, 2)}</pre>`;
+                }
+
+                if (suppliesInfo) {
+                    html += `<h4>Supply Info</h4><pre style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">${JSON.stringify(suppliesInfo, null, 2)}</pre>`;
+                }
+
+                html += `</div>`;
+            }
+
+            // Add counter info if available
+            if (counters) {
+                html += `
+                    <div class="device-detail-section">
+                        <h3>Meter Counters</h3>
+                        <pre style="font-size: 0.75rem; max-height: 300px; overflow-y: auto;">${JSON.stringify(counters, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            // Add gap info if available
+            if (gapInfo) {
+                html += `
+                    <div class="device-detail-section">
+                        <h3>Gap Information</h3>
+                        <pre style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">${JSON.stringify(gapInfo, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            body.innerHTML = html;
+
+        } catch (error) {
+            console.error('Failed to load device details:', error);
+            // Fallback to basic info
+            body.innerHTML = `
+                <div class="device-detail-section">
+                    <h3>Basic Device Information</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
                             <div class="detail-label">Asset Number</div>
@@ -521,60 +684,11 @@
                             <div class="detail-label">Brand</div>
                             <div class="detail-value">${device.Product?.Brand || 'Unknown'}</div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">IP Address</div>
-                            <div class="detail-value">${device.IpAddress || 'N/A'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">MAC Address</div>
-                            <div class="detail-value">${device.MacAddress || 'N/A'}</div>
-                        </div>
                     </div>
                 </div>
-
-                <div class="device-detail-section">
-                    <h3>Customer Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Customer</div>
-                            <div class="detail-value">${device.Customer?.Description || 'Unknown'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Customer Code</div>
-                            <div class="detail-value">${device.Customer?.Code || 'N/A'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Country</div>
-                            <div class="detail-value">${device.Customer?.CountryName || 'N/A'}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="device-detail-section">
-                    <h3>Status</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Last Ping</div>
-                            <div class="detail-value">${device.LastPingUtc ? formatDate(device.LastPingUtc) : 'Never'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Deleted On</div>
-                            <div class="detail-value">${device.DeletedOn ? formatDate(device.DeletedOn) : 'N/A'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Account</div>
-                            <div class="detail-value">${device.Account || 'N/A'}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-        } catch (error) {
-            console.error('Failed to load device details:', error);
-            body.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">⚠️</div>
-                    <p>Failed to load device details</p>
+                <div class="empty-state" style="margin-top: 2rem;">
+                    <p>Additional device details unavailable</p>
+                    <p style="font-size: 0.875rem;">${error.message}</p>
                 </div>
             `;
         }
@@ -647,7 +761,7 @@
             if (customers && customers.length > 0) {
                 select.innerHTML = customers.map(customer => `
                     <option value="${customer.code}" data-id="${customer.id}" data-name="${customer.name}">
-                        ${customer.name}
+                        ${customer.name} (${customer.deviceCount} devices)
                     </option>
                 `).join('');
 
