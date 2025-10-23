@@ -1,0 +1,828 @@
+{
+  "Account/GetProfile": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Nominative": "string (example: \"Jez Slade\")",
+      "CreatedAt": "string (example: \"21/05/2024 20:44:41\")",
+      "CreatedAtDate": "string (example: \"2024-05-21T20:44:41Z\")",
+      "Email": "string (example: \"jez.slade@systeloa.com\")",
+      "Token": "string (example: \"afb663c2-890d-4d89-97fc-57501bb3b06e\")",
+      "Role": "string (example: \"DPU\")",
+      "Capabilities": "array of integer (example: 115) (84 items)",
+      "Language": "string (example: \"English\")",
+      "ShortLanguage": "string (example: \"en-US\")",
+      "IsActive": "boolean (example: True)",
+      "Force2fa": "boolean (example: False)",
+      "ForceSso": "boolean (example: False)",
+      "Use2fa": "boolean (example: False)",
+      "LastLoginAt": "string (example: \"2025-10-23T14:30:12.323Z\")",
+      "IsDeleted": "boolean (example: False)",
+      "ExcludeFromWarningNotifications": "boolean (example: True)",
+      "EnabledNewDevicesNotification": "boolean (example: False)",
+      "PreferredDealer": "null",
+      "DefaultDealer": "null",
+      "DefaultCustomer": "null",
+      "Customers": "null",
+      "Dealers": "null",
+      "Tags": "null",
+      "ReportingReports": "null",
+      "EnablePasswordExpiration": "boolean (example: False)",
+      "Name": "string (example: \"dashboard\")",
+      "Id": "string (example: \"oE9k5vV9W-ccTsuPpMjyfQ2\")"
+    }
+  },
+  "AlertLimit/Customer/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Id": "null",
+      "Product": "null",
+      "BlackTonerLimit": "integer (example: 20)",
+      "YellowTonerLimit": "integer (example: 15)",
+      "CyanTonerLimit": "integer (example: 15)",
+      "MagentaTonerLimit": "integer (example: 15)",
+      "BlackPhotoLimit": "integer (example: 0)",
+      "YellowPhotoLimit": "integer (example: 0)",
+      "CyanPhotoLimit": "integer (example: 0)",
+      "MagentaPhotoLimit": "integer (example: 0)",
+      "MaintenanceKitLimit": "integer (example: 0)",
+      "MaintenanceKits": "array of {'MaintenanceKitTypeId': 'integer (example: 4)', 'MaintenanceKitColorId': 'integer (example: 2)', 'Limit': 'integer (example: 2)'} (9 items)"
+    }
+  },
+  "AlertLimit/Customer/Product/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "AlertLimit/Dealer/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "DealerCode": "string (example: \"NY06AGDWUQ\")",
+      "OverwriteExistingCustomersAlertLimit": "boolean (example: False)",
+      "BlackTonerLimit": "integer (example: 10)",
+      "YellowTonerLimit": "integer (example: 10)",
+      "CyanTonerLimit": "integer (example: 10)",
+      "MagentaTonerLimit": "integer (example: 10)",
+      "BlackPhotoLimit": "integer (example: 10)",
+      "YellowPhotoLimit": "integer (example: 10)",
+      "CyanPhotoLimit": "integer (example: 10)",
+      "MagentaPhotoLimit": "integer (example: 10)",
+      "MaintenanceKitLimit": "integer (example: 10)",
+      "MaintenanceKits": "array (empty)",
+      "Id": "null"
+    }
+  },
+  "AlertLimit2/Customer/GetDefault": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'IdCustomer': 'string (example: \"USlIvWCpo-sF9xTjf2Fvog2\")', 'AlertLimit': {'SupplyType': 'integer (example: 1)', 'ColorType': 'null', 'MaintenanceKitTypeId': 'null', 'MaintenanceKitColorId': 'null', 'AlertLimitType': 'integer (example: 1)', 'CreationAlertLimit': 'null', 'CreationAlertLimitStatus': 'integer (example: 3)', 'PostAlertNotification': 'null', 'PostAlertNotificationStatus': 'integer (example: 2)', 'LastUpdateUTC': 'string (example: \"2024-05-06T19:20:39Z\")', 'CreationAlertLimitProximity': 'null', 'CreationAlertLimitProximityStatus': 'integer (example: 2)'}} (18 items)"
+  },
+  "AlertLimit2/Customer/GetProduct": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "AlertLimit2/Dealer/GetDefault": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'IdDealer': 'string (example: \"SZ13qRwU5GtFLj0i_CbEgQ2\")', 'AlertLimit': {'SupplyType': 'integer (example: 1)', 'ColorType': 'null', 'MaintenanceKitTypeId': 'null', 'MaintenanceKitColorId': 'null', 'AlertLimitType': 'integer (example: 1)', 'CreationAlertLimit': 'integer (example: 10)', 'CreationAlertLimitStatus': 'integer (example: 1)', 'PostAlertNotification': 'null', 'PostAlertNotificationStatus': 'integer (example: 2)', 'LastUpdateUTC': 'string (example: \"2022-03-11T14:50:05Z\")', 'CreationAlertLimitProximity': 'null', 'CreationAlertLimitProximityStatus': 'integer (example: 2)'}} (9 items)"
+  },
+  "AlertLimit2/Dealer/GetProduct": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "ApiClient/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Id': 'string (example: \"Ga-Mt3FvZ7F5Qwd1Nr_3Qg2\")', 'Name': 'string (example: \"dashboard\")', 'AppId': 'string (example: \"9AT9j4UoU2BgLEqmiYCz\")', 'AppSecret': 'string (example: \"ghWlqYK7lejAihT7I+9qEBMWrAFMg4IBH/anLEfV290=\")', 'ApplicationType': 'integer (example: 1)', 'IsActive': 'boolean (example: True)', 'RefreshTokenLifeTime': 'integer (example: 120)', 'AllowedOrigin': 'null', 'DeveloperEmail': 'string (example: \"jez.slade@systeloa.com\")', 'DealerCode': 'string (example: \"NY06AGDWUQ\")'} (1 items)"
+  },
+  "CustomField/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "Customer/Accessories/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Exclusions": "string (example: \";CNC1N4602B;38-22-E2-8E-D6-81\r\n;CN96IDK0QR;80-E...\")",
+      "Overrides": "null",
+      "OutOfDateLimitDevices": "integer (example: 2)",
+      "OutOfDateLimitConnectors": "integer (example: 2)",
+      "IdOrderReplacementLogic": "null",
+      "ExportPreferences": {
+        "CsvDelimiter": "null",
+        "CsvQualifier": "null",
+        "BracketsInColumnName": "boolean (example: True)",
+        "CsvDateTimeFormat": "null"
+      }
+    }
+  },
+  "Customer/AdvancedOptions/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "ExportPreferences": {
+        "CsvDelimiter": "null",
+        "CsvQualifier": "null",
+        "BracketsInColumnName": "boolean (example: True)",
+        "CsvDateTimeFormat": "null"
+      },
+      "OutOfDateLimitDevices": "integer (example: 2)",
+      "OutOfDateLimitConnectors": "integer (example: 2)",
+      "Exclusions": "string (example: \";CNC1N4602B;38-22-E2-8E-D6-81\r\n;CN96IDK0QR;80-E...\")",
+      "Overrides": "null"
+    }
+  },
+  "Customer/AlertSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "IsTonerEnabled": "boolean (example: True)",
+      "IsPhotoEnabled": "boolean (example: True)",
+      "IsMaintKitEnabled": "boolean (example: True)",
+      "IsWasteTonerBoxEnabled": "boolean (example: True)",
+      "IsTransferKitEnabled": "boolean (example: True)",
+      "CustomerCode": "string (example: \"S8COQ6NPQZ\")"
+    }
+  },
+  "Customer/CustomerServicesStatus/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "PrintreleafActive": "boolean (example: False)",
+      "CanActivatePrintreleaf": "boolean (example: False)",
+      "HpSdsActive": "boolean (example: True)",
+      "CanActivateHpSds": "boolean (example: True)",
+      "CanActivatePaperCut": "boolean (example: True)",
+      "PaperCutActive": "boolean (example: False)",
+      "RemoteWsActive": "boolean (example: True)",
+      "CanActivateSharpFSS": "boolean (example: False)",
+      "SharpFSSActive": "boolean (example: False)"
+    }
+  },
+  "Customer/EpsonSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "EpsonERSCustomerId": "null",
+      "EpsonUSBCustomerGuid": "null",
+      "EpsonUSBCustomerDateFormat": "string (example: \"d/M/yyyy H:m\")",
+      "EpsonUSBAvailableDateFormats": "array of {'Code': 'string (example: \"d/M/yyyy H:m\")', 'Description': 'string (example: \"d/M/yyyy H:m\")'} (4 items)",
+      "CustomerCode": "string (example: \"S8COQ6NPQZ\")"
+    }
+  },
+  "Customer/EpsonUSBCustomerId/Get": {
+    "query": {},
+    "response_type": "str",
+    "response_structure": "string (example: \"639b8c16-bf5a-4744-9c55-0d9370044a11\")"
+  },
+  "Customer/eXplorerSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Dca4Stack": "integer (example: 0)",
+      "CustomerCode": "string (example: \"S8COQ6NPQZ\")"
+    }
+  },
+  "CustomerDashboard": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "SdsDashboard": {
+        "TotalCustomers": "integer (example: 1)",
+        "TotalDevices": "integer (example: 104)",
+        "TotalConnectors": "integer (example: 1)",
+        "CommonActionsToComplete": "integer (example: 3)",
+        "PredictiveActionsToComplete": "integer (example: 0)",
+        "NonCommunicatingDevices": "integer (example: 9)",
+        "NonCommunicatingConnectors": "integer (example: 0)",
+        "NonGenuineHPDevices": "integer (example: 0)",
+        "EarlyReplacementDevices": "integer (example: 22)",
+        "DevicesWithErrors": "integer (example: 0)",
+        "DevicesWithWarnings": "integer (example: 0)",
+        "ConnectorsWithErrors": "integer (example: 0)",
+        "ConnectorsWithWarnings": "integer (example: 0)",
+        "CustomerIsEnable": "boolean (example: True)"
+      },
+      "MpsDashboardCustomer": {
+        "EnabledDevicesByContract": "integer (example: 0)",
+        "TotalConnectors": "integer (example: 1)",
+        "TotalManagedDevices": "integer (example: 104)",
+        "HasSentExplorerEmail": "boolean (example: True)",
+        "EmailExplorerInstallationSentAt": "string (example: \"2021-06-17T21:55:30Z\")",
+        "ContactedDevices": "array of {'Key': '...', 'Value': '...'} (3 items)",
+        "ToBeUpdated": "array of {'Type': '...', 'Id': '...', 'Count': '...'} (2 items)",
+        "Books": "array of {'Key': '...', 'Value': '...'} (2 items)",
+        "SupplyAlerts": "array of {'Key': '...', 'Value': '...'} (5 items)",
+        "Warnings": "array (empty)",
+        "SuppliesDelivery": "array (empty)"
+      },
+      "MustShowWelcome": "boolean (example: False)",
+      "ExplorerSetupLink": "null"
+    }
+  },
+  "CustomerDashboard/Pages": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "MonthlyMonoManaged": "integer (example: 294072)",
+      "MonthlyMonoUnManaged": "integer (example: 3555)",
+      "MonthlyColorManaged": "integer (example: 66123)",
+      "MonthlyColorUnManaged": "integer (example: 0)",
+      "AnomalousCounters": "integer (example: 0)"
+    }
+  },
+  "CustomerNotification/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'IsActive': 'boolean (example: True)', 'ActivateOnCustomer': 'boolean (example: False)', 'LastNotificationSentAtUtc': 'null', 'NextNotificationSentAtUtc': 'null', 'NotificationType': 'integer (example: 2)', 'NotificationMode': 'integer (example: 0)', 'OwnerCode': 'null', 'Language': 'integer (example: 1)', 'DealerTemplateId': 'null', 'DealerTemplateName': 'null', 'Name': 'string (example: \"Moore County _Supply Level Alert\")', 'Id': 'string (example: \"UE70zGWBAvUoPyNwwN0NSw2\")'} (1 items)"
+  },
+  "Dealer/AccountingSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "SDICode": "null",
+      "SDIPEC": "null",
+      "Abi": "null",
+      "Cab": "null",
+      "Vat": "string (example: \"MISSING\")",
+      "IBAN": "null",
+      "PaymentTermOverride": "null",
+      "CountryCode": "null",
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "Dealer/AdvancedOptions/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "ShowRepeteadAlertManagement": "boolean (example: False)",
+      "EnableRepeteadAlertManagementOnNewDevices": "boolean (example: False)",
+      "DisableAlertGeneratorOnDeviceCreation": "boolean (example: False)",
+      "DisableImporterMacAddressComparison": "boolean (example: False)",
+      "notInheritSupplies": "boolean (example: False)",
+      "notInheritProductReplacement": "boolean (example: False)",
+      "AvailablePreferences": "array of string (example: \"SupplyList\") (45 items)",
+      "SelectedPreferences": "array of string (example: \"SupplyList\") (9 items)",
+      "ExportPreferences": {
+        "CsvDelimiter": "null",
+        "CsvQualifier": "null",
+        "BracketsInColumnName": "boolean (example: True)",
+        "CsvDateTimeFormat": "null"
+      },
+      "OutOfDateLimitDevices": "integer (example: 2)",
+      "OutOfDateLimitConnectors": "integer (example: 2)",
+      "Settings": {
+        "DashboardPreferencesTask": "integer (example: 63)",
+        "CustomerDashboardPreferencesTask": "integer (example: 7)",
+        "DealerCreateNewCustomerSettings": {
+          "ActivateHPSds": "boolean (example: False)",
+          "InstallationProposalDefaultSelection": "boolean (example: False)",
+          "InstallationProposalDefaultTemplate": "null",
+          "ReadingProblemsDefaultSelection": "boolean (example: False)",
+          "ReadingProblemsDefaultTemplate": "null",
+          "ReadingProblemsExplorerDefaultSelection": "boolean (example: False)",
+          "ReadingProblemsExplorerDefaultTemplate": "null",
+          "DeliveryDefaultSelection": "boolean (example: False)",
+          "DeliveryDefaultTemplate": "null"
+        }
+      },
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "Dealer/AlertLimitOptions/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "AlertLimitLevelEnabled": "boolean (example: True)",
+      "AlertLimitResidualPagesEnabled": "boolean (example: False)",
+      "AlertLimitResidualDaysEnabled": "boolean (example: False)",
+      "PostAlertLevelEnabled": "boolean (example: False)",
+      "PostAlertResidualPagesEnabled": "boolean (example: False)",
+      "PostAlertResidualDaysEnabled": "boolean (example: False)",
+      "FallbackLevelCreationAlertLimit": "integer (example: 10)",
+      "EnableBatchAlertMode": "boolean (example: False)",
+      "BatchAlertProximityType": "integer (example: 0)",
+      "BatchAlertScheduledTimes": "null",
+      "BatchAlertScheduledHistories": "null",
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "Dealer/AlertSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "IsTonerEnabled": "boolean (example: True)",
+      "IsPhotoEnabled": "boolean (example: True)",
+      "IsMaintKitEnabled": "boolean (example: True)",
+      "IsWasteTonerBoxEnabled": "boolean (example: True)",
+      "IsTransferKitEnabled": "boolean (example: True)",
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "Dealer/CounterBlend/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Id': 'string (example: \"fJCJ0sBgLgdUd3PHDMK0iw2\")', 'Name': 'string (example: \"A4 Equivalent Mono Impressions\")', 'Sequence': 'integer (example: 3)', 'Brands': \"array of {'Brand': '...', 'Descriptions': '...', 'Details': '...'} (1 items)\", 'Source': 'integer (example: 1)', 'DealerCode': 'string (example: \"NY06AGDWUQ\")'} (4 items)"
+  },
+  "Dealer/CounterBlendToStandard/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "Dealer/Customizations/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "AlternativeAssetDescription": "null",
+      "LogoUrl": "string (example: \"/media/Dealers/b97c1e73-b9ce-47c9-a077-680b8a2f...\")",
+      "DeleteLogo": "boolean (example: False)",
+      "LogoFile": {
+        "FileName": "string (example: \"b97c1e73-b9ce-47c9-a077-680b8a2fd5e5.png\")",
+        "Base64Content": "string (example: \"iVBORw0KGgoAAAANSUhEUgAAASwAAABACAYAAACgPErgAAA...\")",
+        "MimeType": "string (example: \"image/png\")"
+      },
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "Dealer/DealerServicesStatus/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "PrintreleafActive": "boolean (example: False)",
+      "CanActivatePrintreleaf": "boolean (example: True)",
+      "ZzTonerActive": "boolean (example: False)",
+      "CanActivateZzToner": "boolean (example: False)",
+      "HpSdsActive": "boolean (example: True)",
+      "CanActivateHpSds": "boolean (example: False)"
+    }
+  },
+  "Dealer/GetDealerHierarchy": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Children": "array (empty)",
+      "Parents": "array (empty)",
+      "LogoUrl": "string (example: \"/media/Dealers/b97c1e73-b9ce-47c9-a077-680b8a2f...\")",
+      "AlternativeDealer": {
+        "Code": "string (example: \"NHEZFOY36U\")",
+        "Description": "string (example: \"SYSTEL BUSINESS EQUIPMENT\")",
+        "Id": "string (example: \"bbFPVg7nGD6OhzSh3ACqjA2\")"
+      },
+      "Code": "string (example: \"NY06AGDWUQ\")",
+      "Description": "string (example: \"SYSTEL BUSINESS EQUIPMENT - FAYETTEVILLE\")",
+      "Id": "string (example: \"SZ13qRwU5GtFLj0i_CbEgQ2\")"
+    }
+  },
+  "Dealer/GetDealerTagsHierarchy": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "Dealer/Onboarding/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "DealerCode": "string (example: \"NY06AGDWUQ\")",
+      "Steps": "array of {'Title': 'string (example: \"Dealer’s general information\")', 'Groups': 'array of ... (1 items)'} (10 items)"
+    }
+  },
+  "Dealer/RemoteOfflineCountersSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "IsActive": "boolean (example: False)",
+      "IsTest": "boolean (example: False)",
+      "DeviceWithNoCommunicationDays": "integer (example: 0)",
+      "SendReminderDays": "null",
+      "AutoCalculateCounters": "boolean (example: False)",
+      "AutoCalculateMonthDay": "integer (example: 0)",
+      "EmailTemplate": "null",
+      "AccountName": "null",
+      "EmailSubject": "null",
+      "EmailBcc": "null",
+      "EmailTemplateConfirm": "null",
+      "EmailSubjectConfirm": "null",
+      "EmailConfirmIsActive": "boolean (example: False)",
+      "OnlyOfflineDevices": "boolean (example: False)",
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "Dealer/eXplorerSettings/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "ScansNumberMorning": "integer (example: 1)",
+      "ScansNumberAfternoon": "integer (example: 1)",
+      "ScansNumberEvening": "integer (example: 1)",
+      "AutoEnableDefaultConfiguration": "boolean (example: True)",
+      "AutomaticUpdate": "boolean (example: True)",
+      "UseDca4AsDefault": "boolean (example: True)",
+      "Dca4Stack": "integer (example: 0)",
+      "ExplorerInterval": {
+        "Discovery": "integer (example: 360)",
+        "Meters": "integer (example: 240)",
+        "Supplies": "integer (example: 60)",
+        "Errors": "integer (example: 60)",
+        "Attributes": "integer (example: 240)",
+        "All": "integer (example: 60)"
+      },
+      "DefaultExplorerInterval": {
+        "Discovery": "integer (example: 360)",
+        "Meters": "integer (example: 240)",
+        "Supplies": "integer (example: 60)",
+        "Errors": "integer (example: 60)",
+        "Attributes": "integer (example: 240)",
+        "All": "integer (example: 60)"
+      },
+      "ExplorerWorkingDays": "array of {'DayOfWeek': 'integer (example: 1)', 'IsDayEnabled': 'boolean (example: True)', 'Range1': {'Active': '...', 'Values': '...'}, 'Range2': {'Active': '...', 'Values': '...'}, 'Range3': {'Active': '...', 'Values': '...'}} (7 items)",
+      "AvailableSNMPDiscoveryBrands": "array of {'Key': 'string (example: \"19\")', 'Value': 'string (example: \"BARIX\")'} (33 items)",
+      "PreferredSNMPDiscoveryBrands": "array (empty)",
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "DealerNotification/GetNotificationPlaceholders": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Name': 'string (example: \"$Customer_Description$\")', 'Description': 'string (example: \"np_customer_description\")', 'GroupName': 'string (example: \"np_gr_customers\")', 'SampleValue': 'string (example: \"Customer_Description_SampleValue\")'} (13 items)"
+  },
+  "DealerNotification/GetSampleNotification": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "DealerNotification/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'IsActive': 'boolean (example: False)', 'ActivateOnCustomer': 'boolean (example: False)', 'LastNotificationSentAtUtc': 'null', 'NextNotificationSentAtUtc': 'null', 'NotificationType': 'integer (example: 7)', 'NotificationMode': 'integer (example: 0)', 'OwnerCode': 'null', 'Language': 'integer (example: 1)', 'DealerTemplateId': 'null', 'DealerTemplateName': 'null', 'Name': 'string (example: \"MPS Monitor Installation invitation\")', 'Id': 'string (example: \"SjTqVDMBfTcCAZHFUsSKeQ2\")'} (4 items)"
+  },
+  "DealerNotification/Template/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "EmailTemplateBase": "string (example: \"$BODY$\")",
+      "DealerCode": "string (example: \"NY06AGDWUQ\")"
+    }
+  },
+  "DealerProduct/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "DealerProduct/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "DealerSupply/Count": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "string (example: \"1593\")"
+    }
+  },
+  "DealerSupply/Export": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "FileName": "string (example: \"file.xlsx\")",
+      "Base64Content": "string (example: \"UEsDBBQACAAIAEyEV1vzd1bCJwEAAM4EAAATAAAAW0NvbnR...\")",
+      "MimeType": "string (example: \"application/vnd.openxmlformats-officedocument.s...\")"
+    }
+  },
+  "DealerSupply/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'PartNumber': 'string (example: \"841925RV\")', 'DealerSKU': 'null', 'Description': 'string (example: \"Black Toner\")', 'DescriptionLocalized': 'string (example: \"Black Toner\")', 'SupplyType': 'integer (example: 3)', 'ColorType': 'integer (example: 2)', 'MaintenanceKitType': 'null', 'MaintenanceKitColor': 'null', 'Duration': 'integer (example: 12500)', 'IsInherited': 'boolean (example: True)', 'IsStandard': 'boolean (example: False)', 'Value': 'integer (example: 0)', 'Id': 'string (example: \"rzzZz2QesdGJacyHQ5YnBw2\")'} (50 items)"
+  },
+  "DealerSupplyPriceListing/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "DealerSupplyPriceListing/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "DealerSupplySet/Count": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "string (example: \"0\")"
+    }
+  },
+  "DealerSupplySet/Export": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "FileName": "string (example: \"export.json\")",
+      "Base64Content": "string (example: \"W10=\")",
+      "MimeType": "string (example: \"application/unknown\")"
+    }
+  },
+  "DealerSupplySet/ExportExcel": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "FileName": "string (example: \"export-supplyset.xlsx\")",
+      "Base64Content": "string (example: \"UEsDBBQACAAIAF2EV1vkSK2vGAEAADMDAAATAAAAW0NvbnR...\")",
+      "MimeType": "string (example: \"application/vnd.openxmlformats-officedocument.s...\")"
+    }
+  },
+  "DealerSupplySet/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "DealerSupplySet/ListDealerSupplySetFromStandardModels": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'DealerSupplySetDescription': 'null', 'PartNumbers': 'string (example: \"[24B6040] Black Drum,[24B6186] Black Toner,[40X...\")', 'GroupName': 'integer (example: -2131927886)', 'Details': \"array of {'Product': '...', 'NrOfMangedDevices': '...'} (1 items)\"} (132 items)"
+  },
+  "Device/Deleted/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "Device/Deleted/ListByDealer": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'AssetNumber': 'string (example: \"FQ385\")', 'Account': 'string (example: \"cory.trifilo@systeloa.com\")', 'Customer': {'Code': 'string (example: \"S8COQ6NPQZ\")', 'Description': 'string (example: \"MOORE COUNTY\")', 'CountryCode': 'string (example: \"US\")', 'CountryName': 'string (example: \"United States\")', 'CountryIsEu': 'boolean (example: False)', 'ExternalIdentifier': 'null', 'Id': 'string (example: \"USlIvWCpo-sF9xTjf2Fvog2\")'}, 'LastPingUtc': 'null', 'DeletedOn': 'string (example: \"2021-08-25T14:19:45Z\")', 'SerialNumber': 'string (example: \"CNC1N4602B\")', 'MacAddress': 'string (example: \"38-22-E2-8E-D6-81\")', 'Firmware': 'null', 'SystemName': 'null', 'IpAddress': 'string (example: \"10.1.102.176\")', 'Product': {'Model': 'string (example: \"HP LASERJET FLOW MFP E82560\")', 'Brand': 'string (example: \"HP\")', 'Id': 'string (example: \"IikK1tMEdybFUKuoZWylOQ2\")'}, 'Id': 'string (example: \"xwjGf_RSY0ysuReN7Gzg7Q2\")'} (50 items)"
+  },
+  "Explorer/Cluster/AutoClusters": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Customer': 'null', 'Description': 'string (example: \"auto-1\")', 'AutoFixDayLimit': 'integer (example: 3)', 'ExplorerDatas': \"array of {'CreatedAt': '...', 'Identifier': '...', 'IP': '...', 'SystemName': '...', 'MakeServiceUpdate': '...', 'MakeExplorerUpdate': '...', 'DealerId': '...', 'DealerCode': '...', 'DealerDescription': '...', 'CustomerId': '...', 'CustomerCode': '...', 'CustomerDescription': '...', 'AutomaticUpdate': '...', 'BuildNumber': '...', 'BuildDate': '...', 'IsEmbedded': '...', 'TableVersion': '...', 'ServiceBuildNumber': '...', 'ServiceMajor': '...', 'ConfiguratorBuildNumber': '...', 'PollingInterval': '...', 'LastUpload': '...', 'Version': '...', 'Platform': '...', 'LastPing': '...', 'AgentIsRunning': '...', 'HasWarning': '...', 'PingIsOutOfDate': '...', 'DataIsOutOfDate': '...', 'NeverReceiveData': '...', 'NoValidConfiguration': '...', 'LastRun': '...', 'LastNetworkDiscovery': '...', 'TimeZone': '...', 'TimeZoneIana': '...', 'ExplorerDataJamExplorerJamVersion': '...', 'ExplorerDataJamVersion': '...', 'ExplorerDataJamConnectorStatus': '...', 'ExplorerDataJamLastContactTimeUtc': '...', 'ExplorerDataJamRegistrationKey': '...', 'ExplorerDataJamLastUploadUtc': '...', 'ExplorerDataJamCreatedAtUc': '...', 'ExplorerDataJamInstalledComputer': '...', 'ExplorerDataJamWebProxyAddress': '...', 'ExplorerDataJamWebProxyPort': '...', 'ExplorerDataJamConnectorId': '...', 'ExplorerCluster': '...', 'IsMasterInCluster': '...', 'ExplorerDataInfos': '...', 'Configurations': '...', 'ClusteredSlaves': '...', 'IsSelected': '...', 'LogIsReady': '...', 'SendLog': '...', 'LogFile': '...', 'IsV4': '...', 'Id': '...'} (1 items)\", 'Subnets': 'array of string (example: \"10.0.127\") (1 items)', 'Id': 'null'} (34 items)"
+  },
+  "Explorer/Cluster/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Customer': {'Code': 'string (example: \"XPY90A5X7E\")', 'Description': 'string (example: \"TEST\")', 'CountryCode': 'string (example: \"ES\")', 'CountryName': 'string (example: \"Spain\")', 'CountryIsEu': 'boolean (example: True)', 'ExternalIdentifier': 'null', 'Id': 'string (example: \"xLU6dYTojIJx86T3v-cqqA2\")'}, 'Description': 'string (example: \"cluster Oficinas 17/1/2019\")', 'AutoFixDayLimit': 'integer (example: 1)', 'ExplorerDatas': \"array of {'CreatedAt': '...', 'Identifier': '...', 'IP': '...', 'SystemName': '...', 'MakeServiceUpdate': '...', 'MakeExplorerUpdate': '...', 'DealerId': '...', 'DealerCode': '...', 'DealerDescription': '...', 'CustomerId': '...', 'CustomerCode': '...', 'CustomerDescription': '...', 'AutomaticUpdate': '...', 'BuildNumber': '...', 'BuildDate': '...', 'IsEmbedded': '...', 'TableVersion': '...', 'ServiceBuildNumber': '...', 'ServiceMajor': '...', 'ConfiguratorBuildNumber': '...', 'PollingInterval': '...', 'LastUpload': '...', 'Version': '...', 'Platform': '...', 'LastPing': '...', 'AgentIsRunning': '...', 'HasWarning': '...', 'PingIsOutOfDate': '...', 'DataIsOutOfDate': '...', 'NeverReceiveData': '...', 'NoValidConfiguration': '...', 'LastRun': '...', 'LastNetworkDiscovery': '...', 'TimeZone': '...', 'TimeZoneIana': '...', 'ExplorerDataJamExplorerJamVersion': '...', 'ExplorerDataJamVersion': '...', 'ExplorerDataJamConnectorStatus': '...', 'ExplorerDataJamLastContactTimeUtc': '...', 'ExplorerDataJamRegistrationKey': '...', 'ExplorerDataJamLastUploadUtc': '...', 'ExplorerDataJamCreatedAtUc': '...', 'ExplorerDataJamInstalledComputer': '...', 'ExplorerDataJamWebProxyAddress': '...', 'ExplorerDataJamWebProxyPort': '...', 'ExplorerDataJamConnectorId': '...', 'ExplorerCluster': '...', 'IsMasterInCluster': '...', 'ExplorerDataInfos': '...', 'Configurations': '...', 'ClusteredSlaves': '...', 'IsSelected': '...', 'LogIsReady': '...', 'SendLog': '...', 'LogFile': '...', 'IsV4': '...', 'Id': '...'} (2 items)\", 'Subnets': 'array (empty)', 'Id': 'string (example: \"p2Ma_cczIS9SfIOA3DC5MA2\")'} (50 items)"
+  },
+  "Explorer/Configuration/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'ExplorerSchedules': \"array of {'CustomerId': '...', 'ExplorerConfigurationId': '...', 'Occurence': '...', 'StartAt': '...', 'Days': '...', 'TimeZone': '...', 'LastRequest': '...', 'Id': '...'} (3 items)\", 'ExplorerSubnets': \"array of {'CustomerId': '...', 'OfficeId': '...', 'OfficeCode': '...', 'OfficeDescription': '...', 'ExplorerConfigurationId': '...', 'SubnetMask': '...', 'PartialWalkOID': '...', 'IpStart': '...', 'IpFrom': '...', 'IpEnd': '...', 'Id': '...'} (31 items)\", 'ExplorerHostnames': 'array (empty)', 'ExplorerWorkingDays': \"array of {'DayOfWeek': '...', 'IsDayEnabled': '...', 'Range1': '...', 'Range2': '...', 'Range3': '...'} (7 items)\", 'IdTicket': 'null', 'MaxProcess': 'integer (example: 1)', 'MaxThread': 'integer (example: 1)', 'MaxParallelOperations': 'integer (example: 10)', 'DisablePing': 'boolean (example: False)', 'ActivateExclusions': 'boolean (example: True)', 'UseEmbeddedOIDMap': 'boolean (example: False)', 'MpsUrl': 'null', 'DeviceDetectionOidArray': 'null', 'ActivateOverrides': 'boolean (example: False)', 'DisableWalks': 'boolean (example: False)', 'ScanPc': 'boolean (example: False)', 'VersionTest': 'null', 'UseHPSecureCounters': 'boolean (example: True)', 'Community': 'null', 'ScanTimeout': 'null', 'WalkTimeout': 'null', 'GetTimeout': 'null', 'PingTimeout': 'null', 'SendEnvironmentInfo': 'boolean (example: False)', 'ExplorerJamcParameters': 'null', 'WinceTimeoutSocket': 'integer (example: 5000)', 'WinceDeepSleepDisable': 'boolean (example: False)', 'UseSNMPv2Version': 'boolean (example: False)', 'UseHpProxy': 'boolean (example: False)', 'MacOsUseOtherSNMP': 'boolean (example: False)', 'ForceEncoding': 'null', 'UseKodakAlarisAgent': 'boolean (example: False)', 'ActivateZebraDetection': 'boolean (example: False)', 'DisableMessagePanelReadingsOutsideWorkingDays': 'boolean (example: False)', 'AllowUnicastAndBroadcast': 'boolean (example: False)', 'UseStandardWalk': 'boolean (example: False)', 'UseBulkWalkV3': 'boolean (example: True)', 'AlternativeSnmpPort': 'null', 'AlternativeDiscoveryPorts': 'null', 'ExplorerInterval': {'Discovery': 'null', 'Meters': 'null', 'Supplies': 'null', 'Errors': 'null', 'Attributes': 'null', 'All': 'null'}, 'DefaultExplorerInterval': {'Discovery': 'integer (example: 360)', 'Meters': 'integer (example: 240)', 'Supplies': 'integer (example: 60)', 'Errors': 'integer (example: 60)', 'Attributes': 'integer (example: 240)', 'All': 'integer (example: 60)'}, 'Description': 'string (example: \"DEFAULT\")', 'ExplorerDataSystemName': 'string (example: \"MOCO-JETADMIN\")', 'IsValidConfiguration': 'boolean (example: True)', 'IsEnable': 'boolean (example: True)', 'UseAutoAssign': 'boolean (example: False)', 'ExplorerDataId': 'string (example: \"AoibK16eMjhN9q0kkK-4Jw2\")', 'CustomerId': 'string (example: \"USlIvWCpo-sF9xTjf2Fvog2\")', 'Id': 'string (example: \"y1Cxc2Yeld3p5vlQU0tsYA2\")'} (1 items)"
+  },
+  "Explorer/GetConnectorEndpoints": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "Explorer/GetConnectors": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'CreatedAt': 'string (example: \"0001-01-01T00:00:00Z\")', 'Identifier': 'string (example: \"f1c75da3-ccf3-4111-907b-2b9d66603d56\")', 'IP': 'string (example: \"10.228.217.195;169.254.39.210\")', 'SystemName': 'string (example: \"TERRY\")', 'MakeServiceUpdate': 'boolean (example: False)', 'MakeExplorerUpdate': 'boolean (example: False)', 'DealerId': 'string (example: \"SZ13qRwU5GtFLj0i_CbEgQ2\")', 'DealerCode': 'string (example: \"NY06AGDWUQ\")', 'DealerDescription': 'string (example: \"SYSTEL BUSINESS EQUIPMENT - FAYETTEVILLE\")', 'CustomerId': 'string (example: \"IGqXz-HQDlikBkkKKpdJbw2\")', 'CustomerCode': 'string (example: \"KMZQLW08OV\")', 'CustomerDescription': 'string (example: \"102403 REED LALLIER CHEVROLET\")', 'AutomaticUpdate': 'boolean (example: True)', 'BuildNumber': 'string (example: \"4.3.4.0\")', 'BuildDate': 'string (example: \"2025-06-25T15:32:24Z\")', 'IsEmbedded': 'boolean (example: False)', 'TableVersion': 'null', 'ServiceBuildNumber': 'string (example: \"4.3.4.0\")', 'ServiceMajor': 'integer (example: 4)', 'ConfiguratorBuildNumber': 'null', 'PollingInterval': 'integer (example: 5)', 'LastUpload': 'string (example: \"2025-10-23T13:39:03Z\")', 'Version': 'string (example: \"4.3.4.0\")', 'Platform': 'string (example: \"Windows\")', 'LastPing': 'string (example: \"2025-10-23T14:33:15.57Z\")', 'AgentIsRunning': 'null', 'HasWarning': 'boolean (example: False)', 'PingIsOutOfDate': 'boolean (example: False)', 'DataIsOutOfDate': 'boolean (example: False)', 'NeverReceiveData': 'boolean (example: False)', 'NoValidConfiguration': 'boolean (example: False)', 'LastRun': 'null', 'LastNetworkDiscovery': 'string (example: \"2025-10-22T07:38:15.583Z\")', 'TimeZone': 'string (example: \"(UTC-05:00) Eastern Time (US & Canada)\")', 'TimeZoneIana': 'string (example: \"America/New_York\")', 'ExplorerDataJamExplorerJamVersion': 'null', 'ExplorerDataJamVersion': 'string (example: \"4.1.6712\")', 'ExplorerDataJamConnectorStatus': 'integer (example: 1)', 'ExplorerDataJamLastContactTimeUtc': 'string (example: \"2025-10-23T14:33:00Z\")', 'ExplorerDataJamRegistrationKey': 'string (example: \"bb09b6dc-a3a7-4c78-9703-ff59561af34e\")', 'ExplorerDataJamLastUploadUtc': 'string (example: \"2025-07-14T18:36:00Z\")', 'ExplorerDataJamCreatedAtUc': 'string (example: \"2025-07-14T18:35:38.407Z\")', 'ExplorerDataJamInstalledComputer': 'null', 'ExplorerDataJamWebProxyAddress': 'null', 'ExplorerDataJamWebProxyPort': 'integer (example: 0)', 'ExplorerDataJamConnectorId': 'integer (example: 1482000)', 'ExplorerCluster': 'null', 'IsMasterInCluster': 'boolean (example: False)', 'ExplorerDataInfos': 'array (empty)', 'Configurations': \"array of {'Description': '...', 'ExplorerDataSystemName': '...', 'IsValidConfiguration': '...', 'IsEnable': '...', 'UseAutoAssign': '...', 'ExplorerDataId': '...', 'CustomerId': '...', 'Id': '...'} (1 items)\", 'ClusteredSlaves': 'array (empty)', 'IsSelected': 'boolean (example: False)', 'LogIsReady': 'boolean (example: False)', 'SendLog': 'boolean (example: False)', 'LogFile': 'null', 'IsV4': 'boolean (example: True)', 'Id': 'string (example: \"ovb0HpH-pH6910MpA5MX2g2\")'} (50 items)"
+  },
+  "Explorer/GetDcaReleaseNotes": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "Explorer/GetEndpointsLink": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "string (example: \"https://monitoring.mpsmonitor.com/Endpoint?plat...\")"
+    }
+  },
+  "Explorer/GetExplorerDatas": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'CreatedAt': 'string (example: \"2021-06-22T12:18:11Z\")', 'Identifier': 'string (example: \"0af64ee7-4fd1-4906-accc-7b0575d8faed\")', 'IP': 'string (example: \"10.0.127.100\")', 'SystemName': 'string (example: \"MOCO-JETADMIN\")', 'MakeServiceUpdate': 'boolean (example: False)', 'MakeExplorerUpdate': 'boolean (example: False)', 'DealerId': 'string (example: \"SZ13qRwU5GtFLj0i_CbEgQ2\")', 'DealerCode': 'null', 'DealerDescription': 'null', 'CustomerId': 'string (example: \"USlIvWCpo-sF9xTjf2Fvog2\")', 'CustomerCode': 'string (example: \"S8COQ6NPQZ\")', 'CustomerDescription': 'string (example: \"MOORE COUNTY\")', 'AutomaticUpdate': 'boolean (example: True)', 'BuildNumber': 'string (example: \"3.9.4\")', 'BuildDate': 'string (example: \"2022-10-05T11:44:13Z\")', 'IsEmbedded': 'boolean (example: False)', 'TableVersion': 'integer (example: 13)', 'ServiceBuildNumber': 'string (example: \"3.9.4.17854\")', 'ServiceMajor': 'integer (example: 3)', 'ConfiguratorBuildNumber': 'null', 'PollingInterval': 'integer (example: 20)', 'LastUpload': 'string (example: \"2025-10-22T22:32:40.017Z\")', 'Version': 'string (example: \"3.9.4.13\")', 'Platform': 'string (example: \"Windows\")', 'LastPing': 'string (example: \"2025-10-23T14:31:31.62Z\")', 'AgentIsRunning': 'boolean (example: False)', 'HasWarning': 'boolean (example: False)', 'PingIsOutOfDate': 'boolean (example: False)', 'DataIsOutOfDate': 'boolean (example: False)', 'NeverReceiveData': 'boolean (example: False)', 'NoValidConfiguration': 'boolean (example: False)', 'LastRun': 'string (example: \"2023-01-09T23:18:00Z\")', 'LastNetworkDiscovery': 'string (example: \"2025-10-16T07:51:30.63Z\")', 'TimeZone': 'string (example: \"(UTC-05:00) Eastern Time (US & Canada)\")', 'TimeZoneIana': 'string (example: \"America/New_York\")', 'ExplorerDataJamExplorerJamVersion': 'string (example: \"3.9.4.27684 - 2022-10-17 12:03:21\")', 'ExplorerDataJamVersion': 'string (example: \"4.1.6712\")', 'ExplorerDataJamConnectorStatus': 'integer (example: 1)', 'ExplorerDataJamLastContactTimeUtc': 'string (example: \"2025-10-23T14:32:00Z\")', 'ExplorerDataJamRegistrationKey': 'string (example: \"c66b1c22-57e9-4edb-8fc6-67c46194f35d\")', 'ExplorerDataJamLastUploadUtc': 'string (example: \"2025-10-22T22:38:00Z\")', 'ExplorerDataJamCreatedAtUc': 'null', 'ExplorerDataJamInstalledComputer': 'string (example: \"MOCO-JETADMIN\")', 'ExplorerDataJamWebProxyAddress': 'null', 'ExplorerDataJamWebProxyPort': 'integer (example: 0)', 'ExplorerDataJamConnectorId': 'integer (example: 286148)', 'ExplorerCluster': 'null', 'IsMasterInCluster': 'boolean (example: False)', 'ExplorerDataInfos': \"array of {'Key': '...', 'Value': '...', 'LastUpdate': '...', 'Id': '...'} (32 items)\", 'Configurations': \"array of {'Description': '...', 'ExplorerDataSystemName': '...', 'IsValidConfiguration': '...', 'IsEnable': '...', 'UseAutoAssign': '...', 'ExplorerDataId': '...', 'CustomerId': '...', 'Id': '...'} (1 items)\", 'ClusteredSlaves': 'array (empty)', 'IsSelected': 'boolean (example: False)', 'LogIsReady': 'boolean (example: True)', 'SendLog': 'boolean (example: False)', 'LogFile': 'string (example: \"20240213T183814_0af64ee74fd14906accc7b0575d8fae...\")', 'IsV4': 'boolean (example: False)', 'Id': 'string (example: \"AoibK16eMjhN9q0kkK-4Jw2\")'} (50 items)"
+  },
+  "Explorer/License/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "Explorer/V3/ReleaseNotes": {
+    "query": {},
+    "response_type": "str",
+    "response_structure": "string (example: \"eXplorer 3 Release Notes\r<br/>[3.9.4 16/09/2025...\")"
+  },
+  "Integrations/GetJoinedCustomers": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Code': 'string (example: \"joined\")', 'Description': 'string (example: \"22\")'} (2 items)"
+  },
+  "Integrations/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "Product/Customer/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Logo': 'null', 'Color': 'integer (example: 3)', 'FormatType': 'integer (example: 2)', 'HasGapInfo': 'boolean (example: True)', 'ModelClean': 'null', 'Model': 'string (example: \"RICOH MP C3004\")', 'Brand': 'string (example: \"RICOH\")', 'Id': 'string (example: \"dN9CS6Qw_zx5e3ihkUjq-Q2\")'} (3 items)"
+  },
+  "Product/Dealer/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Logo': 'null', 'Color': 'integer (example: 3)', 'FormatType': 'integer (example: 3)', 'HasGapInfo': 'boolean (example: False)', 'ModelClean': 'null', 'Model': 'string (example: \"HP COLOR LASERJET CP4520 SERIES\")', 'Brand': 'string (example: \"HP\")', 'Id': 'string (example: \"xoNXE5i-pYFyoinO7hid9g2\")'} (50 items)"
+  },
+  "Product/Dealer/ListBrands": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of string (example: \"HP\") (5 items)"
+  },
+  "Product/Dealer/ListModels": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of string (example: \"ACCURIOPRESS C3070\") (50 items)"
+  },
+  "Product/GetBrands": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of string (example: \"#VALUE!\") (50 items)"
+  },
+  "Product/GetModels": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of string (example: \"\u0000\u0000\u0000\u0000\") (50 items)"
+  },
+  "Product/GetSnmpDiscoveryBrands": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of string (example: \"BARIX\") (31 items)"
+  },
+  "Role/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Name': 'string (example: \"Installer\")', 'Description': 'string (example: \"Installer\")', 'Code': 'string (example: \"IN\")', 'Capabilities': \"array of {'Name': '...', 'CapabilityGroupName': '...', 'IsRolesForCustomer': '...', 'Id': '...'} (11 items)\", 'DealerCode': 'null', 'IsCustomRole': 'boolean (example: False)', 'IsShared': 'boolean (example: False)', 'IsSharedByCurrentDealer': 'boolean (example: False)', 'Force2fa': 'boolean (example: False)', 'ForceSso': 'boolean (example: False)', 'MaxLoginFailedAttempts': 'integer (example: 10)', 'DisableAfterInactivesDays': 'integer (example: 180)', 'Id': 'string (example: \"SnBx49i6Re2mpp7th_CgZw2\")'} (12 items)"
+  },
+  "SdsAction/GetDeviceActions": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'CustomerId': 'string (example: \"USlIvWCpo-sF9xTjf2Fvog2\")', 'CustomerCode': 'string (example: \"S8COQ6NPQZ\")', 'CustomerDescription': 'string (example: \"MOORE COUNTY\")', 'DealerId': 'string (example: \"SZ13qRwU5GtFLj0i_CbEgQ2\")', 'DealerCode': 'string (example: \"NY06AGDWUQ\")', 'DealerDescription': 'string (example: \"SYSTEL BUSINESS EQUIPMENT - FAYETTEVILLE\")', 'InstalledProductSerialNumber': 'string (example: \"CNB3P1C8GW\")', 'Brand': 'string (example: \"HP\")', 'Model': 'string (example: \"HP COLOR LASERJET FLOW E78330\")', 'ActionJamId': 'string (example: \"fbfeb5b7-5409-4927-b826-36444487fbf9\")', 'DeviceId': 'string (example: \"bdCjDNK4L1k8-c1hG1psNQ2\")', 'Code': 'string (example: \"TriageFuser\")', 'EventCodeContext': 'string (example: \"50.*\")', 'ActionDateUtc': 'string (example: \"2024-05-06T12:14:00Z\")', 'Severity': 'integer (example: 2)', 'CurrentState': 'integer (example: 1)', 'StatusReports': 'null', 'HasGenuineHpCartridges': 'boolean (example: False)', 'Title': 'null', 'Description': 'null', 'MeanTimeToRepair': 'null', 'ServiceLevel': 'null', 'Tools': 'string (example: \"null\")', 'Parts': 'string (example: \"null\")', 'Link': 'null', 'TotalImpressions': 'integer (example: 109549)', 'FirmwareVersion': 'string (example: \"2502507_000153\")', 'ActionType': 'string (example: \"ExpertRules\")', 'PredictiveData': 'null', 'CustomerReportedProblemData': 'null', 'OfficeId': 'string (example: \"t7ocqp0rnEu39THPO8syCA2\")', 'OfficeCode': 'string (example: \"DEFAULT\")', 'OfficeDescription': 'string (example: \"DEFAULT\")', 'Id': 'string (example: \"afHJW0XD5DZDz9chXcpY5znmx5pwEnWGVne8QKhbV501\")'} (15 items)"
+  },
+  "SdsConnector/GetConnector": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "SdsCustomer/GetAssessTemplates": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'CreatedAtUtc': 'string (example: \"2021-08-20T20:02:00Z\")', 'Name': 'string (example: \"CNC1P1M076 - 20210820200214\")', 'CustomerCode': 'null', 'Values': \"array of {'Label': '...', 'Name': '...', 'Value': '...', 'ValueType': '...', 'ControlType': '...', 'Constraints': '...', 'IsEssentialSecurityPolicy': '...', 'SettingGroup': '...', 'SettingSubGroup': '...', 'Description': '...', 'Order': '...', 'ExcludeFromApiCall': '...', 'LocalizedNotes': '...'} (57 items)\", 'Id': 'string (example: \"HxErZwQTrfwRLvu5XEfWQw2\")'} (4 items)"
+  },
+  "SdsDevice/GetDevicesOperations": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "TotalRows": "integer (example: 0)",
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "SdsEvent/GetDeviceEvent": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "StandardProduct/GetExcelReport": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "FileName": "string (example: \"file.xlsx\")",
+      "Base64Content": "string (example: \"UEsDBBQACAAIACiFV1uyyeObJQEAALQDAAATAAAAW0NvbnR...\")",
+      "MimeType": "string (example: \"application/vnd.openxmlformats-officedocument.s...\")"
+    }
+  },
+  "StandardProduct/GetStandardProductsSummary": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "TotalStandardProductDevices": "integer (example: 2567)",
+      "TotalStandardProducts": "integer (example: 206)",
+      "TotalNonStandardProductDevices": "integer (example: 737)",
+      "TotalNonStandardProducts": "integer (example: 84)",
+      "TotalAssociations": "integer (example: 1)",
+      "TotalAssociationsWorking": "integer (example: 0)",
+      "TotalProjectVolumes": "integer (example: 0)"
+    }
+  },
+  "StandardProduct/ListOperations": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'OperationDateUtc': 'string (example: \"2025-06-04T20:41:17.183Z\")', 'AccountId': 'string (example: \"OHmM5QcXuvJWlOHvok_x6w2\")', 'AccountName': 'string (example: \"jez.slade@systeloa.com\")', 'DealerId': 'string (example: \"SZ13qRwU5GtFLj0i_CbEgQ2\")', 'DealerCode': 'string (example: \"NY06AGDWUQ\")', 'DealerDescription': 'string (example: \"SYSTEL BUSINESS EQUIPMENT - FAYETTEVILLE\")', 'TotalDevices': 'integer (example: 30)', 'TotalDevicesInSuccess': 'integer (example: 30)', 'TotalDevicesInError': 'integer (example: 0)', 'TotalDevicesInRollback': 'integer (example: 0)', 'Status': 'integer (example: 3)', 'ProductModelToStandardProductModelMap': \"array of {'Product': '...', 'StandardProduct': '...', 'NewProduct': '...', 'Rollback': '...'} (6 items)\", 'Id': 'string (example: \"X8gEDKW5ROjlyasuInu8CLjLYAIbPlCvvyWiuBc7H8w1\")'} (1 items)"
+  },
+  "StandardProduct/ListStandardProducts": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array of {'Logo': 'null', 'Color': 'integer (example: 2)', 'FormatType': 'integer (example: 3)', 'HasGapInfo': 'boolean (example: True)', 'ModelClean': 'string (example: \"DCP1000\")', 'Model': 'string (example: \"DCP-1000\")', 'Brand': 'string (example: \"BROTHER\")', 'Id': 'string (example: \"AqnBSrlgNWm_Ospj_B8ATg2\")'} (50 items)"
+  },
+  "TradingPartner/Get": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "TradingPartner/List": {
+    "query": {},
+    "response_type": "list",
+    "response_structure": "array (empty)"
+  },
+  "WhiteLabel/GetWhiteLabelCustomizationByUrl": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "azuread/GetCustomerAzureSettings": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "azuread/GetDealerAzureSettings": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "okta/GetCustomerOktaSettings": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  },
+  "okta/GetDealerOktaSettings": {
+    "query": {},
+    "response_type": "dict",
+    "response_structure": {
+      "Result": "null",
+      "IsValid": "boolean (example: True)",
+      "Errors": "array (empty)",
+      "ReturnValue": "null"
+    }
+  }
+}

@@ -9,12 +9,54 @@ const MPSApi = (function() {
     // API Configuration
     const API_BASE_URL = '/mps-api/query';
     const ENGINE_STATUS_URL = '/mps-api/';
-    const CACHE_DURATION = 60000; // 1 minute
+    const CACHE_DURATION = 300000; // 5 minutes (persistent)
     const MAX_RETRIES = 2;
     const RETRY_DELAY = 1000;
 
-    // In-memory cache
-    const cache = new Map();
+    // Persistent localStorage cache helper
+    const persistentCache = {
+        get: function(key) {
+            try {
+                const item = localStorage.getItem(`mps_cache_${key}`);
+                if (!item) return null;
+
+                const cached = JSON.parse(item);
+                if (Date.now() - cached.timestamp > CACHE_DURATION) {
+                    localStorage.removeItem(`mps_cache_${key}`);
+                    return null;
+                }
+                return cached.data;
+            } catch (e) {
+                return null;
+            }
+        },
+        set: function(key, data) {
+            try {
+                localStorage.setItem(`mps_cache_${key}`, JSON.stringify({
+                    data: data,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                // localStorage full, clear old cache
+                this.cleanup();
+            }
+        },
+        cleanup: function() {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith('mps_cache_')) {
+                    try {
+                        const item = JSON.parse(localStorage.getItem(key));
+                        if (Date.now() - item.timestamp > CACHE_DURATION) {
+                            localStorage.removeItem(key);
+                        }
+                    } catch (e) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            });
+        }
+    };
 
     // Runtime settings (set from admin panel)
     let settings = {
@@ -28,16 +70,16 @@ const MPSApi = (function() {
     };
 
     /**
-     * Make API request with retry logic
+     * Make API request with retry logic and persistent caching
      */
     async function makeRequest(action, params = {}, options = {}) {
         const cacheKey = `${action}:${JSON.stringify(params)}`;
 
-        // Check cache first
-        if (!options.skipCache && cache.has(cacheKey)) {
-            const cached = cache.get(cacheKey);
-            if (Date.now() - cached.timestamp < CACHE_DURATION) {
-                return cached.data;
+        // Check persistent cache first
+        if (!options.skipCache) {
+            const cached = persistentCache.get(cacheKey);
+            if (cached) {
+                return cached;
             }
         }
 
@@ -65,11 +107,8 @@ const MPSApi = (function() {
                     throw new Error(data.error || 'API request failed');
                 }
 
-                // Cache successful response
-                cache.set(cacheKey, {
-                    data: data.data,
-                    timestamp: Date.now()
-                });
+                // Cache successful response to localStorage
+                persistentCache.set(cacheKey, data.data);
 
                 return data.data;
 
@@ -394,10 +433,16 @@ const MPSApi = (function() {
     }
 
     /**
-     * Clear cache
+     * Clear cache (both memory and localStorage)
      */
     function clearCache() {
-        cache.clear();
+        // Clear all localStorage cache entries
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+            if (key.startsWith('mps_cache_')) {
+                localStorage.removeItem(key);
+            }
+        });
     }
 
     /**

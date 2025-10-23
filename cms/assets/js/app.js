@@ -303,25 +303,91 @@
                 return;
             }
 
-            // Render printer list
-            container.innerHTML = sorted.map(device => {
-                const externalId = device.AssetNumber || device.SerialNumber || 'Unknown';
-                const model = device.Product?.Model || 'Unknown Model';
-                const status = device.LastPingUtc ? 'offline' : 'offline'; // All deleted devices are offline
+            // Render printer table with sortable columns
+            container.innerHTML = `
+                <table class="printer-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="identifier" class="sortable">Identifier</th>
+                            <th data-sort="model" class="sortable">Model</th>
+                            <th data-sort="ip" class="sortable">IP Address</th>
+                            <th data-sort="location" class="sortable">Location</th>
+                            <th data-sort="mono" class="sortable">Mono</th>
+                            <th data-sort="color" class="sortable">Color</th>
+                            <th data-sort="status" class="sortable">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sorted.map(device => {
+                            const id = device.ExternalIdentifier || device.AssetNumber || device.SerialNumber || 'Unknown';
+                            const model = device.Product?.Model || 'Unknown';
+                            const ip = device.IpAddress || '-';
+                            const location = device.Note || device.OfficeDescription || '-';
+                            const mono = device.CounterMono ? device.CounterMono.toLocaleString() : '-';
+                            const color = device.CounterColor ? device.CounterColor.toLocaleString() : '-';
+                            const status = device.IsOffline ? 'Offline' : 'Online';
+                            const statusClass = device.IsOffline ? 'offline' : 'online';
 
-                return `
-                    <div class="printer-item" data-device-id="${device.Id}">
-                        <div class="printer-id">${externalId}</div>
-                        <div class="printer-model">${model}</div>
-                        <span class="printer-status ${status}">${status.toUpperCase()}</span>
-                    </div>
-                `;
-            }).join('');
+                            return `
+                                <tr class="printer-row" data-device-id="${device.Id}">
+                                    <td><strong>${id}</strong></td>
+                                    <td>${model}</td>
+                                    <td>${ip}</td>
+                                    <td>${location}</td>
+                                    <td>${mono}</td>
+                                    <td>${color}</td>
+                                    <td><span class="status-badge ${statusClass}">${status}</span></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
 
-            // Add click handlers
-            container.querySelectorAll('.printer-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const deviceId = item.dataset.deviceId;
+            // Add sorting functionality
+            const headers = container.querySelectorAll('th.sortable');
+            let currentSort = { column: 'identifier', ascending: true };
+
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const sortKey = header.dataset.sort;
+                    currentSort.ascending = currentSort.column === sortKey ? !currentSort.ascending : true;
+                    currentSort.column = sortKey;
+
+                    const tbody = container.querySelector('tbody');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                    rows.sort((a, b) => {
+                        const aText = a.cells[Array.from(headers).indexOf(header)].textContent.trim();
+                        const bText = b.cells[Array.from(headers).indexOf(header)].textContent.trim();
+
+                        // Try numeric comparison first
+                        const aNum = parseInt(aText.replace(/,/g, ''));
+                        const bNum = parseInt(bText.replace(/,/g, ''));
+
+                        if (!isNaN(aNum) && !isNaN(bNum)) {
+                            return currentSort.ascending ? aNum - bNum : bNum - aNum;
+                        }
+
+                        // Fallback to string comparison
+                        return currentSort.ascending ?
+                            aText.localeCompare(bText) :
+                            bText.localeCompare(aText);
+                    });
+
+                    tbody.innerHTML = '';
+                    rows.forEach(row => tbody.appendChild(row));
+
+                    // Update header indicators
+                    headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+                    header.classList.add(currentSort.ascending ? 'sort-asc' : 'sort-desc');
+                });
+            });
+
+            // Add click handlers for rows
+            container.querySelectorAll('.printer-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    const deviceId = row.dataset.deviceId;
                     openDeviceModal(deviceId);
                 });
             });

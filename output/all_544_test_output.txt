@@ -1,0 +1,474 @@
+======================================================================
+Testing ALL 544 MPSM API Endpoints
+======================================================================
+
+Total actions to test: 544
+
+[1/544] Account/ChangeLanguage                                       [OK] dict       27 items
+[2/544] Account/ChangePassword                                       [FAIL] Empty response from API
+[3/544] Account/Create                                               [FAIL] CurrendDealerCode is required; Nomina...
+[4/544] Account/Delete                                               [FAIL] Missing required query parameter: id
+[5/544] Account/Delete2fa                                            [FAIL] Missing required query parameter: id
+[6/544] Account/DeleteProfile2fa                                     [OK] dict        4 items
+[7/544] Account/Enable2faForAccount                                  [FAIL] Account not found
+[8/544] Account/Enable2faForProfile                                  [FAIL] The otp is not valid
+[9/544] Account/GetAccount                                           [FAIL] Id field is required
+[10/544] Account/GetAccounts                                          [FAIL] PageNumber must be greater than 0; Pa...
+[11/544] Account/GetProfile                                           [OK] dict       27 items
+[12/544] Account/GetPsk2faData                                        [FAIL] E00000: An error has occurred during ...
+[13/544] Account/GetPsk2faDataForAccount                              [FAIL] E00000: An error has occurred during ...
+[14/544] Account/GetPsk2faDataForProfile                              [FAIL] E00000: An error has occurred during ...
+[15/544] Account/Logout                                               [OK] str         0 items
+[16/544] Account/RefreshAuthCookie                                    [OK] str         0 items
+[17/544] Account/ResetPassword                                        [FAIL] UserName is required; Email is required
+[18/544] Account/ResetPasswordVerifyToken                             [FAIL] Empty response from API
+[19/544] Account/SendOtpEmailForAccount                               [FAIL] Account not found
+[20/544] Account/SetPreferredDealer                                   [OK] dict       27 items
+[21/544] Account/Update                                               [FAIL] CurrendDealerCode is required; Nomina...
+[22/544] Account/UpdateProfile                                        [FAIL] 'Name' should not be empty.; 'Nominat...
+[23/544] AlertLimit/Customer/Delete                                   [FAIL] Missing required query parameter: id
+[24/544] AlertLimit/Customer/Get                                      [OK] dict       12 items
+[25/544] AlertLimit/Customer/Product/Delete                           [FAIL] ObjectToDelete field is required
+[26/544] AlertLimit/Customer/Product/List                             [OK] list        0 items
+[27/544] AlertLimit/Customer/Product/Update                           [FAIL] ObjectToUpdate field is required
+[28/544] AlertLimit/Customer/Update                                   [FAIL] ObjectToUpdate field is required
+[29/544] AlertLimit/Dealer/Get                                        [OK] dict       13 items
+[30/544] AlertLimit/Dealer/Update                                     [FAIL] ObjectToUpdate field is required
+[31/544] AlertLimit/Device/Delete                                     [FAIL] Missing required query parameter: id
+[32/544] AlertLimit/Device/Get                                        [FAIL] Access denied
+[33/544] AlertLimit/Device/Update                                     [FAIL] ObjectToUpdate field is required
+[34/544] AlertLimit2/Customer/CreateDefault                           [FAIL] ObjectToUpdate field is required
+[35/544] AlertLimit2/Customer/CreateProduct                           [FAIL] ObjectToUpdate field is required
+[36/544] AlertLimit2/Customer/DeleteDefaultForConsumable              [FAIL] CustomerId field is required
+[37/544] AlertLimit2/Customer/DeleteProduct                           [FAIL] Missing required query parameter: id
+[38/544] AlertLimit2/Customer/GetDefault                              [OK] list       18 items
+[39/544] AlertLimit2/Customer/GetProduct                              [OK] list        0 items
+[40/544] AlertLimit2/Customer/GetProductList                          [FAIL] Code field is required
+[41/544] AlertLimit2/Customer/UpdateDefault                           [FAIL] ObjectToUpdate field is required
+[42/544] AlertLimit2/Customer/UpdateProduct                           [FAIL] ObjectToUpdate field is required
+[43/544] AlertLimit2/Dealer/CreateDefault                             [FAIL] ObjectToUpdate field is required
+[44/544] AlertLimit2/Dealer/CreateProduct                             [FAIL] ObjectToUpdate field is required
+[45/544] AlertLimit2/Dealer/DeleteProduct                             [FAIL] Missing required query parameter: id
+[46/544] AlertLimit2/Dealer/GetDefault                                [OK] list        9 items
+[47/544] AlertLimit2/Dealer/GetProduct                                [OK] list        0 items
+[48/544] AlertLimit2/Dealer/GetProductList                            [FAIL] Code field is required
+[49/544] AlertLimit2/Dealer/UpdateDefault                             [FAIL] ObjectToUpdate field is required
+[50/544] AlertLimit2/Dealer/UpdateProduct                             [FAIL] ObjectToUpdate field is required
+[51/544] AlertLimit2/Device/CreateDefault                             [FAIL] ObjectToUpdate field is required
+[52/544] AlertLimit2/Device/DeleteDefaultForConsumable                [FAIL] DeviceId field is required
+[53/544] AlertLimit2/Device/GetDefault                                [FAIL] Device not found
+[54/544] AlertLimit2/Device/UpdateDefault                             [FAIL] ObjectToUpdate field is required
+[55/544] AlertLimit2/DisableAlertLimits                               [FAIL] Empty response from API
+[56/544] AlertLimit2/GetAllLimits                                     [FAIL] E00000: An error has occurred during ...
+[57/544] Analytics/GetReportFileResult                                [FAIL] Missing required query parameter: idR...
+[58/544] Analytics/GetReportResult                                    [FAIL] Missing required query parameter: idR...
+[59/544] ApiClient/Account/Create                                     [FAIL] ObjectToCreate field is required
+[60/544] ApiClient/Account/Delete                                     [FAIL] Missing required query parameter: id
+[61/544] ApiClient/Account/Get                                        [FAIL] Account not found
+[62/544] ApiClient/Account/List                                       [FAIL] Dealer not found
+[63/544] ApiClient/Account/Update                                     [FAIL] ObjectToUpdate field is required
+[64/544] ApiClient/Create                                             [FAIL] ObjectToCreate field is required
+[65/544] ApiClient/Delete                                             [FAIL] Missing required query parameter: id
+[66/544] ApiClient/Get                                                [FAIL] E00000: An error has occurred during ...
+[67/544] ApiClient/List                                               [OK] list        1 items
+[68/544] ApiClient/Update                                             [FAIL] ObjectToUpdate field is required
+[69/544] Billing/GetCustomerInvoice                                   [FAIL] Id field is required
+[70/544] Billing/GetCustomerInvoicesList                              [FAIL] Empty response from API
+[71/544] Billing/GetCustomersContracts                                [FAIL] SortColumn cannot be null or empty; I...
+[72/544] Billing/GetCustomersInvoicesList                             [FAIL] SortColumn cannot be null or empty; I...
+[73/544] Billing/GetDealerInvoice                                     [FAIL] Empty response from API
+[74/544] Billing/GetDealerInvoicesList                                [FAIL] Empty response from API
+[75/544] Billing/GetInvoiceCategories                                 [FAIL] Request failed
+[76/544] Billing/UpdateCustomerInvoice                                [FAIL] Invalid JSON response from API
+[77/544] Communication/GetPortalReleaseNotes                          [FAIL] E00000: An error has occurred during ...
+[78/544] Consumable/List                                              [FAIL] DealerCode required
+[79/544] CostCenter/Create                                            [FAIL] ObjectToCreate field is required
+[80/544] CostCenter/Delete                                            [FAIL] Missing required query parameter: id
+[81/544] CostCenter/Get                                               [FAIL] Id field is required
+[82/544] CostCenter/List                                              [FAIL] SortColumn cannot be null or empty; C...
+[83/544] CostCenter/Update                                            [FAIL] ObjectToUpdate field is required
+[84/544] Counter/Catalog/Export                                       [FAIL] Empty response from API
+[85/544] Counter/Catalog/List                                         [FAIL] Empty response from API
+[86/544] Counter/Catalog/Suggestions                                  [FAIL] Empty response from API
+[87/544] Counter/Catalog/Update                                       [FAIL] Empty response from API
+[88/544] Counter/Device/Delete                                        [FAIL] Missing required query parameter: cou...
+[89/544] Counter/Device/Export                                        [FAIL] Device not found
+[90/544] Counter/Device/List                                          [FAIL] Device not found
+[91/544] Counter/Device/Update                                        [FAIL] Required; Required
+[92/544] Counter/Device/UpdateCounterDetailTag                        [FAIL] Device not found
+[93/544] Counter/List                                                 [FAIL] DealerCode required; FromDate must be...
+[94/544] Counter/ListBlended                                          [FAIL] DealerCode required; FromDate must be...
+[95/544] Counter/ListDetailed                                         [FAIL] c.notfound
+[96/544] Counter/ListMaintenanceKitCounters                           [FAIL] Device not found
+[97/544] Counter/UploadOfflineDeviceCounters                          [FAIL] Required; One of SerialNumber, AssetN...
+[98/544] CustomField/Create                                           [FAIL] 'Dealer Code' should not be empty.; '...
+[99/544] CustomField/Delete                                           [FAIL] Missing required query parameter: id
+[100/544] CustomField/Get                                              [FAIL] CustomField not found
+[101/544] CustomField/List                                             [OK] list        0 items
+[102/544] CustomField/Update                                           [FAIL] ObjectToUpdate field is required
+[103/544] Customer/Accessories/Get                                     [OK] dict        6 items
+[104/544] Customer/AdvancedOptions/Get                                 [OK] dict        5 items
+[105/544] Customer/AdvancedOptions/Update                              [FAIL] Code field is required; Required
+[106/544] Customer/AlertSettings/Get                                   [OK] dict        6 items
+[107/544] Customer/AlertSettings/Update                                [FAIL] ObjectToUpdate field is required
+[108/544] Customer/CreateCustomer                                      [FAIL] ObjectToCreate field is required
+[109/544] Customer/CustomerServicesStatus/Get                          [OK] dict        9 items
+[110/544] Customer/DeleteCustomer                                      [FAIL] Id field is required
+[111/544] Customer/EpsonSettings/Get                                   [OK] dict        5 items
+[112/544] Customer/EpsonSettings/Update                                [FAIL] ObjectToUpdate field is required
+[113/544] Customer/EpsonUSBCustomerId/Get                              [OK] str         0 items
+[114/544] Customer/GetCustomer                                         [FAIL] Id field is required
+[115/544] Customer/GetCustomerByCode                                   [FAIL] Code field is required
+[116/544] Customer/GetCustomers                                        [FAIL] SortColumn cannot be null or empty; D...
+[117/544] Customer/GetEmailExplorerInstallationToCustomer              [FAIL] ObjectToCreate field is required
+[118/544] Customer/SendEXplorerInvitation                              [FAIL] 'Email address/es not valid' should n...
+[119/544] Customer/UpdateCustomer                                      [FAIL] ObjectToUpdate field is required
+[120/544] Customer/eXplorerSettings/Get                                [OK] dict        2 items
+[121/544] Customer/eXplorerSettings/Update                             [FAIL] ObjectToUpdate field is required
+[122/544] CustomerCredentials/Delete                                   [FAIL] Missing required query parameter: id
+[123/544] CustomerDashboard                                            [OK] dict        4 items
+[124/544] CustomerDashboard/Connectors                                 [FAIL] Code field is required
+[125/544] CustomerDashboard/Devices                                    [FAIL] Code field is required
+[126/544] CustomerDashboard/Get                                        [FAIL] Code field is required
+[127/544] CustomerDashboard/Pages                                      [OK] dict        5 items
+[128/544] CustomerNotification/ApplyDealerTemplate                     [FAIL] Id field is required; DealerTemplateI...
+[129/544] CustomerNotification/Create                                  [FAIL] E00000: An error has occurred during ...
+[130/544] CustomerNotification/Delete                                  [FAIL] Missing required query parameter: id
+[131/544] CustomerNotification/Get                                     [FAIL] Customer not found
+[132/544] CustomerNotification/GetNotificationPlaceholders             [OK] list       13 items
+[133/544] CustomerNotification/GetSampleNotification                   [FAIL] E00000: An error has occurred during ...
+[134/544] CustomerNotification/List                                    [OK] list        1 items
+[135/544] CustomerNotification/Update                                  [FAIL] Empty response from API
+[136/544] Dealer/AccountingSettings/Get                                [OK] dict        9 items
+[137/544] Dealer/AccountingSettings/Update                             [FAIL] ObjectToUpdate field is required
+[138/544] Dealer/AdvancedOptions/Get                                   [OK] dict       13 items
+[139/544] Dealer/AlertLimitOptions/Get                                 [OK] dict       12 items
+[140/544] Dealer/AlertSettings/Get                                     [OK] dict        6 items
+[141/544] Dealer/AlertSettings/Update                                  [FAIL] ObjectToUpdate field is required
+[142/544] Dealer/CounterBlend/ClearCounter                             [FAIL] Missing required query parameter: id
+[143/544] Dealer/CounterBlend/Create                                   [FAIL] ObjectToCreate field is required
+[144/544] Dealer/CounterBlend/Delete                                   [FAIL] Missing required query parameter: id
+[145/544] Dealer/CounterBlend/Get                                      [FAIL] E00000: An error has occurred during ...
+[146/544] Dealer/CounterBlend/List                                     [OK] list        4 items
+[147/544] Dealer/CounterBlend/Search                                   [FAIL] Brand is required
+[148/544] Dealer/CounterBlend/Update                                   [FAIL] ObjectToUpdate field is required
+[149/544] Dealer/CounterBlendToStandard/Create                         [FAIL] 'Dealer Code' should not be empty.; '...
+[150/544] Dealer/CounterBlendToStandard/Delete                         [FAIL] Missing required query parameter: id
+[151/544] Dealer/CounterBlendToStandard/Get                            [FAIL] DealerCounterBlendToStandardCounter n...
+[152/544] Dealer/CounterBlendToStandard/GetByDevice                    [FAIL] Device not found
+[153/544] Dealer/CounterBlendToStandard/List                           [OK] list        0 items
+[154/544] Dealer/CounterBlendToStandard/Update                         [FAIL] 'Dealer Code' should not be empty.; '...
+[155/544] Dealer/Customizations/Get                                    [OK] dict        5 items
+[156/544] Dealer/Customizations/Update                                 [FAIL] ObjectToUpdate field is required
+[157/544] Dealer/DealerServicesStatus/Get                              [OK] dict        6 items
+[158/544] Dealer/DeclineDemoRequest                                    [FAIL] Empty response from API
+[159/544] Dealer/DemoRequest/Get                                       [FAIL] Missing required query parameter: id
+[160/544] Dealer/DemoRequest/List                                      [FAIL] Missing required query parameter: sor...
+[161/544] Dealer/DistributorSettings/Get                               [FAIL] Access denied
+[162/544] Dealer/DistributorSettings/Update                            [FAIL] ObjectToUpdate field is required
+[163/544] Dealer/ExportDealerTagsHierarchy                             [FAIL] E00000: An error has occurred during ...
+[164/544] Dealer/Get                                                   [FAIL] Code field is required
+[165/544] Dealer/GetDealer                                             [FAIL] Id field is required
+[166/544] Dealer/GetDealerByCode                                       [FAIL] Code field is required
+[167/544] Dealer/GetDealerHierarchy                                    [OK] dict        7 items
+[168/544] Dealer/GetDealerSupportTicketConfiguration                   [FAIL] Code field is required
+[169/544] Dealer/GetDealerTagsHierarchy                                [OK] dict        4 items
+[170/544] Dealer/GetDealers                                            [FAIL] SortColumn cannot be null or empty
+[171/544] Dealer/GetDealersInfo                                        [FAIL] SortColumn cannot be null or empty
+[172/544] Dealer/GetDealersWithoutContract                             [FAIL] Empty response from API
+[173/544] Dealer/Onboarding/Get                                        [OK] dict        2 items
+[174/544] Dealer/Onboarding/Update                                     [FAIL] ObjectToUpdate field is required
+[175/544] Dealer/PostponeDemoExpiration                                [FAIL] Empty response from API
+[176/544] Dealer/RemoteOfflineCountersSettings/Get                     [OK] dict       15 items
+[177/544] Dealer/RemoteOfflineCountersSettings/Update                  [FAIL] ObjectToUpdate field is required
+[178/544] Dealer/SaveDealerTagsHierarchy                               [FAIL] Code field is required
+[179/544] Dealer/Update                                                [FAIL] 'Dealer Code' should not be empty.; '...
+[180/544] Dealer/UpdateDealerSupportTicketConfiguration                [FAIL] ObjectToUpdate field is required
+[181/544] Dealer/eXplorerSettings/Get                                  [OK] dict       13 items
+[182/544] Dealer/eXplorerSettings/Update                               [FAIL] ObjectToUpdate field is required
+[183/544] DealerNotification/Create                                    [FAIL] E00000: An error has occurred during ...
+[184/544] DealerNotification/Delete                                    [FAIL] Missing required query parameter: id
+[185/544] DealerNotification/Get                                       [FAIL] E00000: An error has occurred during ...
+[186/544] DealerNotification/GetNotificationPlaceholders               [OK] list       13 items
+[187/544] DealerNotification/GetSampleNotification                     [OK] dict        4 items
+[188/544] DealerNotification/List                                      [OK] list        4 items
+[189/544] DealerNotification/RemoveMailAddressFromCustomers            [FAIL] DealerCode field is required; Emails ...
+[190/544] DealerNotification/Template/Get                              [OK] dict        2 items
+[191/544] DealerNotification/Template/Update                           [FAIL] ObjectToUpdate field is required
+[192/544] DealerNotification/Update                                    [FAIL] Empty response from API
+[193/544] DealerProduct/Create                                         [FAIL] Code field is required; IdProductFrom...
+[194/544] DealerProduct/Delete                                         [FAIL] Missing required query parameter: id
+[195/544] DealerProduct/Edit                                           [FAIL] Code field is required; IdProductFrom...
+[196/544] DealerProduct/Get                                            [OK] dict        4 items
+[197/544] DealerProduct/List                                           [OK] list        0 items
+[198/544] DealerSupply/Count                                           [OK] dict        3 items
+[199/544] DealerSupply/Create                                          [FAIL] ObjectToCreate field is required
+[200/544] DealerSupply/CreateFromProjectVolumes                        [FAIL] Code field is required
+[201/544] DealerSupply/CreateFromStandardSupply                        [FAIL] Id field is required
+[202/544] DealerSupply/Delete                                          [FAIL] Missing required query parameter: id
+[203/544] DealerSupply/Export                                          [OK] dict        3 items
+[204/544] DealerSupply/Get                                             [FAIL] Code is required
+[205/544] DealerSupply/List                                            [OK] list       50 items
+[206/544] DealerSupply/ListSuggested                                   [FAIL] Code field is required; ProductIds mu...
+[207/544] DealerSupply/Update                                          [FAIL] ObjectToUpdate field is required
+[208/544] DealerSupply/UploadSupplies                                  [FAIL] Error reading file content
+[209/544] DealerSupplyPriceListing/Create                              [FAIL] 'Dealer Code' should not be empty.; '...
+[210/544] DealerSupplyPriceListing/Customer/Create                     [FAIL] Rate limit exceeded
+[211/544] DealerSupplyPriceListing/Delete                              [FAIL] Missing required query parameter: id
+[212/544] DealerSupplyPriceListing/Get                                 [OK] dict        4 items
+[213/544] DealerSupplyPriceListing/List                                [OK] list        0 items
+[214/544] DealerSupplyPriceListing/Update                              [FAIL] E00000: An error has occurred during ...
+[215/544] DealerSupplyPriceListing/UpdateByCustomer                    [FAIL] Rate limit exceeded
+[216/544] DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts [FAIL] Rate limit exceeded
+[217/544] DealerSupplySet/Count                                        [OK] dict        3 items
+[218/544] DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations [FAIL] DealerSupplySet not found
+[219/544] DealerSupplySet/CreateFromProjectVolumes                     [FAIL] Code field is required
+[220/544] DealerSupplySet/CreateFromStandardModels                     [FAIL] E00000: An error has occurred during ...
+[221/544] DealerSupplySet/Delete                                       [FAIL] Missing required query parameter: id
+[222/544] DealerSupplySet/Export                                       [OK] dict        3 items
+[223/544] DealerSupplySet/ExportExcel                                  [OK] dict        3 items
+[224/544] DealerSupplySet/Get                                          [FAIL] Id not found
+[225/544] DealerSupplySet/Import                                       [FAIL] E00000: An error has occurred during ...
+[226/544] DealerSupplySet/List                                         [OK] list        0 items
+[227/544] DealerSupplySet/ListDealerSupplySetFromStandardModels        [OK] list      132 items
+[228/544] DealerSupplySet/SaveSupplySet                                [FAIL] ObjectToUpdate field is required
+[229/544] DealerSupplySet/UploadSupplySet                              [FAIL] Check file errors
+[230/544] Device/AssignOfficeToDevicesByDeviceId                       [FAIL] Required; DevicesId required
+[231/544] Device/AssignOfficeToDevicesBySerialNumber                   [FAIL] Required; DevicesSerialNumber required
+[232/544] Device/Delete                                                [FAIL] Missing required query parameter: id
+[233/544] Device/Deleted/List                                          [FAIL] CustomerCode field is required
+[234/544] Device/Deleted/ListByDealer                                  [OK] list       50 items
+[235/544] Device/Deleted/Restore                                       [FAIL] Id field is required
+[236/544] Device/ExplorerDataAffinities/List                           [FAIL] Device not found
+[237/544] Device/Get                                                   [FAIL] Id field is required
+[238/544] Device/GetDetailedInformations                               [FAIL] Device not found
+[239/544] Device/GetDeviceAdditionalInfos                              [FAIL] Device not found
+[240/544] Device/GetDeviceGapInfos                                     [FAIL] Device not found
+[241/544] Device/GetLfpCounters                                        [FAIL] E00000: An error has occurred during ...
+[242/544] Device/GetSuppliesDetails                                    [FAIL] Device not found
+[243/544] Device/GetSuppliesDetailsInfo                                [FAIL] Device not found
+[244/544] Device/GetSuppliesDetailsSummary                             [FAIL] Device not found
+[245/544] Device/GetZebraSuppliesDetailsSummary                        [FAIL] Device not found
+[246/544] Device/List                                                  [OK] list      100 items
+[247/544] Device/ListAttributesDataHistory                             [FAIL] SortColumn cannot be null or empty; T...
+[248/544] Device/ListErrorsMessagesDataHistory                         [FAIL] SortColumn cannot be null or empty; T...
+[249/544] Device/ListLevelsDataHistory                                 [FAIL] The FromDate is invalid; The ToDate i...
+[250/544] Device/ListMaintenanceKitMessagesDataHistory                 [FAIL] SortColumn cannot be null or empty; T...
+[251/544] Device/ListMeterReads                                        [FAIL] The customerCode is required; The Fro...
+[252/544] Device/ListMetersDataHistory                                 [FAIL] SortColumn cannot be null or empty; T...
+[253/544] Device/ListSuppliesDataHistory                               [FAIL] SortColumn cannot be null or empty; T...
+[254/544] Device/MaintenanceAlerts/List                                [FAIL] IdInstalledProduct  field is required
+[255/544] Device/Offline/Create                                        [FAIL] SerialNumber required; Brand required...
+[256/544] Device/Offline/Get                                           [FAIL] Id field is required
+[257/544] Device/Offline/List                                          [OK] list        4 items
+[258/544] Device/ResetWorkflowMode                                     [FAIL] Empty response from API
+[259/544] Device/SharpFSS/Create                                       [FAIL] SerialNumber required; Model required
+[260/544] Device/Update                                                [FAIL] Device not found
+[261/544] Device/UpdateDeviceSerialNumber                              [FAIL] Id field is required; SerialNumber
+[262/544] Device/UpdateDevicesBySerialNumbers                          [FAIL] Required; Devices required
+[263/544] Device/UpdateSupplySetAssociation                            [FAIL] E00000: An error has occurred during ...
+[264/544] Explorer/AbortRequestSendLogs                                [FAIL] Id field is required
+[265/544] Explorer/AbortUpdateAgent                                    [FAIL] Empty response from API
+[266/544] Explorer/AbortUpdateDca4Client                               [FAIL] Empty response from API
+[267/544] Explorer/AbortUpdateDca4Monitor                              [FAIL] Empty response from API
+[268/544] Explorer/AbortUpdateService                                  [FAIL] Empty response from API
+[269/544] Explorer/AgentVersions                                       [FAIL] Missing required query parameter: id
+[270/544] Explorer/AutomaticUpdate                                     [FAIL] Empty response from API
+[271/544] Explorer/ClearOidRegistry                                    [FAIL] Id field is required
+[272/544] Explorer/Cluster/AddSlaveToCluster                           [FAIL] ObjectToCreate field is required
+[273/544] Explorer/Cluster/AutoClusters                                [OK] list       34 items
+[274/544] Explorer/Cluster/Create                                      [FAIL] ObjectToCreate field is required
+[275/544] Explorer/Cluster/Delete                                      [FAIL] Id field is required
+[276/544] Explorer/Cluster/Get                                         [FAIL] Explorer Cluster not found
+[277/544] Explorer/Cluster/List                                        [OK] list       50 items
+[278/544] Explorer/Configuration/Copy                                  [FAIL] CustomerId field is required; Id fiel...
+[279/544] Explorer/Configuration/Create                                [FAIL] ObjectToCreate field is required
+[280/544] Explorer/Configuration/CreateFromTicket                      [FAIL] Empty response from API
+[281/544] Explorer/Configuration/Delete                                [FAIL] Missing required query parameter: id
+[282/544] Explorer/Configuration/Get                                   [FAIL] Missing required query parameter: con...
+[283/544] Explorer/Configuration/GetTestTableVersions                  [FAIL] E00000: An error has occurred during ...
+[284/544] Explorer/Configuration/List                                  [OK] list        1 items
+[285/544] Explorer/Configuration/ScanImmediate                         [FAIL] CustomerId field is required; Id fiel...
+[286/544] Explorer/Configuration/Update                                [FAIL] ObjectToUpdate field is required
+[287/544] Explorer/DataLogs                                            [FAIL] Missing required query parameter: id
+[288/544] Explorer/DataPings                                           [FAIL] Invalid JSON response from API
+[289/544] Explorer/Dca4ClientVersions                                  [FAIL] Missing required query parameter: id
+[290/544] Explorer/Dca4MonitorVersions                                 [FAIL] Missing required query parameter: id
+[291/544] Explorer/DeleteExplorerData                                  [FAIL] ObjectToDelete field is required
+[292/544] Explorer/DeleteExplorerDataExplorerData                      [FAIL] ObjectToDelete field is required
+[293/544] Explorer/DownloadLogs                                        [FAIL] ExplorerData non found
+[294/544] Explorer/ExplorerDataCommand/List                            [FAIL] ExplorerData not found
+[295/544] Explorer/ExplorerDataInfo/List                               [FAIL] ExplorerData not found
+[296/544] Explorer/GetClusterCounters                                  [FAIL] Customer not found
+[297/544] Explorer/GetConnectorEndpoints                               [OK] list        0 items
+[298/544] Explorer/GetConnectors                                       [OK] list       50 items
+[299/544] Explorer/GetDca4Otp                                          [FAIL] E00000: An error has occurred during ...
+[300/544] Explorer/GetDcaCurrentVersion                                [FAIL] Invalid code specified
+[301/544] Explorer/GetDcaReleaseNotes                                  [OK] dict        4 items
+[302/544] Explorer/GetEndpointsLink                                    [FAIL] Missing required query parameter: pla...
+[303/544] Explorer/GetExplorerDatas                                    [OK] list       50 items
+[304/544] Explorer/GetExplorerSetupLink                                [FAIL] Access denied
+[305/544] Explorer/GetJamcSetupLink                                    [FAIL] CustomerCode not found or SDS not Ena...
+[306/544] Explorer/Hostname/Create                                     [FAIL] CustomerId field is required; Explore...
+[307/544] Explorer/Hostname/Delete                                     [FAIL] Missing required query parameter: id
+[308/544] Explorer/Hostname/Update                                     [FAIL] CustomerId field is required; Explore...
+[309/544] Explorer/ImmediateScanDca4                                   [FAIL] IdExplorerData is required; IdDevice ...
+[310/544] Explorer/Intervals/Update                                    [FAIL] CustomerId field is required; Explore...
+[311/544] Explorer/License/Generate                                    [FAIL] CustomerCode field is required
+[312/544] Explorer/License/List                                        [OK] list        0 items
+[313/544] Explorer/RequestSendLogs                                     [FAIL] ExplorerData non found
+[314/544] Explorer/Schedule/Create                                     [FAIL] CustomerId field is required; Explore...
+[315/544] Explorer/Schedule/Delete                                     [FAIL] Missing required query parameter: id
+[316/544] Explorer/Schedule/Update                                     [FAIL] CustomerId field is required; Explore...
+[317/544] Explorer/SendGetOrWalk                                       [FAIL] IdExplorerData is required; RootOid i...
+[318/544] Explorer/SendGetOrWalkByPrinter                              [FAIL] IdExplorerData is required; IdDevice ...
+[319/544] Explorer/SendHpLfpXml                                        [FAIL] IdExplorerData is required; IpAddress...
+[320/544] Explorer/SendHpLfpXmlByPrinter                               [FAIL] IdExplorerData is required
+[321/544] Explorer/SendPing                                            [FAIL] IdExplorerData is required; IpAddress...
+[322/544] Explorer/ServiceVersions                                     [FAIL] Missing required query parameter: id
+[323/544] Explorer/SetDcaLogLevel                                      [FAIL] Empty response from API
+[324/544] Explorer/SetPollingService                                   [FAIL] Empty response from API
+[325/544] Explorer/Staging/Activate                                    [FAIL] Id field is required; CustomerCode fi...
+[326/544] Explorer/Staging/Delete                                      [FAIL] Missing required query parameter: cus...
+[327/544] Explorer/Staging/List                                        [FAIL] Access denied
+[328/544] Explorer/Subnet/Create                                       [FAIL] CustomerId field is required; Explore...
+[329/544] Explorer/Subnet/Delete                                       [FAIL] Missing required query parameter: id
+[330/544] Explorer/Subnet/Update                                       [FAIL] CustomerId field is required; Explore...
+[331/544] Explorer/UpdateAgent                                         [FAIL] Empty response from API
+[332/544] Explorer/UpdateDca4Client                                    [FAIL] Empty response from API
+[333/544] Explorer/UpdateDca4Monitor                                   [FAIL] Empty response from API
+[334/544] Explorer/UpdateService                                       [FAIL] Empty response from API
+[335/544] Explorer/V3/ReleaseNotes                                     [OK] str         0 items
+[336/544] Explorer/WorkingDays/Update                                  [FAIL] CustomerId field is required; Explore...
+[337/544] Integrations/Create                                          [FAIL] 'Dealer Code' should not be empty.
+[338/544] Integrations/Delete                                          [FAIL] Missing required query parameter: id
+[339/544] Integrations/Get                                             [FAIL] Integration not found
+[340/544] Integrations/GetJoinedCustomers                              [OK] list        2 items
+[341/544] Integrations/GetJoinedDevices                                [FAIL] Integration not found
+[342/544] Integrations/GetLogisticPlaceholders                         [FAIL] E00000: An error has occurred during ...
+[343/544] Integrations/GetNew                                          [FAIL] E00000: An error has occurred during ...
+[344/544] Integrations/List                                            [OK] list        0 items
+[345/544] Integrations/ToServ/Create                                   [FAIL] 'Dealer Code' should not be empty.; '...
+[346/544] Integrations/Update                                          [FAIL] 'Dealer Code' should not be empty.
+[347/544] Integrations/VantageOnline/Create                            [FAIL] 'Dealer Code' should not be empty.; '...
+[348/544] Integrations/eautomate/GetEAutomateLog                       [FAIL] E00000: An error has occurred during ...
+[349/544] Integrations/eautomate/runjoin                               [FAIL] E00000: An error has occurred during ...
+[350/544] Office/Create                                                [FAIL] ObjectToCreate field is required
+[351/544] Office/Delete                                                [FAIL] Missing required query parameter: id
+[352/544] Office/Get                                                   [FAIL] Id field is required
+[353/544] Office/List                                                  [FAIL] SortColumn cannot be null or empty; C...
+[354/544] Office/OfficeFloor/Create                                    [FAIL] OfficeId field is required; Descripti...
+[355/544] Office/OfficeFloor/Delete                                    [FAIL] E00000: An error has occurred during ...
+[356/544] Office/OfficeFloor/DeletePin                                 [FAIL] E00000: An error has occurred during ...
+[357/544] Office/OfficeFloor/GetPin                                    [FAIL] Device not found
+[358/544] Office/OfficeFloor/List                                      [FAIL] Office not found
+[359/544] Office/OfficeFloor/SavePin                                   [FAIL] OfficeId field is required; OfficeFlo...
+[360/544] Office/OfficeFloor/Update                                    [FAIL] OfficeId field is required; OfficeFlo...
+[361/544] Office/Subnet/Create                                         [FAIL] OfficeId field is required; IpRootFro...
+[362/544] Office/Subnet/Delete                                         [FAIL] Missing required query parameter: id
+[363/544] Office/Update                                                [FAIL] ObjectToUpdate field is required
+[364/544] Office/UploadOffices                                         [FAIL] E00000: An error has occurred during ...
+[365/544] Orders/GetOrderAdditionalInfo                                [FAIL] Empty response from API
+[366/544] Orders/GetOrderLineStatuses                                  [FAIL] Invalid JSON response from API
+[367/544] Orders/GetOrderLines                                         [FAIL] Missing required query parameter: req...
+[368/544] Orders/GetOrderProofOfDelivery                               [FAIL] Empty response from API
+[369/544] Orders/GetOrders                                             [FAIL] Missing required query parameter: req...
+[370/544] PanelMessageAlert/Create                                     [FAIL] ObjectToCreate field is required
+[371/544] PanelMessageAlert/Delete                                     [FAIL] Missing required query parameter: id
+[372/544] PanelMessageAlert/GetErrorCodes                              [FAIL] PageNumber must be greater than 0; Pa...
+[373/544] PanelMessageAlert/List                                       [FAIL] SortColumn cannot be null or empty; D...
+[374/544] PanelMessageAlert/Update                                     [FAIL] ObjectToUpdate field is required
+[375/544] Product/Customer/List                                        [FAIL] DealerCode field is required; Custome...
+[376/544] Product/Dealer/List                                          [OK] list       50 items
+[377/544] Product/Dealer/ListBrands                                    [OK] list        5 items
+[378/544] Product/Dealer/ListModels                                    [OK] list       50 items
+[379/544] Product/GetBrands                                            [OK] list       50 items
+[380/544] Product/GetModels                                            [OK] list       50 items
+[381/544] Product/GetProduct                                           [FAIL] Id field is required
+[382/544] Product/GetProducts                                          [FAIL] PageNumber must be greater than 0; Pa...
+[383/544] Product/GetSnmpDiscoveryBrands                               [OK] list       31 items
+[384/544] Project/Create                                               [FAIL] CustomerCode is required; Description...
+[385/544] Project/Delete                                               [FAIL] Missing required query parameter: id
+[386/544] Project/Get                                                  [FAIL] Id field is required
+[387/544] Project/GetContractFile                                      [FAIL] Project not found
+[388/544] Project/GetDetail                                            [FAIL] Project not found
+[389/544] Project/List                                                 [FAIL] SortColumn cannot be null or empty; C...
+[390/544] Project/ManageDevicesAssociation                             [FAIL] Empty response from API
+[391/544] Project/SetRelatedDevicesAlertGenerator                      [FAIL] Id is required
+[392/544] Project/Update                                               [FAIL] Id is required; CustomerCode is requi...
+[393/544] Role/Copy                                                    [FAIL] Id field is required
+[394/544] Role/Create                                                  [FAIL] ObjectToCreate field is required
+[395/544] Role/Delete                                                  [FAIL] Missing required query parameter: id
+[396/544] Role/Get                                                     [FAIL] E00000: An error has occurred during ...
+[397/544] Role/GetAllCapabilities                                      [FAIL] Missing required query parameter: isF...
+[398/544] Role/List                                                    [OK] list       12 items
+[399/544] Role/Update                                                  [FAIL] ObjectToUpdate field is required
+[400/544] Saga/Get                                                     [FAIL] Missing required query parameter: id
+[401/544] Saga/GetSagaOperationLogFile                                 [FAIL] Empty response from API
+[402/544] Saga/GetSagaOperationLogList                                 [FAIL] Empty response from API
+[403/544] Saga/GetSagaOperationLogMessage                              [FAIL] Missing required query parameter: id
+[404/544] Saga/GetSagaOperationsList                                   [FAIL] Empty response from API
+[405/544] Saga/List                                                    [FAIL] Empty response from API
+[406/544] SdsAction/ChangeDeviceActionStatus                           [FAIL] Id field is required
+[407/544] SdsAction/DeleteDeviceAction                                 [FAIL] Missing required query parameter: id
+[408/544] SdsAction/GetDeviceAction                                    [FAIL] Sds service request not found
+[409/544] SdsAction/GetDeviceActions                                   [OK] list       15 items
+[410/544] SdsAction/GetDeviceActionsDashboard                          [OK] list        0 items
+[411/544] SdsConnector/Associate                                       [FAIL] DealerId is required; CustomerId is r...
+[412/544] SdsConnector/DeleteLog                                       [FAIL] Missing required query parameter: id
+[413/544] SdsConnector/Download                                        [FAIL] Id field is required
+[414/544] SdsConnector/DownloadLog                                     [FAIL] Missing required query parameter: id
+[415/544] SdsConnector/GetConnector                                    [OK] dict        4 items
+[416/544] SdsConnector/GetConnectors                                   [FAIL] DealerId is required
+[417/544] SdsConnector/GetJamcConnectors                               [FAIL] E00000: An error has occurred during ...
+[418/544] SdsConnector/GetLogs                                         [FAIL] E00000: An error has occurred during ...
+[419/544] SdsConnector/GetWppConnectors                                [FAIL] E00000: An error has occurred during ...
+[420/544] SdsConnector/Install                                         [FAIL] Id field is required
+[421/544] SdsConnector/Register                                        [FAIL] Id field is required
+[422/544] SdsConnector/RetrieveLog                                     [FAIL] DealerId is required
+[423/544] SdsConnector/Unregister                                      [FAIL] Id field is required
+[424/544] SdsCustomer/Activate                                         [FAIL] Id field is required
+[425/544] SdsCustomer/CreateAssessTemplate                             [FAIL] ObjectToCreate field is required
+[426/544] SdsCustomer/Deactivate                                       [FAIL] Id field is required
+[427/544] SdsCustomer/DeleteAssessTemplate                             [FAIL] Missing required query parameter: id
+[428/544] SdsCustomer/DeleteCredential                                 [FAIL] Missing required query parameter: id
+[429/544] SdsCustomer/GetAssessTemplate                                [FAIL] E00000: An error has occurred during ...
+[430/544] SdsCustomer/GetAssessTemplates                               [OK] list        4 items
+[431/544] SdsCustomer/GetCredential                                    [FAIL] E00000: An error has occurred during ...
+[432/544] SdsCustomer/GetCustomerOperation                             [FAIL] CustomerId is required
+[433/544] SdsCustomer/GetCustomerOperations                            [FAIL] DeviceId is required
+[434/544] SdsCustomer/GetNewAssessTemplate                             [OK] list       81 items
+[435/544] SdsCustomer/RunOperation                                     [FAIL] Id field is required
+[436/544] SdsCustomer/SetCredential                                    [FAIL] Empty response from API
+[437/544] SdsCustomer/Update                                           [FAIL] Invalid JSON response from API
+[438/544] SdsCustomer/UpdateAssessTemplate                             [FAIL] ObjectToUpdate field is required
+[439/544] SdsCustomer/UploadVJamcDevices                               [FAIL] E00000: An error has occurred during ...
+[440/544] SdsDevice/AbortDeviceReboot                                  [FAIL] Id field is required
+[441/544] SdsDevice/AbortDeviceUpdateFirmware                          [FAIL] Id field is required
+[442/544] SdsDevice/AssessAndRemediate                                 [FAIL] DeviceId field is required; AssessTem...
+[443/544] SdsDevice/CheckDeviceOperation                               [FAIL] Device not found or not managed
+[444/544] SdsDevice/CopyPolicy                                         [FAIL] E00000: An error has occurred during ...
+[445/544] SdsDevice/DeleteDeviceCredential                             [FAIL] Missing required query parameter: id
+[446/544] SdsDevice/GetAssessTemplate                                  [FAIL] E00000: An error has occurred during ...
+[447/544] SdsDevice/GetConfigItems                                     [FAIL] E00000: An error has occurred during ...
+[448/544] SdsDevice/GetCounters                                        [FAIL] Device not found
+[449/544] SdsDevice/GetDeviceOperation                                 [FAIL] E00000: An error has occurred during ...
+[450/544] SdsDevice/GetDeviceRemoteEws                                 [FAIL] E00000: An error has occurred during ...
+[451/544] SdsDevice/GetDevicesOperations                               [OK] dict        5 items
+[452/544] SdsDevice/GetDevicesWithFirmwareOutOfDate                    [FAIL] PageNumber must be greater than 0; Pa...
+[453/544] SdsDevice/GetOnDeviceServices                                [FAIL] E00000: An error has occurred during ...
+[454/544] SdsDevice/GetSupplyDetails                                   [FAIL] SupplyType is required
+[455/544] SdsDevice/GetZendeskTicketInfo                               [FAIL] E00000: An error has occurred during ...
+[456/544] SdsDevice/HideEarlyReplacement                               [FAIL] SupplyId is required
+[457/544] SdsDevice/ListSdsAssessAndRemediate                          [FAIL] SortColumn cannot be null or empty; F...
+[458/544] SdsDevice/ListSdsCredentials                                 [FAIL] SortColumn cannot be null or empty; F...
+[459/544] SdsDevice/ListSdsMessageSuppression                          [FAIL] SortColumn cannot be null or empty; F...
+[460/544] SdsDevice/ListSdsRapa                                        [FAIL] Invalid JSON response from API
+[461/544] SdsDevice/ListSdsReboot                                      [FAIL] SortColumn cannot be null or empty; F...
+[462/544] SdsDevice/PerformPrintQualityDiagnostics                     [FAIL] Id field is required
+[463/544] SdsDevice/RemoveFromCloudDCA                                 [FAIL] Missing required query parameter: id
+[464/544] SdsDevice/RemoveFromSDS                                      [FAIL] Missing required query parameter: id
+[465/544] SdsDevice/RetrieveDeviceData                                 [FAIL] Id field is required; DeviceConfigIte...
+[466/544] SdsDevice/SendPanelMessage                                   [FAIL] Id field is required
+[467/544] SdsDevice/SetDeviceConfigData                                [FAIL] Ids is required; DeviceConfigItems is...
+[468/544] SdsDevice/SetDeviceCredential                                
