@@ -282,11 +282,8 @@
             const devices = await MPSApi.getDevicesByCustomer(state.customerCode, state.customerId);
             state.devices = devices || [];
 
-            // Filter by customer if needed and sort by external identifier
-            const filtered = state.devices.filter(d =>
-                !state.customerCode ||
-                (d.Customer && d.Customer.Code === state.customerCode)
-            );
+            // Devices are already filtered by customer in API, just sort
+            const filtered = state.devices;
 
             const sorted = filtered.sort((a, b) => {
                 const idA = a.AssetNumber || a.SerialNumber || '';
