@@ -24,6 +24,8 @@
         const settings = MPSApi.loadSettings();
         state.dealerCode = settings.dealerCode || 'NY06AGDWUQ';
         state.customerCode = settings.customerCode;
+        state.customerId = settings.customerId;
+        state.customerName = settings.customerName;
         state.theme = localStorage.getItem('mps_theme') || 'light';
 
         // Apply theme
@@ -277,7 +279,7 @@
         container.innerHTML = '<div class="loading">Loading printers...</div>';
 
         try {
-            const devices = await MPSApi.getDevicesByCustomer(state.customerCode);
+            const devices = await MPSApi.getDevicesByCustomer(state.customerCode, state.customerId);
             state.devices = devices || [];
 
             // Filter by customer if needed and sort by external identifier
