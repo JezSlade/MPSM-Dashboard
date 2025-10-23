@@ -8,10 +8,13 @@
     // Application state
     const state = {
         currentTab: 'dashboard',
-        customerCode: null,
+        customerCode: 'W9OPXL0YDK', // Default: Cape Fear Valley Med Ctr
+        customerId: '0xUi5WEYLzOCrZ8ILowOvA2',
+        customerName: 'CAPE FEAR VALLEY MED CTR.',
         dealerCode: 'NY06AGDWUQ',
         autoRefreshInterval: null,
         devices: [],
+        allCustomers: [],
         theme: 'light'
     };
 
@@ -212,24 +215,42 @@
         try {
             const data = await MPSApi.getCustomerDashboard(state.customerCode);
 
+            // Extract data from nested structure
+            const sdsData = data.SdsDashboard || {};
+            const mpsData = data.MpsDashboardCustomer || {};
+
             // Render customer dashboard
             container.innerHTML = `
                 <div class="customer-info">
                     <div class="customer-stat">
                         <div class="customer-stat-label">Customer</div>
-                        <div class="customer-stat-value">${data.CustomerName || 'Unknown'}</div>
+                        <div class="customer-stat-value">${state.customerName || 'Unknown'}</div>
                     </div>
                     <div class="customer-stat">
                         <div class="customer-stat-label">Total Devices</div>
-                        <div class="customer-stat-value">${data.TotalDevices || 0}</div>
+                        <div class="customer-stat-value">${sdsData.TotalDevices || 0}</div>
                     </div>
                     <div class="customer-stat">
-                        <div class="customer-stat-label">Active Errors</div>
-                        <div class="customer-stat-value danger">${data.ActiveErrors || 0}</div>
+                        <div class="customer-stat-label">Devices with Errors</div>
+                        <div class="customer-stat-value ${sdsData.DevicesWithErrors > 0 ? 'danger' : 'success'}">
+                            ${sdsData.DevicesWithErrors || 0}
+                        </div>
                     </div>
                     <div class="customer-stat">
-                        <div class="customer-stat-label">Last Sync</div>
-                        <div class="customer-stat-value">${formatDate(data.LastSync) || 'Never'}</div>
+                        <div class="customer-stat-label">Devices with Warnings</div>
+                        <div class="customer-stat-value ${sdsData.DevicesWithWarnings > 0 ? 'warning' : 'success'}">
+                            ${sdsData.DevicesWithWarnings || 0}
+                        </div>
+                    </div>
+                    <div class="customer-stat">
+                        <div class="customer-stat-label">Non-Communicating</div>
+                        <div class="customer-stat-value ${sdsData.NonCommunicatingDevices > 0 ? 'warning' : 'success'}">
+                            ${sdsData.NonCommunicatingDevices || 0}
+                        </div>
+                    </div>
+                    <div class="customer-stat">
+                        <div class="customer-stat-label">Actions Pending</div>
+                        <div class="customer-stat-value">${sdsData.CommonActionsToComplete || 0}</div>
                     </div>
                 </div>
             `;
@@ -620,12 +641,20 @@
         select.innerHTML = '<option value="">Loading customers...</option>';
 
         try {
-            const result = await MPSApi.discoverCustomerByName('');
+            const customers = await MPSApi.getAllCustomers();
+            state.allCustomers = customers;
 
-            if (result.customers && result.customers.length > 0) {
-                select.innerHTML = result.customers.map(customer => `
-                    <option value="${customer.code}">${customer.name} (${customer.code})</option>
+            if (customers && customers.length > 0) {
+                select.innerHTML = customers.map(customer => `
+                    <option value="${customer.code}" data-id="${customer.id}" data-name="${customer.name}">
+                        ${customer.name}
+                    </option>
                 `).join('');
+
+                // Set current selection
+                if (state.customerCode) {
+                    select.value = state.customerCode;
+                }
             } else {
                 select.innerHTML = '<option value="">No customers found</option>';
             }
@@ -738,22 +767,34 @@
      */
     function saveDefaults() {
         const dealerCode = document.getElementById('dealer-select').value;
-        const customerCode = document.getElementById('customer-select').value;
+        const customerSelect = document.getElementById('customer-select');
+        const customerCode = customerSelect.value;
 
         if (!dealerCode || !customerCode) {
             showToast('Please select both dealer and customer', 'warning');
             return;
         }
 
+        // Get selected customer details
+        const selectedOption = customerSelect.options[customerSelect.selectedIndex];
+        const customerId = selectedOption.dataset.id;
+        const customerName = selectedOption.dataset.name;
+
+        // Update state
         state.dealerCode = dealerCode;
         state.customerCode = customerCode;
+        state.customerId = customerId;
+        state.customerName = customerName;
 
+        // Save to API settings
         MPSApi.updateSettings({
             dealerCode: dealerCode,
-            customerCode: customerCode
+            customerCode: customerCode,
+            customerId: customerId,
+            customerName: customerName
         });
 
-        showToast('Defaults saved successfully', 'success');
+        showToast(`Defaults saved: ${customerName}`, 'success');
 
         // Reload dashboard
         refreshDashboard();

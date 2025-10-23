@@ -19,7 +19,9 @@ const MPSApi = (function() {
     // Runtime settings (set from admin panel)
     let settings = {
         dealerCode: 'NY06AGDWUQ',
-        customerCode: null, // Will be discovered
+        customerCode: 'W9OPXL0YDK', // Default: Cape Fear Valley Med Ctr
+        customerId: '0xUi5WEYLzOCrZ8ILowOvA2', // Customer ID
+        customerName: 'CAPE FEAR VALLEY MED CTR.',
         autoRefresh: false,
         refreshInterval: 60
     };
@@ -284,7 +286,7 @@ const MPSApi = (function() {
     }
 
     /**
-     * Discover customer by name
+     * Discover customer by name or get all customers
      */
     async function discoverCustomerByName(searchName) {
         // Get devices and extract customer codes with names
@@ -304,18 +306,23 @@ const MPSApi = (function() {
             if (device.Customer && device.Customer.Code) {
                 const code = device.Customer.Code;
                 const name = device.Customer.Description || 'Unknown';
+                const id = device.Customer.Id;
 
                 if (!customerMap.has(code)) {
                     customerMap.set(code, {
                         code: code,
                         name: name,
+                        id: id,
                         countryCode: device.Customer.CountryCode,
-                        id: device.Customer.Id
+                        countryName: device.Customer.CountryName
                     });
                     customers.push(customerMap.get(code));
                 }
             }
         }
+
+        // Sort customers by name
+        customers.sort((a, b) => a.name.localeCompare(b.name));
 
         // Search for matching customer
         if (searchName) {
@@ -326,11 +333,19 @@ const MPSApi = (function() {
             );
 
             if (match) {
-                return match;
+                return { match: match, customers: customers };
             }
         }
 
         return { customers: customers, match: null };
+    }
+
+    /**
+     * Get all customers
+     */
+    async function getAllCustomers() {
+        const result = await discoverCustomerByName('');
+        return result.customers;
     }
 
     /**
@@ -390,6 +405,7 @@ const MPSApi = (function() {
         getCustomerDashboardPages,
         getCustomerProducts,
         discoverCustomerByName,
+        getAllCustomers,
 
         // Devices
         getDevicesByCustomer,
