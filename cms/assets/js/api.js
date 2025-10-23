@@ -121,16 +121,16 @@ const MPSApi = (function() {
 
     /**
      * Get devices for customer with pagination
+     * NOTE: FilterCustomerId filters multiple customers, so we fetch by dealer and filter client-side
      */
     async function getDevicesByCustomer(customerCode, customerId) {
         const code = customerCode || settings.customerCode;
-        const id = customerId || settings.customerId;
 
-        if (!code || !id) {
-            throw new Error('Customer code and ID not set');
+        if (!code) {
+            throw new Error('Customer code not set');
         }
 
-        // Fetch all pages of ACTIVE devices (paginated API)
+        // Fetch all pages of ACTIVE devices for dealer (paginated API)
         const allDevices = [];
         let pageNumber = 1;
         const pageRows = 100; // Max items per page
@@ -139,13 +139,14 @@ const MPSApi = (function() {
         while (hasMore && pageNumber <= 50) { // Safety limit: 50 pages max (5000 devices)
             const devices = await makeRequest('Device/List', {
                 FilterDealerId: settings.dealerId,
-                FilterCustomerId: id,
                 pageNumber: pageNumber,
                 pageRows: pageRows
             }, { skipCache: true });
 
             if (devices && devices.length > 0) {
-                allDevices.push(...devices);
+                // Filter by customer code on client side
+                const filtered = devices.filter(d => d.CustomerCode === code);
+                allDevices.push(...filtered);
 
                 // Check if we got a full page (meaning there might be more)
                 hasMore = devices.length === pageRows;
