@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPS Monitor Dashboard</title>
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/card-management.css">
 </head>
 <body data-theme="light">
     <!-- Header -->
@@ -99,6 +100,13 @@
         <div id="admin-tab" class="tab-content">
             <div class="admin-container">
                 <h2>Administration</h2>
+
+                <!-- Card Management -->
+                <section class="admin-section">
+                    <div class="card-management-container">
+                        <!-- Card management UI will be rendered here -->
+                    </div>
+                </section>
 
                 <!-- Default Settings -->
                 <section class="admin-section">
@@ -222,6 +230,8 @@
     <!-- Scripts -->
     <script src="assets/js/table-utils.js"></script>
     <script src="assets/js/api.js"></script>
+    <script src="assets/js/card-registry.js"></script>
+    <script src="assets/js/card-manager.js"></script>
     <script src="assets/js/app.js"></script>
 </body>
 </html>

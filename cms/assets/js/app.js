@@ -31,6 +31,19 @@
         // Apply theme
         document.body.setAttribute('data-theme', state.theme);
 
+        // Initialize Card Manager
+        if (typeof CardManager !== 'undefined') {
+            await CardManager.init();
+
+            // Set default parameters for card data fetching
+            CardManager.setParams({
+                dealerId: 'SZ13qRwU5GtFLj0i_CbEgQ2',
+                dealerCode: state.dealerCode,
+                customerCode: state.customerCode,
+                customerId: state.customerId
+            });
+        }
+
         // Setup event listeners
         setupEventListeners();
 
@@ -170,6 +183,11 @@
         // Load tab-specific data
         if (tabName === 'admin') {
             loadAdminData();
+
+            // Render card management UI
+            if (typeof CardManager !== 'undefined') {
+                CardManager.renderAdminPanel('.card-management-container');
+            }
         }
     }
 
@@ -221,6 +239,13 @@
      * Load main dashboard
      */
     async function loadDashboard() {
+        // Use CardManager if available
+        if (typeof CardManager !== 'undefined') {
+            await CardManager.renderDashboard('.dashboard-grid');
+            return;
+        }
+
+        // Fallback to original implementation
         try {
             // Load customer dashboard header
             await loadCustomerDashboard();
