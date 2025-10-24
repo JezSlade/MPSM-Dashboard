@@ -192,9 +192,11 @@
             // Load customer dashboard header
             await loadCustomerDashboard();
 
-            // Load all cards in parallel
+            // FIRST: Load printer list to populate state.devices
+            await loadPrinterList();
+
+            // THEN: Load all other cards in parallel (they depend on state.devices)
             await Promise.all([
-                loadPrinterList(),
                 loadErrorsAlerts(),
                 loadTonerLevels(),
                 loadMeterReads(),
@@ -279,8 +281,10 @@
         container.innerHTML = '<div class="loading">Loading printers...</div>';
 
         try {
+            console.log('[loadPrinterList] Starting. Customer:', state.customerCode);
             const devices = await MPSApi.getDevicesByCustomer(state.customerCode, state.customerId);
             state.devices = devices || [];
+            console.log('[loadPrinterList] Loaded devices:', state.devices.length);
 
             countEl.textContent = state.devices.length;
 
@@ -376,6 +380,7 @@
         container.innerHTML = '<div class="loading">Loading alerts...</div>';
 
         try {
+            console.log('[loadErrorsAlerts] Starting. state.devices count:', state.devices?.length);
             const devices = state.devices;
 
             // Extract devices with issues
@@ -488,6 +493,7 @@
         container.innerHTML = '<div class="loading">Loading toner status...</div>';
 
         try {
+            console.log('[loadTonerLevels] Starting. state.devices count:', state.devices?.length);
             const devices = state.devices;
 
             // Extract devices with toner data
@@ -595,6 +601,7 @@
         container.innerHTML = '<div class="loading">Loading meter data...</div>';
 
         try {
+            console.log('[loadMeterReads] Starting. state.devices count:', state.devices?.length);
             const devices = state.devices;
 
             // Extract counter data
@@ -702,6 +709,7 @@
         container.innerHTML = '<div class="loading">Loading activity...</div>';
 
         try {
+            console.log('[loadRecentActivity] Starting. state.devices count:', state.devices?.length);
             // Get recent device updates
             const devices = state.devices;
             const recentUpdates = devices
