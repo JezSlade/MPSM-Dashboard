@@ -9,36 +9,78 @@ const MPSApi = (function() {
     // API Configuration
     const API_BASE_URL = '/mps-api/query';
     const ENGINE_STATUS_URL = '/mps-api/';
-    const CACHE_DURATION = 300000; // 5 minutes (persistent)
+    const CACHE_DURATION = 300000; // 5 minutes for individual API calls
+    const CACHE_DURATION_LONG = 1800000; // 30 minutes for aggregated data
+    const CACHE_REFRESH_THRESHOLD = 0.8; // Refresh when 80% of TTL elapsed
     const MAX_RETRIES = 2;
     const RETRY_DELAY = 1000;
 
-    // Persistent localStorage cache helper
+    // Cache statistics tracking
+    const cacheStats = {
+        hits: 0,
+        misses: 0,
+        refreshes: 0,
+        get hitRate() {
+            const total = this.hits + this.misses;
+            return total > 0 ? ((this.hits / total) * 100).toFixed(1) : 0;
+        }
+    };
+
+    // Persistent localStorage cache helper with metadata tracking
     const persistentCache = {
-        get: function(key) {
+        get: function(key, ttl = CACHE_DURATION) {
             try {
                 const item = localStorage.getItem(`mps_cache_${key}`);
-                if (!item) return null;
-
-                const cached = JSON.parse(item);
-                if (Date.now() - cached.timestamp > CACHE_DURATION) {
-                    localStorage.removeItem(`mps_cache_${key}`);
+                if (!item) {
+                    cacheStats.misses++;
                     return null;
                 }
+
+                const cached = JSON.parse(item);
+                const age = Date.now() - cached.timestamp;
+
+                if (age > ttl) {
+                    localStorage.removeItem(`mps_cache_${key}`);
+                    cacheStats.misses++;
+                    return null;
+                }
+
+                cacheStats.hits++;
+
+                // Check if we should background refresh (80% of TTL elapsed)
+                if (age > ttl * CACHE_REFRESH_THRESHOLD) {
+                    console.log(`[Cache] ${key} is ${Math.round(age/ttl*100)}% of TTL, consider refresh`);
+                }
+
                 return cached.data;
             } catch (e) {
+                cacheStats.misses++;
                 return null;
             }
         },
-        set: function(key, data) {
+        set: function(key, data, ttl = CACHE_DURATION) {
             try {
                 localStorage.setItem(`mps_cache_${key}`, JSON.stringify({
                     data: data,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    ttl: ttl,
+                    size: JSON.stringify(data).length
                 }));
+                cacheStats.refreshes++;
             } catch (e) {
                 // localStorage full, clear old cache
                 this.cleanup();
+                // Try again
+                try {
+                    localStorage.setItem(`mps_cache_${key}`, JSON.stringify({
+                        data: data,
+                        timestamp: Date.now(),
+                        ttl: ttl,
+                        size: JSON.stringify(data).length
+                    }));
+                } catch (e2) {
+                    console.error('Cache storage failed:', e2);
+                }
             }
         },
         cleanup: function() {
@@ -47,7 +89,8 @@ const MPSApi = (function() {
                 if (key.startsWith('mps_cache_')) {
                     try {
                         const item = JSON.parse(localStorage.getItem(key));
-                        if (Date.now() - item.timestamp > CACHE_DURATION) {
+                        const ttl = item.ttl || CACHE_DURATION;
+                        if (Date.now() - item.timestamp > ttl) {
                             localStorage.removeItem(key);
                         }
                     } catch (e) {
@@ -55,6 +98,53 @@ const MPSApi = (function() {
                     }
                 }
             });
+        },
+        getMetadata: function() {
+            const keys = Object.keys(localStorage);
+            const cacheEntries = [];
+            let totalSize = 0;
+
+            keys.forEach(key => {
+                if (key.startsWith('mps_cache_')) {
+                    try {
+                        const item = JSON.parse(localStorage.getItem(key));
+                        const age = Date.now() - item.timestamp;
+                        const ttl = item.ttl || CACHE_DURATION;
+                        const remaining = Math.max(0, ttl - age);
+                        const size = item.size || JSON.stringify(item.data).length;
+
+                        totalSize += size;
+
+                        cacheEntries.push({
+                            key: key.replace('mps_cache_', ''),
+                            timestamp: item.timestamp,
+                            age: age,
+                            ttl: ttl,
+                            remaining: remaining,
+                            percentUsed: (age / ttl * 100).toFixed(1),
+                            size: size,
+                            sizeKB: (size / 1024).toFixed(2),
+                            expired: age > ttl
+                        });
+                    } catch (e) {
+                        // Skip invalid entries
+                    }
+                }
+            });
+
+            return {
+                entries: cacheEntries.sort((a, b) => b.timestamp - a.timestamp),
+                totalEntries: cacheEntries.length,
+                totalSize: totalSize,
+                totalSizeKB: (totalSize / 1024).toFixed(2),
+                totalSizeMB: (totalSize / 1024 / 1024).toFixed(2),
+                stats: {
+                    hits: cacheStats.hits,
+                    misses: cacheStats.misses,
+                    refreshes: cacheStats.refreshes,
+                    hitRate: cacheStats.hitRate
+                }
+            };
         }
     };
 
@@ -169,6 +259,16 @@ const MPSApi = (function() {
             throw new Error('Customer code not set');
         }
 
+        // Check aggregated cache first (30-minute TTL)
+        const cacheKey = `devices_customer_${code}`;
+        const cached = persistentCache.get(cacheKey, CACHE_DURATION_LONG);
+        if (cached) {
+            console.log(`[Cache HIT] Using cached devices for ${code} (${cached.length} devices, 30min TTL)`);
+            return cached;
+        }
+
+        console.log(`[Cache MISS] Fetching devices for ${code}...`);
+
         // Fetch all pages of ACTIVE devices for dealer (paginated API)
         const allDevices = [];
         let pageNumber = 1;
@@ -180,7 +280,7 @@ const MPSApi = (function() {
                 FilterDealerId: settings.dealerId,
                 pageNumber: pageNumber,
                 pageRows: pageRows
-            }); // REMOVED skipCache: true - use persistent cache!
+            }); // Individual pages still use 5-minute cache
 
             if (devices && devices.length > 0) {
                 // Filter by customer code on client side
@@ -194,6 +294,10 @@ const MPSApi = (function() {
                 hasMore = false;
             }
         }
+
+        // Cache the final aggregated device list with long TTL
+        persistentCache.set(cacheKey, allDevices, CACHE_DURATION_LONG);
+        console.log(`[Cache SET] Cached ${allDevices.length} devices for ${code} (30min TTL)`);
 
         return allDevices;
     }
@@ -429,19 +533,19 @@ const MPSApi = (function() {
      */
     async function getAllCustomers() {
         // Check aggregated cache first (fixes admin dropdown reload issue)
-        const cached = persistentCache.get('customer_list_aggregated');
+        const cached = persistentCache.get('customer_list_aggregated', CACHE_DURATION_LONG);
         if (cached) {
-            console.log('Using cached customer list (aggregated)');
+            console.log('[Cache HIT] Using cached customer list (aggregated, 30min TTL)');
             return cached;
         }
 
-        console.log('Building customer list from devices...');
+        console.log('[Cache MISS] Building customer list from devices...');
         const result = await discoverCustomerByName('');
         const customers = result.customers;
 
-        // Cache the final aggregated customer list
-        persistentCache.set('customer_list_aggregated', customers);
-        console.log(`Cached ${customers.length} customers`);
+        // Cache the final aggregated customer list with long TTL
+        persistentCache.set('customer_list_aggregated', customers, CACHE_DURATION_LONG);
+        console.log(`[Cache SET] Cached ${customers.length} customers (30min TTL)`);
 
         return customers;
     }
@@ -492,6 +596,36 @@ const MPSApi = (function() {
         return { ...settings };
     }
 
+    /**
+     * Get cache metadata and statistics
+     */
+    function getCacheMetadata() {
+        return persistentCache.getMetadata();
+    }
+
+    /**
+     * Warm cache with critical data
+     */
+    async function warmCache() {
+        console.log('[Cache Warming] Starting...');
+        const startTime = Date.now();
+
+        try {
+            // Warm critical data in parallel
+            await Promise.all([
+                getAllCustomers(),
+                getDevicesByCustomer(settings.customerCode, settings.customerId)
+            ]);
+
+            const duration = Date.now() - startTime;
+            console.log(`[Cache Warming] Completed in ${duration}ms`);
+            return { success: true, duration };
+        } catch (error) {
+            console.error('[Cache Warming] Failed:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // Public API
     return {
         // Settings
@@ -499,6 +633,10 @@ const MPSApi = (function() {
         updateSettings,
         loadSettings,
         clearCache,
+
+        // Cache Management
+        getCacheMetadata,
+        warmCache,
 
         // Dealer
         getDealerHierarchy,

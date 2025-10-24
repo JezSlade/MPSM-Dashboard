@@ -133,6 +133,40 @@
                     </div>
                 </section>
 
+                <!-- Cache Dashboard -->
+                <section class="admin-section">
+                    <h3>Cache Dashboard</h3>
+                    <div class="cache-overview">
+                        <div class="cache-stat-grid">
+                            <div class="cache-stat-card">
+                                <div class="cache-stat-label">Hit Rate</div>
+                                <div class="cache-stat-value" id="cache-hit-rate">-</div>
+                            </div>
+                            <div class="cache-stat-card">
+                                <div class="cache-stat-label">Total Entries</div>
+                                <div class="cache-stat-value" id="cache-total-entries">-</div>
+                            </div>
+                            <div class="cache-stat-card">
+                                <div class="cache-stat-label">Cache Size</div>
+                                <div class="cache-stat-value" id="cache-total-size">-</div>
+                            </div>
+                            <div class="cache-stat-card">
+                                <div class="cache-stat-label">Hits / Misses</div>
+                                <div class="cache-stat-value" id="cache-hit-miss">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cache-actions">
+                        <button id="refresh-cache-stats" class="btn btn-secondary">🔄 Refresh Stats</button>
+                        <button id="warm-cache" class="btn btn-primary">🔥 Warm Cache</button>
+                        <button id="clear-all-cache" class="btn btn-danger">🗑️ Clear All Cache</button>
+                    </div>
+                    <div id="cache-entries-container" style="margin-top: 20px;">
+                        <h4>Cache Entries</h4>
+                        <div id="cache-entries-list" class="loading">Loading cache data...</div>
+                    </div>
+                </section>
+
                 <!-- Traffic Metrics -->
                 <section class="admin-section">
                     <h3>Traffic Metrics</h3>

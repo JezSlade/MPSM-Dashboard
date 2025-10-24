@@ -96,6 +96,39 @@
             refreshDashboard();
         });
 
+        // Cache Dashboard - Refresh stats
+        document.getElementById('refresh-cache-stats').addEventListener('click', loadCacheStats);
+
+        // Cache Dashboard - Warm cache
+        document.getElementById('warm-cache').addEventListener('click', async () => {
+            showToast('Warming cache...', 'info');
+            const btn = document.getElementById('warm-cache');
+            btn.disabled = true;
+            btn.textContent = '🔥 Warming...';
+
+            const result = await MPSApi.warmCache();
+
+            btn.disabled = false;
+            btn.textContent = '🔥 Warm Cache';
+
+            if (result.success) {
+                showToast(`Cache warmed in ${result.duration}ms`, 'success');
+                loadCacheStats();
+            } else {
+                showToast('Cache warming failed: ' + result.error, 'error');
+            }
+        });
+
+        // Cache Dashboard - Clear all cache
+        document.getElementById('clear-all-cache').addEventListener('click', () => {
+            if (confirm('Clear all cached data? This will reload the dashboard.')) {
+                MPSApi.clearCache();
+                showToast('All cache cleared', 'success');
+                loadCacheStats();
+                setTimeout(() => refreshDashboard(), 500);
+            }
+        });
+
         // Admin - Export settings
         document.getElementById('export-settings').addEventListener('click', exportSettings);
 
@@ -1032,6 +1065,9 @@
         // Load engine health
         await loadEngineHealth();
 
+        // Load cache statistics
+        loadCacheStats();
+
         // Set current values
         document.getElementById('dealer-select').value = state.dealerCode;
         if (state.customerCode) {
@@ -1259,6 +1295,78 @@
         MPSApi.clearCache();
         await loadDashboard();
         showToast('Dashboard refreshed', 'success');
+    }
+
+    /**
+     * Load cache statistics
+     */
+    function loadCacheStats() {
+        const metadata = MPSApi.getCacheMetadata();
+
+        // Update summary stats
+        document.getElementById('cache-hit-rate').textContent = `${metadata.stats.hitRate}%`;
+        document.getElementById('cache-total-entries').textContent = metadata.totalEntries;
+        document.getElementById('cache-total-size').textContent = `${metadata.totalSizeMB} MB`;
+        document.getElementById('cache-hit-miss').textContent = `${metadata.stats.hits} / ${metadata.stats.misses}`;
+
+        // Build cache entries table
+        const container = document.getElementById('cache-entries-list');
+
+        if (metadata.entries.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:#999;">No cache entries found</p>';
+            return;
+        }
+
+        const html = `
+            <table class="cache-entry-table">
+                <thead>
+                    <tr>
+                        <th>Cache Key</th>
+                        <th>Size</th>
+                        <th>Age</th>
+                        <th>TTL Remaining</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${metadata.entries.map(entry => {
+                        const ageMinutes = Math.floor(entry.age / 60000);
+                        const remainingMinutes = Math.floor(entry.remaining / 60000);
+                        const ttlMinutes = Math.floor(entry.ttl / 60000);
+                        const percentUsed = parseFloat(entry.percentUsed);
+
+                        let status = 'cache-status-fresh';
+                        let statusText = 'Fresh';
+
+                        if (entry.expired) {
+                            status = 'cache-status-expired';
+                            statusText = 'Expired';
+                        } else if (percentUsed > 80) {
+                            status = 'cache-status-aging';
+                            statusText = 'Aging';
+                        }
+
+                        return `
+                            <tr>
+                                <td><code>${entry.key}</code></td>
+                                <td>${entry.sizeKB} KB</td>
+                                <td>${ageMinutes}m ago</td>
+                                <td>${remainingMinutes}m / ${ttlMinutes}m</td>
+                                <td class="${status}">${statusText}</td>
+                                <td>
+                                    <div class="cache-ttl-bar">
+                                        <div class="cache-ttl-fill" style="width: ${percentUsed}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+
+        container.innerHTML = html;
     }
 
     /**
