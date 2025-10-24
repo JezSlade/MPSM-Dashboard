@@ -483,11 +483,11 @@ def build_html(results: List[Dict[str, Any]], catalog_map: Dict[str, Dict[str, A
             border: 2px solid var(--border);
             border-radius: 0.5rem;
             overflow: hidden;
-            transition: all 0.2s ease;
         }}
-        .endpoint-grid-card:hover {{
+        .endpoint-grid-card:not(:has(.endpoint-details[open])):hover {{
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }}
         .endpoint-grid-card.success {{
             border-color: rgba(20, 108, 67, 0.4);
@@ -561,18 +561,19 @@ def build_html(results: List[Dict[str, Any]], catalog_map: Dict[str, Dict[str, A
         }}
         .endpoint-details[open] {{
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 5vh;
+            left: 5vw;
+            right: 5vw;
+            bottom: 5vh;
             z-index: 1000;
             background: var(--bg-card);
             border: 2px solid var(--border);
             border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 90vw;
-            max-height: 90vh;
-            width: 900px;
+            max-width: 900px;
+            margin: 0 auto;
             overflow: hidden;
+            transform: none;
         }}
         .endpoint-details[open] summary {{
             position: sticky;
