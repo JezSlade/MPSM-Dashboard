@@ -428,8 +428,22 @@ const MPSApi = (function() {
      * Get all customers
      */
     async function getAllCustomers() {
+        // Check aggregated cache first (fixes admin dropdown reload issue)
+        const cached = persistentCache.get('customer_list_aggregated');
+        if (cached) {
+            console.log('Using cached customer list (aggregated)');
+            return cached;
+        }
+
+        console.log('Building customer list from devices...');
         const result = await discoverCustomerByName('');
-        return result.customers;
+        const customers = result.customers;
+
+        // Cache the final aggregated customer list
+        persistentCache.set('customer_list_aggregated', customers);
+        console.log(`Cached ${customers.length} customers`);
+
+        return customers;
     }
 
     /**
@@ -443,6 +457,7 @@ const MPSApi = (function() {
                 localStorage.removeItem(key);
             }
         });
+        console.log('Cache cleared (including aggregated customer list)');
     }
 
     /**

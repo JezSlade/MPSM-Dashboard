@@ -282,18 +282,9 @@
             const devices = await MPSApi.getDevicesByCustomer(state.customerCode, state.customerId);
             state.devices = devices || [];
 
-            // Devices are already filtered by customer in API, just sort
-            const filtered = state.devices;
+            countEl.textContent = state.devices.length;
 
-            const sorted = filtered.sort((a, b) => {
-                const idA = a.AssetNumber || a.SerialNumber || '';
-                const idB = b.AssetNumber || b.SerialNumber || '';
-                return idA.localeCompare(idB);
-            });
-
-            countEl.textContent = sorted.length;
-
-            if (sorted.length === 0) {
+            if (state.devices.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">🖨️</div>
@@ -303,94 +294,65 @@
                 return;
             }
 
-            // Render printer table with sortable columns
-            container.innerHTML = `
-                <table class="printer-table">
-                    <thead>
-                        <tr>
-                            <th data-sort="identifier" class="sortable">Identifier</th>
-                            <th data-sort="model" class="sortable">Model</th>
-                            <th data-sort="ip" class="sortable">IP Address</th>
-                            <th data-sort="location" class="sortable">Location</th>
-                            <th data-sort="mono" class="sortable">Mono</th>
-                            <th data-sort="color" class="sortable">Color</th>
-                            <th data-sort="status" class="sortable">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${sorted.map(device => {
-                            const id = device.ExternalIdentifier || device.AssetNumber || device.SerialNumber || 'Unknown';
-                            const model = device.Product?.Model || 'Unknown';
-                            const ip = device.IpAddress || '-';
-                            const location = device.Note || device.OfficeDescription || '-';
-                            const mono = device.CounterMono ? device.CounterMono.toLocaleString() : '-';
-                            const color = device.CounterColor ? device.CounterColor.toLocaleString() : '-';
-                            const status = device.IsOffline ? 'Offline' : 'Online';
-                            const statusClass = device.IsOffline ? 'offline' : 'online';
+            // Prepare data for TableUtils
+            const tableData = state.devices.map(device => ({
+                id: device.Id,
+                identifier: device.ExternalIdentifier || device.AssetNumber || device.SerialNumber || 'Unknown',
+                model: device.Product?.Model || 'Unknown',
+                ip: device.IpAddress || '-',
+                location: device.Note || device.OfficeDescription || '-',
+                monoCounter: device.CounterMono || 0,
+                colorCounter: device.CounterColor || 0,
+                isOffline: device.IsOffline
+            }));
 
-                            return `
-                                <tr class="printer-row" data-device-id="${device.Id}">
-                                    <td><strong>${id}</strong></td>
-                                    <td>${model}</td>
-                                    <td>${ip}</td>
-                                    <td>${location}</td>
-                                    <td>${mono}</td>
-                                    <td>${color}</td>
-                                    <td><span class="status-badge ${statusClass}">${status}</span></td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
+            // Define table columns
+            const columns = [
+                {key: 'identifier', label: 'Identifier'},
+                {key: 'model', label: 'Model'},
+                {key: 'ip', label: 'IP Address'},
+                {key: 'location', label: 'Location'},
+                {key: 'monoCounter', label: 'Mono', render: TableUtils.renderCounter},
+                {key: 'colorCounter', label: 'Color', render: TableUtils.renderCounter},
+                {key: 'isOffline', label: 'Status', render: (value) => TableUtils.renderStatus(null, value)}
+            ];
 
-            // Add sorting functionality
-            const headers = container.querySelectorAll('th.sortable');
-            let currentSort = { column: 'identifier', ascending: true };
+            // Pagination state
+            let pageSize = 50;
+            let currentPage = 1;
 
-            headers.forEach(header => {
-                header.addEventListener('click', () => {
-                    const sortKey = header.dataset.sort;
-                    currentSort.ascending = currentSort.column === sortKey ? !currentSort.ascending : true;
-                    currentSort.column = sortKey;
+            // Function to render table with current page
+            function renderTable() {
+                const table = TableUtils.createPaginatedTable(tableData, columns, {
+                    pageSize: pageSize,
+                    currentPage: currentPage,
+                    className: 'printer-table'
+                });
 
-                    const tbody = container.querySelector('tbody');
-                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                container.innerHTML = table.html;
 
-                    rows.sort((a, b) => {
-                        const aText = a.cells[Array.from(headers).indexOf(header)].textContent.trim();
-                        const bText = b.cells[Array.from(headers).indexOf(header)].textContent.trim();
-
-                        // Try numeric comparison first
-                        const aNum = parseInt(aText.replace(/,/g, ''));
-                        const bNum = parseInt(bText.replace(/,/g, ''));
-
-                        if (!isNaN(aNum) && !isNaN(bNum)) {
-                            return currentSort.ascending ? aNum - bNum : bNum - aNum;
+                // Setup table with callbacks
+                table.setup(container, {
+                    onRowClick: (device) => openDeviceModal(device.id),
+                    onPageSizeChange: (newSize) => {
+                        pageSize = parseInt(newSize);
+                        currentPage = 1;
+                        renderTable();
+                    },
+                    onPageChange: (direction) => {
+                        const totalPages = Math.ceil(tableData.length / pageSize);
+                        if (direction === 'prev' && currentPage > 1) {
+                            currentPage--;
+                        } else if (direction === 'next' && currentPage < totalPages) {
+                            currentPage++;
                         }
-
-                        // Fallback to string comparison
-                        return currentSort.ascending ?
-                            aText.localeCompare(bText) :
-                            bText.localeCompare(aText);
-                    });
-
-                    tbody.innerHTML = '';
-                    rows.forEach(row => tbody.appendChild(row));
-
-                    // Update header indicators
-                    headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
-                    header.classList.add(currentSort.ascending ? 'sort-asc' : 'sort-desc');
+                        renderTable();
+                    }
                 });
-            });
+            }
 
-            // Add click handlers for rows
-            container.querySelectorAll('.printer-row').forEach(row => {
-                row.addEventListener('click', () => {
-                    const deviceId = row.dataset.deviceId;
-                    openDeviceModal(deviceId);
-                });
-            });
+            // Initial render
+            renderTable();
 
         } catch (error) {
             console.error('Failed to load printers:', error);
@@ -411,29 +373,109 @@
         const container = document.getElementById('error-list');
         const countEl = document.getElementById('error-count');
 
-        container.innerHTML = '<div class="loading">Loading errors...</div>';
+        container.innerHTML = '<div class="loading">Loading alerts...</div>';
 
         try {
-            const alerts = await MPSApi.getAlertLimitsDefault(state.customerCode);
+            const devices = state.devices;
 
-            // For now, show empty state
-            // In production, you'd parse actual error data
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">✓</div>
-                    <p>No active errors</p>
+            // Extract devices with issues
+            const alerts = devices.filter(d =>
+                d.IsOffline ||
+                (d.BlackToner !== null && d.BlackToner < 20) ||
+                (d.CyanToner !== null && d.CyanToner < 20) ||
+                (d.MagentaToner !== null && d.MagentaToner < 20) ||
+                (d.YellowToner !== null && d.YellowToner < 20)
+            ).map(d => {
+                const issues = [];
+                if (d.IsOffline) issues.push('Offline');
+                if (d.BlackToner !== null && d.BlackToner < 20) issues.push('Low Black Toner');
+                if (d.CyanToner !== null && d.CyanToner < 20) issues.push('Low Cyan Toner');
+                if (d.MagentaToner !== null && d.MagentaToner < 20) issues.push('Low Magenta Toner');
+                if (d.YellowToner !== null && d.YellowToner < 20) issues.push('Low Yellow Toner');
+
+                return {
+                    id: d.Id,
+                    identifier: d.ExternalIdentifier || d.AssetNumber || 'Unknown',
+                    issues: issues.join(', '),
+                    severity: d.IsOffline ? 'Critical' : 'Warning',
+                    lastUpdate: d.LastUpdate
+                };
+            });
+
+            countEl.textContent = alerts.length;
+
+            const critical = alerts.filter(a => a.severity === 'Critical').length;
+            const warnings = alerts.filter(a => a.severity === 'Warning').length;
+
+            const snapshotHtml = `
+                <div class="snapshot-grid">
+                    <div class="snapshot-item">
+                        <div class="snapshot-value">${alerts.length}</div>
+                        <div class="snapshot-label">Total Alerts</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-value" style="color: #dc3545;">${critical}</div>
+                        <div class="snapshot-label">Critical</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-value" style="color: #ffc107;">${warnings}</div>
+                        <div class="snapshot-label">Warnings</div>
+                    </div>
                 </div>
             `;
-            countEl.textContent = '0';
+
+            const columns = [
+                {key: 'identifier', label: 'Device'},
+                {key: 'issues', label: 'Issues'},
+                {key: 'severity', label: 'Severity', render: (v) => `<span class="status-badge ${v.toLowerCase()}">${v}</span>`},
+                {key: 'lastUpdate', label: 'Last Update', render: TableUtils.renderDate}
+            ];
+
+            // Pagination state
+            let pageSize = 25;
+            let currentPage = 1;
+
+            function renderTable() {
+                const table = TableUtils.createPaginatedTable(alerts, columns, {
+                    pageSize: pageSize,
+                    currentPage: currentPage
+                });
+
+                container.innerHTML = TableUtils.createExpandableCard(
+                    'Errors & Alerts',
+                    snapshotHtml,
+                    table.html
+                );
+
+                TableUtils.setupExpandable(container);
+
+                const detailsSection = container.querySelector('.card-details');
+                if (detailsSection) {
+                    table.setup(detailsSection, {
+                        onRowClick: (alert) => openDeviceModal(alert.id),
+                        onPageSizeChange: (newSize) => {
+                            pageSize = parseInt(newSize);
+                            currentPage = 1;
+                            renderTable();
+                        },
+                        onPageChange: (direction) => {
+                            const totalPages = Math.ceil(alerts.length / pageSize);
+                            if (direction === 'prev' && currentPage > 1) {
+                                currentPage--;
+                            } else if (direction === 'next' && currentPage < totalPages) {
+                                currentPage++;
+                            }
+                            renderTable();
+                        }
+                    });
+                }
+            }
+
+            renderTable();
 
         } catch (error) {
-            console.error('Failed to load errors:', error);
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">⚠️</div>
-                    <p>Unable to load errors</p>
-                </div>
-            `;
+            console.error('Failed to load alerts:', error);
+            container.innerHTML = '<div class="empty-state">Failed to load alerts</div>';
             countEl.textContent = '0';
         }
     }
@@ -443,49 +485,105 @@
      */
     async function loadTonerLevels() {
         const container = document.getElementById('toner-list');
-
         container.innerHTML = '<div class="loading">Loading toner status...</div>';
 
         try {
-            // Use device list to show toner placeholders
-            const devices = state.devices.slice(0, 5); // Show top 5
+            const devices = state.devices;
 
-            if (devices.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🎨</div>
-                        <p>No toner data available</p>
+            // Extract devices with toner data
+            const tonerData = devices.filter(d =>
+                d.BlackToner !== null || d.CyanToner !== null ||
+                d.MagentaToner !== null || d.YellowToner !== null
+            ).map(d => ({
+                id: d.Id,
+                identifier: d.ExternalIdentifier || d.AssetNumber || 'Unknown',
+                black: d.BlackToner,
+                cyan: d.CyanToner,
+                magenta: d.MagentaToner,
+                yellow: d.YellowToner,
+                lowCount: [d.BlackToner, d.CyanToner, d.MagentaToner, d.YellowToner]
+                    .filter(t => t !== null && t < 20).length
+            }));
+
+            // Summary stats
+            const lowToner = tonerData.filter(d => d.lowCount > 0).length;
+            const critical = tonerData.filter(d =>
+                [d.black, d.cyan, d.magenta, d.yellow].some(t => t !== null && t < 10)
+            ).length;
+
+            // Snapshot HTML
+            const snapshotHtml = `
+                <div class="snapshot-grid">
+                    <div class="snapshot-item">
+                        <div class="snapshot-value">${tonerData.length}</div>
+                        <div class="snapshot-label">Total Devices</div>
                     </div>
-                `;
-                return;
+                    <div class="snapshot-item">
+                        <div class="snapshot-value" style="color: #ffc107;">${lowToner}</div>
+                        <div class="snapshot-label">Low Toner (&lt;20%)</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-value" style="color: #dc3545;">${critical}</div>
+                        <div class="snapshot-label">Critical (&lt;10%)</div>
+                    </div>
+                </div>
+            `;
+
+            // Table columns
+            const columns = [
+                {key: 'identifier', label: 'Device'},
+                {key: 'black', label: 'Black', render: TableUtils.renderTonerLevel},
+                {key: 'cyan', label: 'Cyan', render: TableUtils.renderTonerLevel},
+                {key: 'magenta', label: 'Magenta', render: TableUtils.renderTonerLevel},
+                {key: 'yellow', label: 'Yellow', render: TableUtils.renderTonerLevel}
+            ];
+
+            // Pagination state
+            let pageSize = 25;
+            let currentPage = 1;
+
+            function renderTable() {
+                const table = TableUtils.createPaginatedTable(tonerData, columns, {
+                    pageSize: pageSize,
+                    currentPage: currentPage,
+                    className: 'toner-table'
+                });
+
+                container.innerHTML = TableUtils.createExpandableCard(
+                    'Toner Levels',
+                    snapshotHtml,
+                    table.html
+                );
+
+                TableUtils.setupExpandable(container);
+
+                const detailsSection = container.querySelector('.card-details');
+                if (detailsSection) {
+                    table.setup(detailsSection, {
+                        onRowClick: (device) => openDeviceModal(device.id),
+                        onPageSizeChange: (newSize) => {
+                            pageSize = parseInt(newSize);
+                            currentPage = 1;
+                            renderTable();
+                        },
+                        onPageChange: (direction) => {
+                            const totalPages = Math.ceil(tonerData.length / pageSize);
+                            if (direction === 'prev' && currentPage > 1) {
+                                currentPage--;
+                            } else if (direction === 'next' && currentPage < totalPages) {
+                                currentPage++;
+                            }
+                            renderTable();
+                        }
+                    });
+                }
             }
 
-            // Render mock toner data (in production, fetch actual toner levels)
-            container.innerHTML = devices.map(device => {
-                const id = device.AssetNumber || device.SerialNumber;
-                const percentage = Math.floor(Math.random() * 100); // Mock data
-                const level = percentage > 50 ? '' : (percentage > 20 ? 'low' : 'critical');
-
-                return `
-                    <div class="toner-item">
-                        <div class="toner-label">
-                            <span class="toner-device">${id}</span>
-                            <span class="toner-percentage">${percentage}%</span>
-                        </div>
-                        <div class="toner-bar">
-                            <div class="toner-fill ${level}" style="width: ${percentage}%"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            renderTable();
 
         } catch (error) {
             console.error('Failed to load toner levels:', error);
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>Unable to load toner data</p>
-                </div>
-            `;
+            container.innerHTML = '<div class="empty-state">Failed to load toner data</div>';
         }
     }
 
@@ -494,16 +592,106 @@
      */
     async function loadMeterReads() {
         const container = document.getElementById('meter-list');
-
         container.innerHTML = '<div class="loading">Loading meter data...</div>';
 
-        // Placeholder - implement actual meter reading logic
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📊</div>
-                <p>No meter data available</p>
-            </div>
-        `;
+        try {
+            const devices = state.devices;
+
+            // Extract counter data
+            const meterData = devices.map(d => ({
+                id: d.Id,
+                identifier: d.ExternalIdentifier || d.AssetNumber || 'Unknown',
+                monoCounter: d.CounterMono || 0,
+                colorCounter: d.CounterColor || 0,
+                monoMonthly: d.MonthlyMonoVolume || 0,
+                colorMonthly: d.MonthlyColorVolume || 0,
+                totalMonthly: (d.MonthlyMonoVolume || 0) + (d.MonthlyColorVolume || 0)
+            })).sort((a, b) => b.totalMonthly - a.totalMonthly);
+
+            // Summary stats
+            const totalMono = meterData.reduce((sum, d) => sum + d.monoMonthly, 0);
+            const totalColor = meterData.reduce((sum, d) => sum + d.colorMonthly, 0);
+            const top3 = meterData.slice(0, 3);
+
+            const snapshotHtml = `
+                <div class="snapshot-grid">
+                    <div class="snapshot-item">
+                        <div class="snapshot-value">${totalMono.toLocaleString()}</div>
+                        <div class="snapshot-label">Mono Pages (Month)</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-value">${totalColor.toLocaleString()}</div>
+                        <div class="snapshot-label">Color Pages (Month)</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-value">${(totalMono + totalColor).toLocaleString()}</div>
+                        <div class="snapshot-label">Total Pages</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <strong>Top 3 Devices:</strong>
+                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                        ${top3.map(d => `
+                            <li>${d.identifier}: ${d.totalMonthly.toLocaleString()} pages/month</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+
+            const columns = [
+                {key: 'identifier', label: 'Device'},
+                {key: 'monoCounter', label: 'Mono Total', render: TableUtils.renderCounter},
+                {key: 'colorCounter', label: 'Color Total', render: TableUtils.renderCounter},
+                {key: 'monoMonthly', label: 'Mono/Month', render: TableUtils.renderCounter},
+                {key: 'colorMonthly', label: 'Color/Month', render: TableUtils.renderCounter}
+            ];
+
+            // Pagination state
+            let pageSize = 25;
+            let currentPage = 1;
+
+            function renderTable() {
+                const table = TableUtils.createPaginatedTable(meterData, columns, {
+                    pageSize: pageSize,
+                    currentPage: currentPage
+                });
+
+                container.innerHTML = TableUtils.createExpandableCard(
+                    'Meter Reads',
+                    snapshotHtml,
+                    table.html
+                );
+
+                TableUtils.setupExpandable(container);
+
+                const detailsSection = container.querySelector('.card-details');
+                if (detailsSection) {
+                    table.setup(detailsSection, {
+                        onRowClick: (device) => openDeviceModal(device.id),
+                        onPageSizeChange: (newSize) => {
+                            pageSize = parseInt(newSize);
+                            currentPage = 1;
+                            renderTable();
+                        },
+                        onPageChange: (direction) => {
+                            const totalPages = Math.ceil(meterData.length / pageSize);
+                            if (direction === 'prev' && currentPage > 1) {
+                                currentPage--;
+                            } else if (direction === 'next' && currentPage < totalPages) {
+                                currentPage++;
+                            }
+                            renderTable();
+                        }
+                    });
+                }
+            }
+
+            renderTable();
+
+        } catch (error) {
+            console.error('Failed to load meters:', error);
+            container.innerHTML = '<div class="empty-state">Failed to load meter data</div>';
+        }
     }
 
     /**
@@ -511,35 +699,89 @@
      */
     async function loadRecentActivity() {
         const container = document.getElementById('activity-list');
-
         container.innerHTML = '<div class="loading">Loading activity...</div>';
 
         try {
-            const actions = await MPSApi.getDeviceActions(state.customerCode);
+            // Get recent device updates
+            const devices = state.devices;
+            const recentUpdates = devices
+                .filter(d => d.LastUpdate)
+                .map(d => ({
+                    id: d.Id,
+                    identifier: d.ExternalIdentifier || d.AssetNumber || 'Unknown',
+                    action: 'Counter Updated',
+                    timestamp: new Date(d.LastUpdate),
+                    details: `Mono: ${(d.CounterMono || 0).toLocaleString()}, Color: ${(d.CounterColor || 0).toLocaleString()}`
+                }))
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .slice(0, 50);
 
-            if (!actions || actions.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📋</div>
-                        <p>No recent activity</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = actions.slice(0, 5).map(action => `
-                <div class="activity-item">
-                    <div>${action.Description || 'Unknown action'}</div>
-                    <div class="activity-time">${formatDate(action.CreatedAt)}</div>
-                </div>
-            `).join('');
-
-        } catch (error) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>No activity data available</p>
+            const snapshotHtml = `
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <strong>Last 5 Activities:</strong>
+                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem; list-style: none;">
+                        ${recentUpdates.slice(0, 5).map(a => `
+                            <li style="margin: 0.5rem 0; padding: 0.5rem; background: var(--bg-secondary); border-radius: 4px;">
+                                <strong>${a.identifier}</strong> - ${a.action}
+                                <br><small style="color: var(--text-secondary);">${a.timestamp.toLocaleString()}</small>
+                            </li>
+                        `).join('')}
+                    </ul>
                 </div>
             `;
+
+            const columns = [
+                {key: 'identifier', label: 'Device'},
+                {key: 'action', label: 'Action'},
+                {key: 'details', label: 'Details'},
+                {key: 'timestamp', label: 'Time', render: (v) => v.toLocaleString()}
+            ];
+
+            // Pagination state
+            let pageSize = 25;
+            let currentPage = 1;
+
+            function renderTable() {
+                const table = TableUtils.createPaginatedTable(recentUpdates, columns, {
+                    pageSize: pageSize,
+                    currentPage: currentPage
+                });
+
+                container.innerHTML = TableUtils.createExpandableCard(
+                    'Recent Activity',
+                    snapshotHtml,
+                    table.html
+                );
+
+                TableUtils.setupExpandable(container);
+
+                const detailsSection = container.querySelector('.card-details');
+                if (detailsSection) {
+                    table.setup(detailsSection, {
+                        onRowClick: (activity) => openDeviceModal(activity.id),
+                        onPageSizeChange: (newSize) => {
+                            pageSize = parseInt(newSize);
+                            currentPage = 1;
+                            renderTable();
+                        },
+                        onPageChange: (direction) => {
+                            const totalPages = Math.ceil(recentUpdates.length / pageSize);
+                            if (direction === 'prev' && currentPage > 1) {
+                                currentPage--;
+                            } else if (direction === 'next' && currentPage < totalPages) {
+                                currentPage++;
+                            }
+                            renderTable();
+                        }
+                    });
+                }
+            }
+
+            renderTable();
+
+        } catch (error) {
+            console.error('Failed to load activity:', error);
+            container.innerHTML = '<div class="empty-state">Failed to load activity</div>';
         }
     }
 
