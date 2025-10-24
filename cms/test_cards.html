@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Test - MPSM Dashboard</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body {
+            padding: 20px;
+            background: var(--bg-primary);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+        .test-output {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Card Functionality Test</h1>
+
+    <div class="test-section">
+        <h2>1. TableUtils Test</h2>
+        <div id="test-tableutils" class="test-output">Testing TableUtils...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. API Test</h2>
+        <div id="test-api" class="test-output">Testing API...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Sample Table</h2>
+        <div id="test-table"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Console Errors</h2>
+        <div id="test-console" class="test-output">Check browser console (F12)</div>
+    </div>
+
+    <script src="assets/js/table-utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        // Test 1: Check if TableUtils loaded
+        document.getElementById('test-tableutils').textContent =
+            typeof TableUtils !== 'undefined' ?
+            '✓ TableUtils loaded successfully\n' + Object.keys(TableUtils).join(', ') :
+            '✗ TableUtils NOT loaded!';
+
+        // Test 2: Check if MPSApi loaded
+        document.getElementById('test-api').textContent =
+            typeof MPSApi !== 'undefined' ?
+            '✓ MPSApi loaded successfully\n' + Object.keys(MPSApi).join(', ') :
+            '✗ MPSApi NOT loaded!';
+
+        // Test 3: Create sample table
+        if (typeof TableUtils !== 'undefined') {
+            const sampleData = [
+                {id: 1, name: 'Device 1', status: 'Online', counter: 1234},
+                {id: 2, name: 'Device 2', status: 'Offline', counter: 5678},
+                {id: 3, name: 'Device 3', status: 'Online', counter: 91011}
+            ];
+
+            const columns = [
+                {key: 'name', label: 'Name'},
+                {key: 'status', label: 'Status'},
+                {key: 'counter', label: 'Counter', render: TableUtils.renderCounter}
+            ];
+
+            try {
+                const table = TableUtils.createPaginatedTable(sampleData, columns, {pageSize: 10});
+                document.getElementById('test-table').innerHTML = table.html;
+                table.setup(document.getElementById('test-table'), {
+                    onRowClick: (row) => alert('Clicked: ' + row.name)
+                });
+                console.log('✓ Sample table created successfully');
+            } catch (error) {
+                document.getElementById('test-table').innerHTML =
+                    '<div style="color: red;">Error creating table: ' + error.message + '</div>';
+                console.error('Table creation error:', error);
+            }
+        }
+
+        // Test 4: Capture console errors
+        window.addEventListener('error', function(e) {
+            const consoleDiv = document.getElementById('test-console');
+            consoleDiv.innerHTML += `\n<span style="color: red;">ERROR: ${e.message} at ${e.filename}:${e.lineno}</span>`;
+        });
+
+        console.log('='.repeat(60));
+        console.log('Card Test Page Loaded');
+        console.log('TableUtils:', typeof TableUtils);
+        console.log('MPSApi:', typeof MPSApi);
+        console.log('='.repeat(60));
+    </script>
+</body>
+</html>
