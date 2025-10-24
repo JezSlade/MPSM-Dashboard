@@ -1,18 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git push:*)",
-      "Bash(curl:*)",
-      "Bash(python:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Add missing dealerCode to Device and Integrations templates\n\nRoot Cause:\n- Device/Deleted/List missing dealerCode (API requires it despite swagger saying optional)\n- Device/Deleted/ListByDealer missing dealerCode\n- Integrations/GetJoinedCustomers had no template at all\n\nFix Applied:\n- Added dealerCode to Device/Deleted/List template\n- Added dealerCode to Device/Deleted/ListByDealer template  \n- Created Integrations/GetJoinedCustomers template with dealerCode\n\nAll three will now auto-populate dealerCode = NY06AGDWUQ\n\nTemplate count: 158 -> 159 (added GetJoinedCustomers)\n\nResolves: MPSM-DEVICE-LIST-2025-10-21-001 (partial)\nRelated: ChatGPT diagnostic report failing endpoints\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)",
-      "Bash(echo:*)",
-      "Bash(timeout 60 curl -s \"https://mpsm.resolutionsbydesign.us/mps-api/seeds\")",
-      "Bash(tee:*)",
-      "Bash(cat:*)",
-      "Bash(timeout 600 python:*)",
-      "Bash(timeout 30 curl:*)"
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -180,7 +180,7 @@ const MPSApi = (function() {
                 FilterDealerId: settings.dealerId,
                 pageNumber: pageNumber,
                 pageRows: pageRows
-            }, { skipCache: true });
+            }); // REMOVED skipCache: true - use persistent cache!
 
             if (devices && devices.length > 0) {
                 // Filter by customer code on client side
@@ -365,7 +365,7 @@ const MPSApi = (function() {
                 FilterDealerId: settings.dealerId,
                 pageNumber: pageNumber,
                 pageRows: pageRows
-            }, { skipCache: true });
+            }); // REMOVED skipCache: true - use persistent cache!
 
             if (devices && devices.length > 0) {
                 allDevices.push(...devices);
