@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Test - MPS Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="cms/assets/css/styles.css">
+    <link rel="stylesheet" href="cms/assets/css/card-management.css">
+    <style>
+        .test-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+        }
+        .test-section h2 {
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+        }
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .color-swatch {
+            display: inline-block;
+            width: 100px;
+            height: 40px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            margin: 0.5rem;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <header class="dashboard-header">
+        <div class="container">
+            <h1>Frontend Component Test</h1>
+            <div class="header-actions">
+                <button id="theme-toggle" class="btn-icon">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" style="padding: 2rem 0;">
+        <!-- Theme Test -->
+        <div class="test-section">
+            <h2>Theme System</h2>
+            <p>Click the moon icon above to toggle between light and dark themes.</p>
+            <div>
+                <strong>CSS Variables:</strong>
+                <div style="display: flex; flex-wrap: wrap;">
+                    <div>
+                        <div class="color-swatch" style="background: var(--bg-primary);"></div>
+                        <span>--bg-primary</span>
+                    </div>
+                    <div>
+                        <div class="color-swatch" style="background: var(--bg-secondary);"></div>
+                        <span>--bg-secondary</span>
+                    </div>
+                    <div>
+                        <div class="color-swatch" style="background: var(--bg-card);"></div>
+                        <span>--bg-card</span>
+                    </div>
+                    <div>
+                        <div class="color-swatch" style="background: var(--accent-color);"></div>
+                        <span>--accent-color</span>
+                    </div>
+                    <div>
+                        <div class="color-swatch" style="background: var(--success-color);"></div>
+                        <span>--success-color</span>
+                    </div>
+                    <div>
+                        <div class="color-swatch" style="background: var(--danger-color);"></div>
+                        <span>--danger-color</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons Test -->
+        <div class="test-section">
+            <h2>Button Styles</h2>
+            <div class="button-grid">
+                <button class="btn btn-primary">Primary</button>
+                <button class="btn btn-secondary">Secondary</button>
+                <button class="btn btn-success">Success</button>
+                <button class="btn btn-danger">Danger</button>
+                <button class="btn btn-icon"><i class="fas fa-cog"></i></button>
+                <button class="btn btn-sm">Small</button>
+            </div>
+        </div>
+
+        <!-- Cards Test -->
+        <div class="test-section">
+            <h2>Card Components</h2>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Test Card</h3>
+                        <button class="btn btn-icon"><i class="fas fa-ellipsis-v"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <p>This is a test card with sample content.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forms Test -->
+        <div class="test-section">
+            <h2>Form Elements</h2>
+            <div class="form-group">
+                <label>Text Input</label>
+                <input type="text" class="form-control" placeholder="Enter text...">
+            </div>
+            <div class="form-group">
+                <label>Select</label>
+                <select class="form-control">
+                    <option>Option 1</option>
+                    <option>Option 2</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Checkbox</label>
+                <input type="checkbox"> Enable feature
+            </div>
+        </div>
+
+        <!-- Loading States -->
+        <div class="test-section">
+            <h2>Loading States</h2>
+            <div class="loading">Loading...</div>
+        </div>
+
+        <!-- Toast/Alert -->
+        <div class="test-section">
+            <h2>Notifications</h2>
+            <button onclick="showTestToast('success')">Success Toast</button>
+            <button onclick="showTestToast('error')">Error Toast</button>
+            <button onclick="showTestToast('info')">Info Toast</button>
+        </div>
+
+        <!-- Micro Cards -->
+        <div class="test-section">
+            <h2>Micro Cards</h2>
+            <div class="micro-cards-grid">
+                <div class="micro-card">
+                    <div class="micro-card-icon"><i class="fas fa-print"></i></div>
+                    <div class="micro-card-content">
+                        <div class="micro-card-label">Total Devices</div>
+                        <div class="micro-card-value">42</div>
+                    </div>
+                </div>
+                <div class="micro-card">
+                    <div class="micro-card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="micro-card-content">
+                        <div class="micro-card-label">Alerts</div>
+                        <div class="micro-card-value">3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Banner -->
+        <div class="test-section">
+            <h2>Customer Banner</h2>
+            <div class="customer-banner">
+                <div class="customer-banner-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="customer-banner-content">
+                    <div class="customer-banner-label">Customer</div>
+                    <h2 class="customer-banner-name">Test Customer Inc.</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+
+            const icon = this.querySelector('i');
+            icon.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        });
+
+        // Test toast function
+        function showTestToast(type) {
+            alert(`${type.toUpperCase()} toast would appear here`);
+        }
+    </script>
+</body>
+</html>
