@@ -388,8 +388,8 @@ const CardManager = (function() {
         let html = `
             <div class="card-management-compact">
                 <div class="card-mgmt-actions">
-                    <button id="save-card-order" class="btn btn-primary btn-sm">💾 Save</button>
-                    <button id="reset-card-defaults" class="btn btn-secondary btn-sm">🔄 Reset</button>
+                    <button id="save-card-order" class="btn btn-primary btn-sm">Save</button>
+                    <button id="reset-card-defaults" class="btn btn-secondary btn-sm">Reset</button>
                 </div>
                 <div class="card-mgmt-grid">
         `;
@@ -405,14 +405,14 @@ const CardManager = (function() {
 
             html += `
                 <div class="card-mgmt-tile ${visibilityClass}" data-card-id="${card.id}" draggable="true">
-                    <div class="tile-drag">⋮⋮</div>
+                    <div class="tile-drag">≡</div>
                     <div class="tile-icon">${card.icon}</div>
                     <div class="tile-content">
                         <div class="tile-name">${card.name}</div>
                         <div class="tile-category">${card.category}</div>
                     </div>
                     <button class="tile-toggle" data-card-id="${card.id}" title="${isVisible ? 'Hide' : 'Show'}">
-                        ${isVisible ? '👁️' : '🚫'}
+                        ${isVisible ? 'Hide' : 'Show'}
                     </button>
                 </div>
             `;

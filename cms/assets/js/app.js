@@ -79,6 +79,14 @@
             });
         });
 
+        // Admin sub-tab navigation
+        document.querySelectorAll('.admin-subtab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const subTabName = e.target.dataset.subtab;
+                switchAdminSubTab(subTabName);
+            });
+        });
+
         // Theme toggle
         document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
@@ -182,15 +190,35 @@
 
         // Load tab-specific data
         if (tabName === 'admin') {
+            // Admin tab now has sub-tabs, load first sub-tab by default
+            switchAdminSubTab('settings');
+        }
+    }
+
+    /**
+     * Switch between admin sub-tabs
+     */
+    function switchAdminSubTab(subTabName) {
+        // Update UI
+        document.querySelectorAll('.admin-subtab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.subtab === subTabName);
+        });
+
+        document.querySelectorAll('.admin-subtab-content').forEach(content => {
+            content.classList.toggle('active', content.id === `${subTabName}-subtab`);
+        });
+
+        // Load sub-tab-specific data
+        if (subTabName === 'settings') {
             loadAdminData();
-        } else if (tabName === 'cards') {
+        } else if (subTabName === 'cards') {
             // Render card management UI
             if (typeof CardManager !== 'undefined') {
                 CardManager.renderAdminPanel('.card-management-container');
             }
-        } else if (tabName === 'cache') {
+        } else if (subTabName === 'cache') {
             loadCacheStats();
-        } else if (tabName === 'traffic') {
+        } else if (subTabName === 'traffic') {
             loadTrafficMetrics();
         }
     }
@@ -205,7 +233,7 @@
 
         // Update icon
         const icon = document.querySelector('.icon-theme');
-        icon.textContent = state.theme === 'light' ? '🌙' : '☀️';
+        icon.textContent = state.theme === 'light' ? '◐' : '◑';
     }
 
     /**

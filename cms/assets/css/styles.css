@@ -727,6 +727,51 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* Admin Sub-Navigation */
+.admin-panel {
+    padding: 0;
+}
+
+.admin-subnav {
+    background-color: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    padding: 0 1rem;
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.admin-subtab {
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.admin-subtab:hover {
+    color: var(--text-primary);
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.admin-subtab.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    font-weight: 600;
+}
+
+.admin-subtab-content {
+    display: none;
+}
+
+.admin-subtab-content.active {
+    display: block;
+}
+
 /* Empty State */
 .empty-state {
     text-align: center;

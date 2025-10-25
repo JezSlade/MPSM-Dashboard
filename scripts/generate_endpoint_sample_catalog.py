@@ -562,18 +562,18 @@ def build_html(results: List[Dict[str, Any]], catalog_map: Dict[str, Dict[str, A
         .endpoint-details[open] {{
             position: fixed;
             top: 5vh;
-            left: 5vw;
-            right: 5vw;
-            bottom: 5vh;
-            z-index: 1000;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
             background: var(--bg-card);
             border: 2px solid var(--border);
             border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            margin: 0 auto;
-            overflow: hidden;
-            transform: none;
+            width: min(900px, 90vw);
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }}
         .endpoint-details[open] summary {{
             position: sticky;
@@ -652,16 +652,19 @@ def build_html(results: List[Dict[str, Any]], catalog_map: Dict[str, Dict[str, A
         .data-block-expanded .data-table td {{
             padding: 0.6rem 0.8rem;
         }}
-        .endpoint-details[open]::before {{
-            content: '';
+        .modal-backdrop {{
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.5);
-            z-index: -1;
+            z-index: 1000;
             backdrop-filter: blur(4px);
+        }}
+        .modal-backdrop.active {{
+            display: block;
         }}
         .badge {{
             padding: 0.25rem 0.6rem;
@@ -884,13 +887,27 @@ def build_html(results: List[Dict[str, Any]], catalog_map: Dict[str, Dict[str, A
             }}
         }});
 
+        // Modal backdrop management
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        document.body.appendChild(backdrop);
+
+        // Click backdrop to close
+        backdrop.addEventListener('click', () => {{
+            document.querySelectorAll('.endpoint-details[open]').forEach(detail => {{
+                detail.open = false;
+            }});
+        }});
+
         // Prevent body scroll when modal is open
         document.addEventListener('toggle', (e) => {{
             if (e.target.classList.contains('endpoint-details')) {{
                 if (e.target.open) {{
                     document.body.style.overflow = 'hidden';
+                    backdrop.classList.add('active');
                 }} else {{
                     document.body.style.overflow = '';
+                    backdrop.classList.remove('active');
                 }}
             }}
         }}, true);

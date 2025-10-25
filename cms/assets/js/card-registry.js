@@ -313,7 +313,7 @@ const CardRegistry = (function() {
         description: 'Show maintenance alerts and device warnings',
         category: 'Alerts',
         endpoint: 'Device/MaintenanceAlerts/List',
-        icon: '⚠️',
+        icon: '!',
         defaultVisible: true,
         defaultOrder: 4,
         requiresParams: ['idInstalledProduct'],
@@ -375,7 +375,7 @@ const CardRegistry = (function() {
                 const severity = alert.Severity || 'info';
                 html += `
                     <div class="alert-item alert-${severity}">
-                        <div class="alert-icon">${severity === 'critical' ? '🔴' : severity === 'warning' ? '⚠️' : 'ℹ️'}</div>
+                        <div class="alert-icon">${severity === 'critical' ? '●' : severity === 'warning' ? '▲' : '○'}</div>
                         <div class="alert-content">
                             <div class="alert-title">${alert.AlertType || 'Alert'}</div>
                             <div class="alert-message">${alert.Message || 'No details'}</div>

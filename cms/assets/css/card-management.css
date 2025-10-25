@@ -158,7 +158,7 @@
 .btn-toggle-visibility {
     padding: 0.5rem 0.75rem;
     font-size: 1.2rem;
-    border: 2px solid #ddd;
+    border: 2px solid var(--border-color);
     background: var(--bg-card);
     border-radius: 6px;
     cursor: pointer;
@@ -188,17 +188,17 @@
 }
 
 .btn-primary:hover {
-    background: #0854cc;
+    background: var(--accent-hover);
     box-shadow: 0 4px 12px rgba(10, 108, 255, 0.3);
 }
 
 .btn-secondary {
-    background: #6c757d;
+    background: var(--text-secondary);
     color: white;
 }
 
 .btn-secondary:hover {
-    background: #5a6268;
+    background: var(--text-secondary);
 }
 
 /* Card Styles in Dashboard */
@@ -225,7 +225,7 @@
 
 .card-header {
     padding: 1rem 1.25rem;
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    background: linear-gradient(135deg, var(--bg-secondary), var(--border-color));
     border-bottom: 2px solid var(--border-color);
     display: flex;
     justify-content: space-between;
@@ -284,7 +284,8 @@
 }
 
 /* Card Content States */
-.loading {
+.card-body .loading {
+    /* Inherits display: flex from styles.css for spinner positioning */
     text-align: center;
     padding: 2rem;
     color: var(--text-secondary);
@@ -293,18 +294,18 @@
 
 .error {
     padding: 1rem;
-    background: var(--bg-card)3cd;
-    border: 1px solid #ffc107;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid var(--warning-color);
     border-radius: 4px;
-    color: #856404;
+    color: var(--text-primary);
 }
 
 .warning {
     padding: 1rem;
-    background: #cfe2ff;
-    border: 1px solid #0d6efd;
+    background: rgba(13, 110, 253, 0.1);
+    border: 1px solid var(--accent-color);
     border-radius: 4px;
-    color: #084298;
+    color: var(--text-primary);
 }
 
 .empty {
@@ -328,15 +329,15 @@
     padding: 0.75rem;
     background: var(--bg-secondary);
     border-radius: 6px;
-    border-left: 4px solid #28a745;
+    border-left: 4px solid var(--success-color);
 }
 
 .supply-item.supply-warning {
-    border-left-color: #ffc107;
+    border-left-color: var(--warning-color);
 }
 
 .supply-item.supply-critical {
-    border-left-color: #dc3545;
+    border-left-color: var(--danger-color);
 }
 
 .supply-name {
@@ -346,23 +347,23 @@
 
 .supply-bar {
     height: 20px;
-    background: #e9ecef;
+    background: var(--bg-secondary);
     border-radius: 10px;
     overflow: hidden;
 }
 
 .supply-fill {
     height: 100%;
-    background: linear-gradient(90deg, #28a745, #20c997);
+    background: linear-gradient(90deg, var(--success-color), #20c997);
     transition: width 0.3s ease;
 }
 
 .supply-warning .supply-fill {
-    background: linear-gradient(90deg, #ffc107, #fd7e14);
+    background: linear-gradient(90deg, var(--warning-color), #fd7e14);
 }
 
 .supply-critical .supply-fill {
-    background: linear-gradient(90deg, #dc3545, #c82333);
+    background: linear-gradient(90deg, var(--danger-color), #c82333);
 }
 
 .supply-level {
@@ -384,17 +385,17 @@
     padding: 1rem;
     background: var(--bg-secondary);
     border-radius: 6px;
-    border-left: 4px solid #6c757d;
+    border-left: 4px solid var(--text-secondary);
 }
 
 .alert-item.alert-warning {
-    border-left-color: #ffc107;
-    background: var(--bg-card)3cd;
+    border-left-color: var(--warning-color);
+    background: rgba(255, 193, 7, 0.1);
 }
 
 .alert-item.alert-critical {
-    border-left-color: #dc3545;
-    background: #f8d7da;
+    border-left-color: var(--danger-color);
+    background: rgba(220, 53, 69, 0.1);
 }
 
 .alert-icon {
@@ -468,13 +469,13 @@
 }
 
 .status-online {
-    background: #d4edda;
-    color: #155724;
+    background: rgba(40, 167, 69, 0.2);
+    color: var(--success-color);
 }
 
 .status-offline {
-    background: #f8d7da;
-    color: #721c24;
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
 }
 
 /* Card Snapshot Styles */
@@ -563,7 +564,7 @@
     font-style: italic;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px dashed #ddd;
+    border-top: 1px dashed var(--border-color);
 }
 
 /* Modal Styles */
@@ -675,18 +676,18 @@
 }
 
 .supply-item.supply-good {
-    border-color: #28a745;
-    background: #f0fdf4;
+    border-color: var(--success-color);
+    background: var(--bg-secondary);
 }
 
 .supply-item.supply-warning {
     border-color: #ffc107;
-    background: var(--bg-card)bf0;
+    background: rgba(255, 193, 7, 0.1);
 }
 
 .supply-item.supply-critical {
     border-color: #dc3545;
-    background: #fef2f2;
+    background: var(--bg-secondary);
 }
 
 .supply-header {
@@ -708,7 +709,7 @@
 
 .supply-bar {
     height: 0.5rem;
-    background: #e0e0e0;
+    background: var(--border-color);
     border-radius: 4px;
     overflow: hidden;
     margin: 0.5rem 0;
@@ -716,7 +717,7 @@
 
 .supply-fill {
     height: 100%;
-    background: linear-gradient(90deg, #28a745, #34d058);
+    background: linear-gradient(90deg, var(--success-color), #34d058);
     transition: width 0.3s ease;
 }
 

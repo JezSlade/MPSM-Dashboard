@@ -27,10 +27,7 @@
     <nav class="dashboard-nav">
         <div class="container">
             <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
-            <button class="nav-tab" data-tab="admin">Settings</button>
-            <button class="nav-tab" data-tab="cards">Card Management</button>
-            <button class="nav-tab" data-tab="cache">Cache</button>
-            <button class="nav-tab" data-tab="traffic">Traffic</button>
+            <button class="nav-tab" data-tab="admin">Admin</button>
         </div>
     </nav>
 
@@ -50,128 +47,141 @@
         </div>
 
 
-        <!-- Settings Tab -->
+        <!-- Admin Tab with Sub-Tabs -->
         <div id="admin-tab" class="tab-content">
-            <div class="admin-container">
-                <h2>Dashboard Settings</h2>
+            <div class="admin-panel">
+                <!-- Admin Sub-Navigation -->
+                <nav class="admin-subnav">
+                    <button class="admin-subtab active" data-subtab="settings">Settings</button>
+                    <button class="admin-subtab" data-subtab="cards">Card Management</button>
+                    <button class="admin-subtab" data-subtab="cache">Cache</button>
+                    <button class="admin-subtab" data-subtab="traffic">Traffic</button>
+                </nav>
 
-                <!-- Default Settings -->
-                <section class="admin-section">
-                    <h3>Default Settings</h3>
-                    <div class="form-group">
-                        <label for="dealer-select">Default Dealer Code:</label>
-                        <select id="dealer-select" class="form-control">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="customer-select">Default Customer:</label>
-                        <select id="customer-select" class="form-control">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
-                    <button id="save-defaults" class="btn btn-primary">Save Defaults</button>
-                </section>
+                <!-- Settings Sub-Tab -->
+                <div id="settings-subtab" class="admin-subtab-content active">
+                    <div class="admin-container">
+                        <h2>Dashboard Settings</h2>
 
-                <!-- Dashboard Options -->
-                <section class="admin-section">
-                    <h3>Dashboard Options</h3>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="auto-refresh">
-                            Auto-refresh dashboard
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label for="refresh-interval">Refresh interval (seconds):</label>
-                        <input type="number" id="refresh-interval" class="form-control" value="60" min="10" max="300">
-                    </div>
-                </section>
+                        <!-- Default Settings -->
+                        <section class="admin-section">
+                            <h3>Default Settings</h3>
+                            <div class="form-group">
+                                <label for="dealer-select">Default Dealer Code:</label>
+                                <select id="dealer-select" class="form-control">
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="customer-select">Default Customer:</label>
+                                <select id="customer-select" class="form-control">
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+                            <button id="save-defaults" class="btn btn-primary">Save Defaults</button>
+                        </section>
 
-                <!-- Data Management -->
-                <section class="admin-section">
-                    <h3>Data Management</h3>
-                    <button id="clear-cache" class="btn">Clear Cache</button>
-                    <button id="export-settings" class="btn">Export Settings</button>
-                    <button id="import-settings" class="btn">Import Settings</button>
-                    <input type="file" id="import-file" accept=".json" style="display:none">
-                </section>
-            </div>
-        </div>
+                        <!-- Dashboard Options -->
+                        <section class="admin-section">
+                            <h3>Dashboard Options</h3>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="auto-refresh">
+                                    Auto-refresh dashboard
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="refresh-interval">Refresh interval (seconds):</label>
+                                <input type="number" id="refresh-interval" class="form-control" value="60" min="10" max="300">
+                            </div>
+                        </section>
 
-        <!-- Card Management Tab -->
-        <div id="cards-tab" class="tab-content">
-            <div class="card-management-wrapper">
-                <h2>Card Management</h2>
-                <p class="help-text">Customize which cards appear on your dashboard and arrange their order by dragging.</p>
-                <div class="card-management-container">
-                    <!-- Card management UI will be rendered here by CardManager -->
+                        <!-- Data Management -->
+                        <section class="admin-section">
+                            <h3>Data Management</h3>
+                            <button id="clear-cache" class="btn">Clear Cache</button>
+                            <button id="export-settings" class="btn">Export Settings</button>
+                            <button id="import-settings" class="btn">Import Settings</button>
+                            <input type="file" id="import-file" accept=".json" style="display:none">
+                        </section>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Cache Dashboard Tab -->
-        <div id="cache-tab" class="tab-content">
-            <div class="cache-dashboard-wrapper">
-                <h2>Cache Dashboard</h2>
-                <section class="admin-section">
-                    <div class="cache-overview">
-                        <div class="cache-stat-grid">
-                            <div class="cache-stat-card">
-                                <div class="cache-stat-label">Hit Rate</div>
-                                <div class="cache-stat-value" id="cache-hit-rate">-</div>
-                            </div>
-                            <div class="cache-stat-card">
-                                <div class="cache-stat-label">Total Entries</div>
-                                <div class="cache-stat-value" id="cache-total-entries">-</div>
-                            </div>
-                            <div class="cache-stat-card">
-                                <div class="cache-stat-label">Cache Size</div>
-                                <div class="cache-stat-value" id="cache-total-size">-</div>
-                            </div>
-                            <div class="cache-stat-card">
-                                <div class="cache-stat-label">Hits / Misses</div>
-                                <div class="cache-stat-value" id="cache-hit-miss">-</div>
-                            </div>
+                <!-- Card Management Sub-Tab -->
+                <div id="cards-subtab" class="admin-subtab-content">
+                    <div class="card-management-wrapper">
+                        <h2>Card Management</h2>
+                        <p class="help-text">Customize which cards appear on your dashboard and arrange their order by dragging.</p>
+                        <div class="card-management-container">
+                            <!-- Card management UI will be rendered here by CardManager -->
                         </div>
                     </div>
-                    <div class="cache-actions">
-                        <button id="refresh-cache-stats" class="btn btn-secondary">🔄 Refresh Stats</button>
-                        <button id="warm-cache" class="btn btn-primary">🔥 Warm Cache</button>
-                        <button id="clear-all-cache" class="btn btn-danger">🗑️ Clear All Cache</button>
-                    </div>
-                    <div id="cache-entries-container" style="margin-top: 20px;">
-                        <h4>Cache Entries</h4>
-                        <div id="cache-entries-list" class="loading">Loading cache data...</div>
-                    </div>
-                </section>
-            </div>
-        </div>
+                </div>
 
-        <!-- Traffic Metrics Tab -->
-        <div id="traffic-tab" class="tab-content">
-            <div class="traffic-dashboard-wrapper">
-                <h2>Traffic Metrics</h2>
-                <section class="admin-section">
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-label">Total Visitors</div>
-                            <div class="metric-value" id="total-visitors">0</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">Unique Visitors</div>
-                            <div class="metric-value" id="unique-visitors">0</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">Active Sessions</div>
-                            <div class="metric-value" id="active-sessions">0</div>
-                        </div>
+                <!-- Cache Sub-Tab -->
+                <div id="cache-subtab" class="admin-subtab-content">
+                    <div class="cache-dashboard-wrapper">
+                        <h2>Cache Dashboard</h2>
+                        <section class="admin-section">
+                            <div class="cache-overview">
+                                <div class="cache-stat-grid">
+                                    <div class="cache-stat-card">
+                                        <div class="cache-stat-label">Hit Rate</div>
+                                        <div class="cache-stat-value" id="cache-hit-rate">-</div>
+                                    </div>
+                                    <div class="cache-stat-card">
+                                        <div class="cache-stat-label">Total Entries</div>
+                                        <div class="cache-stat-value" id="cache-total-entries">-</div>
+                                    </div>
+                                    <div class="cache-stat-card">
+                                        <div class="cache-stat-label">Cache Size</div>
+                                        <div class="cache-stat-value" id="cache-total-size">-</div>
+                                    </div>
+                                    <div class="cache-stat-card">
+                                        <div class="cache-stat-label">Hits / Misses</div>
+                                        <div class="cache-stat-value" id="cache-hit-miss">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cache-actions">
+                                <button id="refresh-cache-stats" class="btn btn-secondary">Refresh Stats</button>
+                                <button id="warm-cache" class="btn btn-primary">Warm Cache</button>
+                                <button id="clear-all-cache" class="btn btn-danger">Clear All Cache</button>
+                            </div>
+                            <div id="cache-entries-container" style="margin-top: 20px;">
+                                <h4>Cache Entries</h4>
+                                <div id="cache-entries-list" class="loading">Loading cache data...</div>
+                            </div>
+                        </section>
                     </div>
-                    <div class="access-log">
-                        <h4>Recent Access Log</h4>
-                        <div id="access-log-list"></div>
+                </div>
+
+                <!-- Traffic Sub-Tab -->
+                <div id="traffic-subtab" class="admin-subtab-content">
+                    <div class="traffic-dashboard-wrapper">
+                        <h2>Traffic Metrics</h2>
+                        <section class="admin-section">
+                            <div class="metrics-grid">
+                                <div class="metric-card">
+                                    <div class="metric-label">Total Visitors</div>
+                                    <div class="metric-value" id="total-visitors">0</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Unique Visitors</div>
+                                    <div class="metric-value" id="unique-visitors">0</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Active Sessions</div>
+                                    <div class="metric-value" id="active-sessions">0</div>
+                                </div>
+                            </div>
+                            <div class="access-log">
+                                <h4>Recent Access Log</h4>
+                                <div id="access-log-list"></div>
+                            </div>
+                        </section>
                     </div>
-                </section>
+                </div>
             </div>
         </div>
     </main>
