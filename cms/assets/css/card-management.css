@@ -861,3 +861,139 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Compact Card Management Tiles */
+.card-management-compact {
+    padding: 1rem;
+}
+
+.card-mgmt-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-bottom: 1.5rem;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.card-mgmt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.card-mgmt-tile {
+    position: relative;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.card-mgmt-tile:active {
+    cursor: grabbing;
+}
+
+.card-mgmt-tile.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.card-mgmt-tile.visible {
+    border-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--bg-card), rgba(10, 108, 255, 0.05));
+}
+
+.card-mgmt-tile.hidden {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+.card-mgmt-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tile-drag {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    opacity: 0.5;
+}
+
+.tile-icon {
+    font-size: 2rem;
+    margin: 0.5rem 0;
+}
+
+.tile-content {
+    text-align: center;
+    flex: 1;
+}
+
+.tile-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.tile-category {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tile-toggle {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.tile-toggle:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+.card-management-wrapper,
+.cache-dashboard-wrapper,
+.traffic-dashboard-wrapper {
+    padding: 2rem;
+}
+
+.card-management-wrapper h2,
+.cache-dashboard-wrapper h2,
+.traffic-dashboard-wrapper h2 {
+    margin: 0 0 0.5rem;
+}
+
+.card-management-wrapper .help-text {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .card-mgmt-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}

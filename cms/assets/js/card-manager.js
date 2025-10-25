@@ -386,61 +386,42 @@ const CardManager = (function() {
         const categories = CardRegistry.getCategories();
 
         let html = `
-            <div class="card-management">
-                <div class="card-management-header">
-                    <h3>Dashboard Card Management</h3>
-                    <div class="card-management-actions">
-                        <button id="save-card-order" class="btn btn-primary">Save Changes</button>
-                        <button id="reset-card-defaults" class="btn btn-secondary">Reset to Defaults</button>
-                    </div>
+            <div class="card-management-compact">
+                <div class="card-mgmt-actions">
+                    <button id="save-card-order" class="btn btn-primary btn-sm">💾 Save</button>
+                    <button id="reset-card-defaults" class="btn btn-secondary btn-sm">🔄 Reset</button>
                 </div>
-                <p class="help-text">Drag cards to reorder them. Toggle visibility with the eye icon.</p>
+                <div class="card-mgmt-grid">
         `;
 
-        // Group cards by category
-        categories.forEach(category => {
-            const categoryCards = allCards.filter(card => card.category === category);
+        // Render all cards as compact tiles
+        allCards.sort((a, b) => {
+            const orderA = preferences.cards[a.id]?.order ?? a.defaultOrder ?? 999;
+            const orderB = preferences.cards[b.id]?.order ?? b.defaultOrder ?? 999;
+            return orderA - orderB;
+        }).forEach(card => {
+            const isVisible = preferences.cards[card.id]?.visible !== false;
+            const visibilityClass = isVisible ? 'visible' : 'hidden';
 
             html += `
-                <div class="card-category">
-                    <h4>${category}</h4>
-                    <div class="card-list sortable" data-category="${category}">
-            `;
-
-            categoryCards.forEach(card => {
-                const isVisible = preferences.cards[card.id]?.visible !== false;
-                const visibilityIcon = isVisible ? '👁️' : '🚫';
-
-                html += `
-                    <div class="card-config-item" data-card-id="${card.id}" draggable="true">
-                        <div class="card-drag-handle">⋮⋮</div>
-                        <div class="card-info">
-                            <span class="card-icon">${card.icon}</span>
-                            <div class="card-details">
-                                <div class="card-name">${card.name}</div>
-                                <div class="card-description">${card.description}</div>
-                                <div class="card-meta">
-                                    <span class="card-endpoint">📡 ${card.endpoint}</span>
-                                    ${card.requiresParams?.length > 0 ? `<span class="card-params">⚙️ Requires: ${card.requiresParams.join(', ')}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-controls">
-                            <button class="btn-icon btn-toggle-visibility" data-card-id="${card.id}" title="${isVisible ? 'Hide' : 'Show'} card">
-                                <span>${visibilityIcon}</span>
-                            </button>
-                        </div>
+                <div class="card-mgmt-tile ${visibilityClass}" data-card-id="${card.id}" draggable="true">
+                    <div class="tile-drag">⋮⋮</div>
+                    <div class="tile-icon">${card.icon}</div>
+                    <div class="tile-content">
+                        <div class="tile-name">${card.name}</div>
+                        <div class="tile-category">${card.category}</div>
                     </div>
-                `;
-            });
-
-            html += `
-                    </div>
+                    <button class="tile-toggle" data-card-id="${card.id}" title="${isVisible ? 'Hide' : 'Show'}">
+                        ${isVisible ? '👁️' : '🚫'}
+                    </button>
                 </div>
             `;
         });
 
-        html += '</div>';
+        html += `
+                </div>
+            </div>
+        `;
 
         container.innerHTML = html;
 
@@ -453,16 +434,19 @@ const CardManager = (function() {
      */
     function setupAdminEventListeners() {
         // Visibility toggle
-        document.querySelectorAll('.btn-toggle-visibility').forEach(btn => {
-            btn.addEventListener('click', function() {
+        document.querySelectorAll('.tile-toggle').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const cardId = this.dataset.cardId;
                 const currentVisibility = preferences.cards[cardId]?.visible !== false;
                 setCardVisibility(cardId, !currentVisibility);
 
-                // Update icon
-                const icon = this.querySelector('span');
-                icon.textContent = !currentVisibility ? '👁️' : '🚫';
-                this.title = !currentVisibility ? 'Hide card' : 'Show card';
+                // Update icon and tile class
+                this.textContent = !currentVisibility ? '👁️' : '🚫';
+                this.title = !currentVisibility ? 'Hide' : 'Show';
+                const tile = this.closest('.card-mgmt-tile');
+                tile.classList.toggle('visible', !currentVisibility);
+                tile.classList.toggle('hidden', currentVisibility);
             });
         });
 
@@ -472,12 +456,12 @@ const CardManager = (function() {
             saveBtn.addEventListener('click', async function() {
                 // Collect new order from DOM
                 const newOrder = [];
-                document.querySelectorAll('.card-config-item').forEach(item => {
+                document.querySelectorAll('.card-mgmt-tile').forEach(item => {
                     newOrder.push(item.dataset.cardId);
                 });
 
                 await setCardOrder(newOrder);
-                alert('Card order saved successfully!');
+                alert('✅ Card order saved!');
             });
         }
 
@@ -502,7 +486,7 @@ const CardManager = (function() {
      * Setup drag and drop for card reordering
      */
     function setupDragAndDrop() {
-        const items = document.querySelectorAll('.card-config-item');
+        const items = document.querySelectorAll('.card-mgmt-tile');
         let draggedElement = null;
 
         items.forEach(item => {
@@ -520,7 +504,7 @@ const CardManager = (function() {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
 
-                const afterElement = getDragAfterElement(this.parentElement, e.clientY);
+                const afterElement = getDragAfterElement(this.parentElement, e.clientX, e.clientY);
                 if (afterElement == null) {
                     this.parentElement.appendChild(draggedElement);
                 } else {

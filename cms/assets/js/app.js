@@ -183,11 +183,15 @@
         // Load tab-specific data
         if (tabName === 'admin') {
             loadAdminData();
-
+        } else if (tabName === 'cards') {
             // Render card management UI
             if (typeof CardManager !== 'undefined') {
                 CardManager.renderAdminPanel('.card-management-container');
             }
+        } else if (tabName === 'cache') {
+            loadCacheStats();
+        } else if (tabName === 'traffic') {
+            loadTrafficMetrics();
         }
     }
 

@@ -27,7 +27,10 @@
     <nav class="dashboard-nav">
         <div class="container">
             <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
-            <button class="nav-tab" data-tab="admin">Admin</button>
+            <button class="nav-tab" data-tab="admin">Settings</button>
+            <button class="nav-tab" data-tab="cards">Card Management</button>
+            <button class="nav-tab" data-tab="cache">Cache</button>
+            <button class="nav-tab" data-tab="traffic">Traffic</button>
         </div>
     </nav>
 
@@ -46,17 +49,11 @@
             </div>
         </div>
 
-        <!-- Admin Tab -->
+
+        <!-- Settings Tab -->
         <div id="admin-tab" class="tab-content">
             <div class="admin-container">
-                <h2>Administration</h2>
-
-                <!-- Card Management -->
-                <section class="admin-section">
-                    <div class="card-management-container">
-                        <!-- Card management UI will be rendered here -->
-                    </div>
-                </section>
+                <h2>Dashboard Settings</h2>
 
                 <!-- Default Settings -->
                 <section class="admin-section">
@@ -76,9 +73,9 @@
                     <button id="save-defaults" class="btn btn-primary">Save Defaults</button>
                 </section>
 
-                <!-- Dashboard Settings -->
+                <!-- Dashboard Options -->
                 <section class="admin-section">
-                    <h3>Dashboard Settings</h3>
+                    <h3>Dashboard Options</h3>
                     <div class="form-group">
                         <label>
                             <input type="checkbox" id="auto-refresh">
@@ -91,9 +88,33 @@
                     </div>
                 </section>
 
-                <!-- Cache Dashboard -->
+                <!-- Data Management -->
                 <section class="admin-section">
-                    <h3>Cache Dashboard</h3>
+                    <h3>Data Management</h3>
+                    <button id="clear-cache" class="btn">Clear Cache</button>
+                    <button id="export-settings" class="btn">Export Settings</button>
+                    <button id="import-settings" class="btn">Import Settings</button>
+                    <input type="file" id="import-file" accept=".json" style="display:none">
+                </section>
+            </div>
+        </div>
+
+        <!-- Card Management Tab -->
+        <div id="cards-tab" class="tab-content">
+            <div class="card-management-wrapper">
+                <h2>Card Management</h2>
+                <p class="help-text">Customize which cards appear on your dashboard and arrange their order by dragging.</p>
+                <div class="card-management-container">
+                    <!-- Card management UI will be rendered here by CardManager -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Dashboard Tab -->
+        <div id="cache-tab" class="tab-content">
+            <div class="cache-dashboard-wrapper">
+                <h2>Cache Dashboard</h2>
+                <section class="admin-section">
                     <div class="cache-overview">
                         <div class="cache-stat-grid">
                             <div class="cache-stat-card">
@@ -124,10 +145,14 @@
                         <div id="cache-entries-list" class="loading">Loading cache data...</div>
                     </div>
                 </section>
+            </div>
+        </div>
 
-                <!-- Traffic Metrics -->
+        <!-- Traffic Metrics Tab -->
+        <div id="traffic-tab" class="tab-content">
+            <div class="traffic-dashboard-wrapper">
+                <h2>Traffic Metrics</h2>
                 <section class="admin-section">
-                    <h3>Traffic Metrics</h3>
                     <div class="metrics-grid">
                         <div class="metric-card">
                             <div class="metric-label">Total Visitors</div>
@@ -146,15 +171,6 @@
                         <h4>Recent Access Log</h4>
                         <div id="access-log-list"></div>
                     </div>
-                </section>
-
-                <!-- Data Management -->
-                <section class="admin-section">
-                    <h3>Data Management</h3>
-                    <button id="clear-cache" class="btn">Clear Cache</button>
-                    <button id="export-settings" class="btn">Export Settings</button>
-                    <button id="import-settings" class="btn">Import Settings</button>
-                    <input type="file" id="import-file" accept=".json" style="display:none">
                 </section>
             </div>
         </div>
