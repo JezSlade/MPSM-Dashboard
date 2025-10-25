@@ -20,6 +20,13 @@
 
     // Initialize application
     async function init() {
+        // Ensure modal is closed on init (fix for stuck modal issue)
+        const modal = document.getElementById('device-modal');
+        if (modal) {
+            modal.classList.remove('active');
+            console.log('[init] Ensured modal is closed on page load');
+        }
+
         // Load settings
         const settings = MPSApi.loadSettings();
         state.dealerCode = settings.dealerCode || 'NY06AGDWUQ';
@@ -172,13 +179,30 @@
 
         document.getElementById('import-file').addEventListener('change', importSettings);
 
-        // Modal close
-        document.querySelector('.modal-close').addEventListener('click', closeModal);
-        document.querySelector('.modal-overlay').addEventListener('click', closeModal);
+        // Modal close - multiple methods for reliability
+        const modalCloseBtn = document.querySelector('.modal-close');
+        const modalOverlay = document.querySelector('.modal-overlay');
 
-        // Keyboard shortcuts
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeModal();
+            });
+        }
+
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeModal();
+            });
+        }
+
+        // Keyboard shortcuts - ESC key to close modal
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                e.preventDefault();
                 closeModal();
             }
         });
@@ -1032,14 +1056,23 @@
      * Open device detail modal with comprehensive data from all endpoints
      */
     async function openDeviceModal(deviceId) {
+        console.log('[openDeviceModal] Opening modal for deviceId:', deviceId);
+
         const modal = document.getElementById('device-modal');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
+
+        // Validate inputs
+        if (!modal || !title || !body) {
+            console.error('[openDeviceModal] Modal elements not found');
+            return;
+        }
 
         // Find device in state
         const device = state.devices.find(d => d.Id === deviceId);
 
         if (!device) {
+            console.error('[openDeviceModal] Device not found:', deviceId);
             showToast('Device not found', 'error');
             return;
         }
@@ -1248,7 +1281,11 @@
      * Close modal
      */
     function closeModal() {
-        document.getElementById('device-modal').classList.remove('active');
+        console.log('[closeModal] Closing modal');
+        const modal = document.getElementById('device-modal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
     }
 
     /**

@@ -261,7 +261,7 @@ if (empty($_SESSION['logged_in']) && !isset($_GET['login'])) {
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body" id="modal-body">
-                <div class="loading">Loading device details...</div>
+                <!-- Content loaded dynamically by JavaScript -->
             </div>
         </div>
     </div>
