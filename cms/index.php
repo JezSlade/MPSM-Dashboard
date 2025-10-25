@@ -35,64 +35,14 @@
     <main class="container">
         <!-- Dashboard Tab -->
         <div id="dashboard-tab" class="tab-content active">
-            <!-- Customer Dashboard Header -->
+            <!-- Customer Overview Header -->
             <section id="customer-dashboard" class="customer-header">
-                <div class="loading">Loading customer dashboard...</div>
+                <div class="loading">Loading overview...</div>
             </section>
 
-            <!-- Dashboard Cards Grid -->
+            <!-- Dynamic Dashboard Cards Grid -->
             <div class="dashboard-grid">
-                <!-- Printer List Card -->
-                <div class="card card-printers">
-                    <div class="card-header">
-                        <h2>Printers</h2>
-                        <span class="card-count" id="printer-count">0</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="printer-list" class="loading">Loading printers...</div>
-                    </div>
-                </div>
-
-                <!-- Errors & Alerts Card -->
-                <div class="card card-errors">
-                    <div class="card-header">
-                        <h2>Errors & Alerts</h2>
-                        <span class="card-count" id="error-count">0</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="error-list" class="loading">Loading errors...</div>
-                    </div>
-                </div>
-
-                <!-- Toner Levels Card -->
-                <div class="card card-toner">
-                    <div class="card-header">
-                        <h2>Toner Levels</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="toner-list" class="loading">Loading toner status...</div>
-                    </div>
-                </div>
-
-                <!-- Meter Reads Card -->
-                <div class="card card-meters">
-                    <div class="card-header">
-                        <h2>Meter Reads</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="meter-list" class="loading">Loading meter data...</div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity Card -->
-                <div class="card card-activity">
-                    <div class="card-header">
-                        <h2>Recent Activity</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="activity-list" class="loading">Loading activity...</div>
-                    </div>
-                </div>
+                <!-- Cards will be dynamically rendered by CardManager -->
             </div>
         </div>
 

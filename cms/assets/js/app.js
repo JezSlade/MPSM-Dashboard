@@ -239,17 +239,17 @@
      * Load main dashboard
      */
     async function loadDashboard() {
-        // Use CardManager if available
-        if (typeof CardManager !== 'undefined') {
-            await CardManager.renderDashboard('.dashboard-grid');
-            return;
-        }
-
-        // Fallback to original implementation
         try {
-            // Load customer dashboard header
+            // Always load customer dashboard header
             await loadCustomerDashboard();
 
+            // Use CardManager if available
+            if (typeof CardManager !== 'undefined') {
+                await CardManager.renderDashboard('.dashboard-grid');
+                return;
+            }
+
+            // Fallback to original implementation
             // FIRST: Load printer list to populate state.devices
             await loadPrinterList();
 
