@@ -145,12 +145,6 @@ class MPSMonitorEngine {
             self::$config['MPS_CONNECT_TIMEOUT'] = 10;
         }
 
-        $queryEndpoint = self::$config['MPS_QUERY_ENDPOINT'] ?? 'query';
-        $queryEndpoint = trim((string) $queryEndpoint, '/');
-        if ($queryEndpoint === '') {
-            $queryEndpoint = 'query';
-        }
-        self::$config['MPS_QUERY_ENDPOINT'] = $queryEndpoint;
     }
 
     /**
@@ -496,29 +490,27 @@ class MPSMonitorEngine {
             $body = new stdClass();
         }
         
-        [$payload, $preparedHeaders] = $this->prepareActionRequestPayload(
-            $operation,
-            $pathValues,
-            $query,
-            $body,
-            $remaining,
-            $headers,
-            $endpointMetadata
-        );
+        $contentType = null;
+        if ($operation['hasBody']) {
+            if (!empty($operation['formParams'])) {
+                $contentType = 'application/x-www-form-urlencoded';
+            } else {
+                $contentType = 'application/json';
+            }
+        }
 
         $options = [
-            'headers' => $preparedHeaders,
-            'contentType' => 'application/json',
-            'forceBody' => true,
+            'headers' => $headers,
+            'contentType' => $contentType,
             'endpointMetadata' => $endpointMetadata,
             'actionName' => $operation['action'],
         ];
 
         return $this->makeRequest(
-            self::$config['MPS_QUERY_ENDPOINT'],
-            'POST',
-            $payload,
-            [],
+            $endpoint,
+            $operation['method'],
+            $body,
+            $query,
             $options
         );
     }
