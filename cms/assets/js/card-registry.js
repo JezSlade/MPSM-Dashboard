@@ -20,7 +20,8 @@ const CardRegistry = (function() {
      *   defaultVisible: boolean,
      *   defaultOrder: number,
      *   fetchData: async function(),
-     *   render: function(data, container),
+     *   renderSnapshot: function(data, container),  // Compact view
+     *   renderModal: function(data, container),     // Full detail view
      *   requiresParams: array
      * }
      */
@@ -43,7 +44,42 @@ const CardRegistry = (function() {
                 pageRows: 100
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
+            if (!Array.isArray(data)) {
+                container.innerHTML = '<div class="error">No data available</div>';
+                return;
+            }
+
+            const total = data.length;
+            const online = data.filter(d => d.Status === 'Online' || d.IsOnline).length;
+            const offline = total - online;
+            const totalPrints = data.reduce((sum, d) => sum + (d.TotalCounter || 0), 0);
+
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${total}</div>
+                            <div class="snapshot-label">Total Devices</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value success">${online}</div>
+                            <div class="snapshot-label">Online</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${offline > 0 ? 'warning' : ''}">${offline}</div>
+                            <div class="snapshot-label">Offline</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${TableUtils.renderCounter(totalPrints)}</div>
+                            <div class="snapshot-label">Total Prints</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
             if (!Array.isArray(data)) {
                 container.innerHTML = '<div class="error">No data available</div>';
                 return;
@@ -57,9 +93,10 @@ const CardRegistry = (function() {
                     key: 'Status',
                     label: 'Status',
                     width: '10%',
-                    render: (value) => {
-                        const statusClass = value === 'Online' ? 'status-online' : 'status-offline';
-                        return `<span class="status-badge ${statusClass}">${value || 'Unknown'}</span>`;
+                    render: (value, row) => {
+                        const isOnline = value === 'Online' || row.IsOnline;
+                        const statusClass = isOnline ? 'status-online' : 'status-offline';
+                        return `<span class="status-badge ${statusClass}">${isOnline ? 'Online' : 'Offline'}</span>`;
                     }
                 },
                 {
@@ -72,7 +109,7 @@ const CardRegistry = (function() {
             ];
 
             const table = TableUtils.createPaginatedTable(data, columns, {
-                pageSize: 10,
+                pageSize: 20,
                 searchable: true,
                 sortable: true
             });
@@ -102,31 +139,68 @@ const CardRegistry = (function() {
                 id: params.deviceId
             });
         },
-        render: function(data, container) {
-            if (!data) {
+        renderSnapshot: function(data, container) {
+            if (!data || !Array.isArray(data)) {
                 container.innerHTML = '<div class="empty">No supply data available</div>';
                 return;
             }
 
-            let html = '<div class="supply-grid">';
+            const critical = data.filter(s => (s.Level || 0) < 20).length;
+            const warning = data.filter(s => (s.Level || 0) >= 20 && (s.Level || 0) < 50).length;
+            const good = data.filter(s => (s.Level || 0) >= 50).length;
+            const avgLevel = data.reduce((sum, s) => sum + (s.Level || 0), 0) / data.length;
 
-            if (Array.isArray(data)) {
-                data.forEach(supply => {
-                    const level = supply.Level || 0;
-                    const color = supply.Color || 'Black';
-                    const status = level < 20 ? 'critical' : level < 50 ? 'warning' : 'good';
-
-                    html += `
-                        <div class="supply-item supply-${status}">
-                            <div class="supply-name">${color}</div>
-                            <div class="supply-bar">
-                                <div class="supply-fill" style="width: ${level}%"></div>
-                            </div>
-                            <div class="supply-level">${level}%</div>
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${data.length}</div>
+                            <div class="snapshot-label">Supplies</div>
                         </div>
-                    `;
-                });
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${critical > 0 ? 'critical' : ''}">${critical}</div>
+                            <div class="snapshot-label">Critical</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${warning > 0 ? 'warning' : ''}">${warning}</div>
+                            <div class="snapshot-label">Low</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value success">${Math.round(avgLevel)}%</div>
+                            <div class="snapshot-label">Avg Level</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
+            if (!data || !Array.isArray(data)) {
+                container.innerHTML = '<div class="empty">No supply data available</div>';
+                return;
             }
+
+            let html = '<div class="supply-grid-expanded">';
+
+            data.forEach(supply => {
+                const level = supply.Level || 0;
+                const color = supply.Color || 'Black';
+                const type = supply.Type || 'Toner';
+                const status = level < 20 ? 'critical' : level < 50 ? 'warning' : 'good';
+
+                html += `
+                    <div class="supply-item supply-${status}">
+                        <div class="supply-header">
+                            <div class="supply-name">${color} ${type}</div>
+                            <div class="supply-level-text">${level}%</div>
+                        </div>
+                        <div class="supply-bar">
+                            <div class="supply-fill" style="width: ${level}%"></div>
+                        </div>
+                        ${supply.PartNumber ? `<div class="supply-part">Part: ${supply.PartNumber}</div>` : ''}
+                    </div>
+                `;
+            });
 
             html += '</div>';
             container.innerHTML = html;
@@ -154,7 +228,42 @@ const CardRegistry = (function() {
                 toDate: now.toISOString()
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
+            if (!Array.isArray(data) || data.length === 0) {
+                container.innerHTML = '<div class="empty">No meter data available</div>';
+                return;
+            }
+
+            const latest = data[0] || {};
+            const oldest = data[data.length - 1] || {};
+            const totalGrowth = (latest.TotalCounter || 0) - (oldest.TotalCounter || 0);
+            const avgDaily = Math.round(totalGrowth / Math.max(data.length, 1));
+
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${TableUtils.renderCounter(latest.TotalCounter || 0)}</div>
+                            <div class="snapshot-label">Current Total</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${TableUtils.renderCounter(latest.MonoCounter || 0)}</div>
+                            <div class="snapshot-label">B&W</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${TableUtils.renderCounter(latest.ColorCounter || 0)}</div>
+                            <div class="snapshot-label">Color</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${TableUtils.renderCounter(avgDaily)}</div>
+                            <div class="snapshot-label">Avg Daily</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
             if (!Array.isArray(data) || data.length === 0) {
                 container.innerHTML = '<div class="empty">No meter data available</div>';
                 return;
@@ -188,7 +297,7 @@ const CardRegistry = (function() {
             ];
 
             const table = TableUtils.createPaginatedTable(data, columns, {
-                pageSize: 10,
+                pageSize: 15,
                 sortable: true
             });
 
@@ -213,22 +322,65 @@ const CardRegistry = (function() {
                 idInstalledProduct: params.idInstalledProduct
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
             if (!Array.isArray(data) || data.length === 0) {
-                container.innerHTML = '<div class="empty">✓ No active alerts</div>';
+                container.innerHTML = `
+                    <div class="card-snapshot">
+                        <div class="snapshot-empty success">
+                            <div class="snapshot-icon">✓</div>
+                            <div class="snapshot-message">No Active Alerts</div>
+                        </div>
+                        <div class="card-click-hint">Click for details</div>
+                    </div>
+                `;
                 return;
             }
 
-            let html = '<div class="alert-list">';
+            const critical = data.filter(a => a.Severity === 'critical').length;
+            const warnings = data.filter(a => a.Severity === 'warning').length;
+            const info = data.length - critical - warnings;
+
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${data.length > 0 ? 'warning' : ''}">${data.length}</div>
+                            <div class="snapshot-label">Total Alerts</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${critical > 0 ? 'critical' : ''}">${critical}</div>
+                            <div class="snapshot-label">Critical</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${warnings > 0 ? 'warning' : ''}">${warnings}</div>
+                            <div class="snapshot-label">Warnings</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${info}</div>
+                            <div class="snapshot-label">Info</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
+            if (!Array.isArray(data) || data.length === 0) {
+                container.innerHTML = '<div class="empty success">✓ No active alerts</div>';
+                return;
+            }
+
+            let html = '<div class="alert-list-expanded">';
             data.forEach(alert => {
                 const severity = alert.Severity || 'info';
                 html += `
                     <div class="alert-item alert-${severity}">
-                        <div class="alert-icon">${severity === 'critical' ? '🔴' : '⚠️'}</div>
+                        <div class="alert-icon">${severity === 'critical' ? '🔴' : severity === 'warning' ? '⚠️' : 'ℹ️'}</div>
                         <div class="alert-content">
                             <div class="alert-title">${alert.AlertType || 'Alert'}</div>
                             <div class="alert-message">${alert.Message || 'No details'}</div>
                             <div class="alert-time">${TableUtils.renderDate(alert.CreatedAt)}</div>
+                            ${alert.DeviceSerial ? `<div class="alert-device">Device: ${alert.DeviceSerial}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -254,29 +406,79 @@ const CardRegistry = (function() {
                 customerCode: params.customerCode
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
             if (!data) {
                 container.innerHTML = '<div class="error">No customer data</div>';
                 return;
             }
 
             container.innerHTML = `
-                <div class="customer-overview">
-                    <div class="customer-stat">
-                        <div class="stat-label">Customer</div>
-                        <div class="stat-value">${data.CustomerName || 'N/A'}</div>
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${data.TotalDevices || 0}</div>
+                            <div class="snapshot-label">Devices</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${TableUtils.renderCounter(data.TotalPrints || 0)}</div>
+                            <div class="snapshot-label">Total Prints</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${data.ActiveUsers || 0}</div>
+                            <div class="snapshot-label">Users</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${(data.Status || 'inactive').toLowerCase() === 'active' ? 'success' : 'warning'}">${data.Status || 'N/A'}</div>
+                            <div class="snapshot-label">Status</div>
+                        </div>
                     </div>
-                    <div class="customer-stat">
-                        <div class="stat-label">Devices</div>
-                        <div class="stat-value">${data.TotalDevices || 0}</div>
-                    </div>
-                    <div class="customer-stat">
-                        <div class="stat-label">Total Prints</div>
-                        <div class="stat-value">${TableUtils.renderCounter(data.TotalPrints || 0)}</div>
-                    </div>
-                    <div class="customer-stat">
-                        <div class="stat-label">Status</div>
-                        <div class="stat-value status-${(data.Status || 'inactive').toLowerCase()}">${data.Status || 'Inactive'}</div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
+            if (!data) {
+                container.innerHTML = '<div class="error">No customer data</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="customer-overview-expanded">
+                    <div class="customer-detail-grid">
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Customer Name</div>
+                            <div class="detail-value">${data.CustomerName || 'N/A'}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Customer Code</div>
+                            <div class="detail-value">${data.CustomerCode || 'N/A'}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Total Devices</div>
+                            <div class="detail-value">${data.TotalDevices || 0}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Active Devices</div>
+                            <div class="detail-value">${data.ActiveDevices || 0}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Total Prints</div>
+                            <div class="detail-value">${TableUtils.renderCounter(data.TotalPrints || 0)}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Monthly Average</div>
+                            <div class="detail-value">${TableUtils.renderCounter(data.MonthlyAvgPrints || 0)}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">
+                                <span class="status-badge status-${(data.Status || 'inactive').toLowerCase()}">${data.Status || 'Inactive'}</span>
+                            </div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="detail-label">Last Activity</div>
+                            <div class="detail-value">${data.LastActivity ? TableUtils.renderDate(data.LastActivity) : 'N/A'}</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -301,15 +503,50 @@ const CardRegistry = (function() {
                 pageRows: 50
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
+            if (!Array.isArray(data)) {
+                container.innerHTML = '<div class="empty">No supplies available</div>';
+                return;
+            }
+
+            const toner = data.filter(s => s.SupplyType === 3).length;
+            const ink = data.filter(s => s.SupplyType === 2).length;
+            const other = data.length - toner - ink;
+            const avgPrice = data.reduce((sum, s) => sum + (s.Value || 0), 0) / data.length;
+
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${data.length}</div>
+                            <div class="snapshot-label">Total Items</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${toner}</div>
+                            <div class="snapshot-label">Toner</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${ink}</div>
+                            <div class="snapshot-label">Ink</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">$${avgPrice.toFixed(2)}</div>
+                            <div class="snapshot-label">Avg Price</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
             if (!Array.isArray(data)) {
                 container.innerHTML = '<div class="empty">No supplies available</div>';
                 return;
             }
 
             const columns = [
-                { key: 'PartNumber', label: 'Part #', width: '20%' },
-                { key: 'Description', label: 'Description', width: '40%' },
+                { key: 'PartNumber', label: 'Part #', width: '15%' },
+                { key: 'Description', label: 'Description', width: '35%' },
                 {
                     key: 'SupplyType',
                     label: 'Type',
@@ -322,11 +559,12 @@ const CardRegistry = (function() {
                     width: '15%',
                     render: TableUtils.renderCounter
                 },
-                { key: 'Value', label: 'Price', width: '10%', render: (val) => `$${val || 0}` }
+                { key: 'Value', label: 'Price', width: '10%', render: (val) => `$${(val || 0).toFixed(2)}` },
+                { key: 'Stock', label: 'Stock', width: '10%' }
             ];
 
             const table = TableUtils.createPaginatedTable(data, columns, {
-                pageSize: 15,
+                pageSize: 20,
                 searchable: true,
                 sortable: true
             });
@@ -353,20 +591,54 @@ const CardRegistry = (function() {
                 reportFormat: 'Excel'
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
             if (!data || !data.ReportUrl) {
                 container.innerHTML = '<div class="empty">No reports available</div>';
                 return;
             }
 
             container.innerHTML = `
-                <div class="report-item">
-                    <div class="report-icon">📄</div>
-                    <div class="report-info">
-                        <div class="report-name">Generated Report</div>
-                        <div class="report-meta">Format: ${data.ReportFormat || 'Excel'} | Generated: ${TableUtils.renderDate(data.GeneratedAt)}</div>
+                <div class="card-snapshot">
+                    <div class="snapshot-report">
+                        <div class="report-icon-large">📄</div>
+                        <div class="snapshot-value">Report Ready</div>
+                        <div class="snapshot-label">${data.ReportFormat || 'Excel'} Format</div>
                     </div>
-                    <a href="${data.ReportUrl}" class="btn btn-primary" download>Download</a>
+                    <div class="card-click-hint">Click to download</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
+            if (!data || !data.ReportUrl) {
+                container.innerHTML = '<div class="empty">No reports available</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="report-detail-expanded">
+                    <div class="report-header">
+                        <div class="report-icon-large">📄</div>
+                        <div class="report-title">Analytics Report</div>
+                    </div>
+                    <div class="report-metadata">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Format:</span>
+                            <span class="metadata-value">${data.ReportFormat || 'Excel'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Generated:</span>
+                            <span class="metadata-value">${data.GeneratedAt ? TableUtils.renderDate(data.GeneratedAt) : 'N/A'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">File Size:</span>
+                            <span class="metadata-value">${data.FileSize ? (data.FileSize / 1024).toFixed(2) + ' KB' : 'N/A'}</span>
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <a href="${data.ReportUrl}" class="btn btn-primary btn-lg" download>
+                            Download Report
+                        </a>
+                    </div>
                 </div>
             `;
         }
@@ -388,7 +660,41 @@ const CardRegistry = (function() {
                 customerCode: params.customerCode
             });
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
+            if (!Array.isArray(data) || data.length === 0) {
+                container.innerHTML = '<div class="empty">No Explorer data collectors configured</div>';
+                return;
+            }
+
+            const active = data.filter(d => d.Status && d.Status.toLowerCase() === 'active').length;
+            const totalDevices = data.reduce((sum, d) => sum + (d.DeviceCount || 0), 0);
+            const avgVersion = data[0]?.Version || 'N/A';
+
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${data.length}</div>
+                            <div class="snapshot-label">Collectors</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value ${active === data.length ? 'success' : 'warning'}">${active}</div>
+                            <div class="snapshot-label">Active</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${totalDevices}</div>
+                            <div class="snapshot-label">Devices</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${avgVersion}</div>
+                            <div class="snapshot-label">Version</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
             if (!Array.isArray(data) || data.length === 0) {
                 container.innerHTML = '<div class="empty">No Explorer data collectors configured</div>';
                 return;
@@ -416,7 +722,7 @@ const CardRegistry = (function() {
             ];
 
             const table = TableUtils.createPaginatedTable(data, columns, {
-                pageSize: 10
+                pageSize: 15
             });
 
             container.innerHTML = table.html;
@@ -438,15 +744,50 @@ const CardRegistry = (function() {
         fetchData: async (params) => {
             return await MPSApi.query('ApiClient/List', {});
         },
-        render: function(data, container) {
+        renderSnapshot: function(data, container) {
+            if (!Array.isArray(data)) {
+                container.innerHTML = '<div class="empty">No API clients configured</div>';
+                return;
+            }
+
+            const active = data.filter(c => c.IsActive).length;
+            const inactive = data.length - active;
+            const webApps = data.filter(c => c.ApplicationType === 1).length;
+            const mobileApps = data.filter(c => c.ApplicationType === 2).length;
+
+            container.innerHTML = `
+                <div class="card-snapshot">
+                    <div class="snapshot-stat-grid">
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${data.length}</div>
+                            <div class="snapshot-label">Total Clients</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value success">${active}</div>
+                            <div class="snapshot-label">Active</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${webApps}</div>
+                            <div class="snapshot-label">Web</div>
+                        </div>
+                        <div class="snapshot-stat">
+                            <div class="snapshot-value">${mobileApps}</div>
+                            <div class="snapshot-label">Mobile</div>
+                        </div>
+                    </div>
+                    <div class="card-click-hint">Click for details</div>
+                </div>
+            `;
+        },
+        renderModal: function(data, container) {
             if (!Array.isArray(data)) {
                 container.innerHTML = '<div class="empty">No API clients configured</div>';
                 return;
             }
 
             const columns = [
-                { key: 'Name', label: 'Name', width: '25%' },
-                { key: 'AppId', label: 'App ID', width: '30%' },
+                { key: 'Name', label: 'Name', width: '20%' },
+                { key: 'AppId', label: 'App ID', width: '25%' },
                 {
                     key: 'ApplicationType',
                     label: 'Type',
@@ -457,13 +798,14 @@ const CardRegistry = (function() {
                     key: 'IsActive',
                     label: 'Status',
                     width: '15%',
-                    render: (val) => val ? '<span class="status-online">Active</span>' : '<span class="status-offline">Inactive</span>'
+                    render: (val) => val ? '<span class="status-badge status-online">Active</span>' : '<span class="status-badge status-offline">Inactive</span>'
                 },
-                { key: 'DeveloperEmail', label: 'Developer', width: '15%' }
+                { key: 'DeveloperEmail', label: 'Developer', width: '25%' }
             ];
 
             const table = TableUtils.createPaginatedTable(data, columns, {
-                pageSize: 10
+                pageSize: 15,
+                searchable: true
             });
 
             container.innerHTML = table.html;

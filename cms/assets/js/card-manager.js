@@ -166,7 +166,7 @@ const CardManager = (function() {
      */
     function createCardElement(cardDef) {
         const card = document.createElement('div');
-        card.className = `card card-${cardDef.id}`;
+        card.className = `card card-${cardDef.id} card-clickable`;
         card.dataset.cardId = cardDef.id;
 
         card.innerHTML = `
@@ -176,11 +176,8 @@ const CardManager = (function() {
                     <h3>${cardDef.name}</h3>
                 </div>
                 <div class="card-actions">
-                    <button class="btn-icon btn-refresh" title="Refresh">
+                    <button class="btn-icon btn-refresh" title="Refresh" data-action="refresh">
                         <span>🔄</span>
-                    </button>
-                    <button class="btn-icon btn-collapse" title="Collapse">
-                        <span>▼</span>
                     </button>
                 </div>
             </div>
@@ -189,22 +186,23 @@ const CardManager = (function() {
             </div>
         `;
 
+        // Add click listener to open modal
+        card.addEventListener('click', (e) => {
+            // Don't open modal if clicking on action buttons
+            if (e.target.closest('[data-action]')) {
+                return;
+            }
+            openCardModal(cardDef.id, card);
+        });
+
         // Add event listeners
         const refreshBtn = card.querySelector('.btn-refresh');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', async () => {
+            refreshBtn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent modal from opening
                 refreshBtn.classList.add('spinning');
                 await loadCardData(cardDef.id, card);
                 refreshBtn.classList.remove('spinning');
-            });
-        }
-
-        const collapseBtn = card.querySelector('.btn-collapse');
-        const cardBody = card.querySelector('.card-body');
-        if (collapseBtn && cardBody) {
-            collapseBtn.addEventListener('click', () => {
-                cardBody.classList.toggle('collapsed');
-                collapseBtn.querySelector('span').textContent = cardBody.classList.contains('collapsed') ? '▶' : '▼';
             });
         }
 
@@ -241,12 +239,95 @@ const CardManager = (function() {
             // Check if response has data property
             const responseData = data?.data !== undefined ? data.data : data;
 
-            // Render data
-            cardDef.render(responseData, cardBody);
+            // Store data on card element for modal use
+            cardElement.dataset.cardData = JSON.stringify(responseData);
+
+            // Render snapshot (compact view)
+            if (cardDef.renderSnapshot) {
+                cardDef.renderSnapshot(responseData, cardBody);
+            } else if (cardDef.render) {
+                // Fallback to old render method if renderSnapshot not available
+                cardDef.render(responseData, cardBody);
+            }
         } catch (error) {
             console.error(`Error fetching data for card ${cardId}:`, error);
             cardBody.innerHTML = `<div class="error">Failed to load data: ${error.message}</div>`;
         }
+    }
+
+    /**
+     * Open modal with full card details
+     */
+    function openCardModal(cardId, cardElement) {
+        const cardDef = CardRegistry.get(cardId);
+        if (!cardDef) {
+            console.error(`Card ${cardId} not found in registry`);
+            return;
+        }
+
+        // Get stored card data
+        const dataStr = cardElement.dataset.cardData;
+        if (!dataStr) {
+            console.warn('No data available for modal');
+            return;
+        }
+
+        let cardData;
+        try {
+            cardData = JSON.parse(dataStr);
+        } catch (error) {
+            console.error('Failed to parse card data:', error);
+            return;
+        }
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'card-modal';
+        modal.innerHTML = `
+            <div class="card-modal-backdrop"></div>
+            <div class="card-modal-content">
+                <div class="card-modal-header">
+                    <div class="card-modal-title">
+                        <span class="card-icon">${cardDef.icon}</span>
+                        <h2>${cardDef.name}</h2>
+                    </div>
+                    <button class="card-modal-close" title="Close">×</button>
+                </div>
+                <div class="card-modal-body">
+                    <div class="loading">Loading details...</div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
+
+        // Render modal content
+        const modalBody = modal.querySelector('.card-modal-body');
+        if (cardDef.renderModal) {
+            cardDef.renderModal(cardData, modalBody);
+        } else if (cardDef.render) {
+            // Fallback to old render method
+            cardDef.render(cardData, modalBody);
+        }
+
+        // Close handlers
+        const closeModal = () => {
+            document.body.style.overflow = '';
+            modal.remove();
+        };
+
+        modal.querySelector('.card-modal-close').addEventListener('click', closeModal);
+        modal.querySelector('.card-modal-backdrop').addEventListener('click', closeModal);
+
+        // ESC key to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 
     /**
