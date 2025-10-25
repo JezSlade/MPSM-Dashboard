@@ -38,7 +38,7 @@ const CardRegistry = (function() {
         defaultOrder: 1,
         requiresParams: ['FilterDealerId'],
         fetchData: async (params) => {
-            return await MPSApi.query('Device/List', {
+            return await MPSApi.request('Device/List', {
                 FilterDealerId: params.dealerId,
                 pageNumber: 1,
                 pageRows: 100
@@ -135,7 +135,7 @@ const CardRegistry = (function() {
             if (!params.deviceId) {
                 throw new Error('Device ID required');
             }
-            return await MPSApi.query('Device/GetSuppliesDetailsSummary', {
+            return await MPSApi.request('Device/GetSuppliesDetailsSummary', {
                 id: params.deviceId
             });
         },
@@ -222,7 +222,7 @@ const CardRegistry = (function() {
             const now = new Date();
             const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-            return await MPSApi.query('Counter/Device/List', {
+            return await MPSApi.request('Counter/Device/List', {
                 id: params.deviceId,
                 fromDate: thirtyDaysAgo.toISOString(),
                 toDate: now.toISOString()
@@ -318,7 +318,7 @@ const CardRegistry = (function() {
         defaultOrder: 4,
         requiresParams: ['idInstalledProduct'],
         fetchData: async (params) => {
-            return await MPSApi.query('Device/MaintenanceAlerts/List', {
+            return await MPSApi.request('Device/MaintenanceAlerts/List', {
                 idInstalledProduct: params.idInstalledProduct
             });
         },
@@ -402,7 +402,7 @@ const CardRegistry = (function() {
         defaultOrder: 0,
         requiresParams: ['customerCode'],
         fetchData: async (params) => {
-            return await MPSApi.query('CustomerDashboard/Get', {
+            return await MPSApi.request('CustomerDashboard/Get', {
                 customerCode: params.customerCode
             });
         },
@@ -497,7 +497,7 @@ const CardRegistry = (function() {
         defaultOrder: 10,
         requiresParams: ['dealerCode'],
         fetchData: async (params) => {
-            return await MPSApi.query('DealerSupply/List', {
+            return await MPSApi.request('DealerSupply/List', {
                 dealerCode: params.dealerCode,
                 pageNumber: 1,
                 pageRows: 50
@@ -586,7 +586,7 @@ const CardRegistry = (function() {
         defaultOrder: 15,
         requiresParams: ['idReport'],
         fetchData: async (params) => {
-            return await MPSApi.query('Analytics/GetReportFileResult', {
+            return await MPSApi.request('Analytics/GetReportFileResult', {
                 idReport: params.idReport || 1,
                 reportFormat: 'Excel'
             });
@@ -656,7 +656,7 @@ const CardRegistry = (function() {
         defaultOrder: 20,
         requiresParams: ['customerCode'],
         fetchData: async (params) => {
-            return await MPSApi.query('Explorer/GetExplorerDatas', {
+            return await MPSApi.request('Explorer/GetExplorerDatas', {
                 customerCode: params.customerCode
             });
         },
@@ -742,7 +742,7 @@ const CardRegistry = (function() {
         defaultOrder: 25,
         requiresParams: [],
         fetchData: async (params) => {
-            return await MPSApi.query('ApiClient/List', {});
+            return await MPSApi.request('ApiClient/List', {});
         },
         renderSnapshot: function(data, container) {
             if (!Array.isArray(data)) {
