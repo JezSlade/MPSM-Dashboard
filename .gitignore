@@ -27,6 +27,7 @@ nul
 # Cache
 cms/data/*.json
 !cms/data/.gitignore
+!cms/data/.gitkeep
 
 # Backups
 *.backup

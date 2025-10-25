@@ -18,6 +18,12 @@ jobs:
       - name: 🔢 Generate version.js in Deploy Path
         run: echo "window.appVersion = \"0.0.0.${{ github.run_number }}\";" > version.js
 
+      - name: 🗂️ Ensure required directories exist
+        run: |
+          mkdir -p cms/data
+          chmod 755 cms/data
+          echo "Created cms/data directory for users and preferences"
+
       - name: 📂 Debug — List Files in Repo
         run: |
           echo "Listing files before deployment:"
