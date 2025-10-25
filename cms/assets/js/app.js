@@ -241,6 +241,38 @@
     }
 
     /**
+     * Handle micro-card clicks to drill down into specific metrics
+     */
+    function handleMicroCardClick(metric, dashboardData) {
+        console.log('[handleMicroCardClick] Metric:', metric, 'Data:', dashboardData);
+
+        // For now, show a toast with the metric details
+        // TODO: Implement drill-down modals for each metric type
+        switch (metric) {
+            case 'total-devices':
+                showToast('Loading all devices...', 'info');
+                // Could open a filtered view of the printer card
+                break;
+            case 'errors':
+                showToast(`Showing ${dashboardData.DevicesWithErrors} devices with errors`, 'info');
+                // Could filter devices by error status
+                break;
+            case 'warnings':
+                showToast(`Showing ${dashboardData.DevicesWithWarnings} devices with warnings`, 'info');
+                // Could filter devices by warning status
+                break;
+            case 'offline':
+                showToast(`Showing ${dashboardData.NonCommunicatingDevices} offline devices`, 'info');
+                // Could filter devices by communication status
+                break;
+            case 'actions':
+                showToast(`Showing ${dashboardData.CommonActionsToComplete} pending actions`, 'info');
+                // Could show action list
+                break;
+        }
+    }
+
+    /**
      * Discover default customer (Cape Fear Medical Center)
      */
     async function discoverDefaultCustomer() {
@@ -337,41 +369,99 @@
             const sdsData = data.SdsDashboard || {};
             const mpsData = data.MpsDashboardCustomer || {};
 
-            // Render customer dashboard
+            // Render customer dashboard as interactive micro-cards
             container.innerHTML = `
-                <div class="customer-info">
-                    <div class="customer-stat">
-                        <div class="customer-stat-label">Customer</div>
-                        <div class="customer-stat-value">${state.customerName || 'Unknown'}</div>
-                    </div>
-                    <div class="customer-stat">
-                        <div class="customer-stat-label">Total Devices</div>
-                        <div class="customer-stat-value">${sdsData.TotalDevices || 0}</div>
-                    </div>
-                    <div class="customer-stat">
-                        <div class="customer-stat-label">Devices with Errors</div>
-                        <div class="customer-stat-value ${sdsData.DevicesWithErrors > 0 ? 'danger' : 'success'}">
-                            ${sdsData.DevicesWithErrors || 0}
+                <div class="micro-cards-grid">
+                    <div class="micro-card" data-metric="customer">
+                        <div class="micro-card-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="micro-card-content">
+                            <div class="micro-card-label">Customer</div>
+                            <div class="micro-card-value">${state.customerName || 'Unknown'}</div>
                         </div>
                     </div>
-                    <div class="customer-stat">
-                        <div class="customer-stat-label">Devices with Warnings</div>
-                        <div class="customer-stat-value ${sdsData.DevicesWithWarnings > 0 ? 'warning' : 'success'}">
-                            ${sdsData.DevicesWithWarnings || 0}
+
+                    <div class="micro-card clickable" data-metric="total-devices" title="Click to view all devices">
+                        <div class="micro-card-icon">
+                            <i class="fas fa-print"></i>
+                        </div>
+                        <div class="micro-card-content">
+                            <div class="micro-card-label">Total Devices</div>
+                            <div class="micro-card-value">${sdsData.TotalDevices || 0}</div>
+                        </div>
+                        <div class="micro-card-action">
+                            <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div class="customer-stat">
-                        <div class="customer-stat-label">Non-Communicating</div>
-                        <div class="customer-stat-value ${sdsData.NonCommunicatingDevices > 0 ? 'warning' : 'success'}">
-                            ${sdsData.NonCommunicatingDevices || 0}
+
+                    <div class="micro-card clickable ${sdsData.DevicesWithErrors > 0 ? 'status-danger' : 'status-success'}"
+                         data-metric="errors"
+                         title="Click to view devices with errors">
+                        <div class="micro-card-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="micro-card-content">
+                            <div class="micro-card-label">Errors</div>
+                            <div class="micro-card-value">${sdsData.DevicesWithErrors || 0}</div>
+                        </div>
+                        <div class="micro-card-action">
+                            <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div class="customer-stat">
-                        <div class="customer-stat-label">Actions Pending</div>
-                        <div class="customer-stat-value">${sdsData.CommonActionsToComplete || 0}</div>
+
+                    <div class="micro-card clickable ${sdsData.DevicesWithWarnings > 0 ? 'status-warning' : 'status-success'}"
+                         data-metric="warnings"
+                         title="Click to view devices with warnings">
+                        <div class="micro-card-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="micro-card-content">
+                            <div class="micro-card-label">Warnings</div>
+                            <div class="micro-card-value">${sdsData.DevicesWithWarnings || 0}</div>
+                        </div>
+                        <div class="micro-card-action">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <div class="micro-card clickable ${sdsData.NonCommunicatingDevices > 0 ? 'status-warning' : 'status-success'}"
+                         data-metric="offline"
+                         title="Click to view non-communicating devices">
+                        <div class="micro-card-icon">
+                            <i class="fas fa-wifi-slash"></i>
+                        </div>
+                        <div class="micro-card-content">
+                            <div class="micro-card-label">Offline</div>
+                            <div class="micro-card-value">${sdsData.NonCommunicatingDevices || 0}</div>
+                        </div>
+                        <div class="micro-card-action">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <div class="micro-card clickable" data-metric="actions" title="Click to view pending actions">
+                        <div class="micro-card-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="micro-card-content">
+                            <div class="micro-card-label">Actions</div>
+                            <div class="micro-card-value">${sdsData.CommonActionsToComplete || 0}</div>
+                        </div>
+                        <div class="micro-card-action">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
                     </div>
                 </div>
             `;
+
+            // Add click handlers for interactive cards
+            container.querySelectorAll('.micro-card.clickable').forEach(card => {
+                card.addEventListener('click', () => {
+                    const metric = card.dataset.metric;
+                    handleMicroCardClick(metric, sdsData);
+                });
+            });
 
         } catch (error) {
             console.error('Failed to load customer dashboard:', error);
