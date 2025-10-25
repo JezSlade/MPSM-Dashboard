@@ -1423,59 +1423,67 @@
     }
 
     /**
-     * Load traffic metrics
+     * Load traffic metrics from database
      */
-    function loadTrafficMetrics() {
-        // Simple localStorage-based tracking
-        const visits = localStorage.getItem('mps_total_visits') || '0';
-        const uniqueId = localStorage.getItem('mps_visitor_id');
+    async function loadTrafficMetrics() {
+        try {
+            // Fetch stats from database
+            const response = await fetch('api/visitor-tracking.php?action=stats');
+            const data = await response.json();
 
-        document.getElementById('total-visitors').textContent = visits;
-        document.getElementById('unique-visitors').textContent = uniqueId ? '1' : '0';
-        document.getElementById('active-sessions').textContent = '1';
+            if (data.success) {
+                const stats = data.stats;
+                document.getElementById('total-visitors').textContent = stats.total_visits || 0;
+                document.getElementById('unique-visitors').textContent = stats.unique_visitors || 0;
+                document.getElementById('active-sessions').textContent = stats.active_sessions || 0;
+            }
 
-        // Load access log
-        const log = JSON.parse(localStorage.getItem('mps_access_log') || '[]');
-        const logContainer = document.getElementById('access-log-list');
+            // Fetch recent access log
+            const logResponse = await fetch('api/visitor-tracking.php?action=recent&limit=20');
+            const logData = await logResponse.json();
+            const logContainer = document.getElementById('access-log-list');
 
-        if (log.length === 0) {
-            logContainer.innerHTML = '<div class="empty-state"><p>No access log entries</p></div>';
-        } else {
-            logContainer.innerHTML = log.slice(-10).reverse().map(entry => `
-                <div class="log-entry">
-                    <span class="log-ip">${entry.ip || 'Unknown IP'}</span>
-                    <span class="log-time">${formatDate(entry.timestamp)}</span>
-                </div>
-            `).join('');
+            if (logData.success && logData.log && logData.log.length > 0) {
+                logContainer.innerHTML = logData.log.map(entry => `
+                    <div class="log-entry">
+                        <span class="log-ip">${entry.ip_address || 'Unknown'}</span>
+                        <span class="log-user">${entry.username || 'anonymous'}</span>
+                        <span class="log-page">${entry.page_url || '/'}</span>
+                        <span class="log-time">${formatDate(entry.visited_at)}</span>
+                    </div>
+                `).join('');
+            } else {
+                logContainer.innerHTML = '<div class="empty-state"><p>No access log entries</p></div>';
+            }
+
+        } catch (error) {
+            console.error('Failed to load traffic metrics:', error);
+            document.getElementById('total-visitors').textContent = '0';
+            document.getElementById('unique-visitors').textContent = '0';
+            document.getElementById('active-sessions').textContent = '0';
         }
     }
 
     /**
-     * Track visitor
+     * Track visitor - log to database
      */
-    function trackVisitor() {
-        // Increment total visits
-        const visits = parseInt(localStorage.getItem('mps_total_visits') || '0') + 1;
-        localStorage.setItem('mps_total_visits', visits.toString());
+    async function trackVisitor() {
+        try {
+            const response = await fetch('api/visitor-tracking.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    page_url: window.location.pathname
+                })
+            });
 
-        // Set unique visitor ID if not exists
-        if (!localStorage.getItem('mps_visitor_id')) {
-            localStorage.setItem('mps_visitor_id', generateId());
+            const data = await response.json();
+            if (data.success) {
+                console.log('[trackVisitor] Visit logged to database:', data.id);
+            }
+        } catch (error) {
+            console.warn('[trackVisitor] Failed to log visit:', error);
         }
-
-        // Add to access log
-        const log = JSON.parse(localStorage.getItem('mps_access_log') || '[]');
-        log.push({
-            ip: 'Client IP',
-            timestamp: new Date().toISOString()
-        });
-
-        // Keep only last 100 entries
-        if (log.length > 100) {
-            log.splice(0, log.length - 100);
-        }
-
-        localStorage.setItem('mps_access_log', JSON.stringify(log));
     }
 
     /**
@@ -1556,17 +1564,27 @@
         container.innerHTML = '<div class="loading">Loading engine status...</div>';
 
         try {
-            const status = await MPSApi.getEngineStatus();
-            console.log('[loadEngineStatus] Raw status:', status);
+            // Fetch comprehensive system health from our new endpoint
+            const healthResponse = await fetch('api/system-health.php');
+            const health = await healthResponse.json();
+            console.log('[loadEngineStatus] System health:', health);
 
-            // Extract engine health data
-            const uptime = status.uptime || 0;
-            const version = status.version || 'Unknown';
-            const apiVersion = status.apiVersion || 'Unknown';
-            const environment = status.environment || 'production';
-            const database = status.database || {};
-            const cache = status.cache || {};
-            const auth = status.auth || {};
+            // Also get MPS API engine status
+            const status = await MPSApi.getEngineStatus();
+            console.log('[loadEngineStatus] MPS API status:', status);
+
+            // Extract engine health data (from system-health.php)
+            const uptime = health.uptime || 0;
+            const version = health.version || '1.0.0';
+            const environment = health.environment || 'production';
+            const database = health.database || {};
+            const cache = health.cache || {};
+            const auth = health.auth || {};
+
+            // MPS API status
+            const mpsStatus = status.status || 'unknown';
+            const mpsVersion = status.version || 'Unknown';
+            const actionCount = status.action_count || 0;
 
             // Calculate uptime display
             const uptimeHours = Math.floor(uptime / 3600);
@@ -1579,44 +1597,58 @@
             // Render engine status dashboard
             container.innerHTML = `
                 <div class="engine-dashboard">
-                    <!-- Engine Health Overview -->
+                    <!-- System Overview -->
                     <div class="engine-section">
-                        <h3><i class="fas fa-heartbeat"></i> Engine Health</h3>
+                        <h3><i class="fas fa-heartbeat"></i> System Health</h3>
                         <div class="engine-stats-grid">
-                            <div class="engine-stat-card status-success">
-                                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="engine-stat-card ${database.connected ? 'status-success' : 'status-danger'}">
+                                <div class="stat-icon"><i class="fas fa-${database.connected ? 'check-circle' : 'times-circle'}"></i></div>
                                 <div class="stat-content">
-                                    <div class="stat-label">Status</div>
-                                    <div class="stat-value">Online</div>
+                                    <div class="stat-label">Database</div>
+                                    <div class="stat-value">${database.connected ? 'Connected' : 'Disconnected'}</div>
                                 </div>
                             </div>
-                            <div class="engine-stat-card">
-                                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="engine-stat-card ${cache.enabled ? 'status-success' : 'status-warning'}">
+                                <div class="stat-icon"><i class="fas fa-${cache.enabled ? 'check-circle' : 'exclamation-triangle'}"></i></div>
                                 <div class="stat-content">
-                                    <div class="stat-label">Uptime</div>
-                                    <div class="stat-value">${uptimeDisplay}</div>
+                                    <div class="stat-label">Cache</div>
+                                    <div class="stat-value">${cache.enabled ? 'Enabled' : 'Disabled'}</div>
                                 </div>
                             </div>
-                            <div class="engine-stat-card">
-                                <div class="stat-icon"><i class="fas fa-code-branch"></i></div>
+                            <div class="engine-stat-card ${mpsStatus === 'online' ? 'status-success' : 'status-warning'}">
+                                <div class="stat-icon"><i class="fas fa-${mpsStatus === 'online' ? 'check-circle' : 'exclamation-circle'}"></i></div>
                                 <div class="stat-content">
-                                    <div class="stat-label">Version</div>
-                                    <div class="stat-value">${version}</div>
+                                    <div class="stat-label">MPS API</div>
+                                    <div class="stat-value">${mpsStatus}</div>
                                 </div>
                             </div>
-                            <div class="engine-stat-card">
-                                <div class="stat-icon"><i class="fas fa-globe"></i></div>
+                            <div class="engine-stat-card ${auth.sessionActive ? 'status-success' : 'status-danger'}">
+                                <div class="stat-icon"><i class="fas fa-${auth.sessionActive ? 'check-circle' : 'times-circle'}"></i></div>
                                 <div class="stat-content">
-                                    <div class="stat-label">Environment</div>
-                                    <div class="stat-value">${environment}</div>
+                                    <div class="stat-label">Authentication</div>
+                                    <div class="stat-value">${auth.sessionActive ? 'Active' : 'Inactive'}</div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="test-buttons" style="margin-top: 1rem;">
+                            <button class="btn btn-secondary" onclick="window.testDatabaseConnection()">
+                                <i class="fas fa-database"></i> Test Database
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.testCacheConnection()">
+                                <i class="fas fa-memory"></i> Test Cache
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.testMPSAPI()">
+                                <i class="fas fa-plug"></i> Test MPS API
+                            </button>
+                            <button class="btn btn-primary" onclick="loadEngineStatus()">
+                                <i class="fas fa-sync"></i> Refresh Status
+                            </button>
                         </div>
                     </div>
 
                     <!-- Database Status -->
                     <div class="engine-section">
-                        <h3><i class="fas fa-database"></i> Database</h3>
+                        <h3><i class="fas fa-database"></i> Database Details</h3>
                         <div class="engine-detail-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Connection Status:</span>
@@ -1633,12 +1665,26 @@
                                 <span class="detail-label">Host:</span>
                                 <span class="detail-value">${database.host || 'N/A'}</span>
                             </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Database Name:</span>
+                                <span class="detail-value">${database.name || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Tables:</span>
+                                <span class="detail-value">${database.table_count || 'N/A'}</span>
+                            </div>
+                            ${database.error ? `
+                            <div class="detail-item" style="grid-column: 1/-1;">
+                                <span class="detail-label">Error:</span>
+                                <span class="detail-value text-danger">${database.error}</span>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
 
                     <!-- Cache Status -->
                     <div class="engine-section">
-                        <h3><i class="fas fa-memory"></i> Cache</h3>
+                        <h3><i class="fas fa-memory"></i> Cache Details</h3>
                         <div class="engine-detail-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Cache Status:</span>
@@ -1659,6 +1705,46 @@
                                 <span class="detail-label">Hit Rate:</span>
                                 <span class="detail-value">${cache.hitRate || 0}%</span>
                             </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Cache Size:</span>
+                                <span class="detail-value">${cache.size_mb || 0} MB</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Total Hits:</span>
+                                <span class="detail-value">${cache.total_hits || 0}</span>
+                            </div>
+                            ${cache.error ? `
+                            <div class="detail-item" style="grid-column: 1/-1;">
+                                <span class="detail-label">Error:</span>
+                                <span class="detail-value text-danger">${cache.error}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- MPS API Engine Status -->
+                    <div class="engine-section">
+                        <h3><i class="fas fa-cogs"></i> MPS API Engine</h3>
+                        <div class="engine-detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">API Status:</span>
+                                <span class="detail-value ${mpsStatus === 'online' ? 'text-success' : 'text-warning'}">
+                                    <i class="fas fa-${mpsStatus === 'online' ? 'check' : 'exclamation-circle'}"></i>
+                                    ${mpsStatus}
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Engine Version:</span>
+                                <span class="detail-value">${mpsVersion}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Operations Loaded:</span>
+                                <span class="detail-value">${actionCount}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Session User:</span>
+                                <span class="detail-value">${auth.username || 'N/A'}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1667,22 +1753,19 @@
                         <h3><i class="fas fa-shield-alt"></i> Authentication</h3>
                         <div class="engine-detail-grid">
                             <div class="detail-item">
-                                <span class="detail-label">OAuth Status:</span>
-                                <span class="detail-value ${auth.configured ? 'text-success' : 'text-danger'}">
-                                    <i class="fas fa-${auth.configured ? 'check' : 'times'}"></i>
-                                    ${auth.configured ? 'Configured' : 'Not Configured'}
+                                <span class="detail-label">Session Status:</span>
+                                <span class="detail-value ${auth.sessionActive ? 'text-success' : 'text-danger'}">
+                                    <i class="fas fa-${auth.sessionActive ? 'check' : 'times'}"></i>
+                                    ${auth.sessionActive ? 'Active' : 'Inactive'}
                                 </span>
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Token Status:</span>
-                                <span class="detail-value ${auth.tokenValid ? 'text-success' : 'text-warning'}">
-                                    <i class="fas fa-${auth.tokenValid ? 'check' : 'exclamation-triangle'}"></i>
-                                    ${auth.tokenValid ? 'Valid' : 'Expired/Invalid'}
-                                </span>
+                                <span class="detail-label">Logged in as:</span>
+                                <span class="detail-value">${auth.username || 'N/A'}</span>
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Token Expires:</span>
-                                <span class="detail-value">${auth.tokenExpiry || 'N/A'}</span>
+                                <span class="detail-label">Auth Type:</span>
+                                <span class="detail-value">Session-based</span>
                             </div>
                         </div>
                     </div>
@@ -2000,6 +2083,54 @@
             showToast('Failed to create user', 'error');
         }
     });
+
+    // Test functions for connectivity verification
+    window.testDatabaseConnection = async function() {
+        showToast('Testing database connection...', 'info');
+        try {
+            const response = await fetch('api/system-health.php');
+            const health = await response.json();
+
+            if (health.database.connected) {
+                showToast(`✓ Database connected: ${health.database.table_count} tables found`, 'success');
+            } else {
+                showToast(`✗ Database disconnected: ${health.database.error}`, 'error');
+            }
+        } catch (error) {
+            showToast(`✗ Test failed: ${error.message}`, 'error');
+        }
+    };
+
+    window.testCacheConnection = async function() {
+        showToast('Testing cache connection...', 'info');
+        try {
+            const response = await fetch('api/system-health.php');
+            const health = await response.json();
+
+            if (health.cache.enabled) {
+                showToast(`✓ Cache enabled: ${health.cache.entries} entries, ${health.cache.hitRate}% hit rate`, 'success');
+            } else {
+                showToast(`✗ Cache disabled: ${health.cache.error}`, 'warning');
+            }
+        } catch (error) {
+            showToast(`✗ Test failed: ${error.message}`, 'error');
+        }
+    };
+
+    window.testMPSAPI = async function() {
+        showToast('Testing MPS API connection...', 'info');
+        try {
+            const status = await MPSApi.getEngineStatus();
+
+            if (status.status === 'online') {
+                showToast(`✓ MPS API online: ${status.action_count} operations available`, 'success');
+            } else {
+                showToast(`✗ MPS API status: ${status.status}`, 'warning');
+            }
+        } catch (error) {
+            showToast(`✗ Test failed: ${error.message}`, 'error');
+        }
+    };
 
     // Initialize on load
     if (document.readyState === 'loading') {
