@@ -20,12 +20,24 @@
 
     // Initialize application
     async function init() {
-        // Ensure modal is closed on init (fix for stuck modal issue)
-        const modal = document.getElementById('device-modal');
-        if (modal) {
-            modal.classList.remove('active');
-            console.log('[init] Ensured modal is closed on page load');
-        }
+        // FORCE modal to be closed on init (fix for stuck modal issue)
+        // This runs multiple times to catch any timing issues
+        const forceCloseModal = () => {
+            const modal = document.getElementById('device-modal');
+            if (modal && modal.classList.contains('active')) {
+                modal.classList.remove('active');
+                console.log('[init] FORCED modal closed');
+            }
+        };
+
+        // Close immediately
+        forceCloseModal();
+
+        // Close again after 100ms to catch late triggers
+        setTimeout(forceCloseModal, 100);
+
+        // Close again after 500ms for slower loads
+        setTimeout(forceCloseModal, 500);
 
         // Load settings
         const settings = MPSApi.loadSettings();
