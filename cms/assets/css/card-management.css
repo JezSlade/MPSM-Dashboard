@@ -43,10 +43,10 @@
 .card-category h4 {
     margin: 0 0 1rem;
     font-size: 1.2rem;
-    color: var(--primary-color, #0a6cff);
+    color: var(--primary-color, var(--accent-color));
     padding: 0.5rem 0.75rem;
     background: linear-gradient(90deg, rgba(10, 108, 255, 0.1), transparent);
-    border-left: 4px solid var(--primary-color, #0a6cff);
+    border-left: 4px solid var(--primary-color, var(--accent-color));
     border-radius: 4px;
 }
 
@@ -61,8 +61,8 @@
 .card-config-item {
     display: flex;
     align-items: stretch;
-    background: white;
-    border: 2px solid #e0e0e0;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 1rem;
     transition: all 0.2s ease;
@@ -70,7 +70,7 @@
 }
 
 .card-config-item:hover {
-    border-color: #0a6cff;
+    border-color: var(--accent-color);
     box-shadow: 0 4px 12px rgba(10, 108, 255, 0.15);
     transform: translateY(-2px);
 }
@@ -87,7 +87,7 @@
     justify-content: center;
     width: 2rem;
     margin-right: 1rem;
-    color: #999;
+    color: var(--text-secondary);
     font-size: 1.2rem;
     cursor: grab;
     user-select: none;
@@ -138,13 +138,13 @@
 
 .card-endpoint {
     font-family: monospace;
-    background: #f5f5f5;
+    background: var(--bg-secondary);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
 }
 
 .card-params {
-    color: #666;
+    color: var(--text-secondary);
 }
 
 /* Card Controls */
@@ -159,15 +159,15 @@
     padding: 0.5rem 0.75rem;
     font-size: 1.2rem;
     border: 2px solid #ddd;
-    background: white;
+    background: var(--bg-card);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .btn-toggle-visibility:hover {
-    border-color: #0a6cff;
-    background: #f8f9fa;
+    border-color: var(--accent-color);
+    background: var(--bg-secondary);
     transform: scale(1.1);
 }
 
@@ -183,7 +183,7 @@
 }
 
 .btn-primary {
-    background: #0a6cff;
+    background: var(--accent-color);
     color: white;
 }
 
@@ -210,8 +210,8 @@
 }
 
 .card {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.2s ease;
@@ -226,7 +226,7 @@
 .card-header {
     padding: 1rem 1.25rem;
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -241,7 +241,7 @@
 .card-title h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .card-actions {
@@ -252,7 +252,7 @@
 .btn-icon {
     padding: 0.4rem;
     background: transparent;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -260,8 +260,8 @@
 }
 
 .btn-icon:hover {
-    background: #f8f9fa;
-    border-color: #0a6cff;
+    background: var(--bg-secondary);
+    border-color: var(--accent-color);
 }
 
 .btn-icon.spinning {
@@ -287,13 +287,13 @@
 .loading {
     text-align: center;
     padding: 2rem;
-    color: #666;
+    color: var(--text-secondary);
     font-style: italic;
 }
 
 .error {
     padding: 1rem;
-    background: #fff3cd;
+    background: var(--bg-card)3cd;
     border: 1px solid #ffc107;
     border-radius: 4px;
     color: #856404;
@@ -310,7 +310,7 @@
 .empty {
     text-align: center;
     padding: 2rem;
-    color: #999;
+    color: var(--text-secondary);
     font-style: italic;
 }
 
@@ -326,7 +326,7 @@
     gap: 1rem;
     align-items: center;
     padding: 0.75rem;
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 6px;
     border-left: 4px solid #28a745;
 }
@@ -341,7 +341,7 @@
 
 .supply-name {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .supply-bar {
@@ -368,7 +368,7 @@
 .supply-level {
     text-align: right;
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 /* Alert List */
@@ -382,14 +382,14 @@
     display: flex;
     gap: 1rem;
     padding: 1rem;
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 6px;
     border-left: 4px solid #6c757d;
 }
 
 .alert-item.alert-warning {
     border-left-color: #ffc107;
-    background: #fff3cd;
+    background: var(--bg-card)3cd;
 }
 
 .alert-item.alert-critical {
@@ -407,19 +407,19 @@
 
 .alert-title {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
     margin-bottom: 0.25rem;
 }
 
 .alert-message {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
 }
 
 .alert-time {
     font-size: 0.85rem;
-    color: #999;
+    color: var(--text-secondary);
 }
 
 /* Customer Overview */
@@ -432,13 +432,13 @@
 .customer-stat {
     text-align: center;
     padding: 1rem;
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 6px;
 }
 
 .stat-label {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 0.5rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -447,7 +447,7 @@
 .stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .stat-value.status-active {
@@ -455,7 +455,7 @@
 }
 
 .stat-value.status-inactive {
-    color: #6c757d;
+    color: var(--text-secondary);
 }
 
 /* Status Badges */
@@ -502,14 +502,14 @@
 .snapshot-stat {
     text-align: center;
     padding: 0.75rem;
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 6px;
 }
 
 .snapshot-value {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #333;
+    color: var(--text-primary);
     margin-bottom: 0.25rem;
 }
 
@@ -527,7 +527,7 @@
 
 .snapshot-label {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -545,7 +545,7 @@
 .snapshot-message {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .snapshot-empty.success .snapshot-icon {
@@ -559,7 +559,7 @@
 .card-click-hint {
     text-align: center;
     font-size: 0.75rem;
-    color: #999;
+    color: var(--text-secondary);
     font-style: italic;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
@@ -591,7 +591,7 @@
 
 .card-modal-content {
     position: relative;
-    background: white;
+    background: var(--bg-card);
     border-radius: 12px;
     width: min(1200px, 95vw);
     max-height: 90vh;
@@ -617,7 +617,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 2px solid var(--border-color);
     flex-shrink: 0;
 }
 
@@ -630,7 +630,7 @@
 .card-modal-title h2 {
     margin: 0;
     font-size: 1.5rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .card-modal-close {
@@ -638,7 +638,7 @@
     border: none;
     font-size: 2rem;
     line-height: 1;
-    color: #999;
+    color: var(--text-secondary);
     cursor: pointer;
     padding: 0;
     width: 2rem;
@@ -651,8 +651,8 @@
 }
 
 .card-modal-close:hover {
-    background: #f0f0f0;
-    color: #333;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .card-modal-body {
@@ -671,7 +671,7 @@
 .supply-item {
     padding: 1rem;
     border-radius: 8px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border-color);
 }
 
 .supply-item.supply-good {
@@ -681,7 +681,7 @@
 
 .supply-item.supply-warning {
     border-color: #ffc107;
-    background: #fffbf0;
+    background: var(--bg-card)bf0;
 }
 
 .supply-item.supply-critical {
@@ -698,7 +698,7 @@
 
 .supply-name {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .supply-level-text {
@@ -722,7 +722,7 @@
 
 .supply-part {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-top: 0.5rem;
 }
 
@@ -744,14 +744,14 @@
 
 .customer-detail-item {
     padding: 1rem;
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 8px;
-    border-left: 4px solid #0a6cff;
+    border-left: 4px solid var(--accent-color);
 }
 
 .detail-label {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.5rem;
@@ -760,7 +760,7 @@
 .detail-value {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .snapshot-report {
@@ -785,12 +785,12 @@
 .report-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #333;
+    color: var(--text-primary);
     margin-top: 1rem;
 }
 
 .report-metadata {
-    background: #f8f9fa;
+    background: var(--bg-secondary);
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 2rem;
@@ -800,7 +800,7 @@
     display: flex;
     justify-content: space-between;
     padding: 0.75rem 0;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .metadata-item:last-child {
@@ -809,11 +809,11 @@
 
 .metadata-label {
     font-weight: 600;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .metadata-value {
-    color: #333;
+    color: var(--text-primary);
 }
 
 .report-actions {
