@@ -228,6 +228,8 @@
             if (typeof CardManager !== 'undefined') {
                 CardManager.renderAdminPanel('.card-management-container');
             }
+        } else if (subTabName === 'users') {
+            loadUsers();
         } else if (subTabName === 'engine') {
             loadEngineStatus();
         } else if (subTabName === 'cache') {
@@ -1840,6 +1842,115 @@
     function generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
+
+    /**
+     * Load users list
+     */
+    async function loadUsers() {
+        try {
+            const response = await fetch('api/auth.php');
+            const data = await response.json();
+
+            const container = document.getElementById('users-list');
+
+            if (data.success && data.users) {
+                container.innerHTML = `
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.users.map(user => `
+                                <tr>
+                                    <td>${user.id}</td>
+                                    <td>${user.username}</td>
+                                    <td>${user.created ? new Date(user.created).toLocaleDateString() : '-'}</td>
+                                    <td>
+                                        ${user.id === 1 ? '<span class="badge">Admin</span>' :
+                                        `<button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>`}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        } catch (error) {
+            console.error('Failed to load users:', error);
+        }
+    }
+
+    /**
+     * Delete user
+     */
+    window.deleteUser = async function(userId) {
+        if (!confirm('Delete this user?')) return;
+
+        try {
+            const response = await fetch('api/auth.php', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: userId })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                loadUsers();
+                showToast('User deleted', 'success');
+            } else {
+                showToast(data.error || 'Failed to delete user', 'error');
+            }
+        } catch (error) {
+            showToast('Failed to delete user', 'error');
+        }
+    };
+
+    // User management event listeners
+    document.getElementById('add-user-btn')?.addEventListener('click', () => {
+        document.getElementById('add-user-modal').style.display = 'flex';
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-password').value = '';
+    });
+
+    document.getElementById('cancel-user-btn')?.addEventListener('click', () => {
+        document.getElementById('add-user-modal').style.display = 'none';
+    });
+
+    document.getElementById('save-user-btn')?.addEventListener('click', async () => {
+        const username = document.getElementById('new-username').value;
+        const password = document.getElementById('new-password').value;
+
+        if (!username || !password) {
+            showToast('Username and password required', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('api/auth.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'create', username, password })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('add-user-modal').style.display = 'none';
+                loadUsers();
+                showToast('User created', 'success');
+            } else {
+                showToast(data.error || 'Failed to create user', 'error');
+            }
+        } catch (error) {
+            showToast('Failed to create user', 'error');
+        }
+    });
 
     // Initialize on load
     if (document.readyState === 'loading') {

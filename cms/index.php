@@ -1,3 +1,11 @@
+<?php
+session_start();
+// Simple auth check - redirects to login if not logged in
+if (empty($_SESSION['logged_in']) && !isset($_GET['login'])) {
+    header('Location: login.html');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,6 +63,7 @@
                 <nav class="admin-subnav">
                     <button class="admin-subtab active" data-subtab="settings">Settings</button>
                     <button class="admin-subtab" data-subtab="cards">Card Management</button>
+                    <button class="admin-subtab" data-subtab="users">Users</button>
                     <button class="admin-subtab" data-subtab="engine">Engine Control</button>
                     <button class="admin-subtab" data-subtab="cache">Cache</button>
                     <button class="admin-subtab" data-subtab="traffic">Traffic</button>
@@ -116,6 +125,43 @@
                         <p class="help-text">Customize which cards appear on your dashboard and arrange their order by dragging.</p>
                         <div class="card-management-container">
                             <!-- Card management UI will be rendered here by CardManager -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Sub-Tab -->
+                <div id="users-subtab" class="admin-subtab-content">
+                    <div class="users-wrapper">
+                        <h2>User Management</h2>
+                        <p class="help-text">Manage dashboard users (lightweight authentication)</p>
+
+                        <div class="users-actions">
+                            <button id="add-user-btn" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i> Add User
+                            </button>
+                        </div>
+
+                        <div id="users-list" class="users-list">
+                            <div class="loading">Loading users...</div>
+                        </div>
+
+                        <!-- Add User Modal -->
+                        <div id="add-user-modal" class="modal" style="display:none;">
+                            <div class="modal-content">
+                                <h3>Add New User</h3>
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" id="new-username" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <input type="password" id="new-password" class="form-control">
+                                </div>
+                                <div class="modal-actions">
+                                    <button id="save-user-btn" class="btn btn-primary">Save</button>
+                                    <button id="cancel-user-btn" class="btn btn-secondary">Cancel</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
