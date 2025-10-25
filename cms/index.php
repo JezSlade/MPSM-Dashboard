@@ -55,6 +55,7 @@
                 <nav class="admin-subnav">
                     <button class="admin-subtab active" data-subtab="settings">Settings</button>
                     <button class="admin-subtab" data-subtab="cards">Card Management</button>
+                    <button class="admin-subtab" data-subtab="engine">Engine Control</button>
                     <button class="admin-subtab" data-subtab="cache">Cache</button>
                     <button class="admin-subtab" data-subtab="traffic">Traffic</button>
                 </nav>
@@ -115,6 +116,18 @@
                         <p class="help-text">Customize which cards appear on your dashboard and arrange their order by dragging.</p>
                         <div class="card-management-container">
                             <!-- Card management UI will be rendered here by CardManager -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engine Control Sub-Tab -->
+                <div id="engine-subtab" class="admin-subtab-content">
+                    <div class="engine-control-wrapper">
+                        <h2>MPS API Engine Control Center</h2>
+                        <p class="help-text">Monitor and manage the MPS API engine health, performance, and configuration.</p>
+
+                        <div id="engine-status-container">
+                            <div class="loading">Loading engine status...</div>
                         </div>
                     </div>
                 </div>

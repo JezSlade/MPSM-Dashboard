@@ -216,6 +216,8 @@
             if (typeof CardManager !== 'undefined') {
                 CardManager.renderAdminPanel('.card-management-container');
             }
+        } else if (subTabName === 'engine') {
+            loadEngineStatus();
         } else if (subTabName === 'cache') {
             loadCacheStats();
         } else if (subTabName === 'traffic') {
@@ -1466,6 +1468,169 @@
         MPSApi.clearCache();
         await loadDashboard();
         showToast('Dashboard refreshed', 'success');
+    }
+
+    /**
+     * Load and display MPS API engine status
+     */
+    async function loadEngineStatus() {
+        const container = document.getElementById('engine-status-container');
+        container.innerHTML = '<div class="loading">Loading engine status...</div>';
+
+        try {
+            const status = await MPSApi.getEngineStatus();
+            console.log('[loadEngineStatus] Raw status:', status);
+
+            // Extract engine health data
+            const uptime = status.uptime || 0;
+            const version = status.version || 'Unknown';
+            const apiVersion = status.apiVersion || 'Unknown';
+            const environment = status.environment || 'production';
+            const database = status.database || {};
+            const cache = status.cache || {};
+            const auth = status.auth || {};
+
+            // Calculate uptime display
+            const uptimeHours = Math.floor(uptime / 3600);
+            const uptimeDays = Math.floor(uptimeHours / 24);
+            const remainingHours = uptimeHours % 24;
+            const uptimeDisplay = uptimeDays > 0
+                ? `${uptimeDays}d ${remainingHours}h`
+                : `${uptimeHours}h`;
+
+            // Render engine status dashboard
+            container.innerHTML = `
+                <div class="engine-dashboard">
+                    <!-- Engine Health Overview -->
+                    <div class="engine-section">
+                        <h3><i class="fas fa-heartbeat"></i> Engine Health</h3>
+                        <div class="engine-stats-grid">
+                            <div class="engine-stat-card status-success">
+                                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Status</div>
+                                    <div class="stat-value">Online</div>
+                                </div>
+                            </div>
+                            <div class="engine-stat-card">
+                                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Uptime</div>
+                                    <div class="stat-value">${uptimeDisplay}</div>
+                                </div>
+                            </div>
+                            <div class="engine-stat-card">
+                                <div class="stat-icon"><i class="fas fa-code-branch"></i></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Version</div>
+                                    <div class="stat-value">${version}</div>
+                                </div>
+                            </div>
+                            <div class="engine-stat-card">
+                                <div class="stat-icon"><i class="fas fa-globe"></i></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Environment</div>
+                                    <div class="stat-value">${environment}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Status -->
+                    <div class="engine-section">
+                        <h3><i class="fas fa-database"></i> Database</h3>
+                        <div class="engine-detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Connection Status:</span>
+                                <span class="detail-value ${database.connected ? 'text-success' : 'text-danger'}">
+                                    <i class="fas fa-${database.connected ? 'check' : 'times'}"></i>
+                                    ${database.connected ? 'Connected' : 'Disconnected'}
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Database Type:</span>
+                                <span class="detail-value">${database.type || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Host:</span>
+                                <span class="detail-value">${database.host || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cache Status -->
+                    <div class="engine-section">
+                        <h3><i class="fas fa-memory"></i> Cache</h3>
+                        <div class="engine-detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Cache Status:</span>
+                                <span class="detail-value ${cache.enabled ? 'text-success' : 'text-warning'}">
+                                    <i class="fas fa-${cache.enabled ? 'check' : 'exclamation-triangle'}"></i>
+                                    ${cache.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Cache Type:</span>
+                                <span class="detail-value">${cache.type || 'Memory'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Total Entries:</span>
+                                <span class="detail-value">${cache.entries || 0}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Hit Rate:</span>
+                                <span class="detail-value">${cache.hitRate || 0}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authentication Status -->
+                    <div class="engine-section">
+                        <h3><i class="fas fa-shield-alt"></i> Authentication</h3>
+                        <div class="engine-detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">OAuth Status:</span>
+                                <span class="detail-value ${auth.configured ? 'text-success' : 'text-danger'}">
+                                    <i class="fas fa-${auth.configured ? 'check' : 'times'}"></i>
+                                    ${auth.configured ? 'Configured' : 'Not Configured'}
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Token Status:</span>
+                                <span class="detail-value ${auth.tokenValid ? 'text-success' : 'text-warning'}">
+                                    <i class="fas fa-${auth.tokenValid ? 'check' : 'exclamation-triangle'}"></i>
+                                    ${auth.tokenValid ? 'Valid' : 'Expired/Invalid'}
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Token Expires:</span>
+                                <span class="detail-value">${auth.tokenExpiry || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Raw JSON (for debugging) -->
+                    <div class="engine-section">
+                        <h3><i class="fas fa-code"></i> Raw Status Data</h3>
+                        <div class="engine-raw-data">
+                            <pre><code>${JSON.stringify(status, null, 2)}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error('Failed to load engine status:', error);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <p>Failed to load engine status</p>
+                    <p style="font-size: 0.875rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                        ${error.message}
+                    </p>
+                </div>
+            `;
+        }
     }
 
     /**
