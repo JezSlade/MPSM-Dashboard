@@ -333,19 +333,34 @@
                 state.devices = devices || [];
                 console.log('[loadDashboard] Loaded devices:', state.devices.length);
 
-                // Update CardManager params with deviceId if we have devices
+                // Update CardManager params with all required parameters
+                const dealerId = 'SZ13qRwU5GtFLj0i_CbEgQ2'; // Hardcoded dealer ID
+
+                const params = {
+                    dealerId: dealerId,
+                    FilterDealerId: dealerId, // For printer list card
+                    dealerCode: state.dealerCode,
+                    customerCode: state.customerCode,
+                    customerId: state.customerId
+                };
+
                 if (state.devices.length > 0) {
                     const firstDevice = state.devices[0];
-                    CardManager.setParams({
-                        dealerId: 'SZ13qRwU5GtFLj0i_CbEgQ2',
-                        dealerCode: state.dealerCode,
-                        customerCode: state.customerCode,
-                        customerId: state.customerId,
-                        deviceId: firstDevice.Id,
-                        idInstalledProduct: firstDevice.IdInstalledProduct
-                    });
+                    params.deviceId = firstDevice.Id;
+                    params.idInstalledProduct = firstDevice.IdInstalledProduct;
                     console.log('[loadDashboard] Set deviceId:', firstDevice.Id);
                 }
+
+                // Set date range for meter readings (last 30 days)
+                const toDate = new Date();
+                const fromDate = new Date();
+                fromDate.setDate(fromDate.getDate() - 30);
+
+                params.fromDate = fromDate.toISOString().split('T')[0];
+                params.toDate = toDate.toISOString().split('T')[0];
+
+                CardManager.setParams(params);
+                console.log('[loadDashboard] Set all params:', params);
 
                 await CardManager.renderDashboard('.dashboard-grid');
                 return;
