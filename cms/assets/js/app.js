@@ -245,6 +245,26 @@
 
             // Use CardManager if available
             if (typeof CardManager !== 'undefined') {
+                // First, load device list to get deviceId for cards that need it
+                console.log('[loadDashboard] Loading devices first for CardManager params');
+                const devices = await MPSApi.getDevicesByCustomer(state.customerCode, state.customerId);
+                state.devices = devices || [];
+                console.log('[loadDashboard] Loaded devices:', state.devices.length);
+
+                // Update CardManager params with deviceId if we have devices
+                if (state.devices.length > 0) {
+                    const firstDevice = state.devices[0];
+                    CardManager.setParams({
+                        dealerId: 'SZ13qRwU5GtFLj0i_CbEgQ2',
+                        dealerCode: state.dealerCode,
+                        customerCode: state.customerCode,
+                        customerId: state.customerId,
+                        deviceId: firstDevice.Id,
+                        idInstalledProduct: firstDevice.IdInstalledProduct
+                    });
+                    console.log('[loadDashboard] Set deviceId:', firstDevice.Id);
+                }
+
                 await CardManager.renderDashboard('.dashboard-grid');
                 return;
             }
