@@ -233,7 +233,11 @@
 
         // Update icon
         const icon = document.querySelector('.icon-theme');
-        icon.textContent = state.theme === 'light' ? '◐' : '◑';
+        if (state.theme === 'light') {
+            icon.className = 'icon-theme fas fa-moon';
+        } else {
+            icon.className = 'icon-theme fas fa-sun';
+        }
     }
 
     /**

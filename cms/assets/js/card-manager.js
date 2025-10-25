@@ -388,8 +388,12 @@ const CardManager = (function() {
         let html = `
             <div class="card-management-compact">
                 <div class="card-mgmt-actions">
-                    <button id="save-card-order" class="btn btn-primary btn-sm">Save</button>
-                    <button id="reset-card-defaults" class="btn btn-secondary btn-sm">Reset</button>
+                    <button id="save-card-order" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button id="reset-card-defaults" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
                 </div>
                 <div class="card-mgmt-grid">
         `;
@@ -405,14 +409,14 @@ const CardManager = (function() {
 
             html += `
                 <div class="card-mgmt-tile ${visibilityClass}" data-card-id="${card.id}" draggable="true">
-                    <div class="tile-drag">≡</div>
+                    <div class="tile-drag"><i class="fas fa-grip-vertical"></i></div>
                     <div class="tile-icon">${card.icon}</div>
                     <div class="tile-content">
                         <div class="tile-name">${card.name}</div>
                         <div class="tile-category">${card.category}</div>
                     </div>
                     <button class="tile-toggle" data-card-id="${card.id}" title="${isVisible ? 'Hide' : 'Show'}">
-                        ${isVisible ? 'Hide' : 'Show'}
+                        <i class="fas fa-${isVisible ? 'eye-slash' : 'eye'}"></i>
                     </button>
                 </div>
             `;

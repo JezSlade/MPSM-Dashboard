@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPS Monitor Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/card-management.css">
 </head>
@@ -14,10 +15,10 @@
             <h1>MPS Monitor Dashboard</h1>
             <div class="header-actions">
                 <button id="theme-toggle" class="btn-icon" title="Toggle theme">
-                    <span class="icon-theme">🌙</span>
+                    <i class="icon-theme fas fa-moon"></i>
                 </button>
                 <button id="refresh-btn" class="btn-icon" title="Refresh">
-                    <span class="icon-refresh">🔄</span>
+                    <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
         </div>
@@ -144,9 +145,15 @@
                                 </div>
                             </div>
                             <div class="cache-actions">
-                                <button id="refresh-cache-stats" class="btn btn-secondary">Refresh Stats</button>
-                                <button id="warm-cache" class="btn btn-primary">Warm Cache</button>
-                                <button id="clear-all-cache" class="btn btn-danger">Clear All Cache</button>
+                                <button id="refresh-cache-stats" class="btn btn-secondary">
+                                    <i class="fas fa-sync-alt"></i> Refresh Stats
+                                </button>
+                                <button id="warm-cache" class="btn btn-primary">
+                                    <i class="fas fa-fire"></i> Warm Cache
+                                </button>
+                                <button id="clear-all-cache" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> Clear All Cache
+                                </button>
                             </div>
                             <div id="cache-entries-container" style="margin-top: 20px;">
                                 <h4>Cache Entries</h4>
