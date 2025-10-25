@@ -35,20 +35,32 @@ class DomainSeeder {
         // MINIMAL SEED COLLECTION: Only call what's absolutely necessary
         // Priority order: fastest endpoints first, most valuable data first
         $seedEndpoints = [
-            // CRITICAL: This endpoint returns actual device data with customer codes!
-            // Device/Deleted/ListByDealer - dealerCode is optional, pagination required
-            // This will give us real customer codes from devices
-            'Device/Deleted/ListByDealer',  // ~1s, provides customer codes from devices
-
-            // Fast supplementary data
-            'ApiClient/List',  // ~500ms, provides client IDs
+            [
+                'action' => 'Device/List',
+                'params' => [
+                    'pageNumber' => 1,
+                    'pageRows' => 100,
+                ],
+                'note' => 'Active devices with customer codes',
+            ],
+            [
+                'action' => 'ApiClient/List',
+                'params' => [],
+                'note' => 'Client identifiers for integrations',
+            ],
         ];
 
         // Execute seed collection with timeout protection
         $maxExecutionTime = 5; // 5 seconds max for seed collection
         $startCollectionTime = microtime(true);
 
-        foreach ($seedEndpoints as $action) {
+        foreach ($seedEndpoints as $seedConfig) {
+            $action = is_array($seedConfig) ? ($seedConfig['action'] ?? null) : $seedConfig;
+            if (empty($action) || !is_string($action)) {
+                continue;
+            }
+            $params = is_array($seedConfig) ? ($seedConfig['params'] ?? []) : [];
+
             // Check if we're approaching timeout
             $elapsed = microtime(true) - $startCollectionTime;
             if ($elapsed > $maxExecutionTime) {
@@ -57,7 +69,7 @@ class DomainSeeder {
             }
 
             try {
-                $result = self::$engine->dispatchAction($action, []);
+                $result = self::$engine->dispatchAction($action, $params);
                 if ($result['success']) {
                     self::processSeedData($action, $result['data']);
                     $collected[$action] = 'success';

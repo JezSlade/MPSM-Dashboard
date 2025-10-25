@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/SwaggerActionRegistry.php';
 require_once __DIR__ . '/DomainSeeder.php';
+require_once __DIR__ . '/EndpointCatalog.php';
 /**
  * MPS Monitors API Engine
  * 
@@ -143,6 +144,13 @@ class MPSMonitorEngine {
         if (self::$config['MPS_CONNECT_TIMEOUT'] < 1 || self::$config['MPS_CONNECT_TIMEOUT'] > 60) {
             self::$config['MPS_CONNECT_TIMEOUT'] = 10;
         }
+
+        $queryEndpoint = self::$config['MPS_QUERY_ENDPOINT'] ?? 'query';
+        $queryEndpoint = trim((string) $queryEndpoint, '/');
+        if ($queryEndpoint === '') {
+            $queryEndpoint = 'query';
+        }
+        self::$config['MPS_QUERY_ENDPOINT'] = $queryEndpoint;
     }
 
     /**
@@ -227,6 +235,8 @@ class MPSMonitorEngine {
         $additionalHeaders = $options['headers'] ?? [];
         $rawBody = $options['rawBody'] ?? false;
         $forceBody = $options['forceBody'] ?? false;
+        $actionName = $options['actionName'] ?? null;
+        $endpointMetadata = $options['endpointMetadata'] ?? null;
         
         // Increment request counter
         self::$requestCount++;
@@ -236,7 +246,9 @@ class MPSMonitorEngine {
         if (self::$config['MPS_DEBUG']) {
             self::logDebug("Request {$requestId}: {$method} {$url}", [
                 'data' => $data,
-                'params' => $queryParams
+                'params' => $queryParams,
+                'action' => $actionName,
+                'catalog_metadata' => $endpointMetadata,
             ]);
         }
 
@@ -258,6 +270,8 @@ class MPSMonitorEngine {
                 'headers' => $additionalHeaders,
                 'rawBody' => $rawBody,
                 'forceBody' => $forceBody,
+                'actionName' => $actionName,
+                'endpointMetadata' => $endpointMetadata,
             ]);
             
             // Success - return immediately
@@ -313,6 +327,12 @@ class MPSMonitorEngine {
             return $this->errorResponse('Params must be an object.', self::ERR_VALIDATION);
         }
 
+        EndpointCatalog::init();
+        $endpointMetadata = EndpointCatalog::getMetadata($operation['action']);
+        if (self::$config['MPS_DEBUG'] && $endpointMetadata !== null) {
+            self::logDebug("Endpoint metadata for {$operation['action']}", $endpointMetadata);
+        }
+
         // Normalize incoming params (strip placeholder strings like "null")
         $params = $this->sanitizeParameters($params);
 
@@ -324,7 +344,7 @@ class MPSMonitorEngine {
         // Initialize domain seeds on first request (lazy loading)
         // Skip seed collection for seed-collecting actions to avoid recursion
         $skipSeedInit = in_array($action, [
-            'Device/Deleted/ListByDealer',  // Primary seed source - devices with customer codes
+            'Device/List',                   // Primary seed source - active devices with customer codes
             'ApiClient/List',                // Secondary seed source
             'Integrations/GetJoinedCustomers',
             'Role/List',
@@ -374,6 +394,7 @@ class MPSMonitorEngine {
         $query = [];
         $headers = [];
         $body = [];
+        $pathValues = [];
 
         // Resolve path parameters
         foreach ($operation['pathParams'] as $name => $meta) {
@@ -393,6 +414,7 @@ class MPSMonitorEngine {
                 $value = $remaining[$name];
                 unset($remaining[$name]);
             }
+            $pathValues[$name] = $value;
             $endpoint = preg_replace('/{' . preg_quote($name, '/') . '}/', rawurlencode((string) $value), $endpoint);
         }
 
@@ -431,8 +453,6 @@ class MPSMonitorEngine {
             }
         }
 
-        $contentType = $this->determineContentType($operation['consumes'] ?? []);
-
         if ($operation['hasBody']) {
             if (!empty($operation['formParams'])) {
                 $formData = [];
@@ -444,16 +464,14 @@ class MPSMonitorEngine {
                         return $this->errorResponse("Missing required form parameter: {$name}", self::ERR_VALIDATION);
                     }
                 }
-                $body = $formData;
-                if ($contentType === null || stripos($contentType, 'json') !== false) {
-                    $contentType = 'application/x-www-form-urlencoded';
-                }
+                 $body = $formData;
             } else {
                 if (!empty($operation['bodyParam']) && array_key_exists($operation['bodyParam'], $params)) {
                     $body = $params[$operation['bodyParam']];
                     unset($remaining[$operation['bodyParam']]);
                 } else {
                     $body = $remaining;
+                    $remaining = [];
                 }
             }
         }
@@ -477,13 +495,266 @@ class MPSMonitorEngine {
         } elseif (is_array($body) && empty($body) && empty($operation['formParams'])) {
             $body = new stdClass();
         }
+        
+        [$payload, $preparedHeaders] = $this->prepareActionRequestPayload(
+            $operation,
+            $pathValues,
+            $query,
+            $body,
+            $remaining,
+            $headers,
+            $endpointMetadata
+        );
 
         $options = [
-            'headers' => $headers,
-            'contentType' => $contentType,
+            'headers' => $preparedHeaders,
+            'contentType' => 'application/json',
+            'forceBody' => true,
+            'endpointMetadata' => $endpointMetadata,
+            'actionName' => $operation['action'],
         ];
 
-        return $this->makeRequest($endpoint, $operation['method'], $body, $query, $options);
+        return $this->makeRequest(
+            self::$config['MPS_QUERY_ENDPOINT'],
+            'POST',
+            $payload,
+            [],
+            $options
+        );
+    }
+
+    /**
+     * Prepare the payload and headers for the universal query endpoint.
+     *
+     * @param array $operation Operation metadata from the swagger registry
+     * @param array $pathValues Resolved path parameter values
+     * @param array $queryParams Resolved query parameter values
+     * @param mixed $body Body payload (array|object|string)
+     * @param array $remaining Any params not consumed by swagger metadata
+     * @param array $headers Header parameters provided by caller
+     * @param array|null $endpointMetadata Catalog metadata for the action (if available)
+     * @return array{0: array, 1: array} Payload and headers ready for makeRequest
+     */
+    private function prepareActionRequestPayload(
+        array $operation,
+        array $pathValues,
+        array $queryParams,
+        $body,
+        array $remaining,
+        array $headers,
+        ?array $endpointMetadata
+    ): array {
+        $params = $this->assembleActionParameters($pathValues, $queryParams, $body, $remaining);
+        $params = $this->sanitizePayloadArray($params);
+
+        $payload = [
+            'action' => $operation['action'],
+            'params' => empty($params) ? new stdClass() : $params,
+        ];
+
+        $preparedHeaders = $headers;
+        if (!isset($preparedHeaders['X-MPS-Action'])) {
+            $preparedHeaders['X-MPS-Action'] = $operation['action'];
+        }
+        if (!isset($preparedHeaders['X-MPS-Method']) && isset($operation['method'])) {
+            $preparedHeaders['X-MPS-Method'] = $operation['method'];
+        }
+        if (!isset($preparedHeaders['X-MPS-Endpoint']) && isset($operation['path'])) {
+            $preparedHeaders['X-MPS-Endpoint'] = $operation['path'];
+        }
+
+        if ($endpointMetadata !== null) {
+            if (!isset($preparedHeaders['X-MPS-Endpoint-Category']) && isset($endpointMetadata['category'])) {
+                $preparedHeaders['X-MPS-Endpoint-Category'] = $endpointMetadata['category'];
+            }
+            if (!isset($preparedHeaders['X-MPS-Endpoint-UseCase']) && isset($endpointMetadata['use_case'])) {
+                $preparedHeaders['X-MPS-Endpoint-UseCase'] = $endpointMetadata['use_case'];
+            }
+            if (!isset($preparedHeaders['X-MPS-Endpoint-Success']) && array_key_exists('success', $endpointMetadata)) {
+                $preparedHeaders['X-MPS-Endpoint-Success'] = $endpointMetadata['success'] ? '1' : '0';
+            }
+        }
+
+        return [$payload, $preparedHeaders];
+    }
+
+    /**
+     * Combine path, query, body, and remaining parameters into a single params array.
+     *
+     * @param array $pathValues
+     * @param array $queryParams
+     * @param mixed $body
+     * @param array $remaining
+     * @return array
+     */
+    private function assembleActionParameters(array $pathValues, array $queryParams, $body, array $remaining): array
+    {
+        $params = [];
+
+        foreach ($pathValues as $key => $value) {
+            $params[$key] = $value;
+        }
+
+        foreach ($queryParams as $key => $value) {
+            $params[$key] = $value;
+        }
+
+        foreach ($remaining as $key => $value) {
+            $params[$key] = $value;
+        }
+
+        $normalizedBody = $this->normalizePayloadStructure($body);
+        if (is_array($normalizedBody)) {
+            foreach ($normalizedBody as $key => $value) {
+                if (array_key_exists($key, $params)) {
+                    $params[$key] = $this->mergeParameterValue($params[$key], $value);
+                } else {
+                    $params[$key] = $value;
+                }
+            }
+        } elseif ($normalizedBody !== null) {
+            $params['payload'] = $normalizedBody;
+        }
+
+        return $params;
+    }
+
+    /**
+     * Remove null-equivalent values from payload parameters.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function sanitizePayloadArray(array $params): array
+    {
+        foreach ($params as $key => $value) {
+            if ($value instanceof stdClass) {
+                $value = (array) $value;
+            }
+
+            if (is_array($value)) {
+                $cleaned = $this->sanitizePayloadArray($value);
+                if (empty($cleaned)) {
+                    unset($params[$key]);
+                } else {
+                    $params[$key] = $cleaned;
+                }
+                continue;
+            }
+
+            if ($value === null || $this->isPlaceholderValue($value)) {
+                unset($params[$key]);
+                continue;
+            }
+        }
+
+        return $params;
+    }
+
+    /**
+     * Build a concise hint structure based on endpoint catalog metadata.
+     *
+     * @param array|null $metadata
+     * @param mixed $responseData
+     * @param string|null $actionName
+     * @return array|null
+     */
+    private function buildCatalogHint(?array $metadata, $responseData = null, ?string $actionName = null): ?array
+    {
+        if ($metadata === null) {
+            return null;
+        }
+
+        $hint = [];
+
+        if ($actionName !== null) {
+            $hint['action'] = $actionName;
+        } elseif (isset($metadata['action'])) {
+            $hint['action'] = $metadata['action'];
+        }
+
+        if (isset($metadata['category'])) {
+            $hint['category'] = $metadata['category'];
+        }
+        if (isset($metadata['use_case'])) {
+            $hint['use_case'] = $metadata['use_case'];
+        }
+        if (isset($metadata['data_type'])) {
+            $hint['data_type'] = $metadata['data_type'];
+        }
+        if (isset($metadata['data_count'])) {
+            $hint['last_data_count'] = $metadata['data_count'];
+        }
+        if (array_key_exists('success', $metadata)) {
+            $hint['previous_success'] = (bool) $metadata['success'];
+        }
+        if (!empty($metadata['prerequisites'])) {
+            $hint['prerequisites'] = $metadata['prerequisites'];
+        }
+        if (!empty($metadata['error'])) {
+            $hint['last_error'] = $metadata['error'];
+        }
+        if (!empty($metadata['error_code'])) {
+            $hint['last_error_code'] = $metadata['error_code'];
+        }
+        if (!empty($metadata['duration_ms'])) {
+            $hint['last_duration_ms'] = $metadata['duration_ms'];
+        }
+
+        foreach ($hint as $key => $value) {
+            if ($value === null) {
+                unset($hint[$key]);
+            } elseif (is_array($value) && empty($value)) {
+                unset($hint[$key]);
+            } elseif ($value === '') {
+                unset($hint[$key]);
+            }
+        }
+
+        return empty($hint) ? null : $hint;
+    }
+
+    /**
+     * Normalize payload structure to consistent arrays/scalars.
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    private function normalizePayloadStructure($value)
+    {
+        if ($value instanceof stdClass) {
+            $value = (array) $value;
+        }
+
+        if (is_array($value)) {
+            $normalized = [];
+            foreach ($value as $key => $item) {
+                $normalized[$key] = $this->normalizePayloadStructure($item);
+            }
+            return $normalized;
+        }
+
+        if (is_object($value)) {
+            return $this->normalizePayloadStructure((array) $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Merge two parameter values while preserving user input precedence.
+     *
+     * @param mixed $existing
+     * @param mixed $incoming
+     * @return mixed
+     */
+    private function mergeParameterValue($existing, $incoming)
+    {
+        if (is_array($existing) && is_array($incoming)) {
+            return array_replace_recursive($existing, $incoming);
+        }
+
+        return $incoming;
     }
 
     /**
@@ -507,6 +778,8 @@ class MPSMonitorEngine {
         $rawBody = $options['rawBody'] ?? false;
         $forceBody = $options['forceBody'] ?? false;
         $additionalHeaders = $options['headers'] ?? [];
+        $actionName = $options['actionName'] ?? null;
+        $endpointMetadata = $options['endpointMetadata'] ?? null;
 
         $sendBody = $forceBody;
         if (!$sendBody) {
@@ -532,6 +805,20 @@ class MPSMonitorEngine {
         $headersAssoc['User-Agent'] = 'MPS-API-Engine/1.1.0';
         $headersAssoc['X-Request-ID'] = $requestId;
         $headersAssoc['X-Attempt'] = $attempt;
+        if ($actionName && !isset($headersAssoc['X-MPS-Action'])) {
+            $headersAssoc['X-MPS-Action'] = $actionName;
+        }
+        if ($endpointMetadata !== null) {
+            if (isset($endpointMetadata['category']) && !isset($headersAssoc['X-MPS-Endpoint-Category'])) {
+                $headersAssoc['X-MPS-Endpoint-Category'] = $endpointMetadata['category'];
+            }
+            if (isset($endpointMetadata['use_case']) && !isset($headersAssoc['X-MPS-Endpoint-UseCase'])) {
+                $headersAssoc['X-MPS-Endpoint-UseCase'] = $endpointMetadata['use_case'];
+            }
+            if (array_key_exists('success', $endpointMetadata) && !isset($headersAssoc['X-MPS-Endpoint-Success'])) {
+                $headersAssoc['X-MPS-Endpoint-Success'] = $endpointMetadata['success'] ? '1' : '0';
+            }
+        }
 
         if (is_array($additionalHeaders)) {
             foreach ($additionalHeaders as $key => $value) {
@@ -673,6 +960,8 @@ class MPSMonitorEngine {
             ]);
         }
 
+        $catalogHint = $this->buildCatalogHint($endpointMetadata, $decoded, $actionName);
+
         if ($httpCode === 401) {
             if (self::$authMode === 'oauth_password') {
                 $this->clearAccessToken();
@@ -685,14 +974,16 @@ class MPSMonitorEngine {
                 'http_code' => $httpCode,
                 'raw_response' => self::$config['MPS_DEBUG'] ? $decoded : null,
                 'request_id' => $requestId,
-                'retryable' => self::$authMode === 'oauth_password'
+                'retryable' => self::$authMode === 'oauth_password',
+                'catalog_hint' => $catalogHint,
+                'action' => $actionName,
             ];
         }
         
         // Success responses (2xx)
         if ($httpCode >= 200 && $httpCode < 300) {
             // Validate MPSM-specific response format
-            $validation = $this->validateMPSMResponse($decoded, $httpCode);
+            $validation = $this->validateMPSMResponse($decoded, $httpCode, $endpointMetadata, $actionName);
 
             if (!$validation['valid']) {
                 // MPSM returned 200 but indicated an error via IsValid field
@@ -700,7 +991,8 @@ class MPSMonitorEngine {
                     'request_id' => $requestId,
                     'url' => $url,
                     'method' => $method,
-                    'error_details' => $validation['details']
+                    'error_details' => $validation['details'],
+                    'catalog_hint' => $validation['catalog'],
                 ]);
 
                 return [
@@ -710,18 +1002,34 @@ class MPSMonitorEngine {
                     'http_code' => $httpCode,
                     'raw_response' => self::$config['MPS_DEBUG'] ? $validation['details'] : null,
                     'request_id' => $requestId,
-                    'retryable' => false
+                    'retryable' => false,
+                    'catalog_hint' => $validation['catalog'],
+                    'action' => $actionName,
                 ];
             }
 
             // Valid response - return the validated data
-            return [
+            $successPayload = [
                 'success' => true,
                 'data' => $validation['data'],
                 'http_code' => $httpCode,
                 'request_id' => $requestId,
-                'duration_ms' => $duration
+                'duration_ms' => $duration,
             ];
+
+            if (!empty($validation['catalog'])) {
+                $successPayload['catalog_hint'] = $validation['catalog'];
+            }
+
+            if ($endpointMetadata !== null) {
+                $successPayload['endpoint_metadata'] = $endpointMetadata;
+            }
+
+            if ($actionName !== null) {
+                $successPayload['action'] = $actionName;
+            }
+
+            return $successPayload;
         }
         
         // Redirect responses (3xx) - treat as errors
@@ -730,7 +1038,9 @@ class MPSMonitorEngine {
                 'http_code' => $httpCode,
                 'location' => null,
                 'request_id' => $requestId,
-                'retryable' => false
+                'retryable' => false,
+                'catalog_hint' => $catalogHint,
+                'action' => $actionName,
             ]);
         }
         
@@ -740,7 +1050,8 @@ class MPSMonitorEngine {
             self::logError("API Client Error [{$httpCode}]: {$errorMsg}", self::ERR_API, [
                 'request_id' => $requestId,
                 'url' => $url,
-                'method' => $method
+                'method' => $method,
+                'catalog_hint' => $catalogHint,
             ]);
             
             return [
@@ -750,7 +1061,9 @@ class MPSMonitorEngine {
                 'http_code' => $httpCode,
                 'raw_response' => $decoded,
                 'request_id' => $requestId,
-                'retryable' => false
+                'retryable' => false,
+                'catalog_hint' => $catalogHint,
+                'action' => $actionName,
             ];
         }
         
@@ -760,7 +1073,8 @@ class MPSMonitorEngine {
             self::logError("API Server Error [{$httpCode}]: {$errorMsg}", self::ERR_API, [
                 'request_id' => $requestId,
                 'url' => $url,
-                'method' => $method
+                'method' => $method,
+                'catalog_hint' => $catalogHint,
             ]);
             
             return [
@@ -770,7 +1084,9 @@ class MPSMonitorEngine {
                 'http_code' => $httpCode,
                 'raw_response' => $decoded,
                 'request_id' => $requestId,
-                'retryable' => true
+                'retryable' => true,
+                'catalog_hint' => $catalogHint,
+                'action' => $actionName,
             ];
         }
         
@@ -778,29 +1094,10 @@ class MPSMonitorEngine {
         return $this->errorResponse('Unexpected HTTP status code', self::ERR_API, [
             'http_code' => $httpCode,
             'request_id' => $requestId,
-            'retryable' => false
+            'retryable' => false,
+            'catalog_hint' => $catalogHint,
+            'action' => $actionName,
         ]);
-    }
-
-    private function determineContentType(array $consumes): ?string
-    {
-        if (empty($consumes)) {
-            return null;
-        }
-
-        foreach ($consumes as $type) {
-            if (stripos($type, 'json') !== false) {
-                return 'application/json';
-            }
-        }
-
-        foreach ($consumes as $type) {
-            if (stripos($type, 'form') !== false || stripos($type, 'urlencoded') !== false) {
-                return 'application/x-www-form-urlencoded';
-            }
-        }
-
-        return $consumes[0];
     }
 
     /**
@@ -960,14 +1257,17 @@ class MPSMonitorEngine {
      * @param int $httpStatus HTTP status code
      * @return array ['valid' => bool, 'data' => mixed, 'error' => string|null, 'details' => array|null]
      */
-    private function validateMPSMResponse($responseData, $httpStatus) {
+    private function validateMPSMResponse($responseData, $httpStatus, ?array $endpointMetadata = null, ?string $actionName = null) {
+        $catalogHint = $this->buildCatalogHint($endpointMetadata, $responseData, $actionName);
+
         // If not 200, it's a real HTTP error
         if ($httpStatus !== 200) {
             return [
                 'valid' => false,
                 'error' => "HTTP {$httpStatus} error",
                 'details' => $responseData,
-                'data' => null
+                'data' => null,
+                'catalog' => $catalogHint,
             ];
         }
 
@@ -978,7 +1278,8 @@ class MPSMonitorEngine {
                 'valid' => true,
                 'data' => $responseData,
                 'error' => null,
-                'details' => null
+                'details' => null,
+                'catalog' => $catalogHint,
             ];
         }
 
@@ -1005,7 +1306,8 @@ class MPSMonitorEngine {
                     'valid' => false,
                     'error' => $errorString,
                     'details' => $errors,
-                    'data' => null
+                    'data' => null,
+                    'catalog' => $catalogHint,
                 ];
             }
 
@@ -1014,7 +1316,8 @@ class MPSMonitorEngine {
                 'valid' => true,
                 'data' => $responseData['Result'] ?? $responseData,
                 'error' => null,
-                'details' => null
+                'details' => null,
+                'catalog' => $catalogHint,
             ];
         }
 
@@ -1023,7 +1326,8 @@ class MPSMonitorEngine {
             'valid' => true,
             'data' => $responseData,
             'error' => null,
-            'details' => null
+            'details' => null,
+            'catalog' => $catalogHint,
         ];
     }
 
@@ -1072,6 +1376,14 @@ class MPSMonitorEngine {
 
         if ($paramLower === 'dealerid' || $paramLower === 'dealer_id') {
             return self::$config['DEALER_ID'] ?? 'SZ13qRwU5GtFLj0i_CbEgQ2';
+        }
+
+        if ($paramLower === 'filterdealerid' || $paramLower === 'dealerfilterid') {
+            return self::$config['DEALER_ID'] ?? 'SZ13qRwU5GtFLj0i_CbEgQ2';
+        }
+
+        if ($paramLower === 'filterdealercode') {
+            return self::$config['DEALER_CODE'] ?? 'NY06AGDWUQ';
         }
 
         // Customer information - try domain seeds first
@@ -1125,7 +1437,7 @@ class MPSMonitorEngine {
         }
 
         if ($paramLower === 'pagesize' || $paramLower === 'pagerows' || $paramLower === 'limit' || $paramLower === 'per_page') {
-            return 50;
+            return 100;
         }
 
         // Sort defaults
@@ -1152,6 +1464,10 @@ class MPSMonitorEngine {
             return 'Standard';
         }
 
+        if ($paramLower === 'skipcache') {
+            return false;
+        }
+
         // Keep null if no substitution rule found
         // This allows required parameter validation to trigger if truly needed
         return null;
@@ -1169,6 +1485,14 @@ class MPSMonitorEngine {
             return self::$config['DEALER_ID'] ?? null;
         }
 
+        if ($paramLower === 'filterdealerid') {
+            return self::$config['DEALER_ID'] ?? null;
+        }
+
+        if ($paramLower === 'filterdealercode') {
+            return self::$config['DEALER_CODE'] ?? null;
+        }
+
         // Auto-populate customer information (if available in config)
         if ($paramLower === 'customercode' || $paramLower === 'customer_code') {
             return self::$config['CUSTOMER_CODE'] ?? null;
@@ -1183,8 +1507,12 @@ class MPSMonitorEngine {
             return 1;
         }
 
-        if ($paramLower === 'pagesize' || $paramLower === 'limit' || $paramLower === 'per_page') {
-            return 50;
+        if ($paramLower === 'pagesize' || $paramLower === 'limit' || $paramLower === 'per_page' || $paramLower === 'pagerows') {
+            return 100;
+        }
+
+        if ($paramLower === 'skipcache') {
+            return false;
         }
 
         // No default available
@@ -1206,6 +1534,18 @@ class MPSMonitorEngine {
             'error_code' => $errorCode,
             'timestamp' => date('c')
         ];
+
+        if (isset($context['catalog_hint'])) {
+            if ($context['catalog_hint'] !== null) {
+                $response['catalog_hint'] = $context['catalog_hint'];
+            }
+            unset($context['catalog_hint']);
+        }
+
+        if (isset($context['action'])) {
+            $response['action'] = $context['action'];
+            unset($context['action']);
+        }
         
         // Add context in debug mode
         if (self::$config['MPS_DEBUG'] && !empty($context)) {

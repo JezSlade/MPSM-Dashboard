@@ -215,6 +215,18 @@ function setDefaults($config) {
     if ($config['MPS_MAX_RETRIES'] > 10) {
         $config['MPS_MAX_RETRIES'] = 10;
     }
+
+    // Query endpoint (relative path)
+    if (isset($config['MPS_QUERY_ENDPOINT'])) {
+        $config['MPS_QUERY_ENDPOINT'] = trim($config['MPS_QUERY_ENDPOINT']);
+    }
+    if (empty($config['MPS_QUERY_ENDPOINT'])) {
+        $config['MPS_QUERY_ENDPOINT'] = 'query';
+    }
+    $config['MPS_QUERY_ENDPOINT'] = trim($config['MPS_QUERY_ENDPOINT'], '/');
+    if ($config['MPS_QUERY_ENDPOINT'] === '') {
+        $config['MPS_QUERY_ENDPOINT'] = 'query';
+    }
     
     return $config;
 }

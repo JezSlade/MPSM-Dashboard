@@ -141,12 +141,24 @@
         });
 
         // Cache Dashboard - Clear all cache
-        document.getElementById('clear-all-cache').addEventListener('click', () => {
+        document.getElementById('clear-all-cache').addEventListener('click', async () => {
             if (confirm('Clear all cached data? This will reload the dashboard.')) {
-                MPSApi.clearCache();
-                showToast('All cache cleared', 'success');
-                loadCacheStats();
-                setTimeout(() => refreshDashboard(), 500);
+                try {
+                    const response = await fetch('api/cache-manager.php', {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showToast('All cache cleared successfully', 'success');
+                        loadCacheStats();
+                        setTimeout(() => refreshDashboard(), 500);
+                    } else {
+                        showToast('Failed to clear cache: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    showToast('Failed to clear cache: ' + error.message, 'error');
+                }
             }
         });
 
@@ -371,19 +383,19 @@
             const sdsData = data.SdsDashboard || {};
             const mpsData = data.MpsDashboardCustomer || {};
 
-            // Render customer dashboard as interactive micro-cards
+            // Render customer dashboard with prominent customer name banner
             container.innerHTML = `
-                <div class="micro-cards-grid">
-                    <div class="micro-card" data-metric="customer">
-                        <div class="micro-card-icon">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <div class="micro-card-content">
-                            <div class="micro-card-label">Customer</div>
-                            <div class="micro-card-value">${state.customerName || 'Unknown'}</div>
-                        </div>
+                <div class="customer-banner">
+                    <div class="customer-banner-icon">
+                        <i class="fas fa-building"></i>
                     </div>
+                    <div class="customer-banner-content">
+                        <div class="customer-banner-label">Customer</div>
+                        <h2 class="customer-banner-name">${state.customerName || 'Unknown Customer'}</h2>
+                    </div>
+                </div>
 
+                <div class="micro-cards-grid">
                     <div class="micro-card clickable" data-metric="total-devices" title="Click to view all devices">
                         <div class="micro-card-icon">
                             <i class="fas fa-print"></i>
@@ -1634,75 +1646,88 @@
     }
 
     /**
-     * Load cache statistics
+     * Load cache statistics from MySQL cache
      */
-    function loadCacheStats() {
-        const metadata = MPSApi.getCacheMetadata();
-
-        // Update summary stats
-        document.getElementById('cache-hit-rate').textContent = `${metadata.stats.hitRate}%`;
-        document.getElementById('cache-total-entries').textContent = metadata.totalEntries;
-        document.getElementById('cache-total-size').textContent = `${metadata.totalSizeMB} MB`;
-        document.getElementById('cache-hit-miss').textContent = `${metadata.stats.hits} / ${metadata.stats.misses}`;
-
-        // Build cache entries table
+    async function loadCacheStats() {
         const container = document.getElementById('cache-entries-list');
+        container.innerHTML = '<div class="loading">Loading cache data...</div>';
 
-        if (metadata.entries.length === 0) {
-            container.innerHTML = '<p style="text-align:center;color:#999;">No cache entries found</p>';
-            return;
+        try {
+            // Fetch cache stats from MySQL backend
+            const statsResponse = await fetch('api/cache-manager.php');
+            const statsData = await statsResponse.json();
+
+            if (!statsData.success) {
+                throw new Error(statsData.error || 'Failed to load cache stats');
+            }
+
+            const stats = statsData.stats;
+
+            // Update summary stats
+            document.getElementById('cache-hit-rate').textContent = `${stats.hit_rate || 0}%`;
+            document.getElementById('cache-total-entries').textContent = stats.active_entries || 0;
+            document.getElementById('cache-total-size').textContent = `${stats.size_mb || 0} MB`;
+            document.getElementById('cache-hit-miss').textContent = `${stats.total_hits || 0} hits`;
+
+            // Fetch cache entries
+            const entriesResponse = await fetch('api/cache-manager.php?action=entries');
+            const entriesData = await entriesResponse.json();
+
+            const entries = entriesData.entries || [];
+
+            // Build cache entries table
+            if (entries.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:var(--text-secondary);">No cache entries found</p>';
+                return;
+            }
+
+            const html = `
+                <table class="cache-entry-table">
+                    <thead>
+                        <tr>
+                            <th>Cache Key</th>
+                            <th>Size</th>
+                            <th>Created</th>
+                            <th>Expires</th>
+                            <th>Hits</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${entries.map(entry => {
+                            const sizeKB = Math.round(entry.size_bytes / 1024);
+                            const status = entry.status === 'active' ? 'cache-status-fresh' : 'cache-status-expired';
+                            const statusText = entry.status === 'active' ? 'Active' : 'Expired';
+
+                            return `
+                                <tr>
+                                    <td><code>${entry.cache_key}</code></td>
+                                    <td>${sizeKB} KB</td>
+                                    <td>${new Date(entry.created_at).toLocaleString()}</td>
+                                    <td>${new Date(entry.expires_at).toLocaleString()}</td>
+                                    <td>${entry.hit_count}</td>
+                                    <td class="${status}">${statusText}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error('Failed to load cache stats:', error);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <p>Failed to load cache data</p>
+                    <p style="font-size: 0.875rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                        ${error.message}
+                    </p>
+                </div>
+            `;
         }
-
-        const html = `
-            <table class="cache-entry-table">
-                <thead>
-                    <tr>
-                        <th>Cache Key</th>
-                        <th>Size</th>
-                        <th>Age</th>
-                        <th>TTL Remaining</th>
-                        <th>Status</th>
-                        <th>Progress</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${metadata.entries.map(entry => {
-                        const ageMinutes = Math.floor(entry.age / 60000);
-                        const remainingMinutes = Math.floor(entry.remaining / 60000);
-                        const ttlMinutes = Math.floor(entry.ttl / 60000);
-                        const percentUsed = parseFloat(entry.percentUsed);
-
-                        let status = 'cache-status-fresh';
-                        let statusText = 'Fresh';
-
-                        if (entry.expired) {
-                            status = 'cache-status-expired';
-                            statusText = 'Expired';
-                        } else if (percentUsed > 80) {
-                            status = 'cache-status-aging';
-                            statusText = 'Aging';
-                        }
-
-                        return `
-                            <tr>
-                                <td><code>${entry.key}</code></td>
-                                <td>${entry.sizeKB} KB</td>
-                                <td>${ageMinutes}m ago</td>
-                                <td>${remainingMinutes}m / ${ttlMinutes}m</td>
-                                <td class="${status}">${statusText}</td>
-                                <td>
-                                    <div class="cache-ttl-bar">
-                                        <div class="cache-ttl-fill" style="width: ${percentUsed}%"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        `;
-
-        container.innerHTML = html;
     }
 
     /**

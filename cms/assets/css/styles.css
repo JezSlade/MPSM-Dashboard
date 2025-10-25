@@ -727,6 +727,68 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* Customer Banner */
+.customer-banner {
+    background: linear-gradient(135deg, var(--accent-color), #0854cc);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.customer-banner-icon {
+    font-size: 3rem;
+    color: white;
+    width: 4rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.customer-banner-content {
+    flex: 1;
+}
+
+.customer-banner-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.customer-banner-name {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+    .customer-banner {
+        padding: 1rem 1.5rem;
+    }
+
+    .customer-banner-icon {
+        font-size: 2rem;
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .customer-banner-name {
+        font-size: 1.5rem;
+    }
+}
+
 /* Micro Cards Grid in Header */
 .micro-cards-grid {
     display: grid;

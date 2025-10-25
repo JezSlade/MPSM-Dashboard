@@ -64,6 +64,13 @@ return [
             "sortOrder" => "Asc",
         ],
     ],
+    "Device/List" => [
+        "query" => [
+            "FilterDealerId" => null,
+            "pageNumber" => null,
+            "pageRows" => null,
+        ],
+    ],
     "Counter/Device/List" => [
         "query" => [
             "fromDate" => null,

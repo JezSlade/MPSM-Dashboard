@@ -11,6 +11,7 @@
 
 class EndpointCatalog {
     private static $catalog = null;
+    private static $catalogIndex = [];
     private static $testResults = null;
 
     /**
@@ -134,6 +135,7 @@ class EndpointCatalog {
 
         if (!file_exists($resultsFile)) {
             self::$catalog = [];
+            self::$catalogIndex = [];
             self::$testResults = null;
             return;
         }
@@ -143,6 +145,7 @@ class EndpointCatalog {
 
         if (!$data) {
             self::$catalog = [];
+            self::$catalogIndex = [];
             self::$testResults = null;
             return;
         }
@@ -156,11 +159,13 @@ class EndpointCatalog {
      */
     private static function buildCatalog($results) {
         self::$catalog = [];
+        self::$catalogIndex = [];
 
         foreach ($results as $result) {
             $action = $result['action'];
 
-            self::$catalog[$action] = [
+            $entry = [
+                'action' => $action,
                 'success' => $result['success'],
                 'data_type' => $result['data_type'] ?? 'unknown',
                 'data_count' => $result['data_count'] ?? null,
@@ -171,7 +176,44 @@ class EndpointCatalog {
                 'prerequisites' => self::getPrerequisites($result),
                 'use_case' => self::getUseCase($action),
             ];
+
+            self::$catalog[$action] = $entry;
+            self::$catalogIndex[strtolower($action)] = $entry;
         }
+    }
+
+    /**
+     * Retrieve catalog metadata for a specific action.
+     *
+     * @param string $action
+     * @return array|null
+     */
+    public static function getMetadata(string $action): ?array
+    {
+        self::init();
+
+        if (isset(self::$catalog[$action])) {
+            return self::$catalog[$action];
+        }
+
+        $lower = strtolower($action);
+        return self::$catalogIndex[$lower] ?? null;
+    }
+
+    /**
+     * Determine if the catalog recorded a successful invocation.
+     *
+     * @param string $action
+     * @return bool|null Returns true/false for known endpoints, null if unknown.
+     */
+    public static function wasSuccessful(string $action): ?bool
+    {
+        $metadata = self::getMetadata($action);
+        if ($metadata === null || !array_key_exists('success', $metadata)) {
+            return null;
+        }
+
+        return (bool) $metadata['success'];
     }
 
     /**

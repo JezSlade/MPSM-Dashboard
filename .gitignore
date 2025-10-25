@@ -1,0 +1,33 @@
+# Environment and Configuration
+.env
+.env.local
+cms/config/database.php
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+error_log
+
+# Temporary files
+*.tmp
+*.temp
+nul
+
+# Cache
+cms/data/*.json
+!cms/data/.gitignore
+
+# Backups
+*.backup
+*.bak
