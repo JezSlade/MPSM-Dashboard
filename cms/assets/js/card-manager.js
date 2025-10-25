@@ -24,16 +24,24 @@ const CardManager = (function() {
                 const data = await response.json();
                 if (data.success && data.preferences) {
                     preferences = data.preferences;
+                    console.log('[CardManager] Loaded preferences from backend:', preferences);
                 }
             }
         } catch (error) {
-            console.warn('Failed to load card preferences, using defaults:', error);
+            console.warn('[CardManager] Failed to load card preferences, using defaults:', error);
         }
 
         // If no saved preferences, use defaults from registry
-        if (Object.keys(preferences.cards).length === 0) {
+        if (Object.keys(preferences.cards).length === 0 || !preferences.order || preferences.order.length === 0) {
+            console.log('[CardManager] No valid preferences found, resetting to defaults');
             resetToDefaults();
+            // Try to save defaults (but don't fail if save fails)
+            await savePreferences().catch(err => {
+                console.warn('[CardManager] Could not save default preferences:', err);
+            });
         }
+
+        console.log('[CardManager] Final preferences:', preferences);
     }
 
     /**
@@ -63,10 +71,24 @@ const CardManager = (function() {
      * Get visible cards in order
      */
     function getVisibleCards() {
-        return preferences.order
-            .filter(cardId => preferences.cards[cardId]?.visible !== false)
-            .map(cardId => CardRegistry.get(cardId))
+        console.log('[CardManager] Getting visible cards. preferences.order:', preferences.order);
+        console.log('[CardManager] preferences.cards:', preferences.cards);
+
+        const visibleCards = preferences.order
+            .filter(cardId => {
+                const isVisible = preferences.cards[cardId]?.visible !== false;
+                console.log(`[CardManager] Card ${cardId} visible:`, isVisible);
+                return isVisible;
+            })
+            .map(cardId => {
+                const card = CardRegistry.get(cardId);
+                console.log(`[CardManager] Card ${cardId} from registry:`, card ? 'found' : 'NOT FOUND');
+                return card;
+            })
             .filter(card => card !== undefined);
+
+        console.log('[CardManager] Final visible cards:', visibleCards.length);
+        return visibleCards;
     }
 
     /**
