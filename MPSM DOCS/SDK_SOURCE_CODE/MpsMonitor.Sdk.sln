@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29418.71
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MpsMonitor.Sdk.Library", "MpsMonitor.Sdk.Library\MpsMonitor.Sdk.Library.csproj", "{1EB25193-F60A-4D8A-A7CC-CD4F72079266}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MpsMonitor.Sdk.Models", "MpsMonitor.Sdk.Models\MpsMonitor.Sdk.Models.csproj", "{F15C625D-4ABF-4D7C-B63D-EAA4FE06F478}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MpsMonitor.Sdk.Simulator", "MpsMonitor.Sdk.Simulator\MpsMonitor.Sdk.Simulator.csproj", "{F90047C1-E802-461A-8C92-B5F1EE5383A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1EB25193-F60A-4D8A-A7CC-CD4F72079266}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EB25193-F60A-4D8A-A7CC-CD4F72079266}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EB25193-F60A-4D8A-A7CC-CD4F72079266}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EB25193-F60A-4D8A-A7CC-CD4F72079266}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F15C625D-4ABF-4D7C-B63D-EAA4FE06F478}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F15C625D-4ABF-4D7C-B63D-EAA4FE06F478}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F15C625D-4ABF-4D7C-B63D-EAA4FE06F478}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F15C625D-4ABF-4D7C-B63D-EAA4FE06F478}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F90047C1-E802-461A-8C92-B5F1EE5383A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F90047C1-E802-461A-8C92-B5F1EE5383A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F90047C1-E802-461A-8C92-B5F1EE5383A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F90047C1-E802-461A-8C92-B5F1EE5383A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E8BAFB7D-554E-4ABF-8F60-58BBBFEFB276}
+	EndGlobalSection
+EndGlobal

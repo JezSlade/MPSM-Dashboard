@@ -1,6 +1,7 @@
 # Environment and Configuration
 .env
 .env.local
+cms/config.php
 cms/config/database.php
 
 # IDE

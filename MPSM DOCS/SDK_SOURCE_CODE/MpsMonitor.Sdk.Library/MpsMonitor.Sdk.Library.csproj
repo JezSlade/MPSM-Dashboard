@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>P:\abasset.visualstudio.com\MPS\MpsMonitor.Sdk\source\MpsMonitor.Sdk.Library\MpsMonitor.Sdk.Library.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>P:\abasset.visualstudio.com\MPS\MpsMonitor.Sdk\source\MpsMonitor.Sdk.Library\MpsMonitor.Sdk.Library.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="RestSharp" Version="106.6.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MpsMonitor.Sdk.Models\MpsMonitor.Sdk.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="MpsRestClientStandard">
+      <HintPath>P:\abasset.visualstudio.com\MPS\MpsMonitor.Sdk\source\MpsMonitor.Sdk.Library\MpsRestClient\MpsRestClientStandard.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

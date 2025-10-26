@@ -1,0 +1,86 @@
+﻿<Window x:Class="MpsMonitor.Sdk.Simulator.ConnectorsConfigEdit"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MpsMonitor.Sdk.Simulator"
+                xmlns:wpfx="http://schemas.xceed.com/wpf/xaml/toolkit"
+
+        mc:Ignorable="d"
+        Title="ConnectorsConfigEdit" Height="639" Width="800">
+    <Border Padding="10" ScrollViewer.CanContentScroll="True">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"  >
+            <wpfx:BusyIndicator x:Name="_busyIndicator" >
+                <StackPanel ScrollViewer.CanContentScroll="True" VerticalAlignment="Top">
+                    <StackPanel x:Name="spNetwork">
+                        <TextBlock Text="Network to monitoring" Margin="0 0 10 20"></TextBlock>
+
+                        <RadioButton Margin="0 0 10 5" GroupName="grp1" x:Name="rbNetwork" Content="Subnet Import" Checked="RbNetwork_Checked" Unchecked="RbNetwork_Unchecked" />
+                        <TextBox x:Name="txtSubnetFreeText" Margin="0 0 10 20" IsEnabled="{Binding IsChecked, ElementName=rbNetwork}" BindingGroup="{Binding grp1}" Height="135" ></TextBox>
+                        <RadioButton Margin="0 0 10 5" GroupName="grp1" x:Name="rbOffices" Content="Offices" />
+                        <StackPanel x:Name="spOffice">
+                            <ComboBox Margin="0 0 10 5" x:Name="cmbOffices"  IsEnabled="{Binding IsChecked, ElementName=rbOffices}" BindingGroup="{Binding grp1}" Padding="2" SelectedIndex="0" SelectionChanged="cmbOffices_SelectionChanged" >
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0} - {1}">
+                                                    <Binding Path="Code"/>
+                                                    <Binding Path="Description"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <ListView Margin="0 0 10 35"  x:Name="ListViewIpAddress" Height="127" Padding="2" RenderTransformOrigin="0.499,0.455"/>
+                        </StackPanel>
+                        <Button Margin="0 0 10 5"  x:Name="btnSaveSubnet" Content="Save" Click="BtnSaveSubnet_Click"></Button>
+
+                    </StackPanel>
+                    <StackPanel x:Name="spDataDetection">
+                        <TextBlock Text="Data detection timestables (local time)"></TextBlock>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="10*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+                                <!--hour-->
+                                <wpfx:IntegerUpDown FormatString="N0" Value="0" Increment="1" Maximum="23" Minimum="0"  x:Name="iudHours"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1"  Margin="0 0 10 0">
+                                <TextBlock Text=":" FontWeight="Bold" Margin="0 0 0 5"/>
+                            </StackPanel>
+                            <!--minutes-->
+                            <StackPanel Grid.Column="2"  Margin="0 0 10 0">
+                                <wpfx:IntegerUpDown FormatString="N0" Value="0" Increment="1" Maximum="59" Minimum="0"  x:Name="iudMinutes"/>
+                            </StackPanel>
+                            <!--btnSave-->
+                            <StackPanel Grid.Column="3"  Margin="0 0 10 0">
+                                <Button x:Name="btnSaveSchedule" Content="Save" Click="BtnSaveSchedule_Click"></Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                    <!-- Result Panel -->
+                    <StackPanel>
+                        <TabControl x:Name="tabResult" Margin="0 15 0 0">
+                            <TabItem Header="Response">
+                                <TextBox x:Name="ResponseBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                            </TabItem>
+                            <TabItem Header="Request">
+                                <TextBox x:Name="RequestBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
+                </StackPanel>
+            </wpfx:BusyIndicator>
+        </ScrollViewer>
+    </Border>
+</Window>

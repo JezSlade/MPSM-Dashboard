@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(gh run list:*)",
+      "Bash(start https://github.com/JezSlade/MPSM-Dashboard/actions)",
+      "Bash(powershell -Command \"\n$ftpServer = ''ftp://ftp.resolutionsbydesign.us/cms/config/database.php''\n$username = ''mpsm@mpsm.resolutionsbydesign.us''\n$password = ''Deploy123!''\n$localFile = ''cms/config/database.php''\n\nif (-Not (Test-Path $localFile)) {\n    Write-Host ''ERROR: Local database.php file not found''\n    exit 1\n}\n\ntry {\n    $webclient = New-Object System.Net.WebClient\n    $webclient.Credentials = New-Object System.Net.NetworkCredential($username, $password)\n    $webclient.UploadFile($ftpServer, $localFile)\n    Write-Host ''SUCCESS: database.php uploaded to cms/config/''\n} catch {\n    Write-Host \"\"ERROR: $_\"\"\n    exit 1\n}\n\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File upload_database.ps1)",
+      "Bash(git reset:*)",
+      "Bash(start test_frontend.html)",
+      "Bash(powershell -Command \"Get-Content cms\\index.php | Select-String -Pattern ''device-modal'' -Context 2,2\")"
     ],
     "deny": [],
     "ask": []

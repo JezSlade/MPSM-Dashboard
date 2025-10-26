@@ -1,0 +1,126 @@
+﻿<Window x:Class="MpsMonitor.Sdk.Simulator.AddCustomer"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MpsMonitor.Sdk.Simulator"
+        xmlns:wpfx="http://schemas.xceed.com/wpf/xaml/toolkit"
+        mc:Ignorable="d"
+        Title="AddCustomer" Width="800">
+   <Border Padding="10" ScrollViewer.CanContentScroll="True">
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"  >
+         <wpfx:BusyIndicator x:Name="_busyIndicator" >
+
+            <StackPanel ScrollViewer.CanContentScroll="True" VerticalAlignment="Top">
+               <StackPanel>
+                  <!-- label -->
+                  <StackPanel  Margin="0 0 10 0">
+                     <Grid>
+                        <Grid.ColumnDefinitions>
+                           <ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                           <RowDefinition></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <!-- txtDealer Code -->
+                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                           <TextBlock  Text="Dealer" FontWeight="Bold" Margin="0 15 0 5"/>
+                           <TextBox x:Name="txtDealer" Padding="2"  IsReadOnly="True" Background="LightGray" />
+                        </StackPanel>
+                        <!-- Country -->
+                        <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                           <TextBlock  Text="Country" FontWeight="Bold" Margin="0 15 0 5"/>
+                           <ComboBox x:Name="cmbCountry" Padding="2" SelectedIndex="0" ></ComboBox>
+                        </StackPanel>
+                     </Grid>
+                     <!-- txtCompanyName -->
+                     <StackPanel  Margin="0 0 10 0">
+                        <TextBlock  Text="Company Name" FontWeight="Bold" Margin="0 15 0 5"/>
+                        <TextBox x:Name="txtCompanyName" Padding="2" />
+                     </StackPanel>
+
+                     <!-- txtNominative -->
+                     <StackPanel  Margin="0 0 10 0">
+                        <TextBlock  Text="Nominative" FontWeight="Bold" Margin="0 15 0 5"/>
+                        <TextBox x:Name="txtNominative" Padding="2" />
+                     </StackPanel>
+                     <Grid>
+                        <Grid.ColumnDefinitions>
+                           <ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                           <RowDefinition></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <!-- txtMailAddress -->
+                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                           <TextBlock  Text="Email" FontWeight="Bold" Margin="0 15 0 5"/>
+                           <TextBox x:Name="txtMailAddress" Padding="2"   />
+                        </StackPanel>
+                        <!-- txtPhone -->
+                        <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                           <TextBlock  Text="Phone" FontWeight="Bold" Margin="0 15 0 5"/>
+                           <TextBox x:Name="txtPhone" Padding="2"  />
+                        </StackPanel>
+                        <!-- txtNote -->
+                        <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                           <TextBlock  Text="Note" FontWeight="Bold" Margin="0 15 0 5"/>
+                           <TextBox x:Name="txtNote" Padding="2" Height="60"  />
+                        </StackPanel>
+                     </Grid>
+                     <Grid>
+                        <Grid.ColumnDefinitions>
+                           <ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                           <RowDefinition></RowDefinition>
+                        </Grid.RowDefinitions>
+
+                        <!--externalidentifier-->
+                        <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+                           <TextBlock Text="External Identifier" FontWeight="Bold" Margin="0 10 0 5"/>
+                           <TextBox x:Name="txtExternalIdentifier" Padding="2"   />
+                        </StackPanel>
+                        <!--chkSendExplorerInstallationInvitation-->
+                        <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                           <TextBlock Text="" FontWeight="Bold" Margin="0 10 0 5"/>
+                           <CheckBox x:Name="chkSendExplorerInstallationInvitation"  Margin="0 0 0 5" IsChecked="False" >
+                              <TextBlock Text="Send eXplorer installation invitation" TextWrapping="Wrap" FontWeight="Bold" Margin="0 0 0 0"/>
+                           </CheckBox>
+                        </StackPanel>
+                        <!-- chkEnableHPSDS-->
+                        <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                           <TextBlock Text="" FontWeight="Bold" Margin="0 10 0 5"/>
+                           <CheckBox x:Name="chkEnableHPSDS"  Margin="0 0 0 5" IsChecked="False" >
+                              <TextBlock Text="Enable HP Smart Device Services" TextWrapping="Wrap" FontWeight="Bold" Margin="0 0 0 0"/>
+                           </CheckBox>
+                        </StackPanel>
+                     </Grid>
+
+                  </StackPanel>
+                  <!-- btn Save-->
+                  <StackPanel Grid.Column="1" Margin="0 10 10 0">
+                     <Button x:Name="btnSave" Content="Save" Margin="0 5 0 5" Click="BtnSave_Click"></Button>
+                  </StackPanel>
+               </StackPanel>
+
+               <!-- Result Panel -->
+               <StackPanel>
+                  <TabControl x:Name="tabResult" Margin="0 15 0 0">
+                     <TabItem Header="Response">
+                        <TextBox x:Name="ResponseBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                     </TabItem>
+                     <TabItem Header="Request">
+                        <TextBox x:Name="RequestBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                     </TabItem>
+                  </TabControl>
+               </StackPanel>
+            </StackPanel>
+         </wpfx:BusyIndicator>
+      </ScrollViewer>
+   </Border>
+</Window>

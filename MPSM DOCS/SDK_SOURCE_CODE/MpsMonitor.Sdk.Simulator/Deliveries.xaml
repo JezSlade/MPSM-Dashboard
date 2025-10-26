@@ -1,0 +1,149 @@
+﻿<Window x:Class="MpsMonitor.Sdk.Simulator.Deliveries"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MpsMonitor.Sdk.Simulator"
+        mc:Ignorable="d"
+        Title="Deliveries" Height="877.333" Width="800">
+   <Border Padding="10" ScrollViewer.CanContentScroll="True">
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"  >
+         <StackPanel ScrollViewer.CanContentScroll="True" VerticalAlignment="Top">
+            <StackPanel>
+               <!-- label -->
+               <StackPanel  Grid.Column="0" Margin="0 0 10 0">
+                  <Grid>
+                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                     </Grid.ColumnDefinitions>
+                     <!-- label Dealse -->
+                     <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                        <TextBlock  x:Name="lblDealer" Text="Dealer" FontWeight="Bold" Margin="0 15 0 5"/>
+                        <TextBox x:Name="txtDealer" Padding="2" IsReadOnly="True" Background="LightGray" />
+                     </StackPanel>
+
+                     <!-- lblCustomer -->
+                     <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                        <TextBlock x:Name="lblCustomer" Text="Customer" FontWeight="Bold" Margin="0 15 0 5"/>
+                        <TextBox x:Name="txtCustomer" Padding="2" IsReadOnly="True" Background="LightGray" />
+                     </StackPanel>
+                  </Grid>
+                  <!--GRid 2-->
+                  <Grid>
+                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="*" />
+                     </Grid.ColumnDefinitions>
+                     <Grid.RowDefinitions>
+                        <RowDefinition></RowDefinition>
+                     </Grid.RowDefinitions>
+                     <!--Quantity-->
+                     <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+                        <TextBlock Text="Quantity" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtQty" Padding="2" IsReadOnly="True" Background="LightGray"/>
+                     </StackPanel>
+                     <!--Counter-->
+                     <StackPanel Grid.Column="1"  Margin="0 0 10 0">
+                        <TextBlock Text="Counter" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtCounter" Padding="2" IsReadOnly="True" Background="LightGray" />
+                     </StackPanel>
+                     <!--Par Number-->
+                     <StackPanel Grid.Column="2"  Margin="0 0 10 0">
+                        <TextBlock Text="Par Number" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtParNumber" Padding="2" IsReadOnly="True" Background="LightGray"/>
+                     </StackPanel>
+                     <!--Type-->
+                     <StackPanel Grid.Column="3"  Margin="0 0 10 0">
+                        <TextBlock Text="Type" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtType" Padding="2" IsReadOnly="True" Background="LightGray"/>
+                     </StackPanel>
+                  </Grid>
+
+                  <!--GRid 2-->
+                  <Grid>
+                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                     </Grid.ColumnDefinitions>
+                     <Grid.RowDefinitions>
+                        <RowDefinition></RowDefinition>
+                     </Grid.RowDefinitions>
+                     <!--DocumentNumber-->
+                     <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+                        <TextBlock Text="Document Number" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtDocumentNumber" Padding="2" />
+                     </StackPanel>
+                     <!--OrderNumber-->
+                     <StackPanel Grid.Column="1"  Margin="0 0 10 0">
+                        <TextBlock Text="Order Number" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtOrderNumber" Padding="2" />
+                     </StackPanel>
+                     <!--Department-->
+                     <StackPanel Grid.Column="2"  Margin="0 0 10 0">
+                        <TextBlock Text="Department" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtDepartment" Padding="2" />
+                     </StackPanel>
+                     <!--Contact-->
+                     <StackPanel Grid.Column="3"  Margin="0 0 10 0">
+                        <TextBlock Text="Contact" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <TextBox x:Name="txtContact" Padding="2" />
+                     </StackPanel>
+                  </Grid>
+                  <!--GRid check-->
+                  <Grid>
+                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                     </Grid.ColumnDefinitions>
+                     <Grid.RowDefinitions>
+                        <RowDefinition></RowDefinition>
+                     </Grid.RowDefinitions>
+
+                     <!--CreationDate-->
+                     <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+                        <TextBlock Text="CreationDate" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <DatePicker x:Name="CreationDate"  VerticalAlignment="Top" SelectedDateFormat="Short" />
+                     </StackPanel>
+                     <!--SendCustomerNotificationEmail-->
+                     <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                        <TextBlock Text="" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <CheckBox x:Name="chkSendCustomerNotificationEmail"  Margin="0 0 0 5" IsChecked="False" >
+                           <TextBlock Text="Send Customer Notification Email" TextWrapping="Wrap" FontWeight="Bold" Margin="0 0 0 0"/>
+                        </CheckBox>
+                     </StackPanel>
+                     <!--ActivateLogisticNotification-->
+                     <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                           <TextBlock Text="" FontWeight="Bold" Margin="0 10 0 5"/>
+                        <CheckBox x:Name="chkActivateLogisticNotification"  Margin="0 0 0 5" IsChecked="False" >
+                           <TextBlock Text="Activate Logistic Notification" TextWrapping="Wrap" FontWeight="Bold" Margin="0 0 0 0"/>
+                        </CheckBox>
+                     </StackPanel>
+                  </Grid>
+               </StackPanel>
+               <!-- btn save-->
+               <StackPanel Grid.Column="1" Margin="0 10 10 0">
+                  <Button x:Name="btnSave" Content="Save" Margin="0 5 0 5" Click="BtnSave_Click"></Button>
+               </StackPanel>
+            </StackPanel>
+
+            <!-- Result Panel -->
+            <StackPanel>
+               <TabControl x:Name="tabResult" Margin="0 15 0 0">
+                  <TabItem Header="Response">
+                     <TextBox x:Name="ResponseBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                  </TabItem>
+                  <TabItem Header="Request">
+                     <TextBox x:Name="RequestBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                  </TabItem>
+               </TabControl>
+            </StackPanel>
+         </StackPanel>
+      </ScrollViewer>
+   </Border>
+</Window>

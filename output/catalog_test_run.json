@@ -1,0 +1,1882 @@
+[
+  {
+    "action": "Account/GetProfile",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Account/GetPsk2faData",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Account/GetPsk2faDataForAccount",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Account/GetPsk2faDataForProfile",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit/Customer/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit/Customer/Product/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit/Dealer/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit/Device/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "AlertLimit2/Customer/GetDefault",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit2/Customer/GetProduct",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "AlertLimit2/Customer/GetProductList",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit2/Dealer/GetDefault",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit2/Dealer/GetProduct",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "AlertLimit2/Dealer/GetProductList",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "AlertLimit2/Device/GetDefault",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "AlertLimit2/GetAllLimits",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Analytics/GetReportFileResult",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: idReport",
+    "http_status": 400
+  },
+  {
+    "action": "Analytics/GetReportResult",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: idReport",
+    "http_status": 400
+  },
+  {
+    "action": "ApiClient/Account/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "ApiClient/Account/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "ApiClient/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "ApiClient/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Billing/GetInvoiceCategories",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Communication/GetPortalReleaseNotes",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Counter/Device/Export",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Counter/Device/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Counter/ListMaintenanceKitCounters",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "CustomField/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "CustomField/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/Accessories/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/AdvancedOptions/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/AlertSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/CustomerServicesStatus/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/EpsonSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/EpsonUSBCustomerId/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Customer/eXplorerSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "CustomerDashboard",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "CustomerDashboard/Pages",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "CustomerNotification/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "CustomerNotification/GetNotificationPlaceholders",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "CustomerNotification/GetSampleNotification",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "CustomerNotification/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/AccountingSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/AdvancedOptions/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/AlertLimitOptions/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/AlertSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/CounterBlend/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Dealer/CounterBlend/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/CounterBlend/Search",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/CounterBlendToStandard/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Dealer/CounterBlendToStandard/GetByDevice",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Dealer/CounterBlendToStandard/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/Customizations/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/DealerServicesStatus/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/DistributorSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/ExportDealerTagsHierarchy",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/GetDealerHierarchy",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/GetDealerTagsHierarchy",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/Onboarding/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/RemoteOfflineCountersSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Dealer/eXplorerSettings/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerNotification/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "DealerNotification/GetNotificationPlaceholders",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerNotification/GetSampleNotification",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "DealerNotification/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerNotification/Template/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerProduct/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "DealerProduct/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupply/Count",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupply/Export",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupply/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "DealerSupply/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplyPriceListing/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "DealerSupplyPriceListing/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/AssociateByDealerSupplySetAndRelativeProducts",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/Count",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/CountDealerSupplySetAndDevicesPotentialAssociations",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/Export",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/ExportExcel",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "DealerSupplySet/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "DealerSupplySet/ListDealerSupplySetFromStandardModels",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Device/Deleted/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Device/Deleted/ListByDealer",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Device/ExplorerDataAffinities/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetDeviceAdditionalInfos",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetDeviceGapInfos",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetLfpCounters",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetSuppliesDetails",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetSuppliesDetailsInfo",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetSuppliesDetailsSummary",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/GetZebraSuppliesDetailsSummary",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Device/MaintenanceAlerts/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/Cluster/AutoClusters",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/Cluster/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/Cluster/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/Configuration/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/Configuration/GetTestTableVersions",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/Configuration/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/DataPings",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/DownloadLogs",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/ExplorerDataCommand/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/ExplorerDataInfo/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/GetClusterCounters",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/GetConnectorEndpoints",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/GetConnectors",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/GetDca4Otp",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/GetDcaCurrentVersion",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/GetDcaReleaseNotes",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/GetEndpointsLink",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: platform",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/GetExplorerDatas",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/GetExplorerSetupLink",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/GetJamcSetupLink",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/License/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/RequestSendLogs",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Explorer/Staging/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Explorer/V3/ReleaseNotes",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Integrations/GetJoinedCustomers",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/GetJoinedDevices",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/GetLogisticPlaceholders",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/GetNew",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/eautomate/GetEAutomateLog",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Integrations/eautomate/runjoin",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Office/OfficeFloor/GetPin",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Office/OfficeFloor/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Orders/GetOrderLineStatuses",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/Customer/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/Dealer/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/Dealer/ListBrands",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/Dealer/ListModels",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/GetBrands",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/GetModels",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Product/GetSnmpDiscoveryBrands",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "Project/GetContractFile",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Project/GetDetail",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Role/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "Role/GetAllCapabilities",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: isForAccount",
+    "http_status": 400
+  },
+  {
+    "action": "Role/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsAction/GetDeviceAction",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsAction/GetDeviceActions",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsAction/GetDeviceActionsDashboard",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsConnector/GetConnector",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsConnector/GetConnectors",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsConnector/GetJamcConnectors",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsConnector/GetLogs",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsConnector/GetWppConnectors",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsCustomer/GetAssessTemplate",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: customerCode",
+    "http_status": 400
+  },
+  {
+    "action": "SdsCustomer/GetAssessTemplates",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsCustomer/GetCredential",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsCustomer/GetCustomerOperation",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsCustomer/GetCustomerOperations",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsCustomer/GetNewAssessTemplate",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsDevice/GetAssessTemplate",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetConfigItems",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetCounters",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetDeviceOperation",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetDeviceRemoteEws",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetDevicesOperations",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsDevice/GetOnDeviceServices",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetSupplyDetails",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsDevice/GetZendeskTicketInfo",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsEvent/GetDeviceEvent",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsEvent/GetDeviceEvents",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SdsScan/ScanDevice",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "SdsScan/ScanImmediate",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "StandardProduct/GetExcelReport",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "StandardProduct/GetOperation",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "StandardProduct/GetProductsToAssociate",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "StandardProduct/GetStandardProductsSummary",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "StandardProduct/ListDevicesInOperation",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "StandardProduct/ListOperations",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "StandardProduct/ListStandardProducts",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SupplyAlert/GetAvailableMaintenanceKitColors",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SupplyAlert/GetAvailableMaintenanceKitTypes",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "SupplyAlert/GetAvailableSuppliesForADevice",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: deviceId",
+    "http_status": 400
+  },
+  {
+    "action": "TraceVolume/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "TraceVolume/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "TradingPartner/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Missing required query parameter: id",
+    "http_status": 400
+  },
+  {
+    "action": "TradingPartner/List",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "WhiteLabel/Get",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "WhiteLabel/GetWhiteLabelCustomizationByUrl",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "WhiteLabel/GetWhitelabelPlaceholders",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "azuread/GetCustomerAzureSettings",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "azuread/GetDealerAzureSettings",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "okta/GetCustomerOktaSettings",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  },
+  {
+    "action": "okta/GetDealerOktaSettings",
+    "passed": false,
+    "status": "fail",
+    "duration_ms": null,
+    "data_type": null,
+    "sample": null,
+    "error": "Invalid JSON response from API",
+    "http_status": 302
+  }
+]

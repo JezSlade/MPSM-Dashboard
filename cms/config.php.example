@@ -1,0 +1,47 @@
+<?php
+/**
+ * MPSM Dashboard - Configuration Example
+ *
+ * Copy this file to config.php and update with your credentials
+ */
+
+// Security
+define('SECURE_KEY', 'your_secure_key_here');
+
+// Database Configuration
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'your_database_name');
+define('DB_USER', 'your_database_user');
+define('DB_PASS', 'your_database_password');
+define('DB_CHARSET', 'utf8mb4');
+define('DB_PREFIX', 'mpsm_');
+
+// MPS API Configuration
+define('MPS_API_BASE', 'https://api.abassetmanagement.com/api3/');
+define('MPS_API_TOKEN_URL', 'https://api.abassetmanagement.com/api3/token');
+define('MPS_CLIENT_ID', 'your_client_id');
+define('MPS_CLIENT_SECRET', 'your_client_secret');
+define('MPS_USERNAME', 'your_username@example.com');
+define('MPS_PASSWORD', 'your_password');
+define('MPS_GRANT_TYPE', 'password');
+define('MPS_SCOPE', 'your_scope');
+
+// Default Values
+define('DEFAULT_DEALER_CODE', 'YOUR_DEALER_CODE');
+define('DEFAULT_DEALER_ID', 'YOUR_DEALER_ID');
+define('DEFAULT_CUSTOMER_CODE', 'YOUR_CUSTOMER_CODE');
+define('DEFAULT_CUSTOMER_ID', 'YOUR_CUSTOMER_ID');
+define('DEFAULT_CUSTOMER_NAME', 'YOUR CUSTOMER NAME');
+
+// App Settings
+define('APP_NAME', 'MPS Monitor Dashboard');
+define('APP_VERSION', '2.0.0');
+define('SESSION_TIMEOUT', 3600); // 1 hour
+
+// Error Handling
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
+// Timezone
+date_default_timezone_set('America/New_York');
