@@ -12,6 +12,8 @@
     RewriteRule ^db/ - [F,L]
     RewriteRule ^logs/ - [F,L]
     RewriteRule ^\.canonical/ - [F,L]
+    RewriteRule ^\.archive/ - [F,L]
+    RewriteRule ^cms/config\.php$ - [F,L]
 
     # Allow direct access to setup.php
     RewriteCond %{REQUEST_URI} ^/setup\.php$ [NC]
@@ -27,10 +29,13 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^mps-api/(.*)$ mps-api/index.php [L,QSA]
 
-    # Root index.php for all other non-file/directory requests
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ index.php [L]
+    # Redirect root to CMS
+    RewriteCond %{REQUEST_URI} ^/?$ [OR]
+    RewriteCond %{REQUEST_URI} ^/index\.php$
+    RewriteRule ^ /cms/ [L,R=301]
+
+    # No catch-all routing - let Apache handle normal file/directory access
+    # Removed root index.php routing since we moved to cms/ directory
 
     # Additional file protection via FilesMatch
     <FilesMatch "(\.env.*|\.htaccess|composer\.(json|lock)|config\.php)$">
@@ -72,7 +77,5 @@ Options -Indexes
     </FilesMatch>
 </Directory>
 
-# Error documents
-ErrorDocument 403 /error.php?code=403
-ErrorDocument 404 /error.php?code=404
-ErrorDocument 500 /error.php?code=500
+# Error documents - use default Apache pages
+# Removed custom error.php since it doesn't exist
