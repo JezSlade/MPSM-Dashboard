@@ -124,7 +124,9 @@ function callMPSAPI($action, $params = []) {
  * Following Rule 25: Session-Based Auth Only
  */
 function requireAuth() {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (empty($_SESSION['logged_in'])) {
         if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
@@ -147,7 +149,9 @@ function requireAuth() {
  * Check if user is logged in
  */
 function isLoggedIn() {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     return !empty($_SESSION['logged_in']);
 }
 
@@ -167,7 +171,9 @@ function loginUser($username, $password) {
     }
 
     // Set session
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     session_regenerate_id(true);
     $_SESSION['logged_in'] = true;
     $_SESSION['user_id'] = $user['id'];
@@ -181,7 +187,9 @@ function loginUser($username, $password) {
  * Logout user
  */
 function logoutUser() {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     session_destroy();
     setcookie(session_name(), '', time() - 3600, '/');
 }
@@ -234,7 +242,9 @@ function trackVisit($pageUrl = '') {
     try {
         $pdo = getDatabase();
 
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         $userId = $_SESSION['user_id'] ?? null;
         $username = $_SESSION['username'] ?? 'anonymous';
 
