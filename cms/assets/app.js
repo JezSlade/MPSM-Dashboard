@@ -202,7 +202,8 @@ const MPSM = (function() {
         try {
             await Promise.all([
                 loadCustomerHeader(),
-                loadDevices()
+                loadDevices(),
+                loadSupplyAlerts()
             ]);
         } catch (error) {
             showToast('Failed to load dashboard: ' + error.message, 'error');
@@ -335,6 +336,88 @@ const MPSM = (function() {
                 <div class="error-state">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>Failed to load devices</p>
+                    <p class="error-message">${error.message}</p>
+                </div>
+            `;
+            countEl.textContent = '0';
+        }
+    }
+
+    /**
+     * Load supply alerts
+     */
+    async function loadSupplyAlerts() {
+        const container = document.getElementById('supply-alerts');
+        const countEl = document.getElementById('alert-count');
+
+        container.innerHTML = '<div class="loading">Loading supply alerts...</div>';
+
+        try {
+            const response = await fetch('api/get-supply-alerts.php?customerCode=' + state.customerCode + '&pageRows=20');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            const alerts = data.alerts?.Items || [];
+            countEl.textContent = alerts.length;
+
+            if (alerts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
+                return;
+            }
+
+            // Render alerts table
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Priority</th>
+                            <th>Device</th>
+                            <th>Supply Type</th>
+                            <th>Level</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${alerts.map(alert => {
+                            const level = alert.Percentage || 0;
+                            const priority = level < 10 ? 'HIGH' : level < 25 ? 'MED' : 'LOW';
+                            const priorityClass = level < 10 ? 'status-danger' : level < 25 ? 'status-warning' : 'status-success';
+                            const date = alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A';
+
+                            return `
+                                <tr>
+                                    <td><span class="status-badge ${priorityClass}">${priority}</span></td>
+                                    <td>${alert.DeviceSerialNumber || 'Unknown'}</td>
+                                    <td>${alert.SupplyType || 'Supply'}</td>
+                                    <td>
+                                        <div class="toner-bar">
+                                            <div class="toner-fill ${priorityClass}" style="width: ${level}%"></div>
+                                            <span class="toner-text">${level}%</span>
+                                        </div>
+                                    </td>
+                                    <td>${date}</td>
+                                    <td>${alert.StatusText || 'Pending'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div class="card-footer">
+                    <span>${alerts.length} active alerts | <a href="#" id="view-all-alerts">View All</a></span>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+        } catch (error) {
+            container.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load supply alerts</p>
                     <p class="error-message">${error.message}</p>
                 </div>
             `;

@@ -69,11 +69,22 @@ $preferences = getUserPreferences($userId);
             <!-- Device List -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Devices</h2>
+                    <h2>Fleet Devices</h2>
                     <span id="device-count" class="badge">0</span>
                 </div>
                 <div id="device-list" class="card-body">
                     <div class="loading">Loading devices...</div>
+                </div>
+            </section>
+
+            <!-- Supply Alerts -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Supply Alerts & Warnings</h2>
+                    <span id="alert-count" class="badge badge-warning">0</span>
+                </div>
+                <div id="supply-alerts" class="card-body">
+                    <div class="loading">Loading supply alerts...</div>
                 </div>
             </section>
         </div>

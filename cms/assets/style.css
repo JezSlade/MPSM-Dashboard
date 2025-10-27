@@ -525,3 +525,97 @@ main {
         font-size: 0.85rem;
     }
 }
+
+/* Toner Bar Visualization */
+.toner-bar {
+    position: relative;
+    width: 100px;
+    height: 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.toner-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.toner-fill.status-success {
+    background: linear-gradient(90deg, var(--accent-success), #2ecc71);
+}
+
+.toner-fill.status-warning {
+    background: linear-gradient(90deg, var(--accent-warning), #f1c40f);
+}
+
+.toner-fill.status-danger {
+    background: linear-gradient(90deg, var(--accent-danger), #c0392b);
+}
+
+.toner-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-shadow: 0 0 2px rgba(255,255,255,0.8);
+}
+
+/* Card Footer */
+.card-footer {
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.card-footer a {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.card-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--accent-success);
+}
+
+.empty-state p {
+    font-size: 14px;
+}
+
+/* Badge Variants */
+.badge-warning {
+    background: var(--accent-warning);
+    color: #fff;
+}
+
+.badge-success {
+    background: var(--accent-success);
+    color: #fff;
+}
+
+.badge-danger {
+    background: var(--accent-danger);
+    color: #fff;
+}
