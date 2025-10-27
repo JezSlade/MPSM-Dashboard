@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/SwaggerActionRegistry.php';
 require_once __DIR__ . '/DomainSeeder.php';
-require_once __DIR__ . '/EndpointCatalog.php';
+require_once __DIR__ . '/../.canonical/EndpointCatalog.php';
 /**
  * MPS Monitors API Engine
  * 

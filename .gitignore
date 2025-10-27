@@ -33,3 +33,5 @@ cms/data/*.json
 # Backups
 *.backup
 *.bak
+*.txt
+deploy-*.ps1

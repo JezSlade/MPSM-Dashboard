@@ -8,7 +8,12 @@
       "Bash(powershell -ExecutionPolicy Bypass -File upload_database.ps1)",
       "Bash(git reset:*)",
       "Bash(start test_frontend.html)",
-      "Bash(powershell -Command \"Get-Content cms\\index.php | Select-String -Pattern ''device-modal'' -Context 2,2\")"
+      "Bash(powershell -Command \"Get-Content cms\\index.php | Select-String -Pattern ''device-modal'' -Context 2,2\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

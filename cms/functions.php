@@ -290,11 +290,15 @@ function getSystemHealth() {
         $health['database']['error'] = $e->getMessage();
     }
 
-    // Test MPS API
+    // Test MPS API (via mps-api backend proxy)
     try {
-        $token = getMPSToken();
-        $health['mpsApi']['connected'] = true;
-        $health['mpsApi']['hasToken'] = !empty($token);
+        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/?action=Ping');
+        if ($response !== false) {
+            $data = json_decode($response, true);
+            $health['mpsApi']['connected'] = isset($data['success']) && $data['success'];
+        } else {
+            throw new Exception("mps-api backend not responding");
+        }
     } catch (Exception $e) {
         $health['mpsApi']['error'] = $e->getMessage();
     }
