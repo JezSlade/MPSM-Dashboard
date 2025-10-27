@@ -10,9 +10,27 @@ const MPSM = (function() {
     let state = {
         currentTab: 'dashboard',
         theme: 'light',
+        dealerCode: null,
+        dealerId: null,
         customerCode: null,
-        devices: []
+        customerName: null,
+        devices: [],
+        currentDevicePage: 1,
+        currentAlertPage: 1,
+        debugLogs: []
     };
+
+    // Debug logger
+    function debugLog(message, type = 'info') {
+        const timestamp = new Date().toISOString();
+        state.debugLogs.push({ timestamp, message, type });
+        console.log(`[${type.toUpperCase()}] ${message}`);
+
+        // Keep only last 50 logs
+        if (state.debugLogs.length > 50) {
+            state.debugLogs.shift();
+        }
+    }
 
     /**
      * Initialize application
@@ -115,6 +133,7 @@ const MPSM = (function() {
      */
     async function loadPreferences() {
         try {
+            debugLog('Loading user preferences...');
             const response = await fetch('api/get-preferences.php');
             const data = await response.json();
 
@@ -123,13 +142,21 @@ const MPSM = (function() {
             }
 
             const prefs = data.preferences;
-            state.customerCode = prefs.customerCode;
-            state.theme = prefs.theme;
+            state.dealerCode = prefs.dealerCode || 'NY06AGDWUQ';
+            state.dealerId = prefs.dealerId || 'SZ13qRwU5GtFLj0i_CbEgQ2';
+            state.customerCode = prefs.customerCode || 'W9OPXL0YDK';
+            state.customerName = prefs.customerName || 'CAPE FEAR VALLEY MED CTR.';
+            state.theme = prefs.theme || 'light';
+
+            debugLog(`Preferences loaded: ${state.customerCode}`, 'info');
 
         } catch (error) {
-            console.error('Failed to load preferences:', error);
+            debugLog('Failed to load preferences: ' + error.message, 'error');
             // Use defaults
+            state.dealerCode = 'NY06AGDWUQ';
+            state.dealerId = 'SZ13qRwU5GtFLj0i_CbEgQ2';
             state.customerCode = 'W9OPXL0YDK';
+            state.customerName = 'CAPE FEAR VALLEY MED CTR.';
         }
     }
 
@@ -162,19 +189,24 @@ const MPSM = (function() {
      * Save settings from admin panel
      */
     async function saveSettings() {
+        const dealerCode = document.getElementById('dealer-code').value;
+        const dealerId = document.getElementById('dealer-id').value;
         const customerCode = document.getElementById('customer-code').value;
         const customerName = document.getElementById('customer-name').value;
 
-        if (!customerCode || !customerName) {
-            showToast('Customer code and name are required', 'error');
+        if (!dealerCode || !dealerId || !customerCode || !customerName) {
+            showToast('All fields are required', 'error');
             return;
         }
 
         try {
+            debugLog('Saving settings...', 'info');
             const response = await fetch('api/save-preferences.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    dealerCode: dealerCode,
+                    dealerId: dealerId,
                     customerCode: customerCode,
                     customerName: customerName
                 })
@@ -186,11 +218,17 @@ const MPSM = (function() {
                 throw new Error(data.error);
             }
 
+            state.dealerCode = dealerCode;
+            state.dealerId = dealerId;
             state.customerCode = customerCode;
+            state.customerName = customerName;
+
+            debugLog('Settings saved successfully', 'info');
             showToast('Settings saved successfully', 'success');
             await loadDashboard();
 
         } catch (error) {
+            debugLog('Failed to save settings: ' + error.message, 'error');
             showToast('Failed to save settings: ' + error.message, 'error');
         }
     }
@@ -313,7 +351,7 @@ const MPSM = (function() {
                     </thead>
                     <tbody>
                         ${state.devices.map(device => `
-                            <tr>
+                            <tr onclick="MPSM.openDeviceModal('${device.Id}')" style="cursor: pointer;">
                                 <td>${device.AssetNumber || device.SerialNumber || 'N/A'}</td>
                                 <td>${device.Product?.Model || 'Unknown'}</td>
                                 <td>${device.IpAddress || 'N/A'}</td>
@@ -592,10 +630,182 @@ const MPSM = (function() {
         init();
     }
 
+    /**
+     * Open device detail modal
+     */
+    function openDeviceModal(deviceId) {
+        debugLog(`Opening device modal: ${deviceId}`, 'info');
+        const modal = document.getElementById('device-modal');
+        const modalBody = document.getElementById('modal-device-body');
+        const modalName = document.getElementById('modal-device-name');
+
+        modal.classList.add('active');
+        modalBody.innerHTML = '<div class="loading">Loading device details...</div>';
+
+        try {
+            const device = state.devices.find(d => d.Id === deviceId);
+            if (!device) {
+                throw new Error('Device not found');
+            }
+
+            modalName.textContent = device.Product?.Model || 'Device Details';
+
+            const html = `
+                <div class="device-snapshot">
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Serial Number</div>
+                        <div class="snapshot-value">${device.SerialNumber || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Asset Number</div>
+                        <div class="snapshot-value">${device.AssetNumber || device.ExternalIdentifier || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">IP Address</div>
+                        <div class="snapshot-value">${device.IpAddress || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">MAC Address</div>
+                        <div class="snapshot-value">${device.MacAddress || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Location</div>
+                        <div class="snapshot-value">${device.Note || device.OfficeDescription || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Status</div>
+                        <div class="snapshot-value">
+                            <span class="status-badge ${device.IsOffline ? 'status-danger' : 'status-success'}">
+                                ${device.IsOffline ? 'Offline' : 'Online'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Counters</h3>
+                <div class="device-snapshot">
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Total Mono</div>
+                        <div class="snapshot-value">${device.CounterMono?.toLocaleString() || '0'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Total Color</div>
+                        <div class="snapshot-value">${device.CounterColor?.toLocaleString() || '0'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Monthly Mono</div>
+                        <div class="snapshot-value">${device.MonthlyMonoVolume?.toLocaleString() || '0'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Monthly Color</div>
+                        <div class="snapshot-value">${device.MonthlyColorVolume?.toLocaleString() || '0'}</div>
+                    </div>
+                </div>
+
+                <h3>Supply Levels</h3>
+                <div class="supply-grid">
+                    ${device.BlackToner !== null ? `
+                        <div class="supply-item">
+                            <div class="supply-name">Black Toner</div>
+                            <div class="toner-bar">
+                                <div class="toner-fill ${device.BlackToner < 10 ? 'status-danger' : device.BlackToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.BlackToner}%"></div>
+                                <span class="toner-text">${device.BlackToner}%</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${device.CyanToner !== null ? `
+                        <div class="supply-item">
+                            <div class="supply-name">Cyan Toner</div>
+                            <div class="toner-bar">
+                                <div class="toner-fill ${device.CyanToner < 10 ? 'status-danger' : device.CyanToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.CyanToner}%"></div>
+                                <span class="toner-text">${device.CyanToner}%</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${device.MagentaToner !== null ? `
+                        <div class="supply-item">
+                            <div class="supply-name">Magenta Toner</div>
+                            <div class="toner-bar">
+                                <div class="toner-fill ${device.MagentaToner < 10 ? 'status-danger' : device.MagentaToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.MagentaToner}%"></div>
+                                <span class="toner-text">${device.MagentaToner}%</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${device.YellowToner !== null ? `
+                        <div class="supply-item">
+                            <div class="supply-name">Yellow Toner</div>
+                            <div class="toner-bar">
+                                <div class="toner-fill ${device.YellowToner < 10 ? 'status-danger' : device.YellowToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.YellowToner}%"></div>
+                                <span class="toner-text">${device.YellowToner}%</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <h3>Device Information</h3>
+                <div class="device-snapshot">
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Brand</div>
+                        <div class="snapshot-value">${device.Product?.Brand || 'Unknown'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Model</div>
+                        <div class="snapshot-value">${device.Product?.Model || 'Unknown'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Firmware</div>
+                        <div class="snapshot-value">${device.Firmware || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Install Date</div>
+                        <div class="snapshot-value">${device.Install ? new Date(device.Install).toLocaleDateString() : 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Last Update</div>
+                        <div class="snapshot-value">${device.LastUpdate ? new Date(device.LastUpdate).toLocaleString() : 'N/A'}</div>
+                    </div>
+                </div>
+            `;
+
+            modalBody.innerHTML = html;
+
+        } catch (error) {
+            debugLog('Failed to load device details: ' + error.message, 'error');
+            modalBody.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load device details</p>
+                    <p class="error-message">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Close device modal
+     */
+    function closeDeviceModal() {
+        const modal = document.getElementById('device-modal');
+        modal.classList.remove('active');
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('device-modal');
+        if (event.target === modal) {
+            closeDeviceModal();
+        }
+    });
+
     // Public API
     return {
         loadDashboard,
-        showToast
+        showToast,
+        openDeviceModal,
+        closeDeviceModal
     };
 
 })();
+
+// Expose functions to window for onclick handlers
+window.closeDeviceModal = () => MPSM.closeDeviceModal();

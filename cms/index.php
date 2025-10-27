@@ -30,7 +30,7 @@ $preferences = getUserPreferences($userId);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
 </head>
-<body data-theme="<?= htmlspecialchars($preferences['theme']) ?>">
+<body data-theme="<?= htmlspecialchars($preferences['theme'] ?? 'light') ?>">
     <!-- Header -->
     <header class="header">
         <div class="container">
@@ -97,12 +97,20 @@ $preferences = getUserPreferences($userId);
                 </div>
                 <div class="card-body">
                     <div class="form-group">
+                        <label>Dealer Code:</label>
+                        <input type="text" id="dealer-code" class="form-control" value="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Dealer ID:</label>
+                        <input type="text" id="dealer-id" class="form-control" value="<?= htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID) ?>">
+                    </div>
+                    <div class="form-group">
                         <label>Customer Code:</label>
-                        <input type="text" id="customer-code" class="form-control" value="<?= htmlspecialchars($preferences['customerCode']) ?>">
+                        <input type="text" id="customer-code" class="form-control" value="<?= htmlspecialchars($preferences['customerCode'] ?? DEFAULT_CUSTOMER_CODE) ?>">
                     </div>
                     <div class="form-group">
                         <label>Customer Name:</label>
-                        <input type="text" id="customer-name" class="form-control" value="<?= htmlspecialchars($preferences['customerName']) ?>">
+                        <input type="text" id="customer-name" class="form-control" value="<?= htmlspecialchars($preferences['customerName'] ?? DEFAULT_CUSTOMER_NAME) ?>">
                     </div>
                     <button id="save-settings" class="btn btn-primary">Save Settings</button>
                 </div>
@@ -132,6 +140,19 @@ $preferences = getUserPreferences($userId);
 
     <!-- Toast Container -->
     <div id="toast-container"></div>
+
+    <!-- Device Detail Modal -->
+    <div id="device-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-device-name">Device Details</h2>
+                <button class="modal-close" onclick="closeDeviceModal()">&times;</button>
+            </div>
+            <div id="modal-device-body" class="modal-body">
+                <div class="loading">Loading device details...</div>
+            </div>
+        </div>
+    </div>
 
     <!-- JavaScript -->
     <script src="assets/app.js"></script>
