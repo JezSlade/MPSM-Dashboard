@@ -55,6 +55,9 @@ const MPSM = (function() {
 
         // Test health
         document.getElementById('test-health').addEventListener('click', testSystemHealth);
+
+        // Refresh visitors
+        document.getElementById('refresh-visitors').addEventListener('click', loadVisitorLogs);
     }
 
     /**
@@ -70,6 +73,11 @@ const MPSM = (function() {
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.toggle('active', content.id === tabName + '-tab');
         });
+
+        // Load visitor logs when switching to admin tab
+        if (tabName === 'admin') {
+            loadVisitorLogs();
+        }
     }
 
     /**
@@ -396,6 +404,70 @@ const MPSM = (function() {
                 <div class="error-state">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>Health check failed</p>
+                    <p class="error-message">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Load visitor logs
+     */
+    async function loadVisitorLogs() {
+        const container = document.getElementById('visitor-logs');
+        container.innerHTML = '<div class="loading">Loading visitor logs...</div>';
+
+        try {
+            const response = await fetch('api/get-visitor-logs.php?limit=10');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            const logs = data.logs || [];
+
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="empty-state">No visitor logs found</div>';
+                return;
+            }
+
+            // Render visitor table
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Username</th>
+                            <th>IP Address</th>
+                            <th>Page</th>
+                            <th>User Agent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(log => `
+                            <tr>
+                                <td>${new Date(log.visited_at).toLocaleString()}</td>
+                                <td>${log.username}</td>
+                                <td><strong>${log.ip_address}</strong></td>
+                                <td>${log.page_url}</td>
+                                <td title="${log.user_agent}">${log.user_agent.substring(0, 50)}...</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="health-timestamp">
+                    Showing last ${logs.length} visits
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+        } catch (error) {
+            container.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load visitor logs</p>
                     <p class="error-message">${error.message}</p>
                 </div>
             `;

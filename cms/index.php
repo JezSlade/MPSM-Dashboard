@@ -106,6 +106,16 @@ $preferences = getUserPreferences($userId);
                     <div class="loading">Click "Test Now" to check system health...</div>
                 </div>
             </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Visitor Tracking</h2>
+                    <button id="refresh-visitors" class="btn btn-secondary">Refresh</button>
+                </div>
+                <div id="visitor-logs" class="card-body">
+                    <div class="loading">Loading visitor logs...</div>
+                </div>
+            </section>
         </div>
     </main>
 
