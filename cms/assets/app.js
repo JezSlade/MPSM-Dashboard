@@ -76,6 +76,29 @@ const MPSM = (function() {
 
         // Refresh visitors
         document.getElementById('refresh-visitors').addEventListener('click', loadVisitorLogs);
+
+        // Admin section navigation
+        document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const section = e.currentTarget.dataset.section;
+                switchAdminSection(section);
+            });
+        });
+    }
+
+    /**
+     * Switch admin sections
+     */
+    function switchAdminSection(sectionName) {
+        // Update buttons
+        document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.section === sectionName);
+        });
+
+        // Update sections
+        document.querySelectorAll('.admin-section').forEach(section => {
+            section.classList.toggle('active', section.id === 'admin-' + sectionName);
+        });
     }
 
     /**

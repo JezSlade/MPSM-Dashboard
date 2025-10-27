@@ -511,6 +511,133 @@ main {
     border-left: 4px solid var(--accent-primary);
 }
 
+/* Admin Panel */
+.admin-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.admin-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.admin-nav-btn i {
+    font-size: 2rem;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.admin-nav-btn:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.admin-nav-btn:hover i {
+    color: var(--accent-primary);
+}
+
+.admin-nav-btn.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.admin-nav-btn.active i {
+    color: white;
+}
+
+.admin-section {
+    display: none;
+}
+
+.admin-section.active {
+    display: block;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.info-text {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--accent-primary);
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.config-card {
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.config-card i {
+    font-size: 2.5rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.config-card h3 {
+    font-size: 1rem;
+    margin: 0.5rem 0;
+}
+
+.config-card p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.config-card.active {
+    border-color: var(--accent-success);
+}
+
+.config-card.active i {
+    color: var(--accent-success);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .metrics-grid {

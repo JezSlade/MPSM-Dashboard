@@ -61,80 +61,184 @@ $preferences = getUserPreferences($userId);
     <main class="container">
         <!-- Dashboard Tab -->
         <div id="dashboard-tab" class="tab-content active">
-            <!-- Customer Header -->
+            <!-- Customer Header with Metric Cards -->
             <section id="customer-header" class="customer-header">
                 <div class="loading">Loading...</div>
             </section>
 
-            <!-- Device List -->
-            <section class="card">
-                <div class="card-header">
-                    <h2>Fleet Devices</h2>
-                    <span id="device-count" class="badge">0</span>
-                </div>
-                <div id="device-list" class="card-body">
-                    <div class="loading">Loading devices...</div>
-                </div>
-            </section>
-
-            <!-- Supply Alerts -->
-            <section class="card">
-                <div class="card-header">
-                    <h2>Supply Alerts & Warnings</h2>
-                    <span id="alert-count" class="badge badge-warning">0</span>
-                </div>
-                <div id="supply-alerts" class="card-body">
-                    <div class="loading">Loading supply alerts...</div>
-                </div>
-            </section>
+            <!-- Dashboard Grid - 2x2 Snapshot Cards -->
+            <div class="dashboard-grid">
+                <!-- Hidden elements for backward compatibility -->
+                <span id="device-count" style="display:none;">0</span>
+                <span id="alert-count" style="display:none;">0</span>
+                <div id="device-list" style="display:none;"></div>
+                <div id="supply-alerts" style="display:none;"></div>
+            </div>
         </div>
 
         <!-- Admin Tab -->
         <div id="admin-tab" class="tab-content">
-            <section class="card">
-                <div class="card-header">
-                    <h2>Settings</h2>
-                </div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label>Dealer Code:</label>
-                        <input type="text" id="dealer-code" class="form-control" value="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Dealer ID:</label>
-                        <input type="text" id="dealer-id" class="form-control" value="<?= htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID) ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Customer Code:</label>
-                        <input type="text" id="customer-code" class="form-control" value="<?= htmlspecialchars($preferences['customerCode'] ?? DEFAULT_CUSTOMER_CODE) ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Customer Name:</label>
-                        <input type="text" id="customer-name" class="form-control" value="<?= htmlspecialchars($preferences['customerName'] ?? DEFAULT_CUSTOMER_NAME) ?>">
-                    </div>
-                    <button id="save-settings" class="btn btn-primary">Save Settings</button>
-                </div>
-            </section>
+            <!-- Admin Section Navigation -->
+            <div class="admin-nav">
+                <button class="admin-nav-btn active" data-section="customer">
+                    <i class="fas fa-building"></i>
+                    <span>Customer Settings</span>
+                </button>
+                <button class="admin-nav-btn" data-section="system">
+                    <i class="fas fa-heartbeat"></i>
+                    <span>System Monitoring</span>
+                </button>
+                <button class="admin-nav-btn" data-section="dashboard">
+                    <i class="fas fa-th-large"></i>
+                    <span>Dashboard Config</span>
+                </button>
+                <button class="admin-nav-btn" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span>User Management</span>
+                </button>
+            </div>
 
-            <section class="card">
-                <div class="card-header">
-                    <h2>System Health</h2>
-                    <button id="test-health" class="btn btn-secondary">Test Now</button>
-                </div>
-                <div id="health-status" class="card-body">
-                    <div class="loading">Click "Test Now" to check system health...</div>
-                </div>
-            </section>
+            <!-- Customer Settings Section -->
+            <div id="admin-customer" class="admin-section active">
+                <div class="admin-grid">
+                    <section class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-cog"></i> API Configuration</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label><i class="fas fa-tag"></i> Dealer Code:</label>
+                                <input type="text" id="dealer-code" class="form-control" value="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>">
+                                <small class="form-help">Your unique dealer identifier for API requests</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-fingerprint"></i> Dealer ID:</label>
+                                <input type="text" id="dealer-id" class="form-control" value="<?= htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID) ?>">
+                                <small class="form-help">Numeric dealer ID for backend authentication</small>
+                            </div>
+                        </div>
+                    </section>
 
-            <section class="card">
-                <div class="card-header">
-                    <h2>Visitor Tracking</h2>
-                    <button id="refresh-visitors" class="btn btn-secondary">Refresh</button>
+                    <section class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-building"></i> Active Customer</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label><i class="fas fa-hashtag"></i> Customer Code:</label>
+                                <input type="text" id="customer-code" class="form-control" value="<?= htmlspecialchars($preferences['customerCode'] ?? DEFAULT_CUSTOMER_CODE) ?>">
+                                <small class="form-help">Customer code to display on dashboard</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-building"></i> Customer Name:</label>
+                                <input type="text" id="customer-name" class="form-control" value="<?= htmlspecialchars($preferences['customerName'] ?? DEFAULT_CUSTOMER_NAME) ?>">
+                                <small class="form-help">Display name for customer header banner</small>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-                <div id="visitor-logs" class="card-body">
-                    <div class="loading">Loading visitor logs...</div>
+
+                <div class="admin-actions">
+                    <button id="save-settings" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                    <button class="btn btn-secondary" onclick="location.reload()">
+                        <i class="fas fa-undo"></i> Reset Changes
+                    </button>
                 </div>
-            </section>
+            </div>
+
+            <!-- System Monitoring Section -->
+            <div id="admin-system" class="admin-section">
+                <div class="admin-grid">
+                    <section class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-heartbeat"></i> System Health</h2>
+                            <button id="test-health" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Test Now
+                            </button>
+                        </div>
+                        <div id="health-status" class="card-body">
+                            <div class="loading">Click "Test Now" to check system health...</div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-line"></i> Visitor Tracking</h2>
+                            <button id="refresh-visitors" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div id="visitor-logs" class="card-body">
+                            <div class="loading">Loading visitor logs...</div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Dashboard Configuration Section -->
+            <div id="admin-dashboard" class="admin-section">
+                <section class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-th-large"></i> Dashboard Cards</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            <i class="fas fa-info-circle"></i>
+                            Configure which metric cards appear on your dashboard. Click cards to expand to detailed views.
+                        </p>
+                        <div class="dashboard-config-grid">
+                            <div class="config-card active">
+                                <i class="fas fa-printer"></i>
+                                <h3>Total Devices</h3>
+                                <p>Shows total managed devices</p>
+                                <span class="badge badge-success">Enabled</span>
+                            </div>
+                            <div class="config-card active">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h3>Offline Devices</h3>
+                                <p>Displays offline device count</p>
+                                <span class="badge badge-success">Enabled</span>
+                            </div>
+                            <div class="config-card active">
+                                <i class="fas fa-tint"></i>
+                                <h3>Supply Alerts</h3>
+                                <p>Low toner and supply warnings</p>
+                                <span class="badge badge-success">Enabled</span>
+                            </div>
+                            <div class="config-card active">
+                                <i class="fas fa-network-wired"></i>
+                                <h3>Connectors</h3>
+                                <p>Active data connector count</p>
+                                <span class="badge badge-success">Enabled</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- User Management Section -->
+            <div id="admin-users" class="admin-section">
+                <section class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-users"></i> User Management</h2>
+                        <button class="btn btn-secondary" disabled>
+                            <i class="fas fa-user-plus"></i> Add User
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            <i class="fas fa-info-circle"></i>
+                            User management features coming soon. Currently logged in as: <strong><?= htmlspecialchars($_SESSION['username'] ?? 'admin') ?></strong>
+                        </p>
+                        <div class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <p>User management panel under development</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
 
