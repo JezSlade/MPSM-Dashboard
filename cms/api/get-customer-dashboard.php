@@ -15,7 +15,7 @@ $customerCode = $_GET['customerCode'] ?? DEFAULT_CUSTOMER_CODE;
 try {
     // Call mps-api backend via /query endpoint
     $payload = json_encode([
-        'action' => 'Dashboard/Customer',
+        'action' => 'CustomerDashboard',
         'params' => [
             'customerCode' => $customerCode
         ]
