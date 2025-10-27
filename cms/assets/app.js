@@ -264,7 +264,8 @@ const MPSM = (function() {
             }
 
             const dashboard = data.dashboard;
-            const sdsData = dashboard.SdsDashboard || {};
+            const mpsData = dashboard.MpsDashboardCustomer || {};
+            const customerName = state.customerName || 'Unknown Customer';
 
             container.innerHTML = `
                 <div class="customer-banner">
@@ -273,30 +274,31 @@ const MPSM = (function() {
                     </div>
                     <div class="customer-banner-content">
                         <div class="customer-banner-label">Customer</div>
-                        <h2 class="customer-banner-name">${dashboard.CustomerName || 'Unknown'}</h2>
+                        <h2 class="customer-banner-name">${customerName}</h2>
+                        <div class="customer-banner-code">${state.customerCode}</div>
                     </div>
                 </div>
 
                 <div class="metrics-grid">
-                    <div class="metric-card">
+                    <div class="metric-card clickable" onclick="MPSM.expandDevices()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-print"></i></div>
-                        <div class="metric-value">${sdsData.TotalDevices || 0}</div>
+                        <div class="metric-value">${mpsData.TotalManagedDevices || 0}</div>
                         <div class="metric-label">Total Devices</div>
                     </div>
-                    <div class="metric-card ${sdsData.DevicesWithErrors > 0 ? 'status-danger' : 'status-success'}">
-                        <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                        <div class="metric-value">${sdsData.DevicesWithErrors || 0}</div>
-                        <div class="metric-label">Errors</div>
-                    </div>
-                    <div class="metric-card ${sdsData.DevicesWithWarnings > 0 ? 'status-warning' : 'status-success'}">
-                        <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
-                        <div class="metric-value">${sdsData.DevicesWithWarnings || 0}</div>
-                        <div class="metric-label">Warnings</div>
-                    </div>
-                    <div class="metric-card ${sdsData.NonCommunicatingDevices > 0 ? 'status-warning' : 'status-success'}">
+                    <div class="metric-card clickable" onclick="MPSM.expandOffline()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-wifi-slash"></i></div>
-                        <div class="metric-value">${sdsData.NonCommunicatingDevices || 0}</div>
+                        <div class="metric-value" id="offline-count">0</div>
                         <div class="metric-label">Offline</div>
+                    </div>
+                    <div class="metric-card clickable status-warning" onclick="MPSM.expandAlerts()" style="cursor:pointer">
+                        <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
+                        <div class="metric-value" id="alerts-count">0</div>
+                        <div class="metric-label">Alerts</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-link"></i></div>
+                        <div class="metric-value">${mpsData.TotalConnectors || 0}</div>
+                        <div class="metric-label">Connectors</div>
                     </div>
                 </div>
             `;
@@ -331,6 +333,11 @@ const MPSM = (function() {
 
             state.devices = data.devices || [];
             countEl.textContent = state.devices.length;
+
+            // Update offline count in header
+            const offlineCount = state.devices.filter(d => d.IsOffline).length;
+            const offlineEl = document.getElementById('offline-count');
+            if (offlineEl) offlineEl.textContent = offlineCount;
 
             if (state.devices.length === 0) {
                 container.innerHTML = '<div class="empty-state">No devices found</div>';
@@ -400,6 +407,10 @@ const MPSM = (function() {
 
             const alerts = data.alerts?.Items || [];
             countEl.textContent = alerts.length;
+
+            // Update alerts count in header
+            const alertsHeaderEl = document.getElementById('alerts-count');
+            if (alertsHeaderEl) alertsHeaderEl.textContent = alerts.length;
 
             if (alerts.length === 0) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
@@ -797,12 +808,180 @@ const MPSM = (function() {
         }
     });
 
+    /**
+     * Expand to show all devices in modal
+     */
+    function expandDevices() {
+        debugLog('Expanding all devices view', 'info');
+        const modal = document.getElementById('device-modal');
+        const modalTitle = document.getElementById('modal-device-name');
+        const modalBody = document.getElementById('modal-device-body');
+
+        modalTitle.textContent = 'All Devices';
+
+        if (state.devices.length === 0) {
+            modalBody.innerHTML = '<div class="empty-state">No devices found</div>';
+        } else {
+            modalBody.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Asset #</th>
+                            <th>Model</th>
+                            <th>IP Address</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${state.devices.map(device => `
+                            <tr onclick="MPSM.openDeviceModal('${device.Id}')" style="cursor: pointer;">
+                                <td>${device.AssetNumber || device.SerialNumber || 'N/A'}</td>
+                                <td>${device.Product?.Model || 'Unknown'}</td>
+                                <td>${device.IpAddress || 'N/A'}</td>
+                                <td>${device.Note || device.OfficeDescription || '-'}</td>
+                                <td>
+                                    <span class="status-badge ${device.IsOffline ? 'status-danger' : 'status-success'}">
+                                        ${device.IsOffline ? 'Offline' : 'Online'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        modal.classList.add('active');
+    }
+
+    /**
+     * Expand to show offline devices in modal
+     */
+    function expandOffline() {
+        debugLog('Expanding offline devices view', 'info');
+        const modal = document.getElementById('device-modal');
+        const modalTitle = document.getElementById('modal-device-name');
+        const modalBody = document.getElementById('modal-device-body');
+
+        const offlineDevices = state.devices.filter(d => d.IsOffline);
+
+        modalTitle.textContent = 'Offline Devices';
+
+        if (offlineDevices.length === 0) {
+            modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No offline devices</p></div>';
+        } else {
+            modalBody.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Asset #</th>
+                            <th>Model</th>
+                            <th>IP Address</th>
+                            <th>Location</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${offlineDevices.map(device => `
+                            <tr onclick="MPSM.openDeviceModal('${device.Id}')" style="cursor: pointer;">
+                                <td>${device.AssetNumber || device.SerialNumber || 'N/A'}</td>
+                                <td>${device.Product?.Model || 'Unknown'}</td>
+                                <td>${device.IpAddress || 'N/A'}</td>
+                                <td>${device.Note || device.OfficeDescription || '-'}</td>
+                                <td>${device.LastContact ? new Date(device.LastContact).toLocaleString() : 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        modal.classList.add('active');
+    }
+
+    /**
+     * Expand to show supply alerts in modal
+     */
+    async function expandAlerts() {
+        debugLog('Expanding supply alerts view', 'info');
+        const modal = document.getElementById('device-modal');
+        const modalTitle = document.getElementById('modal-device-name');
+        const modalBody = document.getElementById('modal-device-body');
+
+        modalTitle.textContent = 'Supply Alerts';
+        modalBody.innerHTML = '<div class="loading">Loading alerts...</div>';
+        modal.classList.add('active');
+
+        try {
+            const response = await fetch('api/get-supply-alerts.php?customerCode=' + state.customerCode + '&pageRows=100');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            const alerts = data.alerts?.Items || [];
+
+            if (alerts.length === 0) {
+                modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
+            } else {
+                modalBody.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Supply</th>
+                                <th>Level</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${alerts.map(alert => `
+                                <tr>
+                                    <td>${alert.Device?.Model || 'Unknown'}</td>
+                                    <td>${alert.SupplyType || 'N/A'}</td>
+                                    <td>
+                                        <div class="toner-bar-container">
+                                            <div class="toner-bar ${alert.Level <= 10 ? 'toner-critical' : alert.Level <= 20 ? 'toner-low' : ''}">
+                                                <div class="toner-fill" style="width: ${alert.Level}%"></div>
+                                            </div>
+                                            <span class="toner-label">${alert.Level}%</span>
+                                        </div>
+                                    </td>
+                                    <td>${alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <span class="badge ${alert.ManageOption === 'Replace' ? 'badge-warning' : 'badge-info'}">
+                                            ${alert.ManageOption || 'Monitor'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        } catch (error) {
+            modalBody.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load alerts</p>
+                    <p class="error-message">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
     // Public API
     return {
         loadDashboard,
         showToast,
         openDeviceModal,
-        closeDeviceModal
+        closeDeviceModal,
+        expandDevices,
+        expandOffline,
+        expandAlerts
     };
 
 })();
