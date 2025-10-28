@@ -295,7 +295,13 @@ function getSystemHealth() {
         $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/?action=Ping');
         if ($response !== false) {
             $data = json_decode($response, true);
-            $health['mpsApi']['connected'] = isset($data['success']) && $data['success'];
+            if (isset($data['success'])) {
+                $health['mpsApi']['connected'] = (bool) $data['success'];
+            } elseif (isset($data['status'])) {
+                $health['mpsApi']['connected'] = strtolower((string) $data['status']) === 'online';
+            } else {
+                $health['mpsApi']['connected'] = true;
+            }
         } else {
             throw new Exception("mps-api backend not responding");
         }

@@ -26,6 +26,9 @@ const MPSM = (function() {
     };
 
     let customerSearchTimeout = null;
+    let cardSelection = new Set();
+    let cardsInitialized = false;
+    let userTableInstance = null;
 
     // Debug logger
     function debugLog(message, type = 'info') {
@@ -93,6 +96,16 @@ const MPSM = (function() {
             });
         });
 
+        const userForm = document.getElementById('user-create-form');
+        if (userForm) {
+            userForm.addEventListener('submit', createUser);
+        }
+
+        const userTable = document.getElementById('user-table');
+        if (userTable) {
+            userTable.addEventListener('click', handleUserTableClick);
+        }
+
         const customerSelect = document.getElementById('customer-select');
         if (customerSelect) {
             customerSelect.addEventListener('change', handleCustomerSelection);
@@ -108,15 +121,19 @@ const MPSM = (function() {
      * Switch admin sections
      */
     function switchAdminSection(sectionName) {
-        // Update buttons
         document.querySelectorAll('.admin-nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.section === sectionName);
         });
 
-        // Update sections
         document.querySelectorAll('.admin-section').forEach(section => {
             section.classList.toggle('active', section.id === 'admin-' + sectionName);
         });
+
+        if (sectionName === 'dashboard') {
+            renderCardConfig();
+        } else if (sectionName === 'users') {
+            loadUsers();
+        }
     }
 
     /**
@@ -188,9 +205,12 @@ const MPSM = (function() {
             state.customerCode = prefs.customerCode || 'W9OPXL0YDK';
             state.customerName = prefs.customerName || 'CAPE FEAR VALLEY MED CTR.';
             state.theme = prefs.theme || 'light';
+            state.cards = Array.isArray(prefs.cards) ? prefs.cards : [];
+            cardSelection = state.cards.length ? new Set(state.cards) : cardSelection;
 
             debugLog(`Preferences loaded: ${state.customerCode}`, 'info');
             syncPreferenceInputs();
+            initializeCards();
 
         } catch (error) {
             debugLog('Failed to load preferences: ' + error.message, 'error');
@@ -199,8 +219,295 @@ const MPSM = (function() {
             state.dealerId = 'SZ13qRwU5GtFLj0i_CbEgQ2';
             state.customerCode = 'W9OPXL0YDK';
             state.customerName = 'CAPE FEAR VALLEY MED CTR.';
+            state.theme = 'light';
             syncPreferenceInputs();
+            initializeCards();
         }
+    }
+
+    function handleCardData(cardId, snapshot) {
+        if (!snapshot) {
+            return;
+        }
+
+        if (!cardSelection.size && Array.isArray(state.cards) && state.cards.length) {
+            cardSelection = new Set(state.cards);
+        }
+
+        if (cardId === 'device-inventory') {
+            state.devices = snapshot.context?.devices || [];
+            const totalDevices = snapshot.headline ? snapshot.headline.value : state.devices.length;
+            updateMetricValue('device-count', totalDevices);
+            updateMetricValue('banner-device-total', totalDevices);
+            const offlineCount = state.devices.filter(device => device.IsOffline).length;
+            updateMetricValue('offline-count', offlineCount);
+        }
+
+        if (cardId === 'supply-alerts') {
+            state.alerts = snapshot.context?.alerts || [];
+            const totalAlerts = snapshot.headline ? snapshot.headline.value : state.alerts.length;
+            updateMetricValue('alerts-count', totalAlerts);
+            updateMetricValue('alert-count', totalAlerts);
+        }
+
+        if (cardId === 'integrations') {
+            state.connectorsSummary = snapshot.context?.integrations || [];
+            const connectorTotal = snapshot.headline ? snapshot.headline.value : state.connectorsSummary.length;
+            updateMetricValue('connectors-count', connectorTotal);
+            updateMetricValue('connectors-hidden-count', connectorTotal);
+        }
+    }
+
+    function updateMetricValue(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (value === null || value === undefined) {
+            el.textContent = '0';
+            return;
+        }
+        const num = Number(value);
+        el.textContent = Number.isFinite(num) ? num.toLocaleString() : String(value);
+    }
+
+    function renderCardConfig() {
+        const container = document.getElementById('dashboard-card-config');
+        if (!container) return;
+
+        const definitions = CardManager.getAvailableCards();
+
+        if (!cardSelection.size && Array.isArray(state.cards) && state.cards.length) {
+            cardSelection = new Set(state.cards);
+        }
+
+        if (!cardSelection.size) {
+            cardSelection = new Set(CardManager.getEnabledCards());
+        }
+
+        container.innerHTML = '';
+
+        definitions
+            .slice()
+            .sort((a, b) => a.title.localeCompare(b.title))
+            .forEach(card => {
+                const active = cardSelection.has(card.id) || (!cardSelection.size && card.defaultVisible);
+                if (!cardSelection.size && card.defaultVisible) {
+                    cardSelection.add(card.id);
+                }
+
+                const label = document.createElement('label');
+                label.className = 'config-card' + (active ? ' active' : '');
+
+                label.innerHTML = `
+                    <input type="checkbox" data-card-id="${card.id}" ${active ? 'checked' : ''}>
+                    <i class="${card.icon}"></i>
+                    <h3>${card.title}</h3>
+                    <p>${card.description || ''}</p>
+                `;
+
+                label.addEventListener('change', (event) => {
+                    const checkbox = event.currentTarget.querySelector('input[type="checkbox"]');
+                    const { cardId } = checkbox.dataset;
+                    const checked = checkbox.checked;
+
+                    if (!checked && cardSelection.size <= 1 && cardSelection.has(cardId)) {
+                        checkbox.checked = true;
+                        showToast('At least one card must remain enabled', 'warning');
+                        return;
+                    }
+
+                    if (checked) {
+                        cardSelection.add(cardId);
+                        label.classList.add('active');
+                    } else {
+                        cardSelection.delete(cardId);
+                        label.classList.remove('active');
+                    }
+
+                    CardManager.setEnabledCards(Array.from(cardSelection));
+                CardManager.refreshAll().catch(error => debugLog('Card refresh failed: ' + error.message, 'error'));
+            });
+
+            container.appendChild(label);
+        });
+    }
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('api/users/list.php');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            renderUserTable(data.users || []);
+        } catch (error) {
+            debugLog('Failed to load users: ' + error.message, 'error');
+            showToast('Failed to load users: ' + error.message, 'error');
+        }
+    }
+
+    function renderUserTable(users) {
+        const table = document.getElementById('user-table');
+        if (!table) return;
+
+        const columns = `
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+        `;
+
+        const rows = (users || []).map(user => `
+            <tr>
+                <td>${escapeHtml(user.username)}</td>
+                <td>${user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</td>
+                <td>
+                    <div class="user-actions">
+                        <button class="btn btn-secondary" data-action="reset" data-id="${user.id}">
+                            <i class="fas fa-key"></i> Reset Password
+                        </button>
+                        <button class="btn btn-danger" data-action="delete" data-id="${user.id}">
+                            <i class="fas fa-user-slash"></i> Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        const body = rows || `
+            <tr>
+                <td colspan="3">
+                    <div class="empty-state"><i class="fas fa-info-circle"></i><p>No users found</p></div>
+                </td>
+            </tr>
+        `;
+
+        table.innerHTML = columns + '<tbody>' + body + '</tbody>';
+    }
+
+    async function createUser(event) {
+        event.preventDefault();
+
+        const usernameInput = document.getElementById('create-username');
+        const passwordInput = document.getElementById('create-password');
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        if (!username || !password) {
+            showToast('Username and password are required', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch('api/users/create.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            usernameInput.value = '';
+            passwordInput.value = '';
+            showToast('User created successfully', 'success');
+            await loadUsers();
+        } catch (error) {
+            debugLog('Failed to create user: ' + error.message, 'error');
+            showToast('Failed to create user: ' + error.message, 'error');
+        }
+    }
+
+    async function handleUserTableClick(event) {
+        const target = event.target.closest('button[data-action]');
+        if (!target) return;
+
+        const userId = Number(target.dataset.id);
+        const action = target.dataset.action;
+
+        if (action === 'reset') {
+            const password = prompt('Enter a new password for this user:');
+            if (!password) return;
+            await resetUserPassword(userId, password);
+        }
+
+        if (action === 'delete') {
+            if (!confirm('Are you sure you want to delete this user?')) {
+                return;
+            }
+            await deleteUser(userId);
+        }
+    }
+
+    async function resetUserPassword(userId, password) {
+        try {
+            const response = await fetch('api/users/update.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: userId, password })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            showToast('Password updated successfully', 'success');
+            await loadUsers();
+        } catch (error) {
+            debugLog('Failed to update password: ' + error.message, 'error');
+            showToast('Failed to update password: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteUser(userId) {
+        try {
+            const response = await fetch('api/users/delete.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: userId })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            showToast('User deleted successfully', 'success');
+            await loadUsers();
+        } catch (error) {
+            debugLog('Failed to delete user: ' + error.message, 'error');
+            showToast('Failed to delete user: ' + error.message, 'error');
+        }
+    }
+
+    function openCardModal(cardId) {
+        const targetCard = document.querySelector(`.dashboard-card[data-card-id="${cardId}"]`);
+        if (targetCard) {
+            targetCard.click();
+            return true;
+        }
+        return false;
+    }
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     /**
@@ -226,6 +533,33 @@ const MPSM = (function() {
         if (customerNameInput) {
             customerNameInput.value = state.customerName || '';
         }
+    }
+
+    function initializeCards() {
+        if (!cardsInitialized) {
+            CardManager.init({
+                container: '#dashboard-card-container',
+                preferencesProvider: () => ({ cards: Array.from(cardSelection) }),
+                onCardData: handleCardData
+            });
+            cardsInitialized = true;
+        }
+
+        if (!cardSelection.size && Array.isArray(state.cards) && state.cards.length) {
+            cardSelection = new Set(state.cards);
+        }
+
+        CardManager.setContext({
+            dealerCode: state.dealerCode,
+            dealerId: state.dealerId,
+            customerCode: state.customerCode
+        });
+
+        if (cardSelection.size) {
+            CardManager.setEnabledCards(Array.from(cardSelection));
+        }
+
+        renderCardConfig();
     }
 
     /**
@@ -378,6 +712,12 @@ const MPSM = (function() {
         state.alerts = [];
         state.connectorsSummary = null;
 
+        CardManager.setContext({
+            dealerCode: state.dealerCode,
+            dealerId: state.dealerId,
+            customerCode: state.customerCode
+        });
+
         debugLog(`Customer selected: ${code}`, 'info');
         loadDashboard();
     }
@@ -417,6 +757,7 @@ const MPSM = (function() {
 
         try {
             debugLog('Saving settings...', 'info');
+            const enabledCards = Array.from(cardSelection);
             const response = await fetch('api/save-preferences.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -424,7 +765,8 @@ const MPSM = (function() {
                     dealerCode: dealerCode,
                     dealerId: dealerId,
                     customerCode: customerCode,
-                    customerName: customerName
+                    customerName: customerName,
+                    cards: enabledCards
                 })
             });
 
@@ -438,6 +780,17 @@ const MPSM = (function() {
             state.dealerId = dealerId;
             state.customerCode = customerCode;
             state.customerName = customerName;
+            state.cards = enabledCards;
+            cardSelection = new Set(enabledCards);
+
+            CardManager.setContext({
+                dealerCode: state.dealerCode,
+                dealerId: state.dealerId,
+                customerCode: state.customerCode
+            });
+            if (cardSelection.size) {
+                CardManager.setEnabledCards(Array.from(cardSelection));
+            }
 
             debugLog('Settings saved successfully', 'info');
             showToast('Settings saved successfully', 'success');
@@ -454,11 +807,13 @@ const MPSM = (function() {
      */
     async function loadDashboard() {
         try {
-            await Promise.all([
-                loadCustomerHeader(),
-                loadDevices(),
-                loadSupplyAlerts()
-            ]);
+            CardManager.setContext({
+                dealerCode: state.dealerCode,
+                dealerId: state.dealerId,
+                customerCode: state.customerCode
+            });
+            await loadCustomerHeader();
+            await CardManager.refreshAll();
         } catch (error) {
             showToast('Failed to load dashboard: ' + error.message, 'error');
         }
@@ -1136,6 +1491,9 @@ const MPSM = (function() {
      * Expand to show all devices in modal
      */
     function expandDevices() {
+        if (openCardModal('device-inventory')) {
+            return;
+        }
         debugLog('Expanding all devices view', 'info');
         const modal = document.getElementById('device-modal');
         const modalTitle = document.getElementById('modal-device-name');
@@ -1228,6 +1586,9 @@ const MPSM = (function() {
      * Expand to show connector summary in modal
      */
     async function expandConnectors() {
+        if (openCardModal('integrations')) {
+            return;
+        }
         debugLog('Expanding connectors view', 'info');
         const modal = document.getElementById('device-modal');
         const modalTitle = document.getElementById('modal-device-name');
@@ -1306,6 +1667,9 @@ const MPSM = (function() {
      * Expand to show supply alerts in modal
      */
     async function expandAlerts() {
+        if (openCardModal('supply-alerts')) {
+            return;
+        }
         debugLog('Expanding supply alerts view', 'info');
         const modal = document.getElementById('device-modal');
         const modalTitle = document.getElementById('modal-device-name');

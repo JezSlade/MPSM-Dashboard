@@ -74,6 +74,7 @@ $preferences = getUserPreferences($userId);
                 <span id="connectors-hidden-count" style="display:none;">0</span>
                 <div id="device-list" style="display:none;"></div>
                 <div id="supply-alerts" style="display:none;"></div>
+                <div id="dashboard-card-container" class="dashboard-card-grid"></div>
             </div>
         </div>
 
@@ -201,32 +202,7 @@ $preferences = getUserPreferences($userId);
                             <i class="fas fa-info-circle"></i>
                             Configure which metric cards appear on your dashboard. Click cards to expand to detailed views.
                         </p>
-                        <div class="dashboard-config-grid">
-                            <div class="config-card active">
-                                <i class="fas fa-printer"></i>
-                                <h3>Total Devices</h3>
-                                <p>Shows total managed devices</p>
-                                <span class="badge badge-success">Enabled</span>
-                            </div>
-                            <div class="config-card active">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <h3>Offline Devices</h3>
-                                <p>Displays offline device count</p>
-                                <span class="badge badge-success">Enabled</span>
-                            </div>
-                            <div class="config-card active">
-                                <i class="fas fa-tint"></i>
-                                <h3>Supply Alerts</h3>
-                                <p>Low toner and supply warnings</p>
-                                <span class="badge badge-success">Enabled</span>
-                            </div>
-                            <div class="config-card active">
-                                <i class="fas fa-network-wired"></i>
-                                <h3>Connectors</h3>
-                                <p>Active data connector count</p>
-                                <span class="badge badge-success">Enabled</span>
-                            </div>
-                        </div>
+                        <div id="dashboard-card-config" class="dashboard-config-grid"></div>
                     </div>
                 </section>
             </div>
@@ -236,18 +212,43 @@ $preferences = getUserPreferences($userId);
                 <section class="card">
                     <div class="card-header">
                         <h2><i class="fas fa-users"></i> User Management</h2>
-                        <button class="btn btn-secondary" disabled>
-                            <i class="fas fa-user-plus"></i> Add User
-                        </button>
                     </div>
                     <div class="card-body">
-                        <p class="info-text">
-                            <i class="fas fa-info-circle"></i>
-                            User management features coming soon. Currently logged in as: <strong><?= htmlspecialchars($_SESSION['username'] ?? 'admin') ?></strong>
-                        </p>
-                        <div class="empty-state">
-                            <i class="fas fa-users"></i>
-                            <p>User management panel under development</p>
+                        <div class="user-management">
+                            <form id="user-create-form" class="user-form">
+                                <h3><i class="fas fa-user-plus"></i> Add User</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Username</label>
+                                        <input type="text" id="create-username" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Password</label>
+                                        <input type="password" id="create-password" class="form-control" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-user-plus"></i> Create User
+                                </button>
+                            </form>
+                            <div class="user-table-wrapper">
+                                <table id="user-table" class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="3">
+                                                <div class="loading">Loading users...</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -272,6 +273,9 @@ $preferences = getUserPreferences($userId);
     </div>
 
     <!-- JavaScript -->
+    <script src="assets/js/table-utils.js"></script>
+    <script src="assets/js/card-registry.js"></script>
+    <script src="assets/js/card-manager.js"></script>
     <script src="assets/app.js"></script>
 </body>
 </html>
