@@ -71,6 +71,7 @@ $preferences = getUserPreferences($userId);
                 <!-- Hidden elements for backward compatibility -->
                 <span id="device-count" style="display:none;">0</span>
                 <span id="alert-count" style="display:none;">0</span>
+                <span id="connectors-hidden-count" style="display:none;">0</span>
                 <div id="device-list" style="display:none;"></div>
                 <div id="supply-alerts" style="display:none;"></div>
             </div>

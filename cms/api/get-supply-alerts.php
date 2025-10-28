@@ -14,6 +14,20 @@ $dealerCode = $_GET['dealerCode'] ?? DEFAULT_DEALER_CODE;
 $customerCode = $_GET['customerCode'] ?? null; // Optional - null returns all customers
 $pageNumber = isset($_GET['pageNumber']) ? (int)$_GET['pageNumber'] : 1;
 $pageRows = isset($_GET['pageRows']) ? (int)$_GET['pageRows'] : 50;
+$sortColumn = $_GET['sortColumn'] ?? 'InitialDate';
+$sortOrder = $_GET['sortOrder'] ?? 'Desc';
+
+if ($pageNumber < 1) {
+    $pageNumber = 1;
+}
+
+if ($pageRows < 1) {
+    $pageRows = 1;
+} elseif ($pageRows > 200) {
+    $pageRows = 200;
+}
+
+$sortOrder = strtoupper($sortOrder) === 'ASC' ? 'Asc' : 'Desc';
 
 try {
     // Call mps-api backend via /query endpoint
@@ -26,8 +40,8 @@ try {
             'ManageOption' => null, // null = all options
             'PageNumber' => $pageNumber,
             'PageRows' => $pageRows,
-            'SortColumn' => 'InitialDate',
-            'SortOrder' => 1 // 1 = Descending (most recent first)
+            'SortColumn' => $sortColumn,
+            'SortOrder' => $sortOrder
         ]
     ]);
 

@@ -18,6 +18,8 @@ const MPSM = (function() {
         customerSearchTerm: '',
         isLoadingCustomers: false,
         devices: [],
+        alerts: [],
+        connectorsSummary: null,
         currentDevicePage: 1,
         currentAlertPage: 1,
         debugLogs: []
@@ -372,6 +374,9 @@ const MPSM = (function() {
 
         state.customerCode = code;
         state.customerName = description || state.customerName || '';
+        state.devices = [];
+        state.alerts = [];
+        state.connectorsSummary = null;
 
         debugLog(`Customer selected: ${code}`, 'info');
         loadDashboard();
@@ -474,10 +479,16 @@ const MPSM = (function() {
                 throw new Error(data.error);
             }
 
-            const dashboard = data.dashboard;
+            const dashboard = data.dashboard || {};
             const sdsData = dashboard.SdsDashboard || {};
             const mpsData = dashboard.MpsDashboardCustomer || {};
-            const customerName = state.customerName || 'Unknown Customer';
+            const totalsSource = dashboard.MpsDashboardCustomer || dashboard;
+            const resolvedName = state.customerName
+                || totalsSource.CustomerDescription
+                || totalsSource.Description
+                || dashboard.CustomerDescription
+                || 'Unknown Customer';
+            state.customerName = resolvedName;
 
             container.innerHTML = `
                 <div class="customer-banner">
@@ -486,15 +497,15 @@ const MPSM = (function() {
                     </div>
                     <div class="customer-banner-content">
                         <div class="customer-banner-label">Customer</div>
-                        <h2 class="customer-banner-name">${customerName}</h2>
+                        <h2 class="customer-banner-name">${resolvedName}</h2>
                         <div class="customer-banner-code">${state.customerCode}</div>
                     </div>
                 </div>
 
-                <div class="metrics-grid">
+                    <div class="metrics-grid">
                     <div class="metric-card clickable" onclick="MPSM.expandDevices()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-print"></i></div>
-                        <div class="metric-value">${mpsData.TotalManagedDevices || 0}</div>
+                        <div class="metric-value" id="banner-device-total">${totalsSource.TotalManagedDevices ?? 0}</div>
                         <div class="metric-label">Total Devices</div>
                     </div>
                     <div class="metric-card clickable" onclick="MPSM.expandOffline()" style="cursor:pointer">
@@ -507,20 +518,37 @@ const MPSM = (function() {
                         <div class="metric-value" id="alerts-count">0</div>
                         <div class="metric-label">Alerts</div>
                     </div>
-                    <div class="metric-card">
+                    <div class="metric-card clickable" onclick="MPSM.expandConnectors()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-link"></i></div>
-                        <div class="metric-value">${mpsData.TotalConnectors || 0}</div>
+                        <div class="metric-value" id="connectors-count">${totalsSource.TotalConnectors ?? 0}</div>
                         <div class="metric-label">Connectors</div>
                     </div>
                 </div>
             `;
 
             // Hydrate dynamic metrics after template injection
-            const totalDevices = Number(mpsData.TotalManagedDevices ?? 0);
-            const totalConnectors = Number(mpsData.TotalConnectors ?? 0);
-            const offlineCount = Number(sdsData.NonCommunicatingDevices ?? 0);
+            const totalDevices = Number(
+                totalsSource.TotalManagedDevices ??
+                dashboard.TotalManagedDevices ??
+                0
+            );
+            const totalConnectors = Number(
+                totalsSource.TotalConnectors ??
+                dashboard.TotalConnectors ??
+                0
+            );
 
-            const bannerDeviceCount = container.querySelector('.metric-card .metric-value');
+            const offlineCandidates = [
+                dashboard.NonCommunicatingDevices,
+                sdsData.NonCommunicatingDevices,
+                dashboard.OfflineDevices,
+                totalsSource.OfflineDevices
+            ];
+            const offlineCount = Number(
+                offlineCandidates.find(value => typeof value === 'number') ?? 0
+            );
+
+            const bannerDeviceCount = document.getElementById('banner-device-total');
             if (bannerDeviceCount) {
                 bannerDeviceCount.textContent = totalDevices;
             }
@@ -530,9 +558,14 @@ const MPSM = (function() {
                 dashboardDeviceCount.textContent = totalDevices;
             }
 
-            const connectorsCard = container.querySelectorAll('.metric-card .metric-value')[3];
-            if (connectorsCard) {
-                connectorsCard.textContent = totalConnectors;
+            const connectorsBannerEl = document.getElementById('connectors-count');
+            if (connectorsBannerEl) {
+                connectorsBannerEl.textContent = totalConnectors;
+            }
+
+            const connectorsHiddenEl = document.getElementById('connectors-hidden-count');
+            if (connectorsHiddenEl) {
+                connectorsHiddenEl.textContent = totalConnectors;
             }
 
             const offlineEl = document.getElementById('offline-count');
@@ -540,7 +573,11 @@ const MPSM = (function() {
                 offlineEl.textContent = offlineCount;
             }
 
-            const supplySummary = Array.isArray(mpsData.SupplyAlerts) ? mpsData.SupplyAlerts : [];
+            const supplySummary = Array.isArray(totalsSource.SupplyAlerts)
+                ? totalsSource.SupplyAlerts
+                : Array.isArray(dashboard.SupplyAlerts)
+                    ? dashboard.SupplyAlerts
+                    : [];
             const toManageEntry = supplySummary.find(item => (item.Key || '').toLowerCase() === 'tomanage');
             const alertsTotal = Number(toManageEntry?.Value ?? 0);
 
@@ -553,6 +590,10 @@ const MPSM = (function() {
             if (alertsHiddenEl) {
                 alertsHiddenEl.textContent = alertsTotal;
             }
+
+            state.totalDevices = totalDevices;
+            state.connectorsSummary = totalConnectors;
+            state.alertsTotal = alertsTotal;
 
         } catch (error) {
             container.innerHTML = `
@@ -575,22 +616,39 @@ const MPSM = (function() {
         container.innerHTML = '<div class="loading">Loading devices...</div>';
 
         try {
-            const response = await fetch('api/get-devices.php?customerCode=' + state.customerCode);
+            const params = new URLSearchParams({
+                customerCode: state.customerCode || '',
+                dealerCode: state.dealerCode || '',
+                dealerId: state.dealerId || '',
+                pageRows: 50,
+                sortColumn: 'AssetNumber',
+                sortOrder: 'Asc'
+            });
+
+            const response = await fetch('api/get-devices.php?' + params.toString());
             const data = await response.json();
 
             if (!data.success) {
                 throw new Error(data.error);
             }
 
-            state.devices = data.devices || [];
-            countEl.textContent = state.devices.length;
+            const devices = Array.isArray(data.devices) ? data.devices : [];
+            state.devices = devices;
+
+            const totalCount = Number(data.total ?? devices.length ?? 0);
+
+            countEl.textContent = totalCount;
+            const bannerDeviceCount = document.getElementById('banner-device-total');
+            if (bannerDeviceCount) {
+                bannerDeviceCount.textContent = totalCount;
+            }
 
             // Update offline count in header
-            const offlineCount = state.devices.filter(d => d.IsOffline).length;
+            const offlineCount = devices.filter(d => d.IsOffline).length;
             const offlineEl = document.getElementById('offline-count');
             if (offlineEl) offlineEl.textContent = offlineCount;
 
-            if (state.devices.length === 0) {
+            if (devices.length === 0) {
                 container.innerHTML = '<div class="empty-state">No devices found</div>';
                 return;
             }
@@ -649,7 +707,15 @@ const MPSM = (function() {
         container.innerHTML = '<div class="loading">Loading supply alerts...</div>';
 
         try {
-            const response = await fetch('api/get-supply-alerts.php?customerCode=' + state.customerCode + '&pageRows=20');
+            const params = new URLSearchParams({
+                customerCode: state.customerCode || '',
+                dealerCode: state.dealerCode || '',
+                pageRows: 20,
+                sortColumn: 'InitialDate',
+                sortOrder: 'Desc'
+            });
+
+            const response = await fetch('api/get-supply-alerts.php?' + params.toString());
             const data = await response.json();
 
             if (!data.success) {
@@ -665,14 +731,9 @@ const MPSM = (function() {
                 alerts = alertPayload.Items;
             }
 
-            const displayedCount = alerts.length;
+            state.alerts = alerts;
+            const displayedCount = state.alertsTotal ?? alerts.length;
             countEl.textContent = displayedCount;
-
-            // Update alerts count in header
-            const alertsHeaderEl = document.getElementById('alerts-count');
-            if (alertsHeaderEl && !Array.isArray(alertPayload) && typeof alertPayload.TotalCount === 'number') {
-                alertsHeaderEl.textContent = alertPayload.TotalCount;
-            }
 
             if (alerts.length === 0) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
@@ -694,16 +755,17 @@ const MPSM = (function() {
                     </thead>
                     <tbody>
                         ${alerts.map(alert => {
-                            const level = alert.Percentage || 0;
+                            const level = alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0;
                             const priority = level < 10 ? 'HIGH' : level < 25 ? 'MED' : 'LOW';
                             const priorityClass = level < 10 ? 'status-danger' : level < 25 ? 'status-warning' : 'status-success';
                             const date = alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A';
+                            const manageOption = alert.ManageOption || alert.InstallationOption || 'Monitor';
 
                             return `
                                 <tr>
                                     <td><span class="status-badge ${priorityClass}">${priority}</span></td>
-                                    <td>${alert.DeviceSerialNumber || 'Unknown'}</td>
-                                    <td>${alert.SupplyType || 'Supply'}</td>
+                                    <td>${alert.SerialNumber || alert.DeviceSerialNumber || 'Unknown'}</td>
+                                    <td>${alert.SupplyTypeDescription || alert.SupplyType || 'Supply'}</td>
                                     <td>
                                         <div class="toner-bar">
                                             <div class="toner-fill ${priorityClass}" style="width: ${level}%"></div>
@@ -711,7 +773,7 @@ const MPSM = (function() {
                                         </div>
                                     </td>
                                     <td>${date}</td>
-                                    <td>${alert.StatusText || 'Pending'}</td>
+                                    <td>${manageOption}</td>
                                 </tr>
                             `;
                         }).join('')}
@@ -1163,6 +1225,84 @@ const MPSM = (function() {
     }
 
     /**
+     * Expand to show connector summary in modal
+     */
+    async function expandConnectors() {
+        debugLog('Expanding connectors view', 'info');
+        const modal = document.getElementById('device-modal');
+        const modalTitle = document.getElementById('modal-device-name');
+        const modalBody = document.getElementById('modal-device-body');
+
+        modalTitle.textContent = 'Connectors';
+        modalBody.innerHTML = '<div class="loading">Loading connector data...</div>';
+        modal.classList.add('active');
+
+        try {
+            const params = new URLSearchParams({
+                customerCode: state.customerCode || ''
+            });
+
+            const response = await fetch('api/get-connectors.php?' + params.toString());
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            const summary = data.connectors || {};
+            state.connectorsSummary = summary;
+
+            if (!summary || Object.keys(summary).length === 0) {
+                modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No connector data available for this customer</p></div>';
+                return;
+            }
+
+            modalBody.innerHTML = `
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Windows Connectors</th>
+                            <td>${summary.TotalWin ?? 0}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Windows (Last 24h)</th>
+                            <td>${summary.LastDay ?? 0}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Windows (Last Period)</th>
+                            <td>${summary.LastPeriod ?? 0}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Windows (Over Period)</th>
+                            <td>${summary.OverPeriod ?? 0}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">SDS Connectors</th>
+                            <td>${summary.SdsTotalWin ?? 0}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Connector Clusters</th>
+                            <td>${summary.TotalClusters ?? 0}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">SDS Clusters</th>
+                            <td>${summary.SdsTotalClusters ?? 0}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+        } catch (error) {
+            modalBody.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load connector data</p>
+                    <p class="error-message">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    /**
      * Expand to show supply alerts in modal
      */
     async function expandAlerts() {
@@ -1176,14 +1316,27 @@ const MPSM = (function() {
         modal.classList.add('active');
 
         try {
-            const response = await fetch('api/get-supply-alerts.php?customerCode=' + state.customerCode + '&pageRows=100');
+            const params = new URLSearchParams({
+                customerCode: state.customerCode || '',
+                dealerCode: state.dealerCode || '',
+                pageRows: 100,
+                sortColumn: 'InitialDate',
+                sortOrder: 'Desc'
+            });
+
+            const response = await fetch('api/get-supply-alerts.php?' + params.toString());
             const data = await response.json();
 
             if (!data.success) {
                 throw new Error(data.error);
             }
 
-            const alerts = data.alerts?.Items || [];
+            const payload = data.alerts ?? [];
+            const alerts = Array.isArray(payload)
+                ? payload
+                : Array.isArray(payload.Items)
+                    ? payload.Items
+                    : [];
 
             if (alerts.length === 0) {
                 modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
@@ -1200,26 +1353,33 @@ const MPSM = (function() {
                             </tr>
                         </thead>
                         <tbody>
-                            ${alerts.map(alert => `
-                                <tr>
-                                    <td>${alert.Device?.Model || 'Unknown'}</td>
-                                    <td>${alert.SupplyType || 'N/A'}</td>
-                                    <td>
-                                        <div class="toner-bar-container">
-                                            <div class="toner-bar ${alert.Level <= 10 ? 'toner-critical' : alert.Level <= 20 ? 'toner-low' : ''}">
-                                                <div class="toner-fill" style="width: ${alert.Level}%"></div>
+                            ${alerts.map(alert => {
+                                const level = Number(alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0);
+                                const levelClass = level <= 10 ? 'toner-critical' : level <= 20 ? 'toner-low' : '';
+                                const model = alert.Product?.Model || alert.ProductModel || 'Unknown';
+                                const supply = alert.SupplyTypeDescription || alert.SupplyType || 'N/A';
+                                const manageOption = alert.ManageOption || alert.InstallationOption || 'Monitor';
+                                return `
+                                    <tr>
+                                        <td>${model}</td>
+                                        <td>${supply}</td>
+                                        <td>
+                                            <div class="toner-bar-container">
+                                                <div class="toner-bar ${levelClass}">
+                                                    <div class="toner-fill" style="width: ${level}%"></div>
+                                                </div>
+                                                <span class="toner-label">${level}%</span>
                                             </div>
-                                            <span class="toner-label">${alert.Level}%</span>
-                                        </div>
-                                    </td>
-                                    <td>${alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <span class="badge ${alert.ManageOption === 'Replace' ? 'badge-warning' : 'badge-info'}">
-                                            ${alert.ManageOption || 'Monitor'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            `).join('')}
+                                        </td>
+                                        <td>${alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A'}</td>
+                                        <td>
+                                            <span class="badge ${manageOption === 'Replace' ? 'badge-warning' : 'badge-info'}">
+                                                ${manageOption}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 `;
@@ -1243,6 +1403,7 @@ const MPSM = (function() {
         closeDeviceModal,
         expandDevices,
         expandOffline,
+        expandConnectors,
         expandAlerts
     };
 
