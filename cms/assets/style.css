@@ -264,6 +264,10 @@ main {
     cursor: pointer;
 }
 
+.table-row-clickable:hover {
+    background-color: var(--bg-secondary);
+}
+
 /* Health Grid */
 .health-grid {
     display: grid;

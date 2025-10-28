@@ -215,7 +215,12 @@ const CardRegistry = (function () {
                     ],
                     rows: snapshot.context.devices,
                     pageSize: 50,
-                    defaultSort: { column: 'AssetNumber', direction: 'asc' }
+                    defaultSort: { column: 'AssetNumber', direction: 'asc' },
+                    onRowClick: row => {
+                        if (row && row.Id && window.MPSM && typeof window.MPSM.openDeviceModal === 'function') {
+                            window.MPSM.openDeviceModal(row.Id);
+                        }
+                    }
                 });
             }
         },

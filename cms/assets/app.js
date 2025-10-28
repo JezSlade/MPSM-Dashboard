@@ -20,6 +20,10 @@ const MPSM = (function() {
         devices: [],
         alerts: [],
         connectorsSummary: null,
+        totalDevices: 0,
+        offlineDevices: 0,
+        connectorsTotal: 0,
+        alertsTotal: 0,
         currentDevicePage: 1,
         currentAlertPage: 1,
         debugLogs: [],
@@ -273,24 +277,59 @@ const MPSM = (function() {
         }
 
         if (cardId === 'device-inventory') {
-            state.devices = snapshot.context?.devices || [];
-            const totalDevices = snapshot.headline ? snapshot.headline.value : state.devices.length;
+            const snapshotDevices = Array.isArray(snapshot.context?.devices) ? snapshot.context.devices : [];
+            if (snapshotDevices.length) {
+                state.devices = snapshotDevices;
+            }
+
+            const headlineTotal = Number(snapshot.headline?.value ?? 0);
+            const contextTotal = Number(snapshot.context?.total ?? 0);
+            const fallbackTotal = Number(state.totalDevices ?? 0);
+            const totalDevices = Math.max(headlineTotal, contextTotal, fallbackTotal);
+
+            state.totalDevices = totalDevices;
             updateMetricValue('device-count', totalDevices);
             updateMetricValue('banner-device-total', totalDevices);
-            const offlineCount = state.devices.filter(device => device.IsOffline).length;
+
+            const metricOffline = snapshot.metrics?.find(metric => metric.label === 'Offline');
+            const offlineFromMetric = Number(metricOffline?.value ?? 0);
+            const offlineFromState = Array.isArray(state.devices)
+                ? state.devices.filter(device => device.IsOffline).length
+                : 0;
+            const fallbackOffline = Number(state.offlineDevices ?? 0);
+            const offlineCount = Math.max(offlineFromMetric, offlineFromState, fallbackOffline);
+
+            state.offlineDevices = offlineCount;
             updateMetricValue('offline-count', offlineCount);
         }
 
         if (cardId === 'supply-alerts') {
-            state.alerts = snapshot.context?.alerts || [];
-            const totalAlerts = snapshot.headline ? snapshot.headline.value : state.alerts.length;
+            const snapshotAlerts = Array.isArray(snapshot.context?.alerts) ? snapshot.context.alerts : [];
+            if (snapshotAlerts.length) {
+                state.alerts = snapshotAlerts;
+            }
+
+            const headlineAlerts = Number(snapshot.headline?.value ?? 0);
+            const contextAlerts = Number(snapshot.context?.total ?? 0);
+            const fallbackAlerts = Number(state.alertsTotal ?? 0);
+            const totalAlerts = Math.max(headlineAlerts, contextAlerts, fallbackAlerts, state.alerts?.length ?? 0);
+
+            state.alertsTotal = totalAlerts;
             updateMetricValue('alerts-count', totalAlerts);
             updateMetricValue('alert-count', totalAlerts);
         }
 
         if (cardId === 'integrations') {
-            state.connectorsSummary = snapshot.context?.integrations || [];
-            const connectorTotal = snapshot.headline ? snapshot.headline.value : state.connectorsSummary.length;
+            const integrations = Array.isArray(snapshot.context?.integrations) ? snapshot.context.integrations : [];
+            if (integrations.length) {
+                state.connectorsSummary = integrations;
+            }
+
+            const headlineConnectors = Number(snapshot.headline?.value ?? 0);
+            const fallbackConnectors = Number(state.connectorsTotal ?? 0);
+            const connectorTotal = Math.max(headlineConnectors, fallbackConnectors, integrations.length);
+
+            state.connectorsTotal = connectorTotal;
             updateMetricValue('connectors-count', connectorTotal);
             updateMetricValue('connectors-hidden-count', connectorTotal);
         }
@@ -1217,7 +1256,8 @@ const MPSM = (function() {
             }
 
             state.totalDevices = totalDevices;
-            state.connectorsSummary = totalConnectors;
+            state.connectorsTotal = totalConnectors;
+            state.offlineDevices = offlineCount;
             state.alertsTotal = alertsTotal;
 
         } catch (error) {
@@ -2099,4 +2139,5 @@ const MPSM = (function() {
 })();
 
 // Expose functions to window for onclick handlers
+window.MPSM = MPSM;
 window.closeDeviceModal = () => MPSM.closeDeviceModal();
