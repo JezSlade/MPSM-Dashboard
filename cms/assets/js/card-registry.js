@@ -77,6 +77,60 @@ const CardRegistry = (function () {
             }
         },
         {
+            id: 'connectors',
+            title: 'Connectors',
+            icon: 'fas fa-network-wired',
+            description: 'Windows and SDS connector activity',
+            group: 'Summary',
+            defaultVisible: true,
+            load: async (helpers, context) => {
+                const data = await helpers.fetchJson('api/get-connectors.php', {
+                    customerCode: context.customerCode
+                });
+
+                const summary = data.connectors || {};
+                const total = Number(summary.TotalWin ?? 0) + Number(summary.TotalEmbedded ?? 0);
+                const lastDay = Number(summary.LastDay ?? 0);
+                const sdsActive = Number(summary.SdsTotalWin ?? 0) > 0;
+                const online = total > 0 && (lastDay > 0 || sdsActive);
+
+                return {
+                    headline: {
+                        value: total,
+                        label: 'Connectors'
+                    },
+                    metrics: [
+                        {
+                            label: 'Status',
+                            value: online ? 'Online' : 'Offline',
+                            tone: online ? 'success' : 'danger'
+                        },
+                        {
+                            label: 'Active (24h)',
+                            value: lastDay
+                        }
+                    ],
+                    context: { summary, online }
+                };
+            },
+            renderModal: (helpers, context, snapshot) => {
+                const modal = helpers.createModal('Connector Activity');
+                const summary = snapshot.context.summary || {};
+
+                modal.innerHTML = `
+                    <table class="table">
+                        <tbody>
+                            <tr><th>Total Connectors</th><td>${helpers.formatNumber(Number(summary.TotalWin ?? 0) + Number(summary.TotalEmbedded ?? 0))}</td></tr>
+                            <tr><th>SDS Connectors</th><td>${helpers.formatNumber(summary.SdsTotalWin ?? 0)}</td></tr>
+                            <tr><th>Active in last 24h</th><td>${helpers.formatNumber(summary.LastDay ?? 0)}</td></tr>
+                            <tr><th>Active last period</th><td>${helpers.formatNumber(summary.LastPeriod ?? 0)}</td></tr>
+                            <tr><th>Offline over period</th><td>${helpers.formatNumber(summary.OverPeriod ?? 0)}</td></tr>
+                        </tbody>
+                    </table>
+                `;
+            }
+        },
+        {
             id: 'device-inventory',
             title: 'Devices',
             icon: 'fas fa-print',
@@ -133,6 +187,30 @@ const CardRegistry = (function () {
                             format: value => value === 'Offline'
                                 ? '<span class="status-badge status-danger">Offline</span>'
                                 : '<span class="status-badge status-success">Online</span>'
+                        },
+                        {
+                            id: 'BlackToner',
+                            label: 'K',
+                            accessor: row => resolveTonerValue(row, ['BlackToner', 'BlackToner1', 'BlackToner2', 'BlackToner3']),
+                            format: value => renderTonerBadge('black', value)
+                        },
+                        {
+                            id: 'CyanToner',
+                            label: 'C',
+                            accessor: row => resolveTonerValue(row, ['CyanToner']),
+                            format: value => renderTonerBadge('cyan', value)
+                        },
+                        {
+                            id: 'MagentaToner',
+                            label: 'M',
+                            accessor: row => resolveTonerValue(row, ['MagentaToner']),
+                            format: value => renderTonerBadge('magenta', value)
+                        },
+                        {
+                            id: 'YellowToner',
+                            label: 'Y',
+                            accessor: row => resolveTonerValue(row, ['YellowToner']),
+                            format: value => renderTonerBadge('yellow', value)
                         }
                     ],
                     rows: snapshot.context.devices,
@@ -184,7 +262,48 @@ const CardRegistry = (function () {
             },
             renderModal: (helpers, context, snapshot) => {
                 const modal = helpers.createModal('Supply Alerts');
-                helpers.renderTable(modal, {
+                const alerts = snapshot.context.alerts || [];
+                const supplyTypes = Array.from(new Set(alerts.map(alert => alert.SupplyTypeDescription || alert.SupplyType || 'Other')));
+                const activeTypes = new Set(supplyTypes);
+
+                const filterBar = document.createElement('div');
+                filterBar.className = 'table-filters';
+                filterBar.innerHTML = '<span class="filter-label"><i class="fas fa-filter"></i> Supply Types</span>';
+
+                supplyTypes.forEach(type => {
+                    const label = document.createElement('label');
+                    label.className = 'filter-checkbox';
+                    label.innerHTML = `
+                        <input type="checkbox" value="${helpers.escape(type)}" checked>
+                        <span>${helpers.escape(type)}</span>
+                    `;
+                    const checkbox = label.querySelector('input');
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) {
+                            activeTypes.add(type);
+                        } else {
+                            activeTypes.delete(type);
+                        }
+
+                        if (!activeTypes.size) {
+                            activeTypes.add(type);
+                            checkbox.checked = true;
+                            showToast('At least one supply type must remain visible', 'warning');
+                            return;
+                        }
+
+                        const filtered = alerts.filter(alert => activeTypes.has(alert.SupplyTypeDescription || alert.SupplyType || 'Other'));
+                        tableHandle.updateRows(filtered);
+                    });
+                    filterBar.appendChild(label);
+                });
+
+                modal.appendChild(filterBar);
+
+                const tableContainer = document.createElement('div');
+                modal.appendChild(tableContainer);
+
+                const tableHandle = helpers.renderTable(tableContainer, {
                     columns: [
                         { id: 'SerialNumber', label: 'Device', sortable: true },
                         { id: 'ProductModel', label: 'Model', accessor: row => row.ProductModel || row.Product?.Model || 'Unknown', sortable: true },
@@ -208,7 +327,7 @@ const CardRegistry = (function () {
                             accessor: row => row.ManageOption || row.InstallationOption || 'Monitor'
                         }
                     ],
-                    rows: snapshot.context.alerts,
+                    rows: alerts,
                     pageSize: 50,
                     defaultSort: { column: 'Level', direction: 'asc' }
                 });
@@ -473,3 +592,35 @@ const CardRegistry = (function () {
         getAll
     };
 })();
+
+function resolveTonerValue(row, keys) {
+    for (const key of keys) {
+        const value = row[key];
+        if (value !== undefined && value !== null) {
+            return Number(value);
+        }
+    }
+    return null;
+}
+
+function renderTonerBadge(color, value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return `
+            <span class="toner-chip toner-chip--unknown">
+                <span class="toner-chip__fill" style="width:0%"></span>
+                <span class="toner-chip__label">--</span>
+            </span>
+        `;
+    }
+
+    const percentage = Math.max(0, Math.min(100, Number(value)));
+    const colorClass = `toner-chip--${color}`;
+
+    return `
+        <span class="toner-chip ${colorClass}">
+            <span class="toner-chip__fill" style="width:${percentage}%"></span>
+            <span class="toner-chip__label">${percentage}%</span>
+        </span>
+    `;
+}
+

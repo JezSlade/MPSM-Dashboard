@@ -13,7 +13,11 @@
       "Bash(git push:*)",
       "Bash(curl:*)",
       "Bash(python -m json.tool:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File delete_setup.ps1)",
+      "Bash(powershell -Command \"Get-Content ''cms\\assets\\app.js'' | Measure-Object -Line | Select-Object -ExpandProperty Lines\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-app.ps1)",
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-all.ps1)"
     ],
     "deny": [],
     "ask": []

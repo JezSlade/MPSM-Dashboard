@@ -22,13 +22,23 @@ const MPSM = (function() {
         connectorsSummary: null,
         currentDevicePage: 1,
         currentAlertPage: 1,
-        debugLogs: []
+        debugLogs: [],
+        endpointCatalog: {
+            categories: [],
+            statistics: null,
+            selectedCategory: null,
+            searchTerm: '',
+            initialized: false
+        }
     };
 
     let customerSearchTimeout = null;
     let cardSelection = new Set();
     let cardsInitialized = false;
     let userTableInstance = null;
+    let connectorPollTimer = null;
+    let catalogTableInstance = null;
+    let catalogSearchTimeout = null;
 
     // Debug logger
     function debugLog(message, type = 'info') {
@@ -40,6 +50,18 @@ const MPSM = (function() {
         if (state.debugLogs.length > 50) {
             state.debugLogs.shift();
         }
+    }
+
+    function updateConnectorStatusDisplay(online) {
+        const statusEl = document.getElementById('connectors-status');
+        if (!statusEl) {
+            return;
+        }
+
+        statusEl.textContent = online ? 'Online' : 'Offline';
+        statusEl.classList.remove('status-muted');
+        statusEl.classList.toggle('status-online', online);
+        statusEl.classList.toggle('status-offline', !online);
     }
 
     /**
@@ -115,6 +137,16 @@ const MPSM = (function() {
         if (customerSearch) {
             customerSearch.addEventListener('input', handleCustomerSearch);
         }
+
+        const catalogSearch = document.getElementById('catalog-search');
+        if (catalogSearch) {
+            catalogSearch.addEventListener('input', handleCatalogSearch);
+        }
+
+        const catalogCategories = document.getElementById('catalog-category-list');
+        if (catalogCategories) {
+            catalogCategories.addEventListener('click', handleCatalogCategoryClick);
+        }
     }
 
     /**
@@ -133,6 +165,12 @@ const MPSM = (function() {
             renderCardConfig();
         } else if (sectionName === 'users') {
             loadUsers();
+        } else if (sectionName === 'catalog') {
+            loadEndpointCatalog({
+                category: state.endpointCatalog.selectedCategory,
+                search: state.endpointCatalog.searchTerm,
+                silent: state.endpointCatalog.initialized
+            });
         }
     }
 
@@ -742,6 +780,237 @@ const MPSM = (function() {
     }
 
     /**
+     * Handle endpoint catalog search input with debounce
+     */
+    function handleCatalogSearch(event) {
+        const term = event.target.value.trim();
+
+        if (catalogSearchTimeout) {
+            clearTimeout(catalogSearchTimeout);
+        }
+
+        catalogSearchTimeout = setTimeout(() => {
+            state.endpointCatalog.searchTerm = term;
+            loadEndpointCatalog({
+                category: state.endpointCatalog.selectedCategory,
+                search: term,
+                silent: false
+            });
+        }, 300);
+    }
+
+    /**
+     * Handle catalog category selection
+     */
+    function handleCatalogCategoryClick(event) {
+        const button = event.target.closest('button[data-category]');
+        if (!button) {
+            return;
+        }
+
+        const value = button.dataset.category || '';
+        const category = value === '' ? null : value;
+        state.endpointCatalog.selectedCategory = category;
+
+        loadEndpointCatalog({
+            category,
+            search: state.endpointCatalog.searchTerm,
+            silent: false
+        });
+    }
+
+    /**
+     * Load endpoint catalog data from API
+     */
+    async function loadEndpointCatalog(options = {}) {
+        const category = options.category !== undefined ? options.category : state.endpointCatalog.selectedCategory;
+        const search = options.search !== undefined ? options.search : state.endpointCatalog.searchTerm;
+        const silent = options.silent ?? false;
+
+        const categoryContainer = document.getElementById('catalog-category-list');
+        const tableContainer = document.getElementById('catalog-table');
+        const statsContainer = document.getElementById('catalog-stats');
+
+        if (!categoryContainer || !tableContainer) {
+            return;
+        }
+
+        if (!silent && !catalogTableInstance) {
+            tableContainer.innerHTML = '<div class="loading">Loading endpoints...</div>';
+            if (statsContainer) {
+                statsContainer.innerHTML = '';
+            }
+        }
+
+        try {
+            const params = new URLSearchParams({ limit: 200 });
+            if (category) {
+                params.set('category', category);
+            }
+            if (search) {
+                params.set('search', search);
+            }
+
+            const response = await fetch('api/get-endpoint-catalog.php?' + params.toString());
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Catalog request failed');
+            }
+
+            state.endpointCatalog.categories = Array.isArray(data.categories) ? data.categories : [];
+            state.endpointCatalog.statistics = data.statistics || null;
+            state.endpointCatalog.selectedCategory = category;
+            state.endpointCatalog.searchTerm = search;
+            state.endpointCatalog.initialized = true;
+
+            renderEndpointCatalog(data);
+        } catch (error) {
+            if (!silent && !catalogTableInstance) {
+                tableContainer.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load endpoint catalog</p>
+                        <p class="error-message">${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+            showToast('Failed to load endpoint catalog: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Render endpoint catalog UI
+     */
+    function renderEndpointCatalog(payload) {
+        const categoryContainer = document.getElementById('catalog-category-list');
+        const statsContainer = document.getElementById('catalog-stats');
+        const tableContainer = document.getElementById('catalog-table');
+        const searchInput = document.getElementById('catalog-search');
+
+        if (!categoryContainer || !tableContainer) {
+            return;
+        }
+
+        if (searchInput && searchInput.value !== state.endpointCatalog.searchTerm) {
+            searchInput.value = state.endpointCatalog.searchTerm;
+        }
+
+        const categories = Array.isArray(payload.categories) ? payload.categories : [];
+        const stats = payload.statistics || {};
+        const selectedCategory = state.endpointCatalog.selectedCategory || null;
+
+        const totalEndpoints = stats.total_endpoints ?? categories.reduce((acc, item) => acc + (item.endpoint_count || 0), 0);
+        const workingEndpoints = stats.working ?? null;
+        const failedEndpoints = stats.failed ?? null;
+        const averageDuration = stats.avg_response_time ?? null;
+
+        const augmentedCategories = [
+            {
+                id: '',
+                description: 'All Endpoints',
+                endpoint_count: totalEndpoints
+            },
+            ...categories
+        ];
+
+        categoryContainer.innerHTML = augmentedCategories.map(category => {
+            const id = category.id ?? '';
+            const isActive = (selectedCategory ?? '') === id;
+            return `
+                <li>
+                    <button type="button" class="catalog-category ${isActive ? 'active' : ''}" data-category="${escapeHtml(id)}">
+                        <span class="catalog-category-name">${escapeHtml(category.description ?? '')}</span>
+                        <span class="catalog-category-count">${category.endpoint_count ?? 0}</span>
+                    </button>
+                </li>
+            `;
+        }).join('');
+
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="catalog-stat">
+                    <span class="catalog-stat-label">Total</span>
+                    <span class="catalog-stat-value">${Number(totalEndpoints || 0).toLocaleString()}</span>
+                </div>
+                <div class="catalog-stat">
+                    <span class="catalog-stat-label">Working</span>
+                    <span class="catalog-stat-value">${workingEndpoints !== null ? Number(workingEndpoints).toLocaleString() : '—'}</span>
+                </div>
+                <div class="catalog-stat">
+                    <span class="catalog-stat-label">Failed</span>
+                    <span class="catalog-stat-value">${failedEndpoints !== null ? Number(failedEndpoints).toLocaleString() : '—'}</span>
+                </div>
+                <div class="catalog-stat">
+                    <span class="catalog-stat-label">Avg. Response (ms)</span>
+                    <span class="catalog-stat-value">${averageDuration !== null ? Number(averageDuration).toLocaleString() : '—'}</span>
+                </div>
+            `;
+        }
+
+        const rows = Array.isArray(payload.endpoints) ? payload.endpoints : [];
+        const normalizedRows = rows.map(entry => {
+            const status = entry.success === null || entry.success === undefined
+                ? 'Unknown'
+                : entry.success
+                    ? 'Working'
+                    : 'Failed';
+            const tone = status === 'Working' ? 'success' : (status === 'Failed' ? 'danger' : 'muted');
+            return Object.assign({}, entry, {
+                status,
+                statusTone: tone,
+                data_count: entry.data_count !== null && entry.data_count !== undefined
+                    ? Number(entry.data_count)
+                    : null,
+                duration_ms: entry.duration_ms !== null && entry.duration_ms !== undefined
+                    ? Number(entry.duration_ms)
+                    : null
+            });
+        });
+
+        const columns = [
+            { id: 'action', label: 'Action', sortable: true },
+            { id: 'category', label: 'Category', sortable: true },
+            {
+                id: 'status',
+                label: 'Status',
+                accessor: row => row.status,
+                format: (value, row) => `<span class="status-badge status-${row.statusTone || 'muted'}">${value}</span>`,
+                sortable: true
+            },
+            {
+                id: 'data_type',
+                label: 'Data Type',
+                sortable: true
+            },
+            {
+                id: 'data_count',
+                label: 'Items',
+                accessor: row => row.data_count ?? '',
+                sortable: true
+            },
+            {
+                id: 'duration_ms',
+                label: 'Duration (ms)',
+                accessor: row => row.duration_ms ?? '',
+                sortable: true
+            },
+            { id: 'use_case', label: 'Use Case', sortable: true }
+        ];
+
+        if (catalogTableInstance) {
+            catalogTableInstance.updateRows(normalizedRows);
+        } else {
+            catalogTableInstance = TableUtils.renderTable(tableContainer, {
+                columns,
+                rows: normalizedRows,
+                pageSize: 25,
+                defaultSort: { column: 'action', direction: 'asc' }
+            });
+        }
+    }
+
+    /**
      * Save settings from admin panel
      */
     async function saveSettings() {
@@ -877,6 +1146,7 @@ const MPSM = (function() {
                         <div class="metric-icon"><i class="fas fa-link"></i></div>
                         <div class="metric-value" id="connectors-count">${totalsSource.TotalConnectors ?? 0}</div>
                         <div class="metric-label">Connectors</div>
+                        <div class="metric-meta status-pill status-muted" id="connectors-status">Checking…</div>
                     </div>
                 </div>
             `;
@@ -1490,6 +1760,74 @@ const MPSM = (function() {
     /**
      * Expand to show all devices in modal
      */
+    function buildDeviceTableColumns() {
+        return [
+            { id: 'AssetNumber', label: 'Asset #', sortable: true },
+            {
+                id: 'ProductModel',
+                label: 'Model',
+                accessor: row => (row.Product && row.Product.Model) || row.ProductModel || 'Unknown',
+                sortable: true
+            },
+            { id: 'SerialNumber', label: 'Serial', sortable: true },
+            { id: 'IpAddress', label: 'IP Address' },
+            {
+                id: 'OfficeDescription',
+                label: 'Location',
+                accessor: row => row.Note || row.OfficeDescription || '-'
+            },
+            {
+                id: 'IsOffline',
+                label: 'Status',
+                sortable: true,
+                accessor: row => row.IsOffline ? 'Offline' : 'Online',
+                format: value => value === 'Offline'
+                    ? '<span class="status-badge status-danger">Offline</span>'
+                    : '<span class="status-badge status-success">Online</span>'
+            },
+            {
+                id: 'BlackToner',
+                label: 'K',
+                accessor: row => typeof resolveTonerValue === 'function'
+                    ? resolveTonerValue(row, ['BlackToner', 'BlackToner1', 'BlackToner2', 'BlackToner3'])
+                    : row.BlackToner,
+                format: value => typeof renderTonerBadge === 'function'
+                    ? renderTonerBadge('black', value)
+                    : (value ?? '--')
+            },
+            {
+                id: 'CyanToner',
+                label: 'C',
+                accessor: row => typeof resolveTonerValue === 'function'
+                    ? resolveTonerValue(row, ['CyanToner'])
+                    : row.CyanToner,
+                format: value => typeof renderTonerBadge === 'function'
+                    ? renderTonerBadge('cyan', value)
+                    : (value ?? '--')
+            },
+            {
+                id: 'MagentaToner',
+                label: 'M',
+                accessor: row => typeof resolveTonerValue === 'function'
+                    ? resolveTonerValue(row, ['MagentaToner'])
+                    : row.MagentaToner,
+                format: value => typeof renderTonerBadge === 'function'
+                    ? renderTonerBadge('magenta', value)
+                    : (value ?? '--')
+            },
+            {
+                id: 'YellowToner',
+                label: 'Y',
+                accessor: row => typeof resolveTonerValue === 'function'
+                    ? resolveTonerValue(row, ['YellowToner'])
+                    : row.YellowToner,
+                format: value => typeof renderTonerBadge === 'function'
+                    ? renderTonerBadge('yellow', value)
+                    : (value ?? '--')
+            }
+        ];
+    }
+
     function expandDevices() {
         if (openCardModal('device-inventory')) {
             return;
@@ -1504,34 +1842,20 @@ const MPSM = (function() {
         if (state.devices.length === 0) {
             modalBody.innerHTML = '<div class="empty-state">No devices found</div>';
         } else {
-            modalBody.innerHTML = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Asset #</th>
-                            <th>Model</th>
-                            <th>IP Address</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${state.devices.map(device => `
-                            <tr onclick="MPSM.openDeviceModal('${device.Id}')" style="cursor: pointer;">
-                                <td>${device.AssetNumber || device.SerialNumber || 'N/A'}</td>
-                                <td>${device.Product?.Model || 'Unknown'}</td>
-                                <td>${device.IpAddress || 'N/A'}</td>
-                                <td>${device.Note || device.OfficeDescription || '-'}</td>
-                                <td>
-                                    <span class="status-badge ${device.IsOffline ? 'status-danger' : 'status-success'}">
-                                        ${device.IsOffline ? 'Offline' : 'Online'}
-                                    </span>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+            modalBody.innerHTML = '';
+            const tableContainer = document.createElement('div');
+            modalBody.appendChild(tableContainer);
+            TableUtils.renderTable(tableContainer, {
+                columns: buildDeviceTableColumns(),
+                rows: state.devices,
+                pageSize: 50,
+                defaultSort: { column: 'AssetNumber', direction: 'asc' },
+                onRowClick: row => {
+                    if (row && row.Id) {
+                        openDeviceModal(row.Id);
+                    }
+                }
+            });
         }
 
         modal.classList.add('active');
@@ -1553,30 +1877,31 @@ const MPSM = (function() {
         if (offlineDevices.length === 0) {
             modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No offline devices</p></div>';
         } else {
-            modalBody.innerHTML = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Asset #</th>
-                            <th>Model</th>
-                            <th>IP Address</th>
-                            <th>Location</th>
-                            <th>Last Seen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${offlineDevices.map(device => `
-                            <tr onclick="MPSM.openDeviceModal('${device.Id}')" style="cursor: pointer;">
-                                <td>${device.AssetNumber || device.SerialNumber || 'N/A'}</td>
-                                <td>${device.Product?.Model || 'Unknown'}</td>
-                                <td>${device.IpAddress || 'N/A'}</td>
-                                <td>${device.Note || device.OfficeDescription || '-'}</td>
-                                <td>${device.LastContact ? new Date(device.LastContact).toLocaleString() : 'N/A'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+            modalBody.innerHTML = '';
+            const tableContainer = document.createElement('div');
+            modalBody.appendChild(tableContainer);
+            const enriched = offlineDevices.map(device => Object.assign({}, device, {
+                LastContactFormatted: device.LastContact ? new Date(device.LastContact).toLocaleString() : 'N/A'
+            }));
+            TableUtils.renderTable(tableContainer, {
+                columns: [
+                    ...buildDeviceTableColumns(),
+                    {
+                        id: 'LastContactFormatted',
+                        label: 'Last Seen',
+                        accessor: row => row.LastContactFormatted || 'N/A',
+                        sortable: true
+                    }
+                ],
+                rows: enriched,
+                pageSize: 25,
+                defaultSort: { column: 'AssetNumber', direction: 'asc' },
+                onRowClick: row => {
+                    if (row && row.Id) {
+                        openDeviceModal(row.Id);
+                    }
+                }
+            });
         }
 
         modal.classList.add('active');

@@ -1013,6 +1013,10 @@ class MPSMonitorEngine {
                 $successPayload['catalog_hint'] = $validation['catalog'];
             }
 
+            if (!empty($validation['meta'])) {
+                $successPayload['meta'] = $validation['meta'];
+            }
+
             if ($endpointMetadata !== null) {
                 $successPayload['endpoint_metadata'] = $endpointMetadata;
             }
@@ -1251,6 +1255,7 @@ class MPSMonitorEngine {
      */
     private function validateMPSMResponse($responseData, $httpStatus, ?array $endpointMetadata = null, ?string $actionName = null) {
         $catalogHint = $this->buildCatalogHint($endpointMetadata, $responseData, $actionName);
+        $meta = $this->extractResponseMeta($responseData);
 
         // If not 200, it's a real HTTP error
         if ($httpStatus !== 200) {
@@ -1260,6 +1265,7 @@ class MPSMonitorEngine {
                 'details' => $responseData,
                 'data' => null,
                 'catalog' => $catalogHint,
+                'meta' => $meta,
             ];
         }
 
@@ -1272,6 +1278,7 @@ class MPSMonitorEngine {
                 'error' => null,
                 'details' => null,
                 'catalog' => $catalogHint,
+                'meta' => [],
             ];
         }
 
@@ -1300,6 +1307,7 @@ class MPSMonitorEngine {
                     'details' => $errors,
                     'data' => null,
                     'catalog' => $catalogHint,
+                    'meta' => $meta,
                 ];
             }
 
@@ -1310,6 +1318,7 @@ class MPSMonitorEngine {
                 'error' => null,
                 'details' => null,
                 'catalog' => $catalogHint,
+                'meta' => $meta,
             ];
         }
 
@@ -1320,7 +1329,55 @@ class MPSMonitorEngine {
             'error' => null,
             'details' => null,
             'catalog' => $catalogHint,
+            'meta' => $meta,
         ];
+    }
+
+    /**
+     * Extract pagination and count metadata from standard responses.
+     *
+     * @param mixed $responseData
+     * @return array<string, mixed>
+     */
+    private function extractResponseMeta($responseData) {
+        if (!is_array($responseData)) {
+            return [];
+        }
+
+        $meta = [];
+        $mapping = [
+            'TotalRows' => 'total_rows',
+            'TotalCount' => 'total_count',
+            'Total' => 'total',
+            'PageNumber' => 'page_number',
+            'PageRows' => 'page_size',
+            'PageSize' => 'page_size',
+            'TotalPages' => 'total_pages',
+            'ResultCount' => 'result_count',
+            'Count' => 'count',
+        ];
+
+        foreach ($mapping as $source => $target) {
+            if (!array_key_exists($source, $responseData) || $responseData[$source] === null) {
+                continue;
+            }
+
+            // Preserve numeric fidelity where possible
+            $value = $responseData[$source];
+            if (is_numeric($value)) {
+                $meta[$target] = $value + 0;
+            } else {
+                $meta[$target] = $value;
+            }
+        }
+
+        if (isset($responseData['Result']) && is_array($responseData['Result'])) {
+            $meta['items_returned'] = count($responseData['Result']);
+        } elseif (isset($responseData['Items']) && is_array($responseData['Items'])) {
+            $meta['items_returned'] = count($responseData['Items']);
+        }
+
+        return $meta;
     }
 
     /**

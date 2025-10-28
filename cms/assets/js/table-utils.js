@@ -122,7 +122,7 @@ const TableUtils = (function () {
         table.appendChild(thead);
     }
 
-    function renderTableBody(table, columns, rows) {
+    function renderTableBody(table, columns, rows, rowClick) {
         const tbody = document.createElement('tbody');
 
         if (!rows.length) {
@@ -136,6 +136,10 @@ const TableUtils = (function () {
         } else {
             rows.forEach(row => {
                 const tr = document.createElement('tr');
+                if (typeof rowClick === 'function') {
+                    tr.classList.add('table-row-clickable');
+                    tr.addEventListener('click', () => rowClick(row));
+                }
                 columns.forEach(column => {
                     if (column.hidden) return;
                     const td = document.createElement('td');
@@ -213,7 +217,13 @@ const TableUtils = (function () {
     }
 
     function render(container, options) {
-        const { columns = [], rows = [], pageSize = 50, defaultSort = null } = options;
+        const {
+            columns = [],
+            rows = [],
+            pageSize = 50,
+            defaultSort = null,
+            onRowClick = null
+        } = options;
         container.innerHTML = '';
 
         const state = createState(rows, { pageSize, defaultSort });
@@ -244,7 +254,7 @@ const TableUtils = (function () {
             table.className = 'table';
 
             renderTableHeader(table, columns, state, rerender);
-            renderTableBody(table, columns, getPagedRows(state));
+            renderTableBody(table, columns, getPagedRows(state), onRowClick);
 
             tableWrapper.appendChild(table);
             renderPagination(paginationContainer, state, rerender);
@@ -269,4 +279,3 @@ const TableUtils = (function () {
         renderTable: render
     };
 })();
-

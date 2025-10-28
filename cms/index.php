@@ -90,6 +90,10 @@ $preferences = getUserPreferences($userId);
                     <i class="fas fa-heartbeat"></i>
                     <span>System Monitoring</span>
                 </button>
+                <button class="admin-nav-btn" data-section="catalog">
+                    <i class="fas fa-sitemap"></i>
+                    <span>Endpoint Catalog</span>
+                </button>
                 <button class="admin-nav-btn" data-section="dashboard">
                     <i class="fas fa-th-large"></i>
                     <span>Dashboard Config</span>
@@ -189,6 +193,29 @@ $preferences = getUserPreferences($userId);
                         </div>
                     </section>
                 </div>
+            </div>
+
+            <!-- Dashboard Configuration Section -->
+            <div id="admin-catalog" class="admin-section">
+                <section class="card">
+                    <div class="card-header catalog-header">
+                        <h2><i class="fas fa-sitemap"></i> Endpoint Catalog</h2>
+                        <div class="catalog-actions">
+                            <input type="search" id="catalog-search" class="form-control" placeholder="Search endpoints">
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="catalog-layout">
+                            <aside class="catalog-sidebar">
+                                <ul id="catalog-category-list" class="catalog-category-list"></ul>
+                            </aside>
+                            <section class="catalog-content">
+                                <div id="catalog-stats" class="catalog-stats"></div>
+                                <div id="catalog-table" class="catalog-table"></div>
+                            </section>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <!-- Dashboard Configuration Section -->

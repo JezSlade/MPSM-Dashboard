@@ -66,14 +66,50 @@ try {
 
     // mps-api returns {success, data, action}
     if (isset($data['success']) && $data['success'] && isset($data['data'])) {
-        $devices = $data['data'];
-        if (!is_array($devices)) {
-            $devices = [];
+        $raw = $data['data'];
+        $meta = isset($data['meta']) && is_array($data['meta']) ? $data['meta'] : [];
+        $devices = [];
+
+        if (is_array($raw)) {
+            if (isset($raw['Items']) && is_array($raw['Items'])) {
+                $devices = $raw['Items'];
+                if (!isset($meta['total_count']) && isset($raw['TotalCount'])) {
+                    $meta['total_count'] = (int) $raw['TotalCount'];
+                }
+            } elseif (isset($raw['Result']) && is_array($raw['Result'])) {
+                $devices = $raw['Result'];
+                if (!isset($meta['total_rows']) && isset($raw['TotalRows'])) {
+                    $meta['total_rows'] = (int) $raw['TotalRows'];
+                }
+            } else {
+                $isList = array_keys($raw) === range(0, count($raw) - 1);
+                if ($isList) {
+                    $devices = $raw;
+                }
+            }
         }
+
+        $total = $meta['total_rows']
+            ?? $meta['total_count']
+            ?? $meta['total']
+            ?? (isset($raw['TotalCount']) ? (int) $raw['TotalCount'] : null)
+            ?? (isset($raw['TotalRows']) ? (int) $raw['TotalRows'] : null);
+
+        if ($total === null) {
+            $total = count($devices);
+        }
+
+        $responseMeta = $meta;
+        $responseMeta['items_returned'] = count($devices);
 
         jsonSuccess([
             'devices' => $devices,
-            'total' => is_array($devices) ? count($devices) : 0
+            'total' => (int) $total,
+            'page' => [
+                'number' => $meta['page_number'] ?? $pageNumber,
+                'size' => $meta['page_size'] ?? $pageRows,
+            ],
+            'meta' => $responseMeta,
         ]);
     } else {
         throw new Exception($data['error'] ?? 'Unknown error from mps-api');
