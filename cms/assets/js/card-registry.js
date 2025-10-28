@@ -283,19 +283,36 @@ const CardRegistry = (function () {
                     ? data.integrations.Items
                     : Array.isArray(data.integrations) ? data.integrations : [];
 
+                const stats = integrations.reduce((acc, entry) => {
+                    const code = (entry.Code || '').toLowerCase();
+                    const value = Number(entry.Description ?? 0);
+                    if (code === 'joined') {
+                        acc.joined = value;
+                    } else if (code === 'unjoined') {
+                        acc.unjoined = value;
+                    } else {
+                        acc.other += value;
+                    }
+                    return acc;
+                }, { joined: 0, unjoined: 0, other: 0 });
+
                 return {
                     headline: {
-                        value: integrations.length,
-                        label: 'Integrations'
+                        value: stats.joined,
+                        label: 'Joined Customers'
                     },
                     metrics: [
                         {
-                            label: 'Active',
-                            value: integrations.length,
-                            tone: integrations.length ? 'success' : 'neutral'
+                            label: 'Unjoined',
+                            value: stats.unjoined,
+                            tone: stats.unjoined ? 'warning' : 'success'
+                        },
+                        {
+                            label: 'Total',
+                            value: stats.joined + stats.unjoined + stats.other
                         }
                     ],
-                    context: { integrations }
+                    context: { integrations, stats }
                 };
             },
             renderModal: (helpers, context, snapshot) => {
@@ -303,7 +320,12 @@ const CardRegistry = (function () {
                 helpers.renderTable(modal, {
                     columns: [
                         { id: 'Code', label: 'Code', sortable: true },
-                        { id: 'Description', label: 'Description', sortable: true }
+                        {
+                            id: 'Description',
+                            label: 'Count',
+                            sortable: true,
+                            format: value => helpers.formatNumber(Number(value ?? 0))
+                        }
                     ],
                     rows: snapshot.context.integrations,
                     pageSize: 20,
@@ -330,7 +352,7 @@ const CardRegistry = (function () {
                     ? data.clients.Items
                     : Array.isArray(data.clients) ? data.clients : [];
 
-                const active = clients.filter(client => client.Enabled !== false).length;
+                const active = clients.filter(client => client.IsActive !== false).length;
 
                 return {
                     headline: {
@@ -347,21 +369,21 @@ const CardRegistry = (function () {
                 const modal = helpers.createModal('API Clients');
                 helpers.renderTable(modal, {
                     columns: [
-                        { id: 'Description', label: 'Name', sortable: true },
-                        { id: 'ClientId', label: 'Client ID', sortable: true },
+                        { id: 'Name', label: 'Name', sortable: true },
+                        { id: 'AppId', label: 'Client ID', sortable: true },
                         {
-                            id: 'Enabled',
+                            id: 'IsActive',
                             label: 'Status',
-                            accessor: row => row.Enabled !== false ? 'Active' : 'Disabled',
+                            accessor: row => row.IsActive !== false ? 'Active' : 'Disabled',
                             format: value => value === 'Active'
                                 ? '<span class="status-badge status-success">Active</span>'
                                 : '<span class="status-badge status-muted">Disabled</span>'
                         },
-                        { id: 'LastAccessDate', label: 'Last Access', accessor: row => row.LastAccessDate ? new Date(row.LastAccessDate).toLocaleString() : 'N/A' }
+                        { id: 'DeveloperEmail', label: 'Developer Email', sortable: true }
                     ],
                     rows: snapshot.context.clients,
                     pageSize: 25,
-                    defaultSort: { column: 'Description', direction: 'asc' }
+                    defaultSort: { column: 'Name', direction: 'asc' }
                 });
             }
         },
@@ -384,7 +406,13 @@ const CardRegistry = (function () {
                     ? data.supplies.Items
                     : Array.isArray(data.supplies) ? data.supplies : [];
 
-                const toners = supplies.filter(item => item.SupplyTypeDescription === 'Toner').length;
+                const counts = supplies.reduce((acc, item) => {
+                    const type = item.SupplyType;
+                    if (type === 3) acc.toner += 1;
+                    else if (type === 1) acc.maintenance += 1;
+                    else acc.other += 1;
+                    return acc;
+                }, { toner: 0, maintenance: 0, other: 0 });
 
                 return {
                     headline: {
@@ -392,21 +420,42 @@ const CardRegistry = (function () {
                         label: 'SKUs'
                     },
                     metrics: [
-                        { label: 'Toners', value: toners },
-                        { label: 'Maintenance', value: supplies.length - toners }
+                        { label: 'Toner', value: counts.toner },
+                        { label: 'Maintenance', value: counts.maintenance },
+                        { label: 'Other', value: counts.other }
                     ],
                     context: { supplies }
                 };
             },
             renderModal: (helpers, context, snapshot) => {
                 const modal = helpers.createModal('Dealer Supplies');
+                const supplyType = {
+                    1: 'Maintenance',
+                    2: 'Photo Conductor',
+                    3: 'Toner'
+                };
+                const colorType = {
+                    1: 'Color',
+                    2: 'Mono',
+                    3: 'Mono 2',
+                    4: 'Mono 3'
+                };
+
                 helpers.renderTable(modal, {
                     columns: [
-                        { id: 'Code', label: 'Code', sortable: true },
+                        { id: 'PartNumber', label: 'Part Number', sortable: true },
                         { id: 'Description', label: 'Description', sortable: true },
-                        { id: 'SupplyTypeDescription', label: 'Type', sortable: true },
-                        { id: 'Brand', label: 'Brand', sortable: true },
-                        { id: 'ColorTypeDescription', label: 'Color' }
+                        {
+                            id: 'SupplyType',
+                            label: 'Type',
+                            accessor: row => supplyType[row.SupplyType] || 'Other'
+                        },
+                        {
+                            id: 'ColorType',
+                            label: 'Color',
+                            accessor: row => colorType[row.ColorType] || 'N/A'
+                        },
+                        { id: 'Duration', label: 'Yield', sortable: true }
                     ],
                     rows: snapshot.context.supplies,
                     pageSize: 25,
@@ -424,4 +473,3 @@ const CardRegistry = (function () {
         getAll
     };
 })();
-
