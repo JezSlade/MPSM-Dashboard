@@ -125,6 +125,18 @@ $preferences = getUserPreferences($userId);
                         </div>
                         <div class="card-body">
                             <div class="form-group">
+                                <label><i class="fas fa-search"></i> Find Customer:</label>
+                                <input type="text" id="customer-search" class="form-control" placeholder="Search by name or code">
+                                <small class="form-help">Type at least 2 characters to filter customers</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-list"></i> Select Customer:</label>
+                                <select id="customer-select" class="form-control">
+                                    <option value="">Loading customers...</option>
+                                </select>
+                                <small class="form-help">Choose a customer to populate the fields below</small>
+                            </div>
+                            <div class="form-group">
                                 <label><i class="fas fa-hashtag"></i> Customer Code:</label>
                                 <input type="text" id="customer-code" class="form-control" value="<?= htmlspecialchars($preferences['customerCode'] ?? DEFAULT_CUSTOMER_CODE) ?>">
                                 <small class="form-help">Customer code to display on dashboard</small>

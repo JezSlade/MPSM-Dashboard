@@ -14,11 +14,16 @@ const MPSM = (function() {
         dealerId: null,
         customerCode: null,
         customerName: null,
+        customers: [],
+        customerSearchTerm: '',
+        isLoadingCustomers: false,
         devices: [],
         currentDevicePage: 1,
         currentAlertPage: 1,
         debugLogs: []
     };
+
+    let customerSearchTimeout = null;
 
     // Debug logger
     function debugLog(message, type = 'info') {
@@ -42,6 +47,7 @@ const MPSM = (function() {
 
         try {
             await loadPreferences();
+            await loadCustomerOptions();
             await loadDashboard();
         } catch (error) {
             showToast('Failed to initialize: ' + error.message, 'error');
@@ -84,6 +90,16 @@ const MPSM = (function() {
                 switchAdminSection(section);
             });
         });
+
+        const customerSelect = document.getElementById('customer-select');
+        if (customerSelect) {
+            customerSelect.addEventListener('change', handleCustomerSelection);
+        }
+
+        const customerSearch = document.getElementById('customer-search');
+        if (customerSearch) {
+            customerSearch.addEventListener('input', handleCustomerSearch);
+        }
     }
 
     /**
@@ -172,6 +188,7 @@ const MPSM = (function() {
             state.theme = prefs.theme || 'light';
 
             debugLog(`Preferences loaded: ${state.customerCode}`, 'info');
+            syncPreferenceInputs();
 
         } catch (error) {
             debugLog('Failed to load preferences: ' + error.message, 'error');
@@ -180,6 +197,32 @@ const MPSM = (function() {
             state.dealerId = 'SZ13qRwU5GtFLj0i_CbEgQ2';
             state.customerCode = 'W9OPXL0YDK';
             state.customerName = 'CAPE FEAR VALLEY MED CTR.';
+            syncPreferenceInputs();
+        }
+    }
+
+    /**
+     * Ensure admin inputs reflect current preference state
+     */
+    function syncPreferenceInputs() {
+        const dealerCodeInput = document.getElementById('dealer-code');
+        if (dealerCodeInput) {
+            dealerCodeInput.value = state.dealerCode || '';
+        }
+
+        const dealerIdInput = document.getElementById('dealer-id');
+        if (dealerIdInput) {
+            dealerIdInput.value = state.dealerId || '';
+        }
+
+        const customerCodeInput = document.getElementById('customer-code');
+        if (customerCodeInput) {
+            customerCodeInput.value = state.customerCode || '';
+        }
+
+        const customerNameInput = document.getElementById('customer-name');
+        if (customerNameInput) {
+            customerNameInput.value = state.customerName || '';
         }
     }
 
@@ -206,6 +249,151 @@ const MPSM = (function() {
         } catch (error) {
             console.error('Failed to save preference:', error);
         }
+    }
+
+    /**
+     * Load customers for the selector
+     */
+    async function loadCustomerOptions(searchTerm = '') {
+        const select = document.getElementById('customer-select');
+        if (!select) {
+            return;
+        }
+
+        const shouldFilter = searchTerm && searchTerm.length >= 2;
+        const query = shouldFilter ? `?search=${encodeURIComponent(searchTerm)}` : '';
+
+        state.customerSearchTerm = searchTerm;
+        state.isLoadingCustomers = true;
+
+        select.innerHTML = '<option value="">Loading customers...</option>';
+
+        try {
+            const response = await fetch('api/get-customers.php' + query);
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            state.customers = Array.isArray(data.customers) ? data.customers : [];
+            populateCustomerSelect();
+
+        } catch (error) {
+            debugLog('Failed to load customers: ' + error.message, 'error');
+            showToast('Failed to load customers: ' + error.message, 'error');
+            populateCustomerSelect();
+        } finally {
+            state.isLoadingCustomers = false;
+        }
+    }
+
+    /**
+     * Populate customer select element
+     */
+    function populateCustomerSelect() {
+        const select = document.getElementById('customer-select');
+        if (!select) {
+            return;
+        }
+
+        const currentCode = (document.getElementById('customer-code')?.value || state.customerCode || '').trim();
+        const currentName = (document.getElementById('customer-name')?.value || state.customerName || '').trim();
+
+        select.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = state.isLoadingCustomers ? 'Loading customers...' : 'Select a customer';
+        placeholder.disabled = true;
+        placeholder.selected = !currentCode;
+        select.appendChild(placeholder);
+
+        const customers = Array.isArray(state.customers) ? state.customers : [];
+        let hasMatch = false;
+
+        if (!customers.length) {
+            placeholder.textContent = state.isLoadingCustomers ? 'Loading customers...' : 'No customers found';
+            if (currentCode) {
+                const manualOption = document.createElement('option');
+                manualOption.value = currentCode;
+                manualOption.textContent = currentName ? `${currentName} (${currentCode})` : currentCode;
+                manualOption.selected = true;
+                manualOption.dataset.manual = 'true';
+                select.appendChild(manualOption);
+            }
+            return;
+        }
+
+        customers.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer.Code;
+            const label = customer.Description ? `${customer.Description} (${customer.Code})` : customer.Code;
+            option.textContent = label;
+            if (customer.Code === currentCode) {
+                option.selected = true;
+                hasMatch = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (!hasMatch && currentCode) {
+            const manualOption = document.createElement('option');
+            manualOption.value = currentCode;
+            manualOption.textContent = currentName ? `${currentName} (${currentCode})` : currentCode;
+            manualOption.selected = true;
+            manualOption.dataset.manual = 'true';
+            select.appendChild(manualOption);
+        }
+    }
+
+    /**
+     * Handle customer selection change
+     */
+    function handleCustomerSelection(event) {
+        const code = event.target.value;
+        if (!code) {
+            return;
+        }
+
+        const selected = (state.customers || []).find(customer => customer.Code === code);
+        const description = selected ? (selected.Description || '') : '';
+
+        const codeInput = document.getElementById('customer-code');
+        const nameInput = document.getElementById('customer-name');
+
+        if (codeInput) {
+            codeInput.value = code;
+        }
+
+        if (nameInput) {
+            nameInput.value = description || nameInput.value || '';
+        }
+
+        state.customerCode = code;
+        state.customerName = description || state.customerName || '';
+
+        debugLog(`Customer selected: ${code}`, 'info');
+        loadDashboard();
+    }
+
+    /**
+     * Handle customer search input with debounce
+     */
+    function handleCustomerSearch(event) {
+        const term = event.target.value.trim();
+
+        if (customerSearchTimeout) {
+            clearTimeout(customerSearchTimeout);
+        }
+
+        customerSearchTimeout = setTimeout(() => {
+            if (term.length === 0) {
+                loadCustomerOptions();
+            } else if (term.length >= 2) {
+                loadCustomerOptions(term);
+            }
+        }, 300);
     }
 
     /**
@@ -287,6 +475,7 @@ const MPSM = (function() {
             }
 
             const dashboard = data.dashboard;
+            const sdsData = dashboard.SdsDashboard || {};
             const mpsData = dashboard.MpsDashboardCustomer || {};
             const customerName = state.customerName || 'Unknown Customer';
 
@@ -325,6 +514,45 @@ const MPSM = (function() {
                     </div>
                 </div>
             `;
+
+            // Hydrate dynamic metrics after template injection
+            const totalDevices = Number(mpsData.TotalManagedDevices ?? 0);
+            const totalConnectors = Number(mpsData.TotalConnectors ?? 0);
+            const offlineCount = Number(sdsData.NonCommunicatingDevices ?? 0);
+
+            const bannerDeviceCount = container.querySelector('.metric-card .metric-value');
+            if (bannerDeviceCount) {
+                bannerDeviceCount.textContent = totalDevices;
+            }
+
+            const dashboardDeviceCount = document.getElementById('device-count');
+            if (dashboardDeviceCount) {
+                dashboardDeviceCount.textContent = totalDevices;
+            }
+
+            const connectorsCard = container.querySelectorAll('.metric-card .metric-value')[3];
+            if (connectorsCard) {
+                connectorsCard.textContent = totalConnectors;
+            }
+
+            const offlineEl = document.getElementById('offline-count');
+            if (offlineEl) {
+                offlineEl.textContent = offlineCount;
+            }
+
+            const supplySummary = Array.isArray(mpsData.SupplyAlerts) ? mpsData.SupplyAlerts : [];
+            const toManageEntry = supplySummary.find(item => (item.Key || '').toLowerCase() === 'tomanage');
+            const alertsTotal = Number(toManageEntry?.Value ?? 0);
+
+            const alertsBannerEl = document.getElementById('alerts-count');
+            if (alertsBannerEl) {
+                alertsBannerEl.textContent = alertsTotal;
+            }
+
+            const alertsHiddenEl = document.getElementById('alert-count');
+            if (alertsHiddenEl) {
+                alertsHiddenEl.textContent = alertsTotal;
+            }
 
         } catch (error) {
             container.innerHTML = `
@@ -428,12 +656,23 @@ const MPSM = (function() {
                 throw new Error(data.error);
             }
 
-            const alerts = data.alerts?.Items || [];
-            countEl.textContent = alerts.length;
+            const alertPayload = data.alerts ?? [];
+            let alerts = [];
+
+            if (Array.isArray(alertPayload)) {
+                alerts = alertPayload;
+            } else if (Array.isArray(alertPayload.Items)) {
+                alerts = alertPayload.Items;
+            }
+
+            const displayedCount = alerts.length;
+            countEl.textContent = displayedCount;
 
             // Update alerts count in header
             const alertsHeaderEl = document.getElementById('alerts-count');
-            if (alertsHeaderEl) alertsHeaderEl.textContent = alerts.length;
+            if (alertsHeaderEl && !Array.isArray(alertPayload) && typeof alertPayload.TotalCount === 'number') {
+                alertsHeaderEl.textContent = alertPayload.TotalCount;
+            }
 
             if (alerts.length === 0) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
