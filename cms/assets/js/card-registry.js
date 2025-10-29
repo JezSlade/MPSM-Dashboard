@@ -233,50 +233,89 @@ const CardRegistry = (function () {
             group: 'Alerts',
             defaultVisible: true,
             load: async (helpers, context) => {
-                const data = await helpers.fetchJson('api/get-supply-alerts.php', {
-                    customerCode: context.customerCode,
-                    dealerCode: context.dealerCode,
-                    pageRows: 100,
-                    sortColumn: 'InitialDate',
-                    sortOrder: 'Desc'
-                });
+                let alerts = [];
+                let totalAlerts = 0;
+                if (window.MPSM && typeof window.MPSM.fetchAllSupplyAlerts === 'function') {
+                    const result = await window.MPSM.fetchAllSupplyAlerts({
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        pageRows: 500,
+                        sortColumn: 'InitialDate',
+                        sortOrder: 'Desc'
+                    });
+                    alerts = Array.isArray(result.alerts) ? result.alerts : [];
+                    totalAlerts = Number(result.total ?? alerts.length ?? 0);
+                } else {
+                    const data = await helpers.fetchJson('api/get-supply-alerts.php', {
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        pageRows: 500,
+                        sortColumn: 'InitialDate',
+                        sortOrder: 'Desc'
+                    });
+                    const meta = data.meta || {};
+                    const payload = data.alerts ?? [];
+                    alerts = Array.isArray(payload)
+                        ? payload
+                        : Array.isArray(payload.Items) ? payload.Items : [];
+                    totalAlerts = Number(
+                        meta.total_rows
+                        ?? meta.total_count
+                        ?? meta.total
+                        ?? data.total
+                        ?? alerts.length
+                        ?? 0
+                    );
+                }
 
-                const meta = data.meta || {};
-                const payload = data.alerts ?? [];
-                const alerts = Array.isArray(payload)
-                    ? payload
-                    : Array.isArray(payload.Items) ? payload.Items : [];
+                const summarize = (alertList) => {
+                    if (window.computeAlertDeviceSummary) {
+                        return window.computeAlertDeviceSummary(alertList);
+                    }
+                    const deviceMap = new Map();
+                    alertList.forEach(alert => {
+                        const key = window.resolveAlertDeviceKey ? window.resolveAlertDeviceKey(alert) : (alert.DeviceId || alert.IdInstalledProduct || alert.SerialNumber || alert.AssetNumber || null);
+                        if (!key) return;
+                        const level = Number(alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0);
+                        const normalized = Number.isFinite(level) ? level : 100;
+                        const current = deviceMap.get(key);
+                        if (!current || normalized < current) {
+                            deviceMap.set(key, normalized);
+                        }
+                    });
+                    let critical = 0;
+                    let low = 0;
+                    let ok = 0;
+                    deviceMap.forEach(level => {
+                        if (level <= 10) critical += 1;
+                        else if (level <= 25) low += 1;
+                        else ok += 1;
+                    });
+                    return {
+                        totalDevices: deviceMap.size,
+                        critical,
+                        low,
+                        ok,
+                        deviceMap
+                    };
+                };
 
-                const totalAlerts = Number(
-                    meta.total_rows
-                    ?? meta.total_count
-                    ?? meta.total
-                    ?? data.total
-                    ?? alerts.length
-                    ?? 0
-                );
-
-                const counts = alerts.reduce((acc, alert) => {
-                    const level = Number(alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0);
-                    if (level <= 10) acc.critical += 1;
-                    else if (level <= 25) acc.low += 1;
-                    else acc.ok += 1;
-                    return acc;
-                }, { critical: 0, low: 0, ok: 0 });
+                const summary = summarize(alerts);
 
                 return {
                     headline: {
-                        value: totalAlerts,
-                        label: 'Alerts'
+                        value: summary.totalDevices,
+                        label: 'Devices with Alerts'
                     },
                     metrics: [
-                        { label: 'Critical', value: counts.critical, tone: counts.critical > 0 ? 'danger' : 'neutral' },
-                        { label: 'Low', value: counts.low, tone: counts.low > 0 ? 'warning' : 'neutral' }
+                        { label: 'Critical Devices', value: summary.critical, tone: summary.critical > 0 ? 'danger' : 'neutral' },
+                        { label: 'Low Devices', value: summary.low, tone: summary.low > 0 ? 'warning' : 'neutral' },
+                        { label: 'Total Alerts', value: totalAlerts }
                     ],
                     context: {
                         alerts,
                         total: totalAlerts,
-                        meta
+                        summary
                     }
                 };
             },
@@ -530,18 +569,11 @@ const CardRegistry = (function () {
                     return;
                 }
 
-                const intro = document.createElement('p');
-                intro.className = 'modal-subtitle';
-                intro.textContent = 'Select an export to download the latest file. Exports run through the authenticated API context.';
-                modal.appendChild(intro);
-
                 const tableContainer = document.createElement('div');
                 modal.appendChild(tableContainer);
 
                 const columns = [
                     { id: 'action', label: 'Endpoint', sortable: true },
-                    { id: 'use_case', label: 'Use Case', accessor: row => row.use_case || 'N/A', sortable: true },
-                    { id: 'format', label: 'Format', accessor: row => row.format || 'File', sortable: true },
                     { id: 'category', label: 'Category', accessor: row => row.category || 'N/A', sortable: true },
                     {
                         id: 'status',
@@ -574,25 +606,6 @@ const CardRegistry = (function () {
                         label: 'Attempts',
                         accessor: row => row.runtimeAttempts ?? '',
                         sortable: true
-                    },
-                    {
-                        id: 'last_tested',
-                        label: 'Last Tested',
-                        accessor: row => {
-                            const runtime = row.runtimeTestedAt ? new Date(row.runtimeTestedAt).toLocaleString() : null;
-                            if (runtime) {
-                                return runtime;
-                            }
-                            return row.last_tested ? new Date(row.last_tested).toLocaleString() : 'N/A';
-                        },
-                        sortable: true
-                    },
-                    {
-                        id: 'duration_ms',
-                        label: 'Latency (ms)',
-                        accessor: row => row.runtimeDuration ?? row.duration_ms ?? '',
-                        sortable: true,
-                        format: value => value ? helpers.formatNumber(Number(value)) : 'N/A'
                     },
                     {
                         id: 'download',
@@ -654,9 +667,34 @@ const CardRegistry = (function () {
                         return;
                     }
 
+                    const params = Object.assign({}, baseParams);
+
+                    if (actionName === 'Counter/Device/Export') {
+                        const now = new Date();
+                        const from = new Date(now.getTime());
+                        from.setDate(from.getDate() - 30);
+
+                        params.fromDate = params.fromDate || from.toISOString();
+                        params.toDate = params.toDate || now.toISOString();
+                        if (params.exportToCsv === undefined) {
+                            params.exportToCsv = false;
+                        }
+
+                        if (!params.id) {
+                            const resolver = window.MPSM && typeof window.MPSM.resolveDeviceIdForExports === 'function'
+                                ? window.MPSM.resolveDeviceIdForExports
+                                : null;
+                            const deviceId = resolver ? await resolver() : null;
+                            if (!deviceId) {
+                                throw new Error('Unable to resolve a device for Counter/Device/Export.');
+                            }
+                            params.id = deviceId;
+                        }
+                    }
+
                     const payload = {
                         action: actionName,
-                        params: baseParams
+                        params
                     };
 
                     const originalHtml = button.innerHTML;
@@ -689,7 +727,7 @@ const CardRegistry = (function () {
                             exportRow.runtimeError = null;
                             exportRow.runtimeAttempts = result.attempts ?? 1;
                             exportRow.runtimeDuration = result.duration_ms ?? null;
-                            exportRow.runtimeParams = result.params_used ?? null;
+                            exportRow.runtimeParams = result.params_used ?? params;
                             exportRow.runtimeTestedAt = new Date().toISOString();
                             exportRow.success = true;
                         } else {
@@ -709,7 +747,9 @@ const CardRegistry = (function () {
                         exportRow.runtimeStatus = 'Fail';
                         exportRow.runtimeError = error.message;
                         exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
+                        exportRow.runtimeParams = params;
                         exportRow.runtimeTestedAt = new Date().toISOString();
+                        exportRow.success = false;
                         exportTable.updateRows(exports);
                     } finally {
                         button.disabled = false;

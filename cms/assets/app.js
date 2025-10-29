@@ -19,6 +19,7 @@ const MPSM = (function() {
         isLoadingCustomers: false,
         devices: [],
         alerts: [],
+        alertSummary: null,
         connectorsSummary: null,
         totalDevices: 0,
         offlineDevices: 0,
@@ -184,6 +185,85 @@ const MPSM = (function() {
         const colorSource = row?.SupplyTypeDescription || row?.SupplyType || row?.Color || '';
         const color = resolveSupplyColor(colorSource);
         return renderTonerChipMarkup(color, safeLevel);
+    }
+
+    function resolveAlertDeviceKey(alert) {
+        if (!alert || typeof alert !== 'object') {
+            return null;
+        }
+
+        const candidates = [
+            alert.DeviceId,
+            alert.IdDevice,
+            alert.IdInstalledProduct,
+            alert.Id,
+            alert.AssetNumber,
+            alert.ExternalIdentifier,
+            alert.SerialNumber
+        ];
+
+        for (const candidate of candidates) {
+            if (candidate !== undefined && candidate !== null && candidate !== '') {
+                return candidate.toString();
+            }
+        }
+
+        const equipmentId = getEquipmentIdFromAlert(alert);
+        return equipmentId !== 'N/A' ? equipmentId : null;
+    }
+
+    function computeAlertDeviceSummary(alerts) {
+        const deviceMap = new Map();
+
+        if (Array.isArray(alerts)) {
+            alerts.forEach(alert => {
+                const key = resolveAlertDeviceKey(alert);
+                if (!key) {
+                    return;
+                }
+
+                const level = Number(alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0);
+                const normalizedLevel = Number.isFinite(level) ? level : 100;
+
+                const existing = deviceMap.get(key);
+                if (!existing) {
+                    deviceMap.set(key, {
+                        level: normalizedLevel,
+                        alerts: [alert]
+                    });
+                } else {
+                    existing.level = Math.min(existing.level, normalizedLevel);
+                    existing.alerts.push(alert);
+                }
+            });
+        }
+
+        let critical = 0;
+        let low = 0;
+        let ok = 0;
+
+        deviceMap.forEach(entry => {
+            if (entry.level <= 10) {
+                critical += 1;
+            } else if (entry.level <= 25) {
+                low += 1;
+            } else {
+                ok += 1;
+            }
+        });
+
+        return {
+            totalDevices: deviceMap.size,
+            critical,
+            low,
+            ok,
+            deviceMap
+        };
+    }
+
+    if (typeof window !== 'undefined') {
+        window.resolveAlertDeviceKey = window.resolveAlertDeviceKey || resolveAlertDeviceKey;
+        window.computeAlertDeviceSummary = window.computeAlertDeviceSummary || computeAlertDeviceSummary;
     }
 
     function formatDetailValue(value) {
@@ -607,23 +687,14 @@ const MPSM = (function() {
                 state.alerts = snapshotAlerts;
             }
 
-            const headlineAlerts = Number(snapshot.headline?.value ?? NaN);
-            const contextAlerts = Number(snapshot.context?.total ?? NaN);
-            const fallbackAlerts = Number(state.alertsTotal ?? NaN);
-            const alertsLength = Array.isArray(state.alerts) ? state.alerts.length : null;
+            const snapshotSummary = snapshot.context?.summary;
+            const summary = snapshotSummary || computeAlertDeviceSummary(state.alerts);
 
-            const candidates = [
-                Number.isFinite(headlineAlerts) ? headlineAlerts : null,
-                Number.isFinite(alertsLength) ? alertsLength : null,
-                Number.isFinite(contextAlerts) ? contextAlerts : null,
-                Number.isFinite(fallbackAlerts) ? fallbackAlerts : null
-            ].filter(value => value !== null);
+            state.alertSummary = summary;
+            state.alertsTotal = summary.totalDevices;
 
-            const totalAlerts = candidates.length ? Math.max(...candidates) : 0;
-
-            state.alertsTotal = totalAlerts;
-            updateMetricValue('alerts-count', totalAlerts);
-            updateMetricValue('alert-count', totalAlerts);
+            updateMetricValue('alerts-count', summary.totalDevices);
+            updateMetricValue('alert-count', summary.totalDevices);
         }
 
         if (cardId === 'integrations') {
@@ -1687,6 +1758,64 @@ const MPSM = (function() {
     /**
      * Load supply alerts
      */
+    async function fetchAllSupplyAlerts(options = {}) {
+        const alerts = [];
+        let pageNumber = 1;
+        const pageRows = Number(options.pageRows || 500);
+        let totalExpected = null;
+        let lastMeta = {};
+
+        while (true) {
+            const params = new URLSearchParams({
+                customerCode: options.customerCode ?? state.customerCode ?? '',
+                dealerCode: options.dealerCode ?? state.dealerCode ?? '',
+                sortColumn: options.sortColumn ?? 'InitialDate',
+                sortOrder: options.sortOrder ?? 'Desc',
+                pageRows: pageRows,
+                pageNumber: pageNumber
+            });
+
+            const response = await fetch('api/get-supply-alerts.php?' + params.toString());
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Supply alerts request failed');
+            }
+
+            const meta = data.meta || {};
+            lastMeta = meta;
+
+            const chunk = Array.isArray(data.alerts)
+                ? data.alerts
+                : Array.isArray(data.alerts?.Items)
+                    ? data.alerts.Items
+                    : [];
+
+            alerts.push(...chunk);
+
+            totalExpected = Number(
+                meta.total_rows
+                ?? meta.total_count
+                ?? meta.total
+                ?? data.total
+                ?? totalExpected
+                ?? alerts.length
+            );
+
+            if (!chunk.length || alerts.length >= totalExpected) {
+                break;
+            }
+
+            pageNumber += 1;
+        }
+
+        return {
+            alerts,
+            total: totalExpected ?? alerts.length,
+            meta: Object.assign({}, lastMeta, { page_rows: pageRows })
+        };
+    }
+
     async function loadSupplyAlerts() {
         const container = document.getElementById('supply-alerts');
         const countEl = document.getElementById('alert-count');
@@ -1698,40 +1827,16 @@ const MPSM = (function() {
         container.innerHTML = '<div class="loading">Loading supply alerts...</div>';
 
         try {
-            const params = new URLSearchParams({
-                customerCode: state.customerCode || '',
-                dealerCode: state.dealerCode || '',
-                pageRows: 50,
-                sortColumn: 'InitialDate',
-                sortOrder: 'Desc'
-            });
+            const { alerts } = await fetchAllSupplyAlerts();
 
-            const response = await fetch('api/get-supply-alerts.php?' + params.toString());
-            const data = await response.json();
+            state.alerts = alerts;
+            state.alertSummary = computeAlertDeviceSummary(alerts);
+            state.alertsTotal = state.alertSummary.totalDevices;
 
-            if (!data.success) {
-                throw new Error(data.error || 'Supply alerts request failed');
-            }
-
-            const meta = data.meta || {};
-            const alertPayload = Array.isArray(data.alerts) ? data.alerts : [];
-
-            state.alerts = alertPayload;
-
-            const totalAlerts = Number(
-                meta.total_rows
-                ?? meta.total_count
-                ?? meta.total
-                ?? data.total
-                ?? (state.alerts ? state.alerts.length : 0)
-                ?? 0
-            );
-
-            state.alertsTotal = totalAlerts;
             updateMetricValue('alerts-count', state.alertsTotal);
             updateMetricValue('alert-count', state.alertsTotal);
 
-            if (!state.alerts.length) {
+            if (!alerts.length) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
                 return;
             }
@@ -1742,7 +1847,7 @@ const MPSM = (function() {
 
             TableUtils.renderTable(tableContainer, {
                 columns: buildAlertTableColumns(),
-                rows: state.alerts,
+                rows: alerts,
                 pageSize: 50,
                 defaultSort: { column: 'EquipmentId', direction: 'asc' }
             });
@@ -1755,6 +1860,55 @@ const MPSM = (function() {
                 </div>
             `;
         }
+    }
+
+    async function resolveDeviceIdForExports() {
+        const getIdentifier = device => {
+            if (!device || typeof device !== 'object') {
+                return null;
+            }
+            return device.Id
+                ?? device.IdInstalledProduct
+                ?? device.DeviceId
+                ?? device.IdDevice
+                ?? null;
+        };
+
+        if (Array.isArray(state.devices) && state.devices.length) {
+            const candidate = state.devices.map(getIdentifier).find(Boolean);
+            if (candidate) {
+                return candidate.toString();
+            }
+        }
+
+        try {
+            const params = new URLSearchParams({
+                customerCode: state.customerCode || '',
+                dealerCode: state.dealerCode || '',
+                dealerId: state.dealerId || '',
+                pageRows: 1,
+                sortColumn: 'AssetNumber',
+                sortOrder: 'Asc'
+            });
+
+            const response = await fetch('api/get-devices.php?' + params.toString());
+            const data = await response.json();
+
+            if (data.success && Array.isArray(data.devices) && data.devices.length) {
+                const device = data.devices[0];
+                if (!Array.isArray(state.devices) || !state.devices.length) {
+                    state.devices = data.devices;
+                }
+                const identifier = getIdentifier(device);
+                if (identifier) {
+                    return identifier.toString();
+                }
+            }
+        } catch (error) {
+            debugLog('Failed to resolve device ID for export: ' + error.message, 'error');
+        }
+
+        return null;
     }
 
     function buildAlertTableColumns() {
@@ -2421,27 +2575,13 @@ const MPSM = (function() {
         modal.classList.add('active');
 
         try {
-            const params = new URLSearchParams({
-                customerCode: state.customerCode || '',
-                dealerCode: state.dealerCode || '',
-                pageRows: 100,
-                sortColumn: 'InitialDate',
-                sortOrder: 'Desc'
-            });
+            const { alerts } = await fetchAllSupplyAlerts();
 
-            const response = await fetch('api/get-supply-alerts.php?' + params.toString());
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.error);
-            }
-
-            const payload = data.alerts ?? [];
-            const alerts = Array.isArray(payload)
-                ? payload
-                : Array.isArray(payload.Items)
-                    ? payload.Items
-                    : [];
+            state.alerts = alerts;
+            state.alertSummary = computeAlertDeviceSummary(alerts);
+            state.alertsTotal = state.alertSummary.totalDevices;
+            updateMetricValue('alerts-count', state.alertsTotal);
+            updateMetricValue('alert-count', state.alertsTotal);
 
             if (alerts.length === 0) {
                 modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
@@ -2522,7 +2662,9 @@ const MPSM = (function() {
         expandDevices,
         expandOffline,
         expandConnectors,
-        expandAlerts
+        expandAlerts,
+        fetchAllSupplyAlerts,
+        resolveDeviceIdForExports
     };
 
 })();
