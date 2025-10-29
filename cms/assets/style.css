@@ -878,8 +878,21 @@ main {
     background: linear-gradient(90deg, #ffdd55, #ffcc00);
 }
 
+.toner-chip--neutral .toner-chip__fill,
 .toner-chip--unknown .toner-chip__fill {
     background: linear-gradient(90deg, #7f8c8d, #95a5a6);
+}
+
+.toner-chip--critical {
+    box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.35);
+}
+
+.toner-chip--low {
+    box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.35);
+}
+
+.toner-chip--ok {
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.25);
 }
 
 /* Card Footer */
@@ -1122,6 +1135,26 @@ main {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.supply-chip {
+    margin-top: 10px;
+}
+
+.supply-chip .toner-chip {
+    width: 100%;
+    height: 28px;
+    font-size: 0.85rem;
+}
+
+.supply-chip .toner-chip__label {
+    font-size: 0.85rem;
+}
+
+.supply-empty {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 8px 0;
 }
 
 /* Error Logging Display */

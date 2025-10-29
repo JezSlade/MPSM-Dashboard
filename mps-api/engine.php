@@ -706,6 +706,171 @@ class MPSMonitorEngine {
         return empty($hint) ? null : $hint;
     }
 
+    private function parseResponseHeaders(string $rawHeaders): array
+    {
+        if ($rawHeaders === '') {
+            return [];
+        }
+
+        $sections = preg_split('/\r\n\r\n|\n\n|\r\r/', trim($rawHeaders));
+        if (!$sections || !count($sections)) {
+            return [];
+        }
+
+        $lastSection = trim((string) end($sections));
+        if ($lastSection === '') {
+            return [];
+        }
+
+        $lines = preg_split('/\r\n|\n|\r/', $lastSection);
+        $headers = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || stripos($line, 'HTTP/') === 0) {
+                continue;
+            }
+
+            if (strpos($line, ':') !== false) {
+                [$name, $value] = explode(':', $line, 2);
+                $headers[strtolower(trim($name))] = trim($value);
+            }
+        }
+
+        return $headers;
+    }
+
+    private function looksLikeJson($body): bool
+    {
+        if (!is_string($body)) {
+            return false;
+        }
+
+        $trimmed = ltrim($body);
+        if ($trimmed === '') {
+            return false;
+        }
+
+        $first = $trimmed[0];
+        return $first === '{' || $first === '[' || $first === '"' || $first === 'n' || $first === 't' || $first === 'f';
+    }
+
+    private function buildFileResponse(
+        $body,
+        int $httpCode,
+        string $requestId,
+        float $duration,
+        array $headers,
+        ?string $contentType,
+        ?string $actionName
+    ): array {
+        $contentType = $contentType ?: 'application/octet-stream';
+        $disposition = $headers['content-disposition'] ?? null;
+        $extension = $this->guessFileExtension($contentType, $actionName);
+        $fileName = $this->extractFileNameFromContentDisposition($disposition)
+            ?? $this->generateDefaultFileName($actionName, $extension);
+
+        $payload = [
+            'success' => true,
+            'is_file' => true,
+            'file' => [
+                'name' => $fileName,
+                'content_type' => $contentType,
+                'size' => strlen((string) $body),
+                'data' => base64_encode((string) $body),
+            ],
+            'http_code' => $httpCode,
+            'request_id' => $requestId,
+            'duration_ms' => $duration,
+        ];
+
+        if (self::$config['MPS_DEBUG']) {
+            $payload['response_headers'] = $headers;
+        }
+
+        if ($actionName !== null) {
+            $payload['action'] = $actionName;
+        }
+
+        return $payload;
+    }
+
+    private function extractFileNameFromContentDisposition(?string $header): ?string
+    {
+        if (!$header) {
+            return null;
+        }
+
+        if (preg_match("/filename\\*=UTF-8''([^;]+)/i", $header, $matches)) {
+            $name = urldecode($matches[1]);
+            return $this->sanitizeFileName($name);
+        }
+
+        if (preg_match('/filename="?([^";]+)"?/i', $header, $matches)) {
+            return $this->sanitizeFileName($matches[1]);
+        }
+
+        return null;
+    }
+
+    private function generateDefaultFileName(?string $actionName, string $extension): string
+    {
+        $base = $actionName ? preg_replace('/[^a-z0-9_\-]+/i', '_', $actionName) : 'export';
+        $base = trim((string) $base, '_');
+        if ($base === '') {
+            $base = 'export';
+        }
+
+        $extension = ltrim($extension, '.');
+        if ($extension === '') {
+            $extension = 'bin';
+        }
+
+        return $base . '.' . $extension;
+    }
+
+    private function guessFileExtension(?string $contentType, ?string $actionName): string
+    {
+        $map = [
+            'application/vnd.ms-excel' => 'xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+            'application/vnd.ms-excel.sheet.macroenabled.12' => 'xlsm',
+            'text/csv' => 'csv',
+            'text/plain' => 'txt',
+            'application/pdf' => 'pdf',
+            'application/zip' => 'zip',
+            'application/json' => 'json',
+        ];
+
+        if ($contentType) {
+            $lower = strtolower($contentType);
+            if (isset($map[$lower])) {
+                return $map[$lower];
+            }
+        }
+
+        if ($actionName) {
+            $lowerAction = strtolower($actionName);
+            if (strpos($lowerAction, 'excel') !== false || strpos($lowerAction, 'xlsx') !== false) {
+                return 'xlsx';
+            }
+            if (strpos($lowerAction, 'csv') !== false) {
+                return 'csv';
+            }
+            if (strpos($lowerAction, 'pdf') !== false) {
+                return 'pdf';
+            }
+        }
+
+        return 'bin';
+    }
+
+    private function sanitizeFileName(string $name): string
+    {
+        $sanitized = preg_replace('/[\\x00-\\x1F\\x7F\\/\\\\<>:"|?*]+/', '_', $name);
+        $sanitized = trim((string) $sanitized, "._ \t\n\r\0\x0B");
+        return $sanitized !== '' ? $sanitized : 'export';
+    }
     /**
      * Normalize payload structure to consistent arrays/scalars.
      *
@@ -790,7 +955,7 @@ class MPSMonitorEngine {
 
         // Normalize additional headers
         $headersAssoc = [];
-        $headersAssoc['Accept'] = 'application/json';
+        $headersAssoc['Accept'] = 'application/json, application/octet-stream, */*;q=0.8';
         if ($contentType) {
             $headersAssoc['Content-Type'] = $contentType;
         }
@@ -841,6 +1006,7 @@ class MPSMonitorEngine {
             CURLOPT_TIMEOUT => self::$config['MPS_TIMEOUT'],
             CURLOPT_CONNECTTIMEOUT => self::$config['MPS_CONNECT_TIMEOUT'],
             CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_HEADER => true,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_MAXREDIRS => 0,
             CURLOPT_SSL_VERIFYPEER => true,
@@ -881,16 +1047,29 @@ class MPSMonitorEngine {
         
         // Execute request
         $startTime = microtime(true);
-        $response = curl_exec($ch);
+        $rawResponse = curl_exec($ch);
         $duration = round((microtime(true) - $startTime) * 1000, 2); // ms
-        
+
         // Get request info
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlErrno = curl_errno($ch);
         $curlError = curl_error($ch);
-        
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE) ?: 0;
+        $reportedContentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?: '';
+
         curl_close($ch);
-        
+
+        $rawHeaders = '';
+        $responseBody = '';
+        if ($rawResponse !== false && $rawResponse !== null) {
+            $rawHeaders = substr($rawResponse, 0, $headerSize);
+            $responseBody = substr($rawResponse, $headerSize);
+        } else {
+            $responseBody = $rawResponse;
+        }
+
+        $headersMap = $this->parseResponseHeaders($rawHeaders);
+
         // Handle cURL errors
         if ($curlErrno !== 0) {
             $errorMsg = "cURL Error [{$curlErrno}]: {$curlError}";
@@ -913,34 +1092,75 @@ class MPSMonitorEngine {
         }
         
         // Handle HTTP response
-        if ($response === false || $response === '') {
+        if ($responseBody === false || $responseBody === '' || $responseBody === null) {
             return $this->errorResponse('Empty response from API', self::ERR_API, [
                 'http_code' => $httpCode,
                 'request_id' => $requestId
             ]);
         }
-        
-        // Parse JSON response
-        $decoded = json_decode($response, true);
-        $jsonError = json_last_error();
-        
-        if ($jsonError !== JSON_ERROR_NONE) {
-            $jsonErrorMsg = json_last_error_msg();
-            self::logError("JSON decode error: {$jsonErrorMsg}", self::ERR_API, [
-                'request_id' => $requestId,
-                'response_preview' => substr($response, 0, 200)
-            ]);
-            
-            // Return raw response if JSON parse fails
-            return [
-                'success' => false,
-                'error' => 'Invalid JSON response from API',
-                'error_code' => self::ERR_API,
-                'http_code' => $httpCode,
-                'raw_response' => self::$config['MPS_DEBUG'] ? $response : null,
-                'request_id' => $requestId,
-                'retryable' => false
-            ];
+
+        $contentType = $headersMap['content-type'] ?? $reportedContentType;
+        $isJsonContent = is_string($contentType) && stripos($contentType, 'json') !== false;
+
+        $attemptedJsonDecode = false;
+        $decoded = null;
+        $jsonError = JSON_ERROR_NONE;
+
+        if ($isJsonContent || $this->looksLikeJson($responseBody)) {
+            $attemptedJsonDecode = true;
+            $decoded = json_decode($responseBody, true);
+            $jsonError = json_last_error();
+        }
+
+        if ($httpCode >= 200 && $httpCode < 300) {
+            if (!$isJsonContent && (!$attemptedJsonDecode || $jsonError !== JSON_ERROR_NONE)) {
+                return $this->buildFileResponse(
+                    $responseBody,
+                    $httpCode,
+                    $requestId,
+                    $duration,
+                    $headersMap,
+                    $contentType,
+                    $actionName
+                );
+            }
+        }
+
+        if ($attemptedJsonDecode && $jsonError !== JSON_ERROR_NONE) {
+            if ($isJsonContent) {
+                $jsonErrorMsg = json_last_error_msg();
+                self::logError("JSON decode error: {$jsonErrorMsg}", self::ERR_API, [
+                    'request_id' => $requestId,
+                    'response_preview' => substr($responseBody, 0, 200)
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Invalid JSON response from API',
+                    'error_code' => self::ERR_API,
+                    'http_code' => $httpCode,
+                    'raw_response' => self::$config['MPS_DEBUG'] ? $responseBody : null,
+                    'request_id' => $requestId,
+                    'retryable' => false
+                ];
+            }
+
+            // If content wasn't JSON but we attempted due to structure, fall back to treating as file when successful
+            if ($httpCode >= 200 && $httpCode < 300) {
+                return $this->buildFileResponse(
+                    $responseBody,
+                    $httpCode,
+                    $requestId,
+                    $duration,
+                    $headersMap,
+                    $contentType,
+                    $actionName
+                );
+            }
+        }
+
+        if (!$attemptedJsonDecode && !$isJsonContent) {
+            $decoded = ['raw' => $responseBody];
         }
         
         // Log in debug mode
@@ -948,11 +1168,11 @@ class MPSMonitorEngine {
             self::logDebug("Request {$requestId} completed", [
                 'http_code' => $httpCode,
                 'duration_ms' => $duration,
-                'response_size' => strlen($response)
+                'response_size' => strlen((string) $responseBody)
             ]);
         }
 
-        $catalogHint = $this->buildCatalogHint($endpointMetadata, $decoded, $actionName);
+        $catalogHint = $this->buildCatalogHint($endpointMetadata, is_array($decoded) ? $decoded : null, $actionName);
 
         if ($httpCode === 401) {
             if (self::$authMode === 'oauth_password') {

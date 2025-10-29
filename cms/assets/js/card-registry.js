@@ -311,14 +311,32 @@ const CardRegistry = (function () {
 
                 const tableHandle = helpers.renderTable(tableContainer, {
                     columns: [
-                        { id: 'SerialNumber', label: 'Device', sortable: true },
+                        { id: 'EquipmentId', label: 'Equipment ID', accessor: row => resolveEquipmentId(row), sortable: true },
+                        { id: 'SerialNumber', label: 'Serial', accessor: row => row.SerialNumber || row.DeviceSerialNumber || 'N/A', sortable: true },
                         { id: 'ProductModel', label: 'Model', accessor: row => row.ProductModel || row.Product?.Model || 'Unknown', sortable: true },
-                        { id: 'SupplyTypeDescription', label: 'Supply', accessor: row => row.SupplyTypeDescription || row.SupplyType || 'N/A' },
+                        { id: 'SupplyTypeDescription', label: 'Supply', accessor: row => row.SupplyTypeDescription || row.SupplyType || 'N/A', sortable: true },
                         {
                             id: 'Level',
                             label: 'Level',
                             accessor: row => Number(row.Percentage ?? row.ActualResidualPercentage ?? row.InitialResidualPercentage ?? 0),
-                            format: value => `<span class="badge ${value <= 10 ? 'badge-danger' : value <= 25 ? 'badge-warning' : 'badge-success'}">${value}%</span>`,
+                            format: (value, row) => {
+                                const level = Number(value);
+                                if (!Number.isFinite(level)) {
+                                    return '--';
+                                }
+                                const colorResolver = (typeof resolveSupplyColor === 'function')
+                                    ? resolveSupplyColor
+                                    : value => {
+                                        const text = (value ?? '').toString().toLowerCase();
+                                        if (text.includes('cyan')) return 'cyan';
+                                        if (text.includes('magenta')) return 'magenta';
+                                        if (text.includes('yellow')) return 'yellow';
+                                        if (text.includes('black') || text.includes('mono')) return 'black';
+                                        return 'neutral';
+                                    };
+                                const supplyColor = colorResolver(row.SupplyTypeDescription || row.SupplyType || '');
+                                return renderTonerBadge(supplyColor, level);
+                            },
                             sortable: true
                         },
                         {
@@ -335,7 +353,7 @@ const CardRegistry = (function () {
                     ],
                     rows: alerts,
                     pageSize: 50,
-                    defaultSort: { column: 'Level', direction: 'asc' }
+                    defaultSort: { column: 'EquipmentId', direction: 'asc' }
                 });
             }
         },
@@ -455,6 +473,193 @@ const CardRegistry = (function () {
                     rows: snapshot.context.integrations,
                     pageSize: 20,
                     defaultSort: { column: 'Description', direction: 'asc' }
+                });
+            }
+        },
+        {
+            id: 'export-library',
+            title: 'Export Library',
+            icon: 'fas fa-file-export',
+            description: 'Downloadable reports and meter exports',
+            group: 'Reports',
+            defaultVisible: false,
+            load: async (helpers, context) => {
+                const data = await helpers.fetchJson('api/get-export-endpoints.php', {});
+                const exports = Array.isArray(data.exports) ? data.exports : [];
+                const working = exports.filter(entry => entry.success === true).length;
+                const excelCount = exports.filter(entry => (entry.format || '').toLowerCase() === 'excel').length;
+                const csvCount = exports.filter(entry => (entry.format || '').toLowerCase() === 'csv').length;
+
+                return {
+                    headline: {
+                        value: exports.length,
+                        label: 'Exportable Reports'
+                    },
+                    metrics: [
+                        {
+                            label: 'Working',
+                            value: working,
+                            tone: working === exports.length ? 'success' : (working === 0 ? 'danger' : 'warning')
+                        },
+                        { label: 'Excel', value: excelCount || 0 },
+                        { label: 'CSV', value: csvCount || 0 }
+                    ],
+                    context: { exports }
+                };
+            },
+            renderModal: (helpers, context, snapshot) => {
+                const modal = helpers.createModal('Export Library');
+                const exports = snapshot.context.exports || [];
+
+                if (!exports.length) {
+                    modal.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No exportable endpoints are currently available.</p></div>';
+                    return;
+                }
+
+                const intro = document.createElement('p');
+                intro.className = 'modal-subtitle';
+                intro.textContent = 'Select an export to download the latest file. Exports run through the authenticated API context.';
+                modal.appendChild(intro);
+
+                const tableContainer = document.createElement('div');
+                modal.appendChild(tableContainer);
+
+                const columns = [
+                    { id: 'action', label: 'Endpoint', sortable: true },
+                    { id: 'use_case', label: 'Use Case', accessor: row => row.use_case || 'N/A', sortable: true },
+                    { id: 'format', label: 'Format', accessor: row => row.format || 'File', sortable: true },
+                    { id: 'category', label: 'Category', accessor: row => row.category || 'N/A', sortable: true },
+                    {
+                        id: 'success',
+                        label: 'Status',
+                        accessor: row => row.success === null || row.success === undefined
+                            ? 'Untested'
+                            : (row.success ? 'Pass' : 'Fail'),
+                        sortable: true,
+                        format: value => {
+                            if (value === 'Pass') {
+                                return '<span class="status-badge status-success">Pass</span>';
+                            }
+                            if (value === 'Fail') {
+                                return '<span class="status-badge status-danger">Fail</span>';
+                            }
+                            return '<span class="status-badge status-muted">Untested</span>';
+                        }
+                    },
+                    {
+                        id: 'last_tested',
+                        label: 'Last Tested',
+                        accessor: row => row.last_tested ? new Date(row.last_tested).toLocaleString() : 'N/A',
+                        sortable: true
+                    },
+                    {
+                        id: 'duration_ms',
+                        label: 'Latency (ms)',
+                        accessor: row => row.duration_ms ?? '',
+                        sortable: true,
+                        format: value => value ? helpers.formatNumber(Number(value)) : 'N/A'
+                    },
+                    {
+                        id: 'download',
+                        label: 'Download',
+                        accessor: row => row.action,
+                        format: (value, row) => {
+                            const safeAction = helpers.escape(row.action);
+                            return `<button type="button" class="btn btn-primary btn-sm export-download" data-export-action="${safeAction}"><i class="fas fa-download"></i> Download</button>`;
+                        }
+                    }
+                ];
+
+                helpers.renderTable(tableContainer, {
+                    columns,
+                    rows: exports,
+                    pageSize: 25,
+                    defaultSort: { column: 'action', direction: 'asc' }
+                });
+
+                const baseParams = {};
+                if (context.dealerCode) baseParams.dealerCode = context.dealerCode;
+                if (context.dealerId) baseParams.dealerId = context.dealerId;
+                if (context.customerCode) baseParams.customerCode = context.customerCode;
+
+                const base64ToBlob = (base64, contentType) => {
+                    const binary = atob(base64);
+                    const len = binary.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binary.charCodeAt(i);
+                    }
+                    return new Blob([bytes], { type: contentType || 'application/octet-stream' });
+                };
+
+                tableContainer.addEventListener('click', async (event) => {
+                    const button = event.target.closest('button.export-download');
+                    if (!button) {
+                        return;
+                    }
+
+                    const actionName = button.dataset.exportAction;
+                    const exportRow = exports.find(entry => entry.action === actionName);
+                    if (!exportRow) {
+                        showToast('Export definition not found in snapshot.', 'error');
+                        return;
+                    }
+
+                    const prerequisites = Array.isArray(exportRow.prerequisites) ? exportRow.prerequisites : [];
+                    const missing = [];
+                    if (prerequisites.includes('customerCode') && !baseParams.customerCode) {
+                        missing.push('customerCode');
+                    }
+                    if (prerequisites.includes('dealerCode') && !baseParams.dealerCode) {
+                        missing.push('dealerCode');
+                    }
+
+                    if (missing.length) {
+                        showToast(`Missing required context: ${missing.join(', ')}`, 'warning');
+                        return;
+                    }
+
+                    const payload = {
+                        action: actionName,
+                        params: baseParams
+                    };
+
+                    const originalHtml = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    try {
+                        const response = await fetch('api/run-export.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const result = await response.json();
+                        if (!result.success) {
+                            throw new Error(result.error || 'Export failed');
+                        }
+
+                        if (result.file && result.file.data) {
+                            const blob = base64ToBlob(result.file.data, result.file.content_type);
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = result.file.name || (actionName.replace(/[^a-z0-9_\-]+/gi, '_') + '.bin');
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+                            showToast('Export downloaded successfully.', 'success');
+                        } else {
+                            console.log('Export response payload', result);
+                            showToast('Export returned structured data. See console for details.', 'info');
+                        }
+                    } catch (error) {
+                        showToast('Export failed: ' + error.message, 'error');
+                    } finally {
+                        button.disabled = false;
+                        button.innerHTML = originalHtml;
+                    }
                 });
             }
         },
@@ -661,10 +866,16 @@ function renderTonerBadge(color, value) {
     }
 
     const percentage = Math.max(0, Math.min(100, Number(value)));
-    const colorClass = `toner-chip--${color}`;
+    const normalizedColor = ['black', 'cyan', 'magenta', 'yellow'].includes(color)
+        ? color
+        : (color === 'neutral' ? 'neutral' : 'unknown');
+    const colorClass = `toner-chip--${normalizedColor}`;
+    const severityClass = percentage <= 10 ? 'toner-chip--critical'
+        : percentage <= 25 ? 'toner-chip--low'
+        : 'toner-chip--ok';
 
     return `
-        <span class="toner-chip ${colorClass}">
+        <span class="toner-chip ${colorClass} ${severityClass}">
             <span class="toner-chip__fill" style="width:${percentage}%"></span>
             <span class="toner-chip__label">${percentage}%</span>
         </span>

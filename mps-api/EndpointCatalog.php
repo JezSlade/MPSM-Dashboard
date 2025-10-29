@@ -298,6 +298,26 @@ class EndpointCatalog {
     }
 
     /**
+     * Get all cataloged endpoints.
+     */
+    public static function getAllEndpoints($onlySuccessful = false) {
+        self::init();
+
+        if (!is_array(self::$catalog)) {
+            return [];
+        }
+
+        if ($onlySuccessful) {
+            $filtered = array_filter(self::$catalog, function ($info) {
+                return !empty($info['success']);
+            });
+            return array_values($filtered);
+        }
+
+        return array_values(self::$catalog);
+    }
+
+    /**
      * Get endpoints by category
      */
     public static function getEndpointsByCategory($category, $onlySuccessful = false) {

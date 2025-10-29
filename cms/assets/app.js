@@ -122,6 +122,70 @@ const MPSM = (function() {
         window.getEquipmentIdFromDevice = window.getEquipmentIdFromDevice || getEquipmentIdFromDevice;
     }
 
+    function resolveSupplyColor(value) {
+        const text = (value ?? '').toString().toLowerCase();
+        if (!text) {
+            return 'neutral';
+        }
+
+        if (text.includes('black') || text.includes('mono') || text.includes('k ')) {
+            return 'black';
+        }
+        if (text.includes('cyan') || text.includes('c ')) {
+            return 'cyan';
+        }
+        if (text.includes('magenta') || text.includes('m ')) {
+            return 'magenta';
+        }
+        if (text.includes('yellow') || text.includes('y ')) {
+            return 'yellow';
+        }
+
+        return 'neutral';
+    }
+
+    if (typeof window !== 'undefined') {
+        window.resolveSupplyColor = window.resolveSupplyColor || resolveSupplyColor;
+    }
+
+    function renderTonerChipMarkup(color, value) {
+        const renderFn = (typeof window !== 'undefined' && typeof window.renderTonerBadge === 'function')
+            ? window.renderTonerBadge
+            : null;
+
+        if (renderFn) {
+            return renderFn(color, value);
+        }
+
+        const level = Number(value);
+        const safeLevel = Number.isFinite(level) ? Math.max(0, Math.min(100, level)) : 0;
+        const severityClass = safeLevel <= 10 ? 'status-danger'
+            : safeLevel <= 25 ? 'status-warning'
+            : 'status-success';
+
+        return `
+            <div class="toner-bar">
+                <div class="toner-fill ${severityClass}" style="width:${safeLevel}%"></div>
+                <span class="toner-text">${safeLevel}%</span>
+            </div>
+        `;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.renderTonerChipMarkup = window.renderTonerChipMarkup || renderTonerChipMarkup;
+    }
+
+    function renderAlertLevelChip(row, value) {
+        const level = Number(value);
+        if (!Number.isFinite(level)) {
+            return '--';
+        }
+        const safeLevel = Math.max(0, Math.min(100, level));
+        const colorSource = row?.SupplyTypeDescription || row?.SupplyType || row?.Color || '';
+        const color = resolveSupplyColor(colorSource);
+        return renderTonerChipMarkup(color, safeLevel);
+    }
+
     function formatDetailValue(value) {
         if (value === null || value === undefined || value === '') {
             return 'N/A';
@@ -543,10 +607,19 @@ const MPSM = (function() {
                 state.alerts = snapshotAlerts;
             }
 
-            const headlineAlerts = Number(snapshot.headline?.value ?? 0);
-            const contextAlerts = Number(snapshot.context?.total ?? 0);
-            const fallbackAlerts = Number(state.alertsTotal ?? 0);
-            const totalAlerts = Math.max(headlineAlerts, contextAlerts, fallbackAlerts, state.alerts?.length ?? 0);
+            const headlineAlerts = Number(snapshot.headline?.value ?? NaN);
+            const contextAlerts = Number(snapshot.context?.total ?? NaN);
+            const fallbackAlerts = Number(state.alertsTotal ?? NaN);
+            const alertsLength = Array.isArray(state.alerts) ? state.alerts.length : null;
+
+            const candidates = [
+                Number.isFinite(headlineAlerts) ? headlineAlerts : null,
+                Number.isFinite(alertsLength) ? alertsLength : null,
+                Number.isFinite(contextAlerts) ? contextAlerts : null,
+                Number.isFinite(fallbackAlerts) ? fallbackAlerts : null
+            ].filter(value => value !== null);
+
+            const totalAlerts = candidates.length ? candidates[0] : 0;
 
             state.alertsTotal = totalAlerts;
             updateMetricValue('alerts-count', totalAlerts);
@@ -1709,19 +1782,7 @@ const MPSM = (function() {
                 label: 'Level',
                 accessor: row => Number(row.Percentage ?? row.ActualResidualPercentage ?? row.InitialResidualPercentage ?? 0),
                 sortable: true,
-                format: value => {
-                    const level = Number(value);
-                    const safeLevel = Number.isFinite(level) ? Math.max(0, Math.min(100, level)) : 0;
-                    const levelClass = safeLevel <= 10 ? 'status-danger'
-                        : safeLevel <= 20 ? 'status-warning'
-                        : 'status-success';
-                    return `
-                        <div class="toner-bar">
-                            <div class="toner-fill ${levelClass}" style="width: ${safeLevel}%"></div>
-                            <span class="toner-text">${safeLevel}%</span>
-                        </div>
-                    `;
-                }
+                format: (value, row) => renderAlertLevelChip(row, value)
             },
             {
                 id: 'InitialDate',
@@ -1933,6 +1994,40 @@ const MPSM = (function() {
             const equipmentId = getEquipmentIdFromDevice(device);
             const detailContainerId = 'device-endpoint-sections';
 
+            const resolveTonerValueForDevice = (keys) => {
+                if (typeof resolveTonerValue === 'function') {
+                    const resolved = resolveTonerValue(device, keys);
+                    if (Number.isFinite(resolved)) {
+                        return resolved;
+                    }
+                }
+                for (const key of keys) {
+                    const candidate = device[key];
+                    if (candidate !== undefined && candidate !== null && Number.isFinite(Number(candidate))) {
+                        return Number(candidate);
+                    }
+                }
+                return null;
+            };
+
+            const tonerItems = [
+                { color: 'black', label: 'Black Toner', value: resolveTonerValueForDevice(['BlackToner', 'BlackToner1', 'BlackToner2', 'BlackToner3']) },
+                { color: 'cyan', label: 'Cyan Toner', value: resolveTonerValueForDevice(['CyanToner', 'CyanToner1']) },
+                { color: 'magenta', label: 'Magenta Toner', value: resolveTonerValueForDevice(['MagentaToner', 'MagentaToner1']) },
+                { color: 'yellow', label: 'Yellow Toner', value: resolveTonerValueForDevice(['YellowToner', 'YellowToner1']) }
+            ].filter(item => item.value !== null && !Number.isNaN(item.value));
+
+            const supplyMarkup = tonerItems.length
+                ? tonerItems.map(item => `
+                        <div class="supply-item supply-item--${item.color}">
+                            <div class="supply-name">${item.label}</div>
+                            <div class="supply-chip">
+                                ${renderTonerChipMarkup(item.color, item.value)}
+                            </div>
+                        </div>
+                    `).join('')
+                : '<div class="supply-empty">No supply telemetry available</div>';
+
             const html = `
                 <div class="device-snapshot">
                     <div class="snapshot-item">
@@ -1991,42 +2086,7 @@ const MPSM = (function() {
 
                 <h3>Supply Levels</h3>
                 <div class="supply-grid">
-                    ${device.BlackToner !== null ? `
-                        <div class="supply-item">
-                            <div class="supply-name">Black Toner</div>
-                            <div class="toner-bar">
-                                <div class="toner-fill ${device.BlackToner < 10 ? 'status-danger' : device.BlackToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.BlackToner}%"></div>
-                                <span class="toner-text">${device.BlackToner}%</span>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${device.CyanToner !== null ? `
-                        <div class="supply-item">
-                            <div class="supply-name">Cyan Toner</div>
-                            <div class="toner-bar">
-                                <div class="toner-fill ${device.CyanToner < 10 ? 'status-danger' : device.CyanToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.CyanToner}%"></div>
-                                <span class="toner-text">${device.CyanToner}%</span>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${device.MagentaToner !== null ? `
-                        <div class="supply-item">
-                            <div class="supply-name">Magenta Toner</div>
-                            <div class="toner-bar">
-                                <div class="toner-fill ${device.MagentaToner < 10 ? 'status-danger' : device.MagentaToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.MagentaToner}%"></div>
-                                <span class="toner-text">${device.MagentaToner}%</span>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${device.YellowToner !== null ? `
-                        <div class="supply-item">
-                            <div class="supply-name">Yellow Toner</div>
-                            <div class="toner-bar">
-                                <div class="toner-fill ${device.YellowToner < 10 ? 'status-danger' : device.YellowToner < 25 ? 'status-warning' : 'status-success'}" style="width: ${device.YellowToner}%"></div>
-                                <span class="toner-text">${device.YellowToner}%</span>
-                            </div>
-                        </div>
-                    ` : ''}
+                    ${supplyMarkup}
                 </div>
 
                 <h3>Device Information</h3>
@@ -2386,48 +2446,61 @@ const MPSM = (function() {
             if (alerts.length === 0) {
                 modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
             } else {
-                modalBody.innerHTML = `
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Device</th>
-                                <th>Supply</th>
-                                <th>Level</th>
-                                <th>Date</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${alerts.map(alert => {
-                                const level = Number(alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0);
-                                const levelClass = level <= 10 ? 'toner-critical' : level <= 20 ? 'toner-low' : '';
-                                const model = alert.Product?.Model || alert.ProductModel || 'Unknown';
-                                const supply = alert.SupplyTypeDescription || alert.SupplyType || 'N/A';
-                                const manageOption = alert.ManageOption || alert.InstallationOption || 'Monitor';
-                                return `
-                                    <tr>
-                                        <td>${model}</td>
-                                        <td>${supply}</td>
-                                        <td>
-                                            <div class="toner-bar-container">
-                                                <div class="toner-bar ${levelClass}">
-                                                    <div class="toner-fill" style="width: ${level}%"></div>
-                                                </div>
-                                                <span class="toner-label">${level}%</span>
-                                            </div>
-                                        </td>
-                                        <td>${alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A'}</td>
-                                        <td>
-                                            <span class="badge ${manageOption === 'Replace' ? 'badge-warning' : 'badge-info'}">
-                                                ${manageOption}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                `;
+                modalBody.innerHTML = '';
+
+                const supplyTypes = Array.from(new Set(alerts.map(alert => alert.SupplyTypeDescription || alert.SupplyType || 'Other')));
+                const activeTypes = new Set(supplyTypes);
+
+                const filterBar = document.createElement('div');
+                filterBar.className = 'table-filters';
+                filterBar.innerHTML = '<span class="filter-label"><i class="fas fa-filter"></i> Supply Types</span>';
+
+                const tableContainer = document.createElement('div');
+                const modalColumns = buildAlertTableColumns();
+                modalColumns.splice(1, 0, {
+                    id: 'SerialNumber',
+                    label: 'Serial',
+                    accessor: row => row.SerialNumber || row.DeviceSerialNumber || 'N/A',
+                    sortable: true
+                });
+
+                const tableHandle = TableUtils.renderTable(tableContainer, {
+                    columns: modalColumns,
+                    rows: alerts,
+                    pageSize: 50,
+                    defaultSort: { column: 'EquipmentId', direction: 'asc' }
+                });
+
+                supplyTypes.forEach(type => {
+                    const label = document.createElement('label');
+                    label.className = 'filter-checkbox';
+                    label.innerHTML = `
+                        <input type="checkbox" value="${escapeHtml(type)}" checked>
+                        <span>${escapeHtml(type)}</span>
+                    `;
+                    const checkbox = label.querySelector('input');
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) {
+                            activeTypes.add(type);
+                        } else {
+                            activeTypes.delete(type);
+                        }
+
+                        if (!activeTypes.size) {
+                            activeTypes.add(type);
+                            checkbox.checked = true;
+                            showToast('At least one supply type must remain visible', 'warning');
+                            return;
+                        }
+
+                        const filtered = alerts.filter(alert => activeTypes.has(alert.SupplyTypeDescription || alert.SupplyType || 'Other'));
+                        tableHandle.updateRows(filtered);
+                    });
+                    filterBar.appendChild(label);
+                });
+
+                modalBody.appendChild(filterBar);
+                modalBody.appendChild(tableContainer);
             }
         } catch (error) {
             modalBody.innerHTML = `
