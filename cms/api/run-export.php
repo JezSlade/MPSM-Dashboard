@@ -13,6 +13,10 @@ requireAuth();
 
 require_once dirname(__DIR__, 2) . '/.canonical/EndpointCatalog.php';
 
+if (!defined('MPSM_EXPORT_ENDPOINT')) {
+    define('MPSM_EXPORT_ENDPOINT', 'https://mpsm.resolutionsbydesign.us/mps-api/query');
+}
+
 function readJsonRequestBody(): array
 {
     $raw = file_get_contents('php://input');
@@ -22,6 +26,155 @@ function readJsonRequestBody(): array
 
     $decoded = json_decode($raw, true);
     return is_array($decoded) ? $decoded : [];
+}
+
+/**
+ * Perform a raw export call against the mps-api proxy.
+ *
+ * @param string $action
+ * @param array<string,mixed> $params
+ * @return array<string,mixed>
+ * @throws Exception
+ */
+function dispatchExportRequest(string $action, array $params): array
+{
+    $requestBody = json_encode([
+        'action' => $action,
+        'params' => $params
+    ], JSON_UNESCAPED_SLASHES);
+
+    if ($requestBody === false) {
+        throw new Exception('Failed to encode request payload.');
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-Type: application/json\r\n",
+            'content' => $requestBody,
+            'timeout' => 90,
+        ]
+    ]);
+
+    $response = @file_get_contents(MPSM_EXPORT_ENDPOINT, false, $context);
+    if ($response === false) {
+        $error = error_get_last();
+        throw new Exception($error['message'] ?? 'Export request failed.');
+    }
+
+    $decoded = json_decode($response, true);
+    if (!is_array($decoded)) {
+        throw new Exception('Invalid response from export service.');
+    }
+
+    return $decoded;
+}
+
+/**
+ * Attempt to adjust export parameters based on an error message.
+ *
+ * @param string $errorMessage
+ * @param array<string,mixed> $params
+ * @return bool true when an adjustment was applied
+ */
+function applyExportHeuristics(string $errorMessage, array &$params): bool
+{
+    $normalized = strtolower($errorMessage);
+
+    $ensure = function (string $key, $value) use (&$params) {
+        if (!array_key_exists($key, $params)) {
+            $params[$key] = $value;
+            return true;
+        }
+        return false;
+    };
+
+    if (strpos($normalized, 'pagerows') !== false || strpos($normalized, 'page rows') !== false) {
+        return $ensure('pageRows', 1000);
+    }
+
+    if (strpos($normalized, 'pagenumber') !== false || strpos($normalized, 'page number') !== false) {
+        return $ensure('pageNumber', 1);
+    }
+
+    if (strpos($normalized, 'pagesize') !== false) {
+        return $ensure('pageSize', 1000);
+    }
+
+    if (strpos($normalized, 'rowsperpage') !== false) {
+        return $ensure('rowsPerPage', 1000);
+    }
+
+    if (strpos($normalized, 'startdate') !== false || strpos($normalized, 'start date') !== false) {
+        return $ensure('startDate', date('Y-m-d\T00:00:00', strtotime('-30 days')));
+    }
+
+    if (strpos($normalized, 'enddate') !== false || strpos($normalized, 'end date') !== false) {
+        return $ensure('endDate', date('Y-m-d\T23:59:59'));
+    }
+
+    if (strpos($normalized, 'fromdate') !== false || strpos($normalized, 'from date') !== false) {
+        return $ensure('fromDate', date('Y-m-d\T00:00:00', strtotime('-30 days')));
+    }
+
+    if (strpos($normalized, 'todate') !== false || strpos($normalized, 'to date') !== false) {
+        return $ensure('toDate', date('Y-m-d\T23:59:59'));
+    }
+
+    if (strpos($normalized, 'exportformat') !== false || strpos($normalized, ' format') !== false) {
+        return $ensure('exportFormat', 'Excel');
+    }
+
+    if (strpos($normalized, 'exporttocsv') !== false) {
+        return $ensure('exportToCsv', false);
+    }
+
+    if (strpos($normalized, 'format') !== false) {
+        return $ensure('format', 'Excel');
+    }
+
+    return false;
+}
+
+/**
+ * Execute an export with heuristic retries for common validation errors.
+ *
+ * @param string $action
+ * @param array<string,mixed> $initialParams
+ * @return array<string,mixed>
+ * @throws Exception
+ */
+function performExportWithRecovery(string $action, array $initialParams): array
+{
+    $attempts = 0;
+    $params = $initialParams;
+    $lastError = 'Export failed.';
+
+    while ($attempts < 5) {
+        $attempts++;
+
+        $result = dispatchExportRequest($action, $params);
+        if (!empty($result['success'])) {
+            $result['attempts'] = $attempts;
+            $result['params_used'] = $params;
+            return $result;
+        }
+
+        $errorMessage = (string)($result['error'] ?? $result['message'] ?? $result['detail'] ?? '');
+        if ($errorMessage === '') {
+            $lastError = 'Export failed without additional details.';
+            break;
+        }
+
+        $lastError = $errorMessage;
+        $adjusted = applyExportHeuristics($errorMessage, $params);
+
+        if (!$adjusted) {
+            break;
+        }
+    }
+
+    throw new Exception($lastError);
 }
 
 try {
@@ -45,43 +198,10 @@ try {
         throw new Exception('Requested export action is not registered in the catalog.');
     }
 
-    $requestBody = json_encode([
-        'action' => $action,
-        'params' => $params
-    ]);
+    $exportResponse = performExportWithRecovery($action, $params);
 
-    if ($requestBody === false) {
-        throw new Exception('Failed to encode request payload.');
-    }
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/json\r\n",
-            'content' => $requestBody,
-            'timeout' => 60,
-        ]
-    ]);
-
-    $endpoint = 'https://mpsm.resolutionsbydesign.us/mps-api/query';
-    $response = file_get_contents($endpoint, false, $context);
-
-    if ($response === false) {
-        throw new Exception('Export request failed.');
-    }
-
-    $data = json_decode($response, true);
-    if (!is_array($data)) {
-        throw new Exception('Invalid response from export service.');
-    }
-
-    if (empty($data['success'])) {
-        $message = isset($data['error']) ? (string) $data['error'] : 'Export failed.';
-        throw new Exception($message);
-    }
-
-    if (!empty($data['is_file']) && isset($data['file']) && is_array($data['file'])) {
-        $file = $data['file'];
+    if (!empty($exportResponse['is_file']) && isset($exportResponse['file']) && is_array($exportResponse['file'])) {
+        $file = $exportResponse['file'];
         $fileData = $file['data'] ?? null;
         if (!$fileData) {
             throw new Exception('Export completed but no file content was returned.');
@@ -93,16 +213,24 @@ try {
                 'content_type' => $file['content_type'] ?? 'application/octet-stream',
                 'size' => isset($file['size']) ? (int) $file['size'] : null,
                 'data' => $fileData
-            ]
+            ],
+            'attempts' => $exportResponse['attempts'] ?? 1,
+            'params_used' => $exportResponse['params_used'] ?? $params,
+            'duration_ms' => $exportResponse['duration_ms'] ?? null,
+            'catalog_hint' => $exportResponse['catalog_hint'] ?? null
         ]);
         return;
     }
 
     // Fallback: return raw data payload if available (e.g., JSON exports)
-    if (array_key_exists('data', $data)) {
+    if (array_key_exists('data', $exportResponse)) {
         jsonSuccess([
-            'data' => $data['data'],
-            'meta' => $data['meta'] ?? null
+            'data' => $exportResponse['data'],
+            'meta' => $exportResponse['meta'] ?? null,
+            'attempts' => $exportResponse['attempts'] ?? 1,
+            'params_used' => $exportResponse['params_used'] ?? $params,
+            'duration_ms' => $exportResponse['duration_ms'] ?? null,
+            'catalog_hint' => $exportResponse['catalog_hint'] ?? null
         ]);
         return;
     }

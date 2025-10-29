@@ -241,10 +241,20 @@ const CardRegistry = (function () {
                     sortOrder: 'Desc'
                 });
 
+                const meta = data.meta || {};
                 const payload = data.alerts ?? [];
                 const alerts = Array.isArray(payload)
                     ? payload
                     : Array.isArray(payload.Items) ? payload.Items : [];
+
+                const totalAlerts = Number(
+                    meta.total_rows
+                    ?? meta.total_count
+                    ?? meta.total
+                    ?? data.total
+                    ?? alerts.length
+                    ?? 0
+                );
 
                 const counts = alerts.reduce((acc, alert) => {
                     const level = Number(alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0);
@@ -256,14 +266,18 @@ const CardRegistry = (function () {
 
                 return {
                     headline: {
-                        value: alerts.length,
+                        value: totalAlerts,
                         label: 'Alerts'
                     },
                     metrics: [
                         { label: 'Critical', value: counts.critical, tone: counts.critical > 0 ? 'danger' : 'neutral' },
                         { label: 'Low', value: counts.low, tone: counts.low > 0 ? 'warning' : 'neutral' }
                     ],
-                    context: { alerts }
+                    context: {
+                        alerts,
+                        total: totalAlerts,
+                        meta
+                    }
                 };
             },
             renderModal: (helpers, context, snapshot) => {
@@ -530,32 +544,53 @@ const CardRegistry = (function () {
                     { id: 'format', label: 'Format', accessor: row => row.format || 'File', sortable: true },
                     { id: 'category', label: 'Category', accessor: row => row.category || 'N/A', sortable: true },
                     {
-                        id: 'success',
+                        id: 'status',
                         label: 'Status',
-                        accessor: row => row.success === null || row.success === undefined
-                            ? 'Untested'
-                            : (row.success ? 'Pass' : 'Fail'),
+                        accessor: row => {
+                            if (row.runtimeStatus) {
+                                return row.runtimeStatus;
+                            }
+                            if (row.success === null || row.success === undefined) {
+                                return 'Untested';
+                            }
+                            return row.success ? 'Pass' : 'Fail';
+                        },
                         sortable: true,
-                        format: value => {
-                            if (value === 'Pass') {
-                                return '<span class="status-badge status-success">Pass</span>';
+                        format: (value, row) => {
+                            const status = (row.runtimeStatus ?? value ?? 'Untested').toString();
+                            const normalized = status.toLowerCase();
+                            let tone = 'muted';
+                            if (normalized === 'pass' || normalized === 'success') {
+                                tone = 'success';
+                            } else if (normalized === 'fail' || normalized === 'error') {
+                                tone = 'danger';
                             }
-                            if (value === 'Fail') {
-                                return '<span class="status-badge status-danger">Fail</span>';
-                            }
-                            return '<span class="status-badge status-muted">Untested</span>';
+                            const title = row.runtimeError ? ` title="${helpers.escape(row.runtimeError)}"` : '';
+                            return `<span class="status-badge status-${tone}"${title}>${helpers.escape(status)}</span>`;
                         }
+                    },
+                    {
+                        id: 'runtimeAttempts',
+                        label: 'Attempts',
+                        accessor: row => row.runtimeAttempts ?? '',
+                        sortable: true
                     },
                     {
                         id: 'last_tested',
                         label: 'Last Tested',
-                        accessor: row => row.last_tested ? new Date(row.last_tested).toLocaleString() : 'N/A',
+                        accessor: row => {
+                            const runtime = row.runtimeTestedAt ? new Date(row.runtimeTestedAt).toLocaleString() : null;
+                            if (runtime) {
+                                return runtime;
+                            }
+                            return row.last_tested ? new Date(row.last_tested).toLocaleString() : 'N/A';
+                        },
                         sortable: true
                     },
                     {
                         id: 'duration_ms',
                         label: 'Latency (ms)',
-                        accessor: row => row.duration_ms ?? '',
+                        accessor: row => row.runtimeDuration ?? row.duration_ms ?? '',
                         sortable: true,
                         format: value => value ? helpers.formatNumber(Number(value)) : 'N/A'
                     },
@@ -570,7 +605,7 @@ const CardRegistry = (function () {
                     }
                 ];
 
-                helpers.renderTable(tableContainer, {
+                const exportTable = helpers.renderTable(tableContainer, {
                     columns,
                     rows: exports,
                     pageSize: 25,
@@ -650,12 +685,32 @@ const CardRegistry = (function () {
                             document.body.removeChild(link);
                             setTimeout(() => URL.revokeObjectURL(link.href), 2000);
                             showToast('Export downloaded successfully.', 'success');
+                            exportRow.runtimeStatus = 'Pass';
+                            exportRow.runtimeError = null;
+                            exportRow.runtimeAttempts = result.attempts ?? 1;
+                            exportRow.runtimeDuration = result.duration_ms ?? null;
+                            exportRow.runtimeParams = result.params_used ?? null;
+                            exportRow.runtimeTestedAt = new Date().toISOString();
+                            exportRow.success = true;
                         } else {
                             console.log('Export response payload', result);
                             showToast('Export returned structured data. See console for details.', 'info');
+                            exportRow.runtimeStatus = 'Pass';
+                            exportRow.runtimeError = null;
+                            exportRow.runtimeAttempts = result.attempts ?? 1;
+                            exportRow.runtimeDuration = result.duration_ms ?? null;
+                            exportRow.runtimeParams = result.params_used ?? null;
+                            exportRow.runtimeTestedAt = new Date().toISOString();
+                            exportRow.success = true;
                         }
+                        exportTable.updateRows(exports);
                     } catch (error) {
                         showToast('Export failed: ' + error.message, 'error');
+                        exportRow.runtimeStatus = 'Fail';
+                        exportRow.runtimeError = error.message;
+                        exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
+                        exportRow.runtimeTestedAt = new Date().toISOString();
+                        exportTable.updateRows(exports);
                     } finally {
                         button.disabled = false;
                         button.innerHTML = originalHtml;

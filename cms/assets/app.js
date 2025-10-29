@@ -619,7 +619,7 @@ const MPSM = (function() {
                 Number.isFinite(fallbackAlerts) ? fallbackAlerts : null
             ].filter(value => value !== null);
 
-            const totalAlerts = candidates.length ? candidates[0] : 0;
+            const totalAlerts = candidates.length ? Math.max(...candidates) : 0;
 
             state.alertsTotal = totalAlerts;
             updateMetricValue('alerts-count', totalAlerts);
@@ -1727,7 +1727,7 @@ const MPSM = (function() {
                 ?? 0
             );
 
-            state.alertsTotal = Math.max(Number(state.alertsTotal ?? 0), totalAlerts);
+            state.alertsTotal = totalAlerts;
             updateMetricValue('alerts-count', state.alertsTotal);
             updateMetricValue('alert-count', state.alertsTotal);
 
