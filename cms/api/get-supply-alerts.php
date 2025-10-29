@@ -64,9 +64,47 @@ try {
         throw new Exception("Invalid response from mps-api backend");
     }
 
-    // mps-api returns {success, data, action}
+    // mps-api returns {success, data, meta?, action}
     if (isset($data['success']) && $data['success'] && isset($data['data'])) {
-        jsonSuccess(['alerts' => $data['data']]);
+        $raw = $data['data'];
+        $meta = isset($data['meta']) && is_array($data['meta']) ? $data['meta'] : [];
+        $alerts = [];
+
+        if (isset($raw['Items']) && is_array($raw['Items'])) {
+            $alerts = $raw['Items'];
+            if (!isset($meta['total_rows']) && isset($raw['TotalRows'])) {
+                $meta['total_rows'] = (int) $raw['TotalRows'];
+            }
+            if (!isset($meta['total_count']) && isset($raw['TotalCount'])) {
+                $meta['total_count'] = (int) $raw['TotalCount'];
+            }
+        } elseif (is_array($raw)) {
+            $alerts = $raw;
+            if (!isset($meta['total_rows']) && isset($raw['TotalRows'])) {
+                $meta['total_rows'] = (int) $raw['TotalRows'];
+            }
+            if (!isset($meta['total_count']) && isset($raw['TotalCount'])) {
+                $meta['total_count'] = (int) $raw['TotalCount'];
+            }
+        }
+
+        $total = $meta['total_rows']
+            ?? $meta['total_count']
+            ?? $meta['total']
+            ?? count($alerts);
+
+        $responseMeta = $meta;
+        $responseMeta['items_returned'] = count($alerts);
+
+        jsonSuccess([
+            'alerts' => $alerts,
+            'total' => (int) $total,
+            'page' => [
+                'number' => $pageNumber,
+                'size' => $pageRows,
+            ],
+            'meta' => $responseMeta,
+        ]);
     } else {
         throw new Exception($data['error'] ?? 'Unknown error from mps-api');
     }

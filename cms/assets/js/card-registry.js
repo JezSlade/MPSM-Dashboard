@@ -174,7 +174,8 @@ const CardRegistry = (function () {
                 const modal = helpers.createModal('Customer Devices');
                 helpers.renderTable(modal, {
                     columns: [
-                        { id: 'AssetNumber', label: 'Asset #', sortable: true },
+                        { id: 'EquipmentId', label: 'Equipment ID', accessor: row => resolveEquipmentId(row), sortable: true },
+                        { id: 'AssetNumber', label: 'Asset #', accessor: row => row.AssetNumber || '', hidden: true },
                         { id: 'ProductModel', label: 'Model', accessor: row => row.Product?.Model || 'Unknown', sortable: true },
                         { id: 'SerialNumber', label: 'Serial', sortable: true },
                         { id: 'IpAddress', label: 'IP Address' },
@@ -215,7 +216,7 @@ const CardRegistry = (function () {
                     ],
                     rows: snapshot.context.devices,
                     pageSize: 50,
-                    defaultSort: { column: 'AssetNumber', direction: 'asc' },
+                    defaultSort: { column: 'EquipmentId', direction: 'asc' },
                     onRowClick: row => {
                         if (row && row.Id && window.MPSM && typeof window.MPSM.openDeviceModal === 'function') {
                             window.MPSM.openDeviceModal(row.Id);
@@ -598,6 +599,47 @@ const CardRegistry = (function () {
     };
 })();
 
+function resolveEquipmentIdFromParts(asset, external, fallback) {
+    const a = (asset ?? '').toString().trim();
+    const e = (external ?? '').toString().trim();
+    const f = (fallback ?? '').toString().trim();
+
+    if (!a && !e) {
+        return f || 'N/A';
+    }
+
+    if (!a) {
+        return e;
+    }
+
+    if (!e) {
+        return a;
+    }
+
+    if (a.toLowerCase() === e.toLowerCase()) {
+        return a;
+    }
+
+    return `${a} / ${e}`;
+}
+
+function resolveEquipmentId(entity) {
+    if (!entity || typeof entity !== 'object') {
+        return 'N/A';
+    }
+
+    const asset = entity.AssetNumber ?? entity.Asset ?? entity.EquipmentId ?? '';
+    const external = entity.ExternalIdentifier ?? entity.ExternalId ?? '';
+    const fallback = entity.SerialNumber ?? entity.DeviceSerialNumber ?? entity.SystemName ?? '';
+
+    return resolveEquipmentIdFromParts(asset, external, fallback);
+}
+
+if (typeof window !== 'undefined') {
+    window.resolveEquipmentId = window.resolveEquipmentId || resolveEquipmentId;
+    window.resolveEquipmentIdFromParts = window.resolveEquipmentIdFromParts || resolveEquipmentIdFromParts;
+}
+
 function resolveTonerValue(row, keys) {
     for (const key of keys) {
         const value = row[key];
@@ -628,4 +670,6 @@ function renderTonerBadge(color, value) {
         </span>
     `;
 }
+
+
 

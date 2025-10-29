@@ -47,7 +47,7 @@ function buildCategorySummaries(array $categories): array
     $summaries = [];
 
     foreach ($categories as $key => $info) {
-        $working = EndpointCatalog::getEndpointsByCategory($key);
+        $working = EndpointCatalog::getEndpointsByCategory($key, true);
         $summaries[] = [
             'id' => $key,
             'description' => $info['description'] ?? '',

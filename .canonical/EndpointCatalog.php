@@ -131,9 +131,21 @@ class EndpointCatalog {
             return;
         }
 
-        $resultsFile = __DIR__ . '/../output/endpoint_test_results.json';
+        $candidateFiles = [
+            __DIR__ . '/../output/endpoint_test_results.json',
+            __DIR__ . '/endpoint_catalog.json',
+            __DIR__ . '/endpoint_test_results.json'
+        ];
 
-        if (!file_exists($resultsFile)) {
+        $resultsFile = null;
+        foreach ($candidateFiles as $candidate) {
+            if (is_string($candidate) && file_exists($candidate)) {
+                $resultsFile = $candidate;
+                break;
+            }
+        }
+
+        if ($resultsFile === null) {
             self::$catalog = [];
             self::$catalogIndex = [];
             self::$testResults = null;
@@ -151,7 +163,8 @@ class EndpointCatalog {
         }
 
         self::$testResults = $data;
-        self::buildCatalog($data['results']);
+        $results = $data['results'] ?? $data;
+        self::buildCatalog($results);
     }
 
     /**
@@ -161,8 +174,22 @@ class EndpointCatalog {
         self::$catalog = [];
         self::$catalogIndex = [];
 
-        foreach ($results as $result) {
-            $action = $result['action'];
+        if (!is_array($results)) {
+            return;
+        }
+
+        foreach ($results as $key => $result) {
+            if (is_array($result)) {
+                $action = $result['action'] ?? (is_string($key) ? $key : null);
+            } elseif (is_string($key) && is_array($result)) {
+                $action = $key;
+            } else {
+                $action = null;
+            }
+
+            if (!$action) {
+                continue;
+            }
 
             $entry = [
                 'action' => $action,
@@ -300,17 +327,21 @@ class EndpointCatalog {
     /**
      * Get endpoints by category
      */
-    public static function getEndpointsByCategory($category) {
+    public static function getEndpointsByCategory($category, $onlySuccessful = false) {
         self::init();
 
         $endpoints = [];
         foreach (self::$catalog as $action => $info) {
-            if ($info['category'] === $category && $info['success']) {
+            $isSuccessful = (bool)($info['success'] ?? false);
+
+            if ($info['category'] === $category && (!$onlySuccessful || $isSuccessful)) {
                 $endpoints[] = [
                     'action' => $action,
                     'data_type' => $info['data_type'],
                     'data_count' => $info['data_count'],
                     'use_case' => $info['use_case'],
+                    'success' => $info['success'],
+                    'duration_ms' => $info['duration_ms'],
                 ];
             }
         }
@@ -421,7 +452,7 @@ class EndpointCatalog {
             if (!empty($categoryEndpoints)) {
                 $alternatives = [];
                 foreach ($categoryEndpoints as $ep) {
-                    if ($ep['action'] !== $failedAction) {
+                    if (($ep['success'] ?? false) && $ep['action'] !== $failedAction) {
                         $alternatives[$ep['action']] = $ep['use_case'] ?? 'No description';
                     }
                 }
@@ -505,6 +536,10 @@ class EndpointCatalog {
 
         if (!empty($responseTimes)) {
             $stats['avg_response_time'] = round(array_sum($responseTimes) / count($responseTimes), 2);
+        }
+
+        if (is_array(self::$testResults) && isset(self::$testResults['test_date'])) {
+            $stats['test_date'] = self::$testResults['test_date'];
         }
 
         return $stats;

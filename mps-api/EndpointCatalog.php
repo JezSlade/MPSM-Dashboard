@@ -300,17 +300,21 @@ class EndpointCatalog {
     /**
      * Get endpoints by category
      */
-    public static function getEndpointsByCategory($category) {
+    public static function getEndpointsByCategory($category, $onlySuccessful = false) {
         self::init();
 
         $endpoints = [];
         foreach (self::$catalog as $action => $info) {
-            if ($info['category'] === $category && $info['success']) {
+            $isSuccessful = (bool)($info['success'] ?? false);
+
+            if ($info['category'] === $category && (!$onlySuccessful || $isSuccessful)) {
                 $endpoints[] = [
                     'action' => $action,
                     'data_type' => $info['data_type'],
                     'data_count' => $info['data_count'],
                     'use_case' => $info['use_case'],
+                    'success' => $info['success'],
+                    'duration_ms' => $info['duration_ms'],
                 ];
             }
         }
@@ -505,6 +509,10 @@ class EndpointCatalog {
 
         if (!empty($responseTimes)) {
             $stats['avg_response_time'] = round(array_sum($responseTimes) / count($responseTimes), 2);
+        }
+
+        if (is_array(self::$testResults) && isset(self::$testResults['test_date'])) {
+            $stats['test_date'] = self::$testResults['test_date'];
         }
 
         return $stats;

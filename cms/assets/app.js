@@ -27,6 +27,7 @@ const MPSM = (function() {
         currentDevicePage: 1,
         currentAlertPage: 1,
         debugLogs: [],
+        deviceDetails: {},
         endpointCatalog: {
             categories: [],
             statistics: null,
@@ -66,6 +67,239 @@ const MPSM = (function() {
         statusEl.classList.remove('status-muted');
         statusEl.classList.toggle('status-online', online);
         statusEl.classList.toggle('status-offline', !online);
+    }
+
+    function resolveEquipmentIdFromParts(asset, external, fallback) {
+        const a = (asset ?? '').toString().trim();
+        const e = (external ?? '').toString().trim();
+        const f = (fallback ?? '').toString().trim();
+
+        if (!a && !e) {
+            return f || 'N/A';
+        }
+
+        if (!a) {
+            return e;
+        }
+
+        if (!e) {
+            return a;
+        }
+
+        if (a.toLowerCase() === e.toLowerCase()) {
+            return a;
+        }
+
+        return `${a} / ${e}`;
+    }
+
+    function getEquipmentIdFromDevice(device) {
+        if (!device || typeof device !== 'object') {
+            return 'N/A';
+        }
+
+        const asset = device.AssetNumber ?? device.Asset ?? device.EquipmentId ?? '';
+        const external = device.ExternalIdentifier ?? device.ExternalId ?? '';
+        const fallback = device.SerialNumber ?? device.DeviceSerialNumber ?? device.SystemName ?? '';
+
+        return resolveEquipmentIdFromParts(asset, external, fallback);
+    }
+
+    function getEquipmentIdFromAlert(alert) {
+        if (!alert || typeof alert !== 'object') {
+            return 'N/A';
+        }
+
+        const asset = alert.AssetNumber ?? alert.Asset ?? '';
+        const external = alert.ExternalIdentifier ?? alert.ExternalId ?? '';
+        const fallback = alert.SerialNumber ?? alert.DeviceSerialNumber ?? alert.EquipmentId ?? '';
+
+        return resolveEquipmentIdFromParts(asset, external, fallback);
+    }
+
+    if (typeof window !== 'undefined') {
+        window.resolveEquipmentIdFromParts = window.resolveEquipmentIdFromParts || resolveEquipmentIdFromParts;
+        window.getEquipmentIdFromDevice = window.getEquipmentIdFromDevice || getEquipmentIdFromDevice;
+    }
+
+    function formatDetailValue(value) {
+        if (value === null || value === undefined || value === '') {
+            return 'N/A';
+        }
+
+        if (typeof value === 'number') {
+            return Number(value).toLocaleString();
+        }
+
+        if (typeof value === 'boolean') {
+            return value ? 'Yes' : 'No';
+        }
+
+        if (typeof value === 'string') {
+            const isoDatePattern = /^\d{4}-\d{2}-\d{2}T/;
+            if (isoDatePattern.test(value)) {
+                const date = new Date(value);
+                if (!Number.isNaN(date.getTime())) {
+                    return date.toLocaleString();
+                }
+            }
+            return value;
+        }
+
+        if (Array.isArray(value)) {
+            return `${value.length} item(s)`;
+        }
+
+        if (typeof value === 'object') {
+            let serialized = JSON.stringify(value);
+            if (serialized.length > 200) {
+                serialized = serialized.slice(0, 197) + '...';
+            }
+            return serialized;
+        }
+
+        return String(value);
+    }
+
+    function renderKeyValueSnapshot(data, limit = 8) {
+        if (!data || typeof data !== 'object') {
+            return '<div class="snapshot-value">No details available</div>';
+        }
+
+        const entries = Object.entries(data).slice(0, limit);
+        if (!entries.length) {
+            return '<div class="snapshot-value">No details available</div>';
+        }
+
+        return `
+            <div class="device-snapshot">
+                ${entries.map(([key, value]) => `
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">${escapeHtml(key)}</div>
+                        <div class="snapshot-value">${escapeHtml(formatDetailValue(value))}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function renderEndpointDataPreview(entry) {
+        const data = entry.data;
+
+        if (data === null || data === undefined) {
+            return '<div class="snapshot-value">No data returned</div>';
+        }
+
+        if (Array.isArray(data)) {
+            if (!data.length) {
+                return '<div class="snapshot-value">No items returned</div>';
+            }
+
+            const firstObject = data.find(item => item && typeof item === 'object' && !Array.isArray(item));
+            if (firstObject) {
+                return renderKeyValueSnapshot(firstObject);
+            }
+
+            return `<div class="snapshot-value">${escapeHtml(formatDetailValue(data[0]))}</div>`;
+        }
+
+        if (typeof data === 'object') {
+            return renderKeyValueSnapshot(data);
+        }
+
+        return `<div class="snapshot-value">${escapeHtml(formatDetailValue(data))}</div>`;
+    }
+
+    function renderEndpointMetaFooter(entry) {
+        const parts = [];
+
+        const duration = entry.duration_ms ?? entry.duration ?? null;
+        if (duration !== null && duration !== undefined) {
+            parts.push(`Duration: ${formatDetailValue(duration)} ms`);
+        }
+
+        if (Array.isArray(entry.data)) {
+            parts.push(`Items: ${formatDetailValue(entry.data.length)}`);
+        }
+
+        const meta = entry.meta;
+        if (meta && typeof meta === 'object') {
+            const keys = ['items_returned', 'total_rows', 'total_count', 'total', 'count'];
+            keys.forEach(key => {
+                if (meta[key] !== undefined && meta[key] !== null) {
+                    const label = key.replace(/_/g, ' ');
+                    parts.push(`${label}: ${formatDetailValue(meta[key])}`);
+                }
+            });
+        }
+
+        if (!parts.length) {
+            return '';
+        }
+
+        return `
+            <div class="card-footer">
+                ${parts.map(part => `<span>${escapeHtml(part)}</span>`).join(' &bull; ')}
+            </div>
+        `;
+    }
+
+    function renderEndpointSection(entry) {
+        const statusClass = entry.success ? 'status-success' : 'status-danger';
+        const statusLabel = entry.success ? 'Success' : 'Failed';
+        const bodyContent = entry.success
+            ? renderEndpointDataPreview(entry)
+            : `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>${escapeHtml(entry.error || 'Endpoint request failed')}</p>
+                </div>
+            `;
+
+        const footer = renderEndpointMetaFooter(entry);
+
+        return `
+            <div class="card device-detail-card">
+                <div class="card-header">
+                    <h3>${escapeHtml(entry.action || 'Endpoint')}</h3>
+                    <span class="status-badge ${statusClass}">${statusLabel}</span>
+                </div>
+                <div class="card-body">
+                    ${bodyContent}
+                </div>
+                ${footer}
+            </div>
+        `;
+    }
+
+    function renderEndpointSections(results) {
+        if (!Array.isArray(results) || results.length === 0) {
+            return '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No endpoint data available</p></div>';
+        }
+
+        return results.map(renderEndpointSection).join('');
+    }
+
+    async function fetchDeviceDetails(deviceId) {
+        if (state.deviceDetails && state.deviceDetails[deviceId]) {
+            return state.deviceDetails[deviceId];
+        }
+
+        const params = new URLSearchParams({
+            deviceId: deviceId,
+            dealerId: state.dealerId || '',
+            customerCode: state.customerCode || ''
+        });
+
+        const response = await fetch('api/get-device-details.php?' + params.toString());
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Device detail request failed');
+        }
+
+        state.deviceDetails[deviceId] = data;
+        return data;
     }
 
     /**
@@ -788,6 +1022,11 @@ const MPSM = (function() {
         state.devices = [];
         state.alerts = [];
         state.connectorsSummary = null;
+        state.deviceDetails = {};
+        state.totalDevices = 0;
+        state.offlineDevices = 0;
+        state.alertsTotal = 0;
+        state.connectorsTotal = 0;
 
         CardManager.setContext({
             dealerCode: state.dealerCode,
@@ -943,6 +1182,12 @@ const MPSM = (function() {
         const workingEndpoints = stats.working ?? null;
         const failedEndpoints = stats.failed ?? null;
         const averageDuration = stats.avg_response_time ?? null;
+        const lastTested = stats.test_date
+            ? (() => {
+                const date = new Date(stats.test_date);
+                return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+            })()
+            : null;
 
         const augmentedCategories = [
             {
@@ -974,15 +1219,19 @@ const MPSM = (function() {
                 </div>
                 <div class="catalog-stat">
                     <span class="catalog-stat-label">Working</span>
-                    <span class="catalog-stat-value">${workingEndpoints !== null ? Number(workingEndpoints).toLocaleString() : '—'}</span>
+                    <span class="catalog-stat-value">${workingEndpoints !== null ? Number(workingEndpoints).toLocaleString() : 'N/A'}</span>
                 </div>
                 <div class="catalog-stat">
                     <span class="catalog-stat-label">Failed</span>
-                    <span class="catalog-stat-value">${failedEndpoints !== null ? Number(failedEndpoints).toLocaleString() : '—'}</span>
+                    <span class="catalog-stat-value">${failedEndpoints !== null ? Number(failedEndpoints).toLocaleString() : 'N/A'}</span>
                 </div>
                 <div class="catalog-stat">
                     <span class="catalog-stat-label">Avg. Response (ms)</span>
-                    <span class="catalog-stat-value">${averageDuration !== null ? Number(averageDuration).toLocaleString() : '—'}</span>
+                    <span class="catalog-stat-value">${averageDuration !== null ? Number(averageDuration).toLocaleString() : 'N/A'}</span>
+                </div>
+                <div class="catalog-stat">
+                    <span class="catalog-stat-label">Last Tested</span>
+                    <span class="catalog-stat-value">${lastTested || 'N/A'}</span>
                 </div>
             `;
         }
@@ -1278,6 +1527,10 @@ const MPSM = (function() {
         const container = document.getElementById('device-list');
         const countEl = document.getElementById('device-count');
 
+        if (!container || !countEl) {
+            return;
+        }
+
         container.innerHTML = '<div class="loading">Loading devices...</div>';
 
         try {
@@ -1297,68 +1550,64 @@ const MPSM = (function() {
                 throw new Error(data.error);
             }
 
-            const devices = Array.isArray(data.devices) ? data.devices : [];
-            state.devices = devices;
+            const meta = data.meta || {};
+            const fetchedDevices = Array.isArray(data.devices) ? data.devices : [];
 
-            const totalCount = Number(data.total ?? devices.length ?? 0);
-
-            countEl.textContent = totalCount;
-            const bannerDeviceCount = document.getElementById('banner-device-total');
-            if (bannerDeviceCount) {
-                bannerDeviceCount.textContent = totalCount;
+            if (fetchedDevices.length) {
+                state.devices = fetchedDevices;
             }
 
-            // Update offline count in header
-            const offlineCount = devices.filter(d => d.IsOffline).length;
-            const offlineEl = document.getElementById('offline-count');
-            if (offlineEl) offlineEl.textContent = offlineCount;
+            const totalCount = Number(
+                meta.total_rows
+                ?? meta.total_count
+                ?? meta.total
+                ?? data.total
+                ?? (state.devices ? state.devices.length : 0)
+                ?? 0
+            );
 
-            if (devices.length === 0) {
+            state.totalDevices = Math.max(Number(state.totalDevices ?? 0), totalCount);
+            updateMetricValue('device-count', state.totalDevices);
+            updateMetricValue('banner-device-total', state.totalDevices);
+
+            const offlineFromFetch = fetchedDevices.filter(device => device.IsOffline).length;
+            const offlineCount = Math.max(Number(state.offlineDevices ?? 0), offlineFromFetch);
+            state.offlineDevices = offlineCount;
+            updateMetricValue('offline-count', offlineCount);
+
+            const displayDevices = (state.devices && state.devices.length)
+                ? state.devices
+                : fetchedDevices;
+
+            if (!displayDevices.length) {
                 container.innerHTML = '<div class="empty-state">No devices found</div>';
                 return;
             }
 
-            // Render device table
-            const html = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Asset #</th>
-                            <th>Model</th>
-                            <th>IP Address</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${state.devices.map(device => `
-                            <tr onclick="MPSM.openDeviceModal('${device.Id}')" style="cursor: pointer;">
-                                <td>${device.AssetNumber || device.SerialNumber || 'N/A'}</td>
-                                <td>${device.Product?.Model || 'Unknown'}</td>
-                                <td>${device.IpAddress || 'N/A'}</td>
-                                <td>${device.Note || device.OfficeDescription || '-'}</td>
-                                <td>
-                                    <span class="status-badge ${device.IsOffline ? 'status-danger' : 'status-success'}">
-                                        ${device.IsOffline ? 'Offline' : 'Online'}
-                                    </span>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+            container.innerHTML = '';
+            const tableContainer = document.createElement('div');
+            container.appendChild(tableContainer);
 
-            container.innerHTML = html;
+            TableUtils.renderTable(tableContainer, {
+                columns: buildDeviceTableColumns(),
+                rows: displayDevices,
+                pageSize: 50,
+                defaultSort: { column: 'EquipmentId', direction: 'asc' },
+                onRowClick: row => {
+                    if (row && row.Id) {
+                        openDeviceModal(row.Id);
+                    }
+                }
+            });
 
         } catch (error) {
             container.innerHTML = `
                 <div class="error-state">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>Failed to load devices</p>
-                    <p class="error-message">${error.message}</p>
+                    <p class="error-message">${escapeHtml(error.message)}</p>
                 </div>
             `;
-            countEl.textContent = '0';
         }
     }
 
@@ -1369,13 +1618,17 @@ const MPSM = (function() {
         const container = document.getElementById('supply-alerts');
         const countEl = document.getElementById('alert-count');
 
+        if (!container || !countEl) {
+            return;
+        }
+
         container.innerHTML = '<div class="loading">Loading supply alerts...</div>';
 
         try {
             const params = new URLSearchParams({
                 customerCode: state.customerCode || '',
                 dealerCode: state.dealerCode || '',
-                pageRows: 20,
+                pageRows: 50,
                 sortColumn: 'InitialDate',
                 sortOrder: 'Desc'
             });
@@ -1384,83 +1637,110 @@ const MPSM = (function() {
             const data = await response.json();
 
             if (!data.success) {
-                throw new Error(data.error);
+                throw new Error(data.error || 'Supply alerts request failed');
             }
 
-            const alertPayload = data.alerts ?? [];
-            let alerts = [];
+            const meta = data.meta || {};
+            const alertPayload = Array.isArray(data.alerts) ? data.alerts : [];
 
-            if (Array.isArray(alertPayload)) {
-                alerts = alertPayload;
-            } else if (Array.isArray(alertPayload.Items)) {
-                alerts = alertPayload.Items;
-            }
+            state.alerts = alertPayload;
 
-            state.alerts = alerts;
-            const displayedCount = state.alertsTotal ?? alerts.length;
-            countEl.textContent = displayedCount;
+            const totalAlerts = Number(
+                meta.total_rows
+                ?? meta.total_count
+                ?? meta.total
+                ?? data.total
+                ?? (state.alerts ? state.alerts.length : 0)
+                ?? 0
+            );
 
-            if (alerts.length === 0) {
+            state.alertsTotal = Math.max(Number(state.alertsTotal ?? 0), totalAlerts);
+            updateMetricValue('alerts-count', state.alertsTotal);
+            updateMetricValue('alert-count', state.alertsTotal);
+
+            if (!state.alerts.length) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
                 return;
             }
 
-            // Render alerts table
-            const html = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Priority</th>
-                            <th>Device</th>
-                            <th>Supply Type</th>
-                            <th>Level</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${alerts.map(alert => {
-                            const level = alert.Percentage ?? alert.ActualResidualPercentage ?? alert.InitialResidualPercentage ?? 0;
-                            const priority = level < 10 ? 'HIGH' : level < 25 ? 'MED' : 'LOW';
-                            const priorityClass = level < 10 ? 'status-danger' : level < 25 ? 'status-warning' : 'status-success';
-                            const date = alert.InitialDate ? new Date(alert.InitialDate).toLocaleDateString() : 'N/A';
-                            const manageOption = alert.ManageOption || alert.InstallationOption || 'Monitor';
+            container.innerHTML = '';
+            const tableContainer = document.createElement('div');
+            container.appendChild(tableContainer);
 
-                            return `
-                                <tr>
-                                    <td><span class="status-badge ${priorityClass}">${priority}</span></td>
-                                    <td>${alert.SerialNumber || alert.DeviceSerialNumber || 'Unknown'}</td>
-                                    <td>${alert.SupplyTypeDescription || alert.SupplyType || 'Supply'}</td>
-                                    <td>
-                                        <div class="toner-bar">
-                                            <div class="toner-fill ${priorityClass}" style="width: ${level}%"></div>
-                                            <span class="toner-text">${level}%</span>
-                                        </div>
-                                    </td>
-                                    <td>${date}</td>
-                                    <td>${manageOption}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-                <div class="card-footer">
-                    <span>${alerts.length} active alerts | <a href="#" id="view-all-alerts">View All</a></span>
-                </div>
-            `;
-
-            container.innerHTML = html;
-
+            TableUtils.renderTable(tableContainer, {
+                columns: buildAlertTableColumns(),
+                rows: state.alerts,
+                pageSize: 50,
+                defaultSort: { column: 'EquipmentId', direction: 'asc' }
+            });
         } catch (error) {
             container.innerHTML = `
                 <div class="error-state">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>Failed to load supply alerts</p>
-                    <p class="error-message">${error.message}</p>
+                    <p class="error-message">${escapeHtml(error.message)}</p>
                 </div>
             `;
-            countEl.textContent = '0';
         }
+    }
+
+    function buildAlertTableColumns() {
+        return [
+            {
+                id: 'EquipmentId',
+                label: 'Equipment ID',
+                accessor: row => getEquipmentIdFromAlert(row),
+                sortable: true
+            },
+            {
+                id: 'DeviceModel',
+                label: 'Model',
+                accessor: row => row.Product?.Model || row.ProductModel || row.DeviceModel || 'Unknown',
+                sortable: true
+            },
+            {
+                id: 'SupplyType',
+                label: 'Supply',
+                accessor: row => row.SupplyTypeDescription || row.SupplyType || 'Supply',
+                sortable: true
+            },
+            {
+                id: 'Level',
+                label: 'Level',
+                accessor: row => Number(row.Percentage ?? row.ActualResidualPercentage ?? row.InitialResidualPercentage ?? 0),
+                sortable: true,
+                format: value => {
+                    const level = Number(value);
+                    const safeLevel = Number.isFinite(level) ? Math.max(0, Math.min(100, level)) : 0;
+                    const levelClass = safeLevel <= 10 ? 'status-danger'
+                        : safeLevel <= 20 ? 'status-warning'
+                        : 'status-success';
+                    return `
+                        <div class="toner-bar">
+                            <div class="toner-fill ${levelClass}" style="width: ${safeLevel}%"></div>
+                            <span class="toner-text">${safeLevel}%</span>
+                        </div>
+                    `;
+                }
+            },
+            {
+                id: 'InitialDate',
+                label: 'Date',
+                accessor: row => row.InitialDate ? new Date(row.InitialDate).toLocaleDateString() : 'N/A',
+                sortable: true
+            },
+            {
+                id: 'ManageOption',
+                label: 'Action',
+                accessor: row => row.ManageOption || row.InstallationOption || 'Monitor',
+                sortable: true,
+                format: value => {
+                    const option = (value || 'Monitor').toString();
+                    const badgeClass = option.toLowerCase() === 'replace' ? 'badge-warning' : 'badge-info';
+                    return `<span class="badge ${badgeClass}">${escapeHtml(option)}</span>`;
+                }
+            }
+        ];
     }
 
     /**
@@ -1633,7 +1913,7 @@ const MPSM = (function() {
     /**
      * Open device detail modal
      */
-    function openDeviceModal(deviceId) {
+    async function openDeviceModal(deviceId) {
         debugLog(`Opening device modal: ${deviceId}`, 'info');
         const modal = document.getElementById('device-modal');
         const modalBody = document.getElementById('modal-device-body');
@@ -1650,8 +1930,15 @@ const MPSM = (function() {
 
             modalName.textContent = device.Product?.Model || 'Device Details';
 
+            const equipmentId = getEquipmentIdFromDevice(device);
+            const detailContainerId = 'device-endpoint-sections';
+
             const html = `
                 <div class="device-snapshot">
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Equipment ID</div>
+                        <div class="snapshot-value">${escapeHtml(equipmentId)}</div>
+                    </div>
                     <div class="snapshot-item">
                         <div class="snapshot-label">Serial Number</div>
                         <div class="snapshot-value">${device.SerialNumber || 'N/A'}</div>
@@ -1765,9 +2052,37 @@ const MPSM = (function() {
                         <div class="snapshot-value">${device.LastUpdate ? new Date(device.LastUpdate).toLocaleString() : 'N/A'}</div>
                     </div>
                 </div>
+
+                <div class="device-detail-sections">
+                    <h3>Endpoint Data</h3>
+                    <div id="${detailContainerId}">
+                        <div class="loading">Loading endpoint data...</div>
+                    </div>
+                </div>
             `;
 
             modalBody.innerHTML = html;
+
+            try {
+                const detailPayload = await fetchDeviceDetails(deviceId);
+                const detailContainer = document.getElementById(detailContainerId);
+
+                if (detailContainer) {
+                    detailContainer.innerHTML = renderEndpointSections(detailPayload.results || []);
+                }
+            } catch (detailError) {
+                debugLog('Failed to load endpoint data: ' + detailError.message, 'error');
+                const detailContainer = document.getElementById(detailContainerId);
+                if (detailContainer) {
+                    detailContainer.innerHTML = `
+                        <div class="error-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Failed to load endpoint data</p>
+                            <p class="error-message">${escapeHtml(detailError.message)}</p>
+                        </div>
+                    `;
+                }
+            }
 
         } catch (error) {
             debugLog('Failed to load device details: ' + error.message, 'error');
@@ -1802,7 +2117,8 @@ const MPSM = (function() {
      */
     function buildDeviceTableColumns() {
         return [
-            { id: 'AssetNumber', label: 'Asset #', sortable: true },
+            { id: 'EquipmentId', label: 'Equipment ID', accessor: row => getEquipmentIdFromDevice(row), sortable: true },
+            { id: 'AssetNumber', label: 'Asset #', accessor: row => row.AssetNumber || '', hidden: true },
             {
                 id: 'ProductModel',
                 label: 'Model',
@@ -1889,7 +2205,7 @@ const MPSM = (function() {
                 columns: buildDeviceTableColumns(),
                 rows: state.devices,
                 pageSize: 50,
-                defaultSort: { column: 'AssetNumber', direction: 'asc' },
+                defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: row => {
                     if (row && row.Id) {
                         openDeviceModal(row.Id);
@@ -1935,7 +2251,7 @@ const MPSM = (function() {
                 ],
                 rows: enriched,
                 pageSize: 25,
-                defaultSort: { column: 'AssetNumber', direction: 'asc' },
+                defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: row => {
                     if (row && row.Id) {
                         openDeviceModal(row.Id);
