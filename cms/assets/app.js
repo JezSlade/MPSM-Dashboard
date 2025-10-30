@@ -25,10 +25,12 @@ const MPSM = (function() {
         offlineDevices: 0,
         connectorsTotal: 0,
         alertsTotal: 0,
+        cards: [],
         currentDevicePage: 1,
         currentAlertPage: 1,
         debugLogs: [],
         deviceDetails: {},
+        deviceLookup: new Map(),
         endpointCatalog: {
             categories: [],
             statistics: null,
@@ -45,6 +47,103 @@ const MPSM = (function() {
     let connectorPollTimer = null;
     let catalogTableInstance = null;
     let catalogSearchTimeout = null;
+
+    const CARD_LAYOUT_STORAGE_KEY = 'mpsm-dashboard-card-order';
+
+    function getAvailableCardIds() {
+        if (typeof CardRegistry !== 'undefined' && typeof CardRegistry.getAll === 'function') {
+            return CardRegistry.getAll().map(card => card.id);
+        }
+        if (typeof CardManager !== 'undefined' && typeof CardManager.getAvailableCards === 'function') {
+            return CardManager.getAvailableCards().map(card => card.id);
+        }
+        return [];
+    }
+
+    function sanitizeCardOrder(order) {
+        if (!Array.isArray(order)) {
+            return [];
+        }
+
+        const availableIds = new Set(getAvailableCardIds());
+        const seen = new Set();
+        const sanitized = [];
+
+        order.forEach(id => {
+            if (typeof id !== 'string' || id.trim() === '') {
+                return;
+            }
+            const normalized = id.trim();
+            if (seen.has(normalized)) {
+                return;
+            }
+            if (availableIds.size && !availableIds.has(normalized)) {
+                return;
+            }
+            sanitized.push(normalized);
+            seen.add(normalized);
+        });
+
+        return sanitized;
+    }
+
+    function loadCardLayoutFromStorage() {
+        if (typeof window === 'undefined' || !window.localStorage) {
+            return [];
+        }
+
+        try {
+            const stored = window.localStorage.getItem(CARD_LAYOUT_STORAGE_KEY);
+            if (!stored) {
+                return [];
+            }
+
+            const parsed = JSON.parse(stored);
+            return sanitizeCardOrder(parsed);
+        } catch (error) {
+            debugLog('Failed to load stored card layout: ' + error.message, 'warn');
+            return [];
+        }
+    }
+
+    function persistCardLayout(order, syncRemote = true) {
+        const sanitized = sanitizeCardOrder(order);
+        if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                window.localStorage.setItem(CARD_LAYOUT_STORAGE_KEY, JSON.stringify(sanitized));
+            } catch (error) {
+                debugLog('Failed to persist card layout locally: ' + error.message, 'warn');
+            }
+        }
+
+        if (syncRemote && sanitized.length) {
+            savePreference('cards', sanitized).catch(() => {});
+        }
+    }
+
+    function applyCardLayout(order, options = {}) {
+        const sanitized = sanitizeCardOrder(order);
+        if (!sanitized.length) {
+            return;
+        }
+
+        state.cards = sanitized.slice();
+        cardSelection = new Set(sanitized);
+
+        if (cardsInitialized) {
+            CardManager.setEnabledCards(sanitized);
+        }
+
+        if (options.persist !== false) {
+            persistCardLayout(sanitized, options.syncRemote !== false);
+        }
+    }
+
+    const storedCardLayout = loadCardLayoutFromStorage();
+    if (storedCardLayout.length) {
+        state.cards = storedCardLayout.slice();
+        cardSelection = new Set(storedCardLayout);
+    }
 
     // Debug logger
     function debugLog(message, type = 'info') {
@@ -121,6 +220,54 @@ const MPSM = (function() {
     if (typeof window !== 'undefined') {
         window.resolveEquipmentIdFromParts = window.resolveEquipmentIdFromParts || resolveEquipmentIdFromParts;
         window.getEquipmentIdFromDevice = window.getEquipmentIdFromDevice || getEquipmentIdFromDevice;
+        window.getEquipmentIdFromAlert = window.getEquipmentIdFromAlert || getEquipmentIdFromAlert;
+    }
+
+    function hydrateDeviceLookup(devices) {
+        const lookupMap = new Map();
+
+        if (Array.isArray(devices)) {
+            devices.forEach(device => {
+                if (!device || typeof device !== 'object') {
+                    return;
+                }
+
+                const keys = new Set();
+                const deviceId = device.Id ?? device.IdInstalledProduct ?? device.DeviceId ?? null;
+                if (deviceId !== null && deviceId !== undefined) {
+                    keys.add(String(deviceId).toLowerCase());
+                }
+
+                const equipmentId = getEquipmentIdFromDevice(device);
+                if (equipmentId && equipmentId !== 'N/A') {
+                    keys.add(String(equipmentId).toLowerCase());
+                }
+
+                const aliases = [
+                    device.SerialNumber,
+                    device.DeviceSerialNumber,
+                    device.AssetNumber,
+                    device.ExternalIdentifier,
+                    device.SystemName,
+                    device.DeviceAlias
+                ];
+
+                aliases.forEach(alias => {
+                    if (alias !== undefined && alias !== null && alias !== '') {
+                        keys.add(String(alias).toLowerCase());
+                    }
+                });
+
+                keys.forEach(key => lookupMap.set(key, device));
+            });
+        }
+
+        state.deviceLookup = lookupMap;
+        return lookupMap;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.hydrateDeviceLookup = window.hydrateDeviceLookup || hydrateDeviceLookup;
     }
 
     function resolveSupplyColor(value) {
@@ -264,6 +411,44 @@ const MPSM = (function() {
     if (typeof window !== 'undefined') {
         window.resolveAlertDeviceKey = window.resolveAlertDeviceKey || resolveAlertDeviceKey;
         window.computeAlertDeviceSummary = window.computeAlertDeviceSummary || computeAlertDeviceSummary;
+    }
+
+    function findDeviceIdForAlert(alert) {
+        if (!alert || typeof alert !== 'object') {
+            return null;
+        }
+
+        const direct = alert.DeviceId ?? alert.IdDevice ?? alert.IdInstalledProduct ?? null;
+        if (direct !== null && direct !== undefined) {
+            return direct;
+        }
+
+        const lookupKeys = [];
+        const equipmentId = getEquipmentIdFromAlert(alert);
+        if (equipmentId && equipmentId !== 'N/A') {
+            lookupKeys.push(equipmentId);
+        }
+        if (alert.SerialNumber) lookupKeys.push(alert.SerialNumber);
+        if (alert.DeviceSerialNumber) lookupKeys.push(alert.DeviceSerialNumber);
+        if (alert.AssetNumber) lookupKeys.push(alert.AssetNumber);
+        if (alert.ExternalIdentifier) lookupKeys.push(alert.ExternalIdentifier);
+
+        for (const key of lookupKeys) {
+            if (!key) continue;
+            const normalized = key.toString().toLowerCase();
+            if (state.deviceLookup.has(normalized)) {
+                const device = state.deviceLookup.get(normalized);
+                if (device && typeof device === 'object') {
+                    return device.Id ?? device.IdInstalledProduct ?? device.DeviceId ?? null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    if (typeof window !== 'undefined') {
+        window.findDeviceIdForAlert = window.findDeviceIdForAlert || findDeviceIdForAlert;
     }
 
     function formatDetailValue(value) {
@@ -625,8 +810,20 @@ const MPSM = (function() {
             state.customerCode = prefs.customerCode || 'W9OPXL0YDK';
             state.customerName = prefs.customerName || 'CAPE FEAR VALLEY MED CTR.';
             state.theme = prefs.theme || 'light';
-            state.cards = Array.isArray(prefs.cards) ? prefs.cards : [];
-            cardSelection = state.cards.length ? new Set(state.cards) : cardSelection;
+            const serverLayout = sanitizeCardOrder(Array.isArray(prefs.cards) ? prefs.cards : []);
+
+            if (!state.cards.length && serverLayout.length) {
+                state.cards = serverLayout.slice();
+                cardSelection = new Set(state.cards);
+                persistCardLayout(state.cards, false);
+            } else if (state.cards.length) {
+                serverLayout.forEach(id => {
+                    if (!state.cards.includes(id)) {
+                        state.cards.push(id);
+                    }
+                });
+                cardSelection = new Set(state.cards);
+            }
 
             debugLog(`Preferences loaded: ${state.customerCode}`, 'info');
             syncPreferenceInputs();
@@ -656,9 +853,11 @@ const MPSM = (function() {
 
         if (cardId === 'device-inventory') {
             const snapshotDevices = Array.isArray(snapshot.context?.devices) ? snapshot.context.devices : [];
-            if (snapshotDevices.length) {
+            if (snapshotDevices.length && (state.devices.length === 0 || snapshotDevices.length >= state.devices.length)) {
                 state.devices = snapshotDevices;
             }
+
+            hydrateDeviceLookup(state.devices);
 
             const headlineTotal = Number(snapshot.headline?.value ?? 0);
             const contextTotal = Number(snapshot.context?.total ?? 0);
@@ -736,6 +935,7 @@ const MPSM = (function() {
 
         if (!cardSelection.size) {
             cardSelection = new Set(CardManager.getEnabledCards());
+            state.cards = sanitizeCardOrder(Array.from(cardSelection));
         }
 
         container.innerHTML = '';
@@ -764,26 +964,40 @@ const MPSM = (function() {
                     const { cardId } = checkbox.dataset;
                     const checked = checkbox.checked;
 
-                    if (!checked && cardSelection.size <= 1 && cardSelection.has(cardId)) {
+                    if (!checked && state.cards.includes(cardId) && state.cards.length <= 1) {
                         checkbox.checked = true;
                         showToast('At least one card must remain enabled', 'warning');
                         return;
                     }
 
                     if (checked) {
-                        cardSelection.add(cardId);
+                        if (!cardSelection.has(cardId)) {
+                            cardSelection.add(cardId);
+                        }
+                        if (!state.cards.includes(cardId)) {
+                            state.cards.push(cardId);
+                        }
                         label.classList.add('active');
                     } else {
                         cardSelection.delete(cardId);
+                        state.cards = state.cards.filter(id => id !== cardId);
                         label.classList.remove('active');
+
+                        if (!state.cards.length) {
+                            const fallback = sanitizeCardOrder(CardManager.getEnabledCards());
+                            if (fallback.length) {
+                                state.cards = fallback.slice();
+                                cardSelection = new Set(state.cards);
+                            }
+                        }
                     }
 
-                    CardManager.setEnabledCards(Array.from(cardSelection));
-                CardManager.refreshAll().catch(error => debugLog('Card refresh failed: ' + error.message, 'error'));
-            });
+                    applyCardLayout(state.cards);
+                    CardManager.refreshAll().catch(error => debugLog('Card refresh failed: ' + error.message, 'error'));
+                });
 
-            container.appendChild(label);
-        });
+                container.appendChild(label);
+            });
     }
 
     async function loadUsers() {
@@ -991,10 +1205,12 @@ const MPSM = (function() {
     }
 
     function initializeCards() {
+        const initialOrder = state.cards.length ? state.cards.slice() : Array.from(cardSelection);
+
         if (!cardsInitialized) {
             CardManager.init({
                 container: '#dashboard-card-container',
-                preferencesProvider: () => ({ cards: Array.from(cardSelection) }),
+                preferencesProvider: () => ({ cards: initialOrder }),
                 onCardData: handleCardData
             });
             cardsInitialized = true;
@@ -1010,8 +1226,14 @@ const MPSM = (function() {
             customerCode: state.customerCode
         });
 
-        if (cardSelection.size) {
-            CardManager.setEnabledCards(Array.from(cardSelection));
+        const desiredOrder = state.cards.length ? state.cards.slice() : Array.from(cardSelection);
+        if (desiredOrder.length) {
+            applyCardLayout(desiredOrder, { persist: false, syncRemote: false });
+        } else {
+            const fallbackOrder = CardManager.getEnabledCards();
+            if (fallbackOrder.length) {
+                applyCardLayout(fallbackOrder, { persist: false, syncRemote: false });
+            }
         }
 
         renderCardConfig();
@@ -1481,16 +1703,18 @@ const MPSM = (function() {
             state.dealerId = dealerId;
             state.customerCode = customerCode;
             state.customerName = customerName;
-            state.cards = enabledCards;
-            cardSelection = new Set(enabledCards);
+            const sanitizedLayout = sanitizeCardOrder(enabledCards);
+            state.cards = sanitizedLayout.slice();
+            cardSelection = new Set(state.cards);
 
             CardManager.setContext({
                 dealerCode: state.dealerCode,
                 dealerId: state.dealerId,
                 customerCode: state.customerCode
             });
-            if (cardSelection.size) {
-                CardManager.setEnabledCards(Array.from(cardSelection));
+            if (state.cards.length) {
+                applyCardLayout(state.cards, { persist: false, syncRemote: false });
+                persistCardLayout(state.cards, false);
             }
 
             debugLog('Settings saved successfully', 'info');
@@ -1513,6 +1737,9 @@ const MPSM = (function() {
                 dealerId: state.dealerId,
                 customerCode: state.customerCode
             });
+            if (state.cards.length) {
+                applyCardLayout(state.cards, { persist: false, syncRemote: false });
+            }
             await loadCustomerHeader();
             await CardManager.refreshAll();
         } catch (error) {
@@ -1678,55 +1905,45 @@ const MPSM = (function() {
         container.innerHTML = '<div class="loading">Loading devices...</div>';
 
         try {
-            const params = new URLSearchParams({
+            const { devices, total } = await fetchAllDevices({
                 customerCode: state.customerCode || '',
                 dealerCode: state.dealerCode || '',
                 dealerId: state.dealerId || '',
-                pageRows: 50,
                 sortColumn: 'AssetNumber',
                 sortOrder: 'Asc'
             });
 
-            const response = await fetch('api/get-devices.php?' + params.toString());
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.error);
-            }
-
-            const meta = data.meta || {};
-            const fetchedDevices = Array.isArray(data.devices) ? data.devices : [];
-
-            if (fetchedDevices.length) {
-                state.devices = fetchedDevices;
-            }
-
-            const totalCount = Number(
-                meta.total_rows
-                ?? meta.total_count
-                ?? meta.total
-                ?? data.total
-                ?? (state.devices ? state.devices.length : 0)
-                ?? 0
-            );
-
-            state.totalDevices = Math.max(Number(state.totalDevices ?? 0), totalCount);
-            updateMetricValue('device-count', state.totalDevices);
-            updateMetricValue('banner-device-total', state.totalDevices);
-
-            const offlineFromFetch = fetchedDevices.filter(device => device.IsOffline).length;
-            const offlineCount = Math.max(Number(state.offlineDevices ?? 0), offlineFromFetch);
-            state.offlineDevices = offlineCount;
-            updateMetricValue('offline-count', offlineCount);
-
-            const displayDevices = (state.devices && state.devices.length)
-                ? state.devices
-                : fetchedDevices;
-
-            if (!displayDevices.length) {
+            if (!Array.isArray(devices) || devices.length === 0) {
+                state.devices = [];
+                hydrateDeviceLookup([]);
+                state.totalDevices = Math.max(Number(state.totalDevices ?? 0), 0);
+                state.offlineDevices = 0;
+                updateMetricValue('device-count', state.totalDevices);
+                updateMetricValue('banner-device-total', state.totalDevices);
+                updateMetricValue('offline-count', state.offlineDevices);
                 container.innerHTML = '<div class="empty-state">No devices found</div>';
                 return;
             }
+
+            state.devices = devices;
+            hydrateDeviceLookup(state.devices);
+
+            const resolvedTotal = Number.isFinite(Number(total))
+                ? Number(total)
+                : state.devices.length;
+            const totalDevices = Math.max(
+                resolvedTotal,
+                state.devices.length,
+                Number(state.totalDevices ?? 0)
+            );
+
+            state.totalDevices = totalDevices;
+            updateMetricValue('device-count', totalDevices);
+            updateMetricValue('banner-device-total', totalDevices);
+
+            const offlineCount = state.devices.filter(device => device.IsOffline).length;
+            state.offlineDevices = offlineCount;
+            updateMetricValue('offline-count', offlineCount);
 
             container.innerHTML = '';
             const tableContainer = document.createElement('div');
@@ -1734,12 +1951,27 @@ const MPSM = (function() {
 
             TableUtils.renderTable(tableContainer, {
                 columns: buildDeviceTableColumns(),
-                rows: displayDevices,
+                rows: state.devices,
                 pageSize: 50,
                 defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: row => {
-                    if (row && row.Id) {
-                        openDeviceModal(row.Id);
+                    if (!row) {
+                        return;
+                    }
+                    const directId = row.Id ?? row.IdInstalledProduct ?? row.DeviceId ?? null;
+                    if (directId) {
+                        openDeviceModal(directId);
+                        return;
+                    }
+                    const equipmentId = getEquipmentIdFromDevice(row);
+                    if (equipmentId && equipmentId !== 'N/A') {
+                        const cached = state.deviceLookup.get(String(equipmentId).toLowerCase());
+                        const cachedId = cached
+                            ? (cached.Id ?? cached.IdInstalledProduct ?? cached.DeviceId ?? null)
+                            : null;
+                        if (cachedId) {
+                            openDeviceModal(cachedId);
+                        }
                     }
                 }
             });
@@ -1758,6 +1990,100 @@ const MPSM = (function() {
     /**
      * Load supply alerts
      */
+    async function fetchAllDevices(options = {}) {
+        const devices = [];
+        const seenKeys = new Set();
+        let pageNumber = 1;
+        const pageRows = Number(options.pageRows || 200);
+        let totalExpected = null;
+        let lastMeta = {};
+
+        while (true) {
+            const params = new URLSearchParams({
+                customerCode: options.customerCode ?? state.customerCode ?? '',
+                dealerCode: options.dealerCode ?? state.dealerCode ?? '',
+                dealerId: options.dealerId ?? state.dealerId ?? '',
+                pageRows: pageRows,
+                pageNumber: pageNumber,
+                sortColumn: options.sortColumn ?? 'AssetNumber',
+                sortOrder: options.sortOrder ?? 'Asc'
+            });
+
+            const response = await fetch('api/get-devices.php?' + params.toString());
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Device request failed');
+            }
+
+            const meta = data.meta || {};
+            lastMeta = meta;
+
+            const chunk = Array.isArray(data.devices)
+                ? data.devices
+                : Array.isArray(data.devices?.Items)
+                    ? data.devices.Items
+                    : [];
+
+            chunk.forEach(device => {
+                if (!device || typeof device !== 'object') {
+                    return;
+                }
+
+                const identifier =
+                    device.Id
+                    ?? device.IdInstalledProduct
+                    ?? device.DeviceId
+                    ?? getEquipmentIdFromDevice(device)
+                    ?? device.SerialNumber
+                    ?? `${pageNumber}-${devices.length}`;
+
+                const key = String(identifier).toLowerCase();
+                if (!seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    devices.push(device);
+                }
+            });
+
+            const metaTotal = Number(
+                meta.total_rows
+                ?? meta.total_count
+                ?? meta.total
+                ?? data.total
+                ?? totalExpected
+            );
+
+            if (Number.isFinite(metaTotal)) {
+                totalExpected = metaTotal;
+            }
+
+            if (!chunk.length || chunk.length < pageRows) {
+                break;
+            }
+
+            if (totalExpected !== null && devices.length >= totalExpected) {
+                break;
+            }
+
+            pageNumber += 1;
+
+            if (pageNumber > 2000) {
+                debugLog('Aborting device pagination after 2000 pages to prevent runaway loop', 'warn');
+                break;
+            }
+        }
+
+        if (totalExpected === null) {
+            totalExpected = devices.length;
+        }
+
+        return {
+            devices,
+            total: totalExpected,
+            meta: lastMeta
+        };
+    }
+
     async function fetchAllSupplyAlerts(options = {}) {
         const alerts = [];
         let pageNumber = 1;
@@ -1849,7 +2175,15 @@ const MPSM = (function() {
                 columns: buildAlertTableColumns(),
                 rows: alerts,
                 pageSize: 50,
-                defaultSort: { column: 'EquipmentId', direction: 'asc' }
+                defaultSort: { column: 'EquipmentId', direction: 'asc' },
+                onRowClick: alert => {
+                    const deviceId = findDeviceIdForAlert(alert);
+                    if (deviceId) {
+                        openDeviceModal(deviceId);
+                    } else {
+                        showToast('Device details are not available for this alert yet.', 'info');
+                    }
+                }
             });
         } catch (error) {
             container.innerHTML = `
@@ -2138,7 +2472,43 @@ const MPSM = (function() {
         modalBody.innerHTML = '<div class="loading">Loading device details...</div>';
 
         try {
-            const device = state.devices.find(d => d.Id === deviceId);
+            const matchesDevice = (candidate) => {
+                if (!candidate || typeof candidate !== 'object') {
+                    return false;
+                }
+                const identifiers = [
+                    candidate.Id,
+                    candidate.IdInstalledProduct,
+                    candidate.DeviceId
+                ];
+                return identifiers.some(id => id !== undefined && id !== null && String(id) === String(deviceId));
+            };
+
+            let device = state.devices.find(matchesDevice);
+
+            if (!device && state.deviceLookup.size < Math.max(Number(state.totalDevices ?? 0), state.deviceLookup.size || 0)) {
+                try {
+                    const refreshed = await fetchAllDevices({
+                        customerCode: state.customerCode || '',
+                        dealerCode: state.dealerCode || '',
+                        dealerId: state.dealerId || '',
+                        sortColumn: 'AssetNumber',
+                        sortOrder: 'Asc'
+                    });
+                    if (Array.isArray(refreshed.devices) && refreshed.devices.length) {
+                        state.devices = refreshed.devices;
+                        hydrateDeviceLookup(state.devices);
+                        const refreshedTotal = Number.isFinite(Number(refreshed.total))
+                            ? Number(refreshed.total)
+                            : state.devices.length;
+                        state.totalDevices = Math.max(Number(state.totalDevices ?? 0), refreshedTotal, state.devices.length);
+                        device = state.devices.find(matchesDevice);
+                    }
+                } catch (refreshError) {
+                    debugLog('Device cache refresh failed: ' + refreshError.message, 'warn');
+                }
+            }
+
             if (!device) {
                 throw new Error('Device not found');
             }
@@ -2608,7 +2978,15 @@ const MPSM = (function() {
                     columns: modalColumns,
                     rows: alerts,
                     pageSize: 50,
-                    defaultSort: { column: 'EquipmentId', direction: 'asc' }
+                    defaultSort: { column: 'EquipmentId', direction: 'asc' },
+                    onRowClick: alert => {
+                        const deviceId = findDeviceIdForAlert(alert);
+                        if (deviceId) {
+                            openDeviceModal(deviceId);
+                        } else {
+                            showToast('Device details are not available for this alert yet.', 'info');
+                        }
+                    }
                 });
 
                 supplyTypes.forEach(type => {
@@ -2663,7 +3041,9 @@ const MPSM = (function() {
         expandOffline,
         expandConnectors,
         expandAlerts,
+        fetchAllDevices,
         fetchAllSupplyAlerts,
+        hydrateDeviceLookup,
         resolveDeviceIdForExports
     };
 

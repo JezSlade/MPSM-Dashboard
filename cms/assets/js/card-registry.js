@@ -138,17 +138,41 @@ const CardRegistry = (function () {
             group: 'Devices',
             defaultVisible: true,
             load: async (helpers, context) => {
-                const data = await helpers.fetchJson('api/get-devices.php', {
-                    customerCode: context.customerCode,
-                    dealerCode: context.dealerCode,
-                    dealerId: context.dealerId,
-                    pageRows: 200,
-                    sortColumn: 'AssetNumber',
-                    sortOrder: 'Asc'
-                });
+                let devices = [];
+                let total = 0;
 
-                const devices = Array.isArray(data.devices) ? data.devices : [];
-                const total = Number(data.total ?? devices.length ?? 0);
+                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
+                    const result = await window.MPSM.fetchAllDevices({
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        dealerId: context.dealerId,
+                        sortColumn: 'AssetNumber',
+                        sortOrder: 'Asc'
+                    });
+                    devices = Array.isArray(result.devices) ? result.devices : [];
+                    total = Number(result.total ?? devices.length ?? 0);
+
+                    if (typeof window.MPSM.hydrateDeviceLookup === 'function') {
+                        window.MPSM.hydrateDeviceLookup(devices);
+                    }
+                } else {
+                    const data = await helpers.fetchJson('api/get-devices.php', {
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        dealerId: context.dealerId,
+                        pageRows: 200,
+                        sortColumn: 'AssetNumber',
+                        sortOrder: 'Asc'
+                    });
+
+                    devices = Array.isArray(data.devices) ? data.devices : [];
+                    total = Number(data.total ?? devices.length ?? 0);
+                }
+
+                if (!Number.isFinite(total)) {
+                    total = devices.length;
+                }
+
                 const offline = devices.filter(device => device.IsOffline).length;
 
                 return {
@@ -406,7 +430,21 @@ const CardRegistry = (function () {
                     ],
                     rows: alerts,
                     pageSize: 50,
-                    defaultSort: { column: 'EquipmentId', direction: 'asc' }
+                    defaultSort: { column: 'EquipmentId', direction: 'asc' },
+                    onRowClick: row => {
+                        if (!window.MPSM || typeof window.MPSM.openDeviceModal !== 'function') {
+                            return;
+                        }
+                        const resolver = typeof window.findDeviceIdForAlert === 'function'
+                            ? window.findDeviceIdForAlert
+                            : (alert) => alert?.DeviceId ?? alert?.IdInstalledProduct ?? alert?.IdDevice ?? null;
+                        const deviceId = resolver(row);
+                        if (deviceId) {
+                            window.MPSM.openDeviceModal(deviceId);
+                        } else if (typeof window.MPSM.showToast === 'function') {
+                            window.MPSM.showToast('Device details are not available for this alert yet.', 'info');
+                        }
+                    }
                 });
             }
         },
@@ -460,6 +498,159 @@ const CardRegistry = (function () {
                         </div>
                     </div>
                 `;
+            }
+        },
+        {
+            id: 'top-devices',
+            title: 'Top Devices',
+            icon: 'fas fa-trophy',
+            description: 'Top 5 devices by monthly page volume',
+            group: 'Analytics',
+            defaultVisible: true,
+            load: async (helpers, context) => {
+                let devices = [];
+
+                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
+                    const result = await window.MPSM.fetchAllDevices({
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        dealerId: context.dealerId,
+                        sortColumn: 'AssetNumber',
+                        sortOrder: 'Asc'
+                    });
+                    devices = Array.isArray(result.devices) ? result.devices : [];
+                } else {
+                    const data = await helpers.fetchJson('api/get-devices.php', {
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        dealerId: context.dealerId,
+                        pageRows: 200,
+                        sortColumn: 'AssetNumber',
+                        sortOrder: 'Asc'
+                    });
+                    devices = Array.isArray(data.devices) ? data.devices : [];
+                }
+
+                const enriched = devices.map(device => {
+                    const monoCandidates = [
+                        device.MonthlyMonoVolume,
+                        device.MonthlyMonoPages,
+                        device.MonthlyMono,
+                        device.CounterMonoMonthly,
+                        device.CounterMonoDelta
+                    ];
+                    const colorCandidates = [
+                        device.MonthlyColorVolume,
+                        device.MonthlyColorPages,
+                        device.MonthlyColor,
+                        device.CounterColorMonthly,
+                        device.CounterColorDelta
+                    ];
+
+                    const resolvedMono = monoCandidates
+                        .map(value => Number(value) || 0)
+                        .find(value => value > 0) ?? 0;
+                    const resolvedColor = colorCandidates
+                        .map(value => Number(value) || 0)
+                        .find(value => value > 0) ?? 0;
+
+                    const fallbackMono = Number(device.CounterMono ?? 0);
+                    const fallbackColor = Number(device.CounterColor ?? 0);
+
+                    const mono = resolvedMono || fallbackMono;
+                    const color = resolvedColor || fallbackColor;
+                    const total = mono + color;
+
+                    return Object.assign({}, device, {
+                        __topMono: mono,
+                        __topColor: color,
+                        __topTotal: total
+                    });
+                });
+
+                const sorted = enriched
+                    .slice()
+                    .sort((a, b) => (Number(b.__topTotal) || 0) - (Number(a.__topTotal) || 0));
+
+                const topDevices = sorted.slice(0, 5);
+                const totalVolume = topDevices.reduce((sum, device) => sum + (Number(device.__topTotal) || 0), 0);
+                const averageVolume = topDevices.length ? totalVolume / topDevices.length : 0;
+                const offlineCount = topDevices.filter(device => device.IsOffline).length;
+                const colorCapable = topDevices.filter(device => {
+                    const flag = device.IsColor ?? device.ColorCapable ?? device.Product?.IsColor ?? device.Product?.ColorCapable;
+                    if (typeof flag === 'string') {
+                        const normalized = flag.toLowerCase();
+                        return normalized === 'yes' || normalized === 'true' || normalized === 'color';
+                    }
+                    return Boolean(flag);
+                }).length;
+
+                return {
+                    headline: {
+                        value: Math.round(totalVolume),
+                        label: 'Monthly Pages (Top 5)'
+                    },
+                    metrics: [
+                        { label: 'Avg / Device', value: Math.round(averageVolume) },
+                        { label: 'Offline', value: offlineCount, tone: offlineCount ? 'danger' : 'success' },
+                        { label: 'Color Devices', value: colorCapable }
+                    ],
+                    context: { devices: topDevices }
+                };
+            },
+            renderModal: (helpers, context, snapshot) => {
+                const modal = helpers.createModal('Top 5 Devices by Volume');
+                const devices = snapshot.context.devices || [];
+
+                if (!devices.length) {
+                    modal.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No device volume data is available.</p></div>';
+                    return;
+                }
+
+                const formatNumber = (value) => helpers.formatNumber(Number(value) || 0);
+
+                helpers.renderTable(modal, {
+                    columns: [
+                        { id: 'EquipmentId', label: 'Equipment ID', accessor: row => resolveEquipmentId(row), sortable: true },
+                        { id: 'ProductModel', label: 'Model', accessor: row => row.Product?.Model || 'Unknown', sortable: true },
+                        { id: 'OfficeDescription', label: 'Location', accessor: row => row.OfficeDescription || row.Note || '-' },
+                        {
+                            id: 'MonoVolume',
+                            label: 'Monthly Mono',
+                            accessor: row => Number(row.__topMono) || 0,
+                            sortable: true,
+                            format: value => formatNumber(value)
+                        },
+                        {
+                            id: 'ColorVolume',
+                            label: 'Monthly Color',
+                            accessor: row => Number(row.__topColor) || 0,
+                            sortable: true,
+                            format: value => formatNumber(value)
+                        },
+                        {
+                            id: 'TotalVolume',
+                            label: 'Monthly Total',
+                            accessor: row => Number(row.__topTotal) || 0,
+                            sortable: true,
+                            format: value => formatNumber(value)
+                        }
+                    ],
+                    rows: devices,
+                    pageSize: 5,
+                    defaultSort: { column: 'TotalVolume', direction: 'desc' },
+                    onRowClick: row => {
+                        if (!window.MPSM || typeof window.MPSM.openDeviceModal !== 'function') {
+                            return;
+                        }
+                        const rowId = row?.Id ?? row?.IdInstalledProduct ?? row?.DeviceId ?? null;
+                        if (rowId) {
+                            window.MPSM.openDeviceModal(rowId);
+                        } else if (typeof window.MPSM.showToast === 'function') {
+                            window.MPSM.showToast('Device details are not available for this record yet.', 'info');
+                        }
+                    }
+                });
             }
         },
         {
@@ -572,8 +763,21 @@ const CardRegistry = (function () {
                 const tableContainer = document.createElement('div');
                 modal.appendChild(tableContainer);
 
+                const escapeHtml = helpers.escape;
+                const formatNumber = helpers.formatNumber;
+
                 const columns = [
-                    { id: 'action', label: 'Endpoint', sortable: true },
+                    {
+                        id: 'action',
+                        label: 'Endpoint',
+                        sortable: true,
+                        format: value => {
+                            const safeText = escapeHtml(value || 'Unknown');
+                            return (value || '') === 'Counter/Device/Export'
+                                ? `<strong>${safeText}</strong>`
+                                : safeText;
+                        }
+                    },
                     { id: 'category', label: 'Category', accessor: row => row.category || 'N/A', sortable: true },
                     {
                         id: 'status',
@@ -605,7 +809,8 @@ const CardRegistry = (function () {
                         id: 'runtimeAttempts',
                         label: 'Attempts',
                         accessor: row => row.runtimeAttempts ?? '',
-                        sortable: true
+                        sortable: true,
+                        format: value => value === '' ? '--' : formatNumber(Number(value) || 0)
                     },
                     {
                         id: 'download',
@@ -715,17 +920,40 @@ const CardRegistry = (function () {
 
                         if (result.file && result.file.data) {
                             const blob = base64ToBlob(result.file.data, result.file.content_type);
+                            const objectUrl = URL.createObjectURL(blob);
+                            const safeBase = actionName.replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'export';
+                            const contentType = (result.file.content_type || '').toLowerCase();
+                            let filename = result.file.name;
+
+                            if (!filename || typeof filename !== 'string') {
+                                if (contentType.includes('csv')) {
+                                    filename = `${safeBase}.csv`;
+                                } else if (contentType.includes('excel') || contentType.includes('spreadsheet') || contentType.includes('sheet')) {
+                                    filename = `${safeBase}.xlsx`;
+                                } else if (contentType.includes('pdf')) {
+                                    filename = `${safeBase}.pdf`;
+                                } else if (contentType.includes('json')) {
+                                    filename = `${safeBase}.json`;
+                                } else if (contentType.includes('xml')) {
+                                    filename = `${safeBase}.xml`;
+                                } else if (contentType.includes('zip')) {
+                                    filename = `${safeBase}.zip`;
+                                } else {
+                                    filename = `${safeBase}.bin`;
+                                }
+                            }
+
                             const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = result.file.name || (actionName.replace(/[^a-z0-9_\-]+/gi, '_') + '.bin');
+                            link.href = objectUrl;
+                            link.download = filename;
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
-                            setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-                            showToast('Export downloaded successfully.', 'success');
+                            setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+                            showToast(`Export downloaded: ${filename}. Check your browser downloads folder.`, 'success');
                             exportRow.runtimeStatus = 'Pass';
                             exportRow.runtimeError = null;
-                            exportRow.runtimeAttempts = result.attempts ?? 1;
+                            exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
                             exportRow.runtimeDuration = result.duration_ms ?? null;
                             exportRow.runtimeParams = result.params_used ?? params;
                             exportRow.runtimeTestedAt = new Date().toISOString();
@@ -735,7 +963,7 @@ const CardRegistry = (function () {
                             showToast('Export returned structured data. See console for details.', 'info');
                             exportRow.runtimeStatus = 'Pass';
                             exportRow.runtimeError = null;
-                            exportRow.runtimeAttempts = result.attempts ?? 1;
+                            exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
                             exportRow.runtimeDuration = result.duration_ms ?? null;
                             exportRow.runtimeParams = result.params_used ?? null;
                             exportRow.runtimeTestedAt = new Date().toISOString();
