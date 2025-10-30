@@ -19,7 +19,7 @@ const MPSM = (function() {
         isLoadingCustomers: false,
         devices: [],
         alerts: [],
-        alertSummary: null,
+        alertSummary: {},  // FIX BUG #3: Initialize as empty object instead of null
         connectorsSummary: null,
         totalDevices: 0,
         offlineDevices: 0,
@@ -31,6 +31,8 @@ const MPSM = (function() {
         debugLogs: [],
         deviceDetails: {},
         deviceLookup: new Map(),
+        isLoadingDevices: false,  // FIX BUG #1: Add loading flag to prevent concurrent requests
+        isLoadingAlerts: false,   // FIX BUG #1: Add loading flag for alerts
         endpointCatalog: {
             categories: [],
             statistics: null,
@@ -69,6 +71,22 @@ const MPSM = (function() {
         const seen = new Set();
         const sanitized = [];
 
+        // FIX BUG #4: If card registry not loaded yet, defer sanitization
+        if (availableIds.size === 0) {
+            debugLog('Card registry not loaded yet, deferring sanitization', 'info');
+            // Return order as-is, but still deduplicate and normalize
+            order.forEach(id => {
+                if (typeof id === 'string' && id.trim() !== '') {
+                    const normalized = id.trim();
+                    if (!seen.has(normalized)) {
+                        sanitized.push(normalized);
+                        seen.add(normalized);
+                    }
+                }
+            });
+            return sanitized;
+        }
+
         order.forEach(id => {
             if (typeof id !== 'string' || id.trim() === '') {
                 return;
@@ -77,7 +95,8 @@ const MPSM = (function() {
             if (seen.has(normalized)) {
                 return;
             }
-            if (availableIds.size && !availableIds.has(normalized)) {
+            if (!availableIds.has(normalized)) {
+                debugLog(`Removing invalid card ID from layout: ${normalized}`, 'warn');
                 return;
             }
             sanitized.push(normalized);
@@ -2029,6 +2048,13 @@ const MPSM = (function() {
             return;
         }
 
+        // FIX BUG #1: Prevent concurrent device loading requests
+        if (state.isLoadingDevices) {
+            debugLog('Device loading already in progress, skipping duplicate request', 'info');
+            return;
+        }
+
+        state.isLoadingDevices = true;
         container.innerHTML = '<div class="loading">Loading devices...</div>';
 
         try {
@@ -2111,6 +2137,9 @@ const MPSM = (function() {
                     <p class="error-message">${escapeHtml(error.message)}</p>
                 </div>
             `;
+        } finally {
+            // FIX BUG #1: Always reset loading flag
+            state.isLoadingDevices = false;
         }
     }
 

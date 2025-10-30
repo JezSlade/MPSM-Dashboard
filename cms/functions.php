@@ -47,41 +47,65 @@ function getMPSToken() {
         return $token;
     }
 
-    // Request new token
-    $ch = curl_init(MPS_API_TOKEN_URL);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-        CURLOPT_POSTFIELDS => http_build_query([
-            'grant_type' => MPS_GRANT_TYPE,
-            'client_id' => MPS_CLIENT_ID,
-            'client_secret' => MPS_CLIENT_SECRET,
-            'username' => MPS_USERNAME,
-            'password' => MPS_PASSWORD,
-            'scope' => MPS_SCOPE
-        ])
-    ]);
+    // FIX BUG #6: Wrap token refresh in try-catch to reset state on failure
+    try {
+        // Request new token
+        $ch = curl_init(MPS_API_TOKEN_URL);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_TIMEOUT => 10,  // Add timeout
+            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+            CURLOPT_POSTFIELDS => http_build_query([
+                'grant_type' => MPS_GRANT_TYPE,
+                'client_id' => MPS_CLIENT_ID,
+                'client_secret' => MPS_CLIENT_SECRET,
+                'username' => MPS_USERNAME,
+                'password' => MPS_PASSWORD,
+                'scope' => MPS_SCOPE
+            ])
+        ]);
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
 
-    if ($httpCode !== 200) {
-        throw new Exception("OAuth token request failed with HTTP $httpCode");
+        if ($response === false) {
+            // FIX BUG #6: Reset token on failure
+            $token = null;
+            $tokenExpiry = 0;
+            throw new Exception("OAuth token request failed: $curlError");
+        }
+
+        if ($httpCode !== 200) {
+            // FIX BUG #6: Reset token on failure
+            $token = null;
+            $tokenExpiry = 0;
+            throw new Exception("OAuth token request failed with HTTP $httpCode: $response");
+        }
+
+        $data = json_decode($response, true);
+
+        if (!isset($data['access_token'])) {
+            // FIX BUG #6: Reset token on failure
+            $token = null;
+            $tokenExpiry = 0;
+            throw new Exception("No access token in OAuth response");
+        }
+
+        $token = $data['access_token'];
+        // Token expires in 1 hour, refresh 5 minutes early
+        $tokenExpiry = time() + 3300;
+
+        return $token;
+    } catch (Exception $e) {
+        // FIX BUG #6: Ensure token is null on any failure
+        $token = null;
+        $tokenExpiry = 0;
+        error_log("getMPSToken() failed: " . $e->getMessage());
+        throw $e;  // Re-throw for caller to handle
     }
-
-    $data = json_decode($response, true);
-
-    if (!isset($data['access_token'])) {
-        throw new Exception("No access token in OAuth response");
-    }
-
-    $token = $data['access_token'];
-    // Token expires in 1 hour, refresh 5 minutes early
-    $tokenExpiry = time() + 3300;
-
-    return $token;
 }
 
 /**

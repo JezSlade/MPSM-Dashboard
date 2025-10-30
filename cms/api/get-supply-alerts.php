@@ -45,18 +45,34 @@ try {
         ]
     ]);
 
+    // FIX BUG #5: Reduce timeout and add better error messages
     $context = stream_context_create([
         'http' => [
             'method' => 'POST',
             'header' => 'Content-Type: application/json',
             'content' => $payload,
-            'timeout' => 30
+            'timeout' => 15,  // Reduced from 30 to 15 seconds
+            'ignore_errors' => true  // Get response even on HTTP errors
         ]
     ]);
 
     $response = file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+
+    // FIX BUG #5: Better error handling with HTTP status
     if ($response === false) {
-        throw new Exception("Failed to contact mps-api backend");
+        $error = error_get_last();
+        throw new Exception("Failed to contact mps-api backend: " . ($error['message'] ?? 'Unknown error'));
+    }
+
+    // Check HTTP response code
+    if (isset($http_response_header)) {
+        $status_line = $http_response_header[0] ?? '';
+        if (preg_match('/HTTP\/\d\.\d\s+(\d+)/', $status_line, $matches)) {
+            $http_code = (int)$matches[1];
+            if ($http_code >= 400) {
+                throw new Exception("mps-api returned HTTP {$http_code}: {$response}");
+            }
+        }
     }
 
     $data = json_decode($response, true);
@@ -88,10 +104,20 @@ try {
             }
         }
 
+        // FIX BUG #7: Improve total count extraction with logging
         $total = $meta['total_rows']
             ?? $meta['total_count']
             ?? $meta['total']
-            ?? count($alerts);
+            ?? null;
+
+        if ($total === null || $total === 0) {
+            if (count($alerts) > 0) {
+                error_log("get-supply-alerts.php: Total count missing or zero, but " . count($alerts) . " alerts returned. Using alert count.");
+                $total = count($alerts);
+            } else {
+                $total = 0;
+            }
+        }
 
         $responseMeta = $meta;
         $responseMeta['items_returned'] = count($alerts);
