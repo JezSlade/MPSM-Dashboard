@@ -1,0 +1,132 @@
+﻿<Window x:Class="MpsMonitor.Sdk.Simulator.ConnectorsConfig"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MpsMonitor.Sdk.Simulator"
+        xmlns:wpfx="http://schemas.xceed.com/wpf/xaml/toolkit"
+
+        mc:Ignorable="d"
+        Title="Connectors" Width="804" Height="907">
+    <Border Padding="10" ScrollViewer.CanContentScroll="True">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"  >
+            <wpfx:BusyIndicator x:Name="_busyIndicator" >
+                <StackPanel ScrollViewer.CanContentScroll="True" VerticalAlignment="Top">
+                    <StackPanel>
+                        <!-- label -->
+                        <StackPanel  Grid.Column="0" Margin="0 0 10 0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <!-- label Description -->
+                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                    <TextBlock  x:Name="lblCustomer" Text="Customer Id" FontWeight="Bold" Margin="0 15 0 5"/>
+                                    <TextBox x:Name="txtCustomerId" Padding="2" IsReadOnly="True" Background="LightGray" />
+                                </StackPanel>
+
+                                <!-- label  -->
+                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                    <TextBlock  x:Name="lblconfg" Text="Explorer Configuration Id" FontWeight="Bold" Margin="0 15 0 5"/>
+                                    <TextBox x:Name="txtExplorerConfigId" Padding="2" IsReadOnly="True" Background="LightGray" />
+                                </StackPanel>
+
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel  Grid.Column="0" Margin="0 0 10 0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <!-- label Description -->
+                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                    <TextBlock  x:Name="lblDesc" Text="Description" FontWeight="Bold" Margin="0 15 0 5"/>
+                                    <TextBox x:Name="txtDesc" Padding="2" />
+                                </StackPanel>
+
+                                <!-- lblCustomer -->
+                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                    <TextBlock x:Name="lblEnabled" Text="Enabled" FontWeight="Bold" Margin="0 15 0 5"/>
+                                    <CheckBox x:Name="ckbEnable" ></CheckBox>
+                                </StackPanel>
+                                <!-- label SystemName -->
+                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                    <TextBlock  x:Name="lblSystemName" Text="System Name" FontWeight="Bold" Margin="0 15 0 5"/>
+                                    <!--<TextBox x:Name="txtSystemName" Padding="2"  />-->
+                                    <ComboBox x:Name="cmbSystemName" Padding="2" SelectedIndex="0" ></ComboBox>
+
+                                </StackPanel>
+                                <!-- label Community -->
+                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                    <TextBlock  x:Name="lblCommunity" Text="Community" FontWeight="Bold" Margin="0 15 0 5"/>
+                                    <TextBox x:Name="txtCommunity" Padding="2"  />
+                                </StackPanel>
+                            </Grid>
+                            <Button x:Name="btnSave" Content="Save" Margin="0 10 10 5" Click="BtnSave_Click"></Button>
+
+                        </StackPanel>
+
+
+                        <StackPanel  Grid.Column="0" Margin="0 20 10 0">
+                            <!--  Network-->
+                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                <StackPanel  Grid.Column="0" Margin="0 0 0 0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                            <TextBlock x:Name="lblNetworkGrid" Text="Network to be monitored" FontWeight="Bold" Margin="0 15 0 0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="0 0 0 0">
+                                            <Button x:Name="btnAddNetwork" Content="Add" Margin="0 10 0 5" Click="BtnAddNetwork_Click"></Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                                <ListView x:Name="ListViewNetwork" Height="188" Padding="2" RenderTransformOrigin="0.499,0.455" MouseDoubleClick="ListViewNetwork_MouseDoubleClick"/>
+                            </StackPanel>
+
+                        </StackPanel>
+                        
+                        <!--Schedule-->
+                        <StackPanel  Grid.Column="0" Margin="0 0 10 0">
+                            <StackPanel  Grid.Column="0" Margin="0 0 0 0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                        <TextBlock x:Name="lblDataDetectionGrid" Text="Data Detection Time tables " FontWeight="Bold" Margin="0 15 0 0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0 0 0 0">
+                                        <Button x:Name="btnAddSchedule" Content="Add" Margin="0 10 0 5" Click="BtnAddSchedule_Click"></Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <ListView x:Name="ListViewDetection" Height="190" Padding="2" RenderTransformOrigin="0.499,0.455" MouseDoubleClick="ListViewDetection_MouseDoubleClick"/>
+                        </StackPanel>
+                       
+                        <!-- Result Panel -->
+                        <StackPanel>
+                            <TabControl x:Name="tabResult" Margin="0 15 0 0">
+                                <TabItem Header="Response">
+                                    <TextBox x:Name="ResponseBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                                </TabItem>
+                                <TabItem Header="Request">
+                                    <TextBox x:Name="RequestBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                                </TabItem>
+                            </TabControl>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </wpfx:BusyIndicator>
+        </ScrollViewer>
+    </Border>
+</Window>

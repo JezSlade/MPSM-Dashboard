@@ -145,6 +145,105 @@ const MPSM = (function() {
         cardSelection = new Set(storedCardLayout);
     }
 
+    const EASTERN_TIMEZONE = 'America/New_York';
+
+    function formatDateTime(value, options = {}) {
+        if (value === null || value === undefined || value === '') {
+            return 'N/A';
+        }
+
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return 'N/A';
+        }
+
+        const hasStyles = options.dateStyle || options.timeStyle;
+        const baseOptions = hasStyles
+            ? {}
+            : { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+
+        const outputOptions = Object.assign({}, baseOptions, options, { timeZone: EASTERN_TIMEZONE });
+        return date.toLocaleString('en-US', outputOptions);
+    }
+
+    function renderRawJsonDetails(data) {
+        try {
+            const json = JSON.stringify(data, null, 2);
+            if (!json) {
+                return '';
+            }
+            return `
+                <details class="endpoint-raw">
+                    <summary>View raw response</summary>
+                    <pre class="endpoint-raw__pre">${escapeHtml(json)}</pre>
+                </details>
+            `;
+        } catch (error) {
+            debugLog('Failed to render raw JSON: ' + error.message, 'warn');
+            return '';
+        }
+    }
+
+    function renderPrimitiveList(items, limit = 50) {
+        const display = items.slice(0, limit);
+        const remainder = items.length - display.length;
+        return `
+            <ul class="endpoint-list">
+                ${display.map(item => `<li>${escapeHtml(formatDetailValue(item))}</li>`).join('')}
+            </ul>
+            ${remainder > 0 ? `<div class="endpoint-footnote">Showing ${display.length} of ${items.length} records.</div>` : ''}
+        `;
+    }
+
+    function renderObjectArrayTable(items, options = {}) {
+        if (!Array.isArray(items) || !items.length) {
+            return '<div class="snapshot-value">No items returned</div>';
+        }
+
+        const maxRows = options.maxRows ?? 25;
+        const sample = items.slice(0, maxRows);
+        const columnSet = new Set();
+        sample.forEach(item => {
+            if (item && typeof item === 'object' && !Array.isArray(item)) {
+                Object.keys(item).forEach(key => columnSet.add(key));
+            }
+        });
+        const columns = Array.from(columnSet);
+
+        if (!columns.length) {
+            return renderPrimitiveList(items, maxRows);
+        }
+
+        const rowsHtml = sample.map(item => {
+            const safeItem = item && typeof item === 'object' ? item : {};
+            return `
+                <tr>
+                    ${columns.map(column => `<td>${escapeHtml(formatDetailValue(safeItem[column]))}</td>`).join('')}
+                </tr>
+            `;
+        }).join('');
+
+        const footnote = items.length > maxRows
+            ? `<div class="endpoint-footnote">Showing ${maxRows} of ${items.length} records.</div>`
+            : '';
+
+        return `
+            <div class="table-wrapper device-detail-table">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            ${columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+            ${footnote}
+        `;
+    }
+
     // Debug logger
     function debugLog(message, type = 'info') {
         const timestamp = new Date().toISOString();
@@ -210,9 +309,28 @@ const MPSM = (function() {
             return 'N/A';
         }
 
-        const asset = alert.AssetNumber ?? alert.Asset ?? '';
-        const external = alert.ExternalIdentifier ?? alert.ExternalId ?? '';
-        const fallback = alert.SerialNumber ?? alert.DeviceSerialNumber ?? alert.EquipmentId ?? '';
+        const directEquipment =
+            alert.EquipmentId
+            ?? alert.EquipmentID
+            ?? alert.DeviceEquipmentId
+            ?? alert.DeviceEquipmentID
+            ?? alert.InstalledProductEquipmentId
+            ?? alert.DeviceKey
+            ?? '';
+
+        const assetCandidate = alert.AssetNumber ?? alert.Asset ?? '';
+        const externalCandidate = alert.ExternalIdentifier ?? alert.ExternalId ?? '';
+        const serialFallback =
+            alert.SerialNumber
+            ?? alert.DeviceSerialNumber
+            ?? alert.DeviceId
+            ?? alert.IdDevice
+            ?? alert.IdInstalledProduct
+            ?? '';
+
+        const asset = assetCandidate || directEquipment;
+        const external = externalCandidate;
+        const fallback = directEquipment || serialFallback;
 
         return resolveEquipmentIdFromParts(asset, external, fallback);
     }
@@ -464,13 +582,18 @@ const MPSM = (function() {
             return value ? 'Yes' : 'No';
         }
 
+        if (value instanceof Date) {
+            return formatDateTime(value);
+        }
+
         if (typeof value === 'string') {
             const isoDatePattern = /^\d{4}-\d{2}-\d{2}T/;
             if (isoDatePattern.test(value)) {
-                const date = new Date(value);
-                if (!Number.isNaN(date.getTime())) {
-                    return date.toLocaleString();
-                }
+                return formatDateTime(value);
+            }
+            const numeric = Number(value);
+            if (!Number.isNaN(numeric) && String(numeric) === value) {
+                return Number(value).toLocaleString();
             }
             return value;
         }
@@ -480,7 +603,12 @@ const MPSM = (function() {
         }
 
         if (typeof value === 'object') {
-            let serialized = JSON.stringify(value);
+            let serialized;
+            try {
+                serialized = JSON.stringify(value);
+            } catch (error) {
+                return '[Object]';
+            }
             if (serialized.length > 200) {
                 serialized = serialized.slice(0, 197) + '...';
             }
@@ -490,15 +618,18 @@ const MPSM = (function() {
         return String(value);
     }
 
-    function renderKeyValueSnapshot(data, limit = 8) {
+    function renderKeyValueSnapshot(data, limit = 12) {
         if (!data || typeof data !== 'object') {
             return '<div class="snapshot-value">No details available</div>';
         }
 
-        const entries = Object.entries(data).slice(0, limit);
-        if (!entries.length) {
+        const allEntries = Object.entries(data);
+        if (!allEntries.length) {
             return '<div class="snapshot-value">No details available</div>';
         }
+
+        const entries = allEntries.slice(0, limit);
+        const remaining = allEntries.length - entries.length;
 
         return `
             <div class="device-snapshot">
@@ -509,6 +640,7 @@ const MPSM = (function() {
                     </div>
                 `).join('')}
             </div>
+            ${remaining > 0 ? `<div class="endpoint-footnote">+${remaining} more field${remaining === 1 ? '' : 's'} not shown. See raw data for full details.</div>` : ''}
         `;
     }
 
@@ -524,19 +656,19 @@ const MPSM = (function() {
                 return '<div class="snapshot-value">No items returned</div>';
             }
 
-            const firstObject = data.find(item => item && typeof item === 'object' && !Array.isArray(item));
-            if (firstObject) {
-                return renderKeyValueSnapshot(firstObject);
-            }
+            const hasObject = data.some(item => item && typeof item === 'object' && !Array.isArray(item));
+            const preview = hasObject
+                ? renderObjectArrayTable(data)
+                : renderPrimitiveList(data);
 
-            return `<div class="snapshot-value">${escapeHtml(formatDetailValue(data[0]))}</div>`;
+            return preview + renderRawJsonDetails(data);
         }
 
         if (typeof data === 'object') {
-            return renderKeyValueSnapshot(data);
+            return renderKeyValueSnapshot(data) + renderRawJsonDetails(data);
         }
 
-        return `<div class="snapshot-value">${escapeHtml(formatDetailValue(data))}</div>`;
+        return `<div class="snapshot-value">${escapeHtml(formatDetailValue(data))}</div>` + renderRawJsonDetails(data);
     }
 
     function renderEndpointMetaFooter(entry) {
@@ -1033,7 +1165,7 @@ const MPSM = (function() {
         const rows = (users || []).map(user => `
             <tr>
                 <td>${escapeHtml(user.username)}</td>
-                <td>${user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</td>
+                <td>${formatDateTime(user.created_at, { dateStyle: 'short', timeStyle: 'short' })}</td>
                 <td>
                     <div class="user-actions">
                         <button class="btn btn-secondary" data-action="reset" data-id="${user.id}">
@@ -1548,12 +1680,7 @@ const MPSM = (function() {
         const workingEndpoints = stats.working ?? null;
         const failedEndpoints = stats.failed ?? null;
         const averageDuration = stats.avg_response_time ?? null;
-        const lastTested = stats.test_date
-            ? (() => {
-                const date = new Date(stats.test_date);
-                return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
-            })()
-            : null;
+        const lastTested = stats.test_date ? formatDateTime(stats.test_date) : null;
 
         const augmentedCategories = [
             {
@@ -2057,11 +2184,15 @@ const MPSM = (function() {
                 totalExpected = metaTotal;
             }
 
-            if (!chunk.length || chunk.length < pageRows) {
+            if (totalExpected !== null && devices.length >= totalExpected) {
                 break;
             }
 
-            if (totalExpected !== null && devices.length >= totalExpected) {
+            if (!chunk.length) {
+                break;
+            }
+
+            if (chunk.length < pageRows && totalExpected === null) {
                 break;
             }
 
@@ -2275,8 +2406,9 @@ const MPSM = (function() {
             {
                 id: 'InitialDate',
                 label: 'Date',
-                accessor: row => row.InitialDate ? new Date(row.InitialDate).toLocaleDateString() : 'N/A',
-                sortable: true
+                accessor: row => row.InitialDate ? new Date(row.InitialDate).getTime() : 0,
+                sortable: true,
+                format: (value, row) => formatDateTime(row.InitialDate, { dateStyle: 'short', timeStyle: 'short' })
             },
             {
                 id: 'ManageOption',
@@ -2345,7 +2477,7 @@ const MPSM = (function() {
                 </div>
 
                 <div class="health-timestamp">
-                    Last checked: ${new Date(health.timestamp).toLocaleString()}
+                    Last checked: ${formatDateTime(health.timestamp)}
                 </div>
             `;
 
@@ -2397,7 +2529,7 @@ const MPSM = (function() {
                     <tbody>
                         ${logs.map(log => `
                             <tr>
-                                <td>${new Date(log.visited_at).toLocaleString()}</td>
+                                <td>${formatDateTime(log.visited_at)}</td>
                                 <td>${log.username}</td>
                                 <td><strong>${log.ip_address}</strong></td>
                                 <td>${log.page_url}</td>
@@ -2629,11 +2761,11 @@ const MPSM = (function() {
                     </div>
                     <div class="snapshot-item">
                         <div class="snapshot-label">Install Date</div>
-                        <div class="snapshot-value">${device.Install ? new Date(device.Install).toLocaleDateString() : 'N/A'}</div>
+                        <div class="snapshot-value">${formatDateTime(device.Install, { dateStyle: 'short' })}</div>
                     </div>
                     <div class="snapshot-item">
                         <div class="snapshot-label">Last Update</div>
-                        <div class="snapshot-value">${device.LastUpdate ? new Date(device.LastUpdate).toLocaleString() : 'N/A'}</div>
+                        <div class="snapshot-value">${formatDateTime(device.LastUpdate, { dateStyle: 'short', timeStyle: 'short' })}</div>
                     </div>
                 </div>
 
@@ -2821,7 +2953,7 @@ const MPSM = (function() {
             const tableContainer = document.createElement('div');
             modalBody.appendChild(tableContainer);
             const enriched = offlineDevices.map(device => Object.assign({}, device, {
-                LastContactFormatted: device.LastContact ? new Date(device.LastContact).toLocaleString() : 'N/A'
+                LastContactFormatted: formatDateTime(device.LastContact, { dateStyle: 'short', timeStyle: 'short' })
             }));
             TableUtils.renderTable(tableContainer, {
                 columns: [
@@ -3044,7 +3176,8 @@ const MPSM = (function() {
         fetchAllDevices,
         fetchAllSupplyAlerts,
         hydrateDeviceLookup,
-        resolveDeviceIdForExports
+        resolveDeviceIdForExports,
+        formatDateTime
     };
 
 })();

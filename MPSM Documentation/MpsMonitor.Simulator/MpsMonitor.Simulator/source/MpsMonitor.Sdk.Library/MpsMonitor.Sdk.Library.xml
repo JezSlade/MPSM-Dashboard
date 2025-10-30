@@ -1,0 +1,756 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MpsMonitor.Sdk.Library</name>
+    </assembly>
+    <members>
+        <member name="T:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.Authenticate(System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            
+            </summary>
+            <param name="endpoint"></param>
+            <param name="clientId"></param>
+            <param name="clientSecret"></param>
+            <param name="username"></param>
+            <param name="password"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDealers(MpsMonitor.Sdk.Models.Requests.FilteredPagedRequest)">
+            <summary>
+            Gets the dealers.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDealer(MpsMonitor.Sdk.Models.Requests.GetByCodeRequest)">
+            <summary>
+            Gets the dealer.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetCustomers(MpsMonitor.Sdk.Models.Requests.GetCustomersRequest)">
+            <summary>
+            Gets the customers.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetCustomerByCode(MpsMonitor.Sdk.Models.Requests.GetByCodeRequest)">
+            <summary>
+            Gets the customer.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetCustomerById(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Get the customer
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.CreateCustomer(MpsMonitor.Sdk.Models.Requests.CreateRequest{MpsMonitor.Sdk.Models.Dto.CreateCustomerDto})">
+            <summary>
+             Creates the customer.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateCustomer(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.UpdateCustomerDto})">
+            <summary>
+             Update the customer.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDevices(MpsMonitor.Sdk.Models.Requests.GetDevicesRequest)">
+            <summary>
+            This operation gets lists of devices paged and filtered
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDevice(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Returns a device by request parameters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateDevice(MpsMonitor.Sdk.Models.Requests.UpdateDeviceRequest)">
+            <summary>
+            update device
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.ScanImmediate(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Retrieve all updated SDS device data. The operation will take about 20 minutes
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDeviceRemoteEws(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the device remote ews.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.SetDeviceUpdateFirmware(MpsMonitor.Sdk.Models.Requests.SetDeviceUpdateFirmwareRequest)">
+            <summary>
+            Sets the device update firmware.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.SetDeviceReboot(MpsMonitor.Sdk.Models.Requests.SetDeviceRebootRequest)">
+            <summary>
+            Sets the device reboot.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetSuppliesDetails(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Returns a device by request parameters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.ListMaintenanceKitCounters(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Returns maintenance kit counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetListDetailedCounters(MpsMonitor.Sdk.Models.Requests.GetCountersDetailedRequest)">
+            <summary>
+             Returns detailed counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetCounters(MpsMonitor.Sdk.Models.Requests.GetCountersRequest)">
+            <summary>
+            Returns counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetListBlendedCounters(MpsMonitor.Sdk.Models.Requests.GetCountersRequest)">
+            <summary>
+            Returns blended counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetSupplyAlerts(MpsMonitor.Sdk.Models.Requests.GetSupplyAlertRequest)">
+            <summary>
+            Returns a list of opened alerts (not installed yet).
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.SupplyAlertPostPone(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.PostponeAlertDto})">
+            <summary>
+            Postpone an alert until percentage
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdatesAlertsStatus(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.MassiveUpdateAlertDto})">
+            <summary>
+            Update massive supply alerts
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetSupplyAlert(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets a specific alert by its id
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetAvailableSuppliesForADevice(MpsMonitor.Sdk.Models.Requests.GetAvailableSuppliesForADeviceRequest)">
+            <summary>
+            Gets available supplies for a device
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetShippedSupply(MpsMonitor.Sdk.Models.Requests.GetShippedSuppliesRequest)">
+            <summary>
+            Lists the specified request.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.CreateOnAlert(MpsMonitor.Sdk.Models.Requests.CreateShippingSupplyOnAlertRequest)">
+            <summary>
+            Creates a shipped supply entry for a device (and alert).
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateShippedSupply(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.UpdateShippedSupplyDto})">
+            <summary>
+            Updates the specified request.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetOffices(MpsMonitor.Sdk.Models.Requests.GetOfficesRequest)">
+            <summary>
+            Gets the offices.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetOffice(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the office.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateOffice(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.OfficeDto})">
+            <summary>
+            Updates the office.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.CreateOffice(MpsMonitor.Sdk.Models.Requests.CreateRequest{MpsMonitor.Sdk.Models.Dto.OfficeDto})">
+            <summary>
+            Creates the office.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetCountries">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.MaintenanceKitColors">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.MaintenanceKitTypes">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDealerSupplies(MpsMonitor.Sdk.Models.Requests.GetDealerSuppliesRequest)">
+            <summary>
+            Returns list of dealer supplies
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateSupply(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.DealerSupplyDto})">
+            <summary>
+            Update the dealer supply.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.CreateSupply(MpsMonitor.Sdk.Models.Requests.CreateRequest{MpsMonitor.Sdk.Models.Dto.DealerSupplyDto})">
+            <summary>
+            cREATE the dealer supply.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDeviceActions(MpsMonitor.Sdk.Models.Requests.GetDeviceActionsRequest)">
+            <summary>
+            Gets the device actions.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetDeviceAction(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the device action.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.ChangeDeviceActionStatus(MpsMonitor.Sdk.Models.Requests.ChangeDeviceActionStatusRequest)">
+            <summary>
+            Changes the device action status.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetConnectors(MpsMonitor.Sdk.Models.Requests.GetExplorerDatasRequest)">
+            <summary>
+            Gets the offices.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetExplorerConfigurations(MpsMonitor.Sdk.Models.Requests.GetExplorerConfigurationsRequest)">
+            <summary>
+            Returns eXplorer Configurations
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetExplorerConfiguration(MpsMonitor.Sdk.Models.Requests.GetExplorerConfigurationRequest)">
+            <summary>
+            Returns eXplorer Configurations
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.GetExplorerDatas(MpsMonitor.Sdk.Models.Requests.GetExplorerDatasRequest)">
+            <summary>
+            This operation gets explorer data from all dealer customer
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateExplorerConfiguration(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.ExplorerConfigurationDto})">
+            <summary>
+            Update Explorer Configuration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.DeleteSchedule(MpsMonitor.Sdk.Models.Requests.DeleteExplorerScheduleRequest)">
+            <summary>
+            Delete schedule on explorerconfiguration
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateSchedule(MpsMonitor.Sdk.Models.Requests.UpdateExplorerScheduleRequest)">
+            <summary>
+            Update schedule on explorerconfiguration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.CreateSchedule(MpsMonitor.Sdk.Models.Requests.CreateExplorerScheduleRequest)">
+            <summary>
+            Create schedule on explorerconfiguration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.DeleteExplorerSubnet(MpsMonitor.Sdk.Models.Requests.DeleteExplorerSubnetRequest)">
+            <summary>
+            Delete eXplorer subnet
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.UpdateExplorerSubnet(MpsMonitor.Sdk.Models.Requests.UpdateExplorerSubnetRequest)">
+            <summary>
+            Update eXplorer subnet
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.Interface.IMpsMonitorAdapter.CreateExplorerSubnet(MpsMonitor.Sdk.Models.Requests.CreateExplorerSubnetRequest)">
+            <summary>
+            Create eXplorer subnet
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="T:MpsMonitor.Sdk.Library.MpsMonitorAdapter">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetCounters(MpsMonitor.Sdk.Models.Requests.GetCountersRequest)">
+            <summary>
+            Returns counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetListDetailedCounters(MpsMonitor.Sdk.Models.Requests.GetCountersDetailedRequest)">
+            <summary>
+             Returns detailed counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetListBlendedCounters(MpsMonitor.Sdk.Models.Requests.GetCountersRequest)">
+            <summary>
+             Returns detailed counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetCustomers(MpsMonitor.Sdk.Models.Requests.GetCustomersRequest)">
+            <summary>
+            Gets the customers.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetCustomerByCode(MpsMonitor.Sdk.Models.Requests.GetByCodeRequest)">
+            <summary>
+            Gets the customer.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetCustomerById(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the customer.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.CreateCustomer(MpsMonitor.Sdk.Models.Requests.CreateRequest{MpsMonitor.Sdk.Models.Dto.CreateCustomerDto})">
+            <summary>
+             Creates the customer.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateCustomer(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.UpdateCustomerDto})">
+            <summary>
+             Update the customer.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDealers(MpsMonitor.Sdk.Models.Requests.FilteredPagedRequest)">
+            <summary>
+            Gets the dealers.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDealer(MpsMonitor.Sdk.Models.Requests.GetByCodeRequest)">
+            <summary>
+            Gets the dealer.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDevices(MpsMonitor.Sdk.Models.Requests.GetDevicesRequest)">
+            <summary>
+            This operation gets lists of devices paged and filtered
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDevice(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Returns a device by request parameters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.ScanImmediate(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+             Retrieve all updated SDS device data. The operation will take about 20 minutes
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDeviceRemoteEws(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the device remote ews.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.SetDeviceUpdateFirmware(MpsMonitor.Sdk.Models.Requests.SetDeviceUpdateFirmwareRequest)">
+            <summary>
+             Sets the device update firmware.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.SetDeviceReboot(MpsMonitor.Sdk.Models.Requests.SetDeviceRebootRequest)">
+            <summary>
+              Sets the device reboot.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetSuppliesDetails(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Returns a device by request parameters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.ListMaintenanceKitCounters(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Returns maintenance kit counters
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateDevice(MpsMonitor.Sdk.Models.Requests.UpdateDeviceRequest)">
+            <summary>
+            update device
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetConnectors(MpsMonitor.Sdk.Models.Requests.GetExplorerDatasRequest)">
+            <summary>
+            Gets the offices.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetExplorerConfigurations(MpsMonitor.Sdk.Models.Requests.GetExplorerConfigurationsRequest)">
+            <summary>
+            Returns eXplorer Configurations
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetExplorerConfiguration(MpsMonitor.Sdk.Models.Requests.GetExplorerConfigurationRequest)">
+            <summary>
+            Returns eXplorer Configurations
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetExplorerDatas(MpsMonitor.Sdk.Models.Requests.GetExplorerDatasRequest)">
+            <summary>
+            This operation gets explorer data from all dealer customer
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateExplorerConfiguration(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.ExplorerConfigurationDto})">
+            <summary>
+            This operation gets explorer data from all dealer customer
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.DeleteSchedule(MpsMonitor.Sdk.Models.Requests.DeleteExplorerScheduleRequest)">
+            <summary>
+            Delete schedule on explorerconfiguration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateSchedule(MpsMonitor.Sdk.Models.Requests.UpdateExplorerScheduleRequest)">
+            <summary>
+            Delete schedule on explorerconfiguration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.CreateSchedule(MpsMonitor.Sdk.Models.Requests.CreateExplorerScheduleRequest)">
+            <summary>
+            Delete schedule on explorerconfiguration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.DeleteExplorerSubnet(MpsMonitor.Sdk.Models.Requests.DeleteExplorerSubnetRequest)">
+            <summary>
+            Delete schedule on explorerconfiguration
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateExplorerSubnet(MpsMonitor.Sdk.Models.Requests.UpdateExplorerSubnetRequest)">
+            <summary>
+            Update eXplorer subnet
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.CreateExplorerSubnet(MpsMonitor.Sdk.Models.Requests.CreateExplorerSubnetRequest)">
+            <summary>
+            Create eXplorer subnet
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetOffices(MpsMonitor.Sdk.Models.Requests.GetOfficesRequest)">
+            <summary>
+            Gets the offices.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetOffice(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the office.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateOffice(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.OfficeDto})">
+            <summary>
+            Updates the office.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.CreateOffice(MpsMonitor.Sdk.Models.Requests.CreateRequest{MpsMonitor.Sdk.Models.Dto.OfficeDto})">
+            <summary>
+            Creates the office.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDeviceActions(MpsMonitor.Sdk.Models.Requests.GetDeviceActionsRequest)">
+            <summary>
+            Returns list of dealer supplies
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDeviceAction(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets the device action.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.ChangeDeviceActionStatus(MpsMonitor.Sdk.Models.Requests.ChangeDeviceActionStatusRequest)">
+            <summary>
+            Changes the device action status.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetShippedSupply(MpsMonitor.Sdk.Models.Requests.GetShippedSuppliesRequest)">
+            <summary>
+            Lists the specified request.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.CreateOnAlert(MpsMonitor.Sdk.Models.Requests.CreateShippingSupplyOnAlertRequest)">
+            <summary>
+            Creates a shipped supply entry for a device (and alert).
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateShippedSupply(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.UpdateShippedSupplyDto})">
+            <summary>
+            Updates the specified request.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetDealerSupplies(MpsMonitor.Sdk.Models.Requests.GetDealerSuppliesRequest)">
+            <summary>
+            Returns list of dealer supplies
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdateSupply(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.DealerSupplyDto})">
+            <summary>
+            Update the dealer supply.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.CreateSupply(MpsMonitor.Sdk.Models.Requests.CreateRequest{MpsMonitor.Sdk.Models.Dto.DealerSupplyDto})">
+            <summary>
+            cREATE the dealer supply.
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetSupplyAlerts(MpsMonitor.Sdk.Models.Requests.GetSupplyAlertRequest)">
+            <summary>
+            Returns a list of opened alerts (not installed yet).
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.SupplyAlertPostPone(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.PostponeAlertDto})">
+            <summary>
+            Postpone an alert until percentage
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.UpdatesAlertsStatus(MpsMonitor.Sdk.Models.Requests.UpdateRequest{MpsMonitor.Sdk.Models.Dto.MassiveUpdateAlertDto})">
+            <summary>
+            Update massive supply alerts
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetSupplyAlert(MpsMonitor.Sdk.Models.Requests.GetByIdRequest)">
+            <summary>
+            Gets a specific alert by its id
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetAvailableSuppliesForADevice(MpsMonitor.Sdk.Models.Requests.GetAvailableSuppliesForADeviceRequest)">
+            <summary>
+            Gets a specific alert by its id
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.#ctor(Microsoft.Extensions.Logging.ILogger)">
+            <summary>
+            Costruttore
+            </summary>
+            <param name="logger"></param>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.Authenticate(System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            
+            </summary>
+            <param name="endpoint"></param>
+            <param name="clientId"></param>
+            <param name="clientSecret"></param>
+            <param name="username"></param>
+            <param name="password"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.GetCountries">
+            <summary>
+            Get Countries
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.IsValidClient(MpsMonitor.Sdk.Models.Responses.BaseResponse)">
+            <summary>
+            check if client si connected
+            </summary>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.MaintenanceKitColors">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:MpsMonitor.Sdk.Library.MpsMonitorAdapter.MaintenanceKitTypes">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

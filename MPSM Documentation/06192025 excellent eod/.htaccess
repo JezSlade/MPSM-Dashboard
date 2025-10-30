@@ -1,0 +1,39 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Preserve HTTP Authorization headers (for APIs)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Redirect HTTP to HTTPS (optional but recommended)
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Ensure index.php is used as default for root
+DirectoryIndex index.php
+
+# Allow access to .php files
+<FilesMatch "\.php$">
+  Require all granted
+</FilesMatch>
+
+# Explicit MIME type declarations (no override)
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js
+  AddType image/x-icon .ico
+  AddType image/svg+xml .svg
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+  AddType font/ttf .ttf
+  AddType font/eot .eot
+</IfModule>
+
+# Grant access to /api/ folder explicitly
+<IfModule mod_dir.c>
+  <IfModule mod_access_compat.c>
+    <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/api">
+      Require all granted
+    </Directory>
+  </IfModule>
+</IfModule>

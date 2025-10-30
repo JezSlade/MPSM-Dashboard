@@ -1,0 +1,108 @@
+﻿<Window x:Class="MpsMonitor.Sdk.Simulator.HpSdsOperations"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MpsMonitor.Sdk.Simulator"
+        xmlns:wpfx="http://schemas.xceed.com/wpf/xaml/toolkit"
+        mc:Ignorable="d"
+        Title="HpSdsOperations" Height="450" Width="800">
+   <Border Padding="10" ScrollViewer.CanContentScroll="True" Margin="0,0,0,12" Height="400">
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+         
+         <StackPanel  ScrollViewer.CanContentScroll="True" VerticalAlignment="Top">
+            <StackPanel>
+               <!--GRid-->
+               <Grid>
+                  <Grid.ColumnDefinitions>
+                     <ColumnDefinition Width="*" />
+                     <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                     <RowDefinition></RowDefinition>
+                  </Grid.RowDefinitions>
+
+                  <!--pckRestart-->
+                  <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+
+
+                     <Grid>
+                        <Grid.ColumnDefinitions>
+                           <ColumnDefinition Width="3*" />
+                           <!--<ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="*" />-->
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                           <RowDefinition></RowDefinition>
+                        </Grid.RowDefinitions>
+
+                        <!--pckRestart-->
+                        <StackPanel Grid.Column="0"  Margin="0 0 10 0">
+                           <TextBlock x:Name="lblRestart" Text="Restart on" FontWeight="Bold" Margin="0 10 0 5"/>
+                           <!--<DatePicker x:Name="pckScheduleOn"  VerticalAlignment="Top" SelectedDateFormat="Short" SelectedDateChanged="PckScheduleOn_SelectedDateChanged"/>-->
+                           <wpfx:DateTimePicker x:Name="datetimeScheduleOn"  VerticalAlignment="Top" ValueChanged="DatetimeScheduleOn_ValueChanged"/>
+                        </StackPanel>
+                        <!--Hour--><!--
+                        <StackPanel Grid.Column="1"  Margin="0 0 10 0">
+                           <TextBlock Text="Hour" FontWeight="Bold" Margin="0 10 0 5"/>
+                           <ComboBox x:Name="cmbHours" Padding="2" HorizontalAlignment="Left" SelectionChanged="CmbHours_SelectionChanged" />
+
+
+                        </StackPanel>
+
+                        --><!--Minute--><!--
+                        <StackPanel Grid.Column="2"  Margin="0 0 10 0">
+                           <TextBlock Text="Min" FontWeight="Bold" Margin="0 10 0 5"/>
+                           <ComboBox x:Name="cmbMinutes"  Padding="2"  HorizontalAlignment="Left" SelectionChanged="CmbMinutes_SelectionChanged" />
+
+
+                        </StackPanel>-->
+
+                     </Grid>
+                  </StackPanel>
+                  <!--Version-->
+                  <StackPanel Grid.Column="1"  Margin="0 0 10 0" x:Name="spVersionColumn">
+                     <TextBlock Text="Version" FontWeight="Bold" Margin="0 10 0 5"/>
+                     <ComboBox x:Name="cmbVersion" Padding="2">
+                        <ComboBox.ItemTemplate>
+                           <DataTemplate>
+                              <TextBlock>
+                                 <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} - {1}">
+                                       <Binding Path="ReleaseVersion"/>
+                                       <Binding Path="BuildVersion"/>
+                                    </MultiBinding>
+                                 </TextBlock.Text>
+                              </TextBlock>
+                           </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                     </ComboBox>
+                  </StackPanel>
+
+               </Grid>
+               <!-- message-->
+               <StackPanel Grid.Column="1" Margin="0 10 10 0">
+                  <TextBlock Text="Do not use to run the operation immediately" FontSize="10" Margin="0 0  0 5"/>
+                  <!--<TextBlock x:Name="lblDateUtc"  FontSize="8" Margin="0 0  0 5"/>-->
+               </StackPanel>
+               <!-- btn save-->
+               <StackPanel Grid.Column="1" Margin="0 10 10 0">
+                  <Button x:Name="btnSave" Content="Save" Margin="0 5 0 5" Click="BtnSave_Click"></Button>
+               </StackPanel>
+            </StackPanel>
+            <!-- Result Panel -->
+            <StackPanel>
+               <TabControl x:Name="tabResult" Margin="0 15 0 0" Height="224">
+                  <TabItem Header="Response">
+                     <TextBox x:Name="ResponseBox" Padding="2"  Text=""  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+
+                  </TabItem>
+                  <TabItem Header="Request">
+                     <TextBox x:Name="RequestBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                  </TabItem>
+               </TabControl>
+            </StackPanel>
+         </StackPanel>
+      </ScrollViewer>
+   </Border>
+</Window>

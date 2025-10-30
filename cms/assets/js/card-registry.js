@@ -6,6 +6,20 @@
 const CardRegistry = (function () {
     'use strict';
 
+    const formatDate = (value, options = { dateStyle: 'short', timeStyle: 'short' }) => {
+        if (window.MPSM && typeof window.MPSM.formatDateTime === 'function') {
+            return window.MPSM.formatDateTime(value, options);
+        }
+        if (!value) {
+            return 'N/A';
+        }
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return 'N/A';
+        }
+        return date.toLocaleString('en-US', options);
+    };
+
     const definitions = [
         {
             id: 'customer-overview',
@@ -419,8 +433,9 @@ const CardRegistry = (function () {
                         {
                             id: 'InitialDate',
                             label: 'Opened',
-                            accessor: row => row.InitialDate ? new Date(row.InitialDate).toLocaleString() : 'N/A',
-                            sortable: true
+                            accessor: row => row.InitialDate ? new Date(row.InitialDate).getTime() : 0,
+                            sortable: true,
+                            format: (value, row) => formatDate(row.InitialDate)
                         },
                         {
                             id: 'ManageOption',
@@ -958,6 +973,16 @@ const CardRegistry = (function () {
                             exportRow.runtimeParams = result.params_used ?? params;
                             exportRow.runtimeTestedAt = new Date().toISOString();
                             exportRow.success = true;
+                        } else if (result.file && result.file.url) {
+                            window.open(result.file.url, '_blank');
+                            showToast('Export opened in a new tab.', 'info');
+                            exportRow.runtimeStatus = 'Pass';
+                            exportRow.runtimeError = null;
+                            exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
+                            exportRow.runtimeDuration = result.duration_ms ?? null;
+                            exportRow.runtimeParams = result.params_used ?? params;
+                            exportRow.runtimeTestedAt = new Date().toISOString();
+                            exportRow.success = true;
                         } else {
                             console.log('Export response payload', result);
                             showToast('Export returned structured data. See console for details.', 'info');
@@ -1156,9 +1181,23 @@ function resolveEquipmentId(entity) {
         return 'N/A';
     }
 
-    const asset = entity.AssetNumber ?? entity.Asset ?? entity.EquipmentId ?? '';
+    const direct =
+        entity.EquipmentId
+        ?? entity.EquipmentID
+        ?? entity.DeviceEquipmentId
+        ?? entity.DeviceEquipmentID
+        ?? entity.InstalledProductEquipmentId
+        ?? entity.DeviceKey
+        ?? entity.IdDevice
+        ?? '';
+
+    const asset = entity.AssetNumber ?? entity.Asset ?? direct ?? '';
     const external = entity.ExternalIdentifier ?? entity.ExternalId ?? '';
-    const fallback = entity.SerialNumber ?? entity.DeviceSerialNumber ?? entity.SystemName ?? '';
+    const fallback = direct
+        || entity.SerialNumber
+        || entity.DeviceSerialNumber
+        || entity.SystemName
+        || '';
 
     return resolveEquipmentIdFromParts(asset, external, fallback);
 }

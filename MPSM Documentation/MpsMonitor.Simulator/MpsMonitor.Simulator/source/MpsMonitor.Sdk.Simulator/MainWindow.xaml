@@ -1,0 +1,867 @@
+﻿<Window x:Class="MpsMonitor.Sdk.Simulator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MpsMonitor.Sdk.Simulator"
+        xmlns:wpfx="http://schemas.xceed.com/wpf/xaml/toolkit"
+        mc:Ignorable="d"
+        Title="MpsMonitor.Sdk.Simulator" Height="1000" Width="994">
+    <Border Padding="10" ScrollViewer.CanContentScroll="True" Margin="0,0,0,12" >
+        <ScrollViewer Grid.Row="1"  VerticalScrollBarVisibility="Auto">
+            <wpfx:BusyIndicator x:Name="_busyIndicator" >
+                <StackPanel  ScrollViewer.CanContentScroll="True" CanVerticallyScroll="True">
+                    <StackPanel>
+                        <GroupBox Header="Selected elements" x:Name="selectedElements">
+                            <StackPanel Margin="10 0 10 10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                        <TextBlock TextWrapping="Wrap"  x:Name="lblDealer" Text="Dealer: " FontWeight="Bold" Margin="0 10 0 5"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                        <TextBlock TextWrapping="Wrap" x:Name="lblCustomer" Text="Customer: " FontWeight="Bold" Margin="0 10 0 5"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                        <TextBlock TextWrapping="Wrap" x:Name="lblDevice" Text="Device: " FontWeight="Bold" Margin="0 10 0 5"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                        <Button x:Name="btnReomveDealer" Content="Remove Dealer" Click="BtnReomveDealer_Click"></Button>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                        <Button x:Name="btnReomveCustomer" Content="Remove Customer" Click="BtnReomveCustomer_Click"></Button>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                        <Button x:Name="btnReomveDevice" Content="Remove Device" Click="BtnReomveDevice_Click"></Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+                        <TabControl x:Name="MainTabControl" SelectionChanged="MainTabControl_SelectionChanged">
+                            <!-- Tab General-->
+                            <TabItem Header="Auth" x:Name="tabAuth" Margin="-2,0" Height="22" VerticalAlignment="Top">
+                                <StackPanel >
+                                    <!-- Autentication Pannel-->
+                                    <StackPanel>
+                                        <TextBlock Text="Autentication" FontWeight="Bold" FontSize="16"/>
+                                        <!-- Autentication Fields (endpoint clientId, clientsecret,username,password)-->
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- EndPoint -->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="EndPoint" FontWeight="Bold" Margin="0 15 0 5"/>
+                                                    <ComboBox x:Name="cmbEndPoint" Padding="2" SelectionChanged="CmbEndPoint_SelectionChanged"/>
+                                                </StackPanel>
+                                                <!-- EndPoint -->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                </StackPanel>
+                                                <!-- ClientId -->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="ClientId" FontWeight="Bold" Margin="0 15 0 5"/>
+                                                    <TextBox x:Name="ClientId" Padding="2" />
+                                                </StackPanel>
+                                                <!-- ClientSecret -->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="ClientSecret" FontWeight="Bold" Margin="0 15 0 5"/>
+                                                    <TextBox x:Name="ClientSecret" Padding="2" />
+                                                </StackPanel>
+                                                <!-- UserName -->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="UserName" FontWeight="Bold" Margin="0 15 0 5" />
+                                                    <TextBox x:Name="Username" Padding="2" />
+                                                </StackPanel>
+                                                <!-- Password -->
+                                                <StackPanel Grid.Column="4" Margin="0 0 10 0">
+                                                    <TextBlock Text="Password" FontWeight="Bold" Margin="0 15 0 5"/>
+                                                    <TextBox x:Name="Password" Padding="2" />
+                                                </StackPanel>
+                                                <!-- Scope -->
+                                                <StackPanel Grid.Column="5" Margin="0 0 10 0">
+                                                    <TextBlock Text="" FontWeight="Bold" Margin="0 15 0 5"/>
+                                                    <Button x:Name="AuthButton" Content="Auth" Click="AuthButton_Click"></Button>
+                                                </StackPanel>
+                                            </Grid>
+                                            <TextBlock x:Name="urlSelected"  Margin="0 15 0 5"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+
+                            <TabItem Header="Dealer" x:Name="TabDealer" IsEnabled="False">
+                                <StackPanel >
+                                    <!-- Dealers Panel  *****-->
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="2*" />
+                                                <ColumnDefinition Width="2*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!--Get Dealers-->
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <TextBlock Text="Dealers (Max. 20)" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                <Button x:Name="btnGetDealers" Content="Get Dealers" Click="BtnGetDealers_Click" ></Button>
+                                            </StackPanel>
+                                            <!--cmbDealers-->
+                                            <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                <TextBlock Text="Selected Dealer" FontWeight="Bold" Margin="0 15 0 0"/>
+                                                <ComboBox x:Name="cmbDealers" Padding="2" SelectedIndex="0" SelectionChanged="CmbDealers_SelectionChanged"></ComboBox>
+                                            </StackPanel>
+                                            <!--Dealer ID-->
+                                            <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                <TextBlock Text="Id" FontWeight="Bold" Margin="0 15 0 0"/>
+                                                <TextBox x:Name="txtDealerId" IsReadOnly="True" Background="LightGray" />
+                                            </StackPanel>
+                                            <!--Get Dealer Details-->
+                                            <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                <TextBlock Text="" FontWeight="Bold" Margin="0 15 0 0"/>
+                                                <Button x:Name="btnGetDealerDetails" Content="Get Details" Click="BtnGetDealerDetails_Click" IsEnabled="False" ></Button>
+                                            </StackPanel>
+                                            <!--Get Dealer DEvices-->
+                                            <StackPanel Grid.Column="4" Margin="0 0 10 0">
+                                                <TextBlock Text="" FontWeight="Bold" Margin="0 15 0 0"/>
+                                                <Button x:Name="btnClearDealer" Content="Clear"  Click="BtnClearDealer_Click"  ></Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+                            <!-- TabCustomer-->
+                            <TabItem Header="Customer" x:Name="TabCustomer" IsEnabled="False">
+                                <StackPanel>
+                                    <!-- Get Customers Panel -->
+                                    <StackPanel Margin="0 0 10 20">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="2*" />
+                                                <ColumnDefinition Width="2*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Get Customers-->
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <TextBlock Text="Customers" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                <Button x:Name="btnGetCustomers" IsEnabled="False"  Content="Get Customers" Click="BtnGetCustomers_Click"></Button>
+                                            </StackPanel>
+                                            <!-- cmbDealers -->
+                                            <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                <TextBlock Text="Selected Customer" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                <ComboBox x:Name="cmbCustomers" Padding="2" SelectedIndex="0" SelectionChanged="CmbCustomers_SelectionChanged">
+                                                </ComboBox>
+                                            </StackPanel>
+                                            <!-- Customer ID-->
+                                            <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                <TextBlock Text="Id" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                <TextBox x:Name="txtCustomerId" IsReadOnly="True" Background="LightGray" />
+                                            </StackPanel>
+                                            <!-- btnGetCustomerDetails-->
+                                            <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                <TextBlock Text="" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                <Button x:Name="btnGetCustomerDetails" IsEnabled="False" Content="Get Details" Click="BtnGetCustomerDetails_Click"  ></Button>
+                                            </StackPanel>
+                                            <!-- btnClearCustomer-->
+                                            <StackPanel Grid.Column="4" Margin="0 0 10 0">
+                                                <TextBlock Text="" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                <Button x:Name="btnAddCustomer"  Content="Add Customer" Click="BtnAddCustomer_Click"  ></Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- Metriche e contatori -->
+                                    <GroupBox Header="Device Metrics and Counters (*needs a customer)">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Counters last days -->
+                                                <StackPanel Grid.Column="0" Margin="0 10 10 0">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="2*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                            <TextBlock Text="Counters last days" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                            <wpfx:IntegerUpDown FormatString="N0" x:Name="iudCounterslastdays" Value="10" Increment="1" Maximum="30" Minimum="1"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+                                                <!-- Get Meters -->
+                                                <StackPanel Grid.Column="1" Margin="0 10 10 0">
+                                                    <Button x:Name="btnCustomersMeters" IsEnabled="False" Content="Get Customer Meters" Click="BtnCustomersMeters_Click"></Button>
+                                                </StackPanel>
+                                                <!-- Get GetCustomerDeviceDetailedCounters -->
+                                                <StackPanel Grid.Column="2" Margin="0 10 10 0">
+                                                    <Button x:Name="btnCustomersDeviceDetailedCounters" IsEnabled="False" Content="Get Customer Detailed Counters" Click="BtnCustomersDeviceDetailedCounters_Click"></Button>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3" Margin="0 10 10 0">
+                                                    <Button x:Name="btnCustomersDeviceBlendedCounters" IsEnabled="False" Content="Get Customer Blended Counters" Click="BtnCustomersDeviceBlendedCounters_Click"></Button>
+                                                </StackPanel>
+                                            </Grid>
+
+                                        </StackPanel>
+                                    </GroupBox>
+                                </StackPanel>
+                            </TabItem>
+
+                            <TabItem Header="Devices" x:Name="TabDevices" IsEnabled="False">
+                                <StackPanel  Margin="0 20 0 0">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Get DEvice -->
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetDevice" IsEnabled="False" Content="Get Device Details" Click="BtnGetDevice_Click"></Button>
+                                            </StackPanel>
+                                            <!-- Get SuppliesDetails -->
+                                            <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                <Button x:Name="btnSuppliesDetails" IsEnabled="False" Content="Supplies Details" Click="BtnSuppliesDetails_Click"></Button>
+                                            </StackPanel>
+                                            <!-- Get ListMaintenanceKitCounters -->
+                                            <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                <Button x:Name="btnListMaintenanceKitCounters" IsEnabled="False" Content="Maintenance Kit Counters" Click="BtnListMaintenanceKitCounters_Click"></Button>
+                                            </StackPanel>
+                                        </Grid>
+
+                                    </StackPanel>
+                                    <!-- DEvice Metriche e contatori -->
+                                    <StackPanel  Margin="0 10 10 0">
+                                        <GroupBox Header="Device Metrics and Counters (*needs a customer)">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="266*" />
+                                                    <ColumnDefinition Width="242*" />
+                                                    <ColumnDefinition Width="212*" />
+                                                    <ColumnDefinition Width="201*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Device Counters last days -->
+                                                <StackPanel Grid.Column="0" Margin="0 10 10 0">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                            <TextBlock Text="Counters last days" FontWeight="Bold" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                            <wpfx:IntegerUpDown FormatString="N0" x:Name="iudCountersDevicelastdays" Value="10" Increment="1" Maximum="30" Minimum="1" HorizontalAlignment="Left"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+                                                <!-- Get DEviceMeters -->
+                                                <StackPanel Grid.Column="1">
+                                                    <Button x:Name="btnDeviceMeters" IsEnabled="False" Content="Get Device Meters" Click="BtnDeviceMeters_Click" HorizontalAlignment="Center" VerticalAlignment="Center" Width="180" />
+                                                </StackPanel>
+                                                <!-- Get GetDeviceDetailedCounters -->
+                                                <StackPanel Grid.Column="2">
+                                                    <Button x:Name="btnDeviceDetailedCounters" IsEnabled="False" Content="Get Devices Detailed Counters" Click="BtnDeviceDetailedCounters_Click" HorizontalAlignment="Center" VerticalAlignment="Center"  Width="180" />
+                                                </StackPanel>
+                                                <!-- Get GetDeviceBlendedCounters -->
+                                                <StackPanel Grid.Column="3">
+                                                    <Button x:Name="btnDeviceBlendedCounters" IsEnabled="False" Content="Get Devices Blended Counters" Click="BtnDeviceBlendedCounters_Click" HorizontalAlignment="Center" VerticalAlignment="Center" Width="180" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </GroupBox>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+                            <!-- Tab Supplies-->
+                            <TabItem Header="Supplies" x:Name="TabSupplies" IsEnabled="False">
+                                <StackPanel >
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--selected DEaler-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Selected Dealer" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblSuppliesSelectedDealer" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0" >
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudSuppliesPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbSuppliesPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbSuppliesSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="4" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblSuppliesTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <!--GettSupplies-->
+                                        <StackPanel Grid.Column="0" Margin="10 20 10 0">
+                                            <Button x:Name="btnGetSupplies" Content="Get Supplies" Click="BtnGetSupplies_Click"></Button>
+                                        </StackPanel  >
+                                        <!--Add newSuppy-->
+                                        <StackPanel Grid.Column="1" Margin="10 20 10 0">
+                                            <Button x:Name="btnAddSupply" Content="Add New Supply" Click="BtnAddSupply_Click"></Button>
+                                        </StackPanel  >
+                                    </Grid>
+                                    <!-- ListViewSupplies -->
+                                    <StackPanel Margin="10 20 10 0">
+                                        <ListView x:Name="ListViewSupplies" Height="299" Padding="2" MouseDoubleClick="ListViewSupplies_MouseDoubleClick" SelectionChanged="ListViewSupplies_SelectionChanged" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+
+                            <!-- Tab Supplies-->
+                            <TabItem Header="HP SDS Service Request" x:Name="TabSDSServiceRequest" IsEnabled="False">
+                                <StackPanel >
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--selected DEaler-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Selected Dealer" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblSdsSrSelectedDealer" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0" >
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudSdsSrPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbSdsSrPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbSdsSrSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="4" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblsdsSrTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <!--btnGetDeviceActions-->
+                                        <StackPanel Grid.Column="0" Margin="10 20 10 0">
+                                            <Button x:Name="btnGetDeviceActions" Content="Get Service Request" Click="BtnGetDeviceActions_Click"></Button>
+                                        </StackPanel  >
+                                    </Grid>
+                                    <!-- ListViewSupplies -->
+                                    <StackPanel Margin="10 20 10 0">
+                                        <ListView x:Name="ListViewSdsSr" Height="299" Padding="2" MouseDoubleClick="ListViewSdsSr_MouseDoubleClick" SelectionChanged="ListViewSdsSr_SelectionChanged" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
+
+                    <StackPanel x:Name="spGridDevice" Visibility="Visible">
+
+                        <!-- TabControllDetails-->
+                        <TabControl x:Name="TabControllDetails" Margin="0 15 0 0" >
+                            <!-- Tab Device-->
+                            <TabItem Header="Device">
+                                <StackPanel >
+                                    <!--Config Panel-->
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0" >
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudDevicePageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbDevicePageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbDeviceSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblDevicesTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <!--Button panel-->
+                                    <StackPanel Margin="10 20 10 0" >
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="4*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0 17 10 0">
+                                                <Button x:Name="btnGetDevices" Content="Get Devices" Click="BtnGetDevices_Click"></Button>
+                                            </StackPanel>
+                                            <StackPanel Margin="0 0 10 0"  Grid.Column="2" x:Name="spHpSds"  Visibility="Hidden">
+                                                <GroupBox Header="HpSds">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                            <Button x:Name="btnSdsRestart" Content="Restart" Click="BtnSdsRestart_Click"></Button>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                            <Button x:Name="btnSdsUpdateFirmware" Content="Update Firmware" Click="BtnSdsUpdateFirmware_Click"></Button>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                            <Button x:Name="btnSdsScan" Content="Scan" Click="BtnSdsScan_Click"></Button>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                            <Button x:Name="btnSdsEnableEWS" Content="Enable Remote EWS" Click="BtnSdsEnableEWS_Click"></Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </GroupBox>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- ListView Devices -->
+                                    <StackPanel>
+                                        <TextBlock x:Name="lblDeviceGrid" Text="Devices" FontWeight="Bold" Margin="0 15 0 0"/>
+                                        <ListView x:Name="ListViewDevices" Height="299" Padding="2" MouseDoubleClick="ListViewDevices_MouseDoubleClick" RenderTransformOrigin="0.499,0.455" SelectionChanged="ListViewDevices_SelectionChanged" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+                            <!--  TabItem Alert-->
+                            <TabItem Header="Alert">
+                                <StackPanel >
+                                    <!--Config Panel-->
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudAlertsPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbAlertsPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbAlertsSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblAlertsTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <!-- Buttons -->
+                                    <StackPanel Margin="10 20 10 20">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetAllSupplyAlert" Content="Get All" Click="BtnGetAllSupplyAlert_Click"></Button>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetOpenSupplyAlert" Content="Get Open" Click="BtnGetOpenSupplyAlert_Click"></Button>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetCancelledSupplyAlert" Content="Get Cancelled" Click="BtnGetCancelledSupplyAlert_Click"></Button>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetHideSupplyAlert" Content="Get Hide" Click="BtnGetHideSupplyAlert_Click"></Button>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="4" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetInstalledSupplyAlert" Content="Get Installed" Click="BtnGetInstalledSupplyAlert_Click">
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- ListView Alerts -->
+                                    <StackPanel>
+                                        <TextBlock x:Name="lblAlertGrid" Text="Alerts" FontWeight="Bold" Margin="0 0  0 0"/>
+                                        <ListView x:Name="ListViewAlerts" Height="299" Padding="2" RenderTransformOrigin="0.499,0.455" MouseDoubleClick="ListViewAlerts_MouseDoubleClick"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                            </TabItem>
+                            <!--  TabItem deliveries-->
+                            <TabItem Header="Deliveries" HorizontalAlignment="Left" Width="69">
+                                <StackPanel >
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudDeliveriesPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbDeliveriesPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbDeliveriesSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblDeliveriesTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <!-- Buttons -->
+                                    <StackPanel Margin="10 20 10 20">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetShippedSupplies" Content="Get All" Click="BtnGetShippedSupplies_Click"></Button>
+                                            </StackPanel>
+
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- ListView Consegne -->
+                                    <StackPanel>
+                                        <TextBlock x:Name="lblShippedGrid" Text="Deliveries" FontWeight="Bold" Margin="0 0  0 0"/>
+                                        <ListView x:Name="ListViewDelivery" Height="299" Padding="2" MouseDoubleClick="ListViewDelivery_MouseDoubleClick"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+                            <!--  TabItem Connectors-->
+                            <TabItem Header="Connectors" x:Name="TabConnectors">
+                                <StackPanel >
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudConnectorsPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbConnectorsPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbConnectorsSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblConnectorsTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <!-- Buttons -->
+                                    <StackPanel Margin="10 20 10 20">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetConnectors" Content="Get All" Click="BtnGetConnectors_Click"></Button>
+                                            </StackPanel>
+                                           
+
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- ListView Connectors -->
+                                    <StackPanel>
+                                        <TextBlock x:Name="lblConnectorsGrid" Text="Connectors" FontWeight="Bold" Margin="0 0  0 0"/>
+                                        <ListView x:Name="ListViewConnectors" Height="299" Padding="2" RenderTransformOrigin="0.499,0.455" MouseDoubleClick="ListViewConnectors_MouseDoubleClick"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+
+                            <!--  TabItem offices-->
+                            <TabItem Header="Offices" x:Name="TabOffices" IsEnabled="False">
+                                <StackPanel >
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudOfficesPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbOfficesPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbOfficesSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblOfficesTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <!-- Buttons -->
+                                    <StackPanel Margin="10 20 10 20">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetOffices" Content="Get All" Click="BtnGetOffices_Click"></Button>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                <Button x:Name="btnAddOffices" Content="Add Office" Click="BtnAddOffices_Click"></Button>
+                                            </StackPanel>
+
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- ListView Sedi -->
+                                    <StackPanel>
+                                        <TextBlock x:Name="lblOfficesGrid" Text="Offices" FontWeight="Bold" Margin="0 0  0 0"/>
+                                        <ListView x:Name="ListViewOffices" Height="299" Padding="2" RenderTransformOrigin="0.499,0.455" MouseDoubleClick="ListViewOffices_MouseDoubleClick"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+
+                            <!--  TabItem Connectors configurations-->
+                            <TabItem Header="Connectors Configuration" x:Name="TabConnectorsConfig" IsEnabled="False">
+                                <StackPanel >
+                                    <Expander  Header="Pagination">
+                                        <StackPanel Margin="0 0 10 0" >
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!--PageRows-->
+                                                <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Rows " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <wpfx:IntegerUpDown FormatString="N0" Value="50" Increment="1" Maximum="100" Minimum="1"  x:Name="iudConnectorsConfigPageRows"/>
+                                                </StackPanel>
+                                                <!--PageNumber-->
+                                                <StackPanel Grid.Column="1" Margin="0 0 10 0">
+                                                    <TextBlock Text="Page Number " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbConnectorsConfigPageNumber" SelectedIndex="0" IsEnabled="False">
+                                                        <ComboBoxItem>1</ComboBoxItem>
+                                                    </ComboBox>
+
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="2" Margin="0 0 10 0">
+                                                    <TextBlock Text="Sort Order " FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <ComboBox x:Name="cmbConnectorsConfigSortOrder"></ComboBox>
+                                                </StackPanel>
+                                                <!--SortOrder-->
+                                                <StackPanel Grid.Column="3" Margin="0 0 10 0">
+                                                    <TextBlock Text="Total Rows" FontWeight="Bold" Margin="0 10 0 5"/>
+                                                    <TextBlock x:Name="lblConnectorsConfigTotalRows" Text= "" FontWeight="Bold" Margin="0 0 0 5"/>
+                                                </StackPanel>
+
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                    <!-- Buttons -->
+                                    <StackPanel Margin="10 20 10 20">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                                                <Button x:Name="btnGetConnectorsConfig" Content="Get All" Click="BtnGetConnectorsConfig_Click"></Button>
+                                            </StackPanel>
+                                          
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- ListView Sedi -->
+                                    <StackPanel>
+                                        <TextBlock x:Name="lblConnectorsConfigGrid" Text="Connectors Configurations" FontWeight="Bold" Margin="0 0  0 0"/>
+                                        <ListView x:Name="ListViewConnectorsConfig" Height="299" Padding="2" RenderTransformOrigin="0.499,0.455" MouseDoubleClick="ListViewConnectorsConfig_MouseDoubleClick"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
+
+                    <!-- Result Panel -->
+                    <StackPanel>
+                        <TabControl x:Name="tabResult" Margin="0 15 0 0">
+                            <TabItem Header="Response">
+                                <TextBox x:Name="ResponseBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+
+                            </TabItem>
+                            <TabItem Header="Request">
+                                <TextBox x:Name="RequestBox" Padding="2"  Text="" Height="250"  IsReadOnly="True" Background="LightGray" ScrollViewer.CanContentScroll="True" UseLayoutRounding="True" VerticalScrollBarVisibility="Auto"/>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
+                </StackPanel>
+            </wpfx:BusyIndicator>
+        </ScrollViewer>
+    </Border>
+
+</Window>
