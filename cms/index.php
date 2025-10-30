@@ -35,6 +35,13 @@ $preferences = getUserPreferences($userId);
     <header class="header">
         <div class="container">
             <h1><?= APP_NAME ?></h1>
+            <div class="header-search">
+                <div class="global-device-search">
+                    <i class="fas fa-search"></i>
+                    <input type="search" id="global-device-search" placeholder="Search all devices..." autocomplete="off">
+                    <div id="global-search-results" class="global-search-dropdown" style="display:none;"></div>
+                </div>
+            </div>
             <div class="header-actions">
                 <button id="theme-toggle" class="btn-icon" title="Toggle theme">
                     <i class="fas fa-moon"></i>

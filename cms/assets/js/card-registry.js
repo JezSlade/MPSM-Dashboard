@@ -402,7 +402,13 @@ const CardRegistry = (function () {
 
                 const tableHandle = helpers.renderTable(tableContainer, {
                     columns: [
-                        { id: 'EquipmentId', label: 'Equipment ID', accessor: row => resolveEquipmentId(row), sortable: true },
+                        { id: 'EquipmentId', label: 'Equipment ID', accessor: row => {
+                            // Use the global equipment ID resolver from app.js
+                            if (typeof window.getEquipmentIdFromAlert === 'function') {
+                                return window.getEquipmentIdFromAlert(row);
+                            }
+                            return row.EquipmentId || row.AssetNumber || row.SerialNumber || 'N/A';
+                        }, sortable: true },
                         { id: 'SerialNumber', label: 'Serial', accessor: row => row.SerialNumber || row.DeviceSerialNumber || 'N/A', sortable: true },
                         { id: 'ProductModel', label: 'Model', accessor: row => row.ProductModel || row.Product?.Model || 'Unknown', sortable: true },
                         { id: 'SupplyTypeDescription', label: 'Supply', accessor: row => row.SupplyTypeDescription || row.SupplyType || 'N/A', sortable: true },
@@ -652,7 +658,7 @@ const CardRegistry = (function () {
                         }
                     ],
                     rows: devices,
-                    pageSize: 5,
+                    pageSize: 50,
                     defaultSort: { column: 'TotalVolume', direction: 'desc' },
                     onRowClick: row => {
                         if (!window.MPSM || typeof window.MPSM.openDeviceModal !== 'function') {
@@ -730,7 +736,7 @@ const CardRegistry = (function () {
                         }
                     ],
                     rows: snapshot.context.integrations,
-                    pageSize: 20,
+                    pageSize: 50,
                     defaultSort: { column: 'Description', direction: 'asc' }
                 });
             }
@@ -841,7 +847,7 @@ const CardRegistry = (function () {
                 const exportTable = helpers.renderTable(tableContainer, {
                     columns,
                     rows: exports,
-                    pageSize: 25,
+                    pageSize: 50,
                     defaultSort: { column: 'action', direction: 'asc' }
                 });
 
@@ -958,30 +964,65 @@ const CardRegistry = (function () {
                                 }
                             }
 
-                            // FIX BUG #8: Improve download trigger reliability
+                            // FIX BUG #8: Improve download trigger reliability (enhanced)
+                            console.log('[Export] Triggering download:', filename, 'Size:', blob.size, 'bytes');
+
                             const link = document.createElement('a');
                             link.href = objectUrl;
                             link.download = filename;
                             link.style.display = 'none';
+                            link.rel = 'noopener noreferrer';
                             document.body.appendChild(link);
 
-                            // Force a small delay to ensure blob URL is ready
-                            setTimeout(() => {
-                                try {
-                                    link.click();
-                                } catch (e) {
-                                    console.error('Download click failed:', e);
-                                    // Fallback: open in new window
-                                    window.open(objectUrl, '_blank');
-                                }
+                            // Try multiple download strategies
+                            let downloadTriggered = false;
 
-                                // Cleanup after download starts
-                                setTimeout(() => {
+                            try {
+                                // Strategy 1: Direct click (most reliable)
+                                link.click();
+                                downloadTriggered = true;
+                                console.log('[Export] Download triggered via link.click()');
+                                showToast(`Export downloading: ${filename}`, 'success');
+                            } catch (e) {
+                                console.error('[Export] link.click() failed:', e);
+                            }
+
+                            if (!downloadTriggered) {
+                                try {
+                                    // Strategy 2: Programmatic mouse event
+                                    const event = new MouseEvent('click', {
+                                        bubbles: true,
+                                        cancelable: true,
+                                        view: window
+                                    });
+                                    link.dispatchEvent(event);
+                                    downloadTriggered = true;
+                                    console.log('[Export] Download triggered via dispatchEvent');
+                                    showToast(`Export downloading: ${filename}`, 'success');
+                                } catch (e) {
+                                    console.error('[Export] dispatchEvent failed:', e);
+                                }
+                            }
+
+                            if (!downloadTriggered) {
+                                // Strategy 3: Open in new window as fallback
+                                console.log('[Export] Falling back to window.open()');
+                                const newWindow = window.open(objectUrl, '_blank');
+                                if (newWindow) {
+                                    showToast('Export opened in new window. Right-click and Save As...', 'info');
+                                } else {
+                                    showToast('Popup blocked! Please allow popups and try again.', 'error');
+                                }
+                            }
+
+                            // Cleanup after download starts
+                            setTimeout(() => {
+                                if (document.body.contains(link)) {
                                     document.body.removeChild(link);
-                                    URL.revokeObjectURL(objectUrl);
-                                }, 2000);
-                            }, 100);
-                            showToast(`Export downloaded: ${filename}. Check your browser downloads folder.`, 'success');
+                                }
+                                URL.revokeObjectURL(objectUrl);
+                                console.log('[Export] Cleanup complete');
+                            }, 5000);
                             exportRow.runtimeStatus = 'Pass';
                             exportRow.runtimeError = null;
                             exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
@@ -1076,7 +1117,7 @@ const CardRegistry = (function () {
                         { id: 'DeveloperEmail', label: 'Developer Email', sortable: true }
                     ],
                     rows: snapshot.context.clients,
-                    pageSize: 25,
+                    pageSize: 50,
                     defaultSort: { column: 'Name', direction: 'asc' }
                 });
             }
@@ -1152,7 +1193,7 @@ const CardRegistry = (function () {
                         { id: 'Duration', label: 'Yield', sortable: true }
                     ],
                     rows: snapshot.context.supplies,
-                    pageSize: 25,
+                    pageSize: 50,
                     defaultSort: { column: 'Description', direction: 'asc' }
                 });
             }

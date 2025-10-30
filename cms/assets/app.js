@@ -789,6 +789,7 @@ const MPSM = (function() {
     async function init() {
         setupEventListeners();
         loadTheme();
+        initGlobalDeviceSearch();  // Initialize global device search
 
         try {
             await loadPreferences();
@@ -1804,7 +1805,7 @@ const MPSM = (function() {
             catalogTableInstance = TableUtils.renderTable(tableContainer, {
                 columns,
                 rows: normalizedRows,
-                pageSize: 25,
+                pageSize: 50,
                 defaultSort: { column: 'action', direction: 'asc' }
             });
         }
@@ -3065,7 +3066,7 @@ const MPSM = (function() {
                     }
                 ],
                 rows: enriched,
-                pageSize: 25,
+                pageSize: 50,
                 defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: row => {
                     if (row && row.Id) {
@@ -3262,6 +3263,107 @@ const MPSM = (function() {
         }
     }
 
+    /**
+     * Global device search with autocomplete
+     */
+    let globalSearchTimeout = null;
+    let globalSearchCache = [];
+
+    async function initGlobalDeviceSearch() {
+        const searchInput = document.getElementById('global-device-search');
+        const resultsContainer = document.getElementById('global-search-results');
+
+        if (!searchInput || !resultsContainer) {
+            return;
+        }
+
+        searchInput.addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            // Debounce search
+            clearTimeout(globalSearchTimeout);
+            globalSearchTimeout = setTimeout(async () => {
+                try {
+                    resultsContainer.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+                    resultsContainer.style.display = 'block';
+
+                    // Fetch all devices (not restricted to current customer)
+                    const response = await fetch('api/get-devices.php?pageRows=1000');
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        throw new Error(data.error || 'Search failed');
+                    }
+
+                    const devices = data.devices || [];
+                    const queryLower = query.toLowerCase();
+
+                    // Search across multiple fields
+                    const matches = devices.filter(device => {
+                        const equipmentId = getEquipmentIdFromDevice(device).toLowerCase();
+                        const serial = (device.SerialNumber || device.DeviceSerialNumber || '').toLowerCase();
+                        const model = (device.ProductModel || '').toLowerCase();
+                        const customer = (device.CustomerDescription || '').toLowerCase();
+
+                        return equipmentId.includes(queryLower) ||
+                               serial.includes(queryLower) ||
+                               model.includes(queryLower) ||
+                               customer.includes(queryLower);
+                    }).slice(0, 10); // Limit to 10 results
+
+                    if (matches.length === 0) {
+                        resultsContainer.innerHTML = '<div class="search-empty">No devices found</div>';
+                        return;
+                    }
+
+                    resultsContainer.innerHTML = matches.map(device => {
+                        const equipmentId = escapeHtml(getEquipmentIdFromDevice(device));
+                        const model = escapeHtml(device.ProductModel || 'Unknown Model');
+                        const customer = escapeHtml(device.CustomerDescription || 'Unknown Customer');
+                        const deviceId = device.Id || device.IdInstalledProduct || device.DeviceId;
+
+                        return `
+                            <div class="search-result-item" data-device-id="${deviceId}">
+                                <div class="search-result-main">
+                                    <strong>${equipmentId}</strong>
+                                    <span class="search-result-model">${model}</span>
+                                </div>
+                                <div class="search-result-sub">${customer}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Add click handlers
+                    resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const deviceId = item.dataset.deviceId;
+                            if (deviceId) {
+                                openDeviceModal(deviceId);
+                                searchInput.value = '';
+                                resultsContainer.style.display = 'none';
+                            }
+                        });
+                    });
+
+                } catch (error) {
+                    resultsContainer.innerHTML = `<div class="search-error">Search error: ${escapeHtml(error.message)}</div>`;
+                }
+            }, 300);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+                resultsContainer.style.display = 'none';
+            }
+        });
+    }
+
     // Public API
     return {
         loadDashboard,
@@ -3276,7 +3378,8 @@ const MPSM = (function() {
         fetchAllSupplyAlerts,
         hydrateDeviceLookup,
         resolveDeviceIdForExports,
-        formatDateTime
+        formatDateTime,
+        initGlobalDeviceSearch
     };
 
 })();

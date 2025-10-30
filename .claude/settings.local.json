@@ -17,7 +17,10 @@
       "Bash(powershell -ExecutionPolicy Bypass -File delete_setup.ps1)",
       "Bash(powershell -Command \"Get-Content ''cms\\assets\\app.js'' | Measure-Object -Line | Select-Object -ExpandProperty Lines\")",
       "Bash(powershell -ExecutionPolicy Bypass -File deploy-app.ps1)",
-      "Bash(powershell -ExecutionPolicy Bypass -File deploy-all.ps1)"
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-all.ps1)",
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-bug-fixes.ps1)",
+      "Bash(start https://mpsm.resolutionsbydesign.us/cms/)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

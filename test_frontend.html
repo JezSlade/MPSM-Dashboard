@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Bug Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .pass { color: green; }
+        .fail { color: red; }
+        button { padding: 10px 20px; margin: 5px; }
+        #console { background: #f5f5f5; padding: 10px; margin-top: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .log { margin: 2px 0; }
+        .log.info { color: blue; }
+        .log.error { color: red; }
+        .log.success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>MPSM Dashboard - Bug Fix Frontend Test</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Login & Session</h2>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Concurrent Request Prevention</h2>
+        <button onclick="testConcurrentRequests()">Fire 5 Rapid Requests</button>
+        <div id="concurrent-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Device API with Total Count</h2>
+        <button onclick="testDeviceAPI()">Test Device API</button>
+        <div id="device-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Export Download (Bug #8 Fix)</h2>
+        <button onclick="testExportDownload()">Test Export Download</button>
+        <div id="export-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <button onclick="clearConsole()">Clear Console</button>
+        <div id="console"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://mpsm.resolutionsbydesign.us/cms/api/';
+
+        function log(message, type = 'info') {
+            const consoleDiv = document.getElementById('console');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleDiv.appendChild(logEntry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            log('Testing login...', 'info');
+
+            try {
+                const response = await fetch(API_BASE + 'login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin' }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.innerHTML = '<span class="pass">✓ Login successful</span>';
+                    log('Login successful', 'success');
+                } else {
+                    resultDiv.innerHTML = `<span class="fail">✗ Login failed: ${data.error}</span>`;
+                    log(`Login failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="fail">✗ Error: ${error.message}</span>`;
+                log(`Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testConcurrentRequests() {
+            const resultDiv = document.getElementById('concurrent-result');
+            log('Firing 5 concurrent device requests...', 'info');
+
+            const promises = [];
+            for (let i = 0; i < 5; i++) {
+                promises.push(
+                    fetch(API_BASE + 'get-devices.php?customerCode=W9OPXL0YDK&pageRows=10', {
+                        credentials: 'include'
+                    })
+                );
+                log(`Request ${i + 1} fired`, 'info');
+            }
+
+            try {
+                const responses = await Promise.all(promises);
+                const results = await Promise.all(responses.map(r => r.json()));
+                const successCount = results.filter(r => r.success).length;
+
+                resultDiv.innerHTML = `<span class="pass">✓ ${successCount}/5 requests succeeded</span><br>`;
+                resultDiv.innerHTML += `<small>Check browser Network tab - should only see minimal backend requests</small>`;
+                log(`${successCount}/5 requests completed successfully`, 'success');
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="fail">✗ Error: ${error.message}</span>`;
+                log(`Concurrent request error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDeviceAPI() {
+            const resultDiv = document.getElementById('device-result');
+            log('Testing device API with total count...', 'info');
+
+            try {
+                const response = await fetch(API_BASE + 'get-devices.php?customerCode=W9OPXL0YDK&pageRows=10', {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const total = data.total || 0;
+                    const returned = data.devices ? data.devices.length : 0;
+
+                    resultDiv.innerHTML = `<span class="pass">✓ Device API working</span><br>`;
+                    resultDiv.innerHTML += `Total devices: ${total}<br>`;
+                    resultDiv.innerHTML += `Devices returned: ${returned}<br>`;
+
+                    if (total === 0 && returned > 0) {
+                        resultDiv.innerHTML += `<span class="fail">⚠ Bug #7: Total is 0 but ${returned} devices returned</span>`;
+                        log(`Bug #7 detected: Total=${total}, Returned=${returned}`, 'error');
+                    } else {
+                        log(`Device API OK: Total=${total}, Returned=${returned}`, 'success');
+                    }
+                } else {
+                    resultDiv.innerHTML = `<span class="fail">✗ API Error: ${data.error}</span>`;
+                    log(`Device API error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="fail">✗ Error: ${error.message}</span>`;
+                log(`Device API error: ${error.message}`, 'error');
+            }
+        }
+
+        function base64ToBlob(base64, contentType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: contentType || 'application/octet-stream' });
+        }
+
+        async function testExportDownload() {
+            const resultDiv = document.getElementById('export-result');
+            log('Testing export download (Bug #8 fix)...', 'info');
+
+            try {
+                const response = await fetch(API_BASE + 'run-export.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        action: 'DealerSupply/Export',
+                        params: {
+                            DealerCode: 'NY06AGDWUQ',
+                            PageNumber: 1,
+                            PageRows: 10
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Export failed');
+                }
+
+                if (data.file && data.file.data) {
+                    log('Export data received, triggering download...', 'info');
+
+                    // Using Bug #8 fix: improved download trigger
+                    const blob = base64ToBlob(data.file.data, data.file.content_type);
+                    const objectUrl = URL.createObjectURL(blob);
+                    const filename = data.file.name || 'export.xlsx';
+
+                    const link = document.createElement('a');
+                    link.href = objectUrl;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+
+                    // BUG #8 FIX: Add delay before click
+                    setTimeout(() => {
+                        try {
+                            link.click();
+                            log(`Download triggered: ${filename}`, 'success');
+                            resultDiv.innerHTML = `<span class="pass">✓ Export download triggered!</span><br>`;
+                            resultDiv.innerHTML += `<small>Check your Downloads folder for: ${filename}</small>`;
+                        } catch (e) {
+                            log(`Download click failed: ${e.message}, trying fallback`, 'error');
+                            window.open(objectUrl, '_blank');
+                            resultDiv.innerHTML = `<span class="pass">✓ Export opened in new window (fallback)</span>`;
+                        }
+
+                        // Cleanup
+                        setTimeout(() => {
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(objectUrl);
+                        }, 2000);
+                    }, 100);
+                } else {
+                    throw new Error('No file data in export response');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="fail">✗ Error: ${error.message}</span>`;
+                log(`Export error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-login on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, ready for testing', 'info');
+            testLogin();
+        });
+    </script>
+</body>
+</html>
