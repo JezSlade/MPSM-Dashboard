@@ -2120,12 +2120,19 @@ const MPSM = (function() {
     async function fetchAllDevices(options = {}) {
         const devices = [];
         const seenKeys = new Set();
-        let pageNumber = 1;
-        const pageRows = Number(options.pageRows || 200);
+        const pageRows = Math.max(1, Math.min(Number(options.pageRows || 200), 100));
+        let pageNumber = Math.max(1, Number(options.pageNumber || 1));
         let totalExpected = null;
         let lastMeta = {};
+        let safetyCounter = 0;
 
         while (true) {
+            safetyCounter += 1;
+            if (safetyCounter > 100) {
+                debugLog('Device pagination aborted after 100 iterations', 'warn');
+                break;
+            }
+
             const params = new URLSearchParams({
                 customerCode: options.customerCode ?? state.customerCode ?? '',
                 dealerCode: options.dealerCode ?? state.dealerCode ?? '',
@@ -2152,6 +2159,8 @@ const MPSM = (function() {
                     ? data.devices.Items
                     : [];
 
+            const beforeCount = devices.length;
+
             chunk.forEach(device => {
                 if (!device || typeof device !== 'object') {
                     return;
@@ -2163,14 +2172,17 @@ const MPSM = (function() {
                     ?? device.DeviceId
                     ?? getEquipmentIdFromDevice(device)
                     ?? device.SerialNumber
+                    ?? device.IpAddress
                     ?? `${pageNumber}-${devices.length}`;
 
                 const key = String(identifier).toLowerCase();
-                if (!seenKeys.has(key)) {
+                if (key && !seenKeys.has(key)) {
                     seenKeys.add(key);
                     devices.push(device);
                 }
             });
+
+            const addedThisPage = devices.length - beforeCount;
 
             const metaTotal = Number(
                 meta.total_rows
@@ -2192,16 +2204,16 @@ const MPSM = (function() {
                 break;
             }
 
-            if (chunk.length < pageRows && totalExpected === null) {
+            if (addedThisPage === 0) {
+                debugLog(`No new devices returned for page ${pageNumber}; stopping pagination.`, 'warn');
+                break;
+            }
+
+            if (chunk.length < pageRows) {
                 break;
             }
 
             pageNumber += 1;
-
-            if (pageNumber > 2000) {
-                debugLog('Aborting device pagination after 2000 pages to prevent runaway loop', 'warn');
-                break;
-            }
         }
 
         if (totalExpected === null) {
@@ -2217,12 +2229,20 @@ const MPSM = (function() {
 
     async function fetchAllSupplyAlerts(options = {}) {
         const alerts = [];
-        let pageNumber = 1;
-        const pageRows = Number(options.pageRows || 500);
+        const seenAlertKeys = new Set();
+        let pageNumber = Math.max(1, Number(options.pageNumber || 1));
+        const pageRows = Math.max(1, Math.min(Number(options.pageRows || 500), 500));
         let totalExpected = null;
         let lastMeta = {};
+        let safetyCounter = 0;
 
         while (true) {
+            safetyCounter += 1;
+            if (safetyCounter > 200) {
+                debugLog('Supply alert pagination aborted after 200 iterations', 'warn');
+                break;
+            }
+
             const params = new URLSearchParams({
                 customerCode: options.customerCode ?? state.customerCode ?? '',
                 dealerCode: options.dealerCode ?? state.dealerCode ?? '',
@@ -2248,7 +2268,42 @@ const MPSM = (function() {
                     ? data.alerts.Items
                     : [];
 
-            alerts.push(...chunk);
+            const beforeCount = alerts.length;
+
+            chunk.forEach(alert => {
+                if (!alert || typeof alert !== 'object') {
+                    return;
+                }
+
+                const deviceId = alert.DeviceId
+                    ?? alert.IdDevice
+                    ?? alert.IdInstalledProduct
+                    ?? alert.AssetNumber
+                    ?? alert.SerialNumber
+                    ?? '';
+
+                const supplyKey = alert.SupplyTypeDescription
+                    ?? alert.SupplyType
+                    ?? alert.SupplierType
+                    ?? '';
+
+                const initialDate = alert.InitialDate ?? alert.GeneratedOn ?? alert.CreatedOn ?? '';
+                const manageOption = alert.ManageOption ?? alert.InstallationOption ?? '';
+
+                const keyParts = [deviceId, supplyKey, initialDate, manageOption]
+                    .filter(part => part !== null && part !== undefined && part !== '');
+
+                if (!keyParts.length) {
+                    keyParts.push(JSON.stringify(alert));
+                }
+
+                const key = keyParts.join('|').toLowerCase();
+
+                if (!seenAlertKeys.has(key)) {
+                    seenAlertKeys.add(key);
+                    alerts.push(alert);
+                }
+            });
 
             totalExpected = Number(
                 meta.total_rows
@@ -2259,7 +2314,22 @@ const MPSM = (function() {
                 ?? alerts.length
             );
 
-            if (!chunk.length || alerts.length >= totalExpected) {
+            const addedThisPage = alerts.length - beforeCount;
+
+            if (totalExpected !== null && alerts.length >= totalExpected) {
+                break;
+            }
+
+            if (!chunk.length) {
+                break;
+            }
+
+            if (addedThisPage === 0) {
+                debugLog(`No new supply alerts returned for page ${pageNumber}; stopping pagination.`, 'warn');
+                break;
+            }
+
+            if (chunk.length < pageRows) {
                 break;
             }
 
