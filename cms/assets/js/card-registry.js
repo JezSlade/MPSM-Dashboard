@@ -958,13 +958,29 @@ const CardRegistry = (function () {
                                 }
                             }
 
+                            // FIX BUG #8: Improve download trigger reliability
                             const link = document.createElement('a');
                             link.href = objectUrl;
                             link.download = filename;
+                            link.style.display = 'none';
                             document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+
+                            // Force a small delay to ensure blob URL is ready
+                            setTimeout(() => {
+                                try {
+                                    link.click();
+                                } catch (e) {
+                                    console.error('Download click failed:', e);
+                                    // Fallback: open in new window
+                                    window.open(objectUrl, '_blank');
+                                }
+
+                                // Cleanup after download starts
+                                setTimeout(() => {
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(objectUrl);
+                                }, 2000);
+                            }, 100);
                             showToast(`Export downloaded: ${filename}. Check your browser downloads folder.`, 'success');
                             exportRow.runtimeStatus = 'Pass';
                             exportRow.runtimeError = null;
