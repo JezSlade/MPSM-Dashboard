@@ -1157,6 +1157,42 @@ main {
     padding: 8px 0;
 }
 
+.endpoint-raw {
+    margin-top: 12px;
+}
+
+.endpoint-raw__pre {
+    max-height: 320px;
+    overflow: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.endpoint-footnote {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.endpoint-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.9rem;
+}
+
+.endpoint-list li {
+    margin-bottom: 4px;
+}
+
+.device-detail-table {
+    margin-top: 12px;
+}
+
 /* Error Logging Display */
 .debug-panel {
     position: fixed;
