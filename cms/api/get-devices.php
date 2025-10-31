@@ -17,6 +17,7 @@ $pageNumber = isset($_GET['pageNumber']) ? (int) $_GET['pageNumber'] : 1;
 $pageRows = isset($_GET['pageRows']) ? (int) $_GET['pageRows'] : 50;
 $sortColumn = $_GET['sortColumn'] ?? 'AssetNumber';
 $sortOrder = $_GET['sortOrder'] ?? 'Asc';
+$allCustomers = isset($_GET['allCustomers']) && $_GET['allCustomers'] === 'true';
 
 if ($pageNumber < 1) {
     $pageNumber = 1;
@@ -31,18 +32,25 @@ if ($pageRows < 1) {
 $sortOrder = strtoupper($sortOrder) === 'DESC' ? 'Desc' : 'Asc';
 
 try {
+    // Build params - omit customer filter if allCustomers=true for global search
+    $params = [
+        'FilterDealerId' => $dealerId,
+        'FilterDealerCodes' => [$dealerCode],
+        'PageNumber' => $pageNumber,
+        'PageRows' => $pageRows,
+        'SortColumn' => $sortColumn,
+        'SortOrder' => $sortOrder
+    ];
+
+    // Only filter by customer if not searching all customers
+    if (!$allCustomers) {
+        $params['FilterCustomerCodes'] = [$customerCode];
+    }
+
     // Call mps-api backend via /query endpoint
     $payload = json_encode([
         'action' => 'Device/List',
-        'params' => [
-            'FilterDealerId' => $dealerId,
-            'FilterDealerCodes' => [$dealerCode],
-            'FilterCustomerCodes' => [$customerCode],
-            'PageNumber' => $pageNumber,
-            'PageRows' => $pageRows,
-            'SortColumn' => $sortColumn,
-            'SortOrder' => $sortOrder
-        ]
+        'params' => $params
     ]);
 
     // FIX BUG #5: Reduce timeout and add better error messages

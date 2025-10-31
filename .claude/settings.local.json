@@ -22,7 +22,16 @@
       "Bash(start https://mpsm.resolutionsbydesign.us/cms/)",
       "Bash(node:*)",
       "Bash(powershell -ExecutionPolicy Bypass -File deploy-ux-fixes.ps1)",
-      "Bash(powershell -ExecutionPolicy Bypass -File deploy-missing-files.ps1)"
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-missing-files.ps1)",
+      "Bash(python:*)",
+      "Bash(powershell:*)",
+      "Bash(for page in {1..20})",
+      "Bash(do echo \"Checking page $page...\" curl -s \"https://mpsm.resolutionsbydesign.us/cms/api/get-devices.php?pageRows=200&pageNumber=$page&allCustomers=true\" -b /tmp/cookies.txt)",
+      "Bash(echo:*)",
+      "Bash(break done)",
+      "Bash(for i in 1 2 3 4 5)",
+      "Bash(do curl -s \"https://mpsm.resolutionsbydesign.us/cms/api/get-devices.php?pageRows=200&pageNumber=$i&allCustomers=true\" -b /tmp/cookies.txt)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

@@ -3268,6 +3268,44 @@ const MPSM = (function() {
      */
     let globalSearchTimeout = null;
     let globalSearchCache = [];
+    let globalSearchLastFetch = 0;
+    const GLOBAL_SEARCH_CACHE_DURATION = 60000; // Cache for 1 minute
+
+    async function fetchAllDevicesForSearch() {
+        // Return cached data if fresh
+        const now = Date.now();
+        if (globalSearchCache.length > 0 && (now - globalSearchLastFetch) < GLOBAL_SEARCH_CACHE_DURATION) {
+            debugLog(`Using cached device data (${globalSearchCache.length} devices)`, 'info');
+            return globalSearchCache;
+        }
+
+        debugLog('Fetching all devices for search...', 'info');
+        const allDevices = [];
+        let pageNumber = 1;
+        let hasMore = true;
+
+        while (hasMore && pageNumber <= 50) { // Max 50 pages = 10,000 devices
+            const response = await fetch(`api/get-devices.php?pageRows=200&pageNumber=${pageNumber}&allCustomers=true`);
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to fetch devices');
+            }
+
+            const devices = data.devices || [];
+            allDevices.push(...devices);
+            debugLog(`Fetched page ${pageNumber}: ${devices.length} devices (total: ${allDevices.length})`, 'info');
+
+            const total = data.total || 0;
+            hasMore = allDevices.length < total && devices.length > 0;
+            pageNumber++;
+        }
+
+        globalSearchCache = allDevices;
+        globalSearchLastFetch = now;
+        debugLog(`Cached ${allDevices.length} devices for search`, 'info');
+        return allDevices;
+    }
 
     async function initGlobalDeviceSearch() {
         const searchInput = document.getElementById('global-device-search');
@@ -3289,31 +3327,28 @@ const MPSM = (function() {
             clearTimeout(globalSearchTimeout);
             globalSearchTimeout = setTimeout(async () => {
                 try {
-                    resultsContainer.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+                    resultsContainer.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-spin"></i> Searching all devices...</div>';
                     resultsContainer.style.display = 'block';
 
-                    // Fetch all devices (not restricted to current customer)
-                    const response = await fetch('api/get-devices.php?pageRows=1000');
-                    const data = await response.json();
-
-                    if (!data.success) {
-                        throw new Error(data.error || 'Search failed');
-                    }
-
-                    const devices = data.devices || [];
+                    // Fetch all devices across all customers with pagination
+                    const devices = await fetchAllDevicesForSearch();
                     const queryLower = query.toLowerCase();
 
-                    // Search across multiple fields
+                    // Search across multiple fields including ExternalIdentifier
                     const matches = devices.filter(device => {
                         const equipmentId = getEquipmentIdFromDevice(device).toLowerCase();
                         const serial = (device.SerialNumber || device.DeviceSerialNumber || '').toLowerCase();
-                        const model = (device.ProductModel || '').toLowerCase();
+                        const model = (device.ProductModel || device.Product?.Model || '').toLowerCase();
                         const customer = (device.CustomerDescription || '').toLowerCase();
+                        const externalId = (device.ExternalIdentifier || device.ExternalId || '').toLowerCase();
+                        const assetNumber = (device.AssetNumber || device.Asset || '').toLowerCase();
 
                         return equipmentId.includes(queryLower) ||
                                serial.includes(queryLower) ||
                                model.includes(queryLower) ||
-                               customer.includes(queryLower);
+                               customer.includes(queryLower) ||
+                               externalId.includes(queryLower) ||
+                               assetNumber.includes(queryLower);
                     }).slice(0, 10); // Limit to 10 results
 
                     if (matches.length === 0) {
@@ -3323,8 +3358,9 @@ const MPSM = (function() {
 
                     resultsContainer.innerHTML = matches.map(device => {
                         const equipmentId = escapeHtml(getEquipmentIdFromDevice(device));
-                        const model = escapeHtml(device.ProductModel || 'Unknown Model');
+                        const model = escapeHtml(device.ProductModel || device.Product?.Model || 'Unknown Model');
                         const customer = escapeHtml(device.CustomerDescription || 'Unknown Customer');
+                        const serial = escapeHtml(device.SerialNumber || device.DeviceSerialNumber || '');
                         const deviceId = device.Id || device.IdInstalledProduct || device.DeviceId;
 
                         return `
@@ -3333,7 +3369,9 @@ const MPSM = (function() {
                                     <strong>${equipmentId}</strong>
                                     <span class="search-result-model">${model}</span>
                                 </div>
-                                <div class="search-result-sub">${customer}</div>
+                                <div class="search-result-sub">
+                                    ${customer}${serial ? ' • SN: ' + serial : ''}
+                                </div>
                             </div>
                         `;
                     }).join('');
