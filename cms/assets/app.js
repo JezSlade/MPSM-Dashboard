@@ -3302,23 +3302,34 @@ const MPSM = (function() {
         const maxPages = 50; // Safety limit
 
         while (pageNumber <= maxPages) {
+            debugLog(`[SEARCH] Fetching page ${pageNumber}...`, 'info');
             const response = await fetch(`api/get-devices.php?pageRows=100&pageNumber=${pageNumber}&allCustomers=true`);
+
+            if (!response.ok) {
+                debugLog(`[SEARCH] ERROR: HTTP ${response.status} on page ${pageNumber}`, 'error');
+                break;
+            }
+
             const data = await response.json();
+            debugLog(`[SEARCH] Page ${pageNumber} response: success=${data.success}, devices=${data.devices?.length || 0}, total=${data.total}`, 'info');
 
             if (!data.success || !data.devices || data.devices.length === 0) {
+                debugLog(`[SEARCH] STOP: No devices on page ${pageNumber}`, 'warn');
                 break;
             }
 
             allDevices.push(...data.devices);
-            debugLog(`Loaded page ${pageNumber}: ${data.devices.length} devices (total so far: ${allDevices.length})`, 'info');
+            debugLog(`[SEARCH] Loaded page ${pageNumber}: ${data.devices.length} devices (cumulative: ${allDevices.length} of ${data.total})`, 'info');
 
             // Stop if we got fewer devices than requested (last page)
             if (data.devices.length < 100) {
+                debugLog(`[SEARCH] STOP: Last page (got ${data.devices.length} devices)`, 'info');
                 break;
             }
 
             // Stop if we've loaded all devices
             if (data.total && allDevices.length >= data.total) {
+                debugLog(`[SEARCH] STOP: Loaded all devices (${allDevices.length} >= ${data.total})`, 'info');
                 break;
             }
 
