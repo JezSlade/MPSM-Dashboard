@@ -2156,6 +2156,11 @@ const MPSM = (function() {
         let lastMeta = {};
         let safetyCounter = 0;
 
+        // Debug logging for search
+        if (options.allCustomers) {
+            debugLog('fetchAllDevices called with allCustomers=true', 'info');
+        }
+
         while (true) {
             safetyCounter += 1;
             if (safetyCounter > 100) {
@@ -2178,6 +2183,8 @@ const MPSM = (function() {
                 params.append('allCustomers', 'true');
             }
 
+            debugLog(`Fetching page ${pageNumber}, pageRows=${pageRows}, allCustomers=${options.allCustomers ? 'true' : 'false'}`, 'info');
+
             const response = await fetch('api/get-devices.php?' + params.toString());
             const data = await response.json();
 
@@ -2187,6 +2194,8 @@ const MPSM = (function() {
 
             const meta = data.meta || {};
             lastMeta = meta;
+
+            debugLog(`Page ${pageNumber} returned ${data.devices?.length || 0} devices, total=${data.total}`, 'info');
 
             const chunk = Array.isArray(data.devices)
                 ? data.devices
@@ -3270,12 +3279,12 @@ const MPSM = (function() {
 
     /**
      * Global device search with autocomplete
-     * OPTIMIZED: Reuses existing fetchAllDevices() function
+     * Simple pagination approach - manually loop through pages
      */
     let globalSearchTimeout = null;
     let globalSearchCache = [];
     let globalSearchLastFetch = 0;
-    const GLOBAL_SEARCH_CACHE_DURATION = 300000; // Cache for 5 minutes (increased from 1)
+    const GLOBAL_SEARCH_CACHE_DURATION = 300000; // Cache for 5 minutes
 
     async function fetchAllDevicesForSearch() {
         // Return cached data if fresh
@@ -3285,15 +3294,40 @@ const MPSM = (function() {
             return globalSearchCache;
         }
 
-        debugLog('Fetching all devices for search (this may take a few seconds)...', 'info');
+        debugLog('Fetching all devices for search...', 'info');
 
-        // OPTIMIZATION: Use existing fetchAllDevices() function with allCustomers flag
-        const result = await fetchAllDevices({ allCustomers: true });
-        const allDevices = result.devices; // Extract devices array from result object
+        // Simple approach: Manually paginate through all pages
+        const allDevices = [];
+        let pageNumber = 1;
+        const maxPages = 50; // Safety limit
+
+        while (pageNumber <= maxPages) {
+            const response = await fetch(`api/get-devices.php?pageRows=100&pageNumber=${pageNumber}&allCustomers=true`);
+            const data = await response.json();
+
+            if (!data.success || !data.devices || data.devices.length === 0) {
+                break;
+            }
+
+            allDevices.push(...data.devices);
+            debugLog(`Loaded page ${pageNumber}: ${data.devices.length} devices (total so far: ${allDevices.length})`, 'info');
+
+            // Stop if we got fewer devices than requested (last page)
+            if (data.devices.length < 100) {
+                break;
+            }
+
+            // Stop if we've loaded all devices
+            if (data.total && allDevices.length >= data.total) {
+                break;
+            }
+
+            pageNumber++;
+        }
 
         globalSearchCache = allDevices;
         globalSearchLastFetch = now;
-        debugLog(`Cached ${allDevices.length} devices for search`, 'info');
+        debugLog(`Search cache loaded: ${allDevices.length} devices from ${pageNumber} pages`, 'info');
         return allDevices;
     }
 
@@ -3326,6 +3360,7 @@ const MPSM = (function() {
                     const queryLower = query.toLowerCase();
 
                     // Search across multiple fields including ExternalIdentifier
+                    let matchCount = 0;
                     const matches = devices.filter(device => {
                         const equipmentId = getEquipmentIdFromDevice(device).toLowerCase();
                         const serial = (device.SerialNumber || device.DeviceSerialNumber || '').toLowerCase();
@@ -3342,8 +3377,9 @@ const MPSM = (function() {
                                assetNumber.includes(queryLower);
 
                         // Debug: Log first few matches
-                        if (isMatch && matches.length < 3) {
+                        if (isMatch && matchCount < 3) {
                             debugLog(`Match found: ExtId="${externalId}", Serial="${serial}", Equipment="${equipmentId}"`, 'info');
+                            matchCount++;
                         }
 
                         return isMatch;
