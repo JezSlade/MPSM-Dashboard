@@ -638,4 +638,62 @@ When you encounter a new issue:
 
 ---
 
+### Pain Point 6.3: Device EB821 Not Found in Search
+
+**Problem**: Device exists in HP MPSM official site but not in dashboard search or exports
+
+**Symptoms**:
+- Device visible on HP MPSM website
+- Device does NOT appear in dashboard global search
+- Device does NOT appear in dashboard exports
+- Error: "No devices found (searched X devices)"
+
+**Root Cause**: HP SDS API has TWO separate device lists:
+1. `Device/List` - Currently installed/active devices only
+2. `Device/Deleted/List` - Uninstalled/historical devices (where EB821 lives)
+
+Dashboard was only querying `Device/List`, missing uninstalled devices.
+
+**Solution**: Query BOTH endpoints and combine results
+1. Modified `fetchAllDevices()` to include uninstalled devices by default
+2. Created `get-deleted-devices.php` API endpoint
+3. Updated global search to use server-side cache with both datasets
+4. Added `IsUninstalled` flag and visual badge in UI
+
+**Status**: ✅ Fixed (2025-10-31)
+
+---
+
+### Pain Point 6.4: Global Search Takes 30+ Seconds
+
+**Problem**: Global search extremely slow on first load, every user waits 30+ seconds
+
+**Root Cause**:
+1. Sequential pagination - 34 pages fetched one-by-one
+2. No shared cache - each user's browser has separate cache
+3. Client-side caching - expires per-user, no background refresh
+
+**Solution**: Server-side cache with background refresh
+1. Created `get-cached-devices.php` - Serves pre-warmed cache
+2. Created `refresh-cache-cron.php` - Background refresh every 5 minutes
+3. Setup cron: `*/5 * * * * curl https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-cron.php`
+
+**Performance**: 30s → <1s (instant for all users)
+
+**Status**: ✅ Fixed (2025-10-31) - Requires cron setup
+
+---
+
+### Pain Point 6.5: Supply Alerts Show Serial Numbers Instead of Equipment IDs
+
+**Problem**: Supply Alerts modal shows serial numbers in Equipment ID column instead of proper Equipment IDs
+
+**Root Cause**: `getEquipmentIdFromAlert()` had different logic than `getEquipmentIdFromDevice()`
+
+**Solution**: Aligned alert logic with device logic - Priority: AssetNumber > ExternalIdentifier > SerialNumber
+
+**Status**: ✅ Fixed (2025-10-31)
+
+---
+
 *Last Updated: 2025-10-31 | Next Review: 2025-11-30*

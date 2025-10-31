@@ -9,9 +9,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] - 2025-10-31
+
 ### Added
-- Project documentation suite (Constitution, ADRs, Pain Points, Onboarding)
-- PR and Handoff issue templates
+- **Server-Side Device Cache**: Background refresh system for instant search
+  - Created `get-cached-devices.php` for pre-warmed cache access
+  - Created `refresh-cache-cron.php` for automatic 5-minute refresh cycle
+  - Cache includes both installed AND uninstalled devices
+  - Shared across all users (no per-user duplication)
+  - Cron job setup: `*/5 * * * * curl .../refresh-cache-cron.php`
+- **Uninstalled Device Support**: All device lists now include uninstalled devices
+  - New `get-deleted-devices.php` API endpoint queries `Device/Deleted/List`
+  - Modified `fetchAllDevices()` to query both installed and uninstalled
+  - Added `IsUninstalled` flag for UI indicators
+  - Yellow "UNINSTALLED" badge in search results
+  - Supports future Location field for campus mapping
+- **Project Documentation Suite**: Comprehensive documentation following Triple-A principles
+  - CONSTITUTION.md with 10 Agent Covenant rules
+  - ADR directory with template and 5 architectural decisions
+  - PAIN_POINTS.md with 20+ documented issues
+  - ONBOARDING.md with 6-step onboarding process
+  - PR and Handoff issue templates
+
+### Changed
+- **Global Search Performance**: 30 seconds → <1 second (instant)
+  - Changed from parallel pagination to server-side cache
+  - First user triggers cache refresh, subsequent users get instant results
+  - Cache age shown in console logs
+  - No more 34 sequential HTTP requests
+- **Equipment ID Logic**: Standardized across all tables
+  - Supply Alerts modal now shows Equipment ID (not serial number)
+  - Aligned `getEquipmentIdFromAlert()` with `getEquipmentIdFromDevice()`
+  - Priority: AssetNumber > ExternalIdentifier > SerialNumber
+
+### Fixed
+- **Device EB821 Not Found**: Uninstalled devices now searchable
+  - Root cause: HP SDS API has separate `Device/Deleted/List` endpoint
+  - Solution: Query both installed and uninstalled devices
+  - EB821 (and similar uninstalled devices) now appear in search
+- **Supply Alerts Equipment ID**: Shows proper Equipment ID instead of serial
+  - Was showing "MXDCF9L1HN" instead of "EB821"
+  - Fixed by aligning alert logic with device table logic
+- **Global Search Slow Performance**: Instant load for all users
+  - Was 30+ seconds per search due to sequential pagination
+  - Now <1 second via server-side cache
+  - Background refresh keeps data fresh automatically
+
+### Documentation
+- Added Pain Points 6.3, 6.4, 6.5 to PAIN_POINTS.md
+- Updated CHANGELOG.md with v1.4.0 changes
+- Documented cache system setup and cron job configuration
+- Added performance metrics and verification examples
+
+### Technical Debt
+- **Action Required**: Setup cron job for cache refresh
+  - Without cron: Cache only refreshes on-demand (first user waits)
+  - With cron: Cache always fresh (all users instant)
+  - Command: `*/5 * * * * curl https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-cron.php`
 
 ---
 
