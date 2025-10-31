@@ -25,8 +25,10 @@ if ($pageNumber < 1) {
 
 if ($pageRows < 1) {
     $pageRows = 1;
-} elseif ($pageRows > 200) {
-    $pageRows = 200;
+} elseif ($pageRows > 5000) {
+    // Allow up to 5000 devices for global search performance
+    // Single large request is faster than 34 sequential paginated requests
+    $pageRows = 5000;
 }
 
 $sortOrder = strtoupper($sortOrder) === 'DESC' ? 'Desc' : 'Asc';
