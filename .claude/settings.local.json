@@ -20,7 +20,9 @@
       "Bash(powershell -ExecutionPolicy Bypass -File deploy-all.ps1)",
       "Bash(powershell -ExecutionPolicy Bypass -File deploy-bug-fixes.ps1)",
       "Bash(start https://mpsm.resolutionsbydesign.us/cms/)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-ux-fixes.ps1)",
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-missing-files.ps1)"
     ],
     "deny": [],
     "ask": []
