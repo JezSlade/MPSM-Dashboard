@@ -3288,7 +3288,8 @@ const MPSM = (function() {
         debugLog('Fetching all devices for search (this may take a few seconds)...', 'info');
 
         // OPTIMIZATION: Use existing fetchAllDevices() function with allCustomers flag
-        const allDevices = await fetchAllDevices({ allCustomers: true });
+        const result = await fetchAllDevices({ allCustomers: true });
+        const allDevices = result.devices; // Extract devices array from result object
 
         globalSearchCache = allDevices;
         globalSearchLastFetch = now;
