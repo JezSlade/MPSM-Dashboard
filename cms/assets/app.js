@@ -2173,6 +2173,11 @@ const MPSM = (function() {
                 sortOrder: options.sortOrder ?? 'Asc'
             });
 
+            // Add allCustomers parameter if specified
+            if (options.allCustomers === true) {
+                params.append('allCustomers', 'true');
+            }
+
             const response = await fetch('api/get-devices.php?' + params.toString());
             const data = await response.json();
 
@@ -3265,11 +3270,12 @@ const MPSM = (function() {
 
     /**
      * Global device search with autocomplete
+     * OPTIMIZED: Reuses existing fetchAllDevices() function
      */
     let globalSearchTimeout = null;
     let globalSearchCache = [];
     let globalSearchLastFetch = 0;
-    const GLOBAL_SEARCH_CACHE_DURATION = 60000; // Cache for 1 minute
+    const GLOBAL_SEARCH_CACHE_DURATION = 300000; // Cache for 5 minutes (increased from 1)
 
     async function fetchAllDevicesForSearch() {
         // Return cached data if fresh
@@ -3279,27 +3285,10 @@ const MPSM = (function() {
             return globalSearchCache;
         }
 
-        debugLog('Fetching all devices for search...', 'info');
-        const allDevices = [];
-        let pageNumber = 1;
-        let hasMore = true;
+        debugLog('Fetching all devices for search (this may take a few seconds)...', 'info');
 
-        while (hasMore && pageNumber <= 50) { // Max 50 pages = 10,000 devices
-            const response = await fetch(`api/get-devices.php?pageRows=200&pageNumber=${pageNumber}&allCustomers=true`);
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to fetch devices');
-            }
-
-            const devices = data.devices || [];
-            allDevices.push(...devices);
-            debugLog(`Fetched page ${pageNumber}: ${devices.length} devices (total: ${allDevices.length})`, 'info');
-
-            const total = data.total || 0;
-            hasMore = allDevices.length < total && devices.length > 0;
-            pageNumber++;
-        }
+        // OPTIMIZATION: Use existing fetchAllDevices() function with allCustomers flag
+        const allDevices = await fetchAllDevices({ allCustomers: true });
 
         globalSearchCache = allDevices;
         globalSearchLastFetch = now;
@@ -3332,6 +3321,7 @@ const MPSM = (function() {
 
                     // Fetch all devices across all customers with pagination
                     const devices = await fetchAllDevicesForSearch();
+                    debugLog(`Searching ${devices.length} devices for "${query}"`, 'info');
                     const queryLower = query.toLowerCase();
 
                     // Search across multiple fields including ExternalIdentifier
@@ -3343,16 +3333,25 @@ const MPSM = (function() {
                         const externalId = (device.ExternalIdentifier || device.ExternalId || '').toLowerCase();
                         const assetNumber = (device.AssetNumber || device.Asset || '').toLowerCase();
 
-                        return equipmentId.includes(queryLower) ||
+                        const isMatch = equipmentId.includes(queryLower) ||
                                serial.includes(queryLower) ||
                                model.includes(queryLower) ||
                                customer.includes(queryLower) ||
                                externalId.includes(queryLower) ||
                                assetNumber.includes(queryLower);
+
+                        // Debug: Log first few matches
+                        if (isMatch && matches.length < 3) {
+                            debugLog(`Match found: ExtId="${externalId}", Serial="${serial}", Equipment="${equipmentId}"`, 'info');
+                        }
+
+                        return isMatch;
                     }).slice(0, 10); // Limit to 10 results
 
+                    debugLog(`Found ${matches.length} matches for "${query}"`, 'info');
+
                     if (matches.length === 0) {
-                        resultsContainer.innerHTML = '<div class="search-empty">No devices found</div>';
+                        resultsContainer.innerHTML = `<div class="search-empty">No devices found (searched ${devices.length} devices)</div>`;
                         return;
                     }
 
