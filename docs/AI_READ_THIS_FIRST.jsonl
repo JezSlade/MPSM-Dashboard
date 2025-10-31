@@ -1,0 +1,37 @@
+{"section": "Core Principle", "title": "The Triple-A Framework", "description": "Ensure all actions are aligned with project standards, take actionable steps to complete tasks, and maintain accountability through automated checks and balances."}
+{"section": "Pillar 1", "title": "Codified Documentation with Verification Gates", "description": "The Project Constitution is the supreme document that every agent must acknowledge. Mandatory documentation updates ensure all changes are documented with specific triggers for updates."}
+{"section": "Pillar 2", "title": "Automated Enforcement with Pre-Flight Checks", "description": "The 'Pre-Commit Covenant' involves automated checks for linting, testing, and PR template compliance. The CI/CD 'Guardian' Pipeline acts as a gating enforcer with stages for quality, documentation, and integration checks."}
+{"section": "Pillar 3", "title": "The Rigorous Handoff Protocol with Explicit Accountability", "description": "The Handoff Bundle is a streamlined process for outgoing agents to complete before disengaging. The Acceptance Checklist is a simplified checklist for incoming agents to ensure they are up-to-speed."}
+{"section": "Pillar 4", "title": "The PR & Review Process as a Micro-Handoff", "description": "Mandatory PR Template ensures all necessary information is provided and reviewed. Structured Review Process with specific roles for reviewers ensures architectural alignment and functional verification."}
+{"section": "Pillar 5", "title": "Continuous Protocol Improvement", "description": "Bi-Weekly Protocol Review involves regular meetings to discuss and improve the protocol. Protocol Violation Log is a public, blameless log to track and address violations."}
+
+Based on the current codebase, generate the following initial documents:
+
+1. **Project Constitution (`/docs/CONSTITUTION.md`)**:
+   - Include links to all core guides (Style, Architecture, etc.).
+   - Add the "Agent Covenant": a explicit list of non-negotiable rules.
+   - Describe the amendment process for the Constitution.
+
+2. **Architectural Decision Records (ADRs)**:
+   - Identify key architectural decisions from the codebase.
+   - Document each decision with context, decision, and consequences.
+
+3. **Pain Points Document (`PAIN_POINTS.md`)**:
+   - Identify and document any pain points or recurring issues in the codebase.
+   - Provide workarounds or solutions for each pain point.
+
+4. **Onboarding Guide (`ONBOARDING.md`)**:
+   - Outline the setup process for new agents.
+   - Include any prerequisites or dependencies.
+
+5. **Changelog (`CHANGELOG.md`)**:
+   - Document all user-facing changes.
+   - Include version numbers and release dates.
+
+6. **Handoff Issue Template**:
+   - Create a template for the handoff issue with sections for work summary, next actions, pain points, and verification of completion.
+
+7. **PR Template**:
+   - Create a template for pull requests with sections for change description, verification steps, documentation impact, and architectural alignment confirmation.
+
+Ensure all documents are formatted in Markdown and placed in the appropriate directory within the codebase.
