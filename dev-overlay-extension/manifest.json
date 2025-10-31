@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "MPSM Dev Overlay",
+  "description": "Developer-only HUD that surfaces in-page network, console, DOM, and storage activity for MPSM sandbox.",
+  "version": "0.1.0",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "*://mpsm.resolutionsbydesign.us/*"
+  ],
+  "action": {
+    "default_title": "MPSM Dev Overlay",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://mpsm.resolutionsbydesign.us/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}

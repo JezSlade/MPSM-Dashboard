@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>MPSM Dev Overlay</title>
+    <style>
+      body {
+        margin: 0;
+        font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0d1117;
+        color: #f0f6fc;
+        min-width: 240px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      button {
+        background: #238636;
+        border: none;
+        color: #fff;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #30363d;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .status {
+        font-size: 12px;
+        color: #8b949e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <button id="toggle">Show HUD</button>
+      <button class="secondary" id="refresh">Refresh</button>
+    </div>
+    <div class="row">
+      <button class="secondary" id="clear">Clear</button>
+      <button class="secondary" id="export">Export NDJSON</button>
+    </div>
+    <div class="status" id="status">Idle</div>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

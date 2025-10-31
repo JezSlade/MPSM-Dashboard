@@ -328,28 +328,10 @@ const MPSM = (function() {
             return 'N/A';
         }
 
-        const directEquipment =
-            alert.EquipmentId
-            ?? alert.EquipmentID
-            ?? alert.DeviceEquipmentId
-            ?? alert.DeviceEquipmentID
-            ?? alert.InstalledProductEquipmentId
-            ?? alert.DeviceKey
-            ?? '';
-
-        const assetCandidate = alert.AssetNumber ?? alert.Asset ?? '';
-        const externalCandidate = alert.ExternalIdentifier ?? alert.ExternalId ?? '';
-        const serialFallback =
-            alert.SerialNumber
-            ?? alert.DeviceSerialNumber
-            ?? alert.DeviceId
-            ?? alert.IdDevice
-            ?? alert.IdInstalledProduct
-            ?? '';
-
-        const asset = assetCandidate || directEquipment;
-        const external = externalCandidate;
-        const fallback = directEquipment || serialFallback;
+        // Match device table logic: AssetNumber > ExternalIdentifier > SerialNumber
+        const asset = alert.AssetNumber ?? alert.Asset ?? alert.EquipmentId ?? '';
+        const external = alert.ExternalIdentifier ?? alert.ExternalId ?? '';
+        const fallback = alert.SerialNumber ?? alert.DeviceSerialNumber ?? alert.SystemName ?? '';
 
         return resolveEquipmentIdFromParts(asset, external, fallback);
     }
@@ -2155,12 +2137,17 @@ const MPSM = (function() {
         let totalExpected = null;
         let lastMeta = {};
         let safetyCounter = 0;
+        const includeUninstalled = options.includeUninstalled !== false; // Default to true
 
         // Debug logging for search
         if (options.allCustomers) {
             debugLog('fetchAllDevices called with allCustomers=true', 'info');
         }
+        if (includeUninstalled) {
+            debugLog('fetchAllDevices will include uninstalled devices', 'info');
+        }
 
+        // Fetch installed devices first
         while (true) {
             safetyCounter += 1;
             if (safetyCounter > 100) {
@@ -2183,7 +2170,7 @@ const MPSM = (function() {
                 params.append('allCustomers', 'true');
             }
 
-            debugLog(`Fetching page ${pageNumber}, pageRows=${pageRows}, allCustomers=${options.allCustomers ? 'true' : 'false'}`, 'info');
+            debugLog(`Fetching installed devices page ${pageNumber}, pageRows=${pageRows}, allCustomers=${options.allCustomers ? 'true' : 'false'}`, 'info');
 
             const response = await fetch('api/get-devices.php?' + params.toString());
             const data = await response.json();
@@ -2258,6 +2245,58 @@ const MPSM = (function() {
             }
 
             pageNumber += 1;
+        }
+
+        // Now fetch uninstalled/deleted devices if requested
+        if (includeUninstalled) {
+            debugLog('Fetching uninstalled/deleted devices...', 'info');
+            let deletedPageNumber = 1;
+            let deletedSafetyCounter = 0;
+
+            while (deletedSafetyCounter < 50) {
+                deletedSafetyCounter++;
+
+                const deletedParams = new URLSearchParams({
+                    dealerCode: options.dealerCode ?? state.dealerCode ?? '',
+                    pageRows: pageRows,
+                    pageNumber: deletedPageNumber,
+                    sortColumn: options.sortColumn ?? 'AssetNumber',
+                    sortOrder: options.sortOrder ?? 'Asc'
+                });
+
+                const deletedResponse = await fetch('api/get-deleted-devices.php?' + deletedParams.toString());
+                const deletedData = await deletedResponse.json();
+
+                if (!deletedData.success || !deletedData.devices || deletedData.devices.length === 0) {
+                    break;
+                }
+
+                const beforeCount = devices.length;
+
+                deletedData.devices.forEach(device => {
+                    if (!device || typeof device !== 'object') {
+                        return;
+                    }
+                    const key = device.Id || device.IdInstalledProduct || device.DeviceId || device.SerialNumber;
+                    if (!key || seenKeys.has(key)) {
+                        return;
+                    }
+                    seenKeys.add(key);
+                    device.IsUninstalled = true; // Mark as uninstalled
+                    devices.push(device);
+                });
+
+                const addedThisPage = devices.length - beforeCount;
+                debugLog(`Fetched uninstalled devices page ${deletedPageNumber}: added ${addedThisPage} devices`, 'info');
+
+                if (deletedData.devices.length < pageRows || addedThisPage === 0) {
+                    break;
+                }
+
+                deletedPageNumber++;
+            }
+
+            debugLog(`Total devices (installed + uninstalled): ${devices.length}`, 'info');
         }
 
         if (totalExpected === null) {
@@ -3294,100 +3333,36 @@ const MPSM = (function() {
             return globalSearchCache;
         }
 
-        debugLog('[SEARCH] Fetching installed AND deleted/uninstalled devices...', 'info');
+        debugLog('[SEARCH] Fetching devices from pre-warmed cache...', 'info');
 
-        // ROOT CAUSE: Device/List only returns installed devices
-        // EB821 is uninstalled, so we need to query Device/Deleted/List too
-        // Fetch BOTH installed and deleted devices in parallel
+        // Use pre-warmed server-side cache that refreshes every 5 minutes in background
+        // This gives INSTANT results for all users without waiting on API pagination
+        const response = await fetch('api/get-cached-devices.php');
 
-        const [installedResponse, deletedResponse] = await Promise.all([
-            fetch('api/get-devices.php?pageRows=200&pageNumber=1&allCustomers=true'),
-            fetch(`api/get-deleted-devices.php?pageRows=200&pageNumber=1&dealerCode=${state.dealerCode || DEFAULT_DEALER_CODE}`)
-        ]);
-
-        if (!installedResponse.ok) {
-            debugLog(`[SEARCH] ERROR: HTTP ${installedResponse.status} on installed devices`, 'error');
+        if (!response.ok) {
+            debugLog(`[SEARCH] ERROR: HTTP ${response.status}`, 'error');
             return [];
         }
 
-        const installedData = await installedResponse.json();
-        if (!installedData.success || !installedData.devices) {
-            debugLog('[SEARCH] ERROR: Invalid installed devices response', 'error');
+        const data = await response.json();
+        if (!data.success || !data.devices) {
+            debugLog('[SEARCH] ERROR: Invalid cache response', 'error');
             return [];
         }
 
-        const allDevices = [...installedData.devices];
-        const installedTotal = installedData.total || 0;
-        const pageSize = 200;
-        const installedPages = Math.ceil(installedTotal / pageSize);
-
-        debugLog(`[SEARCH] Installed devices page 1: ${installedData.devices.length} devices, total=${installedTotal}, pages=${installedPages}`, 'info');
-
-        // Fetch remaining installed device pages in parallel
-        if (installedPages > 1) {
-            for (let batch = 1; batch < installedPages; batch += 10) {
-                const batchPromises = [];
-                const batchEnd = Math.min(batch + 10, installedPages);
-
-                for (let page = batch + 1; page <= batchEnd; page++) {
-                    batchPromises.push(
-                        fetch(`api/get-devices.php?pageRows=${pageSize}&pageNumber=${page}&allCustomers=true`)
-                            .then(r => r.json())
-                    );
-                }
-
-                const batchResults = await Promise.all(batchPromises);
-                for (const data of batchResults) {
-                    if (data.success && data.devices) {
-                        allDevices.push(...data.devices);
-                    }
-                }
-
-                debugLog(`[SEARCH] Loaded installed pages ${batch + 1}-${batchEnd}: ${allDevices.length} devices so far`, 'info');
-            }
-        }
-
-        // Now fetch deleted/uninstalled devices
-        if (deletedResponse.ok) {
-            const deletedData = await deletedResponse.json();
-            if (deletedData.success && deletedData.devices) {
-                const deletedTotal = deletedData.total || 0;
-                const deletedPages = Math.ceil(deletedTotal / pageSize);
-
-                allDevices.push(...deletedData.devices);
-                debugLog(`[SEARCH] Deleted devices page 1: ${deletedData.devices.length} devices, total=${deletedTotal}, pages=${deletedPages}`, 'info');
-
-                // Fetch remaining deleted device pages in parallel
-                if (deletedPages > 1) {
-                    for (let batch = 1; batch < deletedPages; batch += 10) {
-                        const batchPromises = [];
-                        const batchEnd = Math.min(batch + 10, deletedPages);
-
-                        for (let page = batch + 1; page <= batchEnd; page++) {
-                            batchPromises.push(
-                                fetch(`api/get-deleted-devices.php?pageRows=${pageSize}&pageNumber=${page}&dealerCode=${state.dealerCode || DEFAULT_DEALER_CODE}`)
-                                    .then(r => r.json())
-                            );
-                        }
-
-                        const batchResults = await Promise.all(batchPromises);
-                        for (const data of batchResults) {
-                            if (data.success && data.devices) {
-                                allDevices.push(...data.devices);
-                            }
-                        }
-
-                        debugLog(`[SEARCH] Loaded deleted pages ${batch + 1}-${batchEnd}: ${allDevices.length} devices total`, 'info');
-                    }
-                }
-            }
-        } else {
-            debugLog(`[SEARCH] WARNING: Could not fetch deleted devices (HTTP ${deletedResponse.status})`, 'warn');
-        }
+        const allDevices = data.devices;
+        const cacheAge = data.age || 0;
+        const wasCached = data.cached || false;
 
         globalSearchCache = allDevices;
         globalSearchLastFetch = now;
-        debugLog(`[SEARCH] Cache loaded: ${allDevices.length} devices total (installed + deleted/uninstalled)`, 'info');
+
+        if (wasCached) {
+            debugLog(`[SEARCH] Loaded ${allDevices.length} devices from cache (age: ${cacheAge}s, instant load!)`, 'info');
+        } else {
+            debugLog(`[SEARCH] Loaded ${allDevices.length} devices (cache refreshed, subsequent loads will be instant)`, 'info');
+        }
+
         return allDevices;
     }
 
