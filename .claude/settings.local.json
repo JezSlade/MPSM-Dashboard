@@ -39,7 +39,8 @@
       "Bash(cat:*)",
       "Bash(timeout 120 curl:*)",
       "Bash(timeout 60 curl:*)",
-      "Bash(timeout 120 bash -c \"curl -s ''''https://mpsm.resolutionsbydesign.us/cms/api/get-all-devices-all-customers.php'''' -b cookies.txt\")"
+      "Bash(timeout 120 bash -c \"curl -s ''''https://mpsm.resolutionsbydesign.us/cms/api/get-all-devices-all-customers.php'''' -b cookies.txt\")",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

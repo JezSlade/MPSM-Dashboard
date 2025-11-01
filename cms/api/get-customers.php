@@ -9,7 +9,9 @@ try {
     $params = [
         'DealerCode' => $dealerCode,
         'PageNumber' => 1,
-        'PageRows' => 500
+        'PageRows' => 500,
+        'SortColumn' => 'Description',
+        'SortOrder' => 'Asc'
     ];
 
     $payload = json_encode([
