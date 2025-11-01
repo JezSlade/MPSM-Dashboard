@@ -86,21 +86,21 @@ function refreshDeviceCache($cacheFile, $dealerCode) {
         $pageNumber++;
     }
 
-    // Fetch deleted/uninstalled devices
+    // Fetch deleted/uninstalled devices using ListByDealer
     $deletedParams = [
-        'dealerCode' => $dealerCode,
-        'pageNumber' => 1,
-        'pageRows' => 200,
-        'sortColumn' => 'AssetNumber',
-        'sortOrder' => 'Asc'
+        'DealerCode' => $dealerCode,
+        'PageNumber' => 1,
+        'PageRows' => 200,
+        'SortColumn' => 'AssetNumber',
+        'SortOrder' => 'Asc'
     ];
 
     $deletedPageNumber = 1;
     while ($deletedPageNumber <= 20) {
-        $deletedParams['pageNumber'] = $deletedPageNumber;
+        $deletedParams['PageNumber'] = $deletedPageNumber;
 
         $payload = json_encode([
-            'action' => 'Device/Deleted/List',
+            'action' => 'Device/Deleted/ListByDealer',
             'params' => $deletedParams
         ]);
 

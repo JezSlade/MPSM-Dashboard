@@ -35,7 +35,8 @@
       "Bash(for page in 1 2 3 4 5)",
       "Bash(do echo \"Checking page $page...\")",
       "Bash(for page in 10 11 12 13 14 15)",
-      "Bash(do curl -s \"https://mpsm.resolutionsbydesign.us/cms/api/get-devices.php?pageRows=100&pageNumber=$page&allCustomers=true\" -b /tmp/cookies.txt)"
+      "Bash(do curl -s \"https://mpsm.resolutionsbydesign.us/cms/api/get-devices.php?pageRows=100&pageNumber=$page&allCustomers=true\" -b /tmp/cookies.txt)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

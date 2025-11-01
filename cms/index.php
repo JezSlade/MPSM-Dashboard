@@ -311,5 +311,6 @@ $preferences = getUserPreferences($userId);
     <script src="assets/js/card-registry.js"></script>
     <script src="assets/js/card-manager.js"></script>
     <script src="assets/app.js"></script>
+    <script src="api/cache-engine.js"></script>
 </body>
 </html>

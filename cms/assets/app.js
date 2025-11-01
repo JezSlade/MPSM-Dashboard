@@ -3333,35 +3333,24 @@ const MPSM = (function() {
             return globalSearchCache;
         }
 
-        debugLog('[SEARCH] Fetching devices from pre-warmed cache...', 'info');
+        debugLog('[SEARCH] Fetching all devices including uninstalled...', 'info');
 
-        // Use pre-warmed server-side cache that refreshes every 5 minutes in background
-        // This gives INSTANT results for all users without waiting on API pagination
-        const response = await fetch('api/get-cached-devices.php');
+        // Fetch all devices using fetchAllDevices with allCustomers=true and includeUninstalled=true
+        // This ensures we search across ALL customers and include deleted devices
+        const result = await fetchAllDevices({
+            allCustomers: true,
+            includeUninstalled: true,
+            pageRows: 100,
+            sortColumn: 'AssetNumber',
+            sortOrder: 'Asc'
+        });
 
-        if (!response.ok) {
-            debugLog(`[SEARCH] ERROR: HTTP ${response.status}`, 'error');
-            return [];
-        }
-
-        const data = await response.json();
-        if (!data.success || !data.devices) {
-            debugLog('[SEARCH] ERROR: Invalid cache response', 'error');
-            return [];
-        }
-
-        const allDevices = data.devices;
-        const cacheAge = data.age || 0;
-        const wasCached = data.cached || false;
+        const allDevices = result.devices || [];
 
         globalSearchCache = allDevices;
         globalSearchLastFetch = now;
 
-        if (wasCached) {
-            debugLog(`[SEARCH] Loaded ${allDevices.length} devices from cache (age: ${cacheAge}s, instant load!)`, 'info');
-        } else {
-            debugLog(`[SEARCH] Loaded ${allDevices.length} devices (cache refreshed, subsequent loads will be instant)`, 'info');
-        }
+        debugLog(`[SEARCH] Loaded ${allDevices.length} devices (${result.total} total, including uninstalled)`, 'info');
 
         return allDevices;
     }

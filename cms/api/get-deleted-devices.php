@@ -10,6 +10,7 @@ require '../functions.php';
 
 requireAuth();
 
+$customerCode = $_GET['customerCode'] ?? DEFAULT_CUSTOMER_CODE;
 $dealerCode = $_GET['dealerCode'] ?? DEFAULT_DEALER_CODE;
 $pageNumber = isset($_GET['pageNumber']) ? (int) $_GET['pageNumber'] : 1;
 $pageRows = isset($_GET['pageRows']) ? (int) $_GET['pageRows'] : 50;
@@ -29,17 +30,18 @@ if ($pageRows < 1) {
 $sortOrder = strtoupper($sortOrder) === 'DESC' ? 'Desc' : 'Asc';
 
 try {
-    // Query deleted/uninstalled devices from HP SDS API
+    // Query deleted/uninstalled devices from Asset Management API
+    // Use Device/Deleted/ListByDealer to get ALL deleted devices for the dealer
     $params = [
-        'dealerCode' => $dealerCode,
-        'pageNumber' => $pageNumber,
-        'pageRows' => $pageRows,
-        'sortColumn' => $sortColumn,
-        'sortOrder' => $sortOrder
+        'DealerCode' => $dealerCode,
+        'PageNumber' => $pageNumber,
+        'PageRows' => $pageRows,
+        'SortColumn' => $sortColumn,
+        'SortOrder' => $sortOrder
     ];
 
     $payload = json_encode([
-        'action' => 'Device/Deleted/List',
+        'action' => 'Device/Deleted/ListByDealer',
         'params' => $params
     ]);
 
