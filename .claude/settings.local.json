@@ -36,7 +36,10 @@
       "Bash(do echo \"Checking page $page...\")",
       "Bash(for page in 10 11 12 13 14 15)",
       "Bash(do curl -s \"https://mpsm.resolutionsbydesign.us/cms/api/get-devices.php?pageRows=100&pageNumber=$page&allCustomers=true\" -b /tmp/cookies.txt)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(timeout 120 curl:*)",
+      "Bash(timeout 60 curl:*)",
+      "Bash(timeout 120 bash -c \"curl -s ''''https://mpsm.resolutionsbydesign.us/cms/api/get-all-devices-all-customers.php'''' -b cookies.txt\")"
     ],
     "deny": [],
     "ask": []

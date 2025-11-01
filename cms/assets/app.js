@@ -3333,24 +3333,49 @@ const MPSM = (function() {
             return globalSearchCache;
         }
 
-        debugLog('[SEARCH] Fetching all devices including uninstalled...', 'info');
+        debugLog('[SEARCH] Fetching ALL customers and their devices...', 'info');
 
-        // Fetch all devices using fetchAllDevices with allCustomers=true and includeUninstalled=true
-        // This ensures we search across ALL customers and include deleted devices
-        const result = await fetchAllDevices({
-            allCustomers: true,
-            includeUninstalled: true,
-            pageRows: 100,
-            sortColumn: 'AssetNumber',
-            sortOrder: 'Asc'
-        });
+        // CRITICAL FIX: Query ALL 82 customers individually
+        // allCustomers=true API param doesn't actually return all customers!
 
-        const allDevices = result.devices || [];
+        // Step 1: Get all customer codes
+        const customersResp = await fetch('api/get-customers.php');
+        const customersData = await customersResp.json();
+        const customers = customersData.customers || [];
+
+        debugLog(`[SEARCH] Found ${customers.length} customers, querying each...`, 'info');
+
+        // Step 2: Query each customer (first page only for speed)
+        const allDevices = [];
+        const seenKeys = new Set();
+
+        for (const customer of customers) {
+            try {
+                const result = await fetchAllDevices({
+                    customerCode: customer.Code,
+                    includeUninstalled: true,
+                    pageRows: 100,
+                    sortColumn: 'AssetNumber',
+                    sortOrder: 'Asc'
+                });
+
+                // Add unique devices
+                for (const device of result.devices || []) {
+                    const key = device.Id || device.SerialNumber || device.IpAddress;
+                    if (key && !seenKeys.has(key)) {
+                        seenKeys.add(key);
+                        allDevices.push(device);
+                    }
+                }
+            } catch (err) {
+                debugLog(`[SEARCH] Error fetching customer ${customer.Code}: ${err.message}`, 'warn');
+            }
+        }
 
         globalSearchCache = allDevices;
         globalSearchLastFetch = now;
 
-        debugLog(`[SEARCH] Loaded ${allDevices.length} devices (${result.total} total, including uninstalled)`, 'info');
+        debugLog(`[SEARCH] Loaded ${allDevices.length} total devices from ${customers.length} customers`, 'info');
 
         return allDevices;
     }
