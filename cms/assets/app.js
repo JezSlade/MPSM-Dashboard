@@ -1871,6 +1871,8 @@ const MPSM = (function() {
             }
             await loadCustomerHeader();
             await CardManager.refreshAll();
+            // Update offline count from real device data
+            await updateOfflineCountFromCache();
         } catch (error) {
             showToast('Failed to load dashboard: ' + error.message, 'error');
         }
@@ -2017,6 +2019,33 @@ const MPSM = (function() {
                     <p class="error-message">${error.message}</p>
                 </div>
             `;
+        }
+    }
+
+    /**
+     * Update offline count from cached devices (real-time computation)
+     */
+    async function updateOfflineCountFromCache() {
+        try {
+            const response = await fetch('api/get-cached-devices.php');
+            const data = await response.json();
+
+            if (data.success && Array.isArray(data.devices)) {
+                // Filter for current customer only
+                const customerDevices = data.devices.filter(device =>
+                    device.CustomerCode === state.customerCode ||
+                    device.Customer?.Code === state.customerCode
+                );
+
+                const offlineCount = customerDevices.filter(device => device.IsOffline).length;
+
+                state.offlineDevices = offlineCount;
+                updateMetricValue('offline-count', offlineCount);
+
+                debugLog(`Updated offline count: ${offlineCount} offline devices for customer ${state.customerCode}`, 'info');
+            }
+        } catch (err) {
+            debugLog(`Failed to update offline count: ${err.message}`, 'warn');
         }
     }
 
@@ -2533,7 +2562,7 @@ const MPSM = (function() {
         return [
             {
                 id: 'EquipmentId',
-                label: 'Equipment ID',
+                label: 'Device ID',
                 accessor: row => getEquipmentIdFromAlert(row),
                 sortable: true
             },
@@ -2562,17 +2591,6 @@ const MPSM = (function() {
                 accessor: row => row.InitialDate ? new Date(row.InitialDate).getTime() : 0,
                 sortable: true,
                 format: (value, row) => formatDateTime(row.InitialDate, { dateStyle: 'short', timeStyle: 'short' })
-            },
-            {
-                id: 'ManageOption',
-                label: 'Action',
-                accessor: row => row.ManageOption || row.InstallationOption || 'Monitor',
-                sortable: true,
-                format: value => {
-                    const option = (value || 'Monitor').toString();
-                    const badgeClass = option.toLowerCase() === 'replace' ? 'badge-warning' : 'badge-info';
-                    return `<span class="badge ${badgeClass}">${escapeHtml(option)}</span>`;
-                }
             }
         ];
     }
@@ -3333,51 +3351,27 @@ const MPSM = (function() {
             return globalSearchCache;
         }
 
-        debugLog('[SEARCH] Fetching ALL customers and their devices...', 'info');
+        debugLog('[SEARCH] Fetching devices from server cache...', 'info');
 
-        // CRITICAL FIX: Query ALL 82 customers individually
-        // allCustomers=true API param doesn't actually return all customers!
+        try {
+            // Use server-side cached endpoint (refreshed every 5 min by cron)
+            // This eliminates 82+ sequential API calls
+            const response = await fetch('api/get-cached-devices.php');
+            const data = await response.json();
 
-        // Step 1: Get all customer codes
-        const customersResp = await fetch('api/get-customers.php');
-        const customersData = await customersResp.json();
-        const customers = customersData.customers || [];
-
-        debugLog(`[SEARCH] Found ${customers.length} customers, querying each...`, 'info');
-
-        // Step 2: Query each customer (first page only for speed)
-        const allDevices = [];
-        const seenKeys = new Set();
-
-        for (const customer of customers) {
-            try {
-                const result = await fetchAllDevices({
-                    customerCode: customer.Code,
-                    includeUninstalled: true,
-                    pageRows: 100,
-                    sortColumn: 'AssetNumber',
-                    sortOrder: 'Asc'
-                });
-
-                // Add unique devices
-                for (const device of result.devices || []) {
-                    const key = device.Id || device.SerialNumber || device.IpAddress;
-                    if (key && !seenKeys.has(key)) {
-                        seenKeys.add(key);
-                        allDevices.push(device);
-                    }
-                }
-            } catch (err) {
-                debugLog(`[SEARCH] Error fetching customer ${customer.Code}: ${err.message}`, 'warn');
+            if (data.success && Array.isArray(data.devices)) {
+                globalSearchCache = data.devices;
+                globalSearchLastFetch = now;
+                debugLog(`[SEARCH] Loaded ${data.devices.length} devices from cache (age: ${data.age || 0}s)`, 'info');
+                return data.devices;
+            } else {
+                throw new Error(data.error || 'Failed to fetch cached devices');
             }
+        } catch (err) {
+            debugLog(`[SEARCH] Error fetching cached devices: ${err.message}`, 'error');
+            // Fallback to empty array rather than making 82 API calls
+            return [];
         }
-
-        globalSearchCache = allDevices;
-        globalSearchLastFetch = now;
-
-        debugLog(`[SEARCH] Loaded ${allDevices.length} total devices from ${customers.length} customers`, 'info');
-
-        return allDevices;
     }
 
     async function initGlobalDeviceSearch() {

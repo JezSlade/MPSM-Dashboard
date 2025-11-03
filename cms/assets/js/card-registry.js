@@ -385,7 +385,9 @@ const CardRegistry = (function () {
                         if (!activeTypes.size) {
                             activeTypes.add(type);
                             checkbox.checked = true;
-                            showToast('At least one supply type must remain visible', 'warning');
+                            if (typeof window.MPSM?.showToast === 'function') {
+                                window.MPSM.showToast('At least one supply type must remain visible', 'warning');
+                            }
                             return;
                         }
 
@@ -875,7 +877,9 @@ const CardRegistry = (function () {
                     const actionName = button.dataset.exportAction;
                     const exportRow = exports.find(entry => entry.action === actionName);
                     if (!exportRow) {
-                        showToast('Export definition not found in snapshot.', 'error');
+                        if (typeof window.MPSM?.showToast === 'function') {
+                            window.MPSM.showToast('Export definition not found in snapshot.', 'error');
+                        }
                         return;
                     }
 
@@ -889,7 +893,9 @@ const CardRegistry = (function () {
                     }
 
                     if (missing.length) {
-                        showToast(`Missing required context: ${missing.join(', ')}`, 'warning');
+                        if (typeof window.MPSM?.showToast === 'function') {
+                            window.MPSM.showToast(`Missing required context: ${missing.join(', ')}`, 'warning');
+                        }
                         return;
                     }
 
@@ -982,7 +988,9 @@ const CardRegistry = (function () {
                                 link.click();
                                 downloadTriggered = true;
                                 console.log('[Export] Download triggered via link.click()');
-                                showToast(`Export downloading: ${filename}`, 'success');
+                                if (typeof window.MPSM?.showToast === 'function') {
+                                    window.MPSM.showToast(`Export downloading: ${filename}`, 'success');
+                                }
                             } catch (e) {
                                 console.error('[Export] link.click() failed:', e);
                             }
@@ -998,7 +1006,9 @@ const CardRegistry = (function () {
                                     link.dispatchEvent(event);
                                     downloadTriggered = true;
                                     console.log('[Export] Download triggered via dispatchEvent');
-                                    showToast(`Export downloading: ${filename}`, 'success');
+                                    if (typeof window.MPSM?.showToast === 'function') {
+                                        window.MPSM.showToast(`Export downloading: ${filename}`, 'success');
+                                    }
                                 } catch (e) {
                                     console.error('[Export] dispatchEvent failed:', e);
                                 }
@@ -1008,10 +1018,12 @@ const CardRegistry = (function () {
                                 // Strategy 3: Open in new window as fallback
                                 console.log('[Export] Falling back to window.open()');
                                 const newWindow = window.open(objectUrl, '_blank');
-                                if (newWindow) {
-                                    showToast('Export opened in new window. Right-click and Save As...', 'info');
-                                } else {
-                                    showToast('Popup blocked! Please allow popups and try again.', 'error');
+                                if (typeof window.MPSM?.showToast === 'function') {
+                                    if (newWindow) {
+                                        window.MPSM.showToast('Export opened in new window. Right-click and Save As...', 'info');
+                                    } else {
+                                        window.MPSM.showToast('Popup blocked! Please allow popups and try again.', 'error');
+                                    }
                                 }
                             }
 
@@ -1032,7 +1044,9 @@ const CardRegistry = (function () {
                             exportRow.success = true;
                         } else if (result.file && result.file.url) {
                             window.open(result.file.url, '_blank');
-                            showToast('Export opened in a new tab.', 'info');
+                            if (typeof window.MPSM?.showToast === 'function') {
+                                window.MPSM.showToast('Export opened in a new tab.', 'info');
+                            }
                             exportRow.runtimeStatus = 'Pass';
                             exportRow.runtimeError = null;
                             exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
@@ -1042,7 +1056,9 @@ const CardRegistry = (function () {
                             exportRow.success = true;
                         } else {
                             console.log('Export response payload', result);
-                            showToast('Export returned structured data. See console for details.', 'info');
+                            if (typeof window.MPSM?.showToast === 'function') {
+                                window.MPSM.showToast('Export returned structured data. See console for details.', 'info');
+                            }
                             exportRow.runtimeStatus = 'Pass';
                             exportRow.runtimeError = null;
                             exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
@@ -1053,7 +1069,9 @@ const CardRegistry = (function () {
                         }
                         exportTable.updateRows(exports);
                     } catch (error) {
-                        showToast('Export failed: ' + error.message, 'error');
+                        if (typeof window.MPSM?.showToast === 'function') {
+                            window.MPSM.showToast('Export failed: ' + error.message, 'error');
+                        }
                         exportRow.runtimeStatus = 'Fail';
                         exportRow.runtimeError = error.message;
                         exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
