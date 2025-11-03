@@ -1,34 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "MPSM Dev Overlay",
-  "description": "Developer-only HUD that surfaces in-page network, console, DOM, and storage activity for MPSM sandbox.",
-  "version": "0.1.0",
-  "permissions": [
-    "tabs",
-    "scripting",
-    "storage",
-    "webNavigation"
-  ],
-  "host_permissions": [
-    "*://mpsm.resolutionsbydesign.us/*"
-  ],
+  "name": "CMS Dev HUD",
+  "description": "Overlay HUD for API and UI telemetry on the CMS dashboard.",
+  "version": "1.0.0",
+  "permissions": ["storage", "scripting", "downloads", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"],
+    "run_at": "document_start"
+  }],
+  "commands": {
+    "toggle_hud": {"suggested_key": {"default": "Ctrl+Shift+H"}, "description": "Toggle HUD"},
+    "toggle_inspector": {"suggested_key": {"default": "Ctrl+Shift+I"}, "description": "Toggle Inspector"},
+    "quick_export": {"suggested_key": {"default": "Ctrl+Shift+E"}, "description": "Quick Export"},
+    "pause_capture": {"suggested_key": {"default": "Ctrl+Shift+P"}, "description": "Pause Capture"}
+  },
   "action": {
-    "default_title": "MPSM Dev Overlay",
+    "default_title": "CMS Dev HUD",
     "default_popup": "popup.html"
-  },
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://mpsm.resolutionsbydesign.us/*"
-      ],
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_start"
-    }
-  ]
+  }
 }

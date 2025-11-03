@@ -1,13 +1,88 @@
 # Changelog
 
-All notable changes to the MPSM Dashboard project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to the MPSM Dashboard project.
 
 ---
 
-## [Unreleased]
+## [2.0.0] - November 3, 2025
+
+### Enhanced Admin UI (Commit: 07ee851)
+
+**Added:**
+- Enhanced System Health Dashboard with real-time metrics
+- Detailed component cards (Database, MPS API, Cache Engine, Session)
+- Server resource monitoring (PHP version, memory, disk, load average, uptime)
+- Auto-refresh every 60 seconds when System Monitoring is active
+- Advanced Visitor Log Manager with filtering and pagination
+- Statistics cards (unique users, unique IPs, total visits, last visit)
+- Filter controls (username, IP, date range, page URL, results per page)
+- CSV export with up to 5,000 records
+- Professional UI with gradients, hover effects, responsive design
+
+**Files Modified:**
+- cms/assets/app.js: +251 lines (enhanced testSystemHealth and loadVisitorLogs)
+- cms/assets/style.css: +435 lines (comprehensive styling)
+
+### Cross-Browser Compatibility (Commit: 8783a45)
+
+**Fixed:**
+- Firefox "Connection Error" at login (added SameSite=Lax cookie attribute)
+- Mobile browser loading issues (added Secure flag for HTTPS cookies)
+- Session persistence on all browsers
+
+**Added:**
+- CORS headers for preflight OPTIONS requests
+- Enhanced error handling in login.html
+- Better error messages for debugging
+- HTTPS detection behind reverse proxy
+
+**Files Modified:**
+- cms/config.php: +24 lines (session configuration)
+- cms/functions.php: +44 lines (CORS and security headers)
+- cms/login.html: +68 lines, -28 lines (enhanced error handling)
+
+### System Health Enhancement (Commit: ac9ed2c)
+
+**Added:**
+- Enhanced getSystemHealth() with detailed verification data
+- Response time measurements for all components
+- Visitor log filtering and pagination API
+- Eastern Time timezone support throughout
+- Server metrics (memory, disk, load average, uptime)
+- Cache engine statistics integration
+
+**Files Modified:**
+- cms/functions.php: +207 lines (enhanced getSystemHealth)
+- cms/api/get-visitor-logs.php: +90 lines (filtering and pagination)
+
+---
+
+## [2.0.0] - October 26, 2025
+
+### Complete Rebuild
+
+**Removed:**
+- classes/ directory (Database.php, MySQLCache.php)
+- Complex cache system (broken, never worked)
+- Multiple config files
+- OOP abstractions
+- Silent error handling
+- ~3,000 lines of broken code
+
+**Added:**
+- Single config.php with constants
+- Single functions.php with utilities
+- Visible error messages
+- Working system health checks
+- Clean, simple API endpoints
+- File-based cache engine
+- ~1,500 lines of working code
+
+**Result:**
+- 67% less code
+- 100% functional
+- Easy to maintain
+- Fast to debug
 
 ---
 

@@ -10,6 +10,8 @@
   const STACK_IGNORE = ["content.js", "runtime.js", "extensions::"];
   const FILTER_ORDER = [
     { key: "network", label: "Network" },
+    { key: "cache", label: "Cache" },
+    { key: "retry", label: "Retries" },
     { key: "ws", label: "WebSocket" },
     { key: "beacon", label: "Beacon" },
     { key: "ui", label: "User Actions" },
@@ -61,6 +63,7 @@
 
   function ensureGlobalStyles() {
     if (document.getElementById("mpsm-overlay-global-style")) return;
+    if (!document.head) return; // Wait for head to exist
     const globalStyle = document.createElement("style");
     globalStyle.id = "mpsm-overlay-global-style";
     globalStyle.textContent = `
@@ -109,6 +112,7 @@
 
   function ensureLiveLayer() {
     ensureGlobalStyles();
+    if (!document.body) return null; // Wait for body
     if (!liveLayer || !liveLayer.isConnected) {
       liveLayer = document.createElement("div");
       liveLayer.className = "mpsm-live-layer";
@@ -524,6 +528,15 @@
         overflow: hidden;
         pointer-events: none;
       }
+      .hud-wrapper[data-minimized="true"] {
+        inset: auto;
+        top: 8px;
+        right: 8px;
+        width: auto;
+        height: auto;
+        background: transparent;
+        border: none;
+      }
       .hud-header {
         padding: 10px 12px;
         display: flex;
@@ -774,13 +787,17 @@
         z-index: 2147483646;
         display: none;
       }
-      .hud-wrapper[data-minimized="true"] {
-        height: auto;
-        min-height: 52px;
-      }
       .hud-wrapper[data-minimized="true"] .hud-body,
-      .hud-wrapper[data-minimized="true"] .hud-footer {
+      .hud-wrapper[data-minimized="true"] .hud-footer,
+      .hud-wrapper[data-minimized="true"] .hud-marquee,
+      .hud-wrapper[data-minimized="true"] .hud-controls {
         display: none;
+      }
+      .hud-wrapper[data-minimized="true"] .hud-header {
+        background: rgba(22, 27, 34, 0.95);
+        border: 1px solid #1f242d;
+        border-radius: 6px;
+        padding: 6px 10px;
       }
     `;
 
@@ -1010,26 +1027,40 @@
   }
 
   function exportEvents(scope = "filtered") {
-    const filters = scope === "filtered" ? Array.from(state.filters) : null;
-    const search = scope === "filtered" ? state.search : "";
-    chrome.runtime.sendMessage({
-      type: "export-events",
-      filters,
-      search
-    }, (resp) => {
-      if (!resp || !resp.dataUrl) {
-        flashStatus("Export failed");
-        return;
+    const events = scope === "filtered" ? filteredEvents() : state.events;
+    const now = new Date().toISOString();
+    const lines = [];
+    lines.push(JSON.stringify({
+      manifest: {
+        hud_version: "1.0.0",
+        from: events[0]?.ts ? new Date(events[0].ts).toISOString() : now,
+        to: events[events.length - 1]?.ts ? new Date(events[events.length - 1].ts).toISOString() : now,
+        count: events.length
       }
-      const link = document.createElement("a");
-      link.href = resp.dataUrl;
-      link.download = `mpsm-dev-overlay-${new Date().toISOString()}.ndjson`;
-      document.body.appendChild(link);
-      link.click();
-      requestAnimationFrame(() => link.remove());
-      const scopeLabel = scope === "filtered" ? "matching" : "total";
-      flashStatus(`Exported ${resp.count ?? 0} ${scopeLabel} events`);
+    }));
+    events.forEach(evt => {
+      const entry = {
+        ts: new Date(evt.ts).toISOString(),
+        page_url: window.location.href,
+        type: evt.category || evt.type,
+        session_id: sessionStorage.getItem('hud_session') || 'unknown',
+        hud_version: "1.0.0",
+        ...evt
+      };
+      lines.push(JSON.stringify(entry));
     });
+    const blob = new Blob([lines.join('\n')], { type: 'application/x-ndjson' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `hud_export_${now.replace(/[:.]/g, '-')}_${Math.random().toString(36).slice(2, 8)}.jsonl`;
+    document.body.appendChild(link);
+    link.click();
+    requestAnimationFrame(() => {
+      link.remove();
+      URL.revokeObjectURL(url);
+    });
+    flashStatus(`Exported ${events.length} events as JSONL`);
   }
 
   function wrapFetch() {
@@ -1559,10 +1590,37 @@
     });
   }
 
+  function handleCommands() {
+    chrome.commands?.onCommand?.addListener?.((command) => {
+      const wrapper = ui.shadow?.querySelector(".hud-wrapper");
+      if (command === "toggle_hud" && wrapper) {
+        wrapper.style.display = wrapper.style.display === "none" ? "flex" : "none";
+      } else if (command === "open_logs" && wrapper) {
+        wrapper.style.display = "flex";
+      } else if (command === "toggle_inspector") {
+        toggleHighlightMode();
+      } else if (command === "quick_export") {
+        exportEvents("all");
+      } else if (command === "pause_capture") {
+        state.capturing = !state.capturing;
+        flashStatus(state.capturing ? "Capture resumed" : "Capture paused");
+      }
+    });
+  }
+
   function bootstrap() {
-    createHUD();
-    ensureLiveLayer();
+    sessionStorage.setItem('hud_session', `ulid-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+    // Wait for DOM to be ready before creating HUD
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeHUD);
+    } else {
+      initializeHUD();
+    }
+
+    // Start capturing immediately
     handleMessages();
+    handleCommands();
     wrapFetch();
     wrapXHR();
     wrapBeacon();
@@ -1572,6 +1630,11 @@
     captureStorage();
     captureNavigation();
     captureInteractions();
+  }
+
+  function initializeHUD() {
+    createHUD();
+    ensureLiveLayer();
     captureStateSnapshot("Overlay started");
     addEvent({
       type: "custom",

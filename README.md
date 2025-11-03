@@ -1,24 +1,25 @@
 # MPSM Dashboard
 
-**Version**: 2.0.0 - Complete Rebuild
-**Date**: 2025-10-26
+**Version**: 2.0.0
+**Last Updated**: November 3, 2025
 **Status**: Production Ready
 
 ---
 
 ## What This Is
 
-A clean, simple dashboard for monitoring MPS (Managed Print Services) devices using the MPS Monitors API.
+A comprehensive dashboard for monitoring MPS (Managed Print Services) devices using the MPS Monitors API.
 
 **Live Site**: https://mpsm.resolutionsbydesign.us/cms/
 
-**Features**:
-- Real-time device monitoring
-- Customer dashboard with health metrics
-- Light/dark theme support
-- Simple admin settings
-- System health diagnostics
-- Session-based authentication
+**Key Features**:
+- Real-time device monitoring across 82 customers
+- Enhanced system health monitoring with auto-refresh
+- Advanced visitor tracking with filtering and export
+- File-based cache engine for performance
+- Cross-browser compatible (Chrome, Firefox, Safari, Edge, Mobile)
+- Professional admin UI with detailed metrics
+- Session-based authentication with Eastern Time timezone support
 
 ---
 
@@ -55,20 +56,25 @@ cms/
 
 ---
 
-## Important Documentation
+## Documentation
 
-### Essential Reading
+### Main Documentation
 
-- **[CMS README](cms/README.md)** - Complete CMS documentation
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Complete project documentation (API reference, features, troubleshooting)
+- **[CMS README](cms/README.md)** - CMS-specific documentation
 - **[Engineering Standards](documentation/reference/ENGINEERING_STANDARDS.md)** - Coding principles (MANDATORY)
-- **[API Verified Truths](documentation/reference/API_VERIFIED_TRUTHS.md)** - MPS API facts
-- **[Forensic Analysis](documentation/reference/FORENSIC_ROOT_CAUSE_ANALYSIS.md)** - Why we rebuilt
+
+### Recent Updates (November 2025)
+
+- **Enhanced Admin UI** - System health dashboard and visitor tracking (Commit: 07ee851)
+- **Cross-Browser Fixes** - Firefox and mobile compatibility (Commit: 8783a45)
+- **System Health Enhancement** - Detailed monitoring and metrics (Commit: ac9ed2c)
 
 ### Reference Documentation
 
+- **[API Verified Truths](documentation/reference/API_VERIFIED_TRUTHS.md)** - MPS API facts
 - **[Endpoint Catalog](documentation/Endpoints/EndpointSampleCatalog.html)** - Complete API reference
-- **[Card System Truths](documentation/reference/CARD_SYSTEM_TRUTHS.md)** - Dashboard card facts
-- **[MPS Docs](MPSM DOCS/)** - Official MPS Monitor documentation
+- **[Forensic Analysis](documentation/reference/FORENSIC_ROOT_CAUSE_ANALYSIS.md)** - Why we rebuilt
 
 ---
 
