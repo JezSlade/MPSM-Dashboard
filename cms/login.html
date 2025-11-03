@@ -151,8 +151,14 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please enter both username and password';
+                errorEl.classList.add('active');
+                return;
+            }
 
             errorEl.classList.remove('active');
             loginBtn.disabled = true;
@@ -161,25 +167,67 @@
             try {
                 const response = await fetch('api/login.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',  // Include cookies for session
                     body: JSON.stringify({ username, password })
                 });
+
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Login failed:', response.status, errorText);
+
+                    // Try to parse as JSON
+                    let errorMsg = 'Login failed';
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = `Server error (${response.status})`;
+                    }
+
+                    throw new Error(errorMsg);
+                }
 
                 const data = await response.json();
 
                 if (data.success) {
+                    // Successful login - redirect to dashboard
                     window.location.href = 'index.php';
                 } else {
-                    errorEl.textContent = data.error || 'Login failed';
+                    errorEl.textContent = data.error || 'Invalid credentials';
                     errorEl.classList.add('active');
                     loginBtn.disabled = false;
                     loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
                 }
             } catch (error) {
-                errorEl.textContent = 'Connection error: ' + error.message;
+                console.error('Login error:', error);
+
+                // Detailed error messages for debugging
+                let errorMsg = 'Connection error';
+
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg = 'Cannot connect to server. Please check your internet connection.';
+                } else if (error.message.includes('NetworkError')) {
+                    errorMsg = 'Network error. Please check your connection and try again.';
+                } else if (error.message) {
+                    errorMsg = error.message;
+                }
+
+                errorEl.textContent = errorMsg;
                 errorEl.classList.add('active');
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+            }
+        });
+
+        // Add Enter key support
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                form.dispatchEvent(new Event('submit'));
             }
         });
     </script>

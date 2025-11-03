@@ -502,13 +502,54 @@ function getSystemHealth() {
 }
 
 /**
+ * Set security headers for better cross-browser compatibility
+ */
+function setSecurityHeaders() {
+    // CORS headers for same-origin requests
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        $origin = $_SERVER['HTTP_ORIGIN'];
+        $allowedOrigins = [
+            'https://mpsm.resolutionsbydesign.us',
+            'http://localhost',
+            'http://127.0.0.1'
+        ];
+
+        // Allow same-origin requests
+        if (in_array($origin, $allowedOrigins) ||
+            strpos($origin, 'mpsm.resolutionsbydesign.us') !== false) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+            header('Access-Control-Max-Age: 3600');
+        }
+    }
+
+    // Security headers for all responses
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-XSS-Protection: 1; mode=block');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+
+    // Handle OPTIONS preflight requests
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        exit;
+    }
+}
+
+/**
  * JSON response helper
  * Following Rule 6: Always Show Errors
  */
 function jsonResponse($data, $httpCode = 200) {
+    setSecurityHeaders();
     http_response_code($httpCode);
-    header('Content-Type: application/json');
-    echo json_encode($data, JSON_PRETTY_PRINT);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;
 }
 
