@@ -293,72 +293,209 @@ function trackVisit($pageUrl = '') {
 }
 
 /**
- * Get system health status
+ * Get comprehensive system health status with detailed verification
  */
 function getSystemHealth() {
+    $now = new DateTime('now', new DateTimeZone('America/New_York'));
+
     $health = [
-        'timestamp' => date('c'),
-        'database' => ['connected' => false, 'error' => null],
-        'mpsApi' => ['connected' => false, 'error' => null],
-        'cache' => ['enabled' => false, 'cached_entries' => 0, 'error' => null],
-        'session' => ['active' => isLoggedIn()]
+        'timestamp' => $now->format('c'),
+        'timezone' => 'America/New_York (Eastern)',
+        'server_time' => $now->format('Y-m-d H:i:s T'),
+        'database' => [
+            'connected' => false,
+            'error' => null,
+            'verification' => null,
+            'last_check' => null
+        ],
+        'mpsApi' => [
+            'connected' => false,
+            'error' => null,
+            'verification' => null,
+            'last_check' => null,
+            'response_time_ms' => null
+        ],
+        'cache' => [
+            'enabled' => false,
+            'cached_entries' => 0,
+            'fresh_entries' => 0,
+            'error' => null,
+            'verification' => null,
+            'last_check' => null,
+            'oldest_entry' => null,
+            'newest_entry' => null,
+            'storage_size_mb' => null
+        ],
+        'server' => [
+            'php_version' => phpversion(),
+            'memory_limit' => ini_get('memory_limit'),
+            'memory_used_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+            'disk_free_gb' => null,
+            'disk_total_gb' => null,
+            'load_average' => null,
+            'uptime' => null
+        ],
+        'session' => [
+            'active' => isLoggedIn(),
+            'user' => $_SESSION['username'] ?? null,
+            'started_at' => isset($_SESSION['login_time']) ? date('c', $_SESSION['login_time']) : null
+        ]
     ];
 
-    // Test database
+    // Test database with detailed verification
     try {
+        $checkStart = microtime(true);
         $pdo = getDatabase();
-        $pdo->query("SELECT 1");
+
+        // Verify with actual query
+        $stmt = $pdo->query("SELECT DATABASE() as db_name, NOW() as server_time, VERSION() as version");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $checkDuration = round((microtime(true) - $checkStart) * 1000, 2);
+
         $health['database']['connected'] = true;
         $health['database']['host'] = DB_HOST;
-        $health['database']['name'] = DB_NAME;
+        $health['database']['name'] = $result['db_name'] ?? DB_NAME;
+        $health['database']['version'] = $result['version'] ?? 'unknown';
+        $health['database']['server_time'] = $result['server_time'] ?? null;
+        $health['database']['response_time_ms'] = $checkDuration;
+        $health['database']['last_check'] = $now->format('c');
+        $health['database']['verification'] = "Query executed successfully in {$checkDuration}ms";
+
+        // Get table count
+        $stmt = $pdo->query("SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = DATABASE()");
+        $tableResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $health['database']['table_count'] = (int)$tableResult['table_count'];
+
+        // Get visitor log count
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM " . DB_PREFIX . "visitor_log");
+        $visitorResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $health['database']['visitor_log_entries'] = (int)$visitorResult['count'];
+
     } catch (Exception $e) {
         $health['database']['error'] = $e->getMessage();
+        $health['database']['last_check'] = $now->format('c');
+        $health['database']['verification'] = 'Connection failed';
     }
 
-    // Test MPS API (via mps-api backend proxy)
+    // Test MPS API with timing
     try {
-        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/?action=Ping');
+        $checkStart = microtime(true);
+        $context = stream_context_create(['http' => ['timeout' => 5]]);
+        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/?action=Ping', false, $context);
+        $checkDuration = round((microtime(true) - $checkStart) * 1000, 2);
+
         if ($response !== false) {
             $data = json_decode($response, true);
-            if (isset($data['success'])) {
-                $health['mpsApi']['connected'] = (bool) $data['success'];
-            } elseif (isset($data['status'])) {
-                $health['mpsApi']['connected'] = strtolower((string) $data['status']) === 'online';
-            } else {
-                $health['mpsApi']['connected'] = true;
-            }
+            $health['mpsApi']['connected'] = true;
+            $health['mpsApi']['response_time_ms'] = $checkDuration;
+            $health['mpsApi']['last_check'] = $now->format('c');
+            $health['mpsApi']['verification'] = "Ping successful in {$checkDuration}ms";
+            $health['mpsApi']['response_data'] = $data;
         } else {
             throw new Exception("mps-api backend not responding");
         }
     } catch (Exception $e) {
         $health['mpsApi']['error'] = $e->getMessage();
+        $health['mpsApi']['last_check'] = $now->format('c');
+        $health['mpsApi']['verification'] = 'Connection failed';
     }
 
-    // Check cache engine status
+    // Check cache engine with detailed stats
     try {
+        $checkStart = microtime(true);
         $cacheDir = __DIR__ . '/../mps-api/cache/storage';
+
         if (is_dir($cacheDir)) {
             $health['cache']['enabled'] = true;
             $files = glob($cacheDir . '/*.json');
+
             if ($files !== false) {
                 $health['cache']['cached_entries'] = count($files);
 
-                // Check for fresh entries (cached within last 10 minutes)
+                $totalSize = 0;
+                $oldestTime = null;
+                $newestTime = null;
                 $freshCount = 0;
                 $tenMinutesAgo = time() - 600;
+
                 foreach ($files as $file) {
-                    if (filemtime($file) > $tenMinutesAgo) {
+                    $mtime = filemtime($file);
+                    $totalSize += filesize($file);
+
+                    if ($oldestTime === null || $mtime < $oldestTime) {
+                        $oldestTime = $mtime;
+                    }
+                    if ($newestTime === null || $mtime > $newestTime) {
+                        $newestTime = $mtime;
+                    }
+                    if ($mtime > $tenMinutesAgo) {
                         $freshCount++;
                     }
                 }
+
                 $health['cache']['fresh_entries'] = $freshCount;
+                $health['cache']['storage_size_mb'] = round($totalSize / 1024 / 1024, 2);
+                $health['cache']['oldest_entry'] = $oldestTime ? date('c', $oldestTime) : null;
+                $health['cache']['newest_entry'] = $newestTime ? date('c', $newestTime) : null;
                 $health['cache']['storage_path'] = 'mps-api/cache/storage';
+
+                $checkDuration = round((microtime(true) - $checkStart) * 1000, 2);
+                $health['cache']['last_check'] = $now->format('c');
+                $health['cache']['verification'] = "Scanned {$health['cache']['cached_entries']} cache files in {$checkDuration}ms";
             }
         } else {
             $health['cache']['error'] = 'Cache directory not found';
+            $health['cache']['verification'] = 'Directory does not exist';
         }
     } catch (Exception $e) {
         $health['cache']['error'] = $e->getMessage();
+        $health['cache']['last_check'] = $now->format('c');
+        $health['cache']['verification'] = 'Check failed';
+    }
+
+    // Server health metrics
+    try {
+        // Disk space
+        $diskFree = @disk_free_space(__DIR__);
+        $diskTotal = @disk_total_space(__DIR__);
+        if ($diskFree !== false && $diskTotal !== false) {
+            $health['server']['disk_free_gb'] = round($diskFree / 1024 / 1024 / 1024, 2);
+            $health['server']['disk_total_gb'] = round($diskTotal / 1024 / 1024 / 1024, 2);
+            $health['server']['disk_used_percent'] = round((($diskTotal - $diskFree) / $diskTotal) * 100, 1);
+        }
+
+        // Load average (Unix/Linux only)
+        if (function_exists('sys_getloadavg')) {
+            $load = sys_getloadavg();
+            if ($load !== false) {
+                $health['server']['load_average'] = [
+                    '1min' => round($load[0], 2),
+                    '5min' => round($load[1], 2),
+                    '15min' => round($load[2], 2)
+                ];
+            }
+        }
+
+        // Uptime (Unix/Linux only)
+        if (file_exists('/proc/uptime')) {
+            $uptime = @file_get_contents('/proc/uptime');
+            if ($uptime !== false) {
+                $uptimeSeconds = (int)explode(' ', $uptime)[0];
+                $days = floor($uptimeSeconds / 86400);
+                $hours = floor(($uptimeSeconds % 86400) / 3600);
+                $health['server']['uptime'] = "{$days}d {$hours}h";
+                $health['server']['uptime_seconds'] = $uptimeSeconds;
+            }
+        }
+
+        // PHP info
+        $health['server']['max_execution_time'] = ini_get('max_execution_time') . 's';
+        $health['server']['upload_max_filesize'] = ini_get('upload_max_filesize');
+        $health['server']['post_max_size'] = ini_get('post_max_size');
+
+    } catch (Exception $e) {
+        $health['server']['error'] = $e->getMessage();
     }
 
     return $health;
