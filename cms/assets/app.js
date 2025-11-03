@@ -850,6 +850,9 @@ const MPSM = (function() {
         }
     }
 
+    // Auto-refresh interval tracker
+    let healthRefreshInterval = null;
+
     /**
      * Switch admin sections
      */
@@ -862,10 +865,25 @@ const MPSM = (function() {
             section.classList.toggle('active', section.id === 'admin-' + sectionName);
         });
 
+        // Clear existing auto-refresh when switching sections
+        if (healthRefreshInterval) {
+            clearInterval(healthRefreshInterval);
+            healthRefreshInterval = null;
+        }
+
         if (sectionName === 'dashboard') {
             renderCardConfig();
         } else if (sectionName === 'users') {
             loadUsers();
+        } else if (sectionName === 'system') {
+            // Auto-load system health and visitor logs
+            testSystemHealth();
+            loadVisitorLogs();
+
+            // Setup auto-refresh for system health every 60 seconds
+            healthRefreshInterval = setInterval(() => {
+                testSystemHealth();
+            }, 60000);
         } else if (sectionName === 'catalog') {
             loadEndpointCatalog({
                 category: state.endpointCatalog.selectedCategory,
@@ -2596,7 +2614,7 @@ const MPSM = (function() {
     }
 
     /**
-     * Test system health
+     * Test system health - Enhanced with detailed metrics
      */
     async function testSystemHealth() {
         const container = document.getElementById('health-status');
@@ -2612,43 +2630,145 @@ const MPSM = (function() {
 
             const health = data;
 
+            // Determine cache status
+            let cacheStatus = 'unknown';
+            let cacheIcon = 'question-circle';
+            let cacheClass = 'status-warning';
+
+            if (health.cache && health.cache.storage) {
+                const hitRate = health.cache.hit_rate || 0;
+                if (hitRate >= 70) {
+                    cacheStatus = 'Excellent';
+                    cacheIcon = 'check-circle';
+                    cacheClass = 'status-success';
+                } else if (hitRate >= 40) {
+                    cacheStatus = 'Good';
+                    cacheIcon = 'check-circle';
+                    cacheClass = 'status-success';
+                } else {
+                    cacheStatus = 'Low Hit Rate';
+                    cacheIcon = 'exclamation-circle';
+                    cacheClass = 'status-warning';
+                }
+            }
+
             container.innerHTML = `
-                <div class="health-grid">
-                    <div class="health-item">
-                        <div class="health-icon ${health.database.connected ? 'status-success' : 'status-danger'}">
-                            <i class="fas fa-${health.database.connected ? 'check-circle' : 'times-circle'}"></i>
-                        </div>
-                        <div class="health-content">
-                            <div class="health-label">Database</div>
-                            <div class="health-value">${health.database.connected ? 'Connected' : 'Disconnected'}</div>
-                            ${health.database.error ? `<div class="health-error">${health.database.error}</div>` : ''}
+                <div class="system-health-enhanced">
+                    <!-- Timezone and Server Time -->
+                    <div class="health-header">
+                        <div class="timezone-display">
+                            <i class="fas fa-clock"></i>
+                            <strong>${health.server_time}</strong>
+                            <span class="timezone-label">${health.timezone}</span>
                         </div>
                     </div>
 
-                    <div class="health-item">
-                        <div class="health-icon ${health.mpsApi.connected ? 'status-success' : 'status-danger'}">
-                            <i class="fas fa-${health.mpsApi.connected ? 'check-circle' : 'times-circle'}"></i>
+                    <!-- Component Health Grid -->
+                    <div class="health-grid">
+                        <!-- Database -->
+                        <div class="health-card">
+                            <div class="health-card-icon ${health.database.connected ? 'status-success' : 'status-danger'}">
+                                <i class="fas fa-${health.database.connected ? 'database' : 'times-circle'}"></i>
+                            </div>
+                            <div class="health-card-content">
+                                <div class="health-card-label">Database</div>
+                                <div class="health-card-value">${health.database.connected ? 'Connected' : 'Disconnected'}</div>
+                                ${health.database.verification ? `<div class="health-verification">${health.database.verification}</div>` : ''}
+                                ${health.database.response_time_ms ? `<div class="health-metric">Response: ${health.database.response_time_ms}ms</div>` : ''}
+                                ${health.database.version ? `<div class="health-detail">Version: ${health.database.version}</div>` : ''}
+                                ${health.database.table_count ? `<div class="health-detail">Tables: ${health.database.table_count}</div>` : ''}
+                                ${health.database.visitor_log_entries ? `<div class="health-detail">Visitor Logs: ${health.database.visitor_log_entries.toLocaleString()}</div>` : ''}
+                                ${health.database.error ? `<div class="health-error">${health.database.error}</div>` : ''}
+                            </div>
                         </div>
-                        <div class="health-content">
-                            <div class="health-label">MPS API</div>
-                            <div class="health-value">${health.mpsApi.connected ? 'Connected' : 'Disconnected'}</div>
-                            ${health.mpsApi.error ? `<div class="health-error">${health.mpsApi.error}</div>` : ''}
+
+                        <!-- MPS API -->
+                        <div class="health-card">
+                            <div class="health-card-icon ${health.mpsApi.connected ? 'status-success' : 'status-danger'}">
+                                <i class="fas fa-${health.mpsApi.connected ? 'cloud' : 'times-circle'}"></i>
+                            </div>
+                            <div class="health-card-content">
+                                <div class="health-card-label">MPS API</div>
+                                <div class="health-card-value">${health.mpsApi.connected ? 'Connected' : 'Disconnected'}</div>
+                                ${health.mpsApi.verification ? `<div class="health-verification">${health.mpsApi.verification}</div>` : ''}
+                                ${health.mpsApi.response_time_ms ? `<div class="health-metric">Response: ${health.mpsApi.response_time_ms}ms</div>` : ''}
+                                ${health.mpsApi.last_check ? `<div class="health-detail">Last Check: ${formatDateTime(health.mpsApi.last_check)}</div>` : ''}
+                                ${health.mpsApi.error ? `<div class="health-error">${health.mpsApi.error}</div>` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Cache Engine -->
+                        <div class="health-card">
+                            <div class="health-card-icon ${cacheClass}">
+                                <i class="fas fa-${cacheIcon}"></i>
+                            </div>
+                            <div class="health-card-content">
+                                <div class="health-card-label">Cache Engine</div>
+                                <div class="health-card-value">${cacheStatus}</div>
+                                ${health.cache && health.cache.storage ? `
+                                    <div class="health-verification">Storage: ${(health.cache.storage.total_size_mb || 0).toFixed(2)} MB</div>
+                                    <div class="health-metric">Hit Rate: ${(health.cache.hit_rate || 0).toFixed(1)}%</div>
+                                    <div class="health-detail">Fresh: ${health.cache.storage.fresh_entries || 0} | Stale: ${health.cache.storage.stale_entries || 0}</div>
+                                    ${health.cache.storage.oldest_entry ? `<div class="health-detail">Oldest: ${formatDateTime(health.cache.storage.oldest_entry)}</div>` : ''}
+                                ` : '<div class="health-error">Cache data unavailable</div>'}
+                            </div>
+                        </div>
+
+                        <!-- Session -->
+                        <div class="health-card">
+                            <div class="health-card-icon ${health.session.active ? 'status-success' : 'status-warning'}">
+                                <i class="fas fa-${health.session.active ? 'user-check' : 'exclamation-circle'}"></i>
+                            </div>
+                            <div class="health-card-content">
+                                <div class="health-card-label">Session</div>
+                                <div class="health-card-value">${health.session.active ? 'Active' : 'Inactive'}</div>
+                                ${health.session.user ? `<div class="health-detail">User: ${health.session.user}</div>` : ''}
+                                ${health.session.started ? `<div class="health-detail">Started: ${formatDateTime(health.session.started)}</div>` : ''}
+                            </div>
                         </div>
                     </div>
 
-                    <div class="health-item">
-                        <div class="health-icon ${health.session.active ? 'status-success' : 'status-warning'}">
-                            <i class="fas fa-${health.session.active ? 'check-circle' : 'exclamation-circle'}"></i>
+                    <!-- Server Resources -->
+                    ${health.server ? `
+                        <div class="server-metrics">
+                            <h3><i class="fas fa-server"></i> Server Resources</h3>
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <div class="metric-label">PHP Version</div>
+                                    <div class="metric-value">${health.server.php_version}</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Memory Used</div>
+                                    <div class="metric-value">${health.server.memory_used_mb} MB</div>
+                                    <div class="metric-detail">Peak: ${health.server.memory_peak_mb} MB</div>
+                                </div>
+                                ${health.server.disk_free_gb ? `
+                                    <div class="metric-item">
+                                        <div class="metric-label">Disk Space</div>
+                                        <div class="metric-value">${health.server.disk_free_gb} GB Free</div>
+                                        <div class="metric-detail">Used: ${health.server.disk_used_percent}%</div>
+                                    </div>
+                                ` : ''}
+                                ${health.server.load_average ? `
+                                    <div class="metric-item">
+                                        <div class="metric-label">Load Average</div>
+                                        <div class="metric-value">${health.server.load_average['1min']}</div>
+                                        <div class="metric-detail">5m: ${health.server.load_average['5min']} | 15m: ${health.server.load_average['15min']}</div>
+                                    </div>
+                                ` : ''}
+                                ${health.server.uptime ? `
+                                    <div class="metric-item">
+                                        <div class="metric-label">Uptime</div>
+                                        <div class="metric-value">${health.server.uptime}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
                         </div>
-                        <div class="health-content">
-                            <div class="health-label">Session</div>
-                            <div class="health-value">${health.session.active ? 'Active' : 'Inactive'}</div>
-                        </div>
-                    </div>
-                </div>
+                    ` : ''}
 
-                <div class="health-timestamp">
-                    Last checked: ${formatDateTime(health.timestamp)}
+                    <div class="health-timestamp">
+                        <i class="fas fa-sync-alt"></i> Last checked: ${formatDateTime(health.timestamp)}
+                    </div>
                 </div>
             `;
 
@@ -2664,14 +2784,32 @@ const MPSM = (function() {
     }
 
     /**
-     * Load visitor logs
+     * Load visitor logs - Enhanced with filtering and pagination
      */
+    let visitorFilters = {
+        username: '',
+        ip_address: '',
+        start_date: '',
+        end_date: '',
+        page_url: '',
+        limit: 50,
+        offset: 0
+    };
+
     async function loadVisitorLogs() {
         const container = document.getElementById('visitor-logs');
         container.innerHTML = '<div class="loading">Loading visitor logs...</div>';
 
         try {
-            const response = await fetch('api/get-visitor-logs.php?limit=10');
+            // Build query string from filters
+            const params = new URLSearchParams();
+            Object.keys(visitorFilters).forEach(key => {
+                if (visitorFilters[key]) {
+                    params.append(key, visitorFilters[key]);
+                }
+            });
+
+            const response = await fetch(`api/get-visitor-logs.php?${params.toString()}`);
             const data = await response.json();
 
             if (!data.success) {
@@ -2679,42 +2817,158 @@ const MPSM = (function() {
             }
 
             const logs = data.logs || [];
+            const stats = data.stats || {};
 
-            if (logs.length === 0) {
-                container.innerHTML = '<div class="empty-state">No visitor logs found</div>';
-                return;
-            }
+            // Render filter controls and stats
+            let html = `
+                <div class="visitor-manager">
+                    <!-- Statistics Cards -->
+                    <div class="visitor-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-label">Unique Users</div>
+                                <div class="stat-value">${stats.unique_users || 0}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-network-wired"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-label">Unique IPs</div>
+                                <div class="stat-value">${stats.unique_ips || 0}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-eye"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-label">Total Visits</div>
+                                <div class="stat-value">${(stats.total_visits || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-label">Last Visit</div>
+                                <div class="stat-value-small">${stats.last_visit ? formatDateTime(stats.last_visit) : 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
 
-            // Render visitor table
-            const html = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Username</th>
-                            <th>IP Address</th>
-                            <th>Page</th>
-                            <th>User Agent</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${logs.map(log => `
-                            <tr>
-                                <td>${formatDateTime(log.visited_at)}</td>
-                                <td>${log.username}</td>
-                                <td><strong>${log.ip_address}</strong></td>
-                                <td>${log.page_url}</td>
-                                <td title="${log.user_agent}">${log.user_agent.substring(0, 50)}...</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                <div class="health-timestamp">
-                    Showing last ${logs.length} visits
+                    <!-- Filter Controls -->
+                    <div class="visitor-filters">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label><i class="fas fa-user"></i> Username</label>
+                                <input type="text" id="filter-username" class="form-control" placeholder="Filter by username" value="${visitorFilters.username}">
+                            </div>
+                            <div class="filter-group">
+                                <label><i class="fas fa-network-wired"></i> IP Address</label>
+                                <input type="text" id="filter-ip" class="form-control" placeholder="Filter by IP" value="${visitorFilters.ip_address}">
+                            </div>
+                            <div class="filter-group">
+                                <label><i class="fas fa-calendar-alt"></i> Start Date</label>
+                                <input type="date" id="filter-start-date" class="form-control" value="${visitorFilters.start_date}">
+                            </div>
+                            <div class="filter-group">
+                                <label><i class="fas fa-calendar-check"></i> End Date</label>
+                                <input type="date" id="filter-end-date" class="form-control" value="${visitorFilters.end_date}">
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label><i class="fas fa-link"></i> Page URL</label>
+                                <input type="text" id="filter-page" class="form-control" placeholder="Filter by page URL" value="${visitorFilters.page_url}">
+                            </div>
+                            <div class="filter-group">
+                                <label><i class="fas fa-list-ol"></i> Results Per Page</label>
+                                <select id="filter-limit" class="form-control">
+                                    <option value="25" ${visitorFilters.limit === 25 ? 'selected' : ''}>25</option>
+                                    <option value="50" ${visitorFilters.limit === 50 ? 'selected' : ''}>50</option>
+                                    <option value="100" ${visitorFilters.limit === 100 ? 'selected' : ''}>100</option>
+                                    <option value="200" ${visitorFilters.limit === 200 ? 'selected' : ''}>200</option>
+                                </select>
+                            </div>
+                            <div class="filter-actions">
+                                <button id="apply-filters" class="btn btn-primary">
+                                    <i class="fas fa-filter"></i> Apply Filters
+                                </button>
+                                <button id="clear-filters" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Clear
+                                </button>
+                                <button id="export-logs" class="btn btn-secondary">
+                                    <i class="fas fa-download"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visitor Logs Table -->
+                    ${logs.length === 0 ? `
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No visitor logs found</p>
+                            <p class="empty-hint">Try adjusting your filters</p>
+                        </div>
+                    ` : `
+                        <div class="visitor-table-wrapper">
+                            <table class="table visitor-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-clock"></i> Time (${data.timezone || 'Eastern'})</th>
+                                        <th><i class="fas fa-user"></i> Username</th>
+                                        <th><i class="fas fa-network-wired"></i> IP Address</th>
+                                        <th><i class="fas fa-link"></i> Page</th>
+                                        <th><i class="fas fa-desktop"></i> User Agent</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${logs.map(log => `
+                                        <tr>
+                                            <td class="log-time">${log.formatted_time || formatDateTime(log.visited_at)}</td>
+                                            <td class="log-username">${log.username}</td>
+                                            <td class="log-ip"><code>${log.ip_address}</code></td>
+                                            <td class="log-page" title="${log.page_url}">${truncateUrl(log.page_url, 30)}</td>
+                                            <td class="log-agent" title="${log.user_agent}">${truncateUserAgent(log.user_agent)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="pagination-controls">
+                            <div class="pagination-info">
+                                Showing ${data.offset + 1} - ${Math.min(data.offset + data.count, data.total)} of ${data.total.toLocaleString()} visits
+                            </div>
+                            <div class="pagination-buttons">
+                                <button id="prev-page" class="btn btn-secondary" ${data.offset === 0 ? 'disabled' : ''}>
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <button id="next-page" class="btn btn-secondary" ${!data.has_more ? 'disabled' : ''}>
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `}
                 </div>
             `;
 
             container.innerHTML = html;
+
+            // Attach event listeners
+            document.getElementById('apply-filters')?.addEventListener('click', applyVisitorFilters);
+            document.getElementById('clear-filters')?.addEventListener('click', clearVisitorFilters);
+            document.getElementById('export-logs')?.addEventListener('click', exportVisitorLogs);
+            document.getElementById('prev-page')?.addEventListener('click', () => {
+                visitorFilters.offset = Math.max(0, visitorFilters.offset - visitorFilters.limit);
+                loadVisitorLogs();
+            });
+            document.getElementById('next-page')?.addEventListener('click', () => {
+                if (data.has_more) {
+                    visitorFilters.offset += visitorFilters.limit;
+                    loadVisitorLogs();
+                }
+            });
 
         } catch (error) {
             container.innerHTML = `
@@ -2724,6 +2978,68 @@ const MPSM = (function() {
                     <p class="error-message">${error.message}</p>
                 </div>
             `;
+        }
+    }
+
+    function applyVisitorFilters() {
+        visitorFilters.username = document.getElementById('filter-username').value.trim();
+        visitorFilters.ip_address = document.getElementById('filter-ip').value.trim();
+        visitorFilters.start_date = document.getElementById('filter-start-date').value;
+        visitorFilters.end_date = document.getElementById('filter-end-date').value;
+        visitorFilters.page_url = document.getElementById('filter-page').value.trim();
+        visitorFilters.limit = parseInt(document.getElementById('filter-limit').value);
+        visitorFilters.offset = 0; // Reset to first page
+        loadVisitorLogs();
+    }
+
+    function clearVisitorFilters() {
+        visitorFilters = {
+            username: '',
+            ip_address: '',
+            start_date: '',
+            end_date: '',
+            page_url: '',
+            limit: 50,
+            offset: 0
+        };
+        loadVisitorLogs();
+    }
+
+    function exportVisitorLogs() {
+        // Build query string from current filters
+        const params = new URLSearchParams();
+        Object.keys(visitorFilters).forEach(key => {
+            if (visitorFilters[key] && key !== 'offset') {
+                params.append(key, visitorFilters[key]);
+            }
+        });
+        params.set('limit', '5000'); // Export up to 5000 records
+
+        // Open export URL in new window
+        window.open(`api/get-visitor-logs.php?${params.toString()}&export=csv`, '_blank');
+        showToast('Exporting visitor logs...', 'info');
+    }
+
+    function truncateUrl(url, maxLength) {
+        if (!url) return '';
+        if (url.length <= maxLength) return url;
+        return url.substring(0, maxLength) + '...';
+    }
+
+    function truncateUserAgent(userAgent) {
+        if (!userAgent) return 'Unknown';
+
+        // Extract browser and OS
+        if (userAgent.includes('Chrome')) {
+            return 'Chrome';
+        } else if (userAgent.includes('Firefox')) {
+            return 'Firefox';
+        } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+            return 'Safari';
+        } else if (userAgent.includes('Edge')) {
+            return 'Edge';
+        } else {
+            return userAgent.substring(0, 30) + '...';
         }
     }
 
