@@ -300,6 +300,7 @@ function getSystemHealth() {
         'timestamp' => date('c'),
         'database' => ['connected' => false, 'error' => null],
         'mpsApi' => ['connected' => false, 'error' => null],
+        'cache' => ['enabled' => false, 'cached_entries' => 0, 'error' => null],
         'session' => ['active' => isLoggedIn()]
     ];
 
@@ -331,6 +332,33 @@ function getSystemHealth() {
         }
     } catch (Exception $e) {
         $health['mpsApi']['error'] = $e->getMessage();
+    }
+
+    // Check cache engine status
+    try {
+        $cacheDir = __DIR__ . '/../mps-api/cache/storage';
+        if (is_dir($cacheDir)) {
+            $health['cache']['enabled'] = true;
+            $files = glob($cacheDir . '/*.json');
+            if ($files !== false) {
+                $health['cache']['cached_entries'] = count($files);
+
+                // Check for fresh entries (cached within last 10 minutes)
+                $freshCount = 0;
+                $tenMinutesAgo = time() - 600;
+                foreach ($files as $file) {
+                    if (filemtime($file) > $tenMinutesAgo) {
+                        $freshCount++;
+                    }
+                }
+                $health['cache']['fresh_entries'] = $freshCount;
+                $health['cache']['storage_path'] = 'mps-api/cache/storage';
+            }
+        } else {
+            $health['cache']['error'] = 'Cache directory not found';
+        }
+    } catch (Exception $e) {
+        $health['cache']['error'] = $e->getMessage();
     }
 
     return $health;

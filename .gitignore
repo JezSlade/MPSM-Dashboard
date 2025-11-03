@@ -29,6 +29,7 @@ nul
 cms/data/*.json
 !cms/data/.gitignore
 !cms/data/.gitkeep
+mps-api/cache/storage/
 
 # Backups
 *.backup

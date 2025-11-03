@@ -2,6 +2,7 @@
 require_once __DIR__ . '/SwaggerActionRegistry.php';
 require_once __DIR__ . '/DomainSeeder.php';
 require_once __DIR__ . '/../.canonical/EndpointCatalog.php';
+require_once __DIR__ . '/cache/ActionCache.php';
 /**
  * MPS Monitors API Engine
  * 
@@ -55,6 +56,18 @@ class MPSMonitorEngine {
 
         if (self::$actionRegistry === null) {
             self::$actionRegistry = SwaggerActionRegistry::getInstance();
+        }
+
+        $cacheConfigFile = __DIR__ . '/cache/config.php';
+        if (is_file($cacheConfigFile)) {
+            $cacheConfig = require $cacheConfigFile;
+            if (is_array($cacheConfig)) {
+                ActionCache::init($cacheConfig);
+            } else {
+                ActionCache::init();
+            }
+        } else {
+            ActionCache::init();
         }
     }
     
@@ -197,6 +210,25 @@ class MPSMonitorEngine {
         if (empty($endpoint) || !is_string($endpoint)) {
             return $this->errorResponse('Invalid endpoint', self::ERR_VALIDATION);
         }
+
+        $cacheQuery = $queryParams;
+        $cacheBody = $data;
+        $actionName = $options['actionName'] ?? null;
+        $bypassCache = isset($options['bypassCache']) ? (bool) $options['bypassCache'] : false;
+
+        if (!$bypassCache) {
+            $cached = ActionCache::getCachedResponse(
+                $actionName,
+                $method,
+                $endpoint,
+                $cacheQuery,
+                $cacheBody,
+                $options
+            );
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
         
         $method = strtoupper(trim($method));
         $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -273,6 +305,17 @@ class MPSMonitorEngine {
                 if (self::$config['MPS_DEBUG']) {
                     self::logDebug("Request {$requestId} succeeded on attempt {$attempt}");
                 }
+                if (!$bypassCache) {
+                    ActionCache::storeResponse(
+                        $actionName,
+                        $method,
+                        $endpoint,
+                        $cacheQuery,
+                        $cacheBody,
+                        $result,
+                        $options
+                    );
+                }
                 return $result;
             }
             
@@ -329,6 +372,8 @@ class MPSMonitorEngine {
 
         // Normalize incoming params (strip placeholder strings like "null")
         $params = $this->sanitizeParameters($params);
+        $skipCache = ActionCache::shouldBypassWithParams($params);
+        $params = ActionCache::stripControlParams($params);
 
         // Load payload templates if not already loaded
         if (self::$payloadTemplates === null) {
@@ -504,6 +549,7 @@ class MPSMonitorEngine {
             'contentType' => $contentType,
             'endpointMetadata' => $endpointMetadata,
             'actionName' => $operation['action'],
+            'bypassCache' => $skipCache,
         ];
 
         return $this->makeRequest(
