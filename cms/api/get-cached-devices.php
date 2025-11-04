@@ -71,14 +71,9 @@ try {
         'SortOrder' => 'Asc'
     ]);
 
-    if ($customersData) {
-        if (isset($customersData['Items'])) {
-            $customers = $customersData['Items'];
-        } elseif (isset($customersData['Result'])) {
-            $customers = $customersData['Result'];
-        } elseif (is_array($customersData)) {
-            $customers = $customersData;
-        }
+    // Customer/GetCustomers returns array directly, not wrapped
+    if ($customersData && is_array($customersData)) {
+        $customers = $customersData;
     }
 
     // Step 2: Fetch devices for each customer
@@ -106,18 +101,12 @@ try {
                 'SortOrder' => 'Asc'
             ]);
 
-            if (!$deviceData) {
+            if (!$deviceData || !is_array($deviceData)) {
                 break;
             }
 
-            $pageDevices = [];
-            if (isset($deviceData['Items']) && is_array($deviceData['Items'])) {
-                $pageDevices = $deviceData['Items'];
-            } elseif (isset($deviceData['Result']) && is_array($deviceData['Result'])) {
-                $pageDevices = $deviceData['Result'];
-            } elseif (is_array($deviceData)) {
-                $pageDevices = $deviceData;
-            }
+            // Device/List returns array directly
+            $pageDevices = $deviceData;
 
             if (empty($pageDevices)) {
                 break;
@@ -157,18 +146,12 @@ try {
             'SortOrder' => 'Asc'
         ]);
 
-        if (!$deletedData) {
+        if (!$deletedData || !is_array($deletedData)) {
             break;
         }
 
-        $pageDevices = [];
-        if (isset($deletedData['Items']) && is_array($deletedData['Items'])) {
-            $pageDevices = $deletedData['Items'];
-        } elseif (isset($deletedData['Result']) && is_array($deletedData['Result'])) {
-            $pageDevices = $deletedData['Result'];
-        } elseif (is_array($deletedData)) {
-            $pageDevices = $deletedData;
-        }
+        // Device/Deleted/ListByDealer returns array directly
+        $pageDevices = $deletedData;
 
         if (empty($pageDevices)) {
             break;
