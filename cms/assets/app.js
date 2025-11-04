@@ -3081,8 +3081,8 @@ const MPSM = (function() {
     /**
      * Open device detail modal
      */
-    async function openDeviceModal(deviceId) {
-        debugLog(`Opening device modal: ${deviceId}`, 'info');
+    async function openDeviceModal(deviceId, serialNumber, customerCode) {
+        debugLog(`Opening device modal: ${deviceId || serialNumber}`, 'info');
         const modal = document.getElementById('device-modal');
         const modalBody = document.getElementById('modal-device-body');
         const modalName = document.getElementById('modal-device-name');
@@ -3091,46 +3091,23 @@ const MPSM = (function() {
         modalBody.innerHTML = '<div class="loading">Loading device details...</div>';
 
         try {
-            const matchesDevice = (candidate) => {
-                if (!candidate || typeof candidate !== 'object') {
-                    return false;
-                }
-                const identifiers = [
-                    candidate.Id,
-                    candidate.IdInstalledProduct,
-                    candidate.DeviceId
-                ];
-                return identifiers.some(id => id !== undefined && id !== null && String(id) === String(deviceId));
-            };
+            // Use deep-dive API to fetch comprehensive device data
+            const url = new URL('api/get-device-deep-dive.php', window.location.origin + window.location.pathname);
+            if (deviceId) url.searchParams.append('deviceId', deviceId);
+            if (serialNumber) url.searchParams.append('serialNumber', serialNumber);
+            if (customerCode) url.searchParams.append('customerCode', customerCode);
 
-            let device = state.devices.find(matchesDevice);
+            const response = await fetch(url);
+            const data = await response.json();
 
-            if (!device && state.deviceLookup.size < Math.max(Number(state.totalDevices ?? 0), state.deviceLookup.size || 0)) {
-                try {
-                    const refreshed = await fetchAllDevices({
-                        customerCode: state.customerCode || '',
-                        dealerCode: state.dealerCode || '',
-                        dealerId: state.dealerId || '',
-                        sortColumn: 'AssetNumber',
-                        sortOrder: 'Asc'
-                    });
-                    if (Array.isArray(refreshed.devices) && refreshed.devices.length) {
-                        state.devices = refreshed.devices;
-                        hydrateDeviceLookup(state.devices);
-                        const refreshedTotal = Number.isFinite(Number(refreshed.total))
-                            ? Number(refreshed.total)
-                            : state.devices.length;
-                        state.totalDevices = Math.max(Number(state.totalDevices ?? 0), refreshedTotal, state.devices.length);
-                        device = state.devices.find(matchesDevice);
-                    }
-                } catch (refreshError) {
-                    debugLog('Device cache refresh failed: ' + refreshError.message, 'warn');
-                }
+            if (!data.success || !data.device) {
+                throw new Error(data.error || 'Device not found');
             }
 
-            if (!device) {
-                throw new Error('Device not found');
-            }
+            const device = data.device;
+            const counterDetails = data.counterDetails;
+            const deviceHealth = data.deviceHealth;
+            const supplyAlerts = data.supplyAlerts;
 
             modalName.textContent = device.Product?.Model || 'Device Details';
 
@@ -3256,36 +3233,54 @@ const MPSM = (function() {
                     </div>
                 </div>
 
-                <div class="device-detail-sections">
-                    <h3>Endpoint Data</h3>
-                    <div id="${detailContainerId}">
-                        <div class="loading">Loading endpoint data...</div>
+                ${deviceHealth ? `
+                    <h3>Device Health</h3>
+                    <div class="device-snapshot">
+                        ${deviceHealth.Actions && deviceHealth.Actions.length > 0 ?
+                            deviceHealth.Actions.map(action => `
+                                <div class="snapshot-item" style="grid-column: 1 / -1;">
+                                    <div class="snapshot-label">${escapeHtml(action.ActionType || 'Action')}</div>
+                                    <div class="snapshot-value">${escapeHtml(action.Description || action.Message || 'No details')}</div>
+                                </div>
+                            `).join('') :
+                            '<div class="snapshot-item"><div class="snapshot-value">No health actions</div></div>'
+                        }
                     </div>
-                </div>
+                ` : ''}
+
+                ${counterDetails ? `
+                    <h3>Detailed Counter Information</h3>
+                    <div class="device-snapshot">
+                        ${counterDetails.CounterDetails && counterDetails.CounterDetails.length > 0 ?
+                            counterDetails.CounterDetails.map(counter => `
+                                <div class="snapshot-item">
+                                    <div class="snapshot-label">${escapeHtml(counter.CounterName || counter.Name || 'Counter')}</div>
+                                    <div class="snapshot-value">${(counter.CounterValue || counter.Value || 0).toLocaleString()}</div>
+                                </div>
+                            `).join('') :
+                            '<div class="snapshot-item"><div class="snapshot-value">No detailed counters</div></div>'
+                        }
+                    </div>
+                ` : ''}
+
+                ${supplyAlerts && supplyAlerts.length > 0 ? `
+                    <h3>Supply Alerts</h3>
+                    <div class="device-snapshot">
+                        ${supplyAlerts.map(alert => `
+                            <div class="snapshot-item" style="grid-column: 1 / -1;">
+                                <div class="snapshot-label">${escapeHtml(alert.SupplyName || 'Supply')}</div>
+                                <div class="snapshot-value">
+                                    <span class="status-badge status-warning">
+                                        ${escapeHtml(alert.Message || alert.AlertType || 'Alert')}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
             `;
 
             modalBody.innerHTML = html;
-
-            try {
-                const detailPayload = await fetchDeviceDetails(deviceId);
-                const detailContainer = document.getElementById(detailContainerId);
-
-                if (detailContainer) {
-                    detailContainer.innerHTML = renderEndpointSections(detailPayload.results || []);
-                }
-            } catch (detailError) {
-                debugLog('Failed to load endpoint data: ' + detailError.message, 'error');
-                const detailContainer = document.getElementById(detailContainerId);
-                if (detailContainer) {
-                    detailContainer.innerHTML = `
-                        <div class="error-state">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <p>Failed to load endpoint data</p>
-                            <p class="error-message">${escapeHtml(detailError.message)}</p>
-                        </div>
-                    `;
-                }
-            }
 
         } catch (error) {
             debugLog('Failed to load device details: ' + error.message, 'error');
