@@ -539,6 +539,129 @@ function setSecurityHeaders() {
 }
 
 /**
+ * Cache Management Functions
+ * Simple file-based cache for API responses
+ */
+
+// Define cache directory
+define('CACHE_DIR', __DIR__ . '/api/cache/');
+
+/**
+ * Get cached data
+ * @param string $key Cache key
+ * @return mixed|null Cached data or null if not found/expired
+ */
+function cacheGet($key) {
+    $cacheFile = CACHE_DIR . $key . '.json';
+
+    if (!file_exists($cacheFile)) {
+        return null;
+    }
+
+    $cacheData = json_decode(file_get_contents($cacheFile), true);
+
+    if (!$cacheData || !isset($cacheData['expires_at'])) {
+        return null;
+    }
+
+    // Check if expired
+    if (time() > $cacheData['expires_at']) {
+        @unlink($cacheFile);
+        return null;
+    }
+
+    return $cacheData['data'];
+}
+
+/**
+ * Store data in cache
+ * @param string $key Cache key
+ * @param mixed $data Data to cache
+ * @param int $ttl Time to live in seconds (default: 3600)
+ */
+function cacheStore($key, $data, $ttl = 3600) {
+    // Ensure cache directory exists
+    if (!is_dir(CACHE_DIR)) {
+        mkdir(CACHE_DIR, 0755, true);
+    }
+
+    $cacheFile = CACHE_DIR . $key . '.json';
+
+    $cacheData = [
+        'data' => $data,
+        'cached_at' => time(),
+        'expires_at' => time() + $ttl,
+        'ttl' => $ttl
+    ];
+
+    file_put_contents($cacheFile, json_encode($cacheData));
+}
+
+/**
+ * Clear cache by key or pattern
+ * @param string $pattern Cache key or pattern (e.g., 'devices*')
+ */
+function cacheClear($pattern = '*') {
+    $files = glob(CACHE_DIR . $pattern . '.json');
+    foreach ($files as $file) {
+        @unlink($file);
+    }
+}
+
+/**
+ * Get cache statistics
+ * @return array Cache stats
+ */
+function getCacheStats() {
+    if (!is_dir(CACHE_DIR)) {
+        return [
+            'total_size_mb' => 0,
+            'total_entries' => 0,
+            'fresh_entries' => 0,
+            'stale_entries' => 0
+        ];
+    }
+
+    $files = glob(CACHE_DIR . '*.json');
+    $totalSize = 0;
+    $freshCount = 0;
+    $staleCount = 0;
+    $oldestTime = null;
+    $newestTime = null;
+
+    foreach ($files as $file) {
+        $totalSize += filesize($file);
+        $data = json_decode(file_get_contents($file), true);
+
+        if ($data && isset($data['expires_at'])) {
+            if (time() <= $data['expires_at']) {
+                $freshCount++;
+            } else {
+                $staleCount++;
+            }
+
+            if (isset($data['cached_at'])) {
+                if (!$oldestTime || $data['cached_at'] < $oldestTime) {
+                    $oldestTime = $data['cached_at'];
+                }
+                if (!$newestTime || $data['cached_at'] > $newestTime) {
+                    $newestTime = $data['cached_at'];
+                }
+            }
+        }
+    }
+
+    return [
+        'total_size_mb' => round($totalSize / 1024 / 1024, 2),
+        'total_entries' => count($files),
+        'fresh_entries' => $freshCount,
+        'stale_entries' => $staleCount,
+        'oldest_entry' => $oldestTime ? date('Y-m-d H:i:s', $oldestTime) : null,
+        'newest_entry' => $newestTime ? date('Y-m-d H:i:s', $newestTime) : null
+    ];
+}
+
+/**
  * JSON response helper
  * Following Rule 6: Always Show Errors
  */
