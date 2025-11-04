@@ -4,6 +4,48 @@ All notable changes to the MPSM Dashboard project.
 
 ---
 
+## [2.1.0] - November 4, 2025
+
+### Global Device Search - FilterText Breakthrough (Commit: b76b308)
+
+**BREAKTHROUGH**: Replaced client-side device filtering with instant server-side search using the MPS API's `FilterText` parameter.
+
+**Problem Solved:**
+- Header search bar was fetching 5,000+ devices before searching (60+ second load time)
+- Test device "FQ966" could not be found despite existing in the API
+- Poor user experience with long delays
+
+**Solution:**
+- Created new `search-devices.php` endpoint using Device/List FilterText parameter
+- Server-side search across ALL device fields (SerialNumber, AssetNumber, ExternalIdentifier, Model, etc.)
+- Search results in <1 second instead of 60+ seconds
+- Successfully found FQ966 (in ExternalIdentifier field)
+
+**Performance:**
+- Before: 60+ seconds to fetch 5,100 devices, then search locally
+- After: <1 second instant search results
+- Network transfer reduced from ~5MB to ~10KB per search
+
+**Added:**
+- cms/api/search-devices.php: New server-side search endpoint
+- SEARCH_BREAKTHROUGH.md: Complete documentation of discovery and implementation
+
+**Modified:**
+- cms/assets/app.js: Removed fetchAllDevicesForSearch() and client-side filtering (-66 lines, +13 lines)
+
+**API Discovery:**
+- Device/List with FilterText parameter searches ALL fields instantly
+- FilterCustomerCodes: null = all customers for dealer
+- Status: null = all devices (active + inactive)
+- Proper pagination: PageRows: 50, SortColumn: 'Id', SortOrder: 0
+
+**Files Modified:**
+- cms/api/search-devices.php: New file (88 lines)
+- cms/assets/app.js: -66 lines, +13 lines
+- SEARCH_BREAKTHROUGH.md: New comprehensive documentation
+
+---
+
 ## [2.0.0] - November 3, 2025
 
 ### Enhanced Admin UI (Commit: 07ee851)
