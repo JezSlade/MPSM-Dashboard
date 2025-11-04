@@ -3702,19 +3702,23 @@ const MPSM = (function() {
                         const equipmentId = escapeHtml(getEquipmentIdFromDevice(device));
                         const model = escapeHtml(device.ProductModel || device.Product?.Model || 'Unknown Model');
                         const customer = escapeHtml(device.CustomerDescription || 'Unknown Customer');
-                        const serial = escapeHtml(device.SerialNumber || device.DeviceSerialNumber || '');
+                        const serial = device.SerialNumber || device.DeviceSerialNumber || '';
                         const deviceId = device.Id || device.IdInstalledProduct || device.DeviceId;
+                        const customerCode = device.CustomerCode || '';
                         const isUninstalled = device.IsUninstalled || false;
 
                         return `
-                            <div class="search-result-item" data-device-id="${deviceId}">
+                            <div class="search-result-item"
+                                 data-device-id="${deviceId}"
+                                 data-serial-number="${escapeHtml(serial)}"
+                                 data-customer-code="${escapeHtml(customerCode)}">
                                 <div class="search-result-main">
-                                    <strong>${equipmentId}</strong>
+                                    <strong>${escapeHtml(equipmentId)}</strong>
                                     <span class="search-result-model">${model}</span>
                                     ${isUninstalled ? '<span class="badge badge-warning" style="margin-left: 8px; font-size: 0.75rem;">UNINSTALLED</span>' : ''}
                                 </div>
                                 <div class="search-result-sub">
-                                    ${customer}${serial ? ' • SN: ' + serial : ''}
+                                    ${customer}${serial ? ' • SN: ' + escapeHtml(serial) : ''}
                                 </div>
                             </div>
                         `;
@@ -3724,8 +3728,10 @@ const MPSM = (function() {
                     resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
                         item.addEventListener('click', () => {
                             const deviceId = item.dataset.deviceId;
-                            if (deviceId) {
-                                openDeviceModal(deviceId);
+                            const serialNumber = item.dataset.serialNumber;
+                            const customerCode = item.dataset.customerCode;
+                            if (deviceId || serialNumber) {
+                                openDeviceModal(deviceId, serialNumber, customerCode);
                                 searchInput.value = '';
                                 resultsContainer.style.display = 'none';
                             }
