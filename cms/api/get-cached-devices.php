@@ -66,19 +66,30 @@ function callMpsApiDirect($action, $params) {
 
 // Not in cache, fetch fresh data
 try {
-    // Step 1: Fetch all installed devices for this dealer (using FilterDealerId like get-devices.php)
+    // Step 1: Fetch all installed devices for this dealer
+    // BREAKTHROUGH: Use SDK parameters that actually work!
+    // - FilterCustomerCodes: null (not omitted) = all customers
+    // - PageRows: 50 (API maxes at 100/page regardless)
+    // - SortColumn: Id (not AssetNumber)
+    // - SortOrder: 0 (not Asc)
+    // - Status: 1 (active devices only)
     $allDevices = [];
     $pageNumber = 1;
-    $maxPages = 50; // Safety limit
+    $maxPages = 50; // ~5000 devices max (50 pages * 100/page)
 
     while ($pageNumber <= $maxPages) {
         $deviceData = callMpsApiDirect('Device/List', [
             'FilterDealerId' => DEFAULT_DEALER_ID,
-            'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+            'FilterCustomerCodes' => null,  // null = all customers!
+            'ProductBrand' => null,
+            'ProductModel' => null,
+            'OfficeId' => null,
+            'Status' => 1,  // Active devices only
+            'FilterText' => null,
             'PageNumber' => $pageNumber,
-            'PageRows' => 200,
-            'SortColumn' => 'AssetNumber',
-            'SortOrder' => 'Asc'
+            'PageRows' => 50,  // SDK uses 50 (API returns up to 100)
+            'SortColumn' => 'Id',
+            'SortOrder' => 0
         ]);
 
         if (!$deviceData || !is_array($deviceData)) {
@@ -101,8 +112,8 @@ try {
 
         $allDevices = array_merge($allDevices, $pageDevices);
 
-        // If we got less than 200, we're done
-        if (count($pageDevices) < 200) {
+        // If we got less than 50, we're done (API returns up to 100/page)
+        if (count($pageDevices) < 50) {
             break;
         }
 
