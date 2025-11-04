@@ -33,6 +33,12 @@ $data = json_decode($response, true);
 
 echo "Success: " . (($data['success'] ?? false) ? 'true' : 'false') . "\n";
 
+if (!($data['success'] ?? false)) {
+    echo "Error message: " . ($data['message'] ?? 'No message') . "\n";
+    echo "Full response:\n" . json_encode($data, JSON_PRETTY_PRINT) . "\n";
+    die();
+}
+
 if ($data['success'] ?? false) {
     $customers = $data['data'] ?? [];
 
