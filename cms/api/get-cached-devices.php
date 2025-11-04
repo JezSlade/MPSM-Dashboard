@@ -27,25 +27,58 @@ if ($cached !== null) {
     exit;
 }
 
+// Helper function to call MPS API
+function callMpsApiDirect($action, $params) {
+    $payload = json_encode([
+        'action' => $action,
+        'params' => $params
+    ]);
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => $payload,
+            'timeout' => 15,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+
+    if ($response === false) {
+        return null;
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success']) {
+        return null;
+    }
+
+    return $data['data'] ?? [];
+}
+
 // Not in cache, fetch fresh data
 try {
     // Step 1: Get all customers for this dealer
     $customers = [];
-    try {
-        $customersData = callMpsApi('Customer/List', [
-            'DealerCode' => DEFAULT_DEALER_CODE,
-            'SortColumn' => 'CustomerName',
-            'SortOrder' => 'Asc'
-        ]);
+    $customersData = callMpsApiDirect('Customer/GetCustomers', [
+        'DealerCode' => DEFAULT_DEALER_CODE,
+        'PageNumber' => 1,
+        'PageRows' => 500,
+        'SortColumn' => 'Description',
+        'SortOrder' => 'Asc'
+    ]);
 
+    if ($customersData) {
         if (isset($customersData['Items'])) {
             $customers = $customersData['Items'];
         } elseif (isset($customersData['Result'])) {
             $customers = $customersData['Result'];
+        } elseif (is_array($customersData)) {
+            $customers = $customersData;
         }
-    } catch (Exception $e) {
-        // If customer list fails, try to continue with empty list
-        error_log("Failed to fetch customers: " . $e->getMessage());
     }
 
     // Step 2: Fetch devices for each customer
@@ -54,61 +87,59 @@ try {
 
     foreach ($customers as $customer) {
         $customerId = $customer['Id'] ?? $customer['CustomerId'] ?? null;
+        $customerName = $customer['Description'] ?? $customer['CustomerName'] ?? 'Unknown';
+
         if (!$customerId) {
             continue;
         }
 
-        $customerDevices = [];
         $pageNumber = 1;
         $maxPages = 20; // Limit pages per customer
 
         // Fetch all pages for this customer
         while ($pageNumber <= $maxPages) {
-            try {
-                $params = [
-                    'FilterCustomerIds' => [$customerId],
-                    'PageNumber' => $pageNumber,
-                    'PageRows' => 200,
-                    'SortColumn' => 'AssetNumber',
-                    'SortOrder' => 'Asc'
-                ];
+            $deviceData = callMpsApiDirect('Device/List', [
+                'FilterCustomerIds' => [$customerId],
+                'PageNumber' => $pageNumber,
+                'PageRows' => 200,
+                'SortColumn' => 'AssetNumber',
+                'SortOrder' => 'Asc'
+            ]);
 
-                $deviceData = callMpsApi('Device/List', $params);
-
-                $pageDevices = [];
-                if (isset($deviceData['Items']) && is_array($deviceData['Items'])) {
-                    $pageDevices = $deviceData['Items'];
-                } elseif (isset($deviceData['Result']) && is_array($deviceData['Result'])) {
-                    $pageDevices = $deviceData['Result'];
-                }
-
-                if (empty($pageDevices)) {
-                    break;
-                }
-
-                // Add customer description to each device
-                foreach ($pageDevices as &$device) {
-                    $device['CustomerDescription'] = $customer['CustomerName'] ?? $customer['Description'] ?? 'Unknown';
-                    $device['CustomerId'] = $customerId;
-                }
-                unset($device);
-
-                $customerDevices = array_merge($customerDevices, $pageDevices);
-
-                // If we got less than 200, we're done with this customer
-                if (count($pageDevices) < 200) {
-                    break;
-                }
-
-                $pageNumber++;
-
-            } catch (Exception $e) {
-                error_log("Failed to fetch devices for customer {$customerId}: " . $e->getMessage());
+            if (!$deviceData) {
                 break;
             }
+
+            $pageDevices = [];
+            if (isset($deviceData['Items']) && is_array($deviceData['Items'])) {
+                $pageDevices = $deviceData['Items'];
+            } elseif (isset($deviceData['Result']) && is_array($deviceData['Result'])) {
+                $pageDevices = $deviceData['Result'];
+            } elseif (is_array($deviceData)) {
+                $pageDevices = $deviceData;
+            }
+
+            if (empty($pageDevices)) {
+                break;
+            }
+
+            // Add customer description to each device
+            foreach ($pageDevices as &$device) {
+                $device['CustomerDescription'] = $customerName;
+                $device['CustomerId'] = $customerId;
+            }
+            unset($device);
+
+            $allDevices = array_merge($allDevices, $pageDevices);
+
+            // If we got less than 200, we're done with this customer
+            if (count($pageDevices) < 200) {
+                break;
+            }
+
+            $pageNumber++;
         }
 
-        $allDevices = array_merge($allDevices, $customerDevices);
         $processedCustomers++;
     }
 
@@ -118,48 +149,47 @@ try {
     $maxDeletedPages = 10;
 
     while ($deletedPageNumber <= $maxDeletedPages) {
-        try {
-            $deletedData = callMpsApi('Device/Deleted/ListByDealer', [
-                'DealerCode' => DEFAULT_DEALER_CODE,
-                'PageNumber' => $deletedPageNumber,
-                'PageRows' => 200,
-                'SortColumn' => 'AssetNumber',
-                'SortOrder' => 'Asc'
-            ]);
+        $deletedData = callMpsApiDirect('Device/Deleted/ListByDealer', [
+            'DealerCode' => DEFAULT_DEALER_CODE,
+            'PageNumber' => $deletedPageNumber,
+            'PageRows' => 200,
+            'SortColumn' => 'AssetNumber',
+            'SortOrder' => 'Asc'
+        ]);
 
-            $pageDevices = [];
-            if (isset($deletedData['Items']) && is_array($deletedData['Items'])) {
-                $pageDevices = $deletedData['Items'];
-            } elseif (isset($deletedData['Result']) && is_array($deletedData['Result'])) {
-                $pageDevices = $deletedData['Result'];
-            }
-
-            if (empty($pageDevices)) {
-                break;
-            }
-
-            // Mark as uninstalled and add customer description
-            foreach ($pageDevices as &$device) {
-                $device['IsUninstalled'] = true;
-                // Try to find customer name from existing data
-                if (!isset($device['CustomerDescription'])) {
-                    $device['CustomerDescription'] = $device['CustomerName'] ?? 'Unknown';
-                }
-            }
-            unset($device);
-
-            $deletedDevices = array_merge($deletedDevices, $pageDevices);
-
-            if (count($pageDevices) < 200) {
-                break;
-            }
-
-            $deletedPageNumber++;
-
-        } catch (Exception $e) {
-            error_log("Failed to fetch deleted devices: " . $e->getMessage());
+        if (!$deletedData) {
             break;
         }
+
+        $pageDevices = [];
+        if (isset($deletedData['Items']) && is_array($deletedData['Items'])) {
+            $pageDevices = $deletedData['Items'];
+        } elseif (isset($deletedData['Result']) && is_array($deletedData['Result'])) {
+            $pageDevices = $deletedData['Result'];
+        } elseif (is_array($deletedData)) {
+            $pageDevices = $deletedData;
+        }
+
+        if (empty($pageDevices)) {
+            break;
+        }
+
+        // Mark as uninstalled and add customer description
+        foreach ($pageDevices as &$device) {
+            $device['IsUninstalled'] = true;
+            if (!isset($device['CustomerDescription'])) {
+                $device['CustomerDescription'] = $device['CustomerName'] ?? 'Unknown';
+            }
+        }
+        unset($device);
+
+        $deletedDevices = array_merge($deletedDevices, $pageDevices);
+
+        if (count($pageDevices) < 200) {
+            break;
+        }
+
+        $deletedPageNumber++;
     }
 
     // Combine all devices
