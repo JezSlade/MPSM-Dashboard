@@ -326,6 +326,40 @@ Current: [get-cached-devices.php](cms/api/get-cached-devices.php) still used for
 ## Commit History
 - `7a1afa5` - Create search-devices.php with FilterText
 - `b76b308` - Update frontend to use server-side search
+- `cfe5a38` - Document FilterText search breakthrough
+- `1806026` - Fix search timeout and error handling
+
+## Timeout Fix (Commit: 1806026)
+
+### Issues Encountered
+After deployment, users on different networks experienced:
+1. "JSON.parse: unexpected character at line 1 column 1" - API returned HTML/error instead of JSON
+2. "Search failed: Failed to contact API" - Timeout errors after a few minutes
+
+### Root Cause
+- 15 second timeout was too short for FilterText queries across 5,000+ devices
+- No validation of response format before JSON parsing
+- Poor error logging made debugging difficult
+- PHP execution limits could kill long-running requests
+
+### Fix Applied
+**Increased Timeouts**:
+- HTTP timeout: 15s → 30s
+- PHP execution time: default (30s) → 45s
+
+**Enhanced Error Handling**:
+- Validate response is not empty before JSON decode
+- Check json_last_error() and log parse failures with response preview
+- Catch and log actual PHP errors from file_get_contents()
+- Add response time tracking for monitoring
+
+**Improved Logging**:
+- Log all search attempts with query and result count
+- Log failures with detailed error context
+- Include response preview (first 200 chars) for JSON errors
+- Track and return response time in API result
+
+This provides better resilience on slow networks and comprehensive debugging information.
 
 ## Credits
 Solution developed through systematic API exploration and parameter testing. Key breakthrough: discovering the `FilterText` parameter performs comprehensive server-side search across all device fields.
