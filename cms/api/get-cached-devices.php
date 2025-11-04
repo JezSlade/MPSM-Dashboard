@@ -11,6 +11,10 @@ require '../functions.php';
 
 requireAuth();
 
+// Increase limits for comprehensive device fetching across all customers
+set_time_limit(300); // 5 minutes
+ini_set('memory_limit', '256M');
+
 $cacheKey = 'all-devices-dealer-' . DEFAULT_DEALER_CODE;
 $cacheTTL = 300; // 5 minutes
 
@@ -21,6 +25,8 @@ if ($cached !== null) {
         'devices' => $cached['devices'],
         'total' => $cached['total'],
         'customers' => $cached['customers'],
+        'processed_customers' => $cached['processed_customers'] ?? 0,
+        'deleted_devices' => $cached['deleted_devices'] ?? 0,
         'cached' => true,
         'age' => time() - $cached['timestamp']
     ]);
@@ -183,6 +189,8 @@ try {
         'devices' => $allDevices,
         'total' => count($allDevices),
         'customers' => count($customers),
+        'processed_customers' => $processedCustomers,
+        'deleted_devices' => count($deletedDevices),
         'timestamp' => time()
     ];
 
