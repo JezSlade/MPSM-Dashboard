@@ -24,8 +24,7 @@ if ($cached !== null) {
     jsonSuccess([
         'devices' => $cached['devices'],
         'total' => $cached['total'],
-        'customers' => $cached['customers'],
-        'processed_customers' => $cached['processed_customers'] ?? 0,
+        'installed_devices' => $cached['installed_devices'] ?? 0,
         'deleted_devices' => $cached['deleted_devices'] ?? 0,
         'cached' => true,
         'age' => time() - $cached['timestamp']
@@ -67,91 +66,50 @@ function callMpsApiDirect($action, $params) {
 
 // Not in cache, fetch fresh data
 try {
-    // Step 1: Get all customers for this dealer
-    $customers = [];
-    $customersData = callMpsApiDirect('Customer/List', [
-        'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
-        'PageNumber' => 1,
-        'PageRows' => 1000
-    ]);
-
-    // Customer/List returns wrapped data
-    if ($customersData && is_array($customersData)) {
-        // Try Items first, then Result, then direct array
-        if (isset($customersData['Items']) && is_array($customersData['Items'])) {
-            $customers = $customersData['Items'];
-        } elseif (isset($customersData['Result']) && is_array($customersData['Result'])) {
-            $customers = $customersData['Result'];
-        } else {
-            $customers = $customersData;
-        }
-    }
-
-    // Step 2: Fetch devices for each customer
+    // Step 1: Fetch all installed devices for this dealer (using FilterDealerId like get-devices.php)
     $allDevices = [];
-    $processedCustomers = 0;
+    $pageNumber = 1;
+    $maxPages = 50; // Safety limit
 
-    foreach ($customers as $customer) {
-        $customerCode = $customer['Code'] ?? $customer['CustomerCode'] ?? null;
-        $customerName = $customer['Description'] ?? $customer['CustomerName'] ?? 'Unknown';
+    while ($pageNumber <= $maxPages) {
+        $deviceData = callMpsApiDirect('Device/List', [
+            'FilterDealerId' => DEFAULT_DEALER_ID,
+            'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+            'PageNumber' => $pageNumber,
+            'PageRows' => 200,
+            'SortColumn' => 'AssetNumber',
+            'SortOrder' => 'Asc'
+        ]);
 
-        if (!$customerCode) {
-            continue;
+        if (!$deviceData || !is_array($deviceData)) {
+            break;
         }
 
-        $pageNumber = 1;
-        $maxPages = 20; // Limit pages per customer
-
-        // Fetch all pages for this customer
-        while ($pageNumber <= $maxPages) {
-            $deviceData = callMpsApiDirect('Device/List', [
-                'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
-                'FilterCustomerCodes' => [$customerCode],
-                'PageNumber' => $pageNumber,
-                'PageRows' => 200,
-                'SortColumn' => 'AssetNumber',
-                'SortOrder' => 'Asc'
-            ]);
-
-            if (!$deviceData || !is_array($deviceData)) {
-                break;
-            }
-
-            // Device/List returns wrapped data - try Items, Result, or direct array
-            $pageDevices = [];
-            if (isset($deviceData['Items']) && is_array($deviceData['Items'])) {
-                $pageDevices = $deviceData['Items'];
-            } elseif (isset($deviceData['Result']) && is_array($deviceData['Result'])) {
-                $pageDevices = $deviceData['Result'];
-            } elseif (is_array($deviceData)) {
-                $pageDevices = $deviceData;
-            }
-
-            if (empty($pageDevices)) {
-                break;
-            }
-
-            // Add customer description and code to each device
-            foreach ($pageDevices as &$device) {
-                $device['CustomerDescription'] = $customerName;
-                $device['CustomerCode'] = $customerCode;
-            }
-            unset($device);
-
-            $allDevices = array_merge($allDevices, $pageDevices);
-
-            // If we got less than 200, we're done with this customer
-            if (count($pageDevices) < 200) {
-                break;
-            }
-
-            $pageNumber++;
+        // Device/List returns wrapped data - try Items, Result, or direct array
+        $pageDevices = [];
+        if (isset($deviceData['Items']) && is_array($deviceData['Items'])) {
+            $pageDevices = $deviceData['Items'];
+        } elseif (isset($deviceData['Result']) && is_array($deviceData['Result'])) {
+            $pageDevices = $deviceData['Result'];
+        } elseif (is_array($deviceData)) {
+            $pageDevices = $deviceData;
         }
 
-        $processedCustomers++;
+        if (empty($pageDevices)) {
+            break;
+        }
+
+        $allDevices = array_merge($allDevices, $pageDevices);
+
+        // If we got less than 200, we're done
+        if (count($pageDevices) < 200) {
+            break;
+        }
+
+        $pageNumber++;
     }
 
-    // Step 3: Fetch deleted/uninstalled devices for the dealer
+    // Step 2: Fetch deleted/uninstalled devices for the dealer
     $deletedDevices = [];
     $deletedPageNumber = 1;
     $maxDeletedPages = 10;
@@ -201,8 +159,7 @@ try {
     $cacheData = [
         'devices' => $allDevices,
         'total' => count($allDevices),
-        'customers' => count($customers),
-        'processed_customers' => $processedCustomers,
+        'installed_devices' => count($allDevices) - count($deletedDevices),
         'deleted_devices' => count($deletedDevices),
         'timestamp' => time()
     ];
@@ -214,8 +171,7 @@ try {
     jsonSuccess([
         'devices' => $allDevices,
         'total' => count($allDevices),
-        'customers' => count($customers),
-        'processed_customers' => $processedCustomers,
+        'installed_devices' => count($allDevices) - count($deletedDevices),
         'deleted_devices' => count($deletedDevices),
         'cached' => false,
         'refreshed' => true
