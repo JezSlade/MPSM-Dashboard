@@ -32,8 +32,8 @@ if (empty($deviceId) && empty($serialNumber)) {
     exit;
 }
 
-// Helper function to call MPS API
-function callMpsApi($action, $params) {
+// Helper function to call MPS API query endpoint
+function callMpsApiQuery($action, $params) {
     $payload = json_encode([
         'action' => $action,
         'params' => $params
@@ -76,7 +76,7 @@ try {
     // Step 1: Get base device info
     // Try to get device by searching with FilterText if we have serial number
     if (!empty($serialNumber)) {
-        $deviceData = callMpsApi('Device/List', [
+        $deviceData = callMpsApiQuery('Device/List', [
             'FilterDealerId' => DEFAULT_DEALER_ID,
             'FilterCustomerCodes' => !empty($customerCode) ? [$customerCode] : null,
             'FilterText' => $serialNumber,
@@ -96,7 +96,7 @@ try {
 
     // If we didn't find it by serial, try searching by FilterText with deviceId
     if (!$result['device'] && !empty($deviceId)) {
-        $deviceData = callMpsApi('Device/List', [
+        $deviceData = callMpsApiQuery('Device/List', [
             'FilterDealerId' => DEFAULT_DEALER_ID,
             'FilterCustomerCodes' => !empty($customerCode) ? [$customerCode] : null,
             'FilterText' => $deviceId,
@@ -133,7 +133,7 @@ try {
     // Step 2: Get Counter/ListDetailed for detailed meter readings
     if (!empty($foundSerial) && !empty($foundCustomerCode)) {
         try {
-            $counterData = callMpsApi('Counter/ListDetailed', [
+            $counterData = callMpsApiQuery('Counter/ListDetailed', [
                 'DealerCode' => DEFAULT_DEALER_CODE,
                 'CustomerCode' => $foundCustomerCode,
                 'SerialNumber' => $foundSerial,
@@ -158,7 +158,7 @@ try {
     // Step 3: Get SdsAction/GetDeviceActions for health and recommended actions
     if (!empty($foundSerial)) {
         try {
-            $healthData = callMpsApi('SdsAction/GetDeviceActions', [
+            $healthData = callMpsApiQuery('SdsAction/GetDeviceActions', [
                 'DealerCode' => DEFAULT_DEALER_CODE,
                 'DeviceSerialNumber' => $foundSerial
             ]);
@@ -174,7 +174,7 @@ try {
     // Step 4: Get SupplyAlert/List for this device
     if (!empty($foundCustomerCode)) {
         try {
-            $alertData = callMpsApi('SupplyAlert/List', [
+            $alertData = callMpsApiQuery('SupplyAlert/List', [
                 'DealerId' => DEFAULT_DEALER_ID,
                 'CustomerCodes' => [$foundCustomerCode],
                 'PageNumber' => 1,
