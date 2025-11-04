@@ -3652,43 +3652,10 @@ const MPSM = (function() {
 
     /**
      * Global device search with autocomplete
-     * Simple pagination approach - manually loop through pages
+     * Uses server-side search with FilterText for instant results
+     * Server searches ALL fields across ALL customers instantly
      */
     let globalSearchTimeout = null;
-    let globalSearchCache = [];
-    let globalSearchLastFetch = 0;
-    const GLOBAL_SEARCH_CACHE_DURATION = 300000; // Cache for 5 minutes
-
-    async function fetchAllDevicesForSearch() {
-        // Return cached data if fresh
-        const now = Date.now();
-        if (globalSearchCache.length > 0 && (now - globalSearchLastFetch) < GLOBAL_SEARCH_CACHE_DURATION) {
-            debugLog(`Using cached device data (${globalSearchCache.length} devices)`, 'info');
-            return globalSearchCache;
-        }
-
-        debugLog('[SEARCH] Fetching devices from server cache...', 'info');
-
-        try {
-            // Use server-side cached endpoint (refreshed every 5 min by cron)
-            // This eliminates 82+ sequential API calls
-            const response = await fetch('api/get-cached-devices.php');
-            const data = await response.json();
-
-            if (data.success && Array.isArray(data.devices)) {
-                globalSearchCache = data.devices;
-                globalSearchLastFetch = now;
-                debugLog(`[SEARCH] Loaded ${data.devices.length} devices from cache (age: ${data.age || 0}s)`, 'info');
-                return data.devices;
-            } else {
-                throw new Error(data.error || 'Failed to fetch cached devices');
-            }
-        } catch (err) {
-            debugLog(`[SEARCH] Error fetching cached devices: ${err.message}`, 'error');
-            // Fallback to empty array rather than making 82 API calls
-            return [];
-        }
-    }
 
     async function initGlobalDeviceSearch() {
         const searchInput = document.getElementById('global-device-search');
@@ -3713,41 +3680,21 @@ const MPSM = (function() {
                     resultsContainer.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-spin"></i> Searching all devices...</div>';
                     resultsContainer.style.display = 'block';
 
-                    // Fetch all devices across all customers with pagination
-                    const devices = await fetchAllDevicesForSearch();
-                    debugLog(`Searching ${devices.length} devices for "${query}"`, 'info');
-                    const queryLower = query.toLowerCase();
+                    // Use server-side search with FilterText parameter
+                    // This searches ALL fields across ALL customers instantly
+                    debugLog(`[SEARCH] Server-side search for "${query}"`, 'info');
+                    const response = await fetch(`api/search-devices.php?query=${encodeURIComponent(query)}`);
+                    const data = await response.json();
 
-                    // Search across multiple fields including ExternalIdentifier
-                    let matchCount = 0;
-                    const matches = devices.filter(device => {
-                        const equipmentId = getEquipmentIdFromDevice(device).toLowerCase();
-                        const serial = (device.SerialNumber || device.DeviceSerialNumber || '').toLowerCase();
-                        const model = (device.ProductModel || device.Product?.Model || '').toLowerCase();
-                        const customer = (device.CustomerDescription || '').toLowerCase();
-                        const externalId = (device.ExternalIdentifier || device.ExternalId || '').toLowerCase();
-                        const assetNumber = (device.AssetNumber || device.Asset || '').toLowerCase();
+                    if (!data.success) {
+                        throw new Error(data.error || 'Search failed');
+                    }
 
-                        const isMatch = equipmentId.includes(queryLower) ||
-                               serial.includes(queryLower) ||
-                               model.includes(queryLower) ||
-                               customer.includes(queryLower) ||
-                               externalId.includes(queryLower) ||
-                               assetNumber.includes(queryLower);
-
-                        // Debug: Log first few matches
-                        if (isMatch && matchCount < 3) {
-                            debugLog(`Match found: ExtId="${externalId}", Serial="${serial}", Equipment="${equipmentId}"`, 'info');
-                            matchCount++;
-                        }
-
-                        return isMatch;
-                    }).slice(0, 10); // Limit to 10 results
-
-                    debugLog(`Found ${matches.length} matches for "${query}"`, 'info');
+                    const matches = (data.devices || []).slice(0, 10); // Limit to 10 results
+                    debugLog(`[SEARCH] Found ${data.total || 0} matches for "${query}", showing ${matches.length}`, 'info');
 
                     if (matches.length === 0) {
-                        resultsContainer.innerHTML = `<div class="search-empty">No devices found (searched ${devices.length} devices)</div>`;
+                        resultsContainer.innerHTML = `<div class="search-empty">No devices found matching "${query}"</div>`;
                         return;
                     }
 
