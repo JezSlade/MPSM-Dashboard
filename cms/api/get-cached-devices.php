@@ -84,7 +84,7 @@ try {
             'ProductBrand' => null,
             'ProductModel' => null,
             'OfficeId' => null,
-            'Status' => 1,  // Active devices only
+            'Status' => null,  // null = ALL devices (active + inactive)
             'FilterText' => null,
             'PageNumber' => $pageNumber,
             'PageRows' => 50,  // SDK uses 50 (API returns up to 100)
