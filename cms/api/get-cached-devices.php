@@ -69,17 +69,22 @@ function callMpsApiDirect($action, $params) {
 try {
     // Step 1: Get all customers for this dealer
     $customers = [];
-    $customersData = callMpsApiDirect('Customer/GetCustomers', [
-        'DealerCode' => DEFAULT_DEALER_CODE,
+    $customersData = callMpsApiDirect('Customer/List', [
+        'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
         'PageNumber' => 1,
-        'PageRows' => 500,
-        'SortColumn' => 'Description',
-        'SortOrder' => 'Asc'
+        'PageRows' => 1000
     ]);
 
-    // Customer/GetCustomers returns array directly, not wrapped
+    // Customer/List returns wrapped data
     if ($customersData && is_array($customersData)) {
-        $customers = $customersData;
+        // Try Items first, then Result, then direct array
+        if (isset($customersData['Items']) && is_array($customersData['Items'])) {
+            $customers = $customersData['Items'];
+        } elseif (isset($customersData['Result']) && is_array($customersData['Result'])) {
+            $customers = $customersData['Result'];
+        } else {
+            $customers = $customersData;
+        }
     }
 
     // Step 2: Fetch devices for each customer
@@ -87,10 +92,10 @@ try {
     $processedCustomers = 0;
 
     foreach ($customers as $customer) {
-        $customerId = $customer['Id'] ?? $customer['CustomerId'] ?? null;
+        $customerCode = $customer['Code'] ?? $customer['CustomerCode'] ?? null;
         $customerName = $customer['Description'] ?? $customer['CustomerName'] ?? 'Unknown';
 
-        if (!$customerId) {
+        if (!$customerCode) {
             continue;
         }
 
@@ -100,7 +105,8 @@ try {
         // Fetch all pages for this customer
         while ($pageNumber <= $maxPages) {
             $deviceData = callMpsApiDirect('Device/List', [
-                'FilterCustomerIds' => [$customerId],
+                'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+                'FilterCustomerCodes' => [$customerCode],
                 'PageNumber' => $pageNumber,
                 'PageRows' => 200,
                 'SortColumn' => 'AssetNumber',
@@ -111,17 +117,24 @@ try {
                 break;
             }
 
-            // Device/List returns array directly
-            $pageDevices = $deviceData;
+            // Device/List returns wrapped data - try Items, Result, or direct array
+            $pageDevices = [];
+            if (isset($deviceData['Items']) && is_array($deviceData['Items'])) {
+                $pageDevices = $deviceData['Items'];
+            } elseif (isset($deviceData['Result']) && is_array($deviceData['Result'])) {
+                $pageDevices = $deviceData['Result'];
+            } elseif (is_array($deviceData)) {
+                $pageDevices = $deviceData;
+            }
 
             if (empty($pageDevices)) {
                 break;
             }
 
-            // Add customer description to each device
+            // Add customer description and code to each device
             foreach ($pageDevices as &$device) {
                 $device['CustomerDescription'] = $customerName;
-                $device['CustomerId'] = $customerId;
+                $device['CustomerCode'] = $customerCode;
             }
             unset($device);
 
@@ -156,7 +169,7 @@ try {
             break;
         }
 
-        // Device/Deleted/ListByDealer returns array directly
+        // Device/Deleted/ListByDealer returns direct array (tested and confirmed)
         $pageDevices = $deletedData;
 
         if (empty($pageDevices)) {
