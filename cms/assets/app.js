@@ -2390,8 +2390,11 @@ const MPSM = (function() {
                 defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: alert => {
                     const deviceId = findDeviceIdForAlert(alert);
-                    if (deviceId) {
-                        openDeviceModal(deviceId);
+                    const serialNumber = alert.SerialNumber || alert.DeviceSerialNumber || '';
+                    const customerCode = alert.CustomerCode || '';
+
+                    if (deviceId || serialNumber) {
+                        openDeviceModal(deviceId, serialNumber, customerCode);
                     } else {
                         showToast('Device details are not available for this alert yet.', 'info');
                     }
@@ -3476,8 +3479,11 @@ const MPSM = (function() {
                     defaultSort: { column: 'EquipmentId', direction: 'asc' },
                     onRowClick: alert => {
                         const deviceId = findDeviceIdForAlert(alert);
-                        if (deviceId) {
-                            openDeviceModal(deviceId);
+                        const serialNumber = alert.SerialNumber || alert.DeviceSerialNumber || '';
+                        const customerCode = alert.CustomerCode || '';
+
+                        if (deviceId || serialNumber) {
+                            openDeviceModal(deviceId, serialNumber, customerCode);
                         } else {
                             showToast('Device details are not available for this alert yet.', 'info');
                         }
