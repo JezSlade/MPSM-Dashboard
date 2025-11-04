@@ -97,6 +97,10 @@ $preferences = getUserPreferences($userId);
                     <i class="fas fa-heartbeat"></i>
                     <span>System Monitoring</span>
                 </button>
+                <button class="admin-nav-btn" data-section="logs">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Error Logs</span>
+                </button>
                 <button class="admin-nav-btn" data-section="catalog">
                     <i class="fas fa-sitemap"></i>
                     <span>Endpoint Catalog</span>
@@ -200,6 +204,40 @@ $preferences = getUserPreferences($userId);
                         </div>
                     </section>
                 </div>
+            </div>
+
+            <!-- Error Logs Section -->
+            <div id="admin-logs" class="admin-section">
+                <section class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-file-alt"></i> Error Logs</h2>
+                        <div class="error-log-controls">
+                            <select id="log-level-filter" class="form-control">
+                                <option value="">All Levels</option>
+                                <option value="error">Errors Only</option>
+                                <option value="warning">Warnings</option>
+                                <option value="search">Search Events</option>
+                                <option value="api">API Calls</option>
+                            </select>
+                            <input type="text" id="log-search-filter" class="form-control" placeholder="Filter logs...">
+                            <select id="log-lines-count" class="form-control">
+                                <option value="50">Last 50</option>
+                                <option value="100" selected>Last 100</option>
+                                <option value="200">Last 200</option>
+                                <option value="500">Last 500</option>
+                            </select>
+                            <button id="refresh-logs" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button id="auto-refresh-logs" class="btn btn-secondary" data-active="false">
+                                <i class="fas fa-play"></i> Auto-Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div id="error-logs-display" class="card-body">
+                        <div class="loading">Loading error logs...</div>
+                    </div>
+                </section>
             </div>
 
             <!-- Dashboard Configuration Section -->
@@ -311,6 +349,7 @@ $preferences = getUserPreferences($userId);
     <script src="assets/js/card-registry.js"></script>
     <script src="assets/js/card-manager.js"></script>
     <script src="assets/app.js"></script>
+    <script src="assets/error-logs.js"></script>
     <script src="api/cache-engine.js"></script>
 </body>
 </html>
