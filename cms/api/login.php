@@ -11,11 +11,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonError('Method not allowed', 405);
 }
 
-$data = json_decode(file_get_contents('php://input'), true);
+// Get raw input
+$rawInput = file_get_contents('php://input');
+$data = json_decode($rawInput, true);
+
+// Check for JSON decode errors
+if (json_last_error() !== JSON_ERROR_NONE) {
+    error_log("Login API - JSON decode error: " . json_last_error_msg());
+    error_log("Login API - Raw input: " . $rawInput);
+}
+
 $username = $data['username'] ?? '';
 $password = $data['password'] ?? '';
 
 if (empty($username) || empty($password)) {
+    error_log("Login API - Empty credentials. Username: '$username', Data: " . print_r($data, true));
     jsonError('Username and password required', 400);
 }
 
