@@ -11,14 +11,33 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonError('Method not allowed', 405);
 }
 
-// Get raw input
-$rawInput = file_get_contents('php://input');
-$data = json_decode($rawInput, true);
+// Try multiple input methods (fixes php://input issues with some server configs)
+$data = [];
 
-// Check for JSON decode errors
-if (json_last_error() !== JSON_ERROR_NONE) {
-    error_log("Login API - JSON decode error: " . json_last_error_msg());
-    error_log("Login API - Raw input: " . $rawInput);
+// Method 1: JSON from php://input (most common)
+$rawInput = @file_get_contents('php://input');
+if ($rawInput && !empty($rawInput)) {
+    $decoded = json_decode($rawInput, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        $data = $decoded;
+    }
+}
+
+// Method 2: POST parameters (fallback)
+if (empty($data) && !empty($_POST)) {
+    $data = $_POST;
+}
+
+// Method 3: Raw POST data (another fallback)
+if (empty($data) && isset($_SERVER['CONTENT_TYPE']) &&
+    strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
+    $rawInput = @file_get_contents('php://input');
+    if ($rawInput) {
+        $decoded = @json_decode($rawInput, true);
+        if (is_array($decoded)) {
+            $data = $decoded;
+        }
+    }
 }
 
 $username = $data['username'] ?? '';
