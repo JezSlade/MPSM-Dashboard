@@ -1253,11 +1253,13 @@ const MPSM = (function() {
             cardSelection = new Set(state.cards);
         }
 
-        CardManager.setContext({
-            dealerCode: state.dealerCode,
-            dealerId: state.dealerId,
-            customerCode: state.customerCode
-        });
+        if (typeof CardManager !== 'undefined' && typeof CardManager.setContext === 'function') {
+            CardManager.setContext({
+                dealerCode: state.dealerCode,
+                dealerId: state.dealerId,
+                customerCode: state.customerCode
+            });
+        }
 
         const desiredOrder = state.cards.length ? state.cards.slice() : Array.from(cardSelection);
         if (desiredOrder.length) {
@@ -1427,11 +1429,13 @@ const MPSM = (function() {
         state.alertsTotal = 0;
         state.connectorsTotal = 0;
 
-        CardManager.setContext({
-            dealerCode: state.dealerCode,
-            dealerId: state.dealerId,
-            customerCode: state.customerCode
-        });
+        if (typeof CardManager !== 'undefined' && typeof CardManager.setContext === 'function') {
+            CardManager.setContext({
+                dealerCode: state.dealerCode,
+                dealerId: state.dealerId,
+                customerCode: state.customerCode
+            });
+        }
 
         debugLog(`Customer selected: ${code}`, 'info');
         loadDashboard();
@@ -1735,11 +1739,13 @@ const MPSM = (function() {
             state.cards = sanitizedLayout.slice();
             cardSelection = new Set(state.cards);
 
-            CardManager.setContext({
-                dealerCode: state.dealerCode,
-                dealerId: state.dealerId,
-                customerCode: state.customerCode
-            });
+            if (typeof CardManager !== 'undefined' && typeof CardManager.setContext === 'function') {
+                CardManager.setContext({
+                    dealerCode: state.dealerCode,
+                    dealerId: state.dealerId,
+                    customerCode: state.customerCode
+                });
+            }
             if (state.cards.length) {
                 applyCardLayout(state.cards, { persist: false, syncRemote: false });
                 persistCardLayout(state.cards, false);
@@ -1760,11 +1766,13 @@ const MPSM = (function() {
      */
     async function loadDashboard() {
         try {
-            CardManager.setContext({
-                dealerCode: state.dealerCode,
-                dealerId: state.dealerId,
-                customerCode: state.customerCode
-            });
+            if (typeof CardManager !== 'undefined' && typeof CardManager.setContext === 'function') {
+                CardManager.setContext({
+                    dealerCode: state.dealerCode,
+                    dealerId: state.dealerId,
+                    customerCode: state.customerCode
+                });
+            }
             if (state.cards.length) {
                 applyCardLayout(state.cards, { persist: false, syncRemote: false });
             }
