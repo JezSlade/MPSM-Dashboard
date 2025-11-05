@@ -43,6 +43,9 @@ $preferences = getUserPreferences($userId);
                 </div>
             </div>
             <div class="header-actions">
+                <a href="panel-message-monitor.php" class="btn-icon" title="Panel Messages">
+                    <i class="fas fa-satellite-dish"></i>
+                </a>
                 <button id="theme-toggle" class="btn-icon" title="Toggle theme">
                     <i class="fas fa-moon"></i>
                 </button>

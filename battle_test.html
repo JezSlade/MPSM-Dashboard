@@ -277,6 +277,7 @@
                 <button class="btn btn-primary" id="run-all">▶️ Run All Tests</button>
                 <button class="btn btn-secondary" id="run-api">🔌 API Tests Only</button>
                 <button class="btn btn-secondary" id="run-search">🔍 Search Tests Only</button>
+                <button class="btn btn-secondary" id="run-panel">📡 Panel Tests Only</button>
                 <button class="btn btn-secondary" id="clear">🗑️ Clear Results</button>
             </div>
 
@@ -311,18 +312,28 @@
                 </div>
                 <div class="test-section-body" id="tests-data"></div>
             </div>
+
+            <div class="test-section" id="section-panel">
+                <div class="test-section-header">
+                    <h2>📡 Panel Messages</h2>
+                    <span>Real-time callback system, monitoring, storage</span>
+                </div>
+                <div class="test-section-body" id="tests-panel"></div>
+            </div>
         </div>
     </div>
 
     <script>
         const BASE_URL = 'https://mpsm.resolutionsbydesign.us/cms';
+        const MPS_API_URL = 'https://mpsm.resolutionsbydesign.us/mps-api';
 
         const tests = {
             core: [
                 { name: 'Site loads (HTTP 200 or 302)', test: testSiteLoads },
                 { name: 'Main CSS loads', test: () => testAsset('assets/style.css') },
                 { name: 'Main JS loads', test: () => testAsset('assets/app.js') },
-                { name: 'Error logs JS loads', test: () => testAsset('assets/error-logs.js') }
+                { name: 'Error logs JS loads', test: () => testAsset('assets/error-logs.js') },
+                { name: 'Panel messages JS loads', test: () => testAsset('assets/panel-messages.js') }
             ],
             api: [
                 { name: 'Login API structure', test: testLoginAPI },
@@ -330,7 +341,8 @@
                 { name: 'Search devices API structure', test: testSearchDevicesAPI },
                 { name: 'Deep-dive API structure', test: testDeepDiveAPI },
                 { name: 'Error logs API structure', test: testErrorLogsAPI },
-                { name: 'Get customers API', test: testGetCustomersAPI }
+                { name: 'Get customers API', test: testGetCustomersAPI },
+                { name: 'Panel messages API', test: testPanelMessagesAPI }
             ],
             search: [
                 { name: 'Search with 2+ characters', test: () => testSearch('HP') },
@@ -342,6 +354,12 @@
                 { name: 'Cached devices returns data', test: testCacheHasData },
                 { name: 'Device cache includes customers', test: testCacheHasCustomers },
                 { name: 'Deep-dive returns device fields', test: testDeepDiveDataStructure }
+            ],
+            panel: [
+                { name: 'Panel monitor page loads', test: testPanelMonitorLoads },
+                { name: 'Panel callback endpoint exists', test: testPanelCallbackEndpoint },
+                { name: 'Panel messages have valid structure', test: testPanelMessageStructure },
+                { name: 'Panel messages can be retrieved', test: testPanelMessagesRetrieval }
             ]
         };
 
@@ -472,6 +490,59 @@
             return { pass: false, details: data.error || 'No device data' };
         }
 
+        async function testPanelMessagesAPI() {
+            const response = await fetch(BASE_URL + '/api/get-panel-messages.php?limit=1');
+            const data = await response.json();
+            if (data.hasOwnProperty('success') && data.hasOwnProperty('messages')) {
+                const count = Array.isArray(data.messages) ? data.messages.length : 0;
+                return { pass: true, details: `API working (${count} messages)` };
+            }
+            return { pass: false, details: 'Invalid API response' };
+        }
+
+        async function testPanelMonitorLoads() {
+            const response = await fetch(BASE_URL + '/panel-message-monitor.php');
+            if (response.status === 200 || response.status === 302) {
+                return { pass: true, details: `HTTP ${response.status}` };
+            }
+            return { pass: false, details: `HTTP ${response.status}` };
+        }
+
+        async function testPanelCallbackEndpoint() {
+            const response = await fetch(MPS_API_URL + '/callbacks/panel-message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ callbackSecret: 'wrong-secret' })
+            });
+            const data = await response.json();
+            // Should reject bad secret
+            if (data.success === false) {
+                return { pass: true, details: 'Endpoint validates secret correctly' };
+            }
+            return { pass: false, details: 'Security validation not working' };
+        }
+
+        async function testPanelMessageStructure() {
+            const response = await fetch(BASE_URL + '/api/get-panel-messages.php?limit=1');
+            const data = await response.json();
+            if (data.success && data.messages && data.messages.length > 0) {
+                const msg = data.messages[0];
+                if (msg.hasOwnProperty('id') && msg.hasOwnProperty('received_at')) {
+                    return { pass: true, details: 'Messages have valid structure' };
+                }
+            }
+            return { pass: false, details: 'Invalid message structure or no messages' };
+        }
+
+        async function testPanelMessagesRetrieval() {
+            const response = await fetch(BASE_URL + '/api/get-panel-messages.php?limit=10');
+            const data = await response.json();
+            if (data.success && Array.isArray(data.messages)) {
+                return { pass: true, details: `Retrieved ${data.messages.length} messages` };
+            }
+            return { pass: false, details: 'Failed to retrieve messages' };
+        }
+
         // UI Functions
         function createTestElement(testName, section) {
             const el = document.createElement('div');
@@ -576,6 +647,7 @@
         document.getElementById('run-all').addEventListener('click', runAllTests);
         document.getElementById('run-api').addEventListener('click', () => runSectionTests('api'));
         document.getElementById('run-search').addEventListener('click', () => runSectionTests('search'));
+        document.getElementById('run-panel').addEventListener('click', () => runSectionTests('panel'));
         document.getElementById('clear').addEventListener('click', clearResults);
 
         // Initialize
