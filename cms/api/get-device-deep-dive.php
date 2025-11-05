@@ -70,6 +70,7 @@ try {
         'counterDetails' => null,
         'deviceHealth' => null,
         'supplyAlerts' => null,
+        'panelHistory' => null,
         'errors' => []
     ];
 
@@ -197,6 +198,54 @@ try {
             }
         } catch (Exception $e) {
             $result['errors'][] = "Supply alerts: " . $e->getMessage();
+        }
+    }
+
+    // Step 5: Get panel message history from database (most recent 100)
+    if (!empty($foundSerial)) {
+        try {
+            $pdo = getDatabase();
+            $table = DB_PREFIX . 'panel_messages';
+
+            $sql = "SELECT
+                        id,
+                        received_at,
+                        customer_code,
+                        customer_description,
+                        maintenance_alert_code,
+                        maintenance_alert_id,
+                        panel_configuration,
+                        payload
+                    FROM {$table}
+                    WHERE device_serial = :serialNumber
+                    ORDER BY received_at DESC
+                    LIMIT 100";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':serialNumber' => $foundSerial]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $messages = [];
+            foreach ($rows as $row) {
+                $decodedPayload = json_decode($row['payload'], true);
+                $messages[] = [
+                    'id' => (int)$row['id'],
+                    'received_at' => $row['received_at'],
+                    'customer_code' => $row['customer_code'],
+                    'customer_description' => $row['customer_description'],
+                    'maintenance_alert_code' => $row['maintenance_alert_code'],
+                    'maintenance_alert_id' => $row['maintenance_alert_id'],
+                    'panel_configuration' => $row['panel_configuration'],
+                    'payload' => $decodedPayload ?? $row['payload']
+                ];
+            }
+
+            $result['panelHistory'] = [
+                'total' => count($messages),
+                'messages' => $messages
+            ];
+        } catch (Exception $e) {
+            $result['errors'][] = "Panel history: " . $e->getMessage();
         }
     }
 
