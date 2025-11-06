@@ -12,7 +12,7 @@
  * Run every 5 minutes via cron or Task Scheduler
  */
 
-set_time_limit(600); // 10 minutes max
+set_time_limit(1200); // 20 minutes max (increased for large drill-down operations)
 ini_set('memory_limit', '512M');
 
 require '../config.php';
@@ -106,7 +106,7 @@ try {
         $drilldownQueue = array_values($devices);
         $deviceAttempts = [];
         $processedCount = 0;
-        $drilldownDelayMicroseconds = 50000; // 50ms between requests
+        $drilldownDelayMicroseconds = 250000; // 250ms between requests (increased to reduce rate limit hits)
 
         while (!empty($drilldownQueue)) {
             $device = array_shift($drilldownQueue);
@@ -137,7 +137,7 @@ try {
                 $attempts = ($deviceAttempts[$serialNumber] ?? 0) + 1;
                 $deviceAttempts[$serialNumber] = $attempts;
 
-                if ($attempts > 6) {
+                if ($attempts > 10) {
                     logMessage("Rate limit persisted for {$serialNumber} after {$attempts} attempts; deferring to next run.");
                     $stats['errors']++;
                     unset($deviceAttempts[$serialNumber]);

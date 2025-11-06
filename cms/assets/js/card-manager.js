@@ -5,12 +5,15 @@
 const CardManager = (function () {
     'use strict';
 
+    const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
     const state = {
         container: null,
         cards: [],
         enabled: [],
         context: null,
         cardSnapshots: {},
+        cardDataCache: {}, // { cardId: { data: snapshot, timestamp: Date.now(), context: contextHash } }
         preferencesProvider: null,
         onCardData: null
     };
@@ -39,6 +42,43 @@ const CardManager = (function () {
         state.context = Object.assign({}, context);
     }
 
+    function getContextHash(context) {
+        // Create a simple hash of the context to detect changes
+        return JSON.stringify(context || {});
+    }
+
+    function getCachedData(cardId) {
+        const cached = state.cardDataCache[cardId];
+        if (!cached) return null;
+
+        const age = Date.now() - cached.timestamp;
+        const contextHash = getContextHash(state.context);
+
+        // Invalidate if TTL expired or context changed
+        if (age > CACHE_TTL_MS || cached.context !== contextHash) {
+            delete state.cardDataCache[cardId];
+            return null;
+        }
+
+        return cached.data;
+    }
+
+    function setCachedData(cardId, snapshot) {
+        state.cardDataCache[cardId] = {
+            data: snapshot,
+            timestamp: Date.now(),
+            context: getContextHash(state.context)
+        };
+    }
+
+    function clearCache(cardId = null) {
+        if (cardId) {
+            delete state.cardDataCache[cardId];
+        } else {
+            state.cardDataCache = {};
+        }
+    }
+
     function renderSkeleton() {
         state.container.innerHTML = '';
         state.enabled.forEach(cardId => {
@@ -63,15 +103,19 @@ const CardManager = (function () {
         });
     }
 
-    async function refreshAll() {
+    async function refreshAll(force = false) {
         if (!state.context) {
             throw new Error('CardManager context not set');
         }
 
-        await Promise.all(state.enabled.map(id => refreshCard(id)));
+        if (force) {
+            clearCache();
+        }
+
+        await Promise.all(state.enabled.map(id => refreshCard(id, force)));
     }
 
-    async function refreshCard(cardId) {
+    async function refreshCard(cardId, force = false) {
         const definition = state.cards.find(card => card.id === cardId);
         if (!definition) return;
 
@@ -79,11 +123,25 @@ const CardManager = (function () {
         if (!cardEl) return;
 
         const body = cardEl.querySelector('.card-body');
+
+        // Check cache first (unless forced refresh)
+        if (!force) {
+            const cachedSnapshot = getCachedData(cardId);
+            if (cachedSnapshot) {
+                state.cardSnapshots[cardId] = cachedSnapshot;
+                renderSnapshot(cardEl, definition, cachedSnapshot);
+                state.onCardData(cardId, cachedSnapshot);
+                return; // Use cached data, skip API call
+            }
+        }
+
+        // No cache or forced refresh - show loading and fetch
         body.innerHTML = '<div class="card-loading"><i class="fas fa-spinner fa-spin"></i></div>';
 
         try {
             const snapshot = await definition.load(createHelpers(), state.context);
             state.cardSnapshots[cardId] = snapshot;
+            setCachedData(cardId, snapshot); // Cache the result
             renderSnapshot(cardEl, definition, snapshot);
             state.onCardData(cardId, snapshot);
         } catch (error) {
@@ -229,6 +287,7 @@ const CardManager = (function () {
         setContext,
         refreshAll,
         refreshCard,
+        clearCache,
         getAvailableCards,
         getEnabledCards,
         setEnabledCards
