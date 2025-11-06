@@ -239,10 +239,11 @@ function fetchAllDevices(): array {
     $dealerCode = DEFAULT_DEALER_CODE;
     $allDevices = [];
 
-    // Fetch installed devices across entire dealer (mirrors working params from get-cached-devices.php)
+    // Fetch ALL devices across entire MPSM account (NO dealer/customer filtering)
+    // User requirement: "ALL devices from the MPSM API should be cataloged in the db"
     $installedBaseParams = [
-        'FilterDealerId' => DEFAULT_DEALER_ID,
-        'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+        'FilterDealerId' => null,  // REMOVED: Get devices from ALL dealers
+        'FilterDealerCodes' => null,  // REMOVED: Get devices from ALL dealer codes
         'FilterCustomerCodes' => null,
         'ProductBrand' => null,
         'ProductModel' => null,
@@ -254,7 +255,8 @@ function fetchAllDevices(): array {
         'SortOrder' => 0,
     ];
 
-    for ($pageNumber = 1; $pageNumber <= 50; $pageNumber++) {
+    // Increased from 50 to 200 pages to handle thousands of devices (50 per page = 10,000 max)
+    for ($pageNumber = 1; $pageNumber <= 200; $pageNumber++) {
         $params = $installedBaseParams;
         $params['PageNumber'] = $pageNumber;
         $params = array_filter($params, static function ($value) {
