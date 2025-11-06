@@ -691,6 +691,47 @@ function jsonSuccess($data = []) {
 }
 
 /**
+ * Ensure device CRUD feature is enabled
+ */
+function ensureDeviceCrudEnabled(): void
+{
+    if (!defined('FEATURE_DEVICE_CRUD') || FEATURE_DEVICE_CRUD !== true) {
+        jsonError('Device lifecycle management is currently disabled', 403);
+    }
+}
+
+/**
+ * Append device CRUD activity to audit log
+ *
+ * @param string $action Action name (create/update/delete/list)
+ * @param array $context Request context to log
+ * @param array|null $response Response payload or null on failure
+ * @param string $status success|error
+ * @param string|null $message Additional contextual message
+ */
+function logDeviceCrudAction(string $action, array $context, ?array $response, string $status = 'success', ?string $message = null): void
+{
+    $logDir = __DIR__ . '/logs';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+
+    $logFile = $logDir . '/device-crud-' . date('Y-m-d') . '.log';
+    $entry = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'user' => $_SESSION['username'] ?? 'unknown',
+        'action' => $action,
+        'status' => $status,
+        'context' => $context,
+        'response' => $response,
+        'message' => $message,
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+    ];
+
+    file_put_contents($logFile, json_encode($entry, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND | LOCK_EX);
+}
+
+/**
  * Call MPS API via query endpoint (standardized)
  * Replaces duplicate callMpsApiDirect() functions in various endpoints
  *

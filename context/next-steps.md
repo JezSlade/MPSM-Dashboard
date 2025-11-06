@@ -19,3 +19,7 @@ Updated: 2025-11-06 13:50 UTC
 - Add a light-weight alert on the Admin Database Monitor card whenever drill-down coverage drops below 90 % so on-call staff can launch a warm-up immediately.
 - Document the new sample tables (device cache, drill-down cache, panel messages, payload debugger) in the runbook so new engineers know how to interpret them.
 - Keep an eye on `panel-message-monitor.php` iframe behaviour; if browsers reintroduce frame restrictions, move the debugger into an in-page tab instead of using an `<iframe>`.
+
+## Maybe Later
+
+- Stand up the async worker fleet (Redis/Rabbit-backed queues for `cache.refresh.fast`, `cache.refresh.deep`, `api.prefetch`, `webhook.enrich`, `alerts.evaluate`, and `logs.rollup`) to offload heavy cache hydration, enrichment, and alert evaluation from request/response code paths while keeping ActionCache/MySQL fresh.

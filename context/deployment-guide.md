@@ -208,22 +208,19 @@ https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php
 - Returns JSON with stats
 - Populates `mpsm_cache_devices` and `mpsm_cache_device_drilldown` tables
 
-#### 4. Schedule Cron Job (2 minutes)
+#### 4. Cron Schedule (Immutable)
 
-**To keep cache fresh, schedule every 5 minutes:**
+These jobs are already configured in cPanel and must remain active unless the owner updates them:
 
-**Linux/cPanel:**
 ```bash
-*/5 * * * * curl -s https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php > /dev/null 2>&1
+*/5 * * * * /usr/bin/timeout 240 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?skipDrilldown=1" >/dev/null 2>&1
+0 0 * * * /usr/bin/timeout 1800 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1" >/dev/null 2>&1
+0,30 * * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/mps-api/health" >> /home/youruser/logs/mps-api-health.log
+0 0 * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/get-database-monitor.php" >> /home/youruser/logs/database-monitor.log
+0 0 * * 0 /usr/bin/php /home/youruser/public_html/cms/api/cleanup-payload-debug.php >/dev/null 2>&1
 ```
 
-**Windows Task Scheduler:**
-```powershell
-# Create scheduled task:
-# Program: curl.exe
-# Arguments: -s https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php
-# Trigger: Daily, repeat every 5 minutes indefinitely
-```
+> These are the canonical schedules for cache warm-up, deep refresh, API health logging, database monitor snapshots, and payload debugger cleanup. Update only alongside coordinated documentation changes.
 
 #### 5. Test Live Site (5 minutes)
 

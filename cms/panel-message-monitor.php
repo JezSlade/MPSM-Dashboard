@@ -171,6 +171,12 @@ trackVisit('/panel-message-monitor');
                 <i class="fas fa-satellite-dish"></i>
                 Panel Messages
             </button>
+            <?php if (defined('FEATURE_DEVICE_CRUD') && FEATURE_DEVICE_CRUD) : ?>
+            <button class="monitor-tab-btn" data-tab="device-lifecycle">
+                <i class="fas fa-microchip"></i>
+                Device Lifecycle
+            </button>
+            <?php endif; ?>
             <button class="monitor-tab-btn" data-tab="debugger">
                 <i class="fas fa-bug"></i>
                 Payload Debugger
@@ -234,6 +240,19 @@ trackVisit('/panel-message-monitor');
             </div>
         </section>
         </div>
+        <?php if (defined('FEATURE_DEVICE_CRUD') && FEATURE_DEVICE_CRUD) : ?>
+        <div id="tab-device-lifecycle" class="tab-panel" data-tab="device-lifecycle">
+            <div class="debugger-wrapper">
+                <iframe
+                    class="debugger-frame"
+                    src="device-lifecycle.php"
+                    title="Device Lifecycle Management"
+                    loading="lazy"
+                    referrerpolicy="same-origin">
+                </iframe>
+            </div>
+        </div>
+        <?php endif; ?>
         <div id="tab-debugger" class="tab-panel" data-tab="debugger">
             <div class="debugger-wrapper">
                 <iframe

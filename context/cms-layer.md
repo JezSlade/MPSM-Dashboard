@@ -4,25 +4,24 @@
 
 ## Directory Layout
 
-```
+`
 cms/
-â”œâ”€ config.php                // runtime constants + session config
-â”œâ”€ functions.php             // database + API helpers + caching
-â”œâ”€ index.php                 // authenticated dashboard shell
-â”œâ”€ login.html                // public login page
-â”œâ”€ panel-message-monitor.php // command center (panel stream)
-â”œâ”€ payload-debugger.php      // standalone payload debugger UI
-â”œâ”€ assets/
-â”‚  â”œâ”€ app.js                 // main application bundle (~146â€¯KB)
-â”‚  â”œâ”€ style.css              // dashboard styles
-â”‚  â”œâ”€ panel-messages.js      // command center JS
-â”‚  â”œâ”€ error-logs.js          // log viewer module
-â”‚  â””â”€ js/
-â”‚     â”œâ”€ card-manager.js     // card orchestration (CardManager.setContext)
-â”‚     â”œâ”€ card-registry.js    // registry of all dashboard cards
-â”‚     â””â”€ table-utils.js      // reusable table rendering helpers
-â””â”€ api/                      // JSON endpoints
-```
+|- config.php                // runtime constants + session config
+|- functions.php             // database + API helpers + caching
+|- index.php                 // authenticated dashboard shell
+|- login.html                // public login page
+|- panel-message-monitor.php // command center (panel stream)
+|- device-lifecycle.php      // device CRUD workspace (feature flagged)
+|- payload-debugger.php      // standalone payload debugger UI
+|- assets/
+|  |- app.js                 // main application bundle (~146 KB)
+|  |- style.css              // dashboard styles
+|  |- panel-messages.js      // command center JS
+|  |- error-logs.js          // log viewer module
+|  |- device-crud.js         // device lifecycle interactions
+|  - device-crud.css        // device lifecycle layout
+- api/                      // JSON endpoints
+`
 
 ## Configuration & Sessions
 
@@ -71,6 +70,7 @@ All endpoints call `requireAuth()` and respond with `{success: bool, ...}` JSON 
 
 - **Panel Message Monitor** (`panel-message-monitor.php` + `assets/panel-messages.js`): filters by time window, displays message metadata, opens payload modal.
 - **Payload Debugger** (`payload-debugger.php` + inline JS): auto-refresh UI that consumes `api/get-payload-debug-logs.php`, renders stats, payloads, headers, and a unique-source roll-up. Embedded as a tab inside `panel-message-monitor.php` for same-screen diagnostics.
+- **Device Lifecycle** (`device-lifecycle.php` + `assets/device-crud.js`): feature-flagged CRUD workspace reachable from the monitor. Proxies create/update/delete actions through `mps-api/query`, clears cached device inventories on mutation, and logs every change to `cms/logs/device-crud-YYYY-MM-DD.log` for auditing.
 
 ## Background Cache Flow
 

@@ -95,6 +95,7 @@ DEALER_ID="SZ13qRwU5GtFLj0i_CbEgQ2"
 ## Known Workflows
 
 - **API Dispatch:** CMS posts to `/query`; engine authenticates, calls vendor API, returns JSON with `success`, `data`, `meta`.
+- **Device Lifecycle:** The CMS device workspace calls `Device/Offline/Create`, `Device/Update`, and `Device/Delete` through `/mps-api/query`, letting the engine pick HTTP verbs via `SwaggerActionRegistry` while maintaining audit trails and cache invalidation.
 - **Cache Warmup:** CMS uses `/query` to populate its own database caches (enhanced refresh script).
 - **Diagnostics:** Devs can hit `/diagnostics` (authenticated if desired) to confirm environment health before debugging field issues.
 

@@ -95,7 +95,15 @@ Refer to `BACKGROUND_REFRESH_SYSTEM.md` and `cms/api/refresh-cache-enhanced.php`
 2. Numerous PowerShell deployment scripts (`deploy-*.ps1`) exist for manual FTP pushes; they set up credentials and copy changed files.
 3. Production often caches assets aggressively; after deployment, hard refresh (`Ctrl+Shift+R`) or cache-busting query parameters may be needed for `app.js`.
 
-## 10. Error Handling & Logging
+## 10. Device Lifecycle CRUD
+
+1. From the panel message monitor, the `Device Lifecycle` tab loads `device-lifecycle.php` inside an iframe when the feature flag is enabled.
+2. The workspace fetches inventories via `cms/api/device-list.php`, which proxies `Device/List` through `mps-api/query` with pagination, search, and dealer scoping.
+3. Creating devices submits to `cms/api/device-create.php`, wrapping the vendor `Device/Offline/Create` payload. Successful operations clear `all-devices-dealer-*` cache keys and append audit rows to `cms/logs/device-crud-YYYY-MM-DD.log`.
+4. Updates flow through `cms/api/device-update.php` (calling `Device/Update`), while deletions use `cms/api/device-delete.php` (calling `Device/Delete`). Each call validates the session, enforces the feature flag, and surfaces upstream errors to the UI.
+5. Every mutation response triggers a UI refresh and toast notification; operators can immediately confirm changes without waiting for the background cache job.
+
+## 11. Error Handling & Logging
 
 - CMS: errors returned via `jsonError()` (includes HTTP code). `get-error-logs.php` reads from `cms/logs/php_errors.log`.
 - mps-api: `sendResponse()` attaches `error_code` and optionally stack traces (when `MPS_DEBUG=true`).

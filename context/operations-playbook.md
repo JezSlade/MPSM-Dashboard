@@ -50,11 +50,15 @@
   - Inspect `cms/logs/cache-refresh-YYYY-MM-DD.log`.
   - Send direct API probe through `mps-api/query` to ensure upstream is returning data.
 
-- **Automation:** Schedule every 5 minutes. On Linux cron:
+- **Automation:** These cron jobs are live in cPanel and must remain in place unless explicitly changed:
   ```
-  */5 * * * * curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php" > /dev/null
+  */5 * * * * /usr/bin/timeout 240 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?skipDrilldown=1" >/dev/null 2>&1
+  0 0 * * * /usr/bin/timeout 1800 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1" >/dev/null 2>&1
+  0,30 * * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/mps-api/health" >> /home/youruser/logs/mps-api-health.log
+  0 0 * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/get-database-monitor.php" >> /home/youruser/logs/database-monitor.log
+  0 0 * * 0 /usr/bin/php /home/youruser/public_html/cms/api/cleanup-payload-debug.php >/dev/null 2>&1
   ```
-  On Windows Task Scheduler, invoke PowerShell with `Invoke-WebRequest`.
+  The CMS relies on these schedules for cache freshness, health logging, and payload debugger retention; adjust only with owner approval.
 
 ## Panel Message Diagnostics
 
