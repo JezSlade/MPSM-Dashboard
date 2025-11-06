@@ -509,28 +509,7 @@ function parseRetryAfterHeader(array $headers): ?int {
     return null;
 }
 
-/**
- * Extract devices array from API response
- */
-function extractDevicesFromResponse(array $response): array {
-    if (isset($response['Items']) && is_array($response['Items'])) {
-        return $response['Items'];
-    }
-
-    if (isset($response['Result']) && is_array($response['Result'])) {
-        return $response['Result'];
-    }
-
-    if (array_keys($response) === range(0, count($response) - 1)) {
-        return $response;
-    }
-
-    if (isset($response['data']) && is_array($response['data'])) {
-        return extractDevicesFromResponse($response['data']);
-    }
-
-    return [];
-}
+// Note: extractDevicesFromResponse() is now defined in cms/functions.php (shared utility)
 
 /**
  * Cache device list in database

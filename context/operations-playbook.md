@@ -100,7 +100,6 @@
    - Deploys via FTP to: `ftp.resolutionsbydesign.us`
    - Excludes: logs, tests, .git, documentation, scripts
    - Includes: .env files (OAuth credentials)
-6. After deploy, hard refresh browser (`Ctrl+Shift+R`) to clear cache
 
 **Monitor deployment:**
 - Go to: https://github.com/JezSlade/MPSM-Dashboard/actions
@@ -120,20 +119,61 @@ For urgent hotfixes or when GitHub Actions unavailable:
 
 Scripts upload selected files via FTP and can invalidate caches if necessary.
 
-### Post-Deployment Checklist
+### Post-Deployment Actions (REQUIRED - AUTOMATED)
 
-1. **Verify live site loads:** https://mpsm.resolutionsbydesign.us/cms/
-2. **Hard refresh browser:** `Ctrl+Shift+R`
-3. **Check console:** No JavaScript errors (F12 → Console)
-4. **Test critical features:**
-   - Login works
-   - Dashboard loads
-   - Device search works
-   - Device modal opens
-5. **Monitor logs:**
-   - PHP errors: `cms/logs/php_errors.log`
-   - Cache refresh: `cms/logs/cache-refresh-*.log`
-6. **Verify cache:** Run `refresh-cache-enhanced.php` if needed
+**CRITICAL: When AI agent pushes code, ALL post-deployment actions MUST be completed programmatically:**
+
+1. **Monitor GitHub Actions deployment** (wait for completion, check status)
+   ```bash
+   # Poll GitHub Actions API or check workflow status
+   # Wait for green checkmark before proceeding
+   ```
+
+2. **Trigger cache population** (programmatic)
+   ```bash
+   curl -X GET "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"
+   # Wait for response, verify success
+   ```
+
+3. **Verify live site functionality** (automated testing)
+   ```bash
+   # Run test_live_site.ps1 or equivalent curl-based tests
+   # Test: homepage, cache endpoint, panel monitor, payload debugger, API engine
+   ```
+
+4. **Check error logs** (programmatic)
+   ```bash
+   # Query live error log endpoints if available
+   # Or use cPanel API to check logs
+   ```
+
+5. **Validate performance** (automated benchmarking)
+   ```bash
+   # Test response times for key endpoints
+   # Verify < 3s dashboard load, < 500ms modals, < 100ms cache hits
+   ```
+
+**AI Agent Behavior Requirements:**
+- ✅ MUST complete all post-deployment actions programmatically
+- ✅ MUST verify deployment success before completing task
+- ✅ MUST run automated tests to confirm functionality
+- ✅ MUST NOT just provide instructions - execute all steps
+- ✅ MUST report actual test results and status
+- ❌ DO NOT delegate manual steps to user unless technically impossible
+
+**Manual Steps (Only if Programmatic Access Unavailable):**
+- Database index application (requires phpMyAdmin/MySQL access)
+- File renaming on server (if FTP automation unavailable)
+- Cron job scheduling (if cPanel API unavailable)
+
+### Post-Deployment Verification Checklist
+
+After automated actions complete, verify:
+1. **Live site loads:** https://mpsm.resolutionsbydesign.us/cms/
+2. **Cache operational:** get-cached-devices.php returns data
+3. **Core features working:** Login, dashboard, search, device modal
+4. **No errors:** Clean logs, no console errors
+5. **Performance targets met:** Dashboard < 3s, modals < 500ms
 
 ## Incident Response
 
