@@ -691,6 +691,76 @@ function jsonSuccess($data = []) {
 }
 
 /**
+ * Call MPS API via query endpoint (standardized)
+ * Replaces duplicate callMpsApiDirect() functions in various endpoints
+ *
+ * @param string $action MPS API action (e.g., 'Device/List')
+ * @param array $params Parameters for the action
+ * @return array|null Response data or null on failure
+ */
+function callMPSQuery($action, $params = []) {
+    $payload = json_encode([
+        'action' => $action,
+        'params' => $params
+    ]);
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => $payload,
+            'timeout' => 20,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+
+    if ($response === false) {
+        return null;
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success']) {
+        return null;
+    }
+
+    return $data['data'] ?? [];
+}
+
+/**
+ * Extract devices array from API response (standardized)
+ * Handles different response formats from MPS API
+ *
+ * @param array $response API response
+ * @return array Array of devices
+ */
+function extractDevicesFromResponse($response) {
+    if (!is_array($response)) {
+        return [];
+    }
+
+    if (isset($response['Items']) && is_array($response['Items'])) {
+        return $response['Items'];
+    }
+
+    if (isset($response['Result']) && is_array($response['Result'])) {
+        return $response['Result'];
+    }
+
+    if (array_keys($response) === range(0, count($response) - 1)) {
+        return $response;
+    }
+
+    if (isset($response['data']) && is_array($response['data'])) {
+        return extractDevicesFromResponse($response['data']);
+    }
+
+    return [];
+}
+
+/**
  * Initialize database tables
  * Creates tables if they don't exist
  */
