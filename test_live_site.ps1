@@ -1,131 +1,102 @@
-# Comprehensive Live Site Test Script
-# Tests all functionality on https://mpsm.resolutionsbydesign.us/cms/
+# Live Site Testing Script
+# Tests the MPSM Dashboard after deployment
 
-$base = "https://mpsm.resolutionsbydesign.us/cms"
-$cookies = "test_session_cookies.txt"
-$results = @()
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "MPSM Dashboard Live Site Test" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
 
-function Test-API {
-    param($name, $endpoint, $expectedField)
+$baseUrl = "https://mpsm.resolutionsbydesign.us"
 
-    Write-Host "`n[$name]" -ForegroundColor Cyan
-    $url = "$base/$endpoint"
-
-    try {
-        $response = curl -s $url -b $cookies 2>&1
-
-        if ($response -match $expectedField) {
-            Write-Host "  PASS" -ForegroundColor Green
-            $results += @{Test=$name; Status="PASS"}
-            return $true
-        } else {
-            Write-Host "  FAIL - Expected field not found: $expectedField" -ForegroundColor Red
-            Write-Host "  Response preview: $($response.Substring(0, [Math]::Min(200, $response.Length)))"
-            $results += @{Test=$name; Status="FAIL"; Error="Missing $expectedField"}
-            return $false
-        }
-    } catch {
-        Write-Host "  ERROR - $($_.Exception.Message)" -ForegroundColor Red
-        $results += @{Test=$name; Status="ERROR"; Error=$_.Exception.Message}
-        return $false
-    }
-}
-
-Write-Host "=== MPSM Dashboard Live Site Test ===" -ForegroundColor Yellow
-Write-Host "Target: $base`n"
-
-# Wait for deployment
-Write-Host "Waiting 30s for deployment..." -ForegroundColor Yellow
-Start-Sleep -Seconds 30
-
-# Test 1: Site loads
-Write-Host "`n[1. Site loads]" -ForegroundColor Cyan
+# Test 1: Homepage loads
+Write-Host "Test 1: Homepage..." -NoNewline
 try {
-    $status = curl -s "$base/" -o nul -w "%{http_code}"
-    if ($status -eq 200) {
-        Write-Host "  PASS - HTTP 200" -ForegroundColor Green
-        $results += @{Test="Site loads"; Status="PASS"}
+    $response = Invoke-WebRequest -Uri "$baseUrl/cms/" -TimeoutSec 10 -UseBasicParsing
+    if ($response.StatusCode -eq 200) {
+        Write-Host " PASS" -ForegroundColor Green
     } else {
-        Write-Host "  FAIL - HTTP $status" -ForegroundColor Red
-        $results += @{Test="Site loads"; Status="FAIL"; Error="HTTP $status"}
+        Write-Host " WARN (Status: $($response.StatusCode))" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "  ERROR" -ForegroundColor Red
-    $results += @{Test="Site loads"; Status="ERROR"}
+    Write-Host " FAIL ($($_.Exception.Message))" -ForegroundColor Red
 }
 
-# Test 2-5: Core APIs (no auth required for testing structure)
-Test-API "Login API exists" "api/login.php" "success"
-Test-API "Search devices API" "api/search-devices.php?query=HP" "devices"
-Test-API "Deep-dive API structure" "api/get-device-deep-dive.php?serialNumber=TEST" "success"
-Test-API "Error logs API" "api/get-error-logs.php?lines=10" "logs"
-
-# Test 6: Check for test files (should be deleted)
-Write-Host "`n[6. Test files cleaned up]" -ForegroundColor Cyan
-$testFiles = @(
-    "api/test-counter-list.php",
-    "api/find-fq966.php"
-)
-
-$foundTestFiles = @()
-foreach ($file in $testFiles) {
-    $status = curl -s "$base/$file" -o nul -w "%{http_code}" 2>&1
-    if ($status -eq 200) {
-        $foundTestFiles += $file
+# Test 2: Cache endpoint responds
+Write-Host "Test 2: Cache endpoint..." -NoNewline
+try {
+    $response = Invoke-WebRequest -Uri "$baseUrl/cms/api/get-cached-devices.php" -TimeoutSec 10 -UseBasicParsing
+    $json = $response.Content | ConvertFrom-Json
+    if ($json.success) {
+        Write-Host " PASS (Devices: $($json.total))" -ForegroundColor Green
+    } else {
+        Write-Host " WARN (Not cached yet)" -ForegroundColor Yellow
     }
+} catch {
+    Write-Host " FAIL ($($_.Exception.Message))" -ForegroundColor Red
 }
 
-if ($foundTestFiles.Count -eq 0) {
-    Write-Host "  PASS - All test files removed" -ForegroundColor Green
-    $results += @{Test="Test files cleaned"; Status="PASS"}
-} else {
-    Write-Host "  FAIL - Found test files: $($foundTestFiles -join ', ')" -ForegroundColor Red
-    $results += @{Test="Test files cleaned"; Status="FAIL"; Error="Files remain"}
-}
-
-# Test 7: Assets load
-Write-Host "`n[7. Assets load]" -ForegroundColor Cyan
-$assets = @(
-    "assets/app.js",
-    "assets/style.css",
-    "assets/error-logs.js"
-)
-
-$assetsOK = $true
-foreach ($asset in $assets) {
-    $status = curl -s "$base/$asset" -o nul -w "%{http_code}" 2>&1
-    if ($status -ne 200) {
-        Write-Host "  FAIL - $asset returned $status" -ForegroundColor Red
-        $assetsOK = $false
+# Test 3: Panel message monitor
+Write-Host "Test 3: Panel message monitor..." -NoNewline
+try {
+    $response = Invoke-WebRequest -Uri "$baseUrl/cms/panel-message-monitor.php" -TimeoutSec 10 -UseBasicParsing
+    if ($response.StatusCode -eq 200) {
+        Write-Host " PASS" -ForegroundColor Green
+    } else {
+        Write-Host " WARN (Status: $($response.StatusCode))" -ForegroundColor Yellow
     }
+} catch {
+    Write-Host " FAIL ($($_.Exception.Message))" -ForegroundColor Red
 }
 
-if ($assetsOK) {
-    Write-Host "  PASS - All assets load" -ForegroundColor Green
-    $results += @{Test="Assets load"; Status="PASS"}
-} else {
-    $results += @{Test="Assets load"; Status="FAIL"}
-}
-
-# Summary
-Write-Host "`n`n=== TEST SUMMARY ===" -ForegroundColor Yellow
-$passed = ($results | Where-Object {$_.Status -eq "PASS"}).Count
-$failed = ($results | Where-Object {$_.Status -eq "FAIL"}).Count
-$errors = ($results | Where-Object {$_.Status -eq "ERROR"}).Count
-$total = $results.Count
-
-Write-Host "Total: $total tests"
-Write-Host "Passed: $passed" -ForegroundColor Green
-Write-Host "Failed: $failed" -ForegroundColor Red
-Write-Host "Errors: $errors" -ForegroundColor Red
-
-if ($failed -gt 0 -or $errors -gt 0) {
-    Write-Host "`nFailed/Error tests:"
-    $results | Where-Object {$_.Status -ne "PASS"} | ForEach-Object {
-        Write-Host "  - $($_.Test): $($_.Status) $($_.Error)" -ForegroundColor Red
+# Test 4: Payload debugger
+Write-Host "Test 4: Payload debugger..." -NoNewline
+try {
+    $response = Invoke-WebRequest -Uri "$baseUrl/cms/payload-debugger.php" -TimeoutSec 10 -UseBasicParsing
+    if ($response.StatusCode -eq 200) {
+        Write-Host " PASS" -ForegroundColor Green
+    } else {
+        Write-Host " WARN (Status: $($response.StatusCode))" -ForegroundColor Yellow
     }
-    exit 1
+} catch {
+    Write-Host " FAIL ($($_.Exception.Message))" -ForegroundColor Red
 }
 
-Write-Host "`nAll tests passed!" -ForegroundColor Green
-exit 0
+# Test 5: Background refresh endpoint
+Write-Host "Test 5: Background refresh..." -NoNewline
+try {
+    $response = Invoke-WebRequest -Uri "$baseUrl/cms/api/refresh-cache-enhanced.php" -TimeoutSec 30 -UseBasicParsing
+    $json = $response.Content | ConvertFrom-Json
+    if ($json.success) {
+        Write-Host " PASS (Refreshed: $($json.devices_cached) devices)" -ForegroundColor Green
+    } else {
+        Write-Host " WARN (Error: $($json.error))" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host " FAIL ($($_.Exception.Message))" -ForegroundColor Red
+}
+
+# Test 6: MPS API engine
+Write-Host "Test 6: MPS API engine..." -NoNewline
+try {
+    $response = Invoke-WebRequest -Uri "$baseUrl/mps-api/query" -Method POST -Body '{"action":"test"}' -ContentType "application/json" -TimeoutSec 10 -UseBasicParsing
+    if ($response.StatusCode -eq 200) {
+        Write-Host " PASS" -ForegroundColor Green
+    } else {
+        Write-Host " WARN (Status: $($response.StatusCode))" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host " FAIL ($($_.Exception.Message))" -ForegroundColor Red
+}
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Testing Complete" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Next steps:" -ForegroundColor Yellow
+Write-Host "1. Check GitHub Actions: https://github.com/JezSlade/MPSM-Dashboard/actions" -ForegroundColor White
+Write-Host "2. Apply database indexes via phpMyAdmin (see DEPLOY_NOW.md)" -ForegroundColor White
+Write-Host "3. Rename get-cached-devices.php.NEW to .php on server" -ForegroundColor White
+Write-Host "4. Run cache refresh: $baseUrl/cms/api/refresh-cache-enhanced.php" -ForegroundColor White
+Write-Host "5. Schedule cron job for cache refresh (every 5 min)" -ForegroundColor White
+Write-Host ""

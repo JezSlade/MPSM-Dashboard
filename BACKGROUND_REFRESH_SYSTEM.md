@@ -121,8 +121,9 @@ Stores panel message history per device.
    - Call `Device/Get` API
    - Extract meters, counters, supplies, alerts
    - Store in `mpsm_cache_device_drilldown` table
-2. Rate limiting: 50ms delay between requests
-3. Progress logging every 50 devices
+2. Rate limiting: 50 ms delay between requests
+3. Intelligent rate-limit handling: exponential backoff (0.75 s base) with `RateLimitException` retries, `Retry-After` honouring, and re-queuing per device (up to 6 attempts before deferring).
+4. Progress logging every 50 devices
 
 ### Step 3: Count Panel Messages
 1. Query `mpsm_panel_messages` table

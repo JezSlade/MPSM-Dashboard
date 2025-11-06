@@ -49,6 +49,8 @@ const MPSM = (function() {
     let connectorPollTimer = null;
     let catalogTableInstance = null;
     let catalogSearchTimeout = null;
+    let dbMonitorRefreshInterval = null;
+    let adminDataPrefetched = false;
 
     const CARD_LAYOUT_STORAGE_KEY = 'mpsm-dashboard-card-order';
 
@@ -658,6 +660,7 @@ const MPSM = (function() {
             await loadPreferences();
             await loadCustomerOptions();
             await loadDashboard();
+            prefetchAdminData().catch(error => debugLog('Prefetch failed: ' + error.message, 'warn'));
         } catch (error) {
             showToast('Failed to initialize: ' + error.message, 'error');
         }
@@ -687,7 +690,18 @@ const MPSM = (function() {
         document.getElementById('save-settings').addEventListener('click', saveSettings);
 
         // Test health
-        document.getElementById('test-health').addEventListener('click', testSystemHealth);
+        document.getElementById('test-health').addEventListener('click', () => testSystemHealth());
+
+        // Database monitor actions
+        const dbMonitorRefresh = document.getElementById('refresh-db-monitor');
+        if (dbMonitorRefresh) {
+            dbMonitorRefresh.addEventListener('click', () => loadDatabaseMonitor());
+        }
+
+        const warmCacheQuickBtn = document.getElementById('warm-cache-quick');
+        if (warmCacheQuickBtn) {
+            warmCacheQuickBtn.addEventListener('click', () => runCacheWarmup('quick'));
+        }
 
         // Refresh visitors
         document.getElementById('refresh-visitors').addEventListener('click', loadVisitorLogs);
@@ -731,6 +745,31 @@ const MPSM = (function() {
         }
     }
 
+    async function prefetchAdminData() {
+        if (adminDataPrefetched) {
+            return;
+        }
+        adminDataPrefetched = true;
+
+        try {
+            await testSystemHealth();
+        } catch (error) {
+            debugLog('Prefetch system health failed: ' + error.message, 'warn');
+        }
+
+        try {
+            await loadDatabaseMonitor();
+        } catch (error) {
+            debugLog('Prefetch database monitor failed: ' + error.message, 'warn');
+        }
+
+        try {
+            await loadVisitorLogs();
+        } catch (error) {
+            debugLog('Prefetch visitor logs failed: ' + error.message, 'warn');
+        }
+    }
+
     // Auto-refresh interval tracker
     let healthRefreshInterval = null;
 
@@ -751,6 +790,10 @@ const MPSM = (function() {
             clearInterval(healthRefreshInterval);
             healthRefreshInterval = null;
         }
+        if (dbMonitorRefreshInterval) {
+            clearInterval(dbMonitorRefreshInterval);
+            dbMonitorRefreshInterval = null;
+        }
 
         if (sectionName === 'dashboard') {
             renderCardConfig();
@@ -759,11 +802,16 @@ const MPSM = (function() {
         } else if (sectionName === 'system') {
             // Auto-load system health and visitor logs
             testSystemHealth();
+            loadDatabaseMonitor();
             loadVisitorLogs();
 
             // Setup auto-refresh for system health every 60 seconds
             healthRefreshInterval = setInterval(() => {
-                testSystemHealth();
+                testSystemHealth({ silent: true });
+            }, 60000);
+
+            dbMonitorRefreshInterval = setInterval(() => {
+                loadDatabaseMonitor({ silent: true });
             }, 60000);
         } else if (sectionName === 'catalog') {
             loadEndpointCatalog({
@@ -2508,9 +2556,16 @@ const MPSM = (function() {
     /**
      * Test system health - Enhanced with detailed metrics
      */
-    async function testSystemHealth() {
+    async function testSystemHealth(options = {}) {
+        const { silent = false } = options;
         const container = document.getElementById('health-status');
-        container.innerHTML = '<div class="loading">Testing system health...</div>';
+        if (!container) {
+            return;
+        }
+
+        if (!silent) {
+            container.innerHTML = '<div class="loading">Testing system health...</div>';
+        }
 
         try {
             const response = await fetch('api/system-health.php');
@@ -2672,6 +2727,280 @@ const MPSM = (function() {
                     <p class="error-message">${error.message}</p>
                 </div>
             `;
+        }
+    }
+
+    async function loadDatabaseMonitor(options = {}) {
+        const { silent = false } = options;
+        const container = document.getElementById('db-monitor');
+
+        if (!container) {
+            return;
+        }
+
+        if (!silent) {
+            container.innerHTML = '<div class="loading">Loading database metrics...</div>';
+        }
+
+        try {
+            const response = await fetch('api/get-database-monitor.php');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Request failed');
+            }
+
+            container.innerHTML = renderDatabaseMonitor(data);
+        } catch (error) {
+            container.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load database metrics</p>
+                    <p class="error-message">${escapeHtml(error.message)}</p>
+                </div>
+            `;
+        }
+    }
+
+    function renderDatabaseMonitor(payload) {
+        const tables = payload.tables || {};
+        const coverage = payload.coverage || {};
+        const lock = payload.refresh_lock || {};
+        const samples = payload.samples || {};
+        const generatedAt = payload.generated_at ? formatDateTime(payload.generated_at) : null;
+
+        const deviceCount = Number(coverage.device_count || 0);
+        const drilldownCount = Number(coverage.drilldown_count || 0);
+        const coveragePercent = coverage.drilldown_coverage_percent !== undefined && coverage.drilldown_coverage_percent !== null
+            ? coverage.drilldown_coverage_percent
+            : (deviceCount > 0 ? Math.round((drilldownCount / deviceCount) * 1000) / 10 : 0);
+        const missingTotal = Number(coverage.missing_total || 0);
+        const missingSample = Array.isArray(coverage.missing_sample) ? coverage.missing_sample : [];
+        const coveragePercentDisplay = Number.isFinite(Number(coveragePercent))
+            ? Number(coveragePercent).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+            : '0.0';
+
+        const tableRows = [
+            { key: 'cache_devices', label: 'Device Cache' },
+            { key: 'cache_drilldown', label: 'Drill-Down Cache' },
+            { key: 'panel_messages', label: 'Panel Messages' },
+            { key: 'payload_debugger', label: 'Payload Debugger' }
+        ];
+
+        const statsHtml = tableRows.map((row) => {
+            const info = tables[row.key] || {};
+            const count = Number(info.count || 0).toLocaleString();
+            const newest = info.newest ? formatDateTime(info.newest) : 'N/A';
+            const oldest = info.oldest ? formatDateTime(info.oldest) : 'N/A';
+            return `
+                <div class="db-stat">
+                    <span class="db-stat-label">${row.label}</span>
+                    <span class="db-stat-value">${count}</span>
+                    <span class="db-stat-meta">Newest: ${escapeHtml(newest)}</span>
+                    <span class="db-stat-meta">Oldest: ${escapeHtml(oldest)}</span>
+                </div>
+            `;
+        }).join('');
+
+        const lockActive = !!lock.active;
+        let lockDuration = '';
+        if (lockActive && typeof lock.age_seconds === 'number' && lock.age_seconds >= 0) {
+            if (lock.age_seconds < 60) {
+                lockDuration = `${Math.round(lock.age_seconds)}s`;
+            } else {
+                lockDuration = `${Math.round(lock.age_seconds / 60)} min`;
+            }
+        }
+        const lockStatus = lockActive
+            ? `Active${lockDuration ? ` • ${lockDuration}` : ''}`
+            : 'Idle';
+        const lockMeta = lockActive && lock.created_at
+            ? `Started ${formatDateTime(lock.created_at)}`
+            : 'No running job';
+
+        const missingHtml = missingTotal > 0
+            ? `
+                <div class="db-missing">
+                    <div class="db-missing-header">
+                        <h3>Missing Drill-Downs (${missingTotal.toLocaleString()} devices)</h3>
+                        <p>Sample of recently cached devices that still need deep data.</p>
+                    </div>
+                    <ul class="db-missing-list">
+                        ${missingSample.length ? missingSample.map(item => `
+                            <li>
+                                <code>${escapeHtml(item.serial_number || 'Unknown')}</code>
+                                <span>${item.cached_at ? formatDateTime(item.cached_at) : 'N/A'}</span>
+                            </li>
+                        `).join('') : '<li>Sample currently unavailable.</li>'}
+                    </ul>
+                </div>
+            `
+            : '<div class="db-missing db-missing--empty"><i class="fas fa-check-circle"></i> All cached devices have drill-down data.</div>';
+
+        const sampleSections = [
+            {
+                key: 'cache_devices',
+                label: 'Device Cache (latest 15)',
+                openByDefault: true,
+                columns: [
+                    { field: 'serial_number', label: 'Serial Number' },
+                    { field: 'customer_code', label: 'Customer' },
+                    { field: 'is_uninstalled', label: 'Removed', format: (value) => value ? 'Yes' : 'No' },
+                    { field: 'cached_at', label: 'Cached', format: (value) => value ? formatDateTime(value) : '' }
+                ]
+            },
+            {
+                key: 'cache_device_drilldown',
+                label: 'Drill-Down Cache (latest 15)',
+                columns: [
+                    { field: 'serial_number', label: 'Serial Number' },
+                    { field: 'has_alerts', label: 'Alerts', format: (value) => value ? 'Yes' : 'No' },
+                    { field: 'has_supplies', label: 'Supplies', format: (value) => value ? 'Yes' : 'No' },
+                    { field: 'cached_at', label: 'Cached', format: (value) => value ? formatDateTime(value) : '' }
+                ]
+            },
+            {
+                key: 'panel_messages',
+                label: 'Panel Messages (latest 15)',
+                columns: [
+                    { field: 'device_serial', label: 'Device Serial' },
+                    { field: 'customer_code', label: 'Customer' },
+                    { field: 'maintenance_alert_code', label: 'Alert Code' },
+                    { field: 'received_at', label: 'Received', format: (value) => value ? formatDateTime(value) : '' }
+                ]
+            },
+            {
+                key: 'panel_callback_debug',
+                label: 'Payload Debugger (latest 15)',
+                columns: [
+                    { field: 'timestamp', label: 'Timestamp', format: (value) => value ? formatDateTime(value) : '' },
+                    { field: 'status', label: 'Status', format: (value) => value || 'UNKNOWN' },
+                    { field: 'http_code', label: 'HTTP', format: (value) => (value !== null && value !== undefined) ? value : '—' },
+                    { field: 'unique_source', label: 'Unique Source' }
+                ]
+            }
+        ];
+
+        const formatSampleCell = (column, rawValue) => {
+            let rendered = rawValue;
+            try {
+                if (typeof column.format === 'function') {
+                    rendered = column.format(rawValue, column);
+                }
+            } catch (error) {
+                rendered = rawValue;
+            }
+
+            if (rendered === null || rendered === undefined) {
+                return '';
+            }
+
+            return escapeHtml(String(rendered));
+        };
+
+        const sampleHtml = `
+            <div class="db-samples">
+                ${sampleSections.map((section) => {
+                    const rows = Array.isArray(samples[section.key]) ? samples[section.key] : [];
+                    const tableRows = rows.length
+                        ? rows.map((row) => `
+                            <tr>
+                                ${section.columns.map((column) => `<td>${formatSampleCell(column, row[column.field])}</td>`).join('')}
+                            </tr>
+                        `).join('')
+                        : `<tr><td class="empty" colspan="${section.columns.length}">No recent entries.</td></tr>`;
+
+                    return `
+                        <details class="db-sample"${section.openByDefault ? ' open' : ''}>
+                            <summary>${escapeHtml(section.label)}</summary>
+                            <div class="db-sample-table-wrapper">
+                                <table class="db-sample-table">
+                                    <thead>
+                                        <tr>${section.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr>
+                                    </thead>
+                                    <tbody>${tableRows}</tbody>
+                                </table>
+                            </div>
+                        </details>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        const generatedFooter = generatedAt
+            ? `<div class="db-generated-at">Snapshot captured ${escapeHtml(generatedAt)}</div>`
+            : '';
+
+        return `
+            <div class="db-summary">
+                <div class="db-summary-item">
+                    <span class="db-summary-label">Drill-Down Coverage</span>
+                    <span class="db-summary-value">${coveragePercentDisplay}%</span>
+                    <span class="db-summary-meta">${drilldownCount.toLocaleString()} / ${deviceCount.toLocaleString()} devices</span>
+                </div>
+                <div class="db-summary-item">
+                    <span class="db-summary-label">Refresh Status</span>
+                    <span class="db-summary-value ${lockActive ? 'status-active' : 'status-idle'}">${lockStatus}</span>
+                    <span class="db-summary-meta">${escapeHtml(lockMeta)}</span>
+                </div>
+            </div>
+            <div class="db-stats-grid">
+                ${statsHtml}
+            </div>
+            ${missingHtml}
+            ${sampleHtml}
+            ${generatedFooter}
+        `;
+    }
+
+    async function runCacheWarmup(mode = 'quick') {
+        const endpoint = mode === 'full'
+            ? 'api/refresh-cache-enhanced.php?force=1'
+            : 'api/refresh-cache-enhanced.php?skipDrilldown=1';
+        const warmupBtn = document.getElementById(mode === 'full' ? 'warm-cache-full' : 'warm-cache-quick');
+
+        try {
+            if (warmupBtn) {
+                warmupBtn.disabled = true;
+            }
+
+            showToast(
+                mode === 'full'
+                    ? 'Launching full refresh. This may take several minutes.'
+                    : 'Launching cache warmup (device list only)...',
+                'info'
+            );
+
+            const response = await fetch(endpoint, { credentials: 'same-origin' });
+            const data = await response.json();
+
+            if (!data) {
+                throw new Error('Unexpected response');
+            }
+
+            if (data.status === 'skipped') {
+                showToast(data.reason ? `Refresh skipped: ${data.reason}` : 'Refresh skipped.', 'warning');
+                return;
+            }
+
+            if (data.status !== 'success') {
+                throw new Error(data.message || 'Warmup failed');
+            }
+
+            const stats = data.stats || {};
+            if (typeof stats.devices_cached === 'number') {
+                showToast(`Refresh complete: ${stats.devices_cached.toLocaleString()} devices processed`, 'success');
+            } else {
+                showToast('Refresh request completed.', 'success');
+            }
+
+            loadDatabaseMonitor({ silent: true });
+        } catch (error) {
+            showToast('Warmup failed: ' + error.message, 'error');
+        } finally {
+            if (warmupBtn) {
+                warmupBtn.disabled = false;
+            }
         }
     }
 

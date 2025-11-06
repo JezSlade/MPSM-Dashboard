@@ -191,7 +191,24 @@ $preferences = getUserPreferences($userId);
                             </button>
                         </div>
                         <div id="health-status" class="card-body">
-                            <div class="loading">Click "Test Now" to check system health...</div>
+                            <div class="loading">Preparing system health summary...</div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-database"></i> Database Monitor</h2>
+                            <div class="card-actions">
+                                <button id="warm-cache-quick" class="btn btn-secondary">
+                                    <i class="fas fa-bolt"></i> Warm Cache
+                                </button>
+                                <button id="refresh-db-monitor" class="btn btn-secondary">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div id="db-monitor" class="card-body">
+                            <div class="loading">Loading database metrics...</div>
                         </div>
                     </section>
 

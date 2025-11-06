@@ -51,6 +51,10 @@
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 
+    # Allow CMS command center to embed debugger
+    SetEnvIf Request_URI "^/cms/(panel-message-monitor|payload-debugger)\.php$" allow_iframe=1
+    Header always set X-Frame-Options "SAMEORIGIN" env=allow_iframe
+
     # Remove server signature
     Header unset X-Powered-By
     ServerSignature Off

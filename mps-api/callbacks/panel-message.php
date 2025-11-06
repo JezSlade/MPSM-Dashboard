@@ -7,8 +7,6 @@ declare(strict_types=1);
  * Accepts POSTed JSON payloads from the MPS Monitor callback system,
  * persists the raw payload for later analysis, and provides a simple
  * acknowledgement response.
- *
- * This endpoint deliberately avoids touching the existing engine codepath.
  */
 
 define('MPS_ENGINE_ACCESS', true);
@@ -16,23 +14,30 @@ define('MPS_ENGINE_ACCESS', true);
 require_once dirname(__DIR__, 1) . '/config.php';     // Loads .env-backed engine config
 require_once dirname(__DIR__, 2) . '/cms/config.php'; // Provides DB constants/session settings
 require_once dirname(__DIR__, 2) . '/cms/functions.php';
+require_once __DIR__ . '/panel-message-common.php';
+
+$debugLogId = createPanelCallbackDebugLog();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Method Not Allowed', 405, null);
     respondError('Method Not Allowed', 405);
 }
 
 $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
 if (stripos($contentType, 'application/json') === false) {
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Invalid Content-Type', 415, null);
     respondError('Content-Type must be application/json', 415);
 }
 
 $rawBody = file_get_contents('php://input');
 if ($rawBody === false || trim($rawBody) === '') {
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Empty request body', 400, $rawBody ?: null);
     respondError('Empty request body');
 }
 
 $decoded = json_decode($rawBody, true);
 if (!is_array($decoded)) {
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Invalid JSON payload', 400, $rawBody);
     respondError('Invalid JSON payload');
 }
 
@@ -40,6 +45,7 @@ if (!is_array($decoded)) {
 $providedSecret = $decoded['callbackSecret'] ?? $decoded['secret'] ?? null;
 $expectedSecret = 'mpsm-panel-message-v1';
 if ($providedSecret !== $expectedSecret) {
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Unauthorized - invalid secret', 401, $rawBody);
     respondError('Unauthorized', 401);
 }
 
@@ -48,7 +54,8 @@ try {
     ensurePanelMessageTable($pdo);
 
     $insertSql = sprintf(
-        'INSERT INTO %s (customer_code, customer_description, device_serial, maintenance_alert_code, maintenance_alert_id, panel_configuration, payload, source_ip) VALUES (:customer_code, :customer_description, :device_serial, :maintenance_alert_code, :maintenance_alert_id, :panel_configuration, :payload, :source_ip)',
+        'INSERT INTO %s (customer_code, customer_description, device_serial, maintenance_alert_code, maintenance_alert_id, panel_configuration, payload, source_ip)
+         VALUES (:customer_code, :customer_description, :device_serial, :maintenance_alert_code, :maintenance_alert_id, :panel_configuration, :payload, :source_ip)',
         DB_PREFIX . 'panel_messages'
     );
 
@@ -64,97 +71,16 @@ try {
         ':source_ip' => $_SERVER['REMOTE_ADDR'] ?? null,
     ]);
 
+    $messageId = $pdo->lastInsertId();
+
+    updatePanelCallbackDebugLog($debugLogId, 'SUCCESS', "Message stored with ID {$messageId}", 200, $rawBody);
     logPanelMessage($decoded);
 } catch (Throwable $exception) {
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Database error: ' . $exception->getMessage(), 500, $rawBody);
     respondError('Internal Server Error: ' . $exception->getMessage(), 500);
 }
 
 respondSuccess(['stored' => true]);
-
-/**
- * Ensure storage table exists. Kept local to avoid modifying global initializers.
- */
-function ensurePanelMessageTable(PDO $pdo): void
-{
-    static $ensured = false;
-    if ($ensured) {
-        return;
-    }
-
-    $table = DB_PREFIX . 'panel_messages';
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS {$table} (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            customer_code VARCHAR(100) NULL,
-            customer_description VARCHAR(255) NULL,
-            device_serial VARCHAR(150) NULL,
-            maintenance_alert_code VARCHAR(150) NULL,
-            maintenance_alert_id VARCHAR(150) NULL,
-            panel_configuration VARCHAR(255) NULL,
-            source_ip VARCHAR(45) NULL,
-            payload JSON NOT NULL,
-            processed TINYINT(1) DEFAULT 0,
-            INDEX idx_received_at (received_at),
-            INDEX idx_customer_code (customer_code),
-            INDEX idx_device_serial (device_serial),
-            INDEX idx_processed (processed)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    $ensured = true;
-}
-
-/**
- * Derive a serial number or system identifier from possible payload locations.
- */
-function extractDeviceSerial(array $payload): ?string
-{
-    if (isset($payload['installedProduct']['serialNumber'])) {
-        return (string)$payload['installedProduct']['serialNumber'];
-    }
-    if (isset($payload['InstalledProduct_SerialNumber'])) {
-        return (string)$payload['InstalledProduct_SerialNumber'];
-    }
-    return null;
-}
-
-/**
- * Soft length guard for nullable string columns.
- */
-function truncateField($value, int $length): ?string
-{
-    if ($value === null) {
-        return null;
-    }
-    $string = trim((string)$value);
-    if ($string === '') {
-        return null;
-    }
-    return mb_substr($string, 0, $length);
-}
-
-/**
- * Append a summary line to the panel message log.
- */
-function logPanelMessage(array $payload): void
-{
-    $logDir = dirname(__DIR__) . '/logs';
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0755, true);
-    }
-
-    $logFile = $logDir . '/panel-message-' . date('Y-m-d') . '.log';
-    $summary = [
-        'time' => date('Y-m-d H:i:s'),
-        'customer' => $payload['customer']['code'] ?? $payload['Customer_Code'] ?? null,
-        'serial' => extractDeviceSerial($payload),
-        'alert_code' => $payload['maintenanceAlert']['code'] ?? $payload['MaintenanceAlert_Code'] ?? null,
-    ];
-
-    $line = json_encode($summary, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
-    file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
-}
 
 function respondSuccess(array $data = []): void
 {
@@ -170,3 +96,4 @@ function respondError(string $message, int $status = 400): void
     echo json_encode(['success' => false, 'error' => $message], JSON_UNESCAPED_UNICODE);
     exit;
 }
+

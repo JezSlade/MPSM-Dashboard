@@ -34,6 +34,10 @@ if (empty($deviceId) && empty($serialNumber)) {
 
 // Helper function to call MPS API query endpoint
 function callMpsApiQuery($action, $params) {
+    $params = array_filter($params, static function ($value) {
+        return $value !== null;
+    });
+
     $payload = json_encode([
         'action' => $action,
         'params' => $params
@@ -64,6 +68,44 @@ function callMpsApiQuery($action, $params) {
     return $data['data'] ?? [];
 }
 
+function extractDeviceFromDrilldown(array $drilldown): ?array
+{
+    $candidates = [
+        'Device',
+        'device',
+        'DeviceSummary',
+        'BaseDevice',
+        'DeviceInfo',
+    ];
+
+    foreach ($candidates as $key) {
+        if (isset($drilldown[$key]) && is_array($drilldown[$key]) && !empty($drilldown[$key])) {
+            return $drilldown[$key];
+        }
+    }
+
+    return null;
+}
+
+function extractFirstArray(array $source, array $keys): ?array
+{
+    foreach ($keys as $key) {
+        if (isset($source[$key]) && is_array($source[$key]) && !empty($source[$key])) {
+            return $source[$key];
+        }
+    }
+
+    if (isset($source['Device']) && is_array($source['Device'])) {
+        foreach ($keys as $key) {
+            if (isset($source['Device'][$key]) && is_array($source['Device'][$key]) && !empty($source['Device'][$key])) {
+                return $source['Device'][$key];
+            }
+        }
+    }
+
+    return null;
+}
+
 try {
     $result = [
         'device' => null,
@@ -74,9 +116,72 @@ try {
         'errors' => []
     ];
 
+    $pdo = getDatabase();
+    $prefix = DB_PREFIX;
+    $cachedDrilldownData = null;
+
+    // Attempt to hydrate from cache for instant responses
+    $cachedDeviceJson = null;
+
+    if (!empty($serialNumber)) {
+        $stmt = $pdo->prepare("SELECT device_data FROM {$prefix}cache_devices WHERE serial_number = :serial LIMIT 1");
+        $stmt->execute([':serial' => $serialNumber]);
+        $cachedDeviceJson = $stmt->fetchColumn() ?: null;
+    }
+
+    if (!$cachedDeviceJson && !empty($deviceId)) {
+        $stmt = $pdo->prepare("
+            SELECT device_data
+            FROM {$prefix}cache_devices
+            WHERE JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) = :id
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) = :id
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IdInstalledProduct')) = :id
+            LIMIT 1
+        ");
+        $stmt->execute([':id' => $deviceId]);
+        $cachedDeviceJson = $stmt->fetchColumn() ?: null;
+    }
+
+    if ($cachedDeviceJson) {
+        $cachedDevice = json_decode($cachedDeviceJson, true);
+        if (is_array($cachedDevice) && !empty($cachedDevice)) {
+            $result['device'] = $cachedDevice;
+            if (empty($serialNumber) && !empty($cachedDevice['SerialNumber'])) {
+                $serialNumber = $cachedDevice['SerialNumber'];
+            }
+            if (empty($customerCode) && !empty($cachedDevice['CustomerCode'])) {
+                $customerCode = $cachedDevice['CustomerCode'];
+            }
+        }
+    }
+
+    if (!empty($serialNumber)) {
+        $stmt = $pdo->prepare("SELECT drilldown_data FROM {$prefix}cache_device_drilldown WHERE serial_number = :serial LIMIT 1");
+        $stmt->execute([':serial' => $serialNumber]);
+        $cachedDrilldownJson = $stmt->fetchColumn();
+        if ($cachedDrilldownJson) {
+            $decodedDrilldown = json_decode($cachedDrilldownJson, true);
+            if (is_array($decodedDrilldown) && !empty($decodedDrilldown)) {
+                $cachedDrilldownData = $decodedDrilldown;
+                if (!$result['device']) {
+                    $deviceCandidate = extractDeviceFromDrilldown($decodedDrilldown);
+                    if ($deviceCandidate) {
+                        $result['device'] = $deviceCandidate;
+                        if (empty($serialNumber) && !empty($deviceCandidate['SerialNumber'])) {
+                            $serialNumber = $deviceCandidate['SerialNumber'];
+                        }
+                        if (empty($customerCode) && !empty($deviceCandidate['CustomerCode'])) {
+                            $customerCode = $deviceCandidate['CustomerCode'];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Step 1: Get base device info
     // Try to get device by searching with FilterText if we have serial number
-    if (!empty($serialNumber)) {
+    if (!$result['device'] && !empty($serialNumber)) {
         $deviceData = callMpsApiQuery('Device/List', [
             'FilterDealerId' => DEFAULT_DEALER_ID,
             'FilterCustomerCodes' => !empty($customerCode) ? [$customerCode] : null,
@@ -123,6 +228,30 @@ try {
         }
     }
 
+    // Final fallback: fetch directly by device ID
+    if (!$result['device'] && !empty($deviceId)) {
+        $deviceById = callMpsApiQuery('Device/Get', [
+            'Id' => $deviceId
+        ]);
+
+        if ($deviceById && is_array($deviceById)) {
+            $result['device'] = $deviceById;
+        }
+    }
+
+    if (!$result['device'] && $cachedDrilldownData) {
+        $deviceCandidate = extractDeviceFromDrilldown($cachedDrilldownData);
+        if ($deviceCandidate) {
+            $result['device'] = $deviceCandidate;
+            if (empty($serialNumber) && !empty($deviceCandidate['SerialNumber'])) {
+                $serialNumber = $deviceCandidate['SerialNumber'];
+            }
+            if (empty($customerCode) && !empty($deviceCandidate['CustomerCode'])) {
+                $customerCode = $deviceCandidate['CustomerCode'];
+            }
+        }
+    }
+
     if (!$result['device']) {
         throw new Exception("Device not found");
     }
@@ -131,8 +260,47 @@ try {
     $foundSerial = $result['device']['SerialNumber'] ?? $serialNumber;
     $foundCustomerCode = $result['device']['CustomerCode'] ?? $customerCode;
 
+    if (!$cachedDrilldownData && !empty($foundSerial)) {
+        $stmt = $pdo->prepare("SELECT drilldown_data FROM {$prefix}cache_device_drilldown WHERE serial_number = :serial LIMIT 1");
+        $stmt->execute([':serial' => $foundSerial]);
+        $cachedDrilldownJson = $stmt->fetchColumn();
+        if ($cachedDrilldownJson) {
+            $decodedDrilldown = json_decode($cachedDrilldownJson, true);
+            if (is_array($decodedDrilldown) && !empty($decodedDrilldown)) {
+                $cachedDrilldownData = $decodedDrilldown;
+            }
+        }
+    }
+
+    if ($cachedDrilldownData) {
+        if (!$result['counterDetails']) {
+            $counterArray = extractFirstArray($cachedDrilldownData, ['CounterDetails', 'Counters', 'counterDetails', 'Meters', 'MeterReadings']);
+            if (is_array($counterArray)) {
+                $result['counterDetails'] = [
+                    'CounterDetails' => array_values($counterArray)
+                ];
+            }
+        }
+
+        if (!$result['deviceHealth']) {
+            $actions = extractFirstArray($cachedDrilldownData, ['Actions', 'actions', 'DeviceActions']);
+            if (is_array($actions)) {
+                $result['deviceHealth'] = [
+                    'Actions' => array_values($actions)
+                ];
+            }
+        }
+
+        if (empty($result['supplyAlerts'])) {
+            $alerts = extractFirstArray($cachedDrilldownData, ['SupplyAlerts', 'Alerts', 'SupplyAlertList']);
+            if (is_array($alerts)) {
+                $result['supplyAlerts'] = array_values($alerts);
+            }
+        }
+    }
+
     // Step 2: Get Counter/ListDetailed for detailed meter readings
-    if (!empty($foundSerial) && !empty($foundCustomerCode)) {
+    if (!$result['counterDetails'] && !empty($foundSerial) && !empty($foundCustomerCode)) {
         try {
             $counterData = callMpsApiQuery('Counter/ListDetailed', [
                 'DealerCode' => DEFAULT_DEALER_CODE,
@@ -157,7 +325,7 @@ try {
     }
 
     // Step 3: Get SdsAction/GetDeviceActions for health and recommended actions
-    if (!empty($foundSerial)) {
+    if (!$result['deviceHealth'] && !empty($foundSerial)) {
         try {
             $healthData = callMpsApiQuery('SdsAction/GetDeviceActions', [
                 'DealerCode' => DEFAULT_DEALER_CODE,
@@ -173,7 +341,7 @@ try {
     }
 
     // Step 4: Get SupplyAlert/List for this device
-    if (!empty($foundCustomerCode)) {
+    if (empty($result['supplyAlerts']) && !empty($foundCustomerCode)) {
         try {
             $alertData = callMpsApiQuery('SupplyAlert/List', [
                 'DealerId' => DEFAULT_DEALER_ID,
@@ -204,7 +372,6 @@ try {
     // Step 5: Get panel message history from database (most recent 100)
     if (!empty($foundSerial)) {
         try {
-            $pdo = getDatabase();
             $table = DB_PREFIX . 'panel_messages';
 
             $sql = "SELECT
@@ -247,6 +414,10 @@ try {
         } catch (Exception $e) {
             $result['errors'][] = "Panel history: " . $e->getMessage();
         }
+    }
+
+    if ($cachedDrilldownData) {
+        $result['drilldownCache'] = $cachedDrilldownData;
     }
 
     jsonSuccess($result);

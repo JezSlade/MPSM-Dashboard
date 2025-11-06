@@ -7,6 +7,9 @@
 require '../config.php';
 require '../functions.php';
 
+define('MPS_ENGINE_ACCESS', true);
+require_once dirname(__DIR__, 2) . '/mps-api/callbacks/panel-message-common.php';
+
 requireAuth();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -21,26 +24,7 @@ $status = $_GET['status'] ?? null; // Filter by status: SUCCESS, ERROR, PROCESSI
 try {
     $pdo = getDatabase();
     $table = DB_PREFIX . 'panel_callback_debug';
-
-    // Ensure table exists
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS {$table} (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            timestamp DATETIME NOT NULL,
-            ip_address VARCHAR(45) NOT NULL,
-            http_method VARCHAR(10) NOT NULL,
-            content_type VARCHAR(255) NULL,
-            user_agent VARCHAR(500) NULL,
-            headers JSON NULL,
-            raw_body TEXT NULL,
-            status VARCHAR(20) NOT NULL,
-            message VARCHAR(500) NULL,
-            http_code INT NULL,
-            INDEX idx_timestamp (timestamp),
-            INDEX idx_ip_address (ip_address),
-            INDEX idx_status (status)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
+    ensurePanelCallbackDebugTable($pdo);
 
     $where = '';
     $params = [];
@@ -52,24 +36,57 @@ try {
 
     $sql = "SELECT
                 id, timestamp, ip_address, http_method, content_type,
-                user_agent, headers, raw_body, status, message, http_code
+                user_agent, unique_source, forwarded_for, headers, raw_body,
+                status, message, http_code, completed_at
             FROM {$table}
             {$where}
             ORDER BY timestamp DESC
-            LIMIT :limit";
+            LIMIT {$limit}";
 
     $stmt = $pdo->prepare($sql);
 
     if ($status) {
         $stmt->bindValue(':status', $status, PDO::PARAM_STR);
     }
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $logs = [];
+    $sourceSummary = [];
+
     foreach ($rows as $row) {
+        $decodedHeaders = $row['headers'] ? json_decode($row['headers'], true) : [];
+        $forwardedFor = $row['forwarded_for'];
+
+        if (!$forwardedFor && is_array($decodedHeaders)) {
+            $forwardedFor = $decodedHeaders['X-FORWARDED-FOR'] ?? $decodedHeaders['X_FORWARDED_FOR'] ?? null;
+        }
+
+        $uniqueSource = $row['unique_source'];
+        if (!$uniqueSource) {
+            $sourceParts = [$row['ip_address']];
+            if ($forwardedFor) {
+                $sourceParts[] = "via {$forwardedFor}";
+            }
+            if (!empty($row['user_agent'])) {
+                $sourceParts[] = $row['user_agent'];
+            }
+            $uniqueSource = implode(' | ', array_filter($sourceParts));
+        }
+
+        $sourceKey = strtolower($uniqueSource);
+        if (!isset($sourceSummary[$sourceKey])) {
+            $sourceSummary[$sourceKey] = [
+                'unique_source' => $uniqueSource,
+                'ip_address' => $row['ip_address'],
+                'forwarded_for' => $forwardedFor,
+                'user_agent' => $row['user_agent'],
+                'count' => 0
+            ];
+        }
+        $sourceSummary[$sourceKey]['count']++;
+
         $logs[] = [
             'id' => (int)$row['id'],
             'timestamp' => $row['timestamp'],
@@ -77,12 +94,15 @@ try {
             'http_method' => $row['http_method'],
             'content_type' => $row['content_type'],
             'user_agent' => $row['user_agent'],
-            'headers' => $row['headers'] ? json_decode($row['headers'], true) : null,
+            'headers' => is_array($decodedHeaders) ? $decodedHeaders : null,
             'raw_body' => $row['raw_body'],
             'parsed_body' => $row['raw_body'] ? @json_decode($row['raw_body'], true) : null,
             'status' => $row['status'],
             'message' => $row['message'],
-            'http_code' => $row['http_code'] ? (int)$row['http_code'] : null
+            'http_code' => $row['http_code'] ? (int)$row['http_code'] : null,
+            'forwarded_for' => $forwardedFor,
+            'unique_source' => $uniqueSource,
+            'completed_at' => $row['completed_at']
         ];
     }
 
@@ -92,11 +112,17 @@ try {
                     SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) as success_count,
                     SUM(CASE WHEN status = 'ERROR' THEN 1 ELSE 0 END) as error_count,
                     SUM(CASE WHEN status = 'PROCESSING' THEN 1 ELSE 0 END) as processing_count,
-                    MAX(timestamp) as last_request
+                    MAX(timestamp) as last_request,
+                    MAX(COALESCE(completed_at, timestamp)) as last_completed
                  FROM {$table}";
 
     $statsStmt = $pdo->query($statsSql);
     $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Sort sources by count desc
+    usort($sourceSummary, static function ($a, $b) {
+        return $b['count'] <=> $a['count'];
+    });
 
     jsonSuccess([
         'logs' => $logs,
@@ -105,8 +131,10 @@ try {
             'success_count' => (int)$stats['success_count'],
             'error_count' => (int)$stats['error_count'],
             'processing_count' => (int)$stats['processing_count'],
-            'last_request' => $stats['last_request']
-        ]
+            'last_request' => $stats['last_request'],
+            'last_completed' => $stats['last_completed']
+        ],
+        'sources' => $sourceSummary
     ]);
 
 } catch (Exception $e) {

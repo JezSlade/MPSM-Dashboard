@@ -21,10 +21,14 @@ require '../functions.php';
 $startTime = microtime(true);
 $stats = [
     'devices_cached' => 0,
+    'deleted_devices' => 0,
     'devices_with_drilldown' => 0,
     'devices_with_panels' => 0,
     'api_calls_made' => 0,
+    'page_samples' => [],
+    'drilldown_skipped' => false,
     'errors' => 0,
+    'rate_limit_retries' => 0,
     'duration' => 0
 ];
 
@@ -42,14 +46,33 @@ function logMessage($message) {
     error_log("[ENHANCED-CACHE] $message");
 }
 
-// Prevent concurrent refreshes
+class RateLimitException extends RuntimeException
+{
+    private int $retryAfter;
+
+    public function __construct(string $message, int $retryAfter = 15)
+    {
+        parent::__construct($message);
+        $this->retryAfter = max(1, $retryAfter);
+    }
+
+    public function getRetryAfter(): int
+    {
+        return $this->retryAfter;
+    }
+}
+
+// Prevent concurrent refreshes (allow manual override via ?force=1)
+$forceRun = isset($_GET['force']) && $_GET['force'] === '1';
 if (file_exists($lockFile)) {
     $lockAge = time() - filemtime($lockFile);
-    if ($lockAge < 600) { // 10 minutes
+    if ($forceRun || $lockAge >= 600) {
+        logMessage("Existing lock cleared (force=" . ($forceRun ? 'true' : 'false') . ", age={$lockAge}s)");
+        unlink($lockFile);
+    } else {
         logMessage("Refresh skipped - already in progress");
         die(json_encode(['status' => 'skipped', 'reason' => 'refresh in progress']));
     }
-    unlink($lockFile);
 }
 
 file_put_contents($lockFile, time());
@@ -57,6 +80,8 @@ logMessage("=== Starting enhanced cache refresh ===");
 
 try {
     $pdo = getDatabase();
+    $skipDrilldown = isset($_GET['skipDrilldown']) && $_GET['skipDrilldown'] === '1';
+    $stats['drilldown_skipped'] = $skipDrilldown;
 
     // Step 1: Ensure cache tables exist
     ensureCacheTables($pdo);
@@ -65,38 +90,68 @@ try {
     logMessage("Step 1: Fetching all devices");
     $devices = fetchAllDevices();
     $stats['devices_cached'] = count($devices);
-    logMessage("Fetched {$stats['devices_cached']} devices total");
+    $stats['deleted_devices'] = array_reduce($devices, static function ($carry, $device) {
+        return $carry + (!empty($device['IsUninstalled']) ? 1 : 0);
+    }, 0);
+    logMessage("Fetched {$stats['devices_cached']} devices total ({$stats['deleted_devices']} uninstalled)");
 
     // Step 3: Cache device list
     cacheDeviceList($pdo, $devices);
 
     // Step 4: Fetch drill-down data for each device
-    logMessage("Step 2: Fetching drill-down data for all devices");
-    foreach ($devices as $device) {
-        $serialNumber = $device['SerialNumber'] ?? $device['serialNumber'] ?? null;
-        if (!$serialNumber) {
-            continue;
-        }
+    if ($skipDrilldown) {
+        logMessage("Step 2: Drill-down fetch skipped by request");
+    } else {
+        logMessage("Step 2: Fetching drill-down data for all devices");
+        $drilldownQueue = array_values($devices);
+        $deviceAttempts = [];
+        $processedCount = 0;
+        $drilldownDelayMicroseconds = 50000; // 50ms between requests
 
-        try {
-            $drillDownData = fetchDeviceDrillDown($serialNumber);
-            if ($drillDownData) {
-                cacheDeviceDrillDown($pdo, $serialNumber, $drillDownData);
-                $stats['devices_with_drilldown']++;
+        while (!empty($drilldownQueue)) {
+            $device = array_shift($drilldownQueue);
+            $serialNumber = $device['SerialNumber'] ?? $device['serialNumber'] ?? null;
+            if (!$serialNumber) {
+                continue;
             }
-            $stats['api_calls_made']++;
 
-            // Rate limiting - don't overwhelm the API
-            usleep(50000); // 50ms delay between requests
+            try {
+                $drillDownData = fetchDeviceDrillDown($device);
+                $stats['api_calls_made']++;
 
-        } catch (Exception $e) {
-            logMessage("Error fetching drill-down for $serialNumber: " . $e->getMessage());
-            $stats['errors']++;
-        }
+                if ($drillDownData) {
+                    cacheDeviceDrillDown($pdo, $serialNumber, $drillDownData);
+                    $stats['devices_with_drilldown']++;
+                }
 
-        // Progress logging every 50 devices
-        if ($stats['devices_with_drilldown'] % 50 === 0) {
-            logMessage("Progress: {$stats['devices_with_drilldown']} devices processed");
+                $processedCount++;
+                if ($processedCount % 50 === 0) {
+                    logMessage("Progress: {$stats['devices_with_drilldown']} devices with drill-down cached ({$processedCount} attempted)");
+                }
+
+                usleep($drilldownDelayMicroseconds);
+                unset($deviceAttempts[$serialNumber]);
+
+            } catch (RateLimitException $e) {
+                $stats['rate_limit_retries']++;
+                $attempts = ($deviceAttempts[$serialNumber] ?? 0) + 1;
+                $deviceAttempts[$serialNumber] = $attempts;
+
+                if ($attempts > 6) {
+                    logMessage("Rate limit persisted for {$serialNumber} after {$attempts} attempts; deferring to next run.");
+                    $stats['errors']++;
+                    unset($deviceAttempts[$serialNumber]);
+                    continue;
+                }
+
+                logMessage("Rate limit fetching drill-down for {$serialNumber} (attempt {$attempts}). Sleeping {$e->getRetryAfter()}s then retrying.");
+                sleep($e->getRetryAfter());
+                $drilldownQueue[] = $device;
+
+            } catch (Exception $e) {
+                logMessage("Error fetching drill-down for {$serialNumber}: " . $e->getMessage());
+                $stats['errors']++;
+            }
         }
     }
 
@@ -110,9 +165,11 @@ try {
     // Log completion
     logMessage("=== Cache refresh completed ===");
     logMessage("Devices cached: {$stats['devices_cached']}");
+    logMessage("Deleted devices cached: {$stats['deleted_devices']}");
     logMessage("Drill-down cached: {$stats['devices_with_drilldown']}");
     logMessage("Panel messages: {$stats['devices_with_panels']}");
     logMessage("API calls: {$stats['api_calls_made']}");
+    logMessage("Rate limit retries: {$stats['rate_limit_retries']}");
     logMessage("Errors: {$stats['errors']}");
     logMessage("Duration: {$stats['duration']}s");
 
@@ -124,6 +181,7 @@ try {
     die(json_encode([
         'status' => 'success',
         'stats' => $stats,
+        'page_samples' => $stats['page_samples'],
         'timestamp' => date('Y-m-d H:i:s')
     ]));
 
@@ -181,77 +239,115 @@ function fetchAllDevices(): array {
     $dealerCode = DEFAULT_DEALER_CODE;
     $allDevices = [];
 
-    // Fetch installed devices
-    $installedParams = [
-        'FilterDealerCodes' => [$dealerCode],
-        'PageNumber' => 1,
+    // Fetch installed devices across entire dealer (mirrors working params from get-cached-devices.php)
+    $installedBaseParams = [
+        'FilterDealerId' => DEFAULT_DEALER_ID,
+        'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+        'FilterCustomerCodes' => null,
+        'ProductBrand' => null,
+        'ProductModel' => null,
+        'OfficeId' => null,
+        'Status' => null,
+        'FilterText' => null,
+        'PageRows' => 50,
+        'SortColumn' => 'Id',
+        'SortOrder' => 0,
+    ];
+
+    for ($pageNumber = 1; $pageNumber <= 50; $pageNumber++) {
+        $params = $installedBaseParams;
+        $params['PageNumber'] = $pageNumber;
+        $params = array_filter($params, static function ($value) {
+            return $value !== null;
+        });
+
+        try {
+            $response = callMPSMAPI('Device/List', $params);
+        } catch (RateLimitException $e) {
+            $stats['rate_limit_retries']++;
+            logMessage("Rate limit while fetching installed device page {$pageNumber}; cooling {$e->getRetryAfter()}s before retry.");
+            sleep($e->getRetryAfter());
+            $pageNumber--;
+            continue;
+        }
+        $stats['api_calls_made']++;
+
+        if (!$response) {
+            logMessage("Device/List returned empty response on page {$pageNumber}; stopping pagination.");
+            break;
+        }
+
+        $pageDevices = extractDevicesFromResponse($response);
+        if (empty($pageDevices)) {
+            logMessage("Device/List page {$pageNumber} returned no devices; pagination complete.");
+            break;
+        }
+
+        $stats['page_samples'][] = [
+            'type' => 'installed',
+            'page' => $pageNumber,
+            'count' => count($pageDevices)
+        ];
+
+        $allDevices = array_merge($allDevices, $pageDevices);
+
+        if (count($pageDevices) < 50) {
+            logMessage("Installed devices pagination completed at page {$pageNumber} with fewer than 50 records.");
+            break;
+        }
+    }
+
+    // Fetch deleted/uninstalled devices
+    $deletedBaseParams = [
+        'DealerCode' => $dealerCode,
         'PageRows' => 200,
         'SortColumn' => 'AssetNumber',
         'SortOrder' => 'Asc'
     ];
 
-    $pageNumber = 1;
-    while ($pageNumber <= 50) {
-        $installedParams['PageNumber'] = $pageNumber;
+    for ($deletedPageNumber = 1; $deletedPageNumber <= 20; $deletedPageNumber++) {
+        $params = $deletedBaseParams;
+        $params['PageNumber'] = $deletedPageNumber;
 
-        $response = callMPSMAPI('Device/List', $installedParams);
+        try {
+            $response = callMPSMAPI('Device/Deleted/ListByDealer', $params);
+        } catch (RateLimitException $e) {
+            $stats['rate_limit_retries']++;
+            logMessage("Rate limit while fetching deleted device page {$deletedPageNumber}; cooling {$e->getRetryAfter()}s before retry.");
+            sleep($e->getRetryAfter());
+            $deletedPageNumber--;
+            continue;
+        }
         $stats['api_calls_made']++;
 
         if (!$response) {
+            logMessage("Device/Deleted/ListByDealer returned empty response on page {$deletedPageNumber}; stopping pagination.");
             break;
         }
 
         $pageDevices = extractDevicesFromResponse($response);
         if (empty($pageDevices)) {
+            logMessage("Deleted device page {$deletedPageNumber} returned no devices; pagination complete.");
             break;
         }
 
-        $allDevices = array_merge($allDevices, $pageDevices);
+        $stats['page_samples'][] = [
+            'type' => 'deleted',
+            'page' => $deletedPageNumber,
+            'count' => count($pageDevices)
+        ];
 
-        if (count($pageDevices) < 200) {
-            break;
-        }
-
-        $pageNumber++;
-    }
-
-    // Fetch deleted/uninstalled devices
-    $deletedParams = [
-        'dealerCode' => $dealerCode,
-        'pageNumber' => 1,
-        'pageRows' => 200,
-        'sortColumn' => 'AssetNumber',
-        'sortOrder' => 'Asc'
-    ];
-
-    $deletedPageNumber = 1;
-    while ($deletedPageNumber <= 20) {
-        $deletedParams['pageNumber'] = $deletedPageNumber;
-
-        $response = callMPSMAPI('Device/Deleted/List', $deletedParams);
-        $stats['api_calls_made']++;
-
-        if (!$response) {
-            break;
-        }
-
-        $pageDevices = extractDevicesFromResponse($response);
-        if (empty($pageDevices)) {
-            break;
-        }
-
-        // Mark as uninstalled
         foreach ($pageDevices as &$device) {
             $device['IsUninstalled'] = true;
         }
+        unset($device);
 
         $allDevices = array_merge($allDevices, $pageDevices);
 
         if (count($pageDevices) < 200) {
+            logMessage("Deleted devices pagination completed at page {$deletedPageNumber} with fewer than 200 records.");
             break;
         }
-
-        $deletedPageNumber++;
     }
 
     return $allDevices;
@@ -260,60 +356,177 @@ function fetchAllDevices(): array {
 /**
  * Fetch device drill-down data from MPSM API
  */
-function fetchDeviceDrillDown(string $serialNumber): ?array {
-    $response = callMPSMAPI('Device/Get', ['serialNumber' => $serialNumber]);
+function fetchDeviceDrillDown(array $device): ?array {
+    $params = [];
 
-    if (!$response || !isset($response['success']) || !$response['success']) {
+    if (!empty($device['Id'])) {
+        $params['Id'] = $device['Id'];
+    } elseif (!empty($device['DeviceId'])) {
+        $params['Id'] = $device['DeviceId'];
+    } elseif (!empty($device['SerialNumber'])) {
+        $params['SerialNumber'] = $device['SerialNumber'];
+    } elseif (!empty($device['serialNumber'])) {
+        $params['SerialNumber'] = $device['serialNumber'];
+    } else {
         return null;
     }
 
-    return $response['data'] ?? null;
+    $response = callMPSMAPI('Device/Get', $params);
+
+    return is_array($response) ? $response : null;
 }
 
 /**
  * Call MPSM API endpoint
  */
 function callMPSMAPI(string $action, array $params): ?array {
-    $payload = json_encode([
-        'action' => $action,
-        'params' => $params
-    ]);
+    $maxAttempts = 5;
+    $baseDelayMicroseconds = 750000; // 0.75s
+    $lastError = null;
+    $lastRateLimit = false;
+    $retryAfterSeconds = 10;
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $payload,
-            'timeout' => 15,
-            'ignore_errors' => true
-        ]
-    ]);
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        $payload = json_encode([
+            'action' => $action,
+            'params' => $params
+        ]);
 
-    $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/json',
+                'content' => $payload,
+                'timeout' => 20,
+                'ignore_errors' => true
+            ]
+        ]);
 
-    if ($response === false) {
-        return null;
+        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+        $headers = $http_response_header ?? [];
+        $httpCode = null;
+        if (isset($headers[0]) && preg_match('/\s(\d{3})\s/', $headers[0], $matches)) {
+            $httpCode = (int)$matches[1];
+        }
+
+        if ($response === false) {
+            $lastError = "Transport failure (HTTP {$httpCode})";
+            logMessage("API call [$action] failed to connect (attempt {$attempt}, HTTP {$httpCode})");
+            if ($attempt < $maxAttempts) {
+                usleep((int)($baseDelayMicroseconds * pow(2, $attempt - 1)));
+                continue;
+            }
+            break;
+        }
+
+        $decoded = json_decode($response, true);
+        $success = is_array($decoded) && !empty($decoded['success']);
+        $errorMessage = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : null;
+
+        if ($success) {
+            $data = $decoded['data'] ?? null;
+            $count = 0;
+            if (is_array($data)) {
+                if (isset($data['Items']) && is_array($data['Items'])) {
+                    $count = count($data['Items']);
+                } elseif (isset($data['Result']) && is_array($data['Result'])) {
+                    $count = count($data['Result']);
+                } elseif (array_keys($data) === range(0, count($data) - 1)) {
+                    $count = count($data);
+                }
+            }
+            logMessage("API call [$action] returned {$count} records");
+            return $data;
+        }
+
+        $rateLimitedThisAttempt = ($httpCode === 429) ||
+            (is_string($errorMessage) && stripos($errorMessage, 'rate limit') !== false);
+        $lastRateLimit = $rateLimitedThisAttempt;
+
+        if ($rateLimitedThisAttempt) {
+            $retryAfterHeader = parseRetryAfterHeader($headers);
+            if ($retryAfterHeader !== null) {
+                $retryAfterSeconds = max($retryAfterSeconds, $retryAfterHeader);
+            } else {
+                $retryAfterSeconds = max($retryAfterSeconds, (int)ceil(pow(2, $attempt)));
+            }
+
+            if ($attempt < $maxAttempts) {
+                logMessage("API rate limit hit for [$action] (attempt {$attempt}); sleeping {$retryAfterSeconds}s before retry.");
+                sleep($retryAfterSeconds);
+                continue;
+            }
+
+            logMessage("API rate limit persisted for [$action] after {$attempt} attempts.");
+            break;
+        }
+
+        $lastError = $errorMessage ?: 'Unexpected response payload';
+        logMessage("API error [$action]: " . ($errorMessage ?: 'Unexpected payload'));
+
+        if ($attempt < $maxAttempts) {
+            usleep((int)($baseDelayMicroseconds * pow(2, $attempt - 1)));
+            continue;
+        }
+
+        break;
     }
 
-    return json_decode($response, true);
+    if ($lastRateLimit) {
+        throw new RateLimitException("Rate limit exceeded for {$action}", $retryAfterSeconds);
+    }
+
+    if ($lastError) {
+        logMessage("API call [$action] failed after {$maxAttempts} attempts: {$lastError}");
+    }
+
+    return null;
+}
+
+function parseRetryAfterHeader(array $headers): ?int {
+    foreach ($headers as $headerLine) {
+        if (stripos($headerLine, 'Retry-After:') === 0) {
+            $value = trim(substr($headerLine, strlen('Retry-After:')));
+            if ($value === '') {
+                return null;
+            }
+
+            if (is_numeric($value)) {
+                $seconds = (int)$value;
+                return $seconds > 0 ? $seconds : null;
+            }
+
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) {
+                $diff = $timestamp - time();
+                if ($diff > 0) {
+                    return (int)$diff;
+                }
+            }
+        }
+    }
+
+    return null;
 }
 
 /**
  * Extract devices array from API response
  */
 function extractDevicesFromResponse(array $response): array {
-    if (!isset($response['data'])) {
-        return [];
+    if (isset($response['Items']) && is_array($response['Items'])) {
+        return $response['Items'];
     }
 
-    $raw = $response['data'];
-
-    if (isset($raw['Items']) && is_array($raw['Items'])) {
-        return $raw['Items'];
+    if (isset($response['Result']) && is_array($response['Result'])) {
+        return $response['Result'];
     }
 
-    if (isset($raw['Result']) && is_array($raw['Result'])) {
-        return $raw['Result'];
+    if (array_keys($response) === range(0, count($response) - 1)) {
+        return $response;
+    }
+
+    if (isset($response['data']) && is_array($response['data'])) {
+        return extractDevicesFromResponse($response['data']);
     }
 
     return [];

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'config.php';
 require 'functions.php';
 
@@ -17,6 +17,43 @@ trackVisit('/panel-message-monitor');
         .monitor-container {
             margin: 2rem auto;
             max-width: 1200px;
+        }
+        .monitor-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .monitor-tab-btn {
+            appearance: none;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            padding: 0.5rem 1.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .monitor-tab-btn i {
+            font-size: 0.95rem;
+        }
+        .monitor-tab-btn:hover {
+            background: var(--card-bg-alt);
+        }
+        .monitor-tab-btn.active {
+            background: var(--accent-bg, #1a73e8);
+            color: var(--on-accent-text, #fff);
+            border-color: var(--accent-bg, #1a73e8);
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
         }
         .monitor-controls {
             display: flex;
@@ -99,6 +136,21 @@ trackVisit('/panel-message-monitor');
             background: var(--accent-bg, #e3f2fd);
             color: var(--accent-text, #1565c0);
         }
+        .debugger-wrapper {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--card-bg);
+            min-height: 70vh;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+        }
+        .debugger-frame {
+            width: 100%;
+            height: 100%;
+            min-height: 70vh;
+            border: none;
+            background-color: var(--card-bg);
+        }
     </style>
 </head>
 <body>
@@ -114,10 +166,22 @@ trackVisit('/panel-message-monitor');
     </header>
 
     <main class="monitor-container">
+        <div class="monitor-tabs">
+            <button class="monitor-tab-btn active" data-tab="messages">
+                <i class="fas fa-satellite-dish"></i>
+                Panel Messages
+            </button>
+            <button class="monitor-tab-btn" data-tab="debugger">
+                <i class="fas fa-bug"></i>
+                Payload Debugger
+            </button>
+        </div>
+
+        <div id="tab-messages" class="tab-panel active" data-tab="messages">
         <section class="card">
             <div class="card-header">
                 <h2>Live Callback Stream</h2>
-                <span id="last-refresh" class="badge">Loading…</span>
+                <span id="last-refresh" class="badge">Loading...</span>
             </div>
             <div class="monitor-controls">
                 <div>
@@ -163,12 +227,24 @@ trackVisit('/panel-message-monitor');
                     </thead>
                     <tbody id="message-table-body">
                         <tr>
-                            <td colspan="6">Waiting for data…</td>
+                            <td colspan="6">Waiting for data...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
+        </div>
+        <div id="tab-debugger" class="tab-panel" data-tab="debugger">
+            <div class="debugger-wrapper">
+                <iframe
+                    class="debugger-frame"
+                    src="payload-debugger.php"
+                    title="Payload Debugger"
+                    loading="lazy"
+                    referrerpolicy="same-origin">
+                </iframe>
+            </div>
+        </div>
     </main>
 
     <div id="payload-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
@@ -184,5 +260,27 @@ trackVisit('/panel-message-monitor');
     </div>
 
     <script src="assets/panel-messages.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabButtons = document.querySelectorAll('.monitor-tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            tabButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const target = button.dataset.tab;
+
+                    tabButtons.forEach((btn) => {
+                        btn.classList.toggle('active', btn === button);
+                    });
+
+                    tabPanels.forEach((panel) => {
+                        panel.classList.toggle('active', panel.dataset.tab === target);
+                    });
+                });
+            });
+        });
+    </script>
 </body>
 </html>
+
+
