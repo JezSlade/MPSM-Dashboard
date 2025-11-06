@@ -20,19 +20,27 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
 $limit = min(max($limit, 1), 500); // Between 1 and 500
 
 $status = $_GET['status'] ?? null; // Filter by status: SUCCESS, ERROR, PROCESSING
+$source = $_GET['source'] ?? null; // Filter by source (unique_source field)
 
 try {
     $pdo = getDatabase();
     $table = DB_PREFIX . 'panel_callback_debug';
     ensurePanelCallbackDebugTable($pdo);
 
-    $where = '';
+    $whereClauses = [];
     $params = [];
 
     if ($status) {
-        $where = 'WHERE status = :status';
+        $whereClauses[] = 'status = :status';
         $params[':status'] = $status;
     }
+
+    if ($source) {
+        $whereClauses[] = 'unique_source = :source';
+        $params[':source'] = $source;
+    }
+
+    $where = count($whereClauses) ? 'WHERE ' . implode(' AND ', $whereClauses) : '';
 
     $sql = "SELECT
                 id, timestamp, ip_address, http_method, content_type,
@@ -45,8 +53,8 @@ try {
 
     $stmt = $pdo->prepare($sql);
 
-    if ($status) {
-        $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
     }
 
     $stmt->execute();

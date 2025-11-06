@@ -355,6 +355,12 @@ requireAuth();
                 </select>
             </div>
             <div>
+                <label for="filter-source">Source</label>
+                <select id="filter-source">
+                    <option value="">All Sources</option>
+                </select>
+            </div>
+            <div>
                 <label for="filter-limit">Limit</label>
                 <select id="filter-limit">
                     <option value="50">50</option>
@@ -368,16 +374,6 @@ requireAuth();
                 <label for="auto-refresh">Auto refresh (5s)</label>
             </div>
             <button id="refresh-now">Refresh Now</button>
-        </section>
-
-        <section class="summary-panel">
-            <h2>Unique Sources</h2>
-            <div id="source-summary" class="source-list">
-                <div class="source-item">
-                    <span class="source-count">--</span>
-                    <span class="source-meta">Waiting for data...</span>
-                </div>
-            </div>
         </section>
 
         <section class="logs-container" id="logs-container">
@@ -403,6 +399,7 @@ requireAuth();
             });
 
             document.getElementById('filter-status').addEventListener('change', loadLogs);
+            document.getElementById('filter-source').addEventListener('change', loadLogs);
             document.getElementById('filter-limit').addEventListener('change', loadLogs);
 
             loadLogs();
@@ -411,11 +408,15 @@ requireAuth();
 
         async function loadLogs() {
             const status = document.getElementById('filter-status').value;
+            const source = document.getElementById('filter-source').value;
             const limit = document.getElementById('filter-limit').value;
 
             const params = new URLSearchParams({ limit });
             if (status) {
                 params.append('status', status);
+            }
+            if (source) {
+                params.append('source', source);
             }
 
             try {
@@ -427,7 +428,7 @@ requireAuth();
                 }
 
                 updateStats(data.stats);
-                renderSources(data.sources || []);
+                updateSourceFilter(data.sources || []);
                 renderLogs(data.logs || []);
             } catch (error) {
                 const container = document.getElementById('logs-container');
@@ -449,26 +450,24 @@ requireAuth();
         document.getElementById('stat-last').textContent = lastSeen;
         }
 
-        function renderSources(sources) {
-            const list = document.getElementById('source-summary');
+        function updateSourceFilter(sources) {
+            const select = document.getElementById('filter-source');
+            const currentValue = select.value;
 
-            if (!sources.length) {
-                list.innerHTML = `
-                    <div class="source-item">
-                        <span class="source-count">0 requests</span>
-                        <span class="source-meta">No traffic recorded yet.</span>
-                    </div>
-                `;
-                return;
+            // Rebuild options but preserve selection
+            const optionsHTML = ['<option value="">All Sources</option>'].concat(
+                sources.map(source => {
+                    const label = `${source.unique_source} (${source.count})`;
+                    return `<option value="${escapeHtml(source.unique_source)}">${escapeHtml(label)}</option>`;
+                })
+            ).join('');
+
+            select.innerHTML = optionsHTML;
+
+            // Restore previous selection if it still exists
+            if (currentValue && sources.some(s => s.unique_source === currentValue)) {
+                select.value = currentValue;
             }
-
-            list.innerHTML = sources.map((source) => `
-                <div class="source-item">
-                    <span class="source-count">${source.count} request${source.count === 1 ? '' : 's'}</span>
-                    <span class="source-meta">${source.unique_source}</span>
-                    ${source.forwarded_for ? `<span class="source-meta">Forwarded for: ${source.forwarded_for}</span>` : ''}
-                </div>
-            `).join('');
         }
 
         function renderLogs(logs) {
