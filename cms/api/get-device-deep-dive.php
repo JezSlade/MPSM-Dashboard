@@ -384,12 +384,13 @@ try {
                         panel_configuration,
                         payload
                     FROM {$table}
-                    WHERE device_serial = :serialNumber
+                    WHERE device_serial = :serial
                     ORDER BY received_at DESC
                     LIMIT 100";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([':serialNumber' => $foundSerial]);
+            $stmt->bindValue(':serial', $foundSerial, PDO::PARAM_STR);
+            $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $messages = [];
