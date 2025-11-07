@@ -94,6 +94,20 @@ return [
         'session_timeout' => 3600,
     ],
 
+    // API Configuration
+    'api' => [
+        'version' => 'v1',
+        'rate_limit' => [
+            'enabled' => getenv('API_RATE_LIMIT') === 'true',
+            'requests_per_minute' => 60,
+        ],
+        'cors' => [
+            'allowed_origins' => ['*'], // In production, specify exact origins
+            'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],
+        ],
+    ],
+
     // Feature Flags
     'features' => [
         'device_crud' => getenv('FEATURE_DEVICE_CRUD') !== 'false', // Default enabled
