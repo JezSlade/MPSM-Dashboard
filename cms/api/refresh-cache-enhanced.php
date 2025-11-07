@@ -553,40 +553,9 @@ function cacheDeviceList(PDO $pdo, array $devices): void {
 }
 
 /**
- * Cache device drill-down data
- */
-function cacheDeviceDrillDown(PDO $pdo, string $serialNumber, array $drillDownData): void {
-    $prefix = DB_PREFIX;
-
-    $hasAlerts = !empty($drillDownData['supplyAlerts'] ?? []) ? 1 : 0;
-    $hasSupplies = !empty($drillDownData['supplyLevels'] ?? []) ? 1 : 0;
-
-    $sql = "INSERT INTO {$prefix}cache_device_drilldown
-            (serial_number, drilldown_data, has_alerts, has_supplies, cached_at)
-            VALUES (:serial, :data, :alerts, :supplies, NOW())
-            ON DUPLICATE KEY UPDATE
-            drilldown_data = :data2,
-            has_alerts = :alerts2,
-            has_supplies = :supplies2,
-            cached_at = NOW()";
-
-    $stmt = $pdo->prepare($sql);
-    $dataJson = json_encode($drillDownData);
-
-    $stmt->execute([
-        ':serial' => $serialNumber,
-        ':data' => $dataJson,
-        ':alerts' => $hasAlerts,
-        ':supplies' => $hasSupplies,
-        ':data2' => $dataJson,
-        ':alerts2' => $hasAlerts,
-        ':supplies2' => $hasSupplies
-    ]);
-}
-
-/**
  * Cache panel messages are already in mpsm_panel_messages table
  * Just count devices with panel history
+ * Note: cacheDeviceDrillDown() function is now in cms/functions.php
  */
 function cachePanelMessages(PDO $pdo): int {
     $prefix = DB_PREFIX;
