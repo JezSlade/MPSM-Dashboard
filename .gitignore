@@ -35,4 +35,8 @@ mps-api/cache/storage/
 *.backup
 *.bak
 *.txt
+*.zip
 deploy-*.ps1
+
+# Archive
+archive/
