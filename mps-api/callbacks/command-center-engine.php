@@ -1,0 +1,496 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Command Center Rules Engine
+ *
+ * Processes incoming panel messages against notification rules
+ * and creates dashboard notifications when rules match
+ */
+
+if (!defined('MPS_ENGINE_ACCESS')) {
+    exit('Access denied');
+}
+
+require_once __DIR__ . '/command-center-schema.php';
+
+if (!function_exists('processNotificationRules')) {
+    /**
+     * Main entry point: Process panel message against all active rules
+     *
+     * @param PDO $pdo Database connection
+     * @param int $messageId Panel message ID
+     * @param array $messageData Panel message data
+     */
+    function processNotificationRules(PDO $pdo, int $messageId, array $messageData): void
+    {
+        try {
+            ensureCommandCenterTables($pdo);
+
+            // Update alert aggregations first
+            updateAlertAggregation($pdo, $messageData, $messageId);
+
+            // Get all active notification rules
+            $rules = getActiveNotificationRules($pdo);
+
+            foreach ($rules as $rule) {
+                if (ruleMatches($pdo, $rule, $messageData)) {
+                    createDashboardNotification($pdo, $rule, $messageData, $messageId);
+                    recordRuleMatch($pdo, $rule, $messageData, $messageId);
+                }
+            }
+
+            // Clean up expired notifications
+            expireOldNotifications($pdo);
+
+        } catch (Throwable $e) {
+            error_log("Command Center error: " . $e->getMessage());
+        }
+    }
+}
+
+if (!function_exists('updateAlertAggregation')) {
+    /**
+     * Update or create alert aggregation for frequency tracking
+     */
+    function updateAlertAggregation(PDO $pdo, array $messageData, int $messageId): void
+    {
+        $deviceSerial = $messageData['device_serial'] ?? null;
+        $alertCode = $messageData['maintenance_alert_code'] ?? null;
+        $customerCode = $messageData['customer_code'] ?? null;
+
+        if (!$deviceSerial || !$alertCode) {
+            return; // Need both for aggregation
+        }
+
+        $nyTime = getNYTimestamp();
+        $table = DB_PREFIX . 'alert_aggregations';
+
+        // Check if aggregation exists
+        $sql = "SELECT * FROM {$table}
+                WHERE device_serial = :device AND alert_code = :alert AND customer_code <=> :customer";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':device' => $deviceSerial,
+            ':alert' => $alertCode,
+            ':customer' => $customerCode
+        ]);
+
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            // Update existing aggregation
+            $newCount = $existing['occurrence_count'] + 1;
+
+            // Calculate time window counts
+            $count1h = calculateOccurrenceCount($pdo, $deviceSerial, $alertCode, $customerCode, 1);
+            $count24h = calculateOccurrenceCount($pdo, $deviceSerial, $alertCode, $customerCode, 24);
+            $count7d = calculateOccurrenceCount($pdo, $deviceSerial, $alertCode, $customerCode, 24 * 7);
+            $count30d = calculateOccurrenceCount($pdo, $deviceSerial, $alertCode, $customerCode, 24 * 30);
+
+            $updateSql = "UPDATE {$table}
+                          SET last_occurrence_ny = :ny_time,
+                              occurrence_count = :count,
+                              count_1h = :count_1h,
+                              count_24h = :count_24h,
+                              count_7d = :count_7d,
+                              count_30d = :count_30d,
+                              latest_message_id = :message_id,
+                              latest_payload = :payload
+                          WHERE id = :id";
+
+            $stmt = $pdo->prepare($updateSql);
+            $stmt->execute([
+                ':ny_time' => $nyTime,
+                ':count' => $newCount,
+                ':count_1h' => $count1h,
+                ':count_24h' => $count24h,
+                ':count_7d' => $count7d,
+                ':count_30d' => $count30d,
+                ':message_id' => $messageId,
+                ':payload' => json_encode($messageData),
+                ':id' => $existing['id']
+            ]);
+
+        } else {
+            // Create new aggregation
+            $insertSql = "INSERT INTO {$table}
+                          (device_serial, alert_code, customer_code, first_occurrence_ny,
+                           last_occurrence_ny, occurrence_count, count_1h, count_24h,
+                           count_7d, count_30d, latest_message_id, latest_payload)
+                          VALUES (:device, :alert, :customer, :ny_time, :ny_time, 1, 1, 1, 1, 1, :message_id, :payload)";
+
+            $stmt = $pdo->prepare($insertSql);
+            $stmt->execute([
+                ':device' => $deviceSerial,
+                ':alert' => $alertCode,
+                ':customer' => $customerCode,
+                ':ny_time' => $nyTime,
+                ':message_id' => $messageId,
+                ':payload' => json_encode($messageData)
+            ]);
+        }
+    }
+}
+
+if (!function_exists('calculateOccurrenceCount')) {
+    /**
+     * Calculate occurrence count within a time window
+     */
+    function calculateOccurrenceCount(
+        PDO $pdo,
+        string $deviceSerial,
+        string $alertCode,
+        ?string $customerCode,
+        int $hours
+    ): int {
+        $table = DB_PREFIX . 'panel_messages';
+
+        $sql = "SELECT COUNT(*) as count FROM {$table}
+                WHERE device_serial = :device
+                  AND maintenance_alert_code = :alert
+                  AND customer_code <=> :customer
+                  AND ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':device' => $deviceSerial,
+            ':alert' => $alertCode,
+            ':customer' => $customerCode,
+            ':now' => getNYTimestamp(),
+            ':hours' => $hours
+        ]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)($result['count'] ?? 0);
+    }
+}
+
+if (!function_exists('getActiveNotificationRules')) {
+    /**
+     * Get all enabled notification rules
+     */
+    function getActiveNotificationRules(PDO $pdo): array
+    {
+        $table = DB_PREFIX . 'notification_rules';
+
+        $sql = "SELECT * FROM {$table} WHERE enabled = 1 ORDER BY severity DESC, id ASC";
+        $stmt = $pdo->query($sql);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('ruleMatches')) {
+    /**
+     * Check if a rule matches the message data
+     */
+    function ruleMatches(PDO $pdo, array $rule, array $messageData): bool
+    {
+        $deviceSerial = $messageData['device_serial'] ?? '';
+        $alertCode = $messageData['maintenance_alert_code'] ?? '';
+        $customerCode = $messageData['customer_code'] ?? '';
+
+        // Pattern matching (supports wildcards with %)
+        if ($rule['alert_code_pattern'] && !matchesPattern($alertCode, $rule['alert_code_pattern'])) {
+            return false;
+        }
+
+        if ($rule['device_serial_pattern'] && !matchesPattern($deviceSerial, $rule['device_serial_pattern'])) {
+            return false;
+        }
+
+        if ($rule['customer_code_pattern'] && !matchesPattern($customerCode, $rule['customer_code_pattern'])) {
+            return false;
+        }
+
+        // Frequency threshold matching
+        if ($rule['frequency_count'] && $rule['frequency_window_hours']) {
+            $actualCount = getFrequencyCount($pdo, $rule, $messageData);
+
+            if ($actualCount < $rule['frequency_count']) {
+                return false; // Threshold not met
+            }
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('matchesPattern')) {
+    /**
+     * Check if value matches pattern (supports SQL LIKE wildcards)
+     */
+    function matchesPattern(string $value, string $pattern): bool
+    {
+        // Convert SQL LIKE pattern to regex
+        $pattern = str_replace('%', '.*', $pattern);
+        $pattern = str_replace('_', '.', $pattern);
+        $pattern = '/^' . $pattern . '$/i';
+
+        return (bool)preg_match($pattern, $value);
+    }
+}
+
+if (!function_exists('getFrequencyCount')) {
+    /**
+     * Get occurrence count based on rule's frequency type
+     */
+    function getFrequencyCount(PDO $pdo, array $rule, array $messageData): int
+    {
+        $deviceSerial = $messageData['device_serial'] ?? '';
+        $alertCode = $messageData['maintenance_alert_code'] ?? '';
+        $customerCode = $messageData['customer_code'] ?? '';
+        $hours = (int)$rule['frequency_window_hours'];
+
+        switch ($rule['frequency_type']) {
+            case 'same_device':
+                return calculateOccurrenceCount($pdo, $deviceSerial, $alertCode, $customerCode, $hours);
+
+            case 'same_alert':
+                // Count same alert across all devices
+                $table = DB_PREFIX . 'panel_messages';
+                $sql = "SELECT COUNT(*) as count FROM {$table}
+                        WHERE maintenance_alert_code = :alert
+                          AND ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    ':alert' => $alertCode,
+                    ':now' => getNYTimestamp(),
+                    ':hours' => $hours
+                ]);
+
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return (int)($result['count'] ?? 0);
+
+            case 'same_customer':
+                // Count alerts for same customer
+                $table = DB_PREFIX . 'panel_messages';
+                $sql = "SELECT COUNT(*) as count FROM {$table}
+                        WHERE customer_code = :customer
+                          AND ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    ':customer' => $customerCode,
+                    ':now' => getNYTimestamp(),
+                    ':hours' => $hours
+                ]);
+
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return (int)($result['count'] ?? 0);
+
+            case 'any':
+                // Count all alerts
+                $table = DB_PREFIX . 'panel_messages';
+                $sql = "SELECT COUNT(*) as count FROM {$table}
+                        WHERE ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    ':now' => getNYTimestamp(),
+                    ':hours' => $hours
+                ]);
+
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return (int)($result['count'] ?? 0);
+
+            default:
+                return 0;
+        }
+    }
+}
+
+if (!function_exists('createDashboardNotification')) {
+    /**
+     * Create a dashboard notification from a matched rule
+     */
+    function createDashboardNotification(PDO $pdo, array $rule, array $messageData, int $messageId): void
+    {
+        $deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
+        $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
+        $customerCode = $messageData['customer_code'] ?? '';
+
+        // Get frequency data
+        $frequencyCount = 1;
+        $timeWindow = null;
+
+        if ($rule['frequency_count'] && $rule['frequency_window_hours']) {
+            $frequencyCount = getFrequencyCount($pdo, $rule, $messageData);
+            $timeWindow = (int)$rule['frequency_window_hours'];
+        }
+
+        // Parse notification templates
+        $title = parseNotificationTemplate(
+            $rule['notification_title'] ?: '{severity} Alert - {device} has {alert}',
+            $rule,
+            $messageData,
+            $frequencyCount,
+            $timeWindow
+        );
+
+        $message = parseNotificationTemplate(
+            $rule['notification_message'] ?: '{device} has triggered {alert} {count} times in the past {window}',
+            $rule,
+            $messageData,
+            $frequencyCount,
+            $timeWindow
+        );
+
+        // Calculate expiration
+        $nyTime = getNYTimestamp();
+        $expiresAt = null;
+        if ($rule['auto_dismiss_hours']) {
+            $dt = new DateTime($nyTime, new DateTimeZone('America/New_York'));
+            $dt->add(new DateInterval('PT' . $rule['auto_dismiss_hours'] . 'H'));
+            $expiresAt = $dt->format('Y-m-d H:i:s');
+        }
+
+        // Determine icon and color based on severity
+        $iconMap = [
+            'info' => 'info-circle',
+            'warning' => 'exclamation-triangle',
+            'high' => 'exclamation-circle',
+            'critical' => 'fire'
+        ];
+
+        $colorMap = [
+            'info' => 'blue',
+            'warning' => 'yellow',
+            'high' => 'orange',
+            'critical' => 'red'
+        ];
+
+        $icon = $iconMap[$rule['severity']] ?? 'bell';
+        $color = $colorMap[$rule['severity']] ?? 'gray';
+
+        // Priority: critical=100, high=75, warning=50, info=25
+        $priorityMap = ['critical' => 100, 'high' => 75, 'warning' => 50, 'info' => 25];
+        $priority = $priorityMap[$rule['severity']] ?? 0;
+
+        // Insert notification
+        $table = DB_PREFIX . 'dashboard_notifications';
+        $sql = "INSERT INTO {$table}
+                (title, message, severity, rule_id, device_serial, alert_code, customer_code,
+                 trigger_count, time_window_hours, related_message_ids, created_at_ny,
+                 expires_at_ny, icon, color, priority, status)
+                VALUES (:title, :message, :severity, :rule_id, :device, :alert, :customer,
+                        :count, :window, :message_ids, :created_at, :expires_at, :icon, :color, :priority, 'active')";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':title' => substr($title, 0, 255),
+            ':message' => $message,
+            ':severity' => $rule['severity'],
+            ':rule_id' => $rule['id'],
+            ':device' => $deviceSerial,
+            ':alert' => $alertCode,
+            ':customer' => $customerCode,
+            ':count' => $frequencyCount,
+            ':window' => $timeWindow,
+            ':message_ids' => (string)$messageId,
+            ':created_at' => $nyTime,
+            ':expires_at' => $expiresAt,
+            ':icon' => $icon,
+            ':color' => $color,
+            ':priority' => $priority
+        ]);
+
+        // Update rule trigger tracking
+        $ruleTable = DB_PREFIX . 'notification_rules';
+        $pdo->exec("UPDATE {$ruleTable}
+                    SET last_triggered_at = '{$nyTime}',
+                        trigger_count = trigger_count + 1
+                    WHERE id = {$rule['id']}");
+    }
+}
+
+if (!function_exists('parseNotificationTemplate')) {
+    /**
+     * Parse notification template with variable substitution
+     */
+    function parseNotificationTemplate(
+        string $template,
+        array $rule,
+        array $messageData,
+        int $count,
+        ?int $windowHours
+    ): string {
+        $deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
+        $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
+        $customerCode = $messageData['customer_code'] ?? 'Unknown Customer';
+
+        // Time window formatting
+        $windowText = '';
+        if ($windowHours !== null) {
+            if ($windowHours < 24) {
+                $windowText = $windowHours . ' hour' . ($windowHours != 1 ? 's' : '');
+            } else {
+                $days = $windowHours / 24;
+                $windowText = $days . ' day' . ($days != 1 ? 's' : '');
+            }
+        }
+
+        $replacements = [
+            '{severity}' => ucfirst($rule['severity']),
+            '{device}' => $deviceSerial,
+            '{alert}' => $alertCode,
+            '{customer}' => $customerCode,
+            '{count}' => $count,
+            '{window}' => $windowText,
+            '{rule_name}' => $rule['name'] ?? 'Alert Rule'
+        ];
+
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+}
+
+if (!function_exists('recordRuleMatch')) {
+    /**
+     * Record rule match in history
+     */
+    function recordRuleMatch(PDO $pdo, array $rule, array $messageData, int $messageId): void
+    {
+        $table = DB_PREFIX . 'rule_match_history';
+        $nyTime = getNYTimestamp();
+
+        $sql = "INSERT INTO {$table}
+                (rule_id, panel_message_id, matched_at_ny, device_serial, alert_code,
+                 customer_code, rule_name, rule_severity)
+                VALUES (:rule_id, :message_id, :ny_time, :device, :alert, :customer, :rule_name, :severity)";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':rule_id' => $rule['id'],
+            ':message_id' => $messageId,
+            ':ny_time' => $nyTime,
+            ':device' => $messageData['device_serial'] ?? null,
+            ':alert' => $messageData['maintenance_alert_code'] ?? null,
+            ':customer' => $messageData['customer_code'] ?? null,
+            ':rule_name' => $rule['name'],
+            ':severity' => $rule['severity']
+        ]);
+    }
+}
+
+if (!function_exists('expireOldNotifications')) {
+    /**
+     * Mark expired notifications as expired
+     */
+    function expireOldNotifications(PDO $pdo): void
+    {
+        $table = DB_PREFIX . 'dashboard_notifications';
+        $nyTime = getNYTimestamp();
+
+        $sql = "UPDATE {$table}
+                SET status = 'expired'
+                WHERE status = 'active'
+                  AND expires_at_ny IS NOT NULL
+                  AND expires_at_ny < :ny_time";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':ny_time' => $nyTime]);
+    }
+}

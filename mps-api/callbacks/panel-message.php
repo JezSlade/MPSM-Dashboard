@@ -15,6 +15,7 @@ require_once dirname(__DIR__, 1) . '/config.php';     // Loads .env-backed engin
 require_once dirname(__DIR__, 2) . '/cms/config.php'; // Provides DB constants/session settings
 require_once dirname(__DIR__, 2) . '/cms/functions.php';
 require_once __DIR__ . '/panel-message-common.php';
+require_once __DIR__ . '/command-center-engine.php';  // Command Center for notifications
 
 $debugLogId = createPanelCallbackDebugLog();
 
@@ -75,6 +76,15 @@ try {
     ]);
 
     $messageId = $pdo->lastInsertId();
+
+    // Process Command Center notification rules
+    processNotificationRules($pdo, $messageId, [
+        'device_serial' => truncateField(extractDeviceSerial($decoded), 150),
+        'maintenance_alert_code' => truncateField($decoded['maintenanceAlert']['code'] ?? $decoded['MaintenanceAlert_Code'] ?? null, 150),
+        'customer_code' => truncateField($decoded['customer']['code'] ?? $decoded['Customer_Code'] ?? null, 100),
+        'customer_description' => truncateField($decoded['customer']['description'] ?? $decoded['Customer_Description'] ?? null, 255),
+        'panel_configuration' => truncateField($decoded['maintenanceAlert']['panelConfiguration'] ?? $decoded['PanelMessageConfiguration_Description'] ?? null, 255),
+    ]);
 
     updatePanelCallbackDebugLog($debugLogId, 'SUCCESS', "Message stored with ID {$messageId} at {$nyTimestamp} ET", 200, $rawBody);
     logPanelMessage($decoded);
