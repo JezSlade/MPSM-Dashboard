@@ -101,13 +101,23 @@ function renderHeroNotifications(notifications) {
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
         .slice(0, 5);
 
+    container.style.display = 'block';
+
     if (topNotifications.length === 0) {
-        container.innerHTML = '';
-        container.style.display = 'none';
+        container.innerHTML = `
+            <div class="hero-notification-empty">
+                <div class="hero-empty-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="hero-empty-content">
+                    <h3>No Active Alerts</h3>
+                    <p>Monitoring system is active. Waiting for panel message notifications...</p>
+                    <small>Create notification rules in <a href="command-center.php">Command Center</a> to start receiving alerts</small>
+                </div>
+            </div>
+        `;
         return;
     }
-
-    container.style.display = 'block';
 
     const html = topNotifications.map(notif => {
         const config = HERO_SEVERITY_CONFIG[notif.severity] || HERO_SEVERITY_CONFIG.info;

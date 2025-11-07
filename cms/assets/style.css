@@ -2622,6 +2622,54 @@ main {
     transform: translateY(-1px);
 }
 
+/* Hero Notifications Empty State */
+.hero-notification-empty {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-md);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    animation: slideInFromTop 0.4s ease-out;
+}
+
+.hero-empty-icon {
+    font-size: 3rem;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.hero-empty-content h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.hero-empty-content p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.hero-empty-content small {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    display: block;
+}
+
+.hero-empty-content a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.hero-empty-content a:hover {
+    opacity: 0.8;
+}
+
 /* Command Center - Notification Cards */
 .notification-card {
     background: var(--bg-card);
