@@ -4,15 +4,10 @@
  * Endpoints for managing notification rules and viewing dashboard notifications
  */
 
-session_start();
-require_once __DIR__ . '/../functions.php';
+require '../config.php';
+require '../functions.php';
 
-// Authentication required
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Authentication required']);
-    exit;
-}
+requireAuth();
 
 define('MPS_ENGINE_ACCESS', true);
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-schema.php';
