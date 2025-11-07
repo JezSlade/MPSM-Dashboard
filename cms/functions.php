@@ -849,3 +849,160 @@ function initializeTables() {
         $stmt->execute(['admin', password_hash('admin', PASSWORD_DEFAULT)]);
     }
 }
+
+// ============================================================================
+// BACKWARDS COMPATIBILITY WRAPPERS FOR REPOSITORY LAYER
+// ============================================================================
+// These functions maintain existing API while using new repository pattern
+// Will be deprecated in future releases once all code migrates to repositories
+
+/**
+ * Get cached devices using DeviceRepository
+ * Backwards compatible with legacy device access
+ */
+function getCachedDevices($filters = []) {
+    try {
+        return app(DeviceRepository::class)->findAll($filters);
+    } catch (Exception $e) {
+        error_log("getCachedDevices error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Get device by serial number using DeviceRepository
+ */
+function getCachedDevice($serial) {
+    try {
+        return app(DeviceRepository::class)->findBySerial($serial);
+    } catch (Exception $e) {
+        error_log("getCachedDevice error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Cache device data using DeviceRepository
+ */
+function cacheDeviceData($deviceData, $ttl = 3600) {
+    try {
+        return app(DeviceRepository::class)->cacheDevice($deviceData, $ttl);
+    } catch (Exception $e) {
+        error_log("cacheDeviceData error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get device drilldown using DeviceRepository
+ */
+function getDeviceDrilldown($serial) {
+    try {
+        return app(DeviceRepository::class)->getDrilldown($serial);
+    } catch (Exception $e) {
+        error_log("getDeviceDrilldown error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Cache device drilldown using DeviceRepository
+ */
+function cacheDeviceDrilldown($serial, $drilldownData) {
+    try {
+        return app(DeviceRepository::class)->cacheDrilldown($serial, $drilldownData);
+    } catch (Exception $e) {
+        error_log("cacheDeviceDrilldown error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Search devices using DeviceRepository
+ */
+function searchDevices($query, $limit = 10) {
+    try {
+        return app(DeviceRepository::class)->search($query, $limit);
+    } catch (Exception $e) {
+        error_log("searchDevices error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Get panel messages for device using PanelMessageRepository
+ */
+function getPanelMessages($serial, $limit = 100) {
+    try {
+        return app(PanelMessageRepository::class)->findByDevice($serial, $limit);
+    } catch (Exception $e) {
+        error_log("getPanelMessages error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Get recent panel messages using PanelMessageRepository
+ */
+function getRecentPanelMessages($hours = 24, $limit = 100, $deviceSerial = null) {
+    try {
+        return app(PanelMessageRepository::class)->findRecent($hours, $limit, $deviceSerial);
+    } catch (Exception $e) {
+        error_log("getRecentPanelMessages error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Store panel message using PanelMessageRepository
+ */
+function storePanelMessage($messageData) {
+    try {
+        return app(PanelMessageRepository::class)->store($messageData);
+    } catch (Exception $e) {
+        error_log("storePanelMessage error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Get panel message statistics using PanelMessageRepository
+ */
+function getPanelMessageStats($hours = 24) {
+    try {
+        return app(PanelMessageRepository::class)->getStatistics($hours);
+    } catch (Exception $e) {
+        error_log("getPanelMessageStats error: " . $e->getMessage());
+        return [
+            'total_messages' => 0,
+            'unique_devices' => 0,
+            'unique_customers' => 0,
+            'oldest_message' => null,
+            'newest_message' => null,
+        ];
+    }
+}
+
+/**
+ * Find user by username using UserRepository
+ */
+function findUserByUsername($username) {
+    try {
+        return app(UserRepository::class)->findByUsername($username);
+    } catch (Exception $e) {
+        error_log("findUserByUsername error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Verify user password using UserRepository
+ */
+function verifyUserPassword($username, $password) {
+    try {
+        return app(UserRepository::class)->verifyPassword($username, $password);
+    } catch (Exception $e) {
+        error_log("verifyUserPassword error: " . $e->getMessage());
+        return false;
+    }
+}

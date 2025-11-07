@@ -94,6 +94,43 @@ $container->register(EngineInterface::class, function($container) {
 }, true);
 
 // ============================================================================
+// REGISTER REPOSITORIES
+// ============================================================================
+
+/**
+ * Device Repository
+ * Handles device data access and caching
+ */
+$container->register(DeviceRepository::class, function($container) {
+    return new DeviceRepository(
+        $container->get(PDO::class),
+        $container->get(CacheInterface::class)
+    );
+}, true);
+
+/**
+ * Panel Message Repository
+ * Handles panel message webhook data
+ */
+$container->register(PanelMessageRepository::class, function($container) {
+    return new PanelMessageRepository(
+        $container->get(PDO::class),
+        $container->get(CacheInterface::class)
+    );
+}, true);
+
+/**
+ * User Repository
+ * Handles user authentication and preferences
+ */
+$container->register(UserRepository::class, function($container) {
+    return new UserRepository(
+        $container->get(PDO::class),
+        $container->get(CacheInterface::class)
+    );
+}, true);
+
+// ============================================================================
 // LOAD BACKWARDS COMPATIBILITY LAYER
 // ============================================================================
 
