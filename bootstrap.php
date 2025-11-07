@@ -130,6 +130,14 @@ $container->register(UserRepository::class, function($container) {
     );
 }, true);
 
+/**
+ * Queue Manager
+ * Handles background job queue
+ */
+$container->register(QueueManager::class, function($container) {
+    return new QueueManager($container->get(PDO::class));
+}, true);
+
 // ============================================================================
 // LOAD BACKWARDS COMPATIBILITY LAYER
 // ============================================================================

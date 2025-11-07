@@ -1006,3 +1006,65 @@ function verifyUserPassword($username, $password) {
         return false;
     }
 }
+
+// ============================================================================
+// JOB QUEUE HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Dispatch job to queue
+ *
+ * @param Job $job Job instance
+ * @param int $delay Delay in seconds (default 0)
+ * @return int Job ID
+ */
+function dispatchJob(Job $job, int $delay = 0): int {
+    try {
+        return app(QueueManager::class)->dispatch($job, $delay);
+    } catch (Exception $e) {
+        error_log("dispatchJob error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Dispatch cache refresh job
+ *
+ * @param string|null $serial Device serial (null for all devices)
+ * @param bool $fullRefresh Include drilldown refresh
+ * @return int Job ID
+ */
+function dispatchCacheRefresh(?string $serial = null, bool $fullRefresh = false): int {
+    $job = new RefreshCacheJob($serial, $fullRefresh);
+    return dispatchJob($job);
+}
+
+/**
+ * Get job status
+ *
+ * @param int $jobId Job ID
+ * @return array|null Job status or null if not found
+ */
+function getJobStatus(int $jobId): ?array {
+    try {
+        return app(QueueManager::class)->getStatus($jobId);
+    } catch (Exception $e) {
+        error_log("getJobStatus error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Get queue statistics
+ *
+ * @param string $queue Queue name (default: default)
+ * @return array Queue statistics
+ */
+function getQueueStats(string $queue = 'default'): array {
+    try {
+        return app(QueueManager::class)->getStats($queue);
+    } catch (Exception $e) {
+        error_log("getQueueStats error: " . $e->getMessage());
+        return [];
+    }
+}
