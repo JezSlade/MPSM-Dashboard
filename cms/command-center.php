@@ -1,13 +1,9 @@
 <?php
-declare(strict_types=1);
+require 'config.php';
+require 'functions.php';
 
-require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/session.php';
-
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuth();
+trackVisit('/command-center');
 ?>
 <!DOCTYPE html>
 <html lang="en">
