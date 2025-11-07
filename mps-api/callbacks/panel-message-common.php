@@ -120,7 +120,7 @@ if (!function_exists('createPanelCallbackDebugLog')) {
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                ':timestamp' => date('Y-m-d H:i:s'),
+                ':timestamp' => getNYTimestamp(), // NY local time
                 ':ip_address' => $ipAddress,
                 ':http_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
                 ':content_type' => $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? 'not set',
@@ -190,7 +190,8 @@ if (!function_exists('updatePanelCallbackDebugLog')) {
 
 if (!function_exists('ensurePanelMessageTable')) {
     /**
-     * Ensure the panel message table exists.
+     * Ensure the panel message table exists with NY timezone support.
+     * MISSION CRITICAL: ny_received_at stores NY local time for sorting/filtering/display
      */
     function ensurePanelMessageTable(PDO $pdo): void
     {
@@ -204,6 +205,7 @@ if (!function_exists('ensurePanelMessageTable')) {
             CREATE TABLE IF NOT EXISTS {$table} (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ny_received_at DATETIME NOT NULL COMMENT 'NY local time (America/New_York)',
                 customer_code VARCHAR(100) NULL,
                 customer_description VARCHAR(255) NULL,
                 device_serial VARCHAR(150) NULL,
@@ -214,11 +216,29 @@ if (!function_exists('ensurePanelMessageTable')) {
                 payload JSON NOT NULL,
                 processed TINYINT(1) DEFAULT 0,
                 INDEX idx_received_at (received_at),
+                INDEX idx_ny_received_at (ny_received_at),
                 INDEX idx_customer_code (customer_code),
                 INDEX idx_device_serial (device_serial),
                 INDEX idx_processed (processed)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+
+        // Add ny_received_at column if upgrading from old schema
+        $columnExists = function (string $column) use ($pdo, $table) {
+            $stmt = $pdo->query("SHOW COLUMNS FROM {$table} LIKE '{$column}'");
+            return $stmt ? $stmt->fetch(\PDO::FETCH_ASSOC) : false;
+        };
+
+        if (!$columnExists('ny_received_at')) {
+            $pdo->exec("
+                ALTER TABLE {$table}
+                ADD COLUMN ny_received_at DATETIME NOT NULL COMMENT 'NY local time (America/New_York)' AFTER received_at,
+                ADD INDEX idx_ny_received_at (ny_received_at)
+            ");
+
+            // Backfill existing rows by converting received_at to NY time
+            $pdo->exec("UPDATE {$table} SET ny_received_at = received_at WHERE ny_received_at IS NULL OR ny_received_at = '0000-00-00 00:00:00'");
+        }
 
         $ensured = true;
     }
@@ -257,9 +277,63 @@ if (!function_exists('truncateField')) {
     }
 }
 
+if (!function_exists('getNYTimestamp')) {
+    /**
+     * Get current timestamp in New York timezone (America/New_York)
+     * Returns format: YYYY-MM-DD HH:MM:SS
+     *
+     * MISSION CRITICAL: All timestamps MUST be in NY local time
+     */
+    function getNYTimestamp(): string
+    {
+        $nyTimezone = new DateTimeZone('America/New_York');
+        $now = new DateTime('now', $nyTimezone);
+        return $now->format('Y-m-d H:i:s');
+    }
+}
+
+if (!function_exists('convertToNYTime')) {
+    /**
+     * Convert any timestamp to New York local time
+     *
+     * @param string|int $timestamp Unix timestamp or date string
+     * @return string Formatted as YYYY-MM-DD HH:MM:SS in NY time
+     */
+    function convertToNYTime($timestamp): string
+    {
+        $nyTimezone = new DateTimeZone('America/New_York');
+
+        if (is_numeric($timestamp)) {
+            $dt = new DateTime('@' . $timestamp);
+        } else {
+            $dt = new DateTime($timestamp);
+        }
+
+        $dt->setTimezone($nyTimezone);
+        return $dt->format('Y-m-d H:i:s');
+    }
+}
+
+if (!function_exists('formatNYTimestamp')) {
+    /**
+     * Format NY timestamp for display
+     *
+     * @param string $nyTimestamp NY timestamp in Y-m-d H:i:s format
+     * @param string $format Output format (default: M d, Y g:i A)
+     * @return string Formatted timestamp
+     */
+    function formatNYTimestamp(string $nyTimestamp, string $format = 'M d, Y g:i A'): string
+    {
+        $nyTimezone = new DateTimeZone('America/New_York');
+        $dt = new DateTime($nyTimestamp, $nyTimezone);
+        return $dt->format($format);
+    }
+}
+
 if (!function_exists('logPanelMessage')) {
     /**
      * Append a summary line to the panel message log file.
+     * Uses New York local time for all timestamps.
      */
     function logPanelMessage(array $payload): void
     {
@@ -268,9 +342,12 @@ if (!function_exists('logPanelMessage')) {
             mkdir($logDir, 0755, true);
         }
 
-        $logFile = $logDir . '/panel-message-' . date('Y-m-d') . '.log';
+        $nyTime = getNYTimestamp();
+        $logFile = $logDir . '/panel-message-' . substr($nyTime, 0, 10) . '.log';
+
         $summary = [
-            'time' => date('Y-m-d H:i:s'),
+            'time' => $nyTime,
+            'timezone' => 'America/New_York',
             'customer' => $payload['customer']['code'] ?? $payload['Customer_Code'] ?? null,
             'serial' => extractDeviceSerial($payload),
             'alert_code' => $payload['maintenanceAlert']['code'] ?? $payload['MaintenanceAlert_Code'] ?? null,

@@ -53,14 +53,17 @@ try {
     $pdo = getDatabase();
     ensurePanelMessageTable($pdo);
 
+    $nyTimestamp = getNYTimestamp(); // Get NY local time
+
     $insertSql = sprintf(
-        'INSERT INTO %s (customer_code, customer_description, device_serial, maintenance_alert_code, maintenance_alert_id, panel_configuration, payload, source_ip)
-         VALUES (:customer_code, :customer_description, :device_serial, :maintenance_alert_code, :maintenance_alert_id, :panel_configuration, :payload, :source_ip)',
+        'INSERT INTO %s (ny_received_at, customer_code, customer_description, device_serial, maintenance_alert_code, maintenance_alert_id, panel_configuration, payload, source_ip)
+         VALUES (:ny_received_at, :customer_code, :customer_description, :device_serial, :maintenance_alert_code, :maintenance_alert_id, :panel_configuration, :payload, :source_ip)',
         DB_PREFIX . 'panel_messages'
     );
 
     $stmt = $pdo->prepare($insertSql);
     $stmt->execute([
+        ':ny_received_at' => $nyTimestamp, // MISSION CRITICAL: NY local time
         ':customer_code' => truncateField($decoded['customer']['code'] ?? $decoded['Customer_Code'] ?? null, 100),
         ':customer_description' => truncateField($decoded['customer']['description'] ?? $decoded['Customer_Description'] ?? null, 255),
         ':device_serial' => truncateField(extractDeviceSerial($decoded), 150),
@@ -73,7 +76,7 @@ try {
 
     $messageId = $pdo->lastInsertId();
 
-    updatePanelCallbackDebugLog($debugLogId, 'SUCCESS', "Message stored with ID {$messageId}", 200, $rawBody);
+    updatePanelCallbackDebugLog($debugLogId, 'SUCCESS', "Message stored with ID {$messageId} at {$nyTimestamp} ET", 200, $rawBody);
     logPanelMessage($decoded);
 } catch (Throwable $exception) {
     updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Database error: ' . $exception->getMessage(), 500, $rawBody);
