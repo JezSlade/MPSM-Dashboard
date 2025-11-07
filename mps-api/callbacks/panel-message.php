@@ -75,7 +75,7 @@ try {
         ':source_ip' => $_SERVER['REMOTE_ADDR'] ?? null,
     ]);
 
-    $messageId = $pdo->lastInsertId();
+    $messageId = (int)$pdo->lastInsertId();
 
     // Process Command Center notification rules
     processNotificationRules($pdo, $messageId, [
