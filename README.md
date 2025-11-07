@@ -14,12 +14,14 @@ A comprehensive dashboard for monitoring MPS (Managed Print Services) devices us
 
 **Key Features**:
 - Real-time device monitoring across multiple customers
+- **Command Center**: Rules-based notification system for panel message alerts
+- **Hero Notifications**: Priority alert banners on dashboard with real-time updates
 - 4-level role-based access control (Viewer, Analyst, Admin, Super Admin)
 - Background job queue for long-running tasks
 - Multi-driver caching system (Database, File, Redis)
 - Modern ES6 frontend with component architecture
 - REST API v1 with authentication and permissions
-- Panel message webhook integration
+- Panel message webhook integration (913+ callbacks processed)
 - Professional admin UI with detailed metrics
 
 ---
