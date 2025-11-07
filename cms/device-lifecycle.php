@@ -5,6 +5,9 @@ require 'functions.php';
 requireAuth();
 ensureDeviceCrudEnabled();
 trackVisit('/device-lifecycle');
+
+// Allow iframe embedding from same origin (panel-message-monitor.php)
+header('X-Frame-Options: SAMEORIGIN');
 ?>
 <!DOCTYPE html>
 <html lang="en">
