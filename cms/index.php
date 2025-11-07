@@ -43,6 +43,10 @@ $preferences = getUserPreferences($userId);
                 </div>
             </div>
             <div class="header-actions">
+                <a href="command-center.php" class="btn-icon" title="Command Center">
+                    <i class="fas fa-shield-alt"></i>
+                    <span id="notification-badge" class="notification-badge" style="display:none;">0</span>
+                </a>
                 <a href="panel-message-monitor.php" class="btn-icon" title="Panel Messages">
                     <i class="fas fa-satellite-dish"></i>
                 </a>
@@ -71,6 +75,11 @@ $preferences = getUserPreferences($userId);
     <main class="container">
         <!-- Dashboard Tab -->
         <div id="dashboard-tab" class="tab-content active">
+            <!-- Hero Notifications Widget -->
+            <section id="hero-notifications" class="hero-notifications">
+                <!-- Notifications injected here by hero-notifications.js -->
+            </section>
+
             <!-- Customer Header with Metric Cards -->
             <section id="customer-header" class="customer-header">
                 <div class="loading">Loading...</div>
@@ -371,5 +380,6 @@ $preferences = getUserPreferences($userId);
     <script src="assets/app.js"></script>
     <script src="assets/error-logs.js"></script>
     <script src="api/cache-engine.js"></script>
+    <script src="assets/hero-notifications.js"></script>
 </body>
 </html>
