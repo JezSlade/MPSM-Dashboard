@@ -174,7 +174,7 @@ function fetchDeviceDrillDownData($device) {
 
     // 1. Counter details
     try {
-        $counterResponse = callMPSMAPI('Counter/ListDetailed', [
+        $counterResponse = callMPSAPI('Counter/ListDetailed', [
             'DeviceId' => $deviceId
         ]);
         if ($counterResponse && isset($counterResponse['Counters'])) {
@@ -186,7 +186,7 @@ function fetchDeviceDrillDownData($device) {
 
     // 2. Device actions/health
     try {
-        $actionsResponse = callMPSMAPI('SdsAction/GetDeviceActions', [
+        $actionsResponse = callMPSAPI('SdsAction/GetDeviceActions', [
             'DeviceId' => $deviceId
         ]);
         if ($actionsResponse) {
@@ -198,7 +198,7 @@ function fetchDeviceDrillDownData($device) {
 
     // 3. Supply alerts
     try {
-        $alertsResponse = callMPSMAPI('SupplyAlert/List', [
+        $alertsResponse = callMPSAPI('SupplyAlert/List', [
             'DeviceId' => $deviceId
         ]);
         if ($alertsResponse && isset($alertsResponse['SupplyAlerts'])) {

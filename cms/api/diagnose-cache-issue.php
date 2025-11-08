@@ -85,7 +85,7 @@ try {
         ];
 
         try {
-            $response = callMPSMAPI('Device/List', $params);
+            $response = callMPSAPI('Device/List', $params);
 
             if (!$response || !isset($response['Devices'])) {
                 echo "Page $pageNumber: No response or no Devices array\n";
