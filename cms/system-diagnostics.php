@@ -241,19 +241,33 @@ requireAuth();
 
             try {
                 const response = await fetch('api/get-system-diagnostics.php');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
+
+                console.log('API Response:', result); // Debug log
 
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to load diagnostics');
                 }
 
                 const data = result.data;
+
+                if (!data) {
+                    throw new Error('No data returned from API');
+                }
+
                 renderDiagnostics(data);
             } catch (error) {
+                console.error('Diagnostics Error:', error);
                 content.innerHTML = `
                     <div class="card">
                         <h2 style="color: #e74c3c;"><i class="fas fa-exclamation-triangle"></i> Error</h2>
-                        <p>${error.message}</p>
+                        <p>${escapeHtml(error.message)}</p>
+                        <p style="margin-top: 1rem; font-size: 0.9rem; color: #7f8c8d;">Check browser console for details</p>
                     </div>
                 `;
             }
@@ -264,21 +278,27 @@ requireAuth();
 
             let html = '';
 
+            // Safely access nested properties
+            const health = data.health || { status: 'UNKNOWN', issues: [], recommendations: [] };
+            const panelCallbacks = data.panel_callbacks || { total: 0, success: 0, errors: 0, last_callback: 'Never', error_breakdown: [] };
+            const panelMessages = data.panel_messages || { total_messages: 0, unique_devices: 0, unique_customers: 0, last_message: 'Never' };
+            const cache = data.cache || { total_devices: 0, devices_with_drilldown: 0, coverage_percent: 0, freshness: { cached_within_hour: 0 } };
+
             // Health Status
             html += `
                 <div class="card">
                     <h2><i class="fas fa-heartbeat"></i> System Health</h2>
-                    <div class="health-status ${data.health.status}">${data.health.status}</div>
-                    ${data.health.issues.length > 0 ? `
+                    <div class="health-status ${health.status}">${health.status}</div>
+                    ${health.issues.length > 0 ? `
                         <h3 style="margin-top: 1rem; font-size: 1rem;">Issues Detected:</h3>
                         <ul class="issue-list">
-                            ${data.health.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            ${health.issues.map(issue => `<li>${issue}</li>`).join('')}
                         </ul>
                     ` : ''}
-                    ${data.health.recommendations.length > 0 ? `
+                    ${health.recommendations.length > 0 ? `
                         <h3 style="margin-top: 1rem; font-size: 1rem;">Recommendations:</h3>
                         <ul class="rec-list">
-                            ${data.health.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            ${health.recommendations.map(rec => `<li>${rec}</li>`).join('')}
                         </ul>
                     ` : ''}
                 </div>
@@ -293,19 +313,19 @@ requireAuth();
                     <h2><i class="fas fa-exchange-alt"></i> Panel Callbacks</h2>
                     <div class="stat">
                         <span class="stat-label">Total Callbacks</span>
-                        <span class="stat-value">${data.panel_callbacks.total.toLocaleString()}</span>
+                        <span class="stat-value">${panelCallbacks.total.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Successful</span>
-                        <span class="stat-value success">${data.panel_callbacks.success.toLocaleString()}</span>
+                        <span class="stat-value success">${panelCallbacks.success.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Errors</span>
-                        <span class="stat-value error">${data.panel_callbacks.errors.toLocaleString()}</span>
+                        <span class="stat-value error">${panelCallbacks.errors.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Last Callback</span>
-                        <span class="stat-value">${data.panel_callbacks.last_callback || 'Never'}</span>
+                        <span class="stat-value">${panelCallbacks.last_callback || 'Never'}</span>
                     </div>
                 </div>
             `;
@@ -316,19 +336,19 @@ requireAuth();
                     <h2><i class="fas fa-comments"></i> Panel Messages</h2>
                     <div class="stat">
                         <span class="stat-label">Total Messages</span>
-                        <span class="stat-value success">${data.panel_messages.total_messages.toLocaleString()}</span>
+                        <span class="stat-value success">${panelMessages.total_messages.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Unique Devices</span>
-                        <span class="stat-value">${data.panel_messages.unique_devices.toLocaleString()}</span>
+                        <span class="stat-value">${panelMessages.unique_devices.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Unique Customers</span>
-                        <span class="stat-value">${data.panel_messages.unique_customers.toLocaleString()}</span>
+                        <span class="stat-value">${panelMessages.unique_customers.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Last Message</span>
-                        <span class="stat-value">${data.panel_messages.last_message || 'Never'}</span>
+                        <span class="stat-value">${panelMessages.last_message || 'Never'}</span>
                     </div>
                 </div>
             `;
@@ -339,21 +359,21 @@ requireAuth();
                     <h2><i class="fas fa-database"></i> Drill-Down Cache</h2>
                     <div class="stat">
                         <span class="stat-label">Total Devices</span>
-                        <span class="stat-value">${data.cache.total_devices.toLocaleString()}</span>
+                        <span class="stat-value">${cache.total_devices.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">With Drill-Down Cache</span>
-                        <span class="stat-value success">${data.cache.devices_with_drilldown.toLocaleString()}</span>
+                        <span class="stat-value success">${cache.devices_with_drilldown.toLocaleString()}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Coverage</span>
-                        <span class="stat-value ${data.cache.coverage_percent >= 80 ? 'success' : 'warning'}">
-                            ${data.cache.coverage_percent}%
+                        <span class="stat-value ${cache.coverage_percent >= 80 ? 'success' : 'warning'}">
+                            ${cache.coverage_percent}%
                         </span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Cached in Last Hour</span>
-                        <span class="stat-value">${data.cache.freshness.cached_within_hour.toLocaleString()}</span>
+                        <span class="stat-value">${(cache.freshness?.cached_within_hour || 0).toLocaleString()}</span>
                     </div>
                 </div>
             `;
@@ -361,12 +381,12 @@ requireAuth();
             html += '</div>';
 
             // Error Breakdown
-            if (data.panel_callbacks.error_breakdown.length > 0) {
+            if (panelCallbacks.error_breakdown && panelCallbacks.error_breakdown.length > 0) {
                 html += `
                     <div class="card">
                         <h2><i class="fas fa-bug"></i> Error Breakdown</h2>
                         <div class="error-breakdown">
-                            ${data.panel_callbacks.error_breakdown.map(err => `
+                            ${panelCallbacks.error_breakdown.map(err => `
                                 <div class="error-item">
                                     <div class="error-type">${err.error_type}</div>
                                     <div class="error-meta">
@@ -381,7 +401,7 @@ requireAuth();
             }
 
             // Invalid JSON Analysis
-            const jsonAnalysis = data.panel_callbacks.invalid_json_analysis;
+            const jsonAnalysis = panelCallbacks.invalid_json_analysis || { total: 0, samples: [] };
             if (jsonAnalysis.total > 0) {
                 html += `
                     <div class="card">
