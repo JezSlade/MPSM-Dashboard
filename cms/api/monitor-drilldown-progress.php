@@ -113,21 +113,34 @@ requireAuth();
             $stmt = $pdo->query("SELECT COUNT(*) FROM {$drilldownTable}");
             $drilldownCount = (int)$stmt->fetchColumn();
 
+            // Get device activity (population in progress)
+            $stmt = $pdo->query("
+                SELECT COUNT(*)
+                FROM {$devicesTable}
+                WHERE cached_at > datetime('now', '-1 minute')
+            ");
+            $devicesLastMin = (int)$stmt->fetchColumn();
+
+            $stmt = $pdo->query("
+                SELECT MAX(cached_at) FROM {$devicesTable}
+            ");
+            $lastDeviceCached = $stmt->fetchColumn();
+
             $missing = $totalDevices - $drilldownCount;
             $coverage = $totalDevices > 0 ? round(($drilldownCount / $totalDevices) * 100, 2) : 0;
 
-            // Get recent activity
+            // Get drill-down activity
             $stmt = $pdo->query("
                 SELECT COUNT(*)
                 FROM {$drilldownTable}
-                WHERE cached_at > NOW() - INTERVAL 1 MINUTE
+                WHERE cached_at > datetime('now', '-1 minute')
             ");
-            $lastMinute = (int)$stmt->fetchColumn();
+            $drilldownLastMin = (int)$stmt->fetchColumn();
 
             $stmt = $pdo->query("
                 SELECT COUNT(*)
                 FROM {$drilldownTable}
-                WHERE cached_at > NOW() - INTERVAL 5 MINUTE
+                WHERE cached_at > datetime('now', '-5 minute')
             ");
             $last5Min = (int)$stmt->fetchColumn();
 
@@ -137,19 +150,25 @@ requireAuth();
             $lastCached = $stmt->fetchColumn();
 
             // Calculate rate
-            $ratePerMin = $lastMinute;
+            $ratePerMin = $drilldownLastMin;
             $estimatedMinutes = $ratePerMin > 0 ? ceil($missing / $ratePerMin) : 0;
 
-            // Status determination
+            // Status determination - check BOTH device population and drill-down
+            $expectedDevices = 5000; // Expected total from API
+            $deviceProgress = $totalDevices > 0 ? round(($totalDevices / $expectedDevices) * 100, 2) : 0;
+
             $status = 'RUNNING';
             $statusClass = 'good';
-            if ($coverage >= 100) {
+            if ($totalDevices < $expectedDevices * 0.5) {
+                $status = 'POPULATING DEVICES (' . $deviceProgress . '%)';
+                $statusClass = 'warning';
+            } elseif ($coverage >= 100) {
                 $status = 'COMPLETE ✓';
                 $statusClass = 'good';
-            } elseif ($lastMinute == 0 && $last5Min == 0) {
+            } elseif ($drilldownLastMin == 0 && $last5Min == 0) {
                 $status = 'STALLED';
                 $statusClass = 'error';
-            } elseif ($lastMinute == 0) {
+            } elseif ($drilldownLastMin == 0) {
                 $status = 'SLOW';
                 $statusClass = 'warning';
             }
