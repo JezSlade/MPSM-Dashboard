@@ -117,7 +117,7 @@ requireAuth();
             $stmt = $pdo->query("
                 SELECT COUNT(*)
                 FROM {$devicesTable}
-                WHERE cached_at > datetime('now', '-1 minute')
+                WHERE cached_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
             ");
             $devicesLastMin = (int)$stmt->fetchColumn();
 
@@ -133,14 +133,14 @@ requireAuth();
             $stmt = $pdo->query("
                 SELECT COUNT(*)
                 FROM {$drilldownTable}
-                WHERE cached_at > datetime('now', '-1 minute')
+                WHERE cached_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
             ");
             $drilldownLastMin = (int)$stmt->fetchColumn();
 
             $stmt = $pdo->query("
                 SELECT COUNT(*)
                 FROM {$drilldownTable}
-                WHERE cached_at > datetime('now', '-5 minute')
+                WHERE cached_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
             ");
             $last5Min = (int)$stmt->fetchColumn();
 
@@ -212,8 +212,8 @@ requireAuth();
             echo '<h2 style="color: #4ec9b0; margin-top: 0;">ACTIVITY</h2>';
 
             echo '<div class="stat-row">';
-            echo '<div class="label">Cached in Last Minute:</div>';
-            echo '<div class="value ' . ($lastMinute > 0 ? 'good' : 'error') . '">' . $lastMinute . '</div>';
+            echo '<div class="label">Drill-Downs in Last Minute:</div>';
+            echo '<div class="value ' . ($drilldownLastMin > 0 ? 'good' : 'error') . '">' . $drilldownLastMin . '</div>';
             echo '</div>';
 
             echo '<div class="stat-row">';
