@@ -8,6 +8,7 @@
  */
 
 require_once dirname(__DIR__, 2) . '/bootstrap.php';
+require_once dirname(__DIR__) . '/functions.php';
 
 define('MPS_ENGINE_ACCESS', true);
 require_once dirname(__DIR__, 2) . '/mps-api/callbacks/panel-message-common.php';

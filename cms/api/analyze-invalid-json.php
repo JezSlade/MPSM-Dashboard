@@ -5,6 +5,7 @@
  */
 
 require_once dirname(__DIR__, 2) . '/bootstrap.php';
+require_once dirname(__DIR__) . '/functions.php';
 requireAuth();
 
 header('Content-Type: text/plain; charset=utf-8');
