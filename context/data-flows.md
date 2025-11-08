@@ -45,6 +45,13 @@ Refer to `BACKGROUND_REFRESH_SYSTEM.md` and `cms/api/refresh-cache-enhanced.php`
 6. Panel message coverage counted via `cachePanelMessages()`.
 7. Final stats returned as JSON and log file appended.
 
+**CRITICAL API BEHAVIOR (discovered 2025-11-08):**
+- The `Device/List` API endpoint **ignores the `PageRows` parameter**
+- Always returns **100 devices per page** regardless of requested page size
+- Pagination must check for `< 100` devices to detect last page (not `< 50`)
+- `callMPSMAPI()` returns `$decoded['data']` directly - no wrapper extraction needed
+- See: `CRITICAL_FIX_DEVICE_PAGINATION.md` for full analysis
+
 ## 5. Panel Message Pipeline
 
 **Production Path**

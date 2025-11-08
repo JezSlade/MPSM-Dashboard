@@ -45,9 +45,15 @@
   SELECT MAX(cached_at) FROM mpsm_cache_devices;
   ```
 
+- **Expected Device Count:**
+  - As of 2025-11-08: **5000+ devices** across all customers/dealers
+  - If count is significantly lower, see CRITICAL_FIX_DEVICE_PAGINATION.md
+  - Coverage should be 95%+ (devices with drill-down / total devices)
+
 - **Troubleshooting:**
   - Confirm dealer code in `cms/config.php` matches `.env`.
   - Inspect `cms/logs/cache-refresh-YYYY-MM-DD.log`.
+  - **CRITICAL**: If only getting ~200 devices, check pagination fix was applied (commit 878e7a4f)
   - Send direct API probe through `mps-api/query` to ensure upstream is returning data.
 
 - **Automation:** These cron jobs are live in cPanel and must remain in place unless explicitly changed:
