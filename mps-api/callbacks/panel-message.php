@@ -37,9 +37,20 @@ if ($rawBody === false || trim($rawBody) === '') {
 }
 
 $decoded = json_decode($rawBody, true);
+$jsonError = json_last_error();
+
+// Provide detailed error messages for debugging
+if ($jsonError !== JSON_ERROR_NONE) {
+    $errorMsg = 'Invalid JSON: ' . json_last_error_msg();
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', $errorMsg, 400, $rawBody);
+    respondError($errorMsg);
+}
+
 if (!is_array($decoded)) {
-    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Invalid JSON payload', 400, $rawBody);
-    respondError('Invalid JSON payload');
+    $actualType = gettype($decoded);
+    $errorMsg = "Invalid JSON payload: Expected object/array, received {$actualType}";
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', $errorMsg, 400, $rawBody);
+    respondError($errorMsg);
 }
 
 // Lightweight shared-secret validation since the upstream cannot set headers.
