@@ -255,8 +255,9 @@ function fetchAllDevices(): array {
         'SortOrder' => 0,
     ];
 
-    // Increased from 50 to 200 pages to handle thousands of devices (50 per page = 10,000 max)
-    for ($pageNumber = 1; $pageNumber <= 200; $pageNumber++) {
+    // CRITICAL FIX: API returns 100 devices per page (not 50)
+    // Increased to 500 pages to handle up to 50,000 devices
+    for ($pageNumber = 1; $pageNumber <= 500; $pageNumber++) {
         $params = $installedBaseParams;
         $params['PageNumber'] = $pageNumber;
         $params = array_filter($params, static function ($value) {
@@ -279,22 +280,28 @@ function fetchAllDevices(): array {
             break;
         }
 
-        $pageDevices = extractDevicesFromResponse($response);
+        // CRITICAL FIX: callMPSMAPI already returns the data array, not the wrapper
+        // Response is $decoded['data'] from callMPSMAPI which is the device array
+        $pageDevices = is_array($response) ? $response : [];
+
         if (empty($pageDevices)) {
             logMessage("Device/List page {$pageNumber} returned no devices; pagination complete.");
             break;
         }
 
+        $deviceCount = count($pageDevices);
         $stats['page_samples'][] = [
             'type' => 'installed',
             'page' => $pageNumber,
-            'count' => count($pageDevices)
+            'count' => $deviceCount
         ];
 
+        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices (Total: " . count($allDevices) + $deviceCount . ")");
         $allDevices = array_merge($allDevices, $pageDevices);
 
-        if (count($pageDevices) < 50) {
-            logMessage("Installed devices pagination completed at page {$pageNumber} with fewer than 50 records.");
+        // CRITICAL FIX: API returns 100 devices per page, check for < 100 (not < 50)
+        if ($deviceCount < 100) {
+            logMessage("Installed devices pagination completed at page {$pageNumber} with {$deviceCount} records.");
             break;
         }
     }
