@@ -154,7 +154,7 @@ requireAuth();
             $estimatedMinutes = $ratePerMin > 0 ? ceil($missing / $ratePerMin) : 0;
 
             // Status determination - check BOTH device population and drill-down
-            $expectedDevices = 5000; // Expected total from API
+            $expectedDevices = 8000; // Expected total from API (confirmed via testing 2025-11-08)
             $deviceProgress = $totalDevices > 0 ? round(($totalDevices / $expectedDevices) * 100, 2) : 0;
 
             $status = 'RUNNING';
