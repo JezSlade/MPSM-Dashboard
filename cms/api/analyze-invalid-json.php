@@ -4,8 +4,7 @@
  * Direct database query for diagnostic purposes
  */
 
-require '../config.php';
-require '../functions.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 requireAuth();
 
 header('Content-Type: text/plain; charset=utf-8');

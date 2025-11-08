@@ -1,6 +1,5 @@
 <?php
-require 'config.php';
-require 'functions.php';
+require_once dirname(__DIR__) . '/bootstrap.php';
 requireAuth();
 ?>
 <!DOCTYPE html>

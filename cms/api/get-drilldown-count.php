@@ -4,8 +4,7 @@
  * Simple endpoint to return exact device count with drill-down data
  */
 
-require '../config.php';
-require '../functions.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 requireAuth();
 
 header('Content-Type: application/json; charset=utf-8');

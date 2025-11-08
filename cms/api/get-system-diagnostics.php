@@ -7,8 +7,7 @@
  * - System health metrics
  */
 
-require '../config.php';
-require '../functions.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 define('MPS_ENGINE_ACCESS', true);
 require_once dirname(__DIR__, 2) . '/mps-api/callbacks/panel-message-common.php';
