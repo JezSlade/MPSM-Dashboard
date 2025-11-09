@@ -73,6 +73,13 @@ Options -Indexes
     Header set Cache-Control "max-age=31536000, public"
 </FilesMatch>
 
+# Extended timeout for cache refresh endpoint
+<FilesMatch "refresh-cache-enhanced\.php$">
+    php_value max_execution_time 3600
+    php_value max_input_time 3600
+    php_value memory_limit 1G
+</FilesMatch>
+
 # Protect database directory
 <Directory "/home/resolut7/public_html/mpsm.resolutionsbydesign.us/db">
     Require all denied

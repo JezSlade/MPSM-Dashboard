@@ -12,8 +12,8 @@
  * Run every 5 minutes via cron or Task Scheduler
  */
 
-set_time_limit(1200); // 20 minutes max (increased for large drill-down operations)
-ini_set('memory_limit', '512M');
+set_time_limit(3600); // 60 minutes max for 5000+ devices
+ini_set('memory_limit', '1G'); // 1GB for large datasets
 
 require '../config.php';
 require '../functions.php';
@@ -162,8 +162,32 @@ try {
     // Calculate stats
     $stats['duration'] = round(microtime(true) - $startTime, 2);
 
+    // Health check validation
+    $expectedMinimum = 4000;
+    $healthWarnings = [];
+
+    if ($stats['devices_cached'] < $expectedMinimum) {
+        $warning = "Low device count: {$stats['devices_cached']} cached (expected {$expectedMinimum}+)";
+        logMessage("⚠ WARNING: " . $warning);
+        $healthWarnings[] = $warning;
+    }
+
+    if ($stats['devices_cached'] > 0) {
+        $drilldownCoverage = round(($stats['devices_with_drilldown'] / $stats['devices_cached']) * 100, 1);
+        if ($drilldownCoverage < 80) {
+            $warning = "Low drill-down coverage: {$drilldownCoverage}% (expected 80%+)";
+            logMessage("⚠ WARNING: " . $warning);
+            $healthWarnings[] = $warning;
+        }
+        $stats['drilldown_coverage_percent'] = $drilldownCoverage;
+    }
+
+    $stats['health_warnings'] = $healthWarnings;
+    $stats['health_status'] = empty($healthWarnings) ? 'HEALTHY' : 'WARNING';
+
     // Log completion
     logMessage("=== Cache refresh completed ===");
+    logMessage("Health Status: {$stats['health_status']}");
     logMessage("Devices cached: {$stats['devices_cached']}");
     logMessage("Deleted devices cached: {$stats['deleted_devices']}");
     logMessage("Drill-down cached: {$stats['devices_with_drilldown']}");
@@ -257,6 +281,11 @@ function fetchAllDevices(): array {
 
     // CRITICAL FIX: API returns 100 devices per page (not 50)
     // Increased to 500 pages to handle up to 50,000 devices
+    $consecutiveEmptyPages = 0;
+    $maxEmptyPages = 3; // Stop after 3 consecutive empty pages
+    $retryCount = 0;
+    $maxRetries = 3;
+
     for ($pageNumber = 1; $pageNumber <= 500; $pageNumber++) {
         $params = $installedBaseParams;
         $params['PageNumber'] = $pageNumber;
@@ -266,6 +295,7 @@ function fetchAllDevices(): array {
 
         try {
             $response = callMPSMAPI('Device/List', $params);
+            $retryCount = 0; // Reset retry count on successful call
         } catch (RateLimitException $e) {
             $stats['rate_limit_retries']++;
             logMessage("Rate limit while fetching installed device page {$pageNumber}; cooling {$e->getRetryAfter()}s before retry.");
@@ -275,34 +305,62 @@ function fetchAllDevices(): array {
         }
         $stats['api_calls_made']++;
 
+        // Handle empty/null responses with retry logic
         if (!$response) {
-            logMessage("Device/List returned empty response on page {$pageNumber}; stopping pagination.");
+            $retryCount++;
+            logMessage("WARNING: Empty response on page {$pageNumber} (retry {$retryCount}/{$maxRetries})");
+
+            if ($retryCount < $maxRetries) {
+                sleep(2); // Brief delay before retry
+                $pageNumber--; // Retry same page
+                continue;
+            }
+
+            logMessage("ERROR: Page {$pageNumber} failed after {$maxRetries} retries, stopping pagination.");
             break;
         }
 
         // CRITICAL FIX: callMPSMAPI already returns the data array, not the wrapper
         // Response is $decoded['data'] from callMPSMAPI which is the device array
         $pageDevices = is_array($response) ? $response : [];
+        $deviceCount = count($pageDevices);
 
-        if (empty($pageDevices)) {
-            logMessage("Device/List page {$pageNumber} returned no devices; pagination complete.");
-            break;
+        // Handle empty page (circuit breaker pattern)
+        if ($deviceCount === 0) {
+            $consecutiveEmptyPages++;
+            logMessage("Empty page at {$pageNumber} (consecutive empty: {$consecutiveEmptyPages}/{$maxEmptyPages})");
+
+            if ($consecutiveEmptyPages >= $maxEmptyPages) {
+                logMessage("Pagination complete: {$maxEmptyPages} consecutive empty pages at page {$pageNumber}");
+                break;
+            }
+            continue; // Check next page
         }
 
-        $deviceCount = count($pageDevices);
+        // Reset empty page counter on successful page
+        $consecutiveEmptyPages = 0;
+
         $stats['page_samples'][] = [
             'type' => 'installed',
             'page' => $pageNumber,
             'count' => $deviceCount
         ];
 
-        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices (Total: " . count($allDevices) + $deviceCount . ")");
+        $totalSoFar = count($allDevices) + $deviceCount;
+        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices (Total: {$totalSoFar})");
+
+        // Progress reporting every 10 pages
+        if ($pageNumber % 10 === 0) {
+            logMessage("=== PROGRESS: Page {$pageNumber}, Total devices: {$totalSoFar} ===");
+        }
+
         $allDevices = array_merge($allDevices, $pageDevices);
 
         // CRITICAL FIX: API returns 100 devices per page, check for < 100 (not < 50)
+        // But don't stop immediately - might be a partial page followed by more data
         if ($deviceCount < 100) {
-            logMessage("Installed devices pagination completed at page {$pageNumber} with {$deviceCount} records.");
-            break;
+            logMessage("Partial page detected ({$deviceCount} devices). Checking next page...");
+            continue; // Check next page before stopping
         }
     }
 
