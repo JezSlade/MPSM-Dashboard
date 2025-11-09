@@ -74,16 +74,26 @@ try {
 function getNotifications(PDO $pdo): void
 {
     $status = $_GET['status'] ?? 'active';
+    $severity = $_GET['severity'] ?? null;
     $limit = min((int)($_GET['limit'] ?? 50), 100);
 
     $table = DB_PREFIX . 'dashboard_notifications';
-    $sql = "SELECT * FROM {$table}
-            WHERE status = :status
-            ORDER BY priority DESC, created_at_ny DESC
-            LIMIT :limit";
+    $sql = "SELECT * FROM {$table} WHERE status = :status";
+
+    // Add severity filter if provided
+    if ($severity) {
+        $sql .= " AND severity = :severity";
+    }
+
+    $sql .= " ORDER BY priority DESC, created_at_ny DESC LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':status', $status);
+
+    if ($severity) {
+        $stmt->bindValue(':severity', $severity);
+    }
+
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
 
@@ -92,7 +102,11 @@ function getNotifications(PDO $pdo): void
     echo json_encode([
         'success' => true,
         'notifications' => $notifications,
-        'count' => count($notifications)
+        'count' => count($notifications),
+        'filters' => [
+            'status' => $status,
+            'severity' => $severity
+        ]
     ]);
 }
 
@@ -117,6 +131,33 @@ function createRule(PDO $pdo): void
 
     if (!$data || !isset($data['name'])) {
         throw new Exception('Invalid rule data');
+    }
+
+    // Validate severity
+    $validSeverities = ['info', 'warning', 'high', 'critical'];
+    $severity = $data['severity'] ?? 'warning';
+    if (!in_array($severity, $validSeverities)) {
+        throw new Exception('Invalid severity level');
+    }
+
+    // Validate frequency type
+    $validFreqTypes = ['same_device', 'same_alert', 'same_customer', 'any'];
+    $freqType = $data['frequency_type'] ?? 'same_device';
+    if (!in_array($freqType, $validFreqTypes)) {
+        throw new Exception('Invalid frequency type');
+    }
+
+    // Validate numeric fields
+    if (isset($data['frequency_count']) && (int)$data['frequency_count'] < 1) {
+        throw new Exception('Frequency count must be at least 1');
+    }
+
+    if (isset($data['frequency_window_hours']) && (int)$data['frequency_window_hours'] < 1) {
+        throw new Exception('Frequency window must be at least 1 hour');
+    }
+
+    if (isset($data['auto_dismiss_hours']) && (int)$data['auto_dismiss_hours'] < 1) {
+        throw new Exception('Auto-dismiss hours must be at least 1');
     }
 
     $table = DB_PREFIX . 'notification_rules';
@@ -166,6 +207,31 @@ function updateRule(PDO $pdo): void
 
     if (!$data || !isset($data['id'])) {
         throw new Exception('Rule ID required');
+    }
+
+    // Validate severity
+    $validSeverities = ['info', 'warning', 'high', 'critical'];
+    if (isset($data['severity']) && !in_array($data['severity'], $validSeverities)) {
+        throw new Exception('Invalid severity level');
+    }
+
+    // Validate frequency type
+    $validFreqTypes = ['same_device', 'same_alert', 'same_customer', 'any'];
+    if (isset($data['frequency_type']) && !in_array($data['frequency_type'], $validFreqTypes)) {
+        throw new Exception('Invalid frequency type');
+    }
+
+    // Validate numeric fields
+    if (isset($data['frequency_count']) && (int)$data['frequency_count'] < 1) {
+        throw new Exception('Frequency count must be at least 1');
+    }
+
+    if (isset($data['frequency_window_hours']) && (int)$data['frequency_window_hours'] < 1) {
+        throw new Exception('Frequency window must be at least 1 hour');
+    }
+
+    if (isset($data['auto_dismiss_hours']) && (int)$data['auto_dismiss_hours'] < 1) {
+        throw new Exception('Auto-dismiss hours must be at least 1');
     }
 
     $table = DB_PREFIX . 'notification_rules';
@@ -224,6 +290,14 @@ function deleteRule(PDO $pdo): void
     }
 
     $table = DB_PREFIX . 'notification_rules';
+
+    // Check if rule exists
+    $stmt = $pdo->prepare("SELECT id FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    if (!$stmt->fetch()) {
+        throw new Exception('Rule not found');
+    }
+
     $stmt = $pdo->prepare("DELETE FROM {$table} WHERE id = :id");
     $stmt->execute([':id' => $id]);
 
@@ -242,12 +316,22 @@ function toggleRule(PDO $pdo): void
     }
 
     $table = DB_PREFIX . 'notification_rules';
+
+    // Check if rule exists and get current state
+    $stmt = $pdo->prepare("SELECT enabled FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $rule = $stmt->fetch();
+    if (!$rule) {
+        throw new Exception('Rule not found');
+    }
+
     $stmt = $pdo->prepare("UPDATE {$table} SET enabled = NOT enabled WHERE id = :id");
     $stmt->execute([':id' => $id]);
 
     echo json_encode([
         'success' => true,
-        'message' => 'Rule toggled successfully'
+        'message' => 'Rule toggled successfully',
+        'new_state' => !$rule['enabled']
     ]);
 }
 
@@ -259,8 +343,22 @@ function acknowledgeNotification(PDO $pdo): void
         throw new Exception('Notification ID required');
     }
 
-    $nyTime = getNYTimestamp();
     $table = DB_PREFIX . 'dashboard_notifications';
+
+    // Check if notification exists and is still active
+    $stmt = $pdo->prepare("SELECT status FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $notification = $stmt->fetch();
+
+    if (!$notification) {
+        throw new Exception('Notification not found');
+    }
+
+    if ($notification['status'] !== 'active') {
+        throw new Exception('Notification already ' . $notification['status']);
+    }
+
+    $nyTime = getNYTimestamp();
 
     $stmt = $pdo->prepare("UPDATE {$table}
                            SET status = 'acknowledged',
@@ -288,8 +386,22 @@ function dismissNotification(PDO $pdo): void
         throw new Exception('Notification ID required');
     }
 
-    $nyTime = getNYTimestamp();
     $table = DB_PREFIX . 'dashboard_notifications';
+
+    // Check if notification exists and is still active
+    $stmt = $pdo->prepare("SELECT status FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $notification = $stmt->fetch();
+
+    if (!$notification) {
+        throw new Exception('Notification not found');
+    }
+
+    if ($notification['status'] !== 'active') {
+        throw new Exception('Notification already ' . $notification['status']);
+    }
+
+    $nyTime = getNYTimestamp();
 
     $stmt = $pdo->prepare("UPDATE {$table}
                            SET status = 'dismissed',
