@@ -208,19 +208,21 @@ https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php
 - Returns JSON with stats
 - Populates `mpsm_cache_devices` and `mpsm_cache_device_drilldown` tables
 
-#### 4. Cron Schedule (Immutable)
+#### 4. Cron Schedule (Updated 2025-11-09)
 
-These jobs are already configured in cPanel and must remain active unless the owner updates them:
+These jobs are configured in cPanel and must remain active unless the owner updates them:
 
 ```bash
-*/5 * * * * /usr/bin/timeout 240 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?skipDrilldown=1" >/dev/null 2>&1
+# UPDATED 2025-11-09: Changed from */5 to hourly (0 * * * *) to prevent infinite loop
+# Previous: 5-minute cron was truncating cache before 30-minute refresh could complete
+0 * * * * /usr/bin/timeout 240 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?skipDrilldown=1" >/dev/null 2>&1
 0 0 * * * /usr/bin/timeout 1800 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1" >/dev/null 2>&1
 0,30 * * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/mps-api/health" >> /home/youruser/logs/mps-api-health.log
 0 0 * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/get-database-monitor.php" >> /home/youruser/logs/database-monitor.log
 0 0 * * 0 /usr/bin/php /home/youruser/public_html/cms/api/cleanup-payload-debug.php >/dev/null 2>&1
 ```
 
-> These are the canonical schedules for cache warm-up, deep refresh, API health logging, database monitor snapshots, and payload debugger cleanup. Update only alongside coordinated documentation changes.
+> **Note:** First cron job changed from every 5 minutes to hourly (2025-11-09) to allow full 30,000+ device cache to complete without truncation. This fixes the infinite loop where new cron runs were wiping cache before previous runs could finish. May restore more frequent updates after verifying cache stability.
 
 #### 5. Test Live Site (5 minutes)
 
