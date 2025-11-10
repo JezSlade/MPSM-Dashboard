@@ -429,6 +429,51 @@ main {
     font-weight: 600;
 }
 
+.customer-banner-content {
+    flex: 1;
+}
+
+.customer-banner-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.panel-alert-badge {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(231, 76, 60, 0.95);
+    color: white;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.panel-alert-badge:hover {
+    background: rgba(231, 76, 60, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.panel-alert-badge i {
+    font-size: 1rem;
+}
+
+.panel-alert-badge .badge-count {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
 /* Metrics Grid */
 .metrics-grid {
     display: grid;

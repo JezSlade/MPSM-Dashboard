@@ -1860,6 +1860,8 @@ const MPSM = (function() {
             await CardManager.refreshAll();
             // Update offline count from real device data
             await updateOfflineCountFromCache();
+            // Start panel alert auto-refresh
+            startPanelAlertRefresh();
         } catch (error) {
             showToast('Failed to load dashboard: ' + error.message, 'error');
         }
@@ -1901,6 +1903,12 @@ const MPSM = (function() {
                         <h2 class="customer-banner-name">${resolvedName}</h2>
                         <div class="customer-banner-code">${state.customerCode}</div>
                     </div>
+                    <div class="customer-banner-actions">
+                        <a href="panel-message-monitor.php" class="panel-alert-badge" id="panel-alert-badge" title="Panel Message Alerts" style="display:none;">
+                            <i class="fas fa-satellite-dish"></i>
+                            <span class="badge-count" id="panel-alert-count">0</span>
+                        </a>
+                    </div>
                 </div>
 
                     <div class="metrics-grid">
@@ -1927,6 +1935,9 @@ const MPSM = (function() {
                     </div>
                 </div>
             `;
+
+            // Load panel alert badge
+            loadPanelAlertBadge();
 
             // Hydrate dynamic metrics after template injection
             const totalDevices = Number(
@@ -4001,6 +4012,55 @@ const MPSM = (function() {
                 resultsContainer.style.display = 'none';
             }
         });
+    }
+
+    /**
+     * Load panel alert badge count
+     */
+    let panelAlertRefreshInterval = null;
+
+    async function loadPanelAlertBadge() {
+        if (!state.customerCode) {
+            return;
+        }
+
+        const badge = document.getElementById('panel-alert-badge');
+        const countElement = document.getElementById('panel-alert-count');
+
+        if (!badge || !countElement) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`api/get-panel-alert-count.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`);
+            const data = await response.json();
+
+            if (data.success && data.count > 0) {
+                countElement.textContent = data.count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error loading panel alert badge:', error);
+            badge.style.display = 'none';
+        }
+    }
+
+    function startPanelAlertRefresh() {
+        if (panelAlertRefreshInterval) {
+            clearInterval(panelAlertRefreshInterval);
+        }
+        panelAlertRefreshInterval = setInterval(() => {
+            loadPanelAlertBadge();
+        }, 30000); // Refresh every 30 seconds
+    }
+
+    function stopPanelAlertRefresh() {
+        if (panelAlertRefreshInterval) {
+            clearInterval(panelAlertRefreshInterval);
+            panelAlertRefreshInterval = null;
+        }
     }
 
     // Public API
