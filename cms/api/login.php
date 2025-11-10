@@ -12,10 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Try multiple input methods (fixes php://input issues with some server configs)
+// IMPORTANT: Read php://input only ONCE as stream can be exhausted
+$rawInput = @file_get_contents('php://input');
 $data = [];
 
 // Method 1: JSON from php://input (most common)
-$rawInput = @file_get_contents('php://input');
 if ($rawInput && !empty($rawInput)) {
     $decoded = json_decode($rawInput, true);
     if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
@@ -28,23 +29,15 @@ if (empty($data) && !empty($_POST)) {
     $data = $_POST;
 }
 
-// Method 3: Raw POST data (another fallback)
-if (empty($data) && isset($_SERVER['CONTENT_TYPE']) &&
-    strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
-    $rawInput = @file_get_contents('php://input');
-    if ($rawInput) {
-        $decoded = @json_decode($rawInput, true);
-        if (is_array($decoded)) {
-            $data = $decoded;
-        }
-    }
-}
-
 $username = $data['username'] ?? '';
 $password = $data['password'] ?? '';
 
 if (empty($username) || empty($password)) {
-    error_log("Login API - Empty credentials. Username: '$username', Data: " . print_r($data, true));
+    // Log metadata only - do not expose sensitive payload data
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? 'unknown';
+    $hasUsername = !empty($username) ? 'yes' : 'no';
+    $hasPassword = !empty($password) ? 'yes' : 'no';
+    error_log("Login failed: Empty credentials (username: $hasUsername, password: $hasPassword, content-type: $contentType)");
     jsonError('Username and password required', 400);
 }
 

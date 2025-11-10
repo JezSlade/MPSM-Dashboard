@@ -25,15 +25,18 @@ try {
 
     $params = [];
     if ($hours !== null) {
-        $sql .= " WHERE received_at >= (NOW() - INTERVAL :hours HOUR)";
-        $params[':hours'] = $hours;
+        // Calculate cutoff timestamp in PHP (MySQL doesn't support binding inside INTERVAL)
+        $cutoff = date('Y-m-d H:i:s', strtotime("-{$hours} hours"));
+        $sql .= " WHERE received_at >= :cutoff";
+        $params[':cutoff'] = $cutoff;
     }
 
     $sql .= " ORDER BY received_at DESC LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
     foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value, PDO::PARAM_INT);
+        // Bind cutoff as string timestamp, not integer
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
     }
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();

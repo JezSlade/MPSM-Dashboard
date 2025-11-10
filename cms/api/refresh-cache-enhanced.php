@@ -9,7 +9,9 @@
  * - Customer information
  * - Counter details
  *
- * Run every 5 minutes via cron or Task Scheduler
+ * SCHEDULE: Run hourly via cron (recommended: 02:00 daily)
+ * RUNTIME: ~30 minutes for 5000+ devices
+ * WARNING: Do NOT schedule more frequently than hourly to avoid overlapping runs
  */
 
 set_time_limit(3600); // 60 minutes max for 5000+ devices
@@ -436,11 +438,18 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
     $batchSize = 50; // Cache every 50 pages (5000 devices)
     $deviceBatch = [];
 
-    // Truncate existing cache to start fresh
+    // SAFETY: Use transaction to protect against partial failures
+    // If fetch fails, rollback prevents empty cache tables
     $prefix = DB_PREFIX;
-    logMessage("Truncating cache tables for fresh start");
-    $pdo->exec("TRUNCATE TABLE {$prefix}cache_devices");
-    $pdo->exec("TRUNCATE TABLE {$prefix}cache_device_drilldown");
+    logMessage("Starting transactional cache refresh");
+
+    try {
+        $pdo->beginTransaction();
+
+        // Truncate existing cache within transaction
+        logMessage("Truncating cache tables (protected by transaction)");
+        $pdo->exec("TRUNCATE TABLE {$prefix}cache_devices");
+        $pdo->exec("TRUNCATE TABLE {$prefix}cache_device_drilldown");
 
     // Fetch installed devices with incremental caching
     $installedBaseParams = [
@@ -593,10 +602,23 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
         }
     }
 
-    return [
-        'total_devices' => $totalDevicesCached,
-        'deleted_devices' => $totalDeletedDevices
-    ];
+        // Commit transaction - all inserts succeeded
+        $pdo->commit();
+        logMessage("Transaction committed successfully - cache refresh complete");
+
+        return [
+            'total_devices' => $totalDevicesCached,
+            'deleted_devices' => $totalDeletedDevices
+        ];
+
+    } catch (Exception $e) {
+        // Rollback on any failure - preserves old cache data
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+            logMessage("CRITICAL: Transaction rolled back - cache tables preserved. Error: " . $e->getMessage());
+        }
+        throw $e; // Re-throw for upstream handling
+    }
 }
 
 /**
