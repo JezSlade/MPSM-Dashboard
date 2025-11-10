@@ -119,7 +119,7 @@ $rule1 = [
     'enabled' => 1
 ];
 
-$insertRule($pdo, $rule1);
+insertRule($pdo, $rule1);
 
 // Rule 2: Specific alert code (if we have data)
 if (!empty($alertCodes)) {
@@ -138,7 +138,7 @@ if (!empty($alertCodes)) {
         'enabled' => 1
     ];
 
-    $insertRule($pdo, $rule2);
+    insertRule($pdo, $rule2);
 }
 
 // Rule 3: Frequency-based for specific device (if we have data)
@@ -161,7 +161,7 @@ if (!empty($devices)) {
         'enabled' => 1
     ];
 
-    $insertRule($pdo, $rule3);
+    insertRule($pdo, $rule3);
 }
 
 // Rule 4: Customer-specific monitoring (if we have data)
@@ -182,7 +182,7 @@ if (!empty($customers)) {
         'enabled' => 1
     ];
 
-    $insertRule($pdo, $rule4);
+    insertRule($pdo, $rule4);
 }
 
 // Rule 5: Frequency-based system-wide
@@ -201,7 +201,7 @@ $rule5 = [
     'enabled' => 0  // Start disabled, user can enable if needed
 ];
 
-$insertRule($pdo, $rule5);
+insertRule($pdo, $rule5);
 
 echo "\n=== Rules Created Successfully ===\n";
 echo "Visit Command Center to view and manage rules:\n";
