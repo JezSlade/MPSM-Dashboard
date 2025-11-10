@@ -27,8 +27,25 @@ try {
 }
 
 function tableCount(PDO $pdo, string $table): int {
-    $stmt = $pdo->query("SELECT COUNT(*) FROM {$table}");
-    return (int)$stmt->fetchColumn();
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM {$table}");
+        return (int)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
+function latestTimestamp(PDO $pdo, string $table, string $column = 'created_at'): ?string {
+    try {
+        $stmt = $pdo->query("
+            SELECT MAX({$column}) AS latest
+            FROM {$table}
+        ");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['latest'] ?? null;
+    } catch (Exception $e) {
+        return null;
+    }
 }
 
 ?>
@@ -65,14 +82,7 @@ function tableCount(PDO $pdo, string $table): int {
             <?php foreach ($tables as $table): ?>
                 <?php
                     $count = tableCount($pdo, $table);
-                    $timestamp = null;
-                    $tsStmt = $pdo->query("
-                        SELECT MAX(created_at) AS latest
-                        FROM {$table}
-                        WHERE created_at IS NOT NULL
-                    ");
-                    $tsRow = $tsStmt->fetch(PDO::FETCH_ASSOC);
-                    $timestamp = $tsRow['latest'] ?? null;
+                    $timestamp = latestTimestamp($pdo, $table);
                 ?>
                 <tr>
                     <td><?= htmlspecialchars($table) ?></td>
