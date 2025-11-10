@@ -268,11 +268,10 @@ function fetchAllDevices(): array {
     $dealerCode = DEFAULT_DEALER_CODE;
     $allDevices = [];
 
-    // Fetch ALL devices across entire MPSM account (NO dealer/customer filtering)
-    // User requirement: "ALL devices from the MPSM API should be cataloged in the db"
+    // Fetch only devices for the configured dealer to avoid counting irrelevant customers
     $installedBaseParams = [
-        'FilterDealerId' => null,  // REMOVED: Get devices from ALL dealers
-        'FilterDealerCodes' => null,  // REMOVED: Get devices from ALL dealer codes
+        'FilterDealerId' => DEFAULT_DEALER_ID,
+        'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
         'FilterCustomerCodes' => null,
         'ProductBrand' => null,
         'ProductModel' => null,
