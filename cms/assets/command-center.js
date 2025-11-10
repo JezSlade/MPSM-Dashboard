@@ -154,10 +154,16 @@ async function loadNotifications(silent = false) {
             params.set('severity', notificationFilter);
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         const response = await fetch(`api/command-center.php?${params.toString()}`, {
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`Request failed with status ${response.status}`);
@@ -172,7 +178,8 @@ async function loadNotifications(silent = false) {
         renderNotifications(data.notifications || []);
     } catch (error) {
         console.error('Error loading notifications:', error);
-        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${error.message}</div>`;
+        const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
     }
 }
 
@@ -297,10 +304,16 @@ async function loadRules(silent = false) {
     }
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         const response = await fetch('api/command-center.php?action=get_rules', {
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`Request failed with status ${response.status}`);
@@ -315,7 +328,8 @@ async function loadRules(silent = false) {
         renderRules(data.rules || []);
     } catch (error) {
         console.error('Error loading rules:', error);
-        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${error.message}</div>`;
+        const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
     }
 }
 
@@ -564,10 +578,16 @@ async function loadStatistics(silent = false) {
     }
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         const response = await fetch('api/command-center.php?action=get_aggregations', {
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`Request failed with status ${response.status}`);
@@ -582,7 +602,8 @@ async function loadStatistics(silent = false) {
         renderStatistics(data.aggregations || []);
     } catch (error) {
         console.error('Error loading statistics:', error);
-        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${error.message}</div>`;
+        const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
     }
 }
 
