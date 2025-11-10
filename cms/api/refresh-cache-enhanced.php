@@ -237,9 +237,11 @@ function ensureCacheTables(PDO $pdo): void {
             customer_code VARCHAR(100) NULL,
             is_uninstalled TINYINT(1) DEFAULT 0,
             cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NULL DEFAULT NULL,
             INDEX idx_customer (customer_code),
             INDEX idx_uninstalled (is_uninstalled),
-            INDEX idx_cached (cached_at)
+            INDEX idx_cached (cached_at),
+            INDEX idx_expires (expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
@@ -252,9 +254,11 @@ function ensureCacheTables(PDO $pdo): void {
             has_alerts TINYINT(1) DEFAULT 0,
             has_supplies TINYINT(1) DEFAULT 0,
             cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NULL DEFAULT NULL,
             INDEX idx_serial (serial_number),
             INDEX idx_alerts (has_alerts),
-            INDEX idx_cached (cached_at)
+            INDEX idx_cached (cached_at),
+            INDEX idx_expires (expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 }
