@@ -18,35 +18,39 @@ echo "Quick Cache Warmer - Populating minimal cache...\n\n";
 // Truncate existing cache
 $pdo->exec("TRUNCATE TABLE " . DB_PREFIX . "cache_devices");
 
-// Get OAuth token
-$token = getMPSAuthToken();
-if (!$token) {
-    die("ERROR: Failed to get OAuth token\n");
-}
+// Use mps-api/query endpoint (handles auth internally)
+$params = [
+    'FilterDealerId' => null,
+    'FilterDealerCodes' => null,
+    'FilterCustomerCodes' => null,
+    'ProductBrand' => null,
+    'ProductModel' => null,
+    'OfficeId' => null,
+    'Status' => null,
+    'FilterText' => null,
+    'PageRows' => 100,
+    'PageNumber' => 1,
+    'SortColumn' => 'Id',
+    'SortOrder' => 0,
+];
 
-echo "✓ OAuth token obtained\n";
-
-// Fetch just first page (100 devices)
-$url = MPS_API_BASE . 'Device?dealerCode=' . DEFAULT_DEALER_CODE . '&pageSize=100&pageNumber=1';
-
-$ch = curl_init($url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Authorization: Bearer ' . $token,
-    'Accept: application/json'
+$context = stream_context_create([
+    'http' => [
+        'method' => 'POST',
+        'header' => 'Content-Type: application/json',
+        'content' => json_encode($params),
+        'timeout' => 20
+    ]
 ]);
-curl_setopt($ch, CURLOPT_TIMEOUT, 20);
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+$response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
 
-if ($httpCode !== 200) {
-    die("ERROR: API returned HTTP $httpCode\n");
+if ($response === false) {
+    die("ERROR: Failed to fetch devices from API\n");
 }
 
 $data = json_decode($response, true);
-$devices = $data['items'] ?? [];
+$devices = $data['Devices'] ?? [];
 
 echo "✓ Fetched " . count($devices) . " devices from API\n";
 
@@ -59,16 +63,16 @@ $stmt = $pdo->prepare("
 ");
 
 foreach ($devices as $device) {
-    $serial = $device['serialNumber'] ?? $device['SerialNumber'] ?? null;
+    $serial = $device['SerialNumber'] ?? null;
     if (!$serial) continue;
 
     $stmt->execute([
         $serial,
-        $device['model'] ?? $device['Model'] ?? '',
-        $device['customer']['code'] ?? $device['Customer_Code'] ?? '',
-        $device['customer']['description'] ?? $device['Customer_Description'] ?? '',
-        $device['locationName'] ?? $device['Location_Name'] ?? '',
-        $device['status'] ?? 'Active',
+        $device['Model'] ?? '',
+        $device['Customer_Code'] ?? '',
+        $device['Customer_Description'] ?? '',
+        $device['Location_Name'] ?? '',
+        $device['Status'] ?? 'Active',
         json_encode($device)
     ]);
 
