@@ -36,7 +36,9 @@ if ($rawBody === false || trim($rawBody) === '') {
     respondError('Empty request body');
 }
 
-$decoded = json_decode($rawBody, true);
+$sanitizedBody = sanitizeRawPayload($rawBody);
+
+$decoded = json_decode($sanitizedBody, true);
 $jsonError = json_last_error();
 
 // Provide detailed error messages for debugging
@@ -119,5 +121,23 @@ function respondError(string $message, int $status = 400): void
     http_response_code($status);
     echo json_encode(['success' => false, 'error' => $message], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+function sanitizeRawPayload(string $rawBody): string
+{
+    if ($rawBody === '') {
+        return $rawBody;
+    }
+
+    return preg_replace_callback('/[\x00-\x1F]/u', static function ($matches): string {
+        $char = $matches[0];
+        $ord = ord($char);
+        return match ($ord) {
+            0x09 => '\\t',
+            0x0A => '\\n',
+            0x0D => '\\r',
+            default => sprintf('\\u%04x', $ord),
+        };
+    }, $rawBody);
 }
 

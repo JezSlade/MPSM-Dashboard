@@ -25,6 +25,7 @@ if (!function_exists('processNotificationRules')) {
     function processNotificationRules(PDO $pdo, int $messageId, array $messageData): void
     {
         try {
+            $messageId = (int)$messageId;
             ensureCommandCenterTables($pdo);
 
             // Update alert aggregations first
