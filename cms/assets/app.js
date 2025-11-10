@@ -932,7 +932,11 @@ const MPSM = (function() {
 
             debugLog(`Preferences loaded: ${state.customerCode}`, 'info');
             syncPreferenceInputs();
-            initializeCards();
+
+            // Only initialize cards if on dashboard page
+            if (document.getElementById('dashboard-card-container')) {
+                initializeCards();
+            }
 
         } catch (error) {
             debugLog('Failed to load preferences: ' + error.message, 'error');
@@ -943,7 +947,11 @@ const MPSM = (function() {
             state.customerName = 'CAPE FEAR VALLEY MED CTR.';
             state.theme = 'light';
             syncPreferenceInputs();
-            initializeCards();
+
+            // Only initialize cards if on dashboard page
+            if (document.getElementById('dashboard-card-container')) {
+                initializeCards();
+            }
         }
     }
 
