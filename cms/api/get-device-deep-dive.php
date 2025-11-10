@@ -133,12 +133,16 @@ try {
         $stmt = $pdo->prepare("
             SELECT device_data
             FROM {$prefix}cache_devices
-            WHERE JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) = :id
-               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) = :id
-               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IdInstalledProduct')) = :id
+            WHERE JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) = :id1
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) = :id2
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IdInstalledProduct')) = :id3
             LIMIT 1
         ");
-        $stmt->execute([':id' => $deviceId]);
+        $stmt->execute([
+            ':id1' => $deviceId,
+            ':id2' => $deviceId,
+            ':id3' => $deviceId
+        ]);
         $cachedDeviceJson = $stmt->fetchColumn() ?: null;
     }
 
