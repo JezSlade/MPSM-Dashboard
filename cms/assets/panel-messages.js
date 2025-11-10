@@ -59,9 +59,10 @@
                 row.customer_description ? `<div>${escapeHtml(row.customer_description)}</div>` : null,
             ].filter(Boolean).join('');
 
+            // Display human-readable description (panel_configuration) prominently, with code as secondary
             const alert = [
-                row.maintenance_alert_code ? `<strong>${escapeHtml(row.maintenance_alert_code)}</strong>` : null,
-                row.maintenance_alert_id ? `<div>ID: ${escapeHtml(row.maintenance_alert_id)}</div>` : null,
+                row.panel_configuration ? `<strong>${escapeHtml(row.panel_configuration)}</strong>` : null,
+                row.maintenance_alert_code ? `<div style="font-size: 0.85em; color: #64748b;">Code: ${escapeHtml(row.maintenance_alert_code)}</div>` : null,
             ].filter(Boolean).join('');
 
             const received = row.received_at ? new Date(row.received_at).toLocaleString() : '–';

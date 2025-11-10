@@ -111,14 +111,18 @@ trackVisit('/panel-message-monitor');
             display: flex;
         }
         .modal-content {
-            background: var(--card-bg);
-            color: var(--text-color);
+            background: var(--card-bg, #ffffff);
+            color: var(--text-color, #1e293b);
             border-radius: 8px;
             padding: 1.5rem;
             max-width: 80vw;
             max-height: 80vh;
             overflow: auto;
             box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25);
+        }
+        [data-theme="dark"] .modal-content {
+            background: #222e3f;
+            color: #f1f6fb;
         }
         .modal-header {
             display: flex;
