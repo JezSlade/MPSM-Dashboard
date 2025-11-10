@@ -656,11 +656,17 @@ const MPSM = (function() {
         loadTheme();
         initGlobalDeviceSearch();  // Initialize global device search
 
+        // Only load dashboard components on index.php (not on command-center.php or other pages)
+        const isDashboardPage = document.getElementById('customer-header') !== null;
+
         try {
             await loadPreferences();
-            await loadCustomerOptions();
-            await loadDashboard();
-            prefetchAdminData().catch(error => debugLog('Prefetch failed: ' + error.message, 'warn'));
+
+            if (isDashboardPage) {
+                await loadCustomerOptions();
+                await loadDashboard();
+                prefetchAdminData().catch(error => debugLog('Prefetch failed: ' + error.message, 'warn'));
+            }
         } catch (error) {
             showToast('Failed to initialize: ' + error.message, 'error');
         }
@@ -678,19 +684,34 @@ const MPSM = (function() {
         });
 
         // Theme toggle
-        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', toggleTheme);
+        }
 
         // Refresh
-        document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', loadDashboard);
+        }
 
         // Logout
-        document.getElementById('logout-btn').addEventListener('click', logout);
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', logout);
+        }
 
         // Save settings
-        document.getElementById('save-settings').addEventListener('click', saveSettings);
+        const saveSettingsBtn = document.getElementById('save-settings');
+        if (saveSettingsBtn) {
+            saveSettingsBtn.addEventListener('click', saveSettings);
+        }
 
         // Test health
-        document.getElementById('test-health').addEventListener('click', () => testSystemHealth());
+        const testHealthBtn = document.getElementById('test-health');
+        if (testHealthBtn) {
+            testHealthBtn.addEventListener('click', () => testSystemHealth());
+        }
 
         // Database monitor actions
         const dbMonitorRefresh = document.getElementById('refresh-db-monitor');
@@ -704,7 +725,10 @@ const MPSM = (function() {
         }
 
         // Refresh visitors
-        document.getElementById('refresh-visitors').addEventListener('click', loadVisitorLogs);
+        const refreshVisitorsBtn = document.getElementById('refresh-visitors');
+        if (refreshVisitorsBtn) {
+            refreshVisitorsBtn.addEventListener('click', loadVisitorLogs);
+        }
 
         // Admin section navigation
         document.querySelectorAll('.admin-nav-btn').forEach(btn => {
