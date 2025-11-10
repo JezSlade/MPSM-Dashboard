@@ -70,6 +70,41 @@ echo "\n";
 
 echo "=== Creating Sample Notification Rules ===\n\n";
 
+function insertRule(PDO $pdo, array $rule): void
+{
+    $table = DB_PREFIX . 'notification_rules';
+    $sql = "INSERT INTO {$table}
+            (name, description, severity, enabled, alert_code_pattern,
+             device_serial_pattern, customer_code_pattern, frequency_count,
+             frequency_window_hours, frequency_type, show_dashboard,
+             auto_dismiss_hours, notification_title, notification_message)
+            VALUES (:name, :description, :severity, :enabled, :alert_pattern,
+                    :device_pattern, :customer_pattern, :freq_count,
+                    :freq_window, :freq_type, :show_dash,
+                    :auto_dismiss, :notif_title, :notif_message)";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':name' => $rule['name'],
+        ':description' => $rule['description'] ?? null,
+        ':severity' => $rule['severity'] ?? 'warning',
+        ':enabled' => $rule['enabled'] ?? 1,
+        ':alert_pattern' => $rule['alert_code_pattern'] ?? null,
+        ':device_pattern' => $rule['device_serial_pattern'] ?? null,
+        ':customer_pattern' => $rule['customer_code_pattern'] ?? null,
+        ':freq_count' => $rule['frequency_count'] ?? null,
+        ':freq_window' => $rule['frequency_window_hours'] ?? null,
+        ':freq_type' => $rule['frequency_type'] ?? 'same_device',
+        ':show_dash' => $rule['show_dashboard'] ?? 1,
+        ':auto_dismiss' => $rule['auto_dismiss_hours'] ?? null,
+        ':notif_title' => $rule['notification_title'] ?? null,
+        ':notif_message' => $rule['notification_message'] ?? null
+    ]);
+
+    $ruleId = $pdo->lastInsertId();
+    echo "  ✓ Created rule ID {$ruleId}: {$rule['name']}\n";
+}
+
 // Rule 1: Monitor all alerts (catch-all)
 echo "Creating Rule 1: Monitor All Panel Messages...\n";
 $rule1 = [
@@ -171,38 +206,3 @@ $insertRule($pdo, $rule5);
 echo "\n=== Rules Created Successfully ===\n";
 echo "Visit Command Center to view and manage rules:\n";
 echo "https://mpsm.resolutionsbydesign.us/cms/command-center.php\n\n";
-
-function insertRule(PDO $pdo, array $rule): void
-{
-    $table = DB_PREFIX . 'notification_rules';
-    $sql = "INSERT INTO {$table}
-            (name, description, severity, enabled, alert_code_pattern,
-             device_serial_pattern, customer_code_pattern, frequency_count,
-             frequency_window_hours, frequency_type, show_dashboard,
-             auto_dismiss_hours, notification_title, notification_message)
-            VALUES (:name, :description, :severity, :enabled, :alert_pattern,
-                    :device_pattern, :customer_pattern, :freq_count,
-                    :freq_window, :freq_type, :show_dash,
-                    :auto_dismiss, :notif_title, :notif_message)";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        ':name' => $rule['name'],
-        ':description' => $rule['description'] ?? null,
-        ':severity' => $rule['severity'] ?? 'warning',
-        ':enabled' => $rule['enabled'] ?? 1,
-        ':alert_pattern' => $rule['alert_code_pattern'] ?? null,
-        ':device_pattern' => $rule['device_serial_pattern'] ?? null,
-        ':customer_pattern' => $rule['customer_code_pattern'] ?? null,
-        ':freq_count' => $rule['frequency_count'] ?? null,
-        ':freq_window' => $rule['frequency_window_hours'] ?? null,
-        ':freq_type' => $rule['frequency_type'] ?? 'same_device',
-        ':show_dash' => $rule['show_dashboard'] ?? 1,
-        ':auto_dismiss' => $rule['auto_dismiss_hours'] ?? null,
-        ':notif_title' => $rule['notification_title'] ?? null,
-        ':notif_message' => $rule['notification_message'] ?? null
-    ]);
-
-    $ruleId = $pdo->lastInsertId();
-    echo "  ✓ Created rule ID {$ruleId}: {$rule['name']}\n";
-}
