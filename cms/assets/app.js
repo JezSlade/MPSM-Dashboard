@@ -663,10 +663,10 @@ const MPSM = (function() {
             await loadPreferences();
 
             if (isDashboardPage) {
-                await loadCustomerOptions();
-                await loadDashboard();
-                prefetchAdminData().catch(error => debugLog('Prefetch failed: ' + error.message, 'warn'));
-            }
+            await loadCustomerOptions();
+            await loadDashboard();
+            prefetchAdminData().catch(error => debugLog('Prefetch failed: ' + error.message, 'warn'));
+        }
         } catch (error) {
             showToast('Failed to initialize: ' + error.message, 'error');
         }
@@ -1857,9 +1857,13 @@ const MPSM = (function() {
                 applyCardLayout(state.cards, { persist: false, syncRemote: false });
             }
             await loadCustomerHeader();
-            await CardManager.refreshAll();
-            // Update offline count from real device data
-            await updateOfflineCountFromCache();
+            // Refresh cards and offline counts asynchronously to unblock the UI
+            CardManager.refreshAll().catch(error => {
+                debugLog('CardManager.refreshAll() failed: ' + error.message, 'error');
+            });
+            updateOfflineCountFromCache().catch(error => {
+                debugLog('Offline count refresh failed: ' + error.message, 'warn');
+            });
             // Start panel alert auto-refresh
             startPanelAlertRefresh();
         } catch (error) {
@@ -4086,3 +4090,9 @@ const MPSM = (function() {
 // Expose functions to window for onclick handlers
 window.MPSM = MPSM;
 window.closeDeviceModal = () => MPSM.closeDeviceModal();
+
+/*
+CHANGELOG
+2025-11-11 Codex
+- Deferred the heavy card refresh and offline count fetch in `loadDashboard()` so the header renders immediately and the page stays interactive instead of freezing behind the modal overlay.
+*/

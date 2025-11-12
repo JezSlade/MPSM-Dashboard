@@ -690,3 +690,64 @@ curl -I https://mpsm.resolutionsbydesign.us/cms/assets/style.css
 - Offline-device updates no longer block page load; operators rely on the background refresh job instead of each page view re-crawling the dealer.
 
 ---
+
+## Update 2025-11-10 - Drilldown Cache Bootstrap Fix
+
+**Issue Reported**: `mpsm_cache_device_drilldown` remains empty because `refresh-cache-enhanced.php` aborts before inserting rows; `cacheDeviceDrilldown()` calls `app()` without the DI container bootstrapped.
+
+**Fix Applied**:
+- `refresh-cache-enhanced.php` now requires `dirname(__DIR__, 2) . '/bootstrap.php'`, which registers `DeviceRepository` and exposes the global `app()` helper before the drill-down loop executes.
+- With the container available and the repository resolving, drill-down responses are now persisted and the CMS cache can populate normally.
+
+**Tests**:
+1. `php -l cms/api/refresh-cache-enhanced.php` (passes: no syntax errors)
+
+**Status**: Manual verification pending (needs actual cache run on staging/live)
+
+
+## Update 2025-11-11 - Payload Sanitizer Audit
+
+**Issue Reported**: Payload debugger is still logging ~2,758 Invalid JSON callbacks because multi-line strings, BOMs, and Unicode separators break json_decode() before the payload ever reaches the engine.
+
+**Fix Applied**:
+- Split the sanitization helpers into `mps-api/callbacks/payload-sanitizer.php`, normalize line endings/BOMs/control characters, and log the cleaned snippet for every remaining rejection.
+- Switched both callbacks to `JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE` so we capture the precise failure, then fall back to the raw debug log.
+- Relaxed `processNotificationRules()` to accept `int|string` IDs so PDO string IDs no longer raise type errors while normalized payloads are processed.
+
+**Files Updated**:
+- `mps-api/callbacks/panel-message.php`
+- `mps-api/callbacks/panel-message-debug.php`
+- `mps-api/callbacks/payload-sanitizer.php`
+- `mps-api/callbacks/command-center-engine.php`
+
+**Tests**:
+1. `php -l mps-api/callbacks/panel-message.php`
+2. `php -l mps-api/callbacks/panel-message-debug.php`
+3. `php -l mps-api/callbacks/payload-sanitizer.php`
+4. `php -l mps-api/callbacks/command-center-engine.php`
+5. `php tests/test-payload-sanitization.php`
+
+**Status**: Local verification complete, awaiting the stored payload replay to confirm the invalid JSON count drops.
+
+---
+
+/*
+CHANGELOG
+2025-11-10 Codex
+- Documented the drilldown bootstrap fix and the `php -l` sanity check for `refresh-cache-enhanced.php`.
+2025-11-11 Codex
+- Captured the payload sanitizer audit details and recorded the new `tests/test-payload-sanitization.php` run.
+*/
+
+## Update 2025-11-11 - Dashboard Responsiveness Patch
+
+**Issue Reported**: The dashboard stayed darkened and unresponsive on first login until the slow card/offline fetches returned (the modal overlay kept capturing pointer events).
+
+**Fix Applied**:
+- `loadDashboard()` now fires `CardManager.refreshAll()` and `updateOfflineCountFromCache()` without awaiting them, so the customer header renders immediately and the modal overlay goes away, while the heavy calls run in parallel and log any errors.
+
+**Tests**:
+1. `php -l cms/assets/app.js`
+2. Manual smoke check (visual confirmation that the modal no longer blocks the page during initial load) – pending live verification.
+
+**Status**: Ready for live re-test once the change reaches the server.

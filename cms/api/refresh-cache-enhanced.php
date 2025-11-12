@@ -19,6 +19,7 @@ ini_set('memory_limit', '1G'); // 1GB for large datasets
 
 require '../config.php';
 require '../functions.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 $startTime = microtime(true);
 $stats = [
@@ -838,3 +839,9 @@ function cachePanelMessages(PDO $pdo): int {
 
     return (int)($row['count'] ?? 0);
 }
+
+/*
+CHANGELOG
+2025-11-10 Codex
+- Bootstrapped the service container before the refresh run so `cacheDeviceDrillDown()` can resolve `DeviceRepository` via `app()` and persist drill-down rows.
+*/

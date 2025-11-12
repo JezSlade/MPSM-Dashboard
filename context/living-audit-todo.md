@@ -11,7 +11,9 @@
 1. **Cache Orchestration & Data Freshness Gaps**
    - `cms/api/refresh-cache-enhanced.php:439-444` truncates cache tables before any fetch, and the subsequent inserts (lines 531-535, 763-796) occur in 5k-device batches without transactions. When the MySQL connection drops (`SQLSTATE[HY000]: 2006` in `cms/logs/cache-refresh-*`), both tables remain empty, matching the zero counts reported by `cms/api/get-database-monitor.php:28-45`.
    - Schema and repository are misaligned: `DeviceRepository::cacheDevice()` writes to an `expires_at` column (src/Repositories/DeviceRepository.php:118-127), but `ensureCacheTables()` never creates it (cms/api/refresh-cache-enhanced.php:231-256). This causes silent SQL errors when caching devices/drilldowns, explaining why cache-backed endpoints still hit the vendor API.
+   - Resolved: `cacheDeviceDrilldown()` was throwing because `refresh-cache-enhanced.php` never required `bootstrap.php`, so the `app()` helper used by the function was undefined and the drill-down loop died before persisting rows. Now requiring `dirname(__DIR__, 2) . '/bootstrap.php'` ensures `DeviceRepository` is available and the cache can be populated.
    - Duplicate fetch code (`fetchAllDevices()` at cms/api/refresh-cache-enhanced.php:263-421 versus `cms/api/get-cached-devices.php:70-180`) means pagination parameters differ (FilterDealerId vs. FilterDealerCodes), so device counts never reconcile and cron outputs contradict UI stats.
+   - Payload debugger now reports 2,758 invalid JSON errors; the new `payload-sanitizer.php` normalizes multi-line strings, Unicode separators, and invalid UTF-8 before decoding and logs the sanitized snippet so we can study the remnants.
 
 2. **CMS API/Controller Duplication**
    - `cms/api/get-devices.php` and `cms/api/search-devices.php` each open raw HTTP streams (lines 52-91 and 33-114) instead of using `callMpsAPI()`. This creates divergent timeout/error handling; for example, `get-devices.php` treats any JSON decode failure as “Invalid response” while `search-devices.php` logs successes as errors (line 105), leading to inconsistent behavior reported by operators.
@@ -20,7 +22,8 @@
 
 3. **Front-End & Command-Center UX Debt**
    - `cms/assets/app.js` is a 4,020-line single file (confirmed via line count), so there is no route-level code splitting. As a result, Admin diagnostics, visitor logs, and cache warmers all fire immediately on login, producing the sluggish dashboards reported in Jez’s TODOs.
-   - `cms/assets/panel-messages.js:144-177` fetches the entire panel-message feed again just to display one payload in the modal, duplicating network cost every click. Combined with the iframe-based payload debugger (`cms/panel-message-monitor.php:180-185`) that polls separately, the command center issues redundant requests, explaining the “wonky” monitor load times.
+  - `cms/assets/panel-messages.js:144-177` fetches the entire panel-message feed again just to display one payload in the modal, duplicating network cost every click. Combined with the iframe-based payload debugger (`cms/panel-message-monitor.php:180-185`) that polls separately, the command center issues redundant requests, explaining the “wonky” monitor load times.
+  - Resolved: `loadDashboard()` awaited both `CardManager.refreshAll()` and `updateOfflineCountFromCache()` before the UI became interactive, so the modal overlay stayed in place for minutes while the remote APIs finished; both tasks now run asynchronously after the header renders so the dashboard no longer freezes on login.
 
 4. **mps-api Gateway & Webhook Engine**
    - `mps-api/index.php:346-375` enforces rate limiting by creating/deleting `ratelimit_*.log` files on every request. Under load the filesystem becomes the bottleneck, which matches production complaints about slow `/mps-api/query` even when the vendor API is healthy.
@@ -289,3 +292,9 @@
 ---
 
 *Keep this document synchronized with every cache/API change so Claude and other agents always have the latest investigative trail.*
+/*
+CHANGELOG
+2025-11-10 Codex
+- Logged the bootstrap fix that now loads DI before `cacheDeviceDrilldown()`, which was the root cause of the empty `mpsm_cache_device_drilldown` table.
+- Added the payload-sanitizer worklog so multi-line, BOM, and Unicode line separator payloads get normalized before decoding and the sanitized snippets are captured for RCA.
+*/

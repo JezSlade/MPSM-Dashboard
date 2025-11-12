@@ -15,6 +15,7 @@ require_once dirname(__DIR__, 1) . '/config.php';     // Loads .env-backed engin
 require_once dirname(__DIR__, 2) . '/cms/config.php'; // Provides DB constants/session settings
 require_once dirname(__DIR__, 2) . '/cms/functions.php';
 require_once __DIR__ . '/panel-message-common.php';
+require_once __DIR__ . '/payload-sanitizer.php';
 require_once __DIR__ . '/command-center-engine.php';  // Command Center for notifications
 
 $debugLogId = createPanelCallbackDebugLog();
@@ -38,12 +39,11 @@ if ($rawBody === false || trim($rawBody) === '') {
 
 $sanitizedBody = sanitizeRawPayload($rawBody);
 
-$decoded = json_decode($sanitizedBody, true);
-$jsonError = json_last_error();
-
-// Provide detailed error messages for debugging
-if ($jsonError !== JSON_ERROR_NONE) {
-    $errorMsg = 'Invalid JSON: ' . json_last_error_msg();
+try {
+    $decoded = json_decode($sanitizedBody, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+} catch (\JsonException $exception) {
+    $errorMsg = 'Invalid JSON: ' . $exception->getMessage();
+    logInvalidJsonPayloadSample($debugLogId, $rawBody, $sanitizedBody, $exception);
     updatePanelCallbackDebugLog($debugLogId, 'ERROR', $errorMsg, 400, $rawBody);
     respondError($errorMsg);
 }
@@ -123,21 +123,9 @@ function respondError(string $message, int $status = 400): void
     exit;
 }
 
-function sanitizeRawPayload(string $rawBody): string
-{
-    if ($rawBody === '') {
-        return $rawBody;
-    }
-
-    return preg_replace_callback('/[\x00-\x1F]/u', static function ($matches): string {
-        $char = $matches[0];
-        $ord = ord($char);
-        return match ($ord) {
-            0x09 => '\\t',
-            0x0A => '\\n',
-            0x0D => '\\r',
-            default => sprintf('\\u%04x', $ord),
-        };
-    }, $rawBody);
-}
-
+/*
+CHANGELOG
+2025-11-11 Codex
++- Shifted JSON decoding to JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE, normalized payloads via the shared sanitizer, and now log sanitized fragments when parsing still fails.
++- Added the new payload-sanitizer helper bundle to reuse the same cleaning rules across production and debug callbacks.
+*/

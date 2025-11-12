@@ -14,6 +14,7 @@ require_once dirname(__DIR__, 1) . '/config.php';
 require_once dirname(__DIR__, 2) . '/cms/config.php';
 require_once dirname(__DIR__, 2) . '/cms/functions.php';
 require_once __DIR__ . '/panel-message-common.php';
+require_once __DIR__ . '/payload-sanitizer.php';
 
 $debugLogId = createPanelCallbackDebugLog();
 
@@ -34,10 +35,21 @@ if ($rawBody === false || trim($rawBody) === '') {
     respondError('Empty request body');
 }
 
-$decoded = json_decode($rawBody, true);
+$sanitizedBody = sanitizeRawPayload($rawBody);
+
+try {
+    $decoded = json_decode($sanitizedBody, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+} catch (\JsonException $exception) {
+    $errorMsg = 'Invalid JSON: ' . $exception->getMessage();
+    logInvalidJsonPayloadSample($debugLogId, $rawBody, $sanitizedBody, $exception);
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', $errorMsg, 400, $rawBody);
+    respondError($errorMsg);
+}
+
 if (!is_array($decoded)) {
-    updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Invalid JSON payload', 400, $rawBody);
-    respondError('Invalid JSON payload');
+    $errorMsg = 'Invalid JSON payload: Expected array/object';
+    updatePanelCallbackDebugLog($debugLogId, 'ERROR', $errorMsg, 400, $rawBody);
+    respondError($errorMsg);
 }
 
 // Lightweight shared-secret validation
@@ -96,3 +108,9 @@ function respondError(string $message, int $status = 400): void
     exit;
 }
 
+/*
+CHANGELOG
+2025-11-11 Codex
+- Reused the shared payload sanitizer so debug callbacks behave like production and capture invalid JSON snippets for replay.
+- Swapped `json_decode` for an exception-driven decoder so multiline or badly encoded payloads now return the specific error that caused the rejection.
+*/

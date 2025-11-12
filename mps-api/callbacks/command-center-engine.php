@@ -12,6 +12,12 @@ if (!defined('MPS_ENGINE_ACCESS')) {
     exit('Access denied');
 }
 
+/*
+CHANGELOG
+2025-11-11 Codex
+- Relaxed `processNotificationRules()` to accept `int|string` IDs before coercing them so PDO string IDs no longer trigger type errors.
+*/
+
 require_once __DIR__ . '/command-center-schema.php';
 
 if (!function_exists('processNotificationRules')) {
@@ -19,10 +25,10 @@ if (!function_exists('processNotificationRules')) {
      * Main entry point: Process panel message against all active rules
      *
      * @param PDO $pdo Database connection
-     * @param int $messageId Panel message ID
+     * @param int|string $messageId Panel message ID (allow strings from PDO)
      * @param array $messageData Panel message data
      */
-    function processNotificationRules(PDO $pdo, int $messageId, array $messageData): void
+    function processNotificationRules(PDO $pdo, int|string $messageId, array $messageData): void
     {
         try {
             $messageId = (int)$messageId;
