@@ -442,16 +442,14 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
     $batchSize = 10; // Cache every 10 pages (1000 devices) to prevent MySQL timeout
     $deviceBatch = [];
 
-    // SAFETY: Use transaction to protect against partial failures
-    // If fetch fails, rollback prevents empty cache tables
+    // SAFETY: Truncate tables before fetch begins
+    // Incremental batching (every 1000 devices) provides protection
     $prefix = DB_PREFIX;
-    logMessage("Starting transactional cache refresh");
+    logMessage("Starting cache refresh with incremental commits");
 
     try {
-        $pdo->beginTransaction();
-
-        // Truncate existing cache within transaction
-        logMessage("Truncating cache tables (protected by transaction)");
+        // Truncate existing cache (no transaction - too long for MySQL timeout)
+        logMessage("Truncating cache tables");
         $pdo->exec("TRUNCATE TABLE {$prefix}cache_devices");
         $pdo->exec("TRUNCATE TABLE {$prefix}cache_device_drilldown");
 
@@ -610,9 +608,7 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
         }
     }
 
-        // Commit transaction - all inserts succeeded
-        $pdo->commit();
-        logMessage("Transaction committed successfully - cache refresh complete");
+        logMessage("Cache refresh complete - all batches committed");
 
         return [
             'total_devices' => $totalDevicesCached,
@@ -620,11 +616,7 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
         ];
 
     } catch (Exception $e) {
-        // Rollback on any failure - preserves old cache data
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-            logMessage("CRITICAL: Transaction rolled back - cache tables preserved. Error: " . $e->getMessage());
-        }
+        logMessage("CRITICAL: Cache refresh failed. Error: " . $e->getMessage());
         throw $e; // Re-throw for upstream handling
     }
 }
