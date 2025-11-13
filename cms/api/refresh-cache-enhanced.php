@@ -784,6 +784,8 @@ function parseRetryAfterHeader(array $headers): ?int {
  */
 function cacheDeviceList(PDO $pdo, array $devices): void {
     $prefix = DB_PREFIX;
+    $successCount = 0;
+    $errorCount = 0;
 
     foreach ($devices as $device) {
         $serialNumber = $device['SerialNumber'] ?? $device['serialNumber'] ?? null;
@@ -794,27 +796,61 @@ function cacheDeviceList(PDO $pdo, array $devices): void {
         $customerCode = $device['CustomerCode'] ?? $device['customerCode'] ?? null;
         $isUninstalled = isset($device['IsUninstalled']) && $device['IsUninstalled'] ? 1 : 0;
 
-        $sql = "INSERT INTO {$prefix}cache_devices
-                (serial_number, device_data, customer_code, is_uninstalled, cached_at)
-                VALUES (:serial, :data, :customer, :uninstalled, NOW())
-                ON DUPLICATE KEY UPDATE
-                device_data = :data2,
-                customer_code = :customer2,
-                is_uninstalled = :uninstalled2,
-                cached_at = NOW()";
+        try {
+            $sql = "INSERT INTO {$prefix}cache_devices
+                    (serial_number, device_data, customer_code, is_uninstalled, cached_at)
+                    VALUES (:serial, :data, :customer, :uninstalled, NOW())
+                    ON DUPLICATE KEY UPDATE
+                    device_data = :data2,
+                    customer_code = :customer2,
+                    is_uninstalled = :uninstalled2,
+                    cached_at = NOW()";
 
-        $stmt = $pdo->prepare($sql);
-        $deviceJson = json_encode($device);
+            $stmt = $pdo->prepare($sql);
+            $deviceJson = json_encode($device);
 
-        $stmt->execute([
-            ':serial' => $serialNumber,
-            ':data' => $deviceJson,
-            ':customer' => $customerCode,
-            ':uninstalled' => $isUninstalled,
-            ':data2' => $deviceJson,
-            ':customer2' => $customerCode,
-            ':uninstalled2' => $isUninstalled
-        ]);
+            // Check JSON encoding success
+            if ($deviceJson === false) {
+                logMessage("ERROR: JSON encode failed for device {$serialNumber}: " . json_last_error_msg());
+                $errorCount++;
+                continue;
+            }
+
+            // Check JSON size (MySQL TEXT limit is 65,535 bytes)
+            $jsonSize = strlen($deviceJson);
+            if ($jsonSize > 65000) {
+                logMessage("ERROR: Device {$serialNumber} JSON too large: {$jsonSize} bytes (limit 65,535)");
+                $errorCount++;
+                continue;
+            }
+
+            $result = $stmt->execute([
+                ':serial' => $serialNumber,
+                ':data' => $deviceJson,
+                ':customer' => $customerCode,
+                ':uninstalled' => $isUninstalled,
+                ':data2' => $deviceJson,
+                ':customer2' => $customerCode,
+                ':uninstalled2' => $isUninstalled
+            ]);
+
+            if ($result) {
+                $successCount++;
+            } else {
+                $errorInfo = $stmt->errorInfo();
+                logMessage("ERROR: INSERT failed for {$serialNumber}: " . $errorInfo[2]);
+                $errorCount++;
+            }
+
+        } catch (PDOException $e) {
+            logMessage("ERROR: PDO exception caching {$serialNumber}: " . $e->getMessage());
+            $errorCount++;
+        }
+    }
+
+    // Log batch summary
+    if ($errorCount > 0) {
+        logMessage("Batch cache summary: {$successCount} succeeded, {$errorCount} failed");
     }
 }
 
