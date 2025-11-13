@@ -126,7 +126,7 @@ try {
                 $stats['api_calls_made']++;
 
                 if ($drillDownData) {
-                    cacheDeviceDrillDown($pdo, $serialNumber, $drillDownData);
+                    cacheDeviceDrilldown($serialNumber, $drillDownData);
                     $stats['devices_with_drilldown']++;
                 }
 

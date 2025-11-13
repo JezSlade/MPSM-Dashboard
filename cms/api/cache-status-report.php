@@ -272,5 +272,52 @@ if (empty($issues)) {
 }
 
 echo "\n";
+
+// 8. Cache Refresh Logs
+echo "8. RECENT CACHE REFRESH ACTIVITY\n";
+echo str_repeat("-", 60) . "\n";
+
+$logFile = dirname(__DIR__) . '/logs/cache-refresh-' . date('Y-m-d') . '.log';
+$yesterdayLog = dirname(__DIR__) . '/logs/cache-refresh-' . date('Y-m-d', strtotime('-1 day')) . '.log';
+
+if (file_exists($logFile)) {
+    $logLines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $recentLines = array_slice($logLines, -20);
+
+    echo "Today's Log (last 20 lines):\n";
+    foreach ($recentLines as $line) {
+        echo "  $line\n";
+    }
+} else {
+    echo "No log file found for today ($logFile)\n";
+}
+
+if (file_exists($yesterdayLog)) {
+    echo "\nYesterday's log available: $yesterdayLog\n";
+}
+
+echo "\n";
+
+// 9. Error Detection
+echo "9. ERROR DETECTION\n";
+echo str_repeat("-", 60) . "\n";
+
+$errorCount = 0;
+$warnings = 0;
+
+if (file_exists($logFile)) {
+    $logContent = file_get_contents($logFile);
+    $errorCount = substr_count($logContent, 'ERROR');
+    $warnings = substr_count($logContent, 'WARNING');
+}
+
+echo "Errors in today's log: $errorCount\n";
+echo "Warnings in today's log: $warnings\n";
+
+if ($errorCount > 0 || $warnings > 10) {
+    echo "  ⚠ ATTENTION: Check logs for details\n";
+}
+
+echo "\n";
 echo str_repeat("=", 60) . "\n";
 echo "End of Report\n";
