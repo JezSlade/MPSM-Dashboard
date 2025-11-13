@@ -439,7 +439,7 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
     $dealerCode = DEFAULT_DEALER_CODE;
     $totalDevicesCached = 0;
     $totalDeletedDevices = 0;
-    $batchSize = 50; // Cache every 50 pages (5000 devices)
+    $batchSize = 10; // Cache every 10 pages (1000 devices) to prevent MySQL timeout
     $deviceBatch = [];
 
     // SAFETY: Use transaction to protect against partial failures
@@ -542,6 +542,10 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
         if ($pageNumber % $batchSize === 0 || $deviceCount < 100) {
             if (!empty($deviceBatch)) {
                 logMessage("Caching batch of " . count($deviceBatch) . " devices to database");
+
+                // Keep MySQL connection alive during long operations
+                $pdo->query("SELECT 1");
+
                 cacheDeviceList($pdo, $deviceBatch);
                 $totalDevicesCached += count($deviceBatch);
                 $deviceBatch = []; // Clear batch
