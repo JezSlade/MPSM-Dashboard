@@ -56,7 +56,8 @@ if (!is_array($decoded)) {
 }
 
 // Lightweight shared-secret validation since the upstream cannot set headers.
-$providedSecret = $decoded['callbackSecret'] ?? $decoded['secret'] ?? null;
+// Support both lowercase and uppercase variants due to MPS Monitor sending "Secret" (capital S)
+$providedSecret = $decoded['callbackSecret'] ?? $decoded['secret'] ?? $decoded['Secret'] ?? null;
 $expectedSecret = 'mpsm-panel-message-v1';
 if ($providedSecret !== $expectedSecret) {
     updatePanelCallbackDebugLog($debugLogId, 'ERROR', 'Unauthorized - invalid secret', 401, $rawBody);
