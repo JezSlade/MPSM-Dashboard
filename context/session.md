@@ -222,22 +222,69 @@ if (php_sapi_name() !== 'cli') {
 
 ---
 
+---
+
+## Session Continuation #2 - CRON Configuration Issues
+
+### 8. Discovered CRON Path Misconfiguration ✅
+**Problem:** CRON stopped executing at 19:50:34, no runs for 3+ hours
+
+**Root Cause Analysis:**
+- CRON job path was missing subdirectory: `/home/resolut7/public_html/cms/cron-router.php`
+- Correct path: `/home/resolut7/public_html/mpsm.resolutionsbydesign.us/cms/cron-router.php`
+- Path fixed in cPanel at ~23:00
+
+**Diagnostic Tools Created:**
+- `cms/api/diagnose-cron.php` - Full CRON health check
+- `cms/api/tail-cron-log.php` - Log viewer
+- `cms/api/check-last-cron.php` - Execution timestamp checker
+- `cms/cron-heartbeat.php` - Simple execution verifier
+
+**Commits:** 230dbda, a74d283, 4877258
+
+---
+
+### 9. Config.php Patch Persistently Failing ⚠️
+**Problem:** SERVER_PORT warning persists in CLI execution despite multiple patch attempts
+
+**Evidence:**
+- Patch script runs successfully, creates backups
+- But CLI test still shows: `Undefined array key "SERVER_PORT" in config.php on line 54`
+- Patch ran twice (03:36 and 04:06), both times reported success
+- Warning persists in diagnosis output
+
+**Hypothesis:** Patch script pattern matching failing on production config.php formatting
+
+**New Tools Created:**
+- `cms/api/show-config-session.php` - Display actual config content around line 54
+- `cms/fix-config-session.php` - Direct regex-based fix (more robust)
+
+**Status:** Investigating why patch isn't taking effect
+
+**Commits:** ce23224, ec262ed
+
+---
+
 ## Outstanding Issues
 
-### Issue #1: Cache Refresh Still Not Running ⚠️
-**Status:** Code deployed, waiting for manual config patch
+### Issue #1: CRON Still Not Executing ⚠️
+**Status:** Path fixed in cPanel, waiting for CRON to run
 
 **Current State:**
+- CRON path: Fixed (~23:00)
+- Last execution: 2025-11-14 19:50:34 (3+ hours ago)
 - Devices cached: 200 (stale)
 - Expected: 52,800+ devices
-- CRON job: Running every minute
-- Blocker: Server config.php needs CLI session patch
+
+**Blockers:**
+1. Config.php patch not working (SESSION_PORT warning blocks CLI execution)
+2. CRON hasn't executed since path fix (may need time or restart)
 
 **Next Steps:**
-1. Wait for GitHub Actions deployment to complete (~2-3 minutes)
-2. Run patch script: `php cms/patch-config-cli.php`
-3. Reset cache: `curl ".../cms/api/refresh-cache-chunked.php?action=start"`
-4. Monitor: Watch page number increment every minute
+1. Diagnose why patch isn't applying (check actual config.php content)
+2. Apply direct fix to config.php
+3. Wait for CRON to execute (every minute once config is fixed)
+4. Monitor cache refresh progress
 
 ---
 
@@ -270,7 +317,8 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 
 ---
 
-**Last Updated:** 2025-11-14 22:15 EST
-**Session Duration:** Full day + evening continuation
-**Commits:** 8 total (4e7d8c5, 9186ee2, f626053, d460683, 3ea5d5d, faa41e7, afc6ed8, 5501c3c, 145da72, 9597621)
-**Files Changed:** 24 files (5 new, 6 modified, 13 archived)
+**Last Updated:** 2025-11-14 23:10 EST
+**Session Duration:** Full day + late evening continuation
+**Commits:** 14 total (4e7d8c5, 9186ee2, f626053, d460683, 3ea5d5d, faa41e7, afc6ed8, 5501c3c, 145da72, 9597621, 68b21fc, ce23224, a74d283, 230dbda, 4877258, ec262ed)
+**Files Changed:** 35+ files (15+ new, 8 modified, 13 archived)
+**Current Focus:** Resolving config.php patch failure and CRON execution
