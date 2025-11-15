@@ -21,10 +21,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 
-// Detect execution context
-$isCLI = php_sapi_name() === 'cli';
+// Detect execution context - check if HTTP request (not CLI/CRON)
+$isHTTP = !empty($_SERVER['REQUEST_METHOD']);
 
-if (!$isCLI) {
+if ($isHTTP) {
     // Allow web access for testing/monitoring with secret parameter
     if (!isset($_GET['secret']) || $_GET['secret'] !== 'cron-router-access-2025') {
         http_response_code(403);
@@ -53,8 +53,8 @@ function logMessage($message, $level = 'INFO') {
     $line = "[{$timestamp}] [{$level}] {$message}\n";
     file_put_contents($logFile, $line, FILE_APPEND);
 
-    // Also output to console if CLI
-    if (php_sapi_name() === 'cli') {
+    // Also output to console if not HTTP request
+    if (empty($_SERVER['REQUEST_METHOD'])) {
         echo $line;
     }
 }
@@ -333,7 +333,7 @@ foreach ($tasks as $task) {
 logMessage("CRON Router finished (ran: {$tasksRun}, skipped: {$tasksSkipped}, failed: {$tasksFailed})");
 
 // If running via web, return JSON response
-if (!$isCLI) {
+if ($isHTTP) {
     header('Content-Type: application/json');
     echo json_encode([
         'success' => true,
