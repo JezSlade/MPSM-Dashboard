@@ -16,6 +16,11 @@
  * - No need to modify cPanel for task changes
  */
 
+// SHOW ALL ERRORS (development/debugging mode)
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+
 // Detect execution context
 $isCLI = php_sapi_name() === 'cli';
 

@@ -6,6 +6,11 @@
  * Following Engineering Standards Rule 13: One Responsibility Per File
  */
 
+// SHOW ALL ERRORS (development/debugging mode)
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+
 /**
  * Get database connection
  * Following Rule 2: One Database Access Pattern (Direct PDO)
