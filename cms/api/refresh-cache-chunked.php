@@ -172,7 +172,29 @@ if ($action === 'process' || $action === 'auto') {
         logMessage("Fetching device list page {$page}");
 
         try {
-            $response = callMpsGetDeviceList($page, $perPage, true, true);
+            // Build API parameters (matching refresh-cache-enhanced.php pattern)
+            $params = [
+                'FilterDealerId' => DEFAULT_DEALER_ID,
+                'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+                'FilterCustomerCodes' => null,
+                'ProductBrand' => null,
+                'ProductModel' => null,
+                'OfficeId' => null,
+                'Status' => null,
+                'FilterText' => null,
+                'PageNumber' => $page,
+                'PageRows' => $perPage,
+                'SortColumn' => 'Id',
+                'SortOrder' => 0,
+            ];
+
+            // Remove null values
+            $params = array_filter($params, static function ($value) {
+                return $value !== null;
+            });
+
+            // Call the API using the correct function
+            $response = callMPSMAPI('Device/List', $params);
 
             if (!$response || !isset($response['data'])) {
                 throw new Exception("Invalid API response for page {$page}");
