@@ -29,8 +29,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 
-// Detect execution mode - check if NOT HTTP request (CLI/CRON)
-$isCLI = empty($_SERVER['REQUEST_METHOD']);
+// Detect execution mode - handle shared hosts that run CRON via cgi-fcgi wrapper
+$sapi = PHP_SAPI;
+$isCLI = (
+    in_array($sapi, ['cli', 'phpdbg'], true) ||
+    (empty($_SERVER['REQUEST_METHOD']) && empty($_SERVER['REMOTE_ADDR']))
+);
 
 set_time_limit(120); // 2 minutes max per chunk (HTTP only, CLI ignores this)
 ini_set('memory_limit', '512M');
@@ -405,3 +409,9 @@ respondJson([
         'auto' => '?action=auto - Auto-process (same as process)'
     ]
 ]);
+
+/*
+CHANGELOG
+2025-11-14 Codex
+- Hardened CLI detection so cron executions running via cgi-fcgi wrappers skip HTTP headers and return pure JSON to the router.
+*/
