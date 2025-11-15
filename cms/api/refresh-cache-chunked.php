@@ -1,31 +1,48 @@
 <?php
 /**
- * Chunked Cache Refresh System
+ * Chunked Cache Refresh System - DUAL MODE (CLI + HTTP)
  *
- * Designed to work within web server timeout constraints by processing
- * in small chunks that complete in <60 seconds each.
+ * Designed to work within web server timeout constraints by supporting
+ * both CLI execution (no timeout) and HTTP monitoring (fast status checks).
  *
  * ARCHITECTURE:
  * - Uses staging tables (_staging suffix)
  * - Tracks progress in state file
- * - Each request processes one chunk and exits
- * - Dashboard/CRON repeatedly calls until complete
+ * - Each execution processes one chunk and exits
+ * - CRON router (CLI) processes chunks without HTTP timeout
+ * - HTTP endpoints provide fast status monitoring
  * - Atomic cutover when all chunks complete
  *
- * USAGE:
- * 1. Start: curl "...?action=start"
- * 2. Process: curl "...?action=process" (repeat until done)
- * 3. Status: curl "...?action=status"
+ * CLI USAGE (for CRON):
+ * - php refresh-cache-chunked.php start
+ * - php refresh-cache-chunked.php process
+ * - php refresh-cache-chunked.php status
  *
- * AUTO-MODE: curl "...?action=auto" processes one chunk automatically
+ * HTTP USAGE (for monitoring):
+ * - curl "...?action=start"
+ * - curl "...?action=process" (WARNING: May timeout, use CLI instead)
+ * - curl "...?action=status"
  */
 
-set_time_limit(120); // 2 minutes max per chunk
+// Detect execution mode
+$isCLI = (php_sapi_name() === 'cli');
+
+set_time_limit(120); // 2 minutes max per chunk (HTTP only, CLI ignores this)
 ini_set('memory_limit', '512M');
 
-require '../config.php';
-require '../functions.php';
-require_once dirname(__DIR__, 2) . '/bootstrap.php';
+// Resolve paths differently for CLI vs HTTP
+if ($isCLI) {
+    // CLI: script is in cms/api/, need to go up to cms/
+    $cmsRoot = dirname(__DIR__);
+    require $cmsRoot . '/config.php';
+    require $cmsRoot . '/functions.php';
+    require_once dirname($cmsRoot) . '/bootstrap.php';
+} else {
+    // HTTP: already in cms/api/ context
+    require '../config.php';
+    require '../functions.php';
+    require_once dirname(__DIR__, 2) . '/bootstrap.php';
+}
 
 $stateFile = __DIR__ . '/../locks/cache-refresh-state.json';
 $logFile = __DIR__ . '/../logs/cache-refresh-' . date('Y-m-d') . '.log';
@@ -59,15 +76,34 @@ function saveState($state) {
 }
 
 function respondJson($data) {
-    header('Content-Type: application/json');
-    echo json_encode($data, JSON_PRETTY_PRINT);
+    global $isCLI;
+
+    if ($isCLI) {
+        // CLI: Output JSON to stdout
+        echo json_encode($data, JSON_PRETTY_PRINT) . "\n";
+    } else {
+        // HTTP: Send JSON with headers
+        header('Content-Type: application/json');
+        echo json_encode($data, JSON_PRETTY_PRINT);
+    }
     exit;
+}
+
+// ==================================================================
+// DETERMINE ACTION (from CLI args or HTTP query)
+// ==================================================================
+if ($isCLI) {
+    // CLI mode: action from first argument
+    $action = $argv[1] ?? 'status';
+} else {
+    // HTTP mode: action from query string
+    $action = $_GET['action'] ?? '';
 }
 
 // ==================================================================
 // ACTION: START - Initialize new refresh cycle
 // ==================================================================
-if ($_GET['action'] === 'start') {
+if ($action === 'start') {
     logMessage("=== CHUNKED REFRESH START ===");
 
     $pdo = getDatabase();
@@ -109,7 +145,7 @@ if ($_GET['action'] === 'start') {
 // ==================================================================
 // ACTION: PROCESS - Process next chunk
 // ==================================================================
-if ($_GET['action'] === 'process' || $_GET['action'] === 'auto') {
+if ($action === 'process' || $action === 'auto') {
     $state = getState();
 
     if (!$state) {
@@ -307,7 +343,7 @@ if ($_GET['action'] === 'process' || $_GET['action'] === 'auto') {
 // ==================================================================
 // ACTION: STATUS - Check current progress
 // ==================================================================
-if ($_GET['action'] === 'status') {
+if ($action === 'status') {
     $state = getState();
 
     if (!$state) {

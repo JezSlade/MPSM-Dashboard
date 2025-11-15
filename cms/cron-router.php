@@ -192,25 +192,34 @@ function executeTask($task) {
 
 $tasks = [
 
-    // Chunked Cache Refresh - Process one chunk every minute
+    // Chunked Cache Refresh - Process one chunk every minute (CLI execution, no timeout)
     [
         'name' => 'cache-refresh-chunked',
         'enabled' => true,
         'interval' => 'every_minute',
-        'description' => 'Process one chunk of cache refresh (devices or drill-downs)',
+        'description' => 'Process one chunk of cache refresh via PHP CLI (no HTTP timeout)',
         'callback' => function() {
-            $url = 'https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=process';
-            $response = @file_get_contents($url);
-            $data = json_decode($response, true);
+            // Execute chunked processor via PHP CLI (avoids HTTP timeout completely)
+            $scriptPath = __DIR__ . '/api/refresh-cache-chunked.php';
+            $command = "/usr/bin/php {$scriptPath} process 2>&1";
 
-            if (!$data || !$data['success']) {
-                return ['status' => 'error', 'message' => 'API call failed'];
+            $output = shell_exec($command);
+            $data = json_decode($output, true);
+
+            if (!$data || !isset($data['success'])) {
+                return ['status' => 'error', 'message' => 'CLI execution failed', 'output' => substr($output, 0, 200)];
+            }
+
+            if (!$data['success']) {
+                return ['status' => 'error', 'message' => $data['error'] ?? 'Unknown error'];
             }
 
             return [
                 'status' => 'success',
                 'chunk_duration' => $data['chunk_duration'] ?? null,
                 'state' => $data['state']['status'] ?? 'unknown',
+                'devices_cached' => $data['state']['devices_cached'] ?? 0,
+                'drilldowns_cached' => $data['state']['drilldowns_cached'] ?? 0,
                 'continue' => $data['continue'] ?? false
             ];
         }
@@ -221,15 +230,17 @@ $tasks = [
         'name' => 'cache-refresh-daily-init',
         'enabled' => false, // Disabled by default - enable if you want automatic daily refreshes
         'interval' => 'daily',
-        'description' => 'Initialize a new full cache refresh cycle daily',
+        'description' => 'Initialize a new full cache refresh cycle daily via PHP CLI',
         'callback' => function() {
-            $url = 'https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=start';
-            $response = @file_get_contents($url);
-            $data = json_decode($response, true);
+            $scriptPath = __DIR__ . '/api/refresh-cache-chunked.php';
+            $command = "/usr/bin/php {$scriptPath} start 2>&1";
+
+            $output = shell_exec($command);
+            $data = json_decode($output, true);
 
             return [
-                'status' => $data['success'] ? 'success' : 'error',
-                'message' => $data['message'] ?? 'Unknown response'
+                'status' => ($data && $data['success']) ? 'success' : 'error',
+                'message' => $data['message'] ?? 'CLI execution failed'
             ];
         }
     ],
