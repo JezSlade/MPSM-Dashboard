@@ -91,7 +91,9 @@ try {
 
     // Step 2 & 3: Fetch and cache devices incrementally to prevent timeouts
     logMessage("Step 1: Fetching and caching devices (incremental mode)");
-    $deviceStats = fetchAndCacheAllDevicesIncremental($pdo);
+    // Pass whether we'll fetch drilldown so the incremental refresher can decide
+    // whether it is safe to truncate the drilldown table.
+    $deviceStats = fetchAndCacheAllDevicesIncremental($pdo, !$skipDrilldown);
     $stats['devices_cached'] = $deviceStats['total_devices'];
     $stats['deleted_devices'] = $deviceStats['deleted_devices'];
     logMessage("Cached {$stats['devices_cached']} devices total ({$stats['deleted_devices']} uninstalled)");
@@ -283,7 +285,7 @@ function fetchAllDevices(): array {
         'OfficeId' => null,
         'Status' => null,
         'FilterText' => null,
-        'PageRows' => 50,
+        'PageRows' => 100,
         'SortColumn' => 'Id',
         'SortOrder' => 0,
     ];
@@ -329,9 +331,8 @@ function fetchAllDevices(): array {
             break;
         }
 
-        // CRITICAL FIX: callMPSMAPI already returns the data array, not the wrapper
-        // Response is $decoded['data'] from callMPSMAPI which is the device array
-        $pageDevices = is_array($response) ? $response : [];
+        // Normalize response into a flat devices array regardless of shape
+        $pageDevices = extractDevicesFromResponse($response);
         $deviceCount = count($pageDevices);
 
         // Handle empty page (circuit breaker pattern)
@@ -433,7 +434,7 @@ function fetchAllDevices(): array {
  * Fetch and cache devices incrementally to prevent memory/timeout issues
  * Caches every 50 pages (5000 devices) instead of waiting for all devices
  */
-function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
+function fetchAndCacheAllDevicesIncremental(PDO $pdo, bool $willFetchDrilldown = true): array {
     global $stats;
 
     $dealerCode = DEFAULT_DEALER_CODE;
@@ -451,19 +452,24 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
         // Truncate existing cache (no transaction - too long for MySQL timeout)
         logMessage("Truncating cache tables");
         $pdo->exec("TRUNCATE TABLE {$prefix}cache_devices");
-        $pdo->exec("TRUNCATE TABLE {$prefix}cache_device_drilldown");
+        if ($willFetchDrilldown) {
+            $pdo->exec("TRUNCATE TABLE {$prefix}cache_device_drilldown");
+        } else {
+            // Quick warmup path: keep existing drilldown data to avoid wiping coverage to 0
+            logMessage("Skipping drill-down table truncation (quick warmup)");
+        }
 
     // Fetch installed devices with incremental caching
     $installedBaseParams = [
-        'FilterDealerId' => null,
-        'FilterDealerCodes' => null,
+        'FilterDealerId' => DEFAULT_DEALER_ID,
+        'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
         'FilterCustomerCodes' => null,
         'ProductBrand' => null,
         'ProductModel' => null,
         'OfficeId' => null,
         'Status' => null,
         'FilterText' => null,
-        'PageRows' => 50,
+        'PageRows' => 100,
         'SortColumn' => 'Id',
         'SortOrder' => 0,
     ];
@@ -506,7 +512,8 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
             break;
         }
 
-        $pageDevices = is_array($response) ? $response : [];
+        // Normalize response into a flat devices array regardless of shape
+        $pageDevices = extractDevicesFromResponse($response);
         $deviceCount = count($pageDevices);
 
         if ($deviceCount === 0) {
@@ -592,7 +599,8 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo): array {
             break;
         }
 
-        $pageDevices = $response;
+        // Normalize deleted device page as well (in case the API changes shape)
+        $pageDevices = extractDevicesFromResponse($response);
         foreach ($pageDevices as &$device) {
             $device['IsUninstalled'] = true;
         }
@@ -876,4 +884,13 @@ function cachePanelMessages(PDO $pdo): int {
 CHANGELOG
 2025-11-10 Codex
 - Bootstrapped the service container before the refresh run so `cacheDeviceDrillDown()` can resolve `DeviceRepository` via `app()` and persist drill-down rows.
+*/
+
+/*
+CHANGELOG
+2025-11-15 Codex
+- Fixed device pagination to always flatten API responses via extractDevicesFromResponse() for installed and deleted pages.
+- Restored dealer scoping in incremental fetch (FilterDealerId/FilterDealerCodes) and aligned PageRows to 100.
+- Made drill-down truncation conditional: quick warmup (skipDrilldown=1) no longer wipes drilldown cache.
+- Passed drilldown intent into fetchAndCacheAllDevicesIncremental() to control truncation behavior.
 */
