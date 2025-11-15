@@ -106,8 +106,20 @@ if ($isCLI) {
 }
 
 // ==================================================================
-// ACTION: START - Initialize new refresh cycle
+// ACTION: PROCESS - Process next chunk
 // ==================================================================
+if ($action === 'process' || $action === 'auto') {
+    $state = getState();
+
+    // Auto-start if no state exists (CRON-friendly)
+    if (!$state) {
+        logMessage("No active state found - auto-starting refresh");
+        $action = 'start';
+        // Fall through to start action below
+    }
+}
+
+// Re-check action after potential auto-start
 if ($action === 'start') {
     logMessage("=== CHUNKED REFRESH START ===");
 
@@ -118,7 +130,6 @@ if ($action === 'start') {
     logMessage("Creating staging tables");
     $pdo->exec("DROP TABLE IF EXISTS {$prefix}cache_devices_staging");
     $pdo->exec("DROP TABLE IF EXISTS {$prefix}cache_device_drilldown_staging");
-
     $pdo->exec("CREATE TABLE {$prefix}cache_devices_staging LIKE {$prefix}cache_devices");
     $pdo->exec("CREATE TABLE {$prefix}cache_device_drilldown_staging LIKE {$prefix}cache_device_drilldown");
 
@@ -137,26 +148,20 @@ if ($action === 'start') {
     ];
 
     saveState($state);
-    logMessage("State initialized - ready to process");
+    logMessage("State initialized - starting from page 1");
 
-    respondJson([
-        'success' => true,
-        'action' => 'start',
-        'message' => 'Refresh initialized. Call ?action=process to begin.',
-        'state' => $state
-    ]);
+    // Now process first chunk
+    $action = 'process';
 }
 
-// ==================================================================
-// ACTION: PROCESS - Process next chunk
-// ==================================================================
 if ($action === 'process' || $action === 'auto') {
     $state = getState();
 
+    // Should have state now after auto-start
     if (!$state) {
         respondJson([
             'success' => false,
-            'error' => 'No active refresh. Call ?action=start first.'
+            'error' => 'Failed to initialize state'
         ]);
     }
 
