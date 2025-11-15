@@ -203,7 +203,7 @@ if ($action === 'process' || $action === 'auto') {
             });
 
             // Call the API using the correct function
-            $response = callMPSMAPI('Device/List', $params);
+            $response = callMPSAPI('Device/List', $params);
 
             if (!$response || !isset($response['data'])) {
                 throw new Exception("Invalid API response for page {$page}");
@@ -285,7 +285,7 @@ if ($action === 'process' || $action === 'auto') {
 
             foreach ($chunk as $serial) {
                 try {
-                    $drilldown = callMpsGetDeviceBySerial($serial);
+                    $drilldown = callMPSAPI('Device/Get', ['SerialNumber' => $serial]);
 
                     if ($drilldown && isset($drilldown['serial'])) {
                         $stmt = $pdo->prepare("
