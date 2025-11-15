@@ -29,8 +29,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 
-// Detect execution mode
-$isCLI = (php_sapi_name() === 'cli');
+// Detect execution mode - check if NOT HTTP request (CLI/CRON)
+$isCLI = empty($_SERVER['REQUEST_METHOD']);
 
 set_time_limit(120); // 2 minutes max per chunk (HTTP only, CLI ignores this)
 ini_set('memory_limit', '512M');
