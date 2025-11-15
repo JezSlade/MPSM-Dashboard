@@ -1,4 +1,4 @@
-# Session Summary - 2025-11-14
+# Session Summary - 2025-11-14 (Continued Session)
 
 ## Work Completed Today
 
@@ -165,12 +165,96 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/cache-status-report.php" | 
 
 ---
 
-## Next Session Priorities
+## Session Continuation - Critical Bug Fixes
 
-1. **Verify cache refresh completion** - Check database has >50,000 devices with drill-downs
-2. **Monitor CRON logs** - Ensure router executes successfully every minute
-3. **Complete consolidation** - Archive remaining 2 files per consolidation-plan.md
-4. **Update documentation** - Document today's fixes and architecture changes
+### 5. CRITICAL: Fixed Missing API Function Bug ✅
+**Problem:** Cache refresh completely broken for 2 weeks - stuck at 200 devices
+
+**Root Cause:** refresh-cache-chunked.php:175 called `callMpsGetDeviceList()` which doesn't exist anywhere in codebase. Fatal error every time CRON executed.
+
+**Fix:** Replaced with correct API call pattern:
+```php
+// OLD (BROKEN):
+$response = callMpsGetDeviceList($page, $perPage, true, true);
+
+// NEW (CORRECT):
+$params = [
+    'FilterDealerId' => DEFAULT_DEALER_ID,
+    'FilterDealerCodes' => [DEFAULT_DEALER_CODE],
+    'PageNumber' => $page,
+    'PageRows' => $perPage,
+    'SortColumn' => 'Id',
+    'SortOrder' => 0,
+];
+$response = callMPSMAPI('Device/List', $params);
+```
+
+**Commit:** 5501c3c
+
+---
+
+### 6. Fixed CLI Session Configuration Warnings ✅
+**Problem:** config.php sets session parameters that fail in CLI mode because `$_SERVER['SERVER_PORT']` doesn't exist, causing warnings that break JSON output.
+
+**Root Cause:** Session configuration runs unconditionally, but sessions only make sense in HTTP context.
+
+**Fix:** Created patch script (cms/patch-config-cli.php) that wraps session config in CLI check:
+```php
+if (php_sapi_name() !== 'cli') {
+    // Session configuration only in HTTP mode
+}
+```
+
+**Commits:** 145da72 (deploy.php), 9597621 (patch script)
+
+---
+
+### 7. Added Automated Deployment ✅
+**Created:**
+- deploy.php - HTTP-triggered git pull for rapid deployment
+- cms/patch-config-cli.php - One-time config patcher
+- DEPLOY-INSTRUCTIONS.md - Complete deployment guide
+
+**Benefits:**
+- No SSH required for deployments
+- GitHub Actions auto-deploys on push to main
+- Simple HTTP endpoint for manual deployment
+
+---
+
+## Outstanding Issues
+
+### Issue #1: Cache Refresh Still Not Running ⚠️
+**Status:** Code deployed, waiting for manual config patch
+
+**Current State:**
+- Devices cached: 200 (stale)
+- Expected: 52,800+ devices
+- CRON job: Running every minute
+- Blocker: Server config.php needs CLI session patch
+
+**Next Steps:**
+1. Wait for GitHub Actions deployment to complete (~2-3 minutes)
+2. Run patch script: `php cms/patch-config-cli.php`
+3. Reset cache: `curl ".../cms/api/refresh-cache-chunked.php?action=start"`
+4. Monitor: Watch page number increment every minute
+
+---
+
+### Issue #2: "Unknown Device/Alert" Notifications 🔍
+**Symptom:** Notifications show "Unknown Device" and "Unknown Alert" instead of actual values
+
+**Affected:** Hero notifications and Command Center list
+
+**Code Location:** mps-api/callbacks/command-center-engine.php:319-320
+```php
+$deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
+$alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
+```
+
+**Root Cause:** Fields `device_serial` and `maintenance_alert_code` not populated in `$messageData`
+
+**Status:** Identified but not yet fixed (pending cache refresh resolution)
 
 ---
 
@@ -181,10 +265,12 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/cache-status-report.php" | 
 3. **Staging tables enable zero-downtime deployments** - Atomic cutover prevents partial data states
 4. **Centralized task management reduces complexity** - ONE CRON job + Git-based config > Multiple cPanel jobs
 5. **Case sensitivity matters** - Always handle both uppercase and lowercase variants of API fields
+6. **Missing function errors fail silently without error display** - Always enable error_reporting for debugging
+7. **CLI and HTTP contexts are different** - Session configuration must be skipped in CLI mode
 
 ---
 
-**Last Updated:** 2025-11-14 17:50 EST
-**Session Duration:** Full day
-**Commits:** 5 (4e7d8c5, 9186ee2, f626053, d460683, 3ea5d5d)
-**Files Changed:** 18 files (2 new, 3 modified, 13 archived)
+**Last Updated:** 2025-11-14 22:15 EST
+**Session Duration:** Full day + evening continuation
+**Commits:** 8 total (4e7d8c5, 9186ee2, f626053, d460683, 3ea5d5d, faa41e7, afc6ed8, 5501c3c, 145da72, 9597621)
+**Files Changed:** 24 files (5 new, 6 modified, 13 archived)
