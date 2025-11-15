@@ -184,9 +184,9 @@ if (!defined('DB_HOST')) {
 
 /**
  * Configure session settings
- * Only configure if session hasn't started yet
+ * Only configure if session hasn't started yet and running in HTTP context
  */
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE && !empty($_SERVER['REQUEST_METHOD'])) {
     $sessionConfig = config('session');
 
     // Detect HTTPS
