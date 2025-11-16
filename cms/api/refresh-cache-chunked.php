@@ -205,12 +205,13 @@ if ($action === 'process' || $action === 'auto') {
             // Call the API using the correct function
             $response = callMPSAPI('Device/List', $params);
 
-            if (!$response || !isset($response['data'])) {
+            if (!$response || !isset($response['Result'])) {
                 throw new Exception("Invalid API response for page {$page}");
             }
 
-            $devices = $response['data'];
-            $totalPages = $response['pagination']['total_pages'] ?? 1;
+            $devices = $response['Result'];
+            $totalRows = $response['TotalRows'] ?? 0;
+            $totalPages = ($totalRows > 0) ? (int)ceil($totalRows / $perPage) : 1;
 
             if ($state['total_pages'] === null) {
                 $state['total_pages'] = $totalPages;
@@ -231,21 +232,21 @@ if ($action === 'process' || $action === 'auto') {
             ");
 
             foreach ($devices as $device) {
-                $serial = $device['serial'] ?? $device['deviceSerial'] ?? null;
+                $serial = $device['SerialNumber'] ?? $device['serial'] ?? $device['deviceSerial'] ?? null;
                 if (!$serial) continue;
 
                 $stmt->execute([
                     ':serial' => $serial,
-                    ':customer' => $device['customerCode'] ?? $device['customer_code'] ?? null,
-                    ':type' => $device['deviceType'] ?? $device['device_type'] ?? 'unknown',
-                    ':status' => $device['installStatus'] ?? $device['install_status'] ?? 'unknown',
+                    ':customer' => $device['CustomerCode'] ?? $device['customerCode'] ?? $device['customer_code'] ?? null,
+                    ':type' => $device['Product']['Brand'] ?? $device['deviceType'] ?? $device['device_type'] ?? 'unknown',
+                    ':status' => $device['InstallStatus'] ?? $device['installStatus'] ?? $device['install_status'] ?? 'unknown',
                     ':data' => json_encode($device, JSON_UNESCAPED_UNICODE)
                 ]);
 
                 $state['devices_cached']++;
 
                 // Queue for drill-down fetch (only installed devices)
-                $installStatus = strtolower($device['installStatus'] ?? $device['install_status'] ?? '');
+                $installStatus = strtolower($device['InstallStatus'] ?? $device['installStatus'] ?? $device['install_status'] ?? '');
                 if ($installStatus === 'installed') {
                     $state['devices_to_fetch_drilldown'][] = $serial;
                 }
