@@ -221,12 +221,10 @@ if ($action === 'process' || $action === 'auto') {
             // Cache devices to staging table
             $stmt = $pdo->prepare("
                 INSERT INTO {$prefix}cache_devices_staging
-                (device_serial, customer_code, device_type, install_status, device_data, cached_at)
-                VALUES (:serial, :customer, :type, :status, :data, NOW())
+                (serial_number, customer_code, device_data, cached_at)
+                VALUES (:serial, :customer, :data, NOW())
                 ON DUPLICATE KEY UPDATE
                     customer_code = VALUES(customer_code),
-                    device_type = VALUES(device_type),
-                    install_status = VALUES(install_status),
                     device_data = VALUES(device_data),
                     cached_at = VALUES(cached_at)
             ");
@@ -238,8 +236,6 @@ if ($action === 'process' || $action === 'auto') {
                 $stmt->execute([
                     ':serial' => $serial,
                     ':customer' => $device['CustomerCode'] ?? $device['customerCode'] ?? $device['customer_code'] ?? null,
-                    ':type' => $device['Product']['Brand'] ?? $device['deviceType'] ?? $device['device_type'] ?? 'unknown',
-                    ':status' => $device['InstallStatus'] ?? $device['installStatus'] ?? $device['install_status'] ?? 'unknown',
                     ':data' => json_encode($device, JSON_UNESCAPED_UNICODE)
                 ]);
 
@@ -291,11 +287,11 @@ if ($action === 'process' || $action === 'auto') {
                     if ($drilldown && isset($drilldown['serial'])) {
                         $stmt = $pdo->prepare("
                             INSERT INTO {$prefix}cache_device_drilldown_staging
-                            (device_serial, drilldown_data, has_supply_alerts, has_supplies, cached_at)
+                            (serial_number, drilldown_data, has_alerts, has_supplies, cached_at)
                             VALUES (:serial, :data, :has_alerts, :has_supplies, NOW())
                             ON DUPLICATE KEY UPDATE
                                 drilldown_data = VALUES(drilldown_data),
-                                has_supply_alerts = VALUES(has_supply_alerts),
+                                has_alerts = VALUES(has_alerts),
                                 has_supplies = VALUES(has_supplies),
                                 cached_at = VALUES(cached_at)
                         ");
