@@ -2,7 +2,7 @@
 
 Repository-standard rules for any AI agent operating in this workspace. Applies to Claude Code, Copilot Chat, ChatGPT extensions, and other validators.
 
-Version: 1.0.0  
+Version: 1.0.1  
 Owner: Jez  
 Scope: Entire repository
 
@@ -53,8 +53,8 @@ All agents follow these exact steps for each task:
 6. Scope check: verify alignment with architecture and guardrails.
 7. Approval gate: wait for user approval to implement.
 8. Execute patch: write complete files. Keep changes small and cohesive.
-9. Deploy gate: do not deploy without explicit user approval and command.
-10. Test LIVE: run approved tests; capture outputs in `context/test-log.md`.
+9. Deploy gate: do not deploy without explicit user approval and command. Upload code via FTP per Section 8 (no git push deploys).
+10. Test LIVE: run the updated scripts/endpoints directly on the production site after the FTP sync; capture outputs in `context/test-log.md`.
 11. Verify: confirm no errors, no regressions, all functions intact.
 12. Close: do not mark fixed until the user confirms in chat that LIVE behaves as expected.
 
@@ -64,10 +64,13 @@ All agents follow these exact steps for each task:
 
 ## 8) Deployment policy
 - All deploys require explicit user approval. Record the exact command, timestamp, and result in `context/deploy-log.md`.
+- Deployments happen **only via FTP** using the credentials referenced in `.github/workflows/deploy.yml` (`ftp.resolutionsbydesign.us`, user `mpsm@mpsm.resolutionsbydesign.us`, password `Deploy123!`). Upload the modified files directly into `/cms/...` (or the appropriate directory) and note the transfer command/log.
+- Git pushes do **not** propagate to production; always sync the live tree over FTP before testing or handing off.
 
 ## 9) Testing policy
 - Builders provide a minimal test plan with the patch. Validators execute tests and attach logs to `context/test-log.md`.
 - If a failure occurs, stop, capture artifacts, and propose a rollback.
+- All verification happens against the live server. After each FTP deploy, invoke the relevant production endpoints/scripts (curl, browser, CLI) to validate behavior; document those live checks in `context/test-log.md`.
 
 ## 10) Regression policy
 - Identify adjacent risk areas before edits. After patch, run smoke checks on those areas. If risk is high, propose a split and staged rollout.
