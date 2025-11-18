@@ -751,3 +751,79 @@ CHANGELOG
 2. Manual smoke check (visual confirmation that the modal no longer blocks the page during initial load) – pending live verification.
 
 **Status**: Ready for live re-test once the change reaches the server.
+
+
+---
+
+# Test Log - Panel Error Snapshot Analysis
+
+**Date**: 2025-11-17
+**Task**: Analyze production panel callback errors from live endpoint
+**Data Source**: https://mpsm.resolutionsbydesign.us/cms/api/panel-error-export.php
+**Secret**: mpsm_deploy_4089ad30f8ef64274f6d015e1aa15fad
+
+## Data Collection
+
+### 1. Download Panel Error Export
+curl -H "X-Deploy-Secret: mpsm_deploy_4089ad30f8ef64274f6d015e1aa15fad" "https://mpsm.resolutionsbydesign.us/cms/api/panel-error-export.php" -o panel-error-snapshot.json
+
+✅ Success - 317KB JSON downloaded
+
+**Data Summary:**
+- Total entries: 12,944
+- Time range: 2025-11-05 to 2025-11-17 (12 days)
+- Error rate: 64.93% (8,405 errors)
+- Success rate: 35.07% (4,537 success)
+
+## Analysis Results
+
+### Key Findings
+
+**1. Case-Sensitivity Fix CONFIRMED WORKING ✅**
+- Previous state: 8,398 "Invalid secret" 401 errors
+- Current state: 3 errors (all before fix deployed)
+- Reduction: 99.96%
+- Status: FIX VALIDATED
+
+**2. Major Vendor Issue Identified ⚠️**
+- Error: "Invalid JSON: Syntax error"
+- Count: 7,845 (93.3% of all errors)
+- Source: Single IP 213.92.56.92 (MPS Monitor Cloud)
+- Cause: Truncated JSON payloads (cut off mid-object)
+- Impact: Real production data from LEE COUNTY, HARNETT COUNTY, WAYNE CC, CAPE FEAR VALLEY
+- Customer Impact: HIGH - 7,845 panel messages lost
+
+**3. Error Distribution**
+- Vendor truncation: 7,845 (93.3%)
+- Database type error: 207 (2.5%) - self-resolved
+- Invalid JSON generic: 173 (2.1%)
+- Control character errors: 171 (2.0%)
+- Health checks: 6 (0.07%)
+- Auth errors: 3 (0.04%) - pre-fix only
+
+## Recommendations
+
+### P0 - URGENT: Vendor Escalation Required
+- Contact: MPS Monitor Cloud support
+- Evidence: Sample truncated payloads from IP 213.92.56.92
+- Impact: 7,845 lost messages, 4 major customers affected
+
+### P1 - HIGH: System Hardening
+1. Add payload length validation/alerting
+2. Implement partial payload retry
+3. Enhance JSON sanitizer
+
+### P2 - MEDIUM: Observability
+4. Add health check endpoint
+5. Vendor error rate dashboard
+
+## Verification
+
+- [x] Downloaded production error data
+- [x] Analyzed error types and distribution  
+- [x] Confirmed case-sensitivity fix working (99.96% reduction)
+- [x] Identified vendor truncation issue (7,845 errors)
+- [x] Calculated test vs production breakdown
+- [x] Created analysis document: context/panel-error-analysis-2025-11-17.md
+
+**Status:** Analysis complete. Case-sensitivity fix validated. Vendor escalation required for truncation issue.

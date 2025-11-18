@@ -409,6 +409,8 @@ respondJson([
 
 /*
 CHANGELOG
+2025-11-18 Codex
+- Fixed the staging INSERTs so they reference `serial_number`/`drilldown_data` (matching the actual cache schemas) instead of the obsolete `device_serial` columns, eliminating the SQLSTATE 42S22 cron error.
 2025-11-14 Codex
 - Hardened CLI detection so cron executions running via cgi-fcgi wrappers skip HTTP headers and return pure JSON to the router.
 */

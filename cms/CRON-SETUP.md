@@ -20,6 +20,8 @@ The CRON router provides centralized management of all scheduled tasks without n
 * * * * * /usr/bin/php /home/resolut7/public_html/cms/cron-router.php
 ```
 
+> **Important:** Make sure the filesystem path matches the actual document root (example: `.../public_html/mpsm.resolutionsbydesign.us/...`) and avoid placeholder text such as `...`. Cron daemons will emit “Could not open input file” if the subdirectory is missing, as happened when the refresh-cache job used `/home/resolut7/public_html/.../cms/api/refresh-cache-chunked.php process`.
+
 That's it! You never need to modify cPanel again.
 
 ---
@@ -215,3 +217,9 @@ Check cPanel CRON jobs are active.
 5. Task runs automatically on next schedule
 
 No cPanel access required!
+
+/*
+CHANGELOG
+2025-11-17 Codex
+- Clarified the required cron paths, warned against using placeholder ellipses, and linked the observed “Could not open input file” failure so future CRON edits stay accurate.
+*/
