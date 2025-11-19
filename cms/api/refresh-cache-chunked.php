@@ -53,6 +53,8 @@ if ($isCLI) {
     require_once dirname(__DIR__, 2) . '/bootstrap.php';
 }
 
+define('REFRESH_CACHE_CHUNKED_VERSION', '2025-11-19a');
+
 $stateFile = __DIR__ . '/../locks/cache-refresh-state.json';
 $logFile = __DIR__ . '/../logs/cache-refresh-' . date('Y-m-d') . '.log';
 
@@ -86,6 +88,10 @@ function saveState($state) {
 
 function respondJson($data) {
     global $isCLI;
+
+    if (!array_key_exists('version', $data)) {
+        $data['version'] = REFRESH_CACHE_CHUNKED_VERSION;
+    }
 
     if ($isCLI) {
         // CLI: Output JSON to stdout
@@ -411,6 +417,8 @@ respondJson([
 CHANGELOG
 2025-11-18 Codex
 - Fixed the staging INSERTs so they reference `serial_number`/`drilldown_data` (matching the actual cache schemas) instead of the obsolete `device_serial` columns, eliminating the SQLSTATE 42S22 cron error.
+2025-11-19 Codex
+- Added a `version` payload (constant `REFRESH_CACHE_CHUNKED_VERSION`) so cron emails can prove the deployed script is the updated one, plus logged the version in every JSON response.
 2025-11-14 Codex
 - Hardened CLI detection so cron executions running via cgi-fcgi wrappers skip HTTP headers and return pure JSON to the router.
 */
