@@ -336,6 +336,10 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 - **Root Cause:** Cron kept replaying an old “completed” state file while the cache tables still used `serial_number`, so every run attempted to insert into a missing `device_serial` column and the next page triggered a timeout during token refresh.
 - **Solution:** Added `REFRESH_CACHE_CHUNKED_VERSION` plus runtime detection of `serial_number` vs `device_serial`, and reran `https://.../refresh-cache-chunked.php?action=start` to reset state. Future troubleshooting now includes verifying `version` in cron JSON and checking the state file’s `device_serial_column` before editing SQL.
 
+### Cron Progress Confirmation
+- Cron email at 08:57 UTC (page 5/34) now shows `errors: []`, `devices_cached: 400`, and `version: 2025-11-19a`; `device_serial_column` = `serial_number`, `continue: true`.
+- This proves the new script executed and the `device_serial` INSERT failure is gone; the next milestone is to eliminate the OAuth token timeout and stop cron from spamming once the job completes.
+
 /*
 CHANGELOG
 2025-11-19 Codex

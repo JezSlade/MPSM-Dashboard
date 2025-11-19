@@ -833,3 +833,17 @@ curl -H "X-Deploy-Secret: mpsm_deploy_4089ad30f8ef64274f6d015e1aa15fad" "https:/
 - **Action:** Introduced runtime detection for `serial_number`/`device_serial` columns (and version tag `2025-11-19a`) so the cron response proves the updated code is live even if the schema lags.
 - **Expected outcome:** After the next cron run, the email should show `"version": "2025-11-19a"` and no longer mention the `device_serial` column error; only the OAuth timeout remains.
 - **Next:** Confirm the new version appears in cron output and that the SQLSTATE 42S22 entry is absent, then document that verification once observed.
+
+## 2025-11-19 - Cron Restart Confirmation
+
+```bash
+curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=start"
+```
+
+- **Result:** API returned `status: fetching_devices`, pages 2/34, 100 devices cached, no errors, and `version` 2025-11-19a; state now tracks `device_serial_column` = `serial_number`.
+- **Next:** Monitor the subsequent cron email to ensure `errors[]` only contains the OAuth timeout and that the `device_serial` failure stays gone; capture that verification here.
+
+## 2025-11-19 - Cron Email Progress Confirmed
+
+- **Observation:** Latest cron email shows action `process`, current_page 5/34, `errors: []`, and version `2025-11-19a`; devices_cached now 400 with both serial columns set to `serial_number`.
+- **Conclusion:** The refreshed script is now running live, the old `device_serial` SQL error has disappeared, and the job is progressing through pages without issues; continue monitoring until OAuth timeout is resolved to close the loop.

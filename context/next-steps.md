@@ -6,6 +6,7 @@ Updated: 2025-11-06 13:50 UTC
 
 - Allow a full `cms/api/refresh-cache-enhanced.php?force=1` run to complete (without `skipDrilldown`) and confirm the Database Monitor card reports ≥95 % drill-down coverage; capture the before/after metrics in `BACKGROUND_REFRESH_SYSTEM.md`.
 - Watch `cms/logs/cache-refresh-YYYY-MM-DD.log` for sustained rate-limit messages; if retries still hit the cap, consider increasing the base back-off above 0.75 s or adding a staggered queue.
+- Make sure `refresh-cache-chunked.php` cron emails show `"version": "2025-11-19a"` and `errors: []` before returning to the drill-down phase; if the OAuth token timeout survives, add retries/backoff and silence the repeated completed-state output as the follow-up fix.
 - Surface the cached timestamp inside the device modal once the cache is steady so analysts know how fresh each drill-down snapshot is.
 
 ## Payload Debugger & Callbacks

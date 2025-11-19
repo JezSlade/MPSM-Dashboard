@@ -26,6 +26,8 @@
 ## Background Cache Refresh
 
 - **Manual Run:**
+  /cms/api/refresh-cache-chunked.php now reports `REFRESH_CACHE_CHUNKED_VERSION`/`device_serial_column` when processing, so any cron output should include `"version": "2025-11-19a"` and `"device_serial_column": "serial_number"` as proof the latest script is running.
+  **Cron log:** Direct every-minute output into `/home/resolut7/logs/refresh-cache-chunked.log` (`>> /home/resolut7/logs/refresh-cache-chunked.log 2>&1`) so agents can fetch the file instead of reading email reports.
   ```bash
   # Full run (includes drill-down caching, may take several minutes)
   curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"
@@ -69,6 +71,12 @@
   The CMS relies on these schedules for cache freshness, health logging, and payload debugger retention; adjust only with owner approval.
 
   **Note:** First cron changed from every 5 minutes to hourly (2025-11-09) to allow full 30,000+ device cache population to complete without interference. Once cache stability is verified, may consider restoring more frequent updates.
+
+- **Chunked refresher detail:** Update the cPanel cron entry to redirect output:
+  ```
+  * * * * * /usr/local/bin/php /home/resolut7/public_html/mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php process >> /home/resolut7/logs/refresh-cache-chunked.log 2>&1
+  ```
+  The log stores the versioned JSON for verification.
 
 ## Panel Message Diagnostics
 

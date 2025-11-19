@@ -20,6 +20,11 @@
 - **Result:** Success (pushed column-detection patch so the job works regardless of whether the table uses `serial_number` or `device_serial`)
 - **Notes:** Live cron output now exposes `version` plus dynamic column handling; monitor the next emails for the absence of the `device_serial` error.
 
+## 2025-11-19 14:10 UTC
+- **Command:** `curl --ftp-create-dirs -T /tmp/refresh-cache-chunked.log ftp://ftp.resolutionsbydesign.us/logs/refresh-cache-chunked.log`
+- **Result:** Success (created `/home/resolut7/logs/refresh-cache-chunked.log` and set permissions so cron output can stream there instead of emailing)
+- **Notes:** The new log path will now capture every cron run (bypass email); update cron entry to `>> /home/resolut7/logs/refresh-cache-chunked.log 2>&1`.
+
 /*
 CHANGELOG
 2025-11-18 Codex
