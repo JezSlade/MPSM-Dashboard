@@ -104,6 +104,40 @@ function respondJson($data) {
     exit;
 }
 
+function resolveSerialColumn(PDO $pdo, string $table): string {
+    $tableName = preg_replace('/[^a-z0-9_]/i', '', $table);
+
+    if ($tableName === '') {
+        throw new Exception("Invalid table name: {$table}");
+    }
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM {$tableName}");
+
+    if (!$stmt) {
+        throw new Exception("Unable to inspect columns for {$tableName}");
+    }
+
+    $columns = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'Field');
+
+    foreach (['serial_number', 'device_serial'] as $candidate) {
+        if (in_array($candidate, $columns, true)) {
+            return $candidate;
+        }
+    }
+
+    throw new Exception("Neither serial_number nor device_serial present on {$tableName}");
+}
+
+function ensureStateSerialColumns(PDO $pdo, array &$state, string $prefix) {
+    if (empty($state['device_serial_column'])) {
+        $state['device_serial_column'] = resolveSerialColumn($pdo, "{$prefix}cache_devices_staging");
+    }
+
+    if (empty($state['drilldown_serial_column'])) {
+        $state['drilldown_serial_column'] = resolveSerialColumn($pdo, "{$prefix}cache_device_drilldown_staging");
+    }
+}
+
 // ==================================================================
 // DETERMINE ACTION (from CLI args or HTTP query)
 // ==================================================================
@@ -157,6 +191,19 @@ if ($action === 'start') {
         'last_activity' => date('Y-m-d H:i:s')
     ];
 
+    try {
+        ensureStateSerialColumns($pdo, $state, $prefix);
+        logMessage("Detected serial columns: {$state['device_serial_column']} / {$state['drilldown_serial_column']}");
+    } catch (Exception $e) {
+        $message = "Serial column detection failed: " . $e->getMessage();
+        logMessage("CRITICAL: {$message}");
+        respondJson([
+            'success' => false,
+            'error' => 'Serial column detection failed',
+            'message' => $message
+        ]);
+    }
+
     saveState($state);
     logMessage("State initialized - starting from page 1");
 
@@ -178,6 +225,22 @@ if ($action === 'process' || $action === 'auto') {
     $pdo = getDatabase();
     $prefix = DB_PREFIX;
     $chunkStartTime = microtime(true);
+
+    try {
+        ensureStateSerialColumns($pdo, $state, $prefix);
+    } catch (Exception $e) {
+        $message = "Serial column detection failed: " . $e->getMessage();
+        logMessage("CRITICAL: {$message}");
+        respondJson([
+            'success' => false,
+            'error' => 'Serial column detection failed',
+            'message' => $message,
+            'state' => $state
+        ]);
+    }
+
+    $deviceSerialColumn = $state['device_serial_column'];
+    $drilldownSerialColumn = $state['drilldown_serial_column'];
 
     // PHASE 1: Fetch device list pages
     if ($state['status'] === 'fetching_devices') {
@@ -227,7 +290,7 @@ if ($action === 'process' || $action === 'auto') {
             // Cache devices to staging table
             $stmt = $pdo->prepare("
                 INSERT INTO {$prefix}cache_devices_staging
-                (serial_number, customer_code, device_data, cached_at)
+                ({$deviceSerialColumn}, customer_code, device_data, cached_at)
                 VALUES (:serial, :customer, :data, NOW())
                 ON DUPLICATE KEY UPDATE
                     customer_code = VALUES(customer_code),
@@ -293,7 +356,7 @@ if ($action === 'process' || $action === 'auto') {
                     if ($drilldown && isset($drilldown['serial'])) {
                         $stmt = $pdo->prepare("
                             INSERT INTO {$prefix}cache_device_drilldown_staging
-                            (serial_number, drilldown_data, has_alerts, has_supplies, cached_at)
+                            ({$drilldownSerialColumn}, drilldown_data, has_alerts, has_supplies, cached_at)
                             VALUES (:serial, :data, :has_alerts, :has_supplies, NOW())
                             ON DUPLICATE KEY UPDATE
                                 drilldown_data = VALUES(drilldown_data),
@@ -419,6 +482,7 @@ CHANGELOG
 - Fixed the staging INSERTs so they reference `serial_number`/`drilldown_data` (matching the actual cache schemas) instead of the obsolete `device_serial` columns, eliminating the SQLSTATE 42S22 cron error.
 2025-11-19 Codex
 - Added a `version` payload (constant `REFRESH_CACHE_CHUNKED_VERSION`) so cron emails can prove the deployed script is the updated one, plus logged the version in every JSON response.
+- Added runtime detection of `serial_number` vs `device_serial` columns (plus state persistence) so the chunked refresh works even if the target cache table still uses the legacy column name.
 2025-11-14 Codex
 - Hardened CLI detection so cron executions running via cgi-fcgi wrappers skip HTTP headers and return pure JSON to the router.
 */

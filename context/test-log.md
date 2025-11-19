@@ -827,3 +827,9 @@ curl -H "X-Deploy-Secret: mpsm_deploy_4089ad30f8ef64274f6d015e1aa15fad" "https:/
 - [x] Created analysis document: context/panel-error-analysis-2025-11-17.md
 
 **Status:** Analysis complete. Case-sensitivity fix validated. Vendor escalation required for truncation issue.
+
+## 2025-11-19 - Chunked Refresh Column Detection
+
+- **Action:** Introduced runtime detection for `serial_number`/`device_serial` columns (and version tag `2025-11-19a`) so the cron response proves the updated code is live even if the schema lags.
+- **Expected outcome:** After the next cron run, the email should show `"version": "2025-11-19a"` and no longer mention the `device_serial` column error; only the OAuth timeout remains.
+- **Next:** Confirm the new version appears in cron output and that the SQLSTATE 42S22 entry is absent, then document that verification once observed.

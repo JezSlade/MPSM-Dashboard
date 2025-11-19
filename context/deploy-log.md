@@ -15,6 +15,11 @@
 - **Result:** Success (deployed the version that publishes `REFRESH_CACHE_CHUNKED_VERSION` on every response)
 - **Notes:** Next cron email should include the `version` field, proving the updated script is running; keep an eye on errors for the OAuth timeout.
 
+## 2025-11-19 14:00 UTC
+- **Command:** `curl -T cms/api/refresh-cache-chunked.php ftp://ftp.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php`
+- **Result:** Success (pushed column-detection patch so the job works regardless of whether the table uses `serial_number` or `device_serial`)
+- **Notes:** Live cron output now exposes `version` plus dynamic column handling; monitor the next emails for the absence of the `device_serial` error.
+
 /*
 CHANGELOG
 2025-11-18 Codex

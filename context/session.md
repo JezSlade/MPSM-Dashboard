@@ -317,8 +317,27 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 
 ---
 
-**Last Updated:** 2025-11-14 23:10 EST
+---
+
+### Cron Refresh Status Summary (2025-11-19)
+- `refresh-cache-chunked.php` now exposes `REFRESH_CACHE_CHUNKED_VERSION` (2025-11-19a) on every JSON response so live emails prove we pushed the updated file.
+- Cron still reports the OAuth token timeout on page 17 and keeps re-emitting the `status: completed` snapshot when `continue: false`; the next action is to harden token retries/backoff and quiet the completed-run output.
+
+**Last Updated:** 2025-11-19 13:30 UTC
 **Session Duration:** Full day + late evening continuation
 **Commits:** 14 total (4e7d8c5, 9186ee2, f626053, d460683, 3ea5d5d, faa41e7, afc6ed8, 5501c3c, 145da72, 9597621, 68b21fc, ce23224, a74d283, 230dbda, 4877258, ec262ed)
 **Files Changed:** 35+ files (15+ new, 8 modified, 13 archived)
 **Current Focus:** Resolving config.php patch failure and CRON execution
+
+---
+
+### Problem / Solution Snapshot
+- **Symptom:** Cron mails repeatedly show `status: completed` with `errors` that mention `device_serial` and OAuth token timeouts even though code changes went live.
+- **Root Cause:** Cron kept replaying an old “completed” state file while the cache tables still used `serial_number`, so every run attempted to insert into a missing `device_serial` column and the next page triggered a timeout during token refresh.
+- **Solution:** Added `REFRESH_CACHE_CHUNKED_VERSION` plus runtime detection of `serial_number` vs `device_serial`, and reran `https://.../refresh-cache-chunked.php?action=start` to reset state. Future troubleshooting now includes verifying `version` in cron JSON and checking the state file’s `device_serial_column` before editing SQL.
+
+/*
+CHANGELOG
+2025-11-19 Codex
+- Logged the release of `REFRESH_CACHE_CHUNKED_VERSION`, described the remaining OAuth timeout and retry work, and updated the session metadata date.
+*/
