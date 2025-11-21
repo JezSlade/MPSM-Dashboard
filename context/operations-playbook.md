@@ -47,6 +47,8 @@
   SELECT MAX(cached_at) FROM mpsm_cache_devices;
   ```
 
+- **Log Monitoring:** After each cron execution, pull `/home/resolut7/logs/refresh-cache-chunked.log` (FTP/curl) and confirm the appended JSON includes `"version": "2025-11-19a"`, `state`, and `errors`. If the file stays empty, rerun the helper `cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` to regenerate output.
+
 - **Expected Device Count:**
   - As of 2025-11-08: **5000+ devices** across all customers/dealers
   - If count is significantly lower, see CRITICAL_FIX_DEVICE_PAGINATION.md
@@ -77,6 +79,8 @@
   * * * * * /usr/local/bin/php /home/resolut7/public_html/mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php process >> /home/resolut7/logs/refresh-cache-chunked.log 2>&1
   ```
   The log stores the versioned JSON for verification.
+
+- **Emergency trigger:** If you need to rerun the CLI process manually, call `https://mpsm.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`; it executes the same command as cron and returns the output/exit code so you can confirm the versioned script is live.
 
 ## Panel Message Diagnostics
 

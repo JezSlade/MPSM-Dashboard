@@ -310,9 +310,9 @@ if ($action === 'process' || $action === 'auto') {
 
                 $state['devices_cached']++;
 
-                // Queue for drill-down fetch (only installed devices)
+                // Queue for drill-down fetch (skip only uninstalled devices)
                 $installStatus = strtolower($device['InstallStatus'] ?? $device['installStatus'] ?? $device['install_status'] ?? '');
-                if ($installStatus === 'installed') {
+                if ($installStatus !== 'uninstalled') {
                     $state['devices_to_fetch_drilldown'][] = $serial;
                 }
             }
@@ -483,6 +483,7 @@ CHANGELOG
 2025-11-19 Codex
 - Added a `version` payload (constant `REFRESH_CACHE_CHUNKED_VERSION`) so cron emails can prove the deployed script is the updated one, plus logged the version in every JSON response.
 - Added runtime detection of `serial_number` vs `device_serial` columns (plus state persistence) so the chunked refresh works even if the target cache table still uses the legacy column name.
+- Queried and enqueued every device that is not explicitly `uninstalled` so the drill-down stage actually runs once the device list completes (earlier we only queued devices claiming to be `installed` and never executed stage 2).
 2025-11-14 Codex
 - Hardened CLI detection so cron executions running via cgi-fcgi wrappers skip HTTP headers and return pure JSON to the router.
 */

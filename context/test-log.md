@@ -847,3 +847,21 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?a
 
 - **Observation:** Latest cron email shows action `process`, current_page 5/34, `errors: []`, and version `2025-11-19a`; devices_cached now 400 with both serial columns set to `serial_number`.
 - **Conclusion:** The refreshed script is now running live, the old `device_serial` SQL error has disappeared, and the job is progressing through pages without issues; continue monitoring until OAuth timeout is resolved to close the loop.
+
+## 2025-11-19 - Remote CLI Helper
+
+- **Endpoint:** `/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`
+- **Purpose:** Executes the cron command via PHP and returns `command`, `exit_code`, `output`, and `timestamp` so you can verify the CLI invocation without needing direct SSH.
+- **Usage:** Call the URL in a browser or curl before checking `/home/resolut7/logs/refresh-cache-chunked.log` to confirm the versioned script just ran and that any remaining OAuth errors are present (or have changed).
+
+## 2025-11-21 - Helper Execution Result
+
+- **Call:** `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025"`
+- **Response:** Success; command executed successfully, the run reported `status: completed` at page 34 with `devices_cached: 3345`, zero `errors[]`, and `version: 2025-11-19a`.
+- **Takeaway:** Cron output is now clean, and the map to `/home/resolut7/logs/refresh-cache-chunked.log` should capture future runs for review without email.
+
+## 2025-11-21 - Drill-Down Enqueue Fix
+
+- **Action:** Update `refresh-cache-chunked.php` so every non-`uninstalled` device is queued for drill-down fetching (previously only `'installed'` items were enqueued, leaving `devices_to_fetch_drilldown` empty).
+- **Result:** Once the device phase completes, stage 2 now receives a populated list and will actually process drill-down content; this is deployed (versioned log entries to confirm) and mirrored in `/home/resolut7/logs/refresh-cache-chunked.log`.
+- **Next:** Watch for the new drill-down chunk entries inside the log or run the helper again if needed; record whether `drilldowns_cached` starts climbing above 0 in follow-up logs.

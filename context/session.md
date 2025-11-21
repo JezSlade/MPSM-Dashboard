@@ -340,6 +340,10 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 - Cron email at 08:57 UTC (page 5/34) now shows `errors: []`, `devices_cached: 400`, and `version: 2025-11-19a`; `device_serial_column` = `serial_number`, `continue: true`.
 - This proves the new script executed and the `device_serial` INSERT failure is gone; the next milestone is to eliminate the OAuth token timeout and stop cron from spamming once the job completes.
 
+### CLI Helper Outcome
+- The helper endpoint (`run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`) now runs the CLI command directly; the 11:09 UTC execution completed all 34 pages with `devices_cached: 3345`, no errors, saved `%version` 2025-11-19a, and sets `continue: false`. Use that response + `/home/resolut7/logs/refresh-cache-chunked.log` to confirm future runs without waiting for email.
+- Drill-down note: After stage 1 finishes, every device that isn’t explicitly `uninstalled` is now queued for drill-downs, which means state 2 will populate `drilldowns_cached` once enough devices finish processing; check `/home/resolut7/logs/refresh-cache-chunked.log` for the next chunk outputs to verify the queue was not empty and stage 2 executed.
+
 /*
 CHANGELOG
 2025-11-19 Codex

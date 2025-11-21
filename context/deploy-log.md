@@ -25,6 +25,16 @@
 - **Result:** Success (created `/home/resolut7/logs/refresh-cache-chunked.log` and set permissions so cron output can stream there instead of emailing)
 - **Notes:** The new log path will now capture every cron run (bypass email); update cron entry to `>> /home/resolut7/logs/refresh-cache-chunked.log 2>&1`.
 
+## 2025-11-19 15:05 UTC
+- **Command:** `curl -T cms/api/run-refresh-cache-chunked.php ftp://ftp.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php`
+- **Result:** Success (deployed HTTP helper that executes the CLI process when supplied with `secret=RUN_REFRESH_2025`)
+- **Notes:** Use the new endpoint to trigger the chunked refresh from this workspace; responses include the shell command, exit code, and CLI output.
+
+## 2025-11-21 16:40 UTC
+- **Command:** `curl -T cms/api/refresh-cache-chunked.php ftp://ftp.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php`
+- **Result:** Success (queued all non-uninstalled devices for drill-down fetching so stage 2 actually runs).
+- **Notes:** This change ensures the drill-down phase executes even when devices don’t classify themselves as `installed`; monitor `/home/resolut7/logs/refresh-cache-chunked.log` for the next drill-down chunk outputs.
+
 /*
 CHANGELOG
 2025-11-18 Codex
