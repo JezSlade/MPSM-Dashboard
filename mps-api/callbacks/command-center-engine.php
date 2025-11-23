@@ -126,14 +126,15 @@ if (!function_exists('updateAlertAggregation')) {
                           (device_serial, alert_code, customer_code, first_occurrence_ny,
                            last_occurrence_ny, occurrence_count, count_1h, count_24h,
                            count_7d, count_30d, latest_message_id, latest_payload)
-                          VALUES (:device, :alert, :customer, :ny_time, :ny_time, 1, 1, 1, 1, 1, :message_id, :payload)";
+                          VALUES (:device, :alert, :customer, :first_ny, :last_ny, 1, 1, 1, 1, 1, :message_id, :payload)";
 
             $stmt = $pdo->prepare($insertSql);
             $stmt->execute([
                 ':device' => $deviceSerial,
                 ':alert' => $alertCode,
                 ':customer' => $customerCode,
-                ':ny_time' => $nyTime,
+                ':first_ny' => $nyTime,
+                ':last_ny' => $nyTime,
                 ':message_id' => $messageId,
                 ':payload' => json_encode($messageData)
             ]);
