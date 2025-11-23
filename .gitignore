@@ -38,5 +38,8 @@ mps-api/cache/storage/
 *.zip
 deploy-*.ps1
 
-# Archive
+# Archive (general)
 archive/
+# But track specific CMS archives
+!cms/archive/
+!cms/api/archive/
