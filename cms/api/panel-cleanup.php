@@ -351,6 +351,10 @@ try {
 
             // Test rule processing with error capture
             $testError = null;
+            $aggBefore = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+            $notifBefore = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "dashboard_notifications")->fetchColumn();
+            $historyBefore = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "rule_match_history")->fetchColumn();
+
             try {
                 ensureCommandCenterTables($pdo);
                 processNotificationRules($pdo, (int)$latestMessage['id'], $messageData);
@@ -358,16 +362,55 @@ try {
                 $testError = $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine();
             }
 
+            $aggAfter = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+            $notifAfter = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "dashboard_notifications")->fetchColumn();
+            $historyAfter = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "rule_match_history")->fetchColumn();
+
             // Check what happened
             $rulesTable = DB_PREFIX . 'notification_rules';
-            $activeRules = $pdo->query("SELECT * FROM {$rulesTable} WHERE enabled = 1")->fetchAll(PDO::FETCH_ASSOC);
+            $activeRules = $pdo->query("SELECT id, name, alert_code_pattern, device_serial_pattern, customer_code_pattern FROM {$rulesTable} WHERE enabled = 1")->fetchAll(PDO::FETCH_ASSOC);
+
+            // Test pattern matching manually
+            $patternTests = [];
+            foreach ($activeRules as $rule) {
+                $test = ['rule_id' => $rule['id'], 'rule_name' => $rule['name']];
+                if ($rule['alert_code_pattern']) {
+                    $pattern = str_replace('%', '.*', $rule['alert_code_pattern']);
+                    $pattern = str_replace('_', '.', $pattern);
+                    $regex = '/^' . $pattern . '$/i';
+                    $test['alert_pattern'] = $rule['alert_code_pattern'];
+                    $test['alert_matches'] = (bool)preg_match($regex, $messageData['maintenance_alert_code'] ?? '');
+                }
+                if ($rule['device_serial_pattern']) {
+                    $pattern = str_replace('%', '.*', $rule['device_serial_pattern']);
+                    $pattern = str_replace('_', '.', $pattern);
+                    $regex = '/^' . $pattern . '$/i';
+                    $test['device_pattern'] = $rule['device_serial_pattern'];
+                    $test['device_matches'] = (bool)preg_match($regex, $messageData['device_serial'] ?? '');
+                }
+                if ($rule['customer_code_pattern']) {
+                    $pattern = str_replace('%', '.*', $rule['customer_code_pattern']);
+                    $pattern = str_replace('_', '.', $pattern);
+                    $regex = '/^' . $pattern . '$/i';
+                    $test['customer_pattern'] = $rule['customer_code_pattern'];
+                    $test['customer_matches'] = (bool)preg_match($regex, $messageData['customer_code'] ?? '');
+                }
+                $patternTests[] = $test;
+            }
 
             $results['test'] = [
-                'message_used' => $latestMessage,
+                'message_used' => [
+                    'id' => $latestMessage['id'],
+                    'device_serial' => $latestMessage['device_serial'],
+                    'maintenance_alert_code' => $latestMessage['maintenance_alert_code'],
+                    'customer_code' => $latestMessage['customer_code']
+                ],
                 'message_data_sent' => $messageData,
                 'active_rules_count' => count($activeRules),
+                'pattern_tests' => $patternTests,
                 'error' => $testError,
-                'aggregations_after' => (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn()
+                'counts_before' => ['aggregations' => $aggBefore, 'notifications' => $notifBefore, 'history' => $historyBefore],
+                'counts_after' => ['aggregations' => $aggAfter, 'notifications' => $notifAfter, 'history' => $historyAfter]
             ];
         } else {
             $results['test'] = ['error' => 'No panel messages found'];
