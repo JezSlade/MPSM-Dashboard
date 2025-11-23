@@ -4,11 +4,14 @@ const MobileApp = (() => {
         alerts: [],
         searchResults: [],
         activeSection: 'alerts',
-        lastQuery: ''
+        lastQuery: '',
+        customers: [],
+        customerSearchTimeout: null
     };
 
     let alertInterval = null;
     let searchTimeout = null;
+    let customerSelectTimeout = null;
 
     const fetchJson = async (url, options = {}) => {
         const response = await fetch(url, options);
@@ -261,6 +264,109 @@ const MobileApp = (() => {
         return device.EquipmentId || device.EquipmentCode || device.AssetNumber || device.SerialNumber || device.DeviceSerialNumber || 'Device';
     };
 
+    const savePreference = async (key, value) => {
+        try {
+            const payload = {};
+            payload[key] = value;
+            await fetchJson('api/save-preferences.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            // Silent fail on mobile
+        }
+    };
+
+    const loadCustomers = async (searchTerm = '') => {
+        const select = document.getElementById('mobile-customer-select');
+        if (!select) {
+            return;
+        }
+
+        select.innerHTML = '<option>Loading...</option>';
+        const query = searchTerm && searchTerm.length >= 2 ? `?search=${encodeURIComponent(searchTerm)}` : '';
+        try {
+            const data = await fetchJson('api/get-customers.php' + query);
+            state.customers = Array.isArray(data.customers) ? data.customers : [];
+            populateCustomerSelect();
+        } catch (error) {
+            select.innerHTML = `<option>Error loading customers</option>`;
+        }
+    };
+
+    const populateCustomerSelect = () => {
+        const select = document.getElementById('mobile-customer-select');
+        const nameEl = document.getElementById('mobile-customer-name');
+        const codeEl = document.getElementById('mobile-customer-code');
+        if (!select) {
+            return;
+        }
+
+        const currentCode = (config.customerCode || '').trim();
+        const currentName = (config.customerName || '').trim();
+        select.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = state.customers.length ? 'Select customer' : 'No customers';
+        placeholder.disabled = true;
+        placeholder.selected = !currentCode;
+        select.appendChild(placeholder);
+
+        state.customers.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer.Code;
+            option.textContent = customer.Description ? `${customer.Description} (${customer.Code})` : customer.Code;
+            if (customer.Code === currentCode) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (currentCode && !state.customers.find(c => c.Code === currentCode)) {
+            const manual = document.createElement('option');
+            manual.value = currentCode;
+            manual.textContent = currentName ? `${currentName} (${currentCode})` : currentCode;
+            manual.selected = true;
+            select.appendChild(manual);
+        }
+
+        if (nameEl && currentName) {
+            nameEl.textContent = currentName;
+        }
+        if (codeEl && currentCode) {
+            codeEl.textContent = currentCode;
+        }
+    };
+
+    const setCustomer = async (code, name = '') => {
+        if (!code) {
+            return;
+        }
+        config.customerCode = code;
+        config.customerName = name || config.customerName || '';
+
+        const nameEl = document.getElementById('mobile-customer-name');
+        const codeEl = document.getElementById('mobile-customer-code');
+        if (nameEl) {
+            nameEl.textContent = config.customerName || code;
+        }
+        if (codeEl) {
+            codeEl.textContent = code;
+        }
+
+        await savePreference('customerCode', code);
+        if (config.customerName) {
+            await savePreference('customerName', config.customerName);
+        }
+
+        await loadAlerts().catch(() => {});
+        if (state.lastQuery && state.lastQuery.length >= 2) {
+            searchDevices(state.lastQuery).catch(() => {});
+        }
+    };
+
     const escapeHtml = (value) => {
         if (value === null || value === undefined) {
             return '';
@@ -313,6 +419,41 @@ const MobileApp = (() => {
                 }
             });
         }
+    };
+
+    const bindCustomerSwitch = () => {
+        const searchInput = document.getElementById('mobile-customer-search');
+        const select = document.getElementById('mobile-customer-select');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.trim();
+                if (customerSelectTimeout) {
+                    clearTimeout(customerSelectTimeout);
+                }
+                customerSelectTimeout = setTimeout(() => {
+                    if (!term || term.length < 2) {
+                        loadCustomers();
+                    } else {
+                        loadCustomers(term);
+                    }
+                }, 250);
+            });
+        }
+
+        if (select) {
+            select.addEventListener('change', (e) => {
+                const code = e.target.value;
+                if (!code) {
+                    return;
+                }
+                const match = (state.customers || []).find(c => c.Code === code);
+                const name = match ? (match.Description || '') : '';
+                setCustomer(code, name);
+            });
+        }
+
+        loadCustomers().catch(() => {});
     };
 
     const bindAlerts = () => {
@@ -387,6 +528,7 @@ const MobileApp = (() => {
     const init = () => {
         bindNav();
         bindSearch();
+        bindCustomerSwitch();
         bindAlerts();
         bindModal();
         bindHeaderActions();
@@ -404,4 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
 CHANGELOG
 2025-11-24 Codex
 - Implemented mobile landing logic with alert polling, device search, section navigation, and device modal using existing APIs.
+2025-11-24 Codex
+- Added mobile customer switcher reusing get-customers preferences flow; persists selection and reloads alerts/search context.
 */

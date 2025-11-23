@@ -13,6 +13,7 @@ Deliver a web dashboard that surfaces dealer-wide device telemetry from MPS Moni
 - **Background Cache:** Database-backed caches for devices and drill-down payloads (`cms/api/refresh-cache-enhanced.php`).
 - **API Engine:** Hardened proxy and automation layer for the official MPS Monitor API (`mps-api/index.php`, `mps-api/engine.php`).
 - **Panel Message Intake:** Live webhook endpoint with full persistence and UI visualization (`mps-api/callbacks/panel-message.php`, `cms/api/get-panel-messages.php`).
+- **Mobile Landing:** Dedicated phone-first entry at `/cms/mobile.php` with quick alerts, device lookup, lifecycle access, and links back to admin/dev tools.
 
 ## Non-Negotiable Standards
 
