@@ -106,7 +106,7 @@ try {
 
     // Get recent messages
     $stmt = $pdo->prepare("
-        SELECT id, device_serial, maintenance_alert_code, maintenance_alert_description,
+        SELECT id, device_serial, maintenance_alert_code, maintenance_alert_id,
                customer_code, ny_received_at
         FROM {$pmTable}
         WHERE customer_code = :customer
