@@ -60,10 +60,9 @@ async function loadHeroNotifications() {
 
         let notifications = data.notifications || [];
 
-        // Fallback client filter if server filter not yet applied
-        if (customerCode) {
-            notifications = notifications.filter(n => (n.customer_code || '').toString() === customerCode.toString());
-        }
+        // Server already filters by customerCode via JOIN with panel_messages
+        // Client filter removed - was incorrectly filtering out notifications where
+        // customer_code was null but matched via pm_customer_code JOIN column
 
         activeNotificationsCount = notifications.length;
         lastHeroNotifications = notifications;
@@ -335,4 +334,5 @@ CHANGELOG
 - Group notifications by device+alert to show unique count (avoids "6 active" when there are 2 unique alerts triggered 3x each).
 - Show aggregated trigger count when > 1.
 - Fixed race condition: removed DOMContentLoaded auto-load, let app.js trigger loadHeroNotifications() after customer code is set.
+- Removed redundant client-side customer filter that was incorrectly filtering out notifications matched via server-side JOIN.
 */
