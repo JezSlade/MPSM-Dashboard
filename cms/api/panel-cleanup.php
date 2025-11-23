@@ -334,6 +334,7 @@ try {
     // ==== Test Rule Processing ====
     if ($action === 'test-rules') {
         define('MPS_ENGINE_ACCESS', true);
+        require_once dirname(__DIR__, 2) . '/mps-api/callbacks/panel-message-common.php';  // Provides getNYTimestamp()
         require_once dirname(__DIR__, 2) . '/mps-api/callbacks/command-center-schema.php';
         require_once dirname(__DIR__, 2) . '/mps-api/callbacks/command-center-engine.php';
 

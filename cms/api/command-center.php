@@ -10,6 +10,7 @@ require '../functions.php';
 requireAuth();
 
 define('MPS_ENGINE_ACCESS', true);
+require_once __DIR__ . '/../../mps-api/callbacks/panel-message-common.php';  // Provides getNYTimestamp()
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-schema.php';
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-engine.php';
 
