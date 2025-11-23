@@ -233,6 +233,22 @@ try {
         // Check recent panel messages
         $recentMessages = $pdo->query("SELECT id, device_serial, maintenance_alert_code, customer_code, ny_received_at FROM {$messagesTable} ORDER BY ny_received_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
 
+        // Check if alert_aggregations table has data
+        $aggCount = 0;
+        try {
+            $aggCount = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+        } catch (Exception $e) {
+            $aggCount = -1; // Table may not exist
+        }
+
+        // Get a sample of aggregations
+        $sampleAggregations = [];
+        try {
+            $sampleAggregations = $pdo->query("SELECT device_serial, alert_code, occurrence_count, last_occurrence_ny FROM {$aggregationsTable} ORDER BY last_occurrence_ny DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $sampleAggregations = ['error' => $e->getMessage()];
+        }
+
         $results['alert_system'] = [
             'notification_rules' => [
                 'count' => is_array($rules) ? count($rules) : 0,
@@ -248,8 +264,56 @@ try {
                 'recent_count' => is_array($recentMatches) ? count($recentMatches) : 0,
                 'recent' => $recentMatches
             ],
+            'alert_aggregations' => [
+                'total_count' => $aggCount,
+                'recent' => $sampleAggregations
+            ],
             'recent_panel_messages' => $recentMessages
         ];
+    }
+
+    // ==== Clean Alert System Test Data ====
+    if ($action === 'clean-alerts' && !$dryRun) {
+        $rulesTable = DB_PREFIX . 'notification_rules';
+        $notificationsTable = DB_PREFIX . 'dashboard_notifications';
+        $historyTable = DB_PREFIX . 'rule_match_history';
+
+        $deleted = [];
+
+        // Delete test notifications
+        $stmt = $pdo->prepare("DELETE FROM {$notificationsTable} WHERE device_serial LIKE '%TEST%' OR alert_code LIKE '%TEST%' OR title LIKE '%TEST%'");
+        $stmt->execute();
+        $deleted['test_notifications'] = $stmt->rowCount();
+
+        // Delete "Unknown Device" notifications
+        $stmt = $pdo->prepare("DELETE FROM {$notificationsTable} WHERE device_serial = 'Unknown Device' OR alert_code = 'Unknown Alert'");
+        $stmt->execute();
+        $deleted['unknown_notifications'] = $stmt->rowCount();
+
+        // Delete duplicate rules (keep lowest ID for each name)
+        $duplicateIds = $pdo->query("
+            SELECT nr.id FROM {$rulesTable} nr
+            WHERE nr.id NOT IN (
+                SELECT MIN(id) FROM {$rulesTable} GROUP BY name
+            )
+        ")->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($duplicateIds)) {
+            $placeholders = implode(',', array_fill(0, count($duplicateIds), '?'));
+            $stmt = $pdo->prepare("DELETE FROM {$rulesTable} WHERE id IN ({$placeholders})");
+            $stmt->execute($duplicateIds);
+            $deleted['duplicate_rules'] = $stmt->rowCount();
+        } else {
+            $deleted['duplicate_rules'] = 0;
+        }
+
+        // Delete orphaned rule match history
+        $stmt = $pdo->prepare("DELETE FROM {$historyTable} WHERE device_serial IS NULL AND alert_code IS NULL");
+        $stmt->execute();
+        $deleted['orphaned_matches'] = $stmt->rowCount();
+
+        $results['deleted'] = $deleted;
+        $results['message'] = 'Alert system cleanup completed';
     }
 
     // Add usage instructions
@@ -259,7 +323,8 @@ try {
             'cleanup_dry_run' => '?action=cleanup&dry_run=1 - Preview cleanup',
             'cleanup_execute' => '?action=cleanup&dry_run=0 - Execute cleanup',
             'purge_old' => '?action=purge-old&days=30&dry_run=0 - Purge entries older than X days',
-            'alert_audit' => '?action=alert-audit - Audit alert system rules and notifications'
+            'alert_audit' => '?action=alert-audit - Audit alert system rules and notifications',
+            'clean_alerts' => '?action=clean-alerts&dry_run=0 - Clean test/duplicate alert data'
         ];
     }
 
