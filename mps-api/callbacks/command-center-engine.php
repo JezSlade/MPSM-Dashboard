@@ -315,7 +315,9 @@ if (!function_exists('createDashboardNotification')) {
     function createDashboardNotification(PDO $pdo, array $rule, array $messageData, int $messageId): void
     {
         $deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
+        $deviceIdentifier = $messageData['device_identifier'] ?? $deviceSerial;
         $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
+        $alertDescription = $messageData['maintenance_alert_description'] ?? '';
         $customerCode = $messageData['customer_code'] ?? '';
 
         // Get frequency data
@@ -327,9 +329,15 @@ if (!function_exists('createDashboardNotification')) {
             $timeWindow = (int)$rule['frequency_window_hours'];
         }
 
+        // Default templates use meaningful data
+        // Title: Short summary with device and alert description
+        // Message: More detail with customer context
+        $defaultTitle = '{alert}';
+        $defaultMessage = '{device} - {customer}';
+
         // Parse notification templates
         $title = parseNotificationTemplate(
-            $rule['notification_title'] ?: '{severity} Alert - {device} has {alert}',
+            $rule['notification_title'] ?: $defaultTitle,
             $rule,
             $messageData,
             $frequencyCount,
@@ -337,7 +345,7 @@ if (!function_exists('createDashboardNotification')) {
         );
 
         $message = parseNotificationTemplate(
-            $rule['notification_message'] ?: '{device} has triggered {alert} {count} times in the past {window}',
+            $rule['notification_message'] ?: $defaultMessage,
             $rule,
             $messageData,
             $frequencyCount,
@@ -424,8 +432,12 @@ if (!function_exists('parseNotificationTemplate')) {
         ?int $windowHours
     ): string {
         $deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
+        $deviceIdentifier = $messageData['device_identifier'] ?? $deviceSerial;
+        $deviceModel = trim($messageData['device_model'] ?? '');
         $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
-        $customerCode = $messageData['customer_code'] ?? 'Unknown Customer';
+        $alertDescription = $messageData['maintenance_alert_description'] ?? '';
+        $customerCode = $messageData['customer_code'] ?? '';
+        $customerDescription = $messageData['customer_description'] ?? 'Unknown Customer';
 
         // Time window formatting
         $windowText = '';
@@ -438,11 +450,26 @@ if (!function_exists('parseNotificationTemplate')) {
             }
         }
 
+        // Use human-readable device name (identifier or model, fallback to serial)
+        $deviceDisplay = $deviceIdentifier;
+        if ($deviceDisplay === $deviceSerial && !empty($deviceModel)) {
+            $deviceDisplay = $deviceModel;
+        }
+
+        // Use alert description if available, otherwise code
+        $alertDisplay = !empty($alertDescription) ? $alertDescription : "Alert {$alertCode}";
+
         $replacements = [
             '{severity}' => ucfirst($rule['severity']),
-            '{device}' => $deviceSerial,
-            '{alert}' => $alertCode,
-            '{customer}' => $customerCode,
+            '{device}' => $deviceDisplay,
+            '{device_serial}' => $deviceSerial,
+            '{device_id}' => $deviceIdentifier,
+            '{device_model}' => $deviceModel,
+            '{alert}' => $alertDisplay,
+            '{alert_code}' => $alertCode,
+            '{alert_description}' => $alertDescription,
+            '{customer}' => $customerDescription ?: $customerCode,
+            '{customer_code}' => $customerCode,
             '{count}' => $count,
             '{window}' => $windowText,
             '{rule_name}' => $rule['name'] ?? 'Alert Rule'

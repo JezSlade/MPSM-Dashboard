@@ -865,3 +865,11 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?a
 - **Action:** Update `refresh-cache-chunked.php` so every non-`uninstalled` device is queued for drill-down fetching (previously only `'installed'` items were enqueued, leaving `devices_to_fetch_drilldown` empty).
 - **Result:** Once the device phase completes, stage 2 now receives a populated list and will actually process drill-down content; this is deployed (versioned log entries to confirm) and mirrored in `/home/resolut7/logs/refresh-cache-chunked.log`.
 - **Next:** Watch for the new drill-down chunk entries inside the log or run the helper again if needed; record whether `drilldowns_cached` starts climbing above 0 in follow-up logs.
+
+## 2025-11-22 - Panel Callback Cleanup
+
+- **Action:** Ran cleanup API `panel-cleanup.php` to remove old entries and test data using secret auth.
+- **Commands:**  
+  - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/panel-cleanup.php?action=purge-old&days=7&dry_run=0&secret=PANEL_CLEANUP_2025"`  
+  - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/panel-cleanup.php?action=cleanup&dry_run=0&secret=PANEL_CLEANUP_2025"`
+- **Result:** Deleted `debug_old_entries=12204`, `messages_old_entries=1119`; no test data or probe errors remained. Post-cleanup stats: `panel_callback_debug` total 6,295 (errors 28, success 6,267; range 2025-11-16 to 2025-11-22), `panel_messages` total 9,204 (range 2025-11-09 to 2025-11-22).
