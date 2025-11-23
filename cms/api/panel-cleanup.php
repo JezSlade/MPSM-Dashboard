@@ -235,10 +235,24 @@ try {
 
         // Check if alert_aggregations table has data
         $aggCount = 0;
+        $tableExists = [];
         try {
             $aggCount = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+            $tableExists['alert_aggregations'] = true;
         } catch (Exception $e) {
             $aggCount = -1; // Table may not exist
+            $tableExists['alert_aggregations'] = false;
+        }
+
+        // Check other command center tables exist
+        foreach (['notification_rules', 'dashboard_notifications', 'rule_match_history'] as $tableName) {
+            $fullTable = DB_PREFIX . $tableName;
+            try {
+                $pdo->query("SELECT 1 FROM {$fullTable} LIMIT 1");
+                $tableExists[$tableName] = true;
+            } catch (Exception $e) {
+                $tableExists[$tableName] = false;
+            }
         }
 
         // Get a sample of aggregations
@@ -268,6 +282,7 @@ try {
                 'total_count' => $aggCount,
                 'recent' => $sampleAggregations
             ],
+            'table_status' => $tableExists,
             'recent_panel_messages' => $recentMessages
         ];
     }
