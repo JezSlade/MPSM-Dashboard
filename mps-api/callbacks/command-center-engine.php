@@ -154,19 +154,19 @@ if (!function_exists('calculateOccurrenceCount')) {
     ): int {
         $table = DB_PREFIX . 'panel_messages';
 
+        // Note: Can't bind $hours in INTERVAL clause, but it's already validated as int
         $sql = "SELECT COUNT(*) as count FROM {$table}
                 WHERE device_serial = :device
                   AND maintenance_alert_code = :alert
                   AND customer_code <=> :customer
-                  AND ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+                  AND ny_received_at >= DATE_SUB(:now, INTERVAL {$hours} HOUR)";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':device' => $deviceSerial,
             ':alert' => $alertCode,
             ':customer' => $customerCode,
-            ':now' => getNYTimestamp(),
-            ':hours' => $hours
+            ':now' => getNYTimestamp()
         ]);
 
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -260,13 +260,12 @@ if (!function_exists('getFrequencyCount')) {
                 $table = DB_PREFIX . 'panel_messages';
                 $sql = "SELECT COUNT(*) as count FROM {$table}
                         WHERE maintenance_alert_code = :alert
-                          AND ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+                          AND ny_received_at >= DATE_SUB(:now, INTERVAL {$hours} HOUR)";
 
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
                     ':alert' => $alertCode,
-                    ':now' => getNYTimestamp(),
-                    ':hours' => $hours
+                    ':now' => getNYTimestamp()
                 ]);
 
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -277,13 +276,12 @@ if (!function_exists('getFrequencyCount')) {
                 $table = DB_PREFIX . 'panel_messages';
                 $sql = "SELECT COUNT(*) as count FROM {$table}
                         WHERE customer_code = :customer
-                          AND ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+                          AND ny_received_at >= DATE_SUB(:now, INTERVAL {$hours} HOUR)";
 
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
                     ':customer' => $customerCode,
-                    ':now' => getNYTimestamp(),
-                    ':hours' => $hours
+                    ':now' => getNYTimestamp()
                 ]);
 
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -293,12 +291,11 @@ if (!function_exists('getFrequencyCount')) {
                 // Count all alerts
                 $table = DB_PREFIX . 'panel_messages';
                 $sql = "SELECT COUNT(*) as count FROM {$table}
-                        WHERE ny_received_at >= DATE_SUB(:now, INTERVAL :hours HOUR)";
+                        WHERE ny_received_at >= DATE_SUB(:now, INTERVAL {$hours} HOUR)";
 
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
-                    ':now' => getNYTimestamp(),
-                    ':hours' => $hours
+                    ':now' => getNYTimestamp()
                 ]);
 
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
