@@ -58,6 +58,12 @@ body {
     gap: 10px;
 }
 
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .brand-icon {
     width: 40px;
     height: 40px;
@@ -70,15 +76,10 @@ body {
 }
 
 .brand-label {
-    font-size: 14px;
-    letter-spacing: 0.1em;
+    font-size: 12px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
-}
-
-.brand-sub {
-    font-size: 18px;
-    font-weight: 700;
 }
 
 .quick-links {

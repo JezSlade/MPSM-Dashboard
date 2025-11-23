@@ -36,9 +36,13 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
             <div class="header-top">
                 <div class="brand">
                     <span class="brand-icon"><i class="fas fa-bolt"></i></span>
-                    <div>
-                        <div class="brand-label">MPSM</div>
-                        <div class="brand-sub">Mobile</div>
+                    <div class="brand-text">
+                        <div class="brand-label">Active customer</div>
+                        <select id="mobile-customer-select" class="customer-select" aria-label="Select customer">
+                            <option value="<?php echo $customerCode; ?>" selected>
+                                <?php echo $customerName ? $customerName . ' (' . $customerCode . ')' : $customerCode; ?>
+                            </option>
+                        </select>
                     </div>
                 </div>
                 <div class="quick-links">
@@ -52,27 +56,9 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                 </div>
             </div>
             <div class="header-context">
-                <div>
-                    <div class="context-label">Customer</div>
-                    <div class="context-value" id="mobile-customer-name"><?php echo $customerName ?: 'Active Customer'; ?></div>
-                </div>
                 <div class="context-chip">
                     <i class="fas fa-hashtag"></i>
                     <span id="mobile-customer-code"><?php echo $customerCode; ?></span>
-                </div>
-            </div>
-            <div class="customer-switch">
-                <div class="switch-label">Switch customer</div>
-                <div class="switch-row">
-                    <div class="switch-input">
-                        <i class="fas fa-search"></i>
-                        <input type="search" id="mobile-customer-search" placeholder="Search customers..." autocomplete="off" inputmode="search">
-                    </div>
-                    <select id="mobile-customer-select" aria-label="Select customer">
-                        <option value="<?php echo $customerCode; ?>" selected>
-                            <?php echo $customerName ? $customerName . ' (' . $customerCode . ')' : $customerCode; ?>
-                        </option>
-                    </select>
                 </div>
                 <div id="mobile-customer-status" class="switch-status" aria-live="polite"></div>
             </div>
