@@ -76,6 +76,7 @@ function getNotifications(PDO $pdo): void
 {
     $status = $_GET['status'] ?? 'active';
     $severity = $_GET['severity'] ?? null;
+    $customerCode = $_GET['customerCode'] ?? null;
     $limit = min((int)($_GET['limit'] ?? 50), 100);
 
     $table = DB_PREFIX . 'dashboard_notifications';
@@ -86,6 +87,11 @@ function getNotifications(PDO $pdo): void
         $sql .= " AND severity = :severity";
     }
 
+    // Restrict to current customer if provided
+    if ($customerCode) {
+        $sql .= " AND customer_code = :customer_code";
+    }
+
     $sql .= " ORDER BY priority DESC, created_at_ny DESC LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
@@ -93,6 +99,10 @@ function getNotifications(PDO $pdo): void
 
     if ($severity) {
         $stmt->bindValue(':severity', $severity);
+    }
+
+    if ($customerCode) {
+        $stmt->bindValue(':customer_code', $customerCode);
     }
 
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -475,3 +485,9 @@ function getRuleHistory(PDO $pdo): void
         'count' => count($history)
     ]);
 }
+
+/*
+CHANGELOG
+2025-11-22 Codex
+- Added optional customerCode filter to dashboard notifications to scope alerts to the currently viewed customer.
+*/

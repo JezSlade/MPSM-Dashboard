@@ -1915,11 +1915,25 @@ const MPSM = (function() {
                     </div>
                 </div>
 
-                    <div class="metrics-grid">
-                    <div class="metric-card clickable" onclick="MPSM.expandDevices()" style="cursor:pointer">
-                        <div class="metric-icon"><i class="fas fa-print"></i></div>
-                        <div class="metric-value" id="banner-device-total">${totalsSource.TotalManagedDevices ?? 0}</div>
-                        <div class="metric-label">Total Devices</div>
+            `;
+
+            // Append hero notifications into the banner area (collapsible)
+            const heroContainer = document.getElementById('hero-notifications');
+            if (heroContainer) {
+                heroContainer.classList.add('hero-inline');
+                const banner = container.querySelector('.customer-banner');
+                if (banner) {
+                    banner.classList.add('customer-banner-wrap');
+                    banner.appendChild(heroContainer);
+                }
+            }
+
+            container.innerHTML += `
+                <div class="metrics-grid">
+                <div class="metric-card clickable" onclick="MPSM.expandDevices()" style="cursor:pointer">
+                    <div class="metric-icon"><i class="fas fa-print"></i></div>
+                    <div class="metric-value" id="banner-device-total">${totalsSource.TotalManagedDevices ?? 0}</div>
+                    <div class="metric-label">Total Devices</div>
                     </div>
                     <div class="metric-card clickable" onclick="MPSM.expandOffline()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-wifi-slash"></i></div>
@@ -1939,6 +1953,10 @@ const MPSM = (function() {
                     </div>
                 </div>
             `;
+
+            // Refresh hero notifications now that the banner reflects this customer
+            window.currentCustomerCode = state.customerCode;
+            loadHeroNotifications();
 
             // Load panel alert badge
             loadPanelAlertBadge();
@@ -4095,4 +4113,6 @@ window.closeDeviceModal = () => MPSM.closeDeviceModal();
 CHANGELOG
 2025-11-11 Codex
 - Deferred the heavy card refresh and offline count fetch in `loadDashboard()` so the header renders immediately and the page stays interactive instead of freezing behind the modal overlay.
+2025-11-22 Codex
+- Moved hero notifications into the customer banner context and refresh them after the banner loads to align alerts with the selected customer.
 */

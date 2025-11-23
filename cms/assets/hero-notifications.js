@@ -1,34 +1,20 @@
 /**
  * Hero Notifications Widget
- * Displays active dashboard notifications in the hero header section
+ * Displays active dashboard notifications in the customer header (collapsible)
  */
 
 // State
 let heroAutoRefreshInterval = null;
 let activeNotificationsCount = 0;
+let heroExpanded = false;
+let lastHeroNotifications = [];
 
 // Severity Configuration
 const HERO_SEVERITY_CONFIG = {
-    critical: {
-        gradient: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-        icon: 'fire',
-        label: 'Critical'
-    },
-    high: {
-        gradient: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
-        icon: 'exclamation-circle',
-        label: 'High Priority'
-    },
-    warning: {
-        gradient: 'linear-gradient(135deg, #f39c12 0%, #d68910 100%)',
-        icon: 'exclamation-triangle',
-        label: 'Warning'
-    },
-    info: {
-        gradient: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
-        icon: 'info-circle',
-        label: 'Information'
-    }
+    critical: { gradient: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)', icon: 'fire', label: 'Critical' },
+    high: { gradient: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)', icon: 'exclamation-circle', label: 'High Priority' },
+    warning: { gradient: 'linear-gradient(135deg, #f39c12 0%, #d68910 100%)', icon: 'exclamation-triangle', label: 'Warning' },
+    info: { gradient: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)', icon: 'info-circle', label: 'Information' }
 };
 
 // Initialize on page load
@@ -48,7 +34,13 @@ function startHeroAutoRefresh() {
 // Load and display hero notifications
 async function loadHeroNotifications() {
     try {
-        const response = await fetch('api/command-center.php?action=get_notifications&status=active', {
+        const customerCode = getCurrentCustomerCode();
+        const params = new URLSearchParams({ action: 'get_notifications', status: 'active' });
+        if (customerCode) {
+            params.append('customerCode', customerCode);
+        }
+
+        const response = await fetch('api/command-center.php?' + params.toString(), {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         });
@@ -64,11 +56,18 @@ async function loadHeroNotifications() {
             return;
         }
 
-        const notifications = data.notifications || [];
-        activeNotificationsCount = notifications.length;
+        let notifications = data.notifications || [];
 
-        // Update notification badge in header
-        updateNotificationBadge(activeNotificationsCount);
+        // Fallback client filter if server filter not yet applied
+        if (customerCode) {
+            notifications = notifications.filter(n => (n.customer_code || '').toString() === customerCode.toString());
+        }
+
+        activeNotificationsCount = notifications.length;
+        lastHeroNotifications = notifications;
+
+        // Update notification badge in header (hidden to avoid clutter)
+        updateNotificationBadge();
 
         // Render hero notifications
         renderHeroNotifications(notifications);
@@ -78,17 +77,17 @@ async function loadHeroNotifications() {
     }
 }
 
-// Update notification badge count in header
-function updateNotificationBadge(count) {
+// Update notification badge count in header (hidden now)
+function updateNotificationBadge() {
     const badge = document.getElementById('notification-badge');
     if (!badge) return;
+    badge.style.display = 'none';
+}
 
-    if (count > 0) {
-        badge.textContent = count > 99 ? '99+' : count.toString();
-        badge.style.display = 'inline-block';
-    } else {
-        badge.style.display = 'none';
-    }
+// Get currently selected customer code from banner
+function getCurrentCustomerCode() {
+    const codeEl = document.querySelector('.customer-banner-code');
+    return codeEl ? codeEl.textContent.trim() : '';
 }
 
 // Render hero notifications
@@ -103,23 +102,20 @@ function renderHeroNotifications(notifications) {
 
     container.style.display = 'block';
 
-    if (topNotifications.length === 0) {
-        container.innerHTML = `
-            <div class="hero-notification-empty">
-                <div class="hero-empty-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <div class="hero-empty-content">
-                    <h3>No Active Alerts</h3>
-                    <p>Monitoring system is active. Waiting for panel message notifications...</p>
-                    <small>Create notification rules in <a href="command-center.php">Command Center</a> to start receiving alerts</small>
-                </div>
+    const count = topNotifications.length;
+    const configEmpty = `
+        <div class="hero-notification-empty">
+            <div class="hero-empty-icon">
+                <i class="fas fa-shield-alt"></i>
             </div>
-        `;
-        return;
-    }
+            <div class="hero-empty-content">
+                <h3>No Active Alerts</h3>
+                <p>Monitoring system is active.</p>
+            </div>
+        </div>
+    `;
 
-    const html = topNotifications.map(notif => {
+    const chipsHtml = topNotifications.map(notif => {
         const config = HERO_SEVERITY_CONFIG[notif.severity] || HERO_SEVERITY_CONFIG.info;
         const title = notif.title || config.label;
 
@@ -175,12 +171,30 @@ function renderHeroNotifications(notifications) {
         `;
     }).join('');
 
-    container.innerHTML = html;
+    const listHtml = heroExpanded
+        ? (count ? `<div class="hero-chip-list">${chipsHtml}</div>` : configEmpty)
+        : '';
 
-    // Add slide-in animation
-    container.querySelectorAll('.hero-notification').forEach((el, index) => {
-        el.style.animation = `slideInFromTop 0.4s ease-out ${index * 0.1}s both`;
-    });
+    container.classList.toggle('expanded', heroExpanded);
+    container.classList.toggle('collapsed', !heroExpanded);
+
+    container.innerHTML = `
+        <div class="hero-alert-toggle">
+            <div class="hero-alert-heading">
+                <span class="hero-alert-label"><i class="fas fa-bell"></i> Alerts</span>
+                <span class="hero-alert-count">${count ? `${count} active` : 'No active alerts'}</span>
+            </div>
+            <button class="hero-btn hero-toggle-btn" onclick="toggleHeroAlerts()">
+                ${heroExpanded ? 'Hide' : 'Show'}
+            </button>
+        </div>
+        ${listHtml}
+    `;
+}
+
+function toggleHeroAlerts() {
+    heroExpanded = !heroExpanded;
+    renderHeroNotifications(lastHeroNotifications);
 }
 
 // Acknowledge notification
@@ -289,4 +303,5 @@ function escapeHtmlHero(text) {
 CHANGELOG
 2025-11-22 Codex
 - Redesigned hero notifications into compact header chips using identifier/alert-friendly text and tighter layout.
+- Scoped alerts to the current customer with collapsible header placement and badge suppression.
 */
