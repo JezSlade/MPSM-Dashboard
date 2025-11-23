@@ -200,13 +200,66 @@ try {
         $results['message'] = 'Old entries purged successfully';
     }
 
+    // ==== Alert System Audit ====
+    if ($action === 'alert-audit') {
+        $rulesTable = DB_PREFIX . 'notification_rules';
+        $notificationsTable = DB_PREFIX . 'dashboard_notifications';
+        $historyTable = DB_PREFIX . 'rule_match_history';
+
+        // Check notification rules
+        $rules = [];
+        try {
+            $rules = $pdo->query("SELECT id, name, severity, enabled, alert_code_pattern, device_serial_pattern, customer_code_pattern, frequency_count, frequency_window_hours, trigger_count, last_triggered_at FROM {$rulesTable} ORDER BY enabled DESC, severity DESC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $rules = ['error' => $e->getMessage()];
+        }
+
+        // Check active notifications
+        $notifications = [];
+        try {
+            $notifications = $pdo->query("SELECT id, title, severity, status, device_serial, alert_code, created_at_ny FROM {$notificationsTable} ORDER BY created_at_ny DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $notifications = ['error' => $e->getMessage()];
+        }
+
+        // Check recent rule matches
+        $recentMatches = [];
+        try {
+            $recentMatches = $pdo->query("SELECT rule_id, rule_name, rule_severity, device_serial, alert_code, matched_at_ny FROM {$historyTable} ORDER BY matched_at_ny DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $recentMatches = ['error' => $e->getMessage()];
+        }
+
+        // Check recent panel messages
+        $recentMessages = $pdo->query("SELECT id, device_serial, maintenance_alert_code, customer_code, ny_received_at FROM {$messagesTable} ORDER BY ny_received_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+
+        $results['alert_system'] = [
+            'notification_rules' => [
+                'count' => is_array($rules) ? count($rules) : 0,
+                'enabled_count' => is_array($rules) ? count(array_filter($rules, fn($r) => $r['enabled'] ?? false)) : 0,
+                'rules' => $rules
+            ],
+            'dashboard_notifications' => [
+                'count' => is_array($notifications) ? count($notifications) : 0,
+                'active_count' => is_array($notifications) ? count(array_filter($notifications, fn($n) => ($n['status'] ?? '') === 'active')) : 0,
+                'recent' => $notifications
+            ],
+            'rule_match_history' => [
+                'recent_count' => is_array($recentMatches) ? count($recentMatches) : 0,
+                'recent' => $recentMatches
+            ],
+            'recent_panel_messages' => $recentMessages
+        ];
+    }
+
     // Add usage instructions
     if ($action === 'status') {
         $results['usage'] = [
             'status' => '?action=status - View cleanup candidates',
             'cleanup_dry_run' => '?action=cleanup&dry_run=1 - Preview cleanup',
             'cleanup_execute' => '?action=cleanup&dry_run=0 - Execute cleanup',
-            'purge_old' => '?action=purge-old&days=30&dry_run=0 - Purge entries older than X days'
+            'purge_old' => '?action=purge-old&days=30&dry_run=0 - Purge entries older than X days',
+            'alert_audit' => '?action=alert-audit - Audit alert system rules and notifications'
         ];
     }
 
