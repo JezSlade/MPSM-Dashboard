@@ -84,8 +84,11 @@ function updateNotificationBadge() {
     badge.style.display = 'none';
 }
 
-// Get currently selected customer code from banner
+// Get currently selected customer code from banner or global
 function getCurrentCustomerCode() {
+    if (window.currentCustomerCode) {
+        return window.currentCustomerCode;
+    }
     const codeEl = document.querySelector('.customer-banner-code');
     return codeEl ? codeEl.textContent.trim() : '';
 }

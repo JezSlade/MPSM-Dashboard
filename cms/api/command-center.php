@@ -89,7 +89,7 @@ function getNotifications(PDO $pdo): void
 
     // Restrict to current customer if provided
     if ($customerCode) {
-        $sql .= " AND customer_code = :customer_code";
+        $sql .= " AND LOWER(TRIM(customer_code)) = LOWER(TRIM(:customer_code))";
     }
 
     $sql .= " ORDER BY priority DESC, created_at_ny DESC LIMIT :limit";
