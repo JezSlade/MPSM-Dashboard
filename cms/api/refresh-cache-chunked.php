@@ -53,7 +53,7 @@ if ($isCLI) {
     require_once dirname(__DIR__, 2) . '/bootstrap.php';
 }
 
-define('REFRESH_CACHE_CHUNKED_VERSION', '2025-11-22a');
+define('REFRESH_CACHE_CHUNKED_VERSION', '2025-11-22b');
 
 $stateFile = __DIR__ . '/../locks/cache-refresh-state.json';
 $logFile = __DIR__ . '/../logs/cache-refresh-' . date('Y-m-d') . '.log';
@@ -378,12 +378,17 @@ if ($action === 'process' || $action === 'auto') {
                     }
 
                     // Call Device/Get with the correct Id parameter
-                    $drilldown = callMPSAPI('Device/Get', ['Id' => $deviceId]);
+                    $apiResponse = callMPSAPI('Device/Get', ['Id' => $deviceId]);
+
+                    // MPS Cloud API wraps response in {Result: {...}, IsValid: bool, Errors: [...]}
+                    // Extract the actual device data from the Result wrapper
+                    $drilldown = $apiResponse['Result'] ?? $apiResponse;
 
                     // Check for valid response - API returns device data with SerialNumber field
                     $responseSerial = $drilldown['SerialNumber'] ?? $drilldown['serial'] ?? $drilldown['serialNumber'] ?? null;
+                    $isValid = $apiResponse['IsValid'] ?? true;
 
-                    if ($drilldown && $responseSerial) {
+                    if ($drilldown && $responseSerial && $isValid) {
                         $stmt = $pdo->prepare("
                             INSERT INTO {$prefix}cache_device_drilldown_staging
                             ({$drilldownSerialColumn}, drilldown_data, has_alerts, has_supplies, cached_at)
@@ -409,7 +414,8 @@ if ($action === 'process' || $action === 'auto') {
                         $state['drilldowns_cached']++;
                     } else {
                         // Log why we skipped this device
-                        $errorInfo = $drilldown['ErrorMessage'] ?? $drilldown['error'] ?? 'No SerialNumber in response';
+                        $errors = $apiResponse['Errors'] ?? [];
+                        $errorInfo = !empty($errors) ? json_encode($errors) : ($drilldown['ErrorMessage'] ?? 'No SerialNumber in response');
                         logMessage("WARNING: Device {$serial} (ID: {$deviceId}) - {$errorInfo}");
                     }
 
@@ -513,7 +519,9 @@ respondJson([
 
 /*
 CHANGELOG
-2025-11-22 Codex
+2025-11-22b Codex
+- Fixed MPS Cloud API response parsing: Response wraps device in {Result: {...}, IsValid: bool}. Now extracts Result before checking SerialNumber.
+2025-11-22a Codex
 - Fixed drill-down fetch: Device/Get API requires `Id` parameter, not `SerialNumber`. Now stores device ID mapping during Stage 1 and uses it in Stage 2.
 - Fixed response field check: API returns `SerialNumber` (PascalCase), not `serial` (lowercase). Now checks multiple case variants.
 - Added fallback: if device ID not in state map, queries staging table to extract ID from cached device_data JSON.
