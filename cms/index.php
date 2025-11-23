@@ -454,9 +454,9 @@ $preferences = getUserPreferences($userId);
     <script src="assets/js/table-utils.js"></script>
     <script src="assets/js/card-registry.js"></script>
     <script src="assets/js/card-manager.js"></script>
+    <script src="assets/hero-notifications.js"></script>
     <script src="assets/app.js"></script>
     <script src="assets/error-logs.js"></script>
     <script src="api/cache-engine.js"></script>
-    <script src="assets/hero-notifications.js"></script>
 </body>
 </html>
