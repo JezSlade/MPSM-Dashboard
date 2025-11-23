@@ -80,19 +80,32 @@ function getNotifications(PDO $pdo): void
     $limit = min((int)($_GET['limit'] ?? 50), 100);
 
     $table = DB_PREFIX . 'dashboard_notifications';
-    $sql = "SELECT * FROM {$table} WHERE status = :status";
+
+    // Optional join to backfill customer_code when missing
+    $select = "dn.*";
+    $join = "";
+    $where = "dn.status = :status";
 
     // Add severity filter if provided
     if ($severity) {
-        $sql .= " AND severity = :severity";
+        $where .= " AND dn.severity = :severity";
     }
 
     // Restrict to current customer if provided
     if ($customerCode) {
-        $sql .= " AND LOWER(TRIM(customer_code)) = LOWER(TRIM(:customer_code))";
+        $join = "LEFT JOIN " . DB_PREFIX . "panel_messages pm
+                 ON pm.id = CAST(SUBSTRING_INDEX(dn.related_message_ids, ',', 1) AS UNSIGNED)";
+        $where .= " AND (
+            LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
+            OR (
+                (dn.customer_code IS NULL OR dn.customer_code = '')
+                AND LOWER(TRIM(pm.customer_code)) = LOWER(TRIM(:customer_code))
+            )
+        )";
+        $select .= ", pm.customer_code AS pm_customer_code";
     }
 
-    $sql .= " ORDER BY priority DESC, created_at_ny DESC LIMIT :limit";
+    $sql = "SELECT {$select} FROM {$table} dn {$join} WHERE {$where} ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':status', $status);
@@ -490,4 +503,6 @@ function getRuleHistory(PDO $pdo): void
 CHANGELOG
 2025-11-22 Codex
 - Added optional customerCode filter to dashboard notifications to scope alerts to the currently viewed customer.
+2025-11-23 Codex
+- Relaxed customer scoping to include legacy notifications missing customer_code by joining panel_messages on related_message_ids.
 */
