@@ -141,6 +141,58 @@ body {
     margin-top: 14px;
 }
 
+.customer-switch {
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.switch-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.switch-row {
+    display: flex;
+    gap: 8px;
+}
+
+.switch-input {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+}
+
+.switch-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+}
+
+#mobile-customer-select {
+    min-width: 160px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    padding: 10px;
+}
+
 .search-input {
     display: flex;
     align-items: center;
@@ -554,4 +606,6 @@ body {
 CHANGELOG
 2025-11-24 Codex
 - Added mobile-first stylesheet with sticky header, bottom navigation, quick cards, alerts/list layouts, and modal styling tailored for phones.
+2025-11-24 Codex
+- Styled customer switcher for mobile header to enable quick customer changes.
 */

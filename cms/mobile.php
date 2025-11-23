@@ -54,11 +54,25 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
             <div class="header-context">
                 <div>
                     <div class="context-label">Customer</div>
-                    <div class="context-value"><?php echo $customerName ?: 'Active Customer'; ?></div>
+                    <div class="context-value" id="mobile-customer-name"><?php echo $customerName ?: 'Active Customer'; ?></div>
                 </div>
                 <div class="context-chip">
                     <i class="fas fa-hashtag"></i>
-                    <span><?php echo $customerCode; ?></span>
+                    <span id="mobile-customer-code"><?php echo $customerCode; ?></span>
+                </div>
+            </div>
+            <div class="customer-switch">
+                <div class="switch-label">Switch customer</div>
+                <div class="switch-row">
+                    <div class="switch-input">
+                        <i class="fas fa-search"></i>
+                        <input type="search" id="mobile-customer-search" placeholder="Search customers..." autocomplete="off" inputmode="search">
+                    </div>
+                    <select id="mobile-customer-select" aria-label="Select customer">
+                        <option value="<?php echo $customerCode; ?>" selected>
+                            <?php echo $customerName ? $customerName . ' (' . $customerCode . ')' : $customerCode; ?>
+                        </option>
+                    </select>
                 </div>
             </div>
             <div class="search-box">
