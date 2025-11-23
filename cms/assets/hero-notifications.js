@@ -96,10 +96,10 @@ function renderHeroNotifications(notifications) {
     const container = document.getElementById('hero-notifications');
     if (!container) return;
 
-    // Only show top 5 priority notifications
+    // Only show top 6 priority notifications to keep header compact
     const topNotifications = notifications
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-        .slice(0, 5);
+        .slice(0, 6);
 
     container.style.display = 'block';
 
@@ -121,35 +121,54 @@ function renderHeroNotifications(notifications) {
 
     const html = topNotifications.map(notif => {
         const config = HERO_SEVERITY_CONFIG[notif.severity] || HERO_SEVERITY_CONFIG.info;
+        const title = notif.title || config.label;
+
+        const device = notif.device_identifier || notif.device_serial || '';
+        const customer = notif.customer_code || '';
+        const alertCode = notif.alert_code || '';
+        const secondary = notif.message
+            || [device, customer].filter(Boolean).join(' • ')
+            || 'New alert';
+
+        const metaParts = [];
+        if (alertCode) {
+            metaParts.push(`<span class="meta-pill"><i class="fas fa-bell"></i> ${escapeHtmlHero(alertCode)}</span>`);
+        }
+        if (device) {
+            metaParts.push(`<span class="meta-pill"><i class="fas fa-hdd"></i> ${escapeHtmlHero(device)}</span>`);
+        }
+        if (notif.trigger_count && notif.time_window_hours) {
+            metaParts.push(`<span class="meta-pill"><i class="fas fa-chart-line"></i> ${notif.trigger_count}x in ${notif.time_window_hours}h</span>`);
+        }
+        const metaHtml = metaParts.join('');
 
         return `
-            <div class="hero-notification hero-notification-${notif.severity}"
+            <div class="hero-notification hero-notification-${notif.severity} hero-chip"
                  style="background: ${config.gradient};"
                  data-id="${notif.id}">
-                <div class="hero-notification-content">
-                    <div class="hero-notification-icon">
+                <div class="hero-chip-content">
+                    <div class="hero-chip-icon" aria-hidden="true">
                         <i class="fas fa-${config.icon}"></i>
                     </div>
-                    <div class="hero-notification-body">
-                        <div class="hero-notification-title">
-                            ${escapeHtmlHero(notif.title)}
+                    <div class="hero-chip-body">
+                        <div class="hero-chip-title">
+                            ${escapeHtmlHero(title)}
                         </div>
-                        <div class="hero-notification-message">
-                            ${escapeHtmlHero(notif.message)}
+                        <div class="hero-chip-subtitle">
+                            ${escapeHtmlHero(secondary)}
                         </div>
-                        <div class="hero-notification-meta">
-                            ${notif.device_serial ? `<span><i class="fas fa-hdd"></i> ${escapeHtmlHero(notif.device_serial)}</span>` : ''}
-                            ${notif.trigger_count && notif.time_window_hours ? `<span><i class="fas fa-chart-line"></i> ${notif.trigger_count}x in ${notif.time_window_hours}h</span>` : ''}
-                            <span><i class="fas fa-clock"></i> ${formatHeroTimestamp(notif.created_at_ny)}</span>
-                        </div>
+                        ${metaHtml ? `<div class="hero-chip-meta">${metaHtml}</div>` : ''}
                     </div>
-                    <div class="hero-notification-actions">
-                        <button class="hero-btn" onclick="acknowledgeHeroNotification(${notif.id})" title="Acknowledge">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="hero-btn" onclick="dismissHeroNotification(${notif.id})" title="Dismiss">
-                            <i class="fas fa-times"></i>
-                        </button>
+                    <div class="hero-chip-actions">
+                        <span class="hero-chip-time"><i class="fas fa-clock"></i> ${formatHeroTimestamp(notif.created_at_ny)}</span>
+                        <div class="hero-chip-buttons">
+                            <button class="hero-btn" onclick="acknowledgeHeroNotification(${notif.id})" title="Acknowledge">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="hero-btn" onclick="dismissHeroNotification(${notif.id})" title="Dismiss">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -265,3 +284,9 @@ function escapeHtmlHero(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+/*
+CHANGELOG
+2025-11-22 Codex
+- Redesigned hero notifications into compact header chips using identifier/alert-friendly text and tighter layout.
+*/
