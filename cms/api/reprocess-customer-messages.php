@@ -40,7 +40,7 @@ try {
     // Get panel messages for this customer with alert codes
     $pmTable = DB_PREFIX . 'panel_messages';
     $stmt = $pdo->prepare("
-        SELECT id, device_serial, device_identifier, device_model,
+        SELECT id, device_serial,
                maintenance_alert_code, maintenance_alert_id,
                customer_code, customer_description,
                ny_received_at
@@ -79,10 +79,9 @@ try {
             try {
                 $messageData = [
                     'device_serial' => $msg['device_serial'],
-                    'device_identifier' => $msg['device_identifier'] ?? $msg['device_serial'],
-                    'device_model' => $msg['device_model'] ?? '',
+                    'device_identifier' => $msg['device_serial'],
                     'maintenance_alert_code' => $msg['maintenance_alert_code'],
-                    'maintenance_alert_id' => $msg['maintenance_alert_id'],
+                    'maintenance_alert_id' => $msg['maintenance_alert_id'] ?? null,
                     'customer_code' => $msg['customer_code'],
                     'customer_description' => $msg['customer_description'] ?? ''
                 ];
