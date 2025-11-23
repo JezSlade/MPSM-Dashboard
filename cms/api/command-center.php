@@ -92,9 +92,15 @@ function getNotifications(PDO $pdo): void
     }
 
     // Restrict to current customer if provided
-    // Use simple filter on dn.customer_code - the engine now populates this field
+    // Show notifications that either:
+    // 1. Match the customer code exactly, OR
+    // 2. Have no customer code (legacy/global notifications)
     if ($customerCode) {
-        $where .= " AND LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))";
+        $where .= " AND (
+            LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
+            OR dn.customer_code IS NULL
+            OR dn.customer_code = ''
+        )";
     }
 
     $sql = "SELECT {$select} FROM {$table} dn {$join} WHERE {$where} ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
@@ -498,4 +504,5 @@ CHANGELOG
 2025-11-23 Codex
 - Relaxed customer scoping to include legacy notifications missing customer_code by joining panel_messages on related_message_ids.
 - Reverted to simple customer_code filter - the complex JOIN was causing query failures. Engine now populates customer_code directly.
+- Include notifications with NULL/empty customer_code (legacy/global alerts) alongside customer-specific ones.
 */
