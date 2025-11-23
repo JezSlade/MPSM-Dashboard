@@ -74,6 +74,7 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                         </option>
                     </select>
                 </div>
+                <div id="mobile-customer-status" class="switch-status" aria-live="polite"></div>
             </div>
             <div class="search-box">
                 <label for="mobile-search" class="sr-only">Search devices</label>

@@ -1,16 +1,16 @@
 :root {
-    --bg: #0b1220;
-    --bg-card: #0f1a2d;
-    --bg-muted: #0c1626;
-    --border: #1c2940;
+    --bg: linear-gradient(135deg, #0f1629 0%, #0a1c2f 50%, #0c1a2c 100%);
+    --bg-card: #101c30;
+    --bg-muted: #0d1626;
+    --border: rgba(255, 255, 255, 0.08);
     --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent: #3b82f6;
-    --accent-strong: #60a5fa;
-    --critical: #ef4444;
-    --warning: #f59e0b;
-    --success: #22c55e;
-    --shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+    --text-muted: #96a6c4;
+    --accent: #4f9cff;
+    --accent-strong: #7ab3ff;
+    --critical: #f87171;
+    --warning: #fbbf24;
+    --success: #34d399;
+    --shadow: 0 18px 40px rgba(5, 10, 25, 0.55);
     --radius: 16px;
     --radius-sm: 12px;
     --radius-xs: 10px;
@@ -37,11 +37,12 @@ body {
 
 .mobile-header {
     padding: 20px 16px 14px;
-    background: linear-gradient(135deg, #0d1c34 0%, #0a1021 100%);
+    background: linear-gradient(160deg, #0f1f36 0%, #0c1524 55%, #0f1f36 100%);
     position: sticky;
     top: 0;
     z-index: 10;
     box-shadow: var(--shadow);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .header-top {
@@ -58,14 +59,14 @@ body {
 }
 
 .brand-icon {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
-    background: rgba(59, 130, 246, 0.2);
+    background: linear-gradient(135deg, #4f9cff, #2563eb);
     display: grid;
     place-items: center;
-    color: var(--accent-strong);
-    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+    color: #0b1220;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 .brand-label {
@@ -88,7 +89,7 @@ body {
 
 .icon-btn {
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     color: var(--text);
     border-radius: 12px;
     padding: 10px;
@@ -144,9 +145,9 @@ body {
 .customer-switch {
     margin-top: 12px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius);
-    padding: 10px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -161,7 +162,7 @@ body {
 
 .switch-row {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 
 .switch-input {
@@ -191,6 +192,20 @@ body {
     background: rgba(255, 255, 255, 0.06);
     color: var(--text);
     padding: 10px;
+}
+
+.switch-status {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-height: 16px;
+}
+
+.switch-status[data-tone="warn"] {
+    color: var(--warning);
+}
+
+.switch-status[data-tone="success"] {
+    color: var(--success);
 }
 
 .search-input {
@@ -461,11 +476,12 @@ body {
     left: 0;
     right: 0;
     height: 64px;
-    background: rgba(10, 16, 33, 0.95);
+    background: rgba(9, 13, 25, 0.95);
     border-top: 1px solid var(--border);
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     z-index: 20;
+    backdrop-filter: blur(6px);
 }
 
 .nav-btn {
@@ -608,4 +624,6 @@ CHANGELOG
 - Added mobile-first stylesheet with sticky header, bottom navigation, quick cards, alerts/list layouts, and modal styling tailored for phones.
 2025-11-24 Codex
 - Styled customer switcher for mobile header to enable quick customer changes.
+2025-11-24 Codex
+- Refined mobile visual design (gradient header, stronger contrast, blur nav, clearer switch status) for a cleaner look.
 */

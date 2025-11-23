@@ -278,20 +278,35 @@ const MobileApp = (() => {
         }
     };
 
+    const setCustomerStatus = (message, tone = 'muted') => {
+        const el = document.getElementById('mobile-customer-status');
+        if (!el) return;
+        el.textContent = message || '';
+        el.dataset.tone = tone;
+    };
+
     const loadCustomers = async (searchTerm = '') => {
         const select = document.getElementById('mobile-customer-select');
         if (!select) {
             return;
         }
 
+        state.customerSearchTerm = searchTerm.trim();
         select.innerHTML = '<option>Loading...</option>';
-        const query = searchTerm && searchTerm.length >= 2 ? `?search=${encodeURIComponent(searchTerm)}` : '';
+
+        const params = new URLSearchParams();
+        if (config.dealerCode) {
+            params.append('dealerCode', config.dealerCode);
+        }
+
         try {
-            const data = await fetchJson('api/get-customers.php' + query);
+            const data = await fetchJson(`api/get-customers.php?${params.toString()}`);
             state.customers = Array.isArray(data.customers) ? data.customers : [];
             populateCustomerSelect();
+            setCustomerStatus(state.customers.length ? '' : 'No customers returned', state.customers.length ? 'muted' : 'warn');
         } catch (error) {
             select.innerHTML = `<option>Error loading customers</option>`;
+            setCustomerStatus(error.message || 'Unable to load customers', 'warn');
         }
     };
 
@@ -305,6 +320,7 @@ const MobileApp = (() => {
 
         const currentCode = (config.customerCode || '').trim();
         const currentName = (config.customerName || '').trim();
+        const filter = state.customerSearchTerm.toLowerCase();
         select.innerHTML = '';
 
         const placeholder = document.createElement('option');
@@ -314,7 +330,15 @@ const MobileApp = (() => {
         placeholder.selected = !currentCode;
         select.appendChild(placeholder);
 
-        state.customers.forEach(customer => {
+        const filtered = state.customers.filter(customer => {
+            if (!filter || filter.length < 2) return true;
+            return (
+                (customer.Description || '').toLowerCase().includes(filter) ||
+                (customer.Code || '').toLowerCase().includes(filter)
+            );
+        });
+
+        filtered.forEach(customer => {
             const option = document.createElement('option');
             option.value = customer.Code;
             option.textContent = customer.Description ? `${customer.Description} (${customer.Code})` : customer.Code;
@@ -432,10 +456,13 @@ const MobileApp = (() => {
                     clearTimeout(customerSelectTimeout);
                 }
                 customerSelectTimeout = setTimeout(() => {
-                    if (!term || term.length < 2) {
-                        loadCustomers();
-                    } else {
-                        loadCustomers(term);
+                    // API lacks server-side search; filter client-side on populate
+                    state.customerSearchTerm = term;
+                    populateCustomerSelect();
+                    if (term.length === 0 && state.customers.length === 0) {
+                        loadCustomers().catch(() => {});
+                    } else if (state.customers.length === 0) {
+                        loadCustomers().catch(() => {});
                     }
                 }, 250);
             });
@@ -548,4 +575,6 @@ CHANGELOG
 - Implemented mobile landing logic with alert polling, device search, section navigation, and device modal using existing APIs.
 2025-11-24 Codex
 - Added mobile customer switcher reusing get-customers preferences flow; persists selection and reloads alerts/search context.
+2025-11-24 Codex
+- Improved customer switcher robustness (dealer-aware fetch, client-side filtering, status messaging) and refined styling hooks.
 */
