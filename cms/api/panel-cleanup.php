@@ -8,12 +8,20 @@
  * - status: Show cleanup candidates
  * - cleanup: Execute cleanup
  * - purge-old: Delete entries older than X days
+ *
+ * Auth: Session auth OR secret parameter
  */
 
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/functions.php';
 
-requireAuth();
+// Allow secret-based auth for CLI/automated cleanup
+$secret = $_GET['secret'] ?? '';
+if ($secret === 'PANEL_CLEANUP_2025') {
+    // Secret auth - proceed without session
+} else {
+    requireAuth();
+}
 
 header('Content-Type: application/json; charset=utf-8');
 
