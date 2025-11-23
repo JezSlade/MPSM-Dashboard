@@ -98,8 +98,27 @@ function renderHeroNotifications(notifications) {
     const container = document.getElementById('hero-notifications');
     if (!container) return;
 
+    // Group notifications by device_serial + alert_code to show unique alerts
+    const grouped = new Map();
+    notifications.forEach(notif => {
+        const key = `${notif.device_serial || ''}|${notif.alert_code || ''}`;
+        const existing = grouped.get(key);
+        if (!existing || (notif.priority || 0) > (existing.priority || 0)) {
+            // Keep highest priority version, aggregate trigger counts
+            const aggregatedCount = existing
+                ? (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1)
+                : (notif.trigger_count || 1);
+            grouped.set(key, { ...notif, _aggregatedTriggers: aggregatedCount });
+        } else if (existing) {
+            // Add to existing trigger count
+            existing._aggregatedTriggers = (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1);
+        }
+    });
+
+    const uniqueNotifications = Array.from(grouped.values());
+
     // Only show top 6 priority notifications to keep header compact
-    const topNotifications = notifications
+    const topNotifications = uniqueNotifications
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
         .slice(0, 6);
 
@@ -136,8 +155,10 @@ function renderHeroNotifications(notifications) {
         if (device) {
             metaParts.push(`<span class="meta-pill"><i class="fas fa-hdd"></i> ${escapeHtmlHero(device)}</span>`);
         }
-        if (notif.trigger_count && notif.time_window_hours) {
-            metaParts.push(`<span class="meta-pill"><i class="fas fa-chart-line"></i> ${notif.trigger_count}x in ${notif.time_window_hours}h</span>`);
+        const triggerCount = notif._aggregatedTriggers || notif.trigger_count || 0;
+        if (triggerCount > 1) {
+            const windowText = notif.time_window_hours ? ` in ${notif.time_window_hours}h` : '';
+            metaParts.push(`<span class="meta-pill"><i class="fas fa-chart-line"></i> ${triggerCount}x${windowText}</span>`);
         }
         const metaHtml = metaParts.join('');
 
@@ -184,7 +205,7 @@ function renderHeroNotifications(notifications) {
     container.innerHTML = `
         <div class="hero-alert-toggle">
             <div class="hero-alert-heading">
-                <span class="hero-alert-label"><i class="fas fa-bell"></i> Maintenance Alerts</span>
+                <span class="hero-alert-label"><i class="fas fa-bell"></i> System Alerts</span>
                 <span class="hero-alert-count">${count ? `${count} active` : 'No active alerts'}</span>
             </div>
             <button class="hero-btn hero-toggle-btn" onclick="toggleHeroAlerts()">
@@ -308,5 +329,7 @@ CHANGELOG
 - Redesigned hero notifications into compact header chips using identifier/alert-friendly text and tighter layout.
 - Scoped alerts to the current customer with collapsible header placement and badge suppression.
 2025-11-23 Codex
-- Retitled header toggle to “Maintenance Alerts” for clarity.
+- Renamed header toggle to "System Alerts" to distinguish from dashboard Maintenance Alerts metric.
+- Group notifications by device+alert to show unique count (avoids "6 active" when there are 2 unique alerts triggered 3x each).
+- Show aggregated trigger count when > 1.
 */

@@ -2222,6 +2222,14 @@ const MPSM = (function() {
             debugLog(`Fetching installed devices page ${pageNumber}, pageRows=${pageRows}, allCustomers=${options.allCustomers ? 'true' : 'false'}`, 'info');
 
             const response = await fetch('api/get-devices.php?' + params.toString());
+
+            // Guard against HTML error pages
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Expected JSON but received ${contentType}: ${text.slice(0, 100)}`);
+            }
+
             const data = await response.json();
 
             if (!data.success) {
