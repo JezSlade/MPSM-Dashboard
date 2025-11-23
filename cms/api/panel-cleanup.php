@@ -357,7 +357,54 @@ try {
 
             try {
                 ensureCommandCenterTables($pdo);
-                processNotificationRules($pdo, (int)$latestMessage['id'], $messageData);
+
+                // Call individual functions directly to capture errors
+                $stepErrors = [];
+
+                // Step 1: updateAlertAggregation
+                try {
+                    updateAlertAggregation($pdo, $messageData, (int)$latestMessage['id']);
+                } catch (Throwable $e) {
+                    $stepErrors['updateAlertAggregation'] = $e->getMessage();
+                }
+
+                // Step 2: Get active rules
+                $rules = [];
+                try {
+                    $rules = getActiveNotificationRules($pdo);
+                } catch (Throwable $e) {
+                    $stepErrors['getActiveNotificationRules'] = $e->getMessage();
+                }
+
+                // Step 3: Process each rule
+                $ruleResults = [];
+                foreach ($rules as $rule) {
+                    $ruleTest = ['rule_id' => $rule['id'], 'name' => $rule['name']];
+                    try {
+                        $matches = ruleMatches($pdo, $rule, $messageData);
+                        $ruleTest['matches'] = $matches;
+                        if ($matches) {
+                            try {
+                                createDashboardNotification($pdo, $rule, $messageData, (int)$latestMessage['id']);
+                                $ruleTest['notification_created'] = true;
+                            } catch (Throwable $e) {
+                                $ruleTest['notification_error'] = $e->getMessage();
+                            }
+                            try {
+                                recordRuleMatch($pdo, $rule, $messageData, (int)$latestMessage['id']);
+                                $ruleTest['match_recorded'] = true;
+                            } catch (Throwable $e) {
+                                $ruleTest['record_error'] = $e->getMessage();
+                            }
+                        }
+                    } catch (Throwable $e) {
+                        $ruleTest['match_error'] = $e->getMessage();
+                    }
+                    $ruleResults[] = $ruleTest;
+                }
+
+                $results['step_errors'] = $stepErrors;
+                $results['rule_results'] = $ruleResults;
             } catch (Throwable $e) {
                 $testError = $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine();
             }
