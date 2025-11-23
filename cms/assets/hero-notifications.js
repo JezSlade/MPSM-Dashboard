@@ -19,10 +19,17 @@ const HERO_SEVERITY_CONFIG = {
 
 // Initialize on page load - defer to allow app.js to set window.currentCustomerCode first
 document.addEventListener('DOMContentLoaded', function () {
-    // Delay initial load to avoid race condition with app.js customer code initialization
-    // app.js sets window.currentCustomerCode and calls loadHeroNotifications() explicitly
-    // This DOMContentLoaded only starts the auto-refresh timer
+    // Start auto-refresh timer
     startHeroAutoRefresh();
+
+    // Fallback: if app.js hasn't called loadHeroNotifications() within 2 seconds, call it ourselves
+    // This ensures the toggle bar always renders even if there's a timing issue
+    setTimeout(function() {
+        const container = document.getElementById('hero-notifications');
+        if (container && !container.innerHTML.trim()) {
+            loadHeroNotifications();
+        }
+    }, 2000);
 });
 
 // Auto-refresh every 30 seconds
@@ -335,4 +342,5 @@ CHANGELOG
 - Show aggregated trigger count when > 1.
 - Fixed race condition: removed DOMContentLoaded auto-load, let app.js trigger loadHeroNotifications() after customer code is set.
 - Removed redundant client-side customer filter that was incorrectly filtering out notifications matched via server-side JOIN.
+- Added 2-second fallback to ensure toggle bar renders even if app.js initialization is delayed.
 */
