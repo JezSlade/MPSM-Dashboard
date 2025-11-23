@@ -331,6 +331,49 @@ try {
         $results['message'] = 'Alert system cleanup completed';
     }
 
+    // ==== Test Rule Processing ====
+    if ($action === 'test-rules') {
+        define('MPS_ENGINE_ACCESS', true);
+        require_once dirname(__DIR__, 2) . '/mps-api/callbacks/command-center-schema.php';
+        require_once dirname(__DIR__, 2) . '/mps-api/callbacks/command-center-engine.php';
+
+        // Get the most recent panel message
+        $latestMessage = $pdo->query("SELECT * FROM {$messagesTable} ORDER BY ny_received_at DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+
+        if ($latestMessage) {
+            $messageData = [
+                'device_serial' => $latestMessage['device_serial'],
+                'maintenance_alert_code' => $latestMessage['maintenance_alert_code'],
+                'customer_code' => $latestMessage['customer_code'],
+                'customer_description' => $latestMessage['customer_description'],
+                'panel_configuration' => $latestMessage['panel_configuration'],
+            ];
+
+            // Test rule processing with error capture
+            $testError = null;
+            try {
+                ensureCommandCenterTables($pdo);
+                processNotificationRules($pdo, (int)$latestMessage['id'], $messageData);
+            } catch (Throwable $e) {
+                $testError = $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine();
+            }
+
+            // Check what happened
+            $rulesTable = DB_PREFIX . 'notification_rules';
+            $activeRules = $pdo->query("SELECT * FROM {$rulesTable} WHERE enabled = 1")->fetchAll(PDO::FETCH_ASSOC);
+
+            $results['test'] = [
+                'message_used' => $latestMessage,
+                'message_data_sent' => $messageData,
+                'active_rules_count' => count($activeRules),
+                'error' => $testError,
+                'aggregations_after' => (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn()
+            ];
+        } else {
+            $results['test'] = ['error' => 'No panel messages found'];
+        }
+    }
+
     // Add usage instructions
     if ($action === 'status') {
         $results['usage'] = [
@@ -339,7 +382,8 @@ try {
             'cleanup_execute' => '?action=cleanup&dry_run=0 - Execute cleanup',
             'purge_old' => '?action=purge-old&days=30&dry_run=0 - Purge entries older than X days',
             'alert_audit' => '?action=alert-audit - Audit alert system rules and notifications',
-            'clean_alerts' => '?action=clean-alerts&dry_run=0 - Clean test/duplicate alert data'
+            'clean_alerts' => '?action=clean-alerts&dry_run=0 - Clean test/duplicate alert data',
+            'test_rules' => '?action=test-rules - Test rule processing with latest message'
         ];
     }
 
