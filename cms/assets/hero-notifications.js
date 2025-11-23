@@ -17,9 +17,11 @@ const HERO_SEVERITY_CONFIG = {
     info: { gradient: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)', icon: 'info-circle', label: 'Information' }
 };
 
-// Initialize on page load
+// Initialize on page load - defer to allow app.js to set window.currentCustomerCode first
 document.addEventListener('DOMContentLoaded', function () {
-    loadHeroNotifications();
+    // Delay initial load to avoid race condition with app.js customer code initialization
+    // app.js sets window.currentCustomerCode and calls loadHeroNotifications() explicitly
+    // This DOMContentLoaded only starts the auto-refresh timer
     startHeroAutoRefresh();
 });
 
@@ -332,4 +334,5 @@ CHANGELOG
 - Renamed header toggle to "System Alerts" to distinguish from dashboard Maintenance Alerts metric.
 - Group notifications by device+alert to show unique count (avoids "6 active" when there are 2 unique alerts triggered 3x each).
 - Show aggregated trigger count when > 1.
+- Fixed race condition: removed DOMContentLoaded auto-load, let app.js trigger loadHeroNotifications() after customer code is set.
 */

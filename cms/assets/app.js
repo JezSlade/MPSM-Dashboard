@@ -2048,6 +2048,14 @@ const MPSM = (function() {
     async function updateOfflineCountFromCache() {
         try {
             const response = await fetch('api/get-cached-devices.php');
+
+            // Guard against HTML error pages
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                debugLog(`Cached devices returned non-JSON (${contentType}), skipping`, 'warn');
+                return;
+            }
+
             const data = await response.json();
 
             if (data.success && Array.isArray(data.devices)) {
@@ -2322,6 +2330,19 @@ const MPSM = (function() {
                 });
 
                 const deletedResponse = await fetch('api/get-deleted-devices.php?' + deletedParams.toString());
+
+                // Guard against HTML error pages (404, 500, etc.)
+                if (!deletedResponse.ok) {
+                    debugLog(`Deleted devices endpoint returned ${deletedResponse.status}, skipping`, 'warn');
+                    break;
+                }
+
+                const deletedContentType = deletedResponse.headers.get('content-type') || '';
+                if (!deletedContentType.includes('application/json')) {
+                    debugLog(`Deleted devices returned non-JSON (${deletedContentType}), skipping`, 'warn');
+                    break;
+                }
+
                 const deletedData = await deletedResponse.json();
 
                 if (!deletedData.success || !deletedData.devices || deletedData.devices.length === 0) {

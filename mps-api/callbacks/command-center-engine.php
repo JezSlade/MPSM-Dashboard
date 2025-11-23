@@ -463,12 +463,16 @@ if (!function_exists('createDashboardNotification')) {
             ]);
         }
 
-        // Update rule trigger tracking
+        // Update rule trigger tracking (using prepared statement to prevent SQL injection)
         $ruleTable = DB_PREFIX . 'notification_rules';
-        $pdo->exec("UPDATE {$ruleTable}
-                    SET last_triggered_at = '{$nyTime}',
+        $ruleUpdateStmt = $pdo->prepare("UPDATE {$ruleTable}
+                    SET last_triggered_at = :ny_time,
                         trigger_count = trigger_count + 1
-                    WHERE id = {$rule['id']}");
+                    WHERE id = :rule_id");
+        $ruleUpdateStmt->execute([
+            ':ny_time' => $nyTime,
+            ':rule_id' => (int)$rule['id']
+        ]);
     }
 }
 
