@@ -48,7 +48,7 @@ const CardRegistry = (function () {
                     },
                     metrics: [
                         { label: 'Connectors', value: totalsSource.TotalConnectors ?? 0 },
-                        { label: 'Alerts', value: Number(toManage?.Value ?? 0) },
+                        { label: 'Maintenance Alerts', value: Number(toManage?.Value ?? 0) },
                         { label: 'Enabled', value: totalsSource.EnabledDevicesByContract ?? 0 }
                     ],
                     context: {
@@ -533,25 +533,30 @@ const CardRegistry = (function () {
             load: async (helpers, context) => {
                 let devices = [];
 
-                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
-                    const result = await window.MPSM.fetchAllDevices({
-                        customerCode: context.customerCode,
-                        dealerCode: context.dealerCode,
-                        dealerId: context.dealerId,
-                        sortColumn: 'AssetNumber',
-                        sortOrder: 'Asc'
-                    });
-                    devices = Array.isArray(result.devices) ? result.devices : [];
-                } else {
-                    const data = await helpers.fetchJson('api/get-devices.php', {
-                        customerCode: context.customerCode,
-                        dealerCode: context.dealerCode,
-                        dealerId: context.dealerId,
-                        pageRows: 200,
-                        sortColumn: 'AssetNumber',
-                        sortOrder: 'Asc'
-                    });
-                    devices = Array.isArray(data.devices) ? data.devices : [];
+                try {
+                    if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
+                        const result = await window.MPSM.fetchAllDevices({
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            dealerId: context.dealerId,
+                            sortColumn: 'AssetNumber',
+                            sortOrder: 'Asc'
+                        });
+                        devices = Array.isArray(result.devices) ? result.devices : [];
+                    } else {
+                        const data = await helpers.fetchJson('api/get-devices.php', {
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            dealerId: context.dealerId,
+                            pageRows: 200,
+                            sortColumn: 'AssetNumber',
+                            sortOrder: 'Asc'
+                        });
+                        devices = Array.isArray(data.devices) ? data.devices : [];
+                    }
+                } catch (error) {
+                    console.error('Top Devices card failed to load devices:', error);
+                    devices = [];
                 }
 
                 const enriched = devices.map(device => {
@@ -1319,5 +1324,8 @@ function renderTonerBadge(color, value) {
     `;
 }
 
-
-
+/*
+CHANGELOG
+2025-11-23 Codex
+- Renamed Alerts metric to Maintenance Alerts and hardened Top Devices card loading to tolerate non-JSON responses without crashing.
+*/

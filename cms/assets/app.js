@@ -1943,7 +1943,7 @@ const MPSM = (function() {
                     <div class="metric-card clickable status-warning" onclick="MPSM.expandAlerts()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
                         <div class="metric-value" id="alerts-count">0</div>
-                        <div class="metric-label">Alerts</div>
+                        <div class="metric-label">Maintenance Alerts</div>
                     </div>
                     <div class="metric-card clickable" onclick="MPSM.expandConnectors()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-link"></i></div>
@@ -4115,4 +4115,6 @@ CHANGELOG
 - Deferred the heavy card refresh and offline count fetch in `loadDashboard()` so the header renders immediately and the page stays interactive instead of freezing behind the modal overlay.
 2025-11-22 Codex
 - Moved hero notifications into the customer banner context and refresh them after the banner loads to align alerts with the selected customer.
+2025-11-23 Codex
+- Renamed the Alerts metric card to Maintenance Alerts to reduce perceived severity.
 */

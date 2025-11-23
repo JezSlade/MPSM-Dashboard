@@ -873,3 +873,8 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?a
   - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/panel-cleanup.php?action=purge-old&days=7&dry_run=0&secret=PANEL_CLEANUP_2025"`  
   - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/panel-cleanup.php?action=cleanup&dry_run=0&secret=PANEL_CLEANUP_2025"`
 - **Result:** Deleted `debug_old_entries=12204`, `messages_old_entries=1119`; no test data or probe errors remained. Post-cleanup stats: `panel_callback_debug` total 6,295 (errors 28, success 6,267; range 2025-11-16 to 2025-11-22), `panel_messages` total 9,204 (range 2025-11-09 to 2025-11-22).
+
+## 2025-11-23 - Dashboard UX & Alert Dedup
+
+- **Action:** Updated hero alerts to be customer-scoped, collapsible in the banner, and retitled to “Maintenance Alerts”. Renamed the Alerts metric card to “Maintenance Alerts”. Hardened Top Devices card JSON handling and added deduplication for dashboard notifications (rule/device/alert) to prevent repeat triggers.
+- **Verification:** Manual reload required; no automated tests run in this environment. Pending live UI smoke to confirm alerts populate for the active customer and Top Devices card renders without parse errors.

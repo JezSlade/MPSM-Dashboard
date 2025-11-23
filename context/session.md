@@ -344,8 +344,24 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 - The helper endpoint (`run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`) now runs the CLI command directly; the 11:09 UTC execution completed all 34 pages with `devices_cached: 3345`, no errors, saved `%version` 2025-11-19a, and sets `continue: false`. Use that response + `/home/resolut7/logs/refresh-cache-chunked.log` to confirm future runs without waiting for email.
 - Drill-down note: After stage 1 finishes, every device that isn’t explicitly `uninstalled` is now queued for drill-downs, which means state 2 will populate `drilldowns_cached` once enough devices finish processing; check `/home/resolut7/logs/refresh-cache-chunked.log` for the next chunk outputs to verify the queue was not empty and stage 2 executed.
 
+### 2025-11-23 - Hero Alerts UX and Scoping
+- Moved hero notifications into the customer banner as a collapsible “Alerts” control; chips render inline only when toggled open.
+- Suppressed the legacy red badge and capped display to top-priority alerts to reduce header clutter.
+- Scoped alerts to the current customer using `customerCode` filter plus backfill join on related panel message when notifications lack customer_code.
+- Trimmed/lowered customer matching to avoid whitespace/casing misses.
+
+### 2025-11-23 - Maintenance Alerts UX + Dedup
+- Renamed the dashboard alerts metric to “Maintenance Alerts” to reduce perceived severity.
+- Retitled the hero toggle to “Maintenance Alerts” and kept the collapsed-in-banner behavior.
+- Added deduplication for dashboard notifications to prevent repeat triggers for the same rule/device/alert.
+- Hardened Top Devices card JSON handling to avoid crashes on malformed responses.
+
 /*
 CHANGELOG
 2025-11-19 Codex
 - Logged the release of `REFRESH_CACHE_CHUNKED_VERSION`, described the remaining OAuth timeout and retry work, and updated the session metadata date.
+2025-11-23 Codex
+- Added customer-scoped, collapsible hero alerts, hid the badge, and backfilled customer matching via related panel messages.
+2025-11-23 Codex
+- Documented Maintenance Alerts renaming, notification deduplication, and Top Devices hardening.
 */

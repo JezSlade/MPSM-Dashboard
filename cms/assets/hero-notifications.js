@@ -184,7 +184,7 @@ function renderHeroNotifications(notifications) {
     container.innerHTML = `
         <div class="hero-alert-toggle">
             <div class="hero-alert-heading">
-                <span class="hero-alert-label"><i class="fas fa-bell"></i> Alerts</span>
+                <span class="hero-alert-label"><i class="fas fa-bell"></i> Maintenance Alerts</span>
                 <span class="hero-alert-count">${count ? `${count} active` : 'No active alerts'}</span>
             </div>
             <button class="hero-btn hero-toggle-btn" onclick="toggleHeroAlerts()">
@@ -307,4 +307,6 @@ CHANGELOG
 2025-11-22 Codex
 - Redesigned hero notifications into compact header chips using identifier/alert-friendly text and tighter layout.
 - Scoped alerts to the current customer with collapsible header placement and badge suppression.
+2025-11-23 Codex
+- Retitled header toggle to “Maintenance Alerts” for clarity.
 */

@@ -56,6 +56,12 @@ if (!function_exists('processNotificationRules')) {
     }
 }
 
+/*
+CHANGELOG
+2025-11-23 Codex
+- Added deduplication for dashboard notifications to prevent repeat triggers from creating multiple active rows for the same rule/device/alert.
+*/
+
 if (!function_exists('updateAlertAggregation')) {
     /**
      * Update or create alert aggregation for frequency tracking
@@ -383,33 +389,79 @@ if (!function_exists('createDashboardNotification')) {
         $priorityMap = ['critical' => 100, 'high' => 75, 'warning' => 50, 'info' => 25];
         $priority = $priorityMap[$rule['severity']] ?? 0;
 
-        // Insert notification
         $table = DB_PREFIX . 'dashboard_notifications';
-        $sql = "INSERT INTO {$table}
-                (title, message, severity, rule_id, device_serial, alert_code, customer_code,
-                 trigger_count, time_window_hours, related_message_ids, created_at_ny,
-                 expires_at_ny, icon, color, priority, status)
-                VALUES (:title, :message, :severity, :rule_id, :device, :alert, :customer,
-                        :count, :window, :message_ids, :created_at, :expires_at, :icon, :color, :priority, 'active')";
 
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':title' => substr($title, 0, 255),
-            ':message' => $message,
-            ':severity' => $rule['severity'],
+        // Deduplicate: if an active notification already exists for this rule/device/alert, update it instead of inserting
+        $existingStmt = $pdo->prepare("
+            SELECT id, trigger_count, related_message_ids
+            FROM {$table}
+            WHERE status = 'active'
+              AND rule_id = :rule_id
+              AND device_serial = :device
+              AND alert_code = :alert
+            LIMIT 1
+        ");
+        $existingStmt->execute([
             ':rule_id' => $rule['id'],
             ':device' => $deviceSerial,
-            ':alert' => $alertCode,
-            ':customer' => $customerCode,
-            ':count' => $frequencyCount,
-            ':window' => $timeWindow,
-            ':message_ids' => (string)$messageId,
-            ':created_at' => $nyTime,
-            ':expires_at' => $expiresAt,
-            ':icon' => $icon,
-            ':color' => $color,
-            ':priority' => $priority
+            ':alert' => $alertCode
         ]);
+        $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $existingIds = array_filter(array_map('trim', explode(',', (string)$existing['related_message_ids'])));
+            $existingIds[] = (string)$messageId;
+            $newIds = implode(',', array_slice(array_unique($existingIds), 0, 50)); // cap length defensively
+
+            $update = $pdo->prepare("
+                UPDATE {$table}
+                   SET title = :title,
+                       message = :message,
+                       trigger_count = :count,
+                       time_window_hours = :window,
+                       related_message_ids = :message_ids,
+                       expires_at_ny = :expires_at,
+                       priority = :priority,
+                       created_at_ny = created_at_ny
+                 WHERE id = :id
+            ");
+            $update->execute([
+                ':title' => substr($title, 0, 255),
+                ':message' => $message,
+                ':count' => max((int)$existing['trigger_count'] + 1, $frequencyCount),
+                ':window' => $timeWindow,
+                ':message_ids' => $newIds,
+                ':expires_at' => $expiresAt,
+                ':priority' => $priority,
+                ':id' => $existing['id']
+            ]);
+        } else {
+            $sql = "INSERT INTO {$table}
+                    (title, message, severity, rule_id, device_serial, alert_code, customer_code,
+                     trigger_count, time_window_hours, related_message_ids, created_at_ny,
+                     expires_at_ny, icon, color, priority, status)
+                    VALUES (:title, :message, :severity, :rule_id, :device, :alert, :customer,
+                            :count, :window, :message_ids, :created_at, :expires_at, :icon, :color, :priority, 'active')";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':title' => substr($title, 0, 255),
+                ':message' => $message,
+                ':severity' => $rule['severity'],
+                ':rule_id' => $rule['id'],
+                ':device' => $deviceSerial,
+                ':alert' => $alertCode,
+                ':customer' => $customerCode,
+                ':count' => $frequencyCount,
+                ':window' => $timeWindow,
+                ':message_ids' => (string)$messageId,
+                ':created_at' => $nyTime,
+                ':expires_at' => $expiresAt,
+                ':icon' => $icon,
+                ':color' => $color,
+                ':priority' => $priority
+            ]);
+        }
 
         // Update rule trigger tracking
         $ruleTable = DB_PREFIX . 'notification_rules';
