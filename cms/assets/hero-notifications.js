@@ -162,26 +162,18 @@ function renderHeroNotifications(notifications) {
             || notif.alert_code
             || config.label
             || 'System Alert';
-        const device = notif.equipment_id || notif.device_identifier || notif.device_serial || '';
-        const customer = notif.customer_description || notif.customer_code || '';
+        const equipmentId = notif.equipment_id || notif.device_identifier || notif.device_serial || '';
         const model = notif.model || '';
         const department = notif.department || notif.device_location || notif.device_department || '';
-        const alertCode = notif.alert_code || '';
-        const secondary = customer || model || device || 'Alert';
+
+        // Build subtitle with Equipment ID, Model, and Department
+        const subtitleParts = [];
+        if (equipmentId) subtitleParts.push(equipmentId);
+        if (model) subtitleParts.push(model);
+        if (department) subtitleParts.push(department);
+        const subtitle = subtitleParts.join(' • ') || 'Device Alert';
 
         const metaParts = [];
-        if (alertCode) {
-            metaParts.push(`<span class="meta-pill"><i class="fas fa-bell"></i> ${escapeHtmlHero(alertCode)}</span>`);
-        }
-        if (device) {
-            metaParts.push(`<span class="meta-pill"><i class="fas fa-barcode"></i> ${escapeHtmlHero(device)}</span>`);
-        }
-        if (model) {
-            metaParts.push(`<span class="meta-pill"><i class="fas fa-desktop"></i> ${escapeHtmlHero(model)}</span>`);
-        }
-        if (department) {
-            metaParts.push(`<span class="meta-pill"><i class="fas fa-map-marker-alt"></i> ${escapeHtmlHero(department)}</span>`);
-        }
         const triggerCount = notif._aggregatedTriggers || notif.trigger_count || 0;
         if (triggerCount > 1) {
             const windowText = notif.time_window_hours ? ` in ${notif.time_window_hours}h` : '';
@@ -201,8 +193,8 @@ function renderHeroNotifications(notifications) {
                         <div class="hero-chip-title" title="${escapeHtmlHero(displayName)}">
                             ${escapeHtmlHero(displayName)}
                         </div>
-                        <div class="hero-chip-subtitle" title="${escapeHtmlHero(secondary)}">
-                            ${escapeHtmlHero(secondary)}
+                        <div class="hero-chip-subtitle" title="${escapeHtmlHero(subtitle)}">
+                            ${escapeHtmlHero(subtitle)}
                         </div>
                         ${metaHtml ? `<div class="hero-chip-meta">${metaHtml}</div>` : ''}
                     </div>

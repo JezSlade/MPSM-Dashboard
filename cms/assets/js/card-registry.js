@@ -211,28 +211,23 @@ const CardRegistry = (function () {
                 const suppliesDelivery = Array.isArray(totalsSource.SuppliesDelivery) ? totalsSource.SuppliesDelivery : [];
 
                 const toManage = supplyAlerts.find(item => (item.Key || '').toLowerCase() === 'tomanage');
-                let duplicateIpGroups = [];
 
-                console.log('[DupIP] Checking for fetchAllDevices function:', typeof window.MPSM?.fetchAllDevices);
+                // Extract duplicate IPs from warnings (more reliable than device fetch)
+                const duplicateIps = warnings
+                    .filter(w => w.Key === 'IP_Duplicated')
+                    .map(w => w.Value)
+                    .filter(Boolean);
 
-                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
-                    try {
-                        console.log('[DupIP] Calling fetchAllDevices for customer:', context.customerCode);
-                        const result = await window.MPSM.fetchAllDevices({
-                            customerCode: context.customerCode,
-                            dealerCode: context.dealerCode,
-                            dealerId: context.dealerId,
-                            includeUninstalled: true,
-                            pageRows: 1000
-                        });
-                        console.log('[DupIP] fetchAllDevices returned:', result?.devices?.length, 'devices');
-                        duplicateIpGroups = buildDuplicateIpGroups(result?.devices || []);
-                    } catch (error) {
-                        console.error('[DupIP] Duplicate IP fetch failed', error);
-                    }
-                } else {
-                    console.warn('[DupIP] fetchAllDevices not available on window.MPSM');
-                }
+                console.log('[DupIP] Found', duplicateIps.length, 'duplicate IPs from warnings');
+
+                // Build simple groups from duplicate IPs
+                const duplicateIpGroups = duplicateIps.map(ip => ({
+                    ip,
+                    devices: [], // Device details not available from warnings
+                    deviceCount: 2, // Minimum for a duplicate
+                    hasOffline: false,
+                    modelCount: 0
+                }));
 
                 return {
                     headline: {
@@ -473,9 +468,8 @@ const CardRegistry = (function () {
                     duplicateGrid.querySelectorAll('.dup-ip-card').forEach(card => {
                         card.addEventListener('click', () => {
                             const ip = card.getAttribute('data-ip') || '';
-                            const match = duplicateIpGroups.find(group => group.ip === ip);
-                            if (match) {
-                                renderDuplicateComparison(match);
+                            if (ip) {
+                                openLifecycle(ip);
                             }
                         });
                     });
@@ -563,24 +557,18 @@ const CardRegistry = (function () {
                                         <div class="dup-ip-card" data-ip="${helpers.escape(group.ip)}">
                                             <header>
                                                 <div>
-                                                    <p class="dup-ip-label">IP Address</p>
+                                                    <p class="dup-ip-label">Duplicate IP Address</p>
                                                     <h4>${helpers.escape(group.ip)}</h4>
                                                 </div>
-                                                <span class="dup-ip-badge">${helpers.formatNumber(group.devices.length)} devices</span>
+                                                <span class="dup-ip-badge dup-ip-badge-warning"><i class="fas fa-exclamation-triangle"></i> Duplicate</span>
                                             </header>
-                                            <div class="dup-ip-meta">
-                                                <span class="dup-ip-pill">${helpers.formatNumber(group.modelCount)} models</span>
-                                                ${group.hasOffline
-                                                    ? '<span class="dup-ip-pill pill-danger">Offline present</span>'
-                                                    : '<span class="dup-ip-pill pill-success">All online</span>'}
-                                            </div>
-                                            <div class="dup-ip-hint">Click to compare devices</div>
+                                            <div class="dup-ip-hint">Click IP to search in Device Lifecycle</div>
                                         </div>
                                     `).join('')
-                                    : '<div class="empty-state-inline">No duplicate IPs detected for this customer. Check browser console for [DupIP] logs.</div>'
+                                    : '<div class="empty-state-inline">No duplicate IPs detected for this customer.</div>'
                                 }
                             </div>
-                            <p class="section-help">Click a card to compare devices sharing the same IP.</p>
+                            <p class="section-help">Click a card to search for devices with that IP in Device Lifecycle.</p>
                         </section>
 
                         <section class="customer-overview-section">
