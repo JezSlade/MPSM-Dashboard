@@ -65,6 +65,8 @@
                 ${row.maintenance_alert_code ? `<div style="font-size: 0.85em; color: #64748b;">Code: ${escapeHtml(row.maintenance_alert_code)}</div>` : ''}
             `;
 
+            const department = row.department ? `<div style="color:#334155;">Dept: ${escapeHtml(row.department)}</div>` : '';
+
             const received = row.received_at ? new Date(row.received_at).toLocaleString() : '–';
 
             return `
@@ -72,7 +74,7 @@
                     <td>${received}</td>
                     <td>${customer || '–'}</td>
                     <td>${escapeHtml(row.device_serial || '–')}</td>
-                    <td>${alert || '–'}</td>
+                    <td>${alert || '–'}${department}</td>
                     <td>${escapeHtml(row.panel_configuration || '–')}</td>
                     <td>
                         <button class="btn btn-secondary btn-small" data-action="view-payload">

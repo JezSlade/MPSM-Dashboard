@@ -3461,6 +3461,17 @@ const MPSM = (function() {
 
             const equipmentId = getEquipmentIdFromDevice(device);
             const detailContainerId = 'device-endpoint-sections';
+            const resolveDepartment = (entity) => {
+                if (!entity || typeof entity !== 'object') return 'N/A';
+                return entity.Department
+                    ?? entity.department
+                    ?? entity.OfficeDescription
+                    ?? entity.Note
+                    ?? entity.Location
+                    ?? entity.CustomerLocation
+                    ?? 'N/A';
+            };
+            const department = resolveDepartment(device);
 
             const resolveTonerValueForDevice = (keys) => {
                 if (typeof resolveTonerValue === 'function') {
@@ -3528,6 +3539,7 @@ const MPSM = (function() {
                     : messages.slice(0, 12).map(msg => {
                         const received = formatDateTime(msg.received_at, { dateStyle: 'short', timeStyle: 'short' }) || 'Unknown time';
                         const code = msg.display_name || msg.panel_configuration || msg.maintenance_alert_code || msg.id || 'Alert';
+                        const dept = msg.department || resolveDepartment(device);
                         const summary = summarizePanelMessage(msg);
                         return `
                             <div class="snapshot-item" style="grid-column: 1 / -1;">
@@ -3535,6 +3547,7 @@ const MPSM = (function() {
                                 <div class="snapshot-value">
                                     <span class="status-badge status-warning">${escapeHtml(String(code))}</span>
                                     <span class="muted" style="margin-left:8px;">${escapeHtml(String(summary))}</span>
+                                    ${dept ? `<div class="muted" style="margin-top:4px;">Dept: ${escapeHtml(dept)}</div>` : ''}
                                 </div>
                             </div>
                         `;
@@ -3573,6 +3586,10 @@ const MPSM = (function() {
                     <div class="snapshot-item">
                         <div class="snapshot-label">Location</div>
                         <div class="snapshot-value">${device.Note || device.OfficeDescription || 'N/A'}</div>
+                    </div>
+                    <div class="snapshot-item">
+                        <div class="snapshot-label">Department</div>
+                        <div class="snapshot-value">${escapeHtml(department)}</div>
                     </div>
                     <div class="snapshot-item">
                         <div class="snapshot-label">Status</div>
@@ -3721,6 +3738,7 @@ const MPSM = (function() {
         return [
             { id: 'EquipmentId', label: 'Equipment ID', accessor: row => getEquipmentIdFromDevice(row), sortable: true },
             { id: 'AssetNumber', label: 'Asset #', accessor: row => row.AssetNumber || '', hidden: true },
+            { id: 'Department', label: 'Department', accessor: row => row.Department || row.department || row.OfficeDescription || row.Note || 'N/A', sortable: true },
             {
                 id: 'ProductModel',
                 label: 'Model',
@@ -4104,6 +4122,7 @@ const MPSM = (function() {
                         const equipmentId = escapeHtml(getEquipmentIdFromDevice(device));
                         const model = escapeHtml(device.ProductModel || device.Product?.Model || 'Unknown Model');
                         const customer = escapeHtml(device.CustomerDescription || 'Unknown Customer');
+                        const department = escapeHtml(device.Department || device.department || device.OfficeDescription || device.Note || '');
                         const serial = device.SerialNumber || device.DeviceSerialNumber || '';
                         const deviceId = device.Id || device.IdInstalledProduct || device.DeviceId;
                         const customerCode = device.CustomerCode || '';
@@ -4120,7 +4139,7 @@ const MPSM = (function() {
                                     ${isUninstalled ? '<span class="badge badge-warning" style="margin-left: 8px; font-size: 0.75rem;">UNINSTALLED</span>' : ''}
                                 </div>
                                 <div class="search-result-sub">
-                                    ${customer}${serial ? ' • SN: ' + escapeHtml(serial) : ''}
+                                    ${customer}${department ? ' • Dept: ' + department : ''}${serial ? ' • SN: ' + escapeHtml(serial) : ''}
                                 </div>
                             </div>
                         `;

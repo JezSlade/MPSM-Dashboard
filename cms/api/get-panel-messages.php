@@ -35,8 +35,25 @@ try {
     }
 
     $table = DB_PREFIX . 'panel_messages';
-    $sql = "SELECT id, received_at, customer_code, customer_description, device_serial, maintenance_alert_code, maintenance_alert_id, panel_configuration, processed, payload
-            FROM {$table}";
+    $devicesTable = DB_PREFIX . 'cache_devices';
+    $sql = "SELECT pm.id,
+                   pm.received_at,
+                   pm.customer_code,
+                   pm.customer_description,
+                   pm.device_serial,
+                   pm.maintenance_alert_code,
+                   pm.maintenance_alert_id,
+                   pm.panel_configuration,
+                   pm.processed,
+                   pm.payload,
+                   COALESCE(
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Department')),
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.department')),
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.OfficeDescription')),
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Note'))
+                   ) AS department
+            FROM {$table} pm
+            LEFT JOIN {$devicesTable} cd ON cd.serial_number = pm.device_serial";
 
     $params = [];
     if ($hours !== null) {
@@ -62,11 +79,17 @@ try {
     foreach ($rows as $row) {
         $decodedPayload = json_decode($row['payload'], true);
         $payloadDescription = null;
+        $payloadDepartment = null;
         if (is_array($decodedPayload)) {
             $payloadDescription = $decodedPayload['maintenanceAlert']['description']
                 ?? $decodedPayload['MaintenanceAlert_Description']
                 ?? $decodedPayload['alert_description']
                 ?? $decodedPayload['description']
+                ?? null;
+            $payloadDepartment = $decodedPayload['Department']
+                ?? $decodedPayload['department']
+                ?? $decodedPayload['OfficeDescription']
+                ?? $decodedPayload['Note']
                 ?? null;
         }
         $code = $row['maintenance_alert_code'] ?? '';
@@ -91,6 +114,7 @@ try {
             'maintenance_alert_id' => $row['maintenance_alert_id'],
             'panel_configuration' => $row['panel_configuration'],
             'processed' => (bool)$row['processed'],
+            'department' => $row['department'] ?? $payloadDepartment,
             'display_name' => $displayName,
             'payload' => $decodedPayload ?? $row['payload'],
         ];
@@ -100,3 +124,9 @@ try {
 } catch (Exception $e) {
     jsonError($e->getMessage());
 }
+
+/*
+CHANGELOG
+2025-11-28 Codex
+- Added department (physical location) to panel message responses via cache join/payload fallback and ensured human-readable alert display names take precedence over raw codes.
+*/
