@@ -108,27 +108,26 @@ function renderHeroNotifications(notifications) {
     const container = document.getElementById('hero-notifications');
     if (!container) return;
 
-    // Group notifications by device_serial + alert_code to show unique alerts
+    // Group notifications by device_serial + alert_code to show unique alerts, but if grouping collapses to zero (missing codes) fall back to the original list
     const grouped = new Map();
     notifications.forEach(notif => {
-        const key = `${notif.device_serial || ''}|${notif.alert_code || ''}`;
+        const key = `${notif.device_serial || ''}|${notif.alert_code || ''}|${notif.alert_display_name || ''}`;
         const existing = grouped.get(key);
         if (!existing || (notif.priority || 0) > (existing.priority || 0)) {
-            // Keep highest priority version, aggregate trigger counts
             const aggregatedCount = existing
                 ? (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1)
                 : (notif.trigger_count || 1);
             grouped.set(key, { ...notif, _aggregatedTriggers: aggregatedCount });
         } else if (existing) {
-            // Add to existing trigger count
             existing._aggregatedTriggers = (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1);
         }
     });
 
-    const uniqueNotifications = Array.from(grouped.values());
+    const groupedList = Array.from(grouped.values());
+    const sourceList = groupedList.length ? groupedList : notifications;
 
     // Only show top 6 priority notifications to keep header compact
-    const topNotifications = uniqueNotifications
+    const topNotifications = sourceList
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
         .slice(0, 6);
 

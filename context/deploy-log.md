@@ -62,6 +62,11 @@
 - **Result:** Success (hardened cache-first search fallback, enriched notifications with department/model/equipment_id, and updated hero cards to show human-readable alert names and device metadata).
 - **Notes:** System Alerts cards now render display_name, model, department, and equipment barcode; search gracefully degrades if API is unreachable.
 
+## 2025-11-28 19:55 UTC
+- **Command:** `curl -T cms/assets/hero-notifications.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
+- **Result:** Success (restored alerts rendering by falling back to the raw notification list when grouping yields zero, while keeping display name/device/department metadata).
+- **Notes:** System Alerts should now appear even if alert_code/device_serial are missing in the feed.
+
 /*
 CHANGELOG
 2025-11-18 Codex
