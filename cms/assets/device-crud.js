@@ -30,11 +30,14 @@
 
     const updateModal = document.getElementById('device-update-modal');
     const updateForm = document.getElementById('device-update-form');
-    const updateLabel = document.getElementById('update-device-label');
+    const updateDeviceLabel = document.getElementById('update-device-label');
+    const updateDeviceSerial = document.getElementById('update-device-serial');
+    const updateDeviceCurrent = document.getElementById('update-device-current');
     const updateDeviceId = document.getElementById('update-device-id');
     const updateManaged = document.getElementById('update-managed');
     const updateAlerts = document.getElementById('update-alerts');
     const updateRepeatAlerts = document.getElementById('update-repeat-alerts');
+    const createManaged = document.getElementById('create-managed');
 
     const state = {
         page: 1,
@@ -295,6 +298,10 @@
         const formData = new FormData(createForm);
         const payload = Object.fromEntries(formData.entries());
 
+        if (createManaged) {
+            payload.isManaged = createManaged.checked;
+        }
+
         try {
             const response = await fetch(endpoints.create, {
                 method: 'POST',
@@ -324,11 +331,26 @@
         }
 
         const deviceId = resolveDeviceId(device);
-        updateDeviceId.value = deviceId;
-        updateLabel.value = `${device.SerialNumber || device.Serial || 'Device'} • ${deviceId}`;
+        const serial = device.SerialNumber || device.Serial || '-';
+        const brand = device.ProductBrand || device.Brand || '-';
+        const model = device.ProductModel || device.Model || '-';
 
-        document.getElementById('update-brand').value = device.ProductBrand || device.Brand || '';
-        document.getElementById('update-model').value = device.ProductModel || device.Model || '';
+        updateDeviceId.value = deviceId;
+
+        if (updateDeviceSerial) {
+            updateDeviceSerial.textContent = serial;
+        }
+        if (updateDeviceLabel) {
+            updateDeviceLabel.textContent = deviceId;
+        }
+        if (updateDeviceCurrent) {
+            updateDeviceCurrent.textContent = `${brand} / ${model}`;
+        }
+
+        document.getElementById('update-brand').value = '';
+        document.getElementById('update-model').value = '';
+        document.getElementById('update-standard-model-id').value = device.StandardModelId || '';
+        document.getElementById('update-standard-model-clean').value = device.StandardModelClean || '';
         document.getElementById('update-project').value = device.ProjectId || '';
         document.getElementById('update-office').value = device.OfficeId || '';
 
