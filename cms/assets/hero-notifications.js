@@ -62,6 +62,7 @@ async function loadHeroNotifications() {
 
         if (!data.success) {
             console.error('Failed to load notifications:', data.error);
+            renderHeroNotifications([]);
             return;
         }
 
@@ -82,6 +83,7 @@ async function loadHeroNotifications() {
 
     } catch (error) {
         console.error('Error loading hero notifications:', error);
+        renderHeroNotifications([]);
     }
 }
 
@@ -147,8 +149,8 @@ function renderHeroNotifications(notifications) {
 
     const chipsHtml = topNotifications.map(notif => {
         const config = HERO_SEVERITY_CONFIG[notif.severity] || HERO_SEVERITY_CONFIG.info;
-        const displayName = notif.display_name || notif.title || config.label || 'System Alert';
-        const device = notif.device_identifier || notif.device_serial || '';
+        const displayName = notif.alert_display_name || notif.display_name || notif.title || config.label || 'System Alert';
+        const device = notif.equipment_id || notif.device_identifier || notif.device_serial || '';
         const customer = notif.customer_description || notif.customer_code || '';
         const model = notif.model || '';
         const department = notif.department || notif.device_location || notif.device_department || '';
