@@ -54,6 +54,37 @@ const MPSM = (function() {
 
     const CARD_LAYOUT_STORAGE_KEY = 'mpsm-dashboard-card-order';
 
+    // Offline threshold: devices not reporting for 7+ days are considered offline
+    const OFFLINE_THRESHOLD_DAYS = 7;
+
+    /**
+     * Determine if a device is offline based on IsOffline flag OR LastUpdate date
+     * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
+     */
+    function isDeviceOffline(device) {
+        // If API explicitly marks as offline, trust it
+        if (device.IsOffline === true) {
+            return true;
+        }
+
+        // Compute from LastUpdate if IsOffline is not set or false
+        const lastUpdate = device.LastUpdate || device.LastCounterDate || device.LastMeterDate;
+        if (!lastUpdate) {
+            // No last update info - can't determine, assume online
+            return false;
+        }
+
+        try {
+            const lastDate = new Date(lastUpdate);
+            const now = new Date();
+            const daysSinceUpdate = (now - lastDate) / (1000 * 60 * 60 * 24);
+
+            return daysSinceUpdate >= OFFLINE_THRESHOLD_DAYS;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function getAvailableCardIds() {
         if (typeof CardRegistry !== 'undefined' && typeof CardRegistry.getAll === 'function') {
             return CardRegistry.getAll().map(card => card.id);
@@ -984,7 +1015,7 @@ const MPSM = (function() {
             const metricOffline = snapshot.metrics?.find(metric => metric.label === 'Offline');
             const offlineFromMetric = Number(metricOffline?.value ?? 0);
             const offlineFromState = Array.isArray(state.devices)
-                ? state.devices.filter(device => device.IsOffline).length
+                ? state.devices.filter(device => isDeviceOffline(device)).length
                 : 0;
             const fallbackOffline = Number(state.offlineDevices ?? 0);
             const offlineCount = Math.max(offlineFromMetric, offlineFromState, fallbackOffline);
@@ -2065,7 +2096,7 @@ const MPSM = (function() {
                     device.Customer?.Code === state.customerCode
                 );
 
-                const offlineCount = customerDevices.filter(device => device.IsOffline).length;
+                const offlineCount = customerDevices.filter(device => isDeviceOffline(device)).length;
 
                 state.offlineDevices = offlineCount;
                 updateMetricValue('offline-count', offlineCount);
@@ -2134,7 +2165,7 @@ const MPSM = (function() {
             updateMetricValue('device-count', totalDevices);
             updateMetricValue('banner-device-total', totalDevices);
 
-            const offlineCount = state.devices.filter(device => device.IsOffline).length;
+            const offlineCount = state.devices.filter(device => isDeviceOffline(device)).length;
             state.offlineDevices = offlineCount;
             updateMetricValue('offline-count', offlineCount);
 
@@ -3492,8 +3523,8 @@ const MPSM = (function() {
                     <div class="snapshot-item">
                         <div class="snapshot-label">Status</div>
                         <div class="snapshot-value">
-                            <span class="status-badge ${device.IsOffline ? 'status-danger' : 'status-success'}">
-                                ${device.IsOffline ? 'Offline' : 'Online'}
+                            <span class="status-badge ${isDeviceOffline(device) ? 'status-danger' : 'status-success'}">
+                                ${isDeviceOffline(device) ? 'Offline' : 'Online'}
                             </span>
                         </div>
                     </div>
@@ -3649,7 +3680,7 @@ const MPSM = (function() {
                 id: 'IsOffline',
                 label: 'Status',
                 sortable: true,
-                accessor: row => row.IsOffline ? 'Offline' : 'Online',
+                accessor: row => isDeviceOffline(row) ? 'Offline' : 'Online',
                 format: value => value === 'Offline'
                     ? '<span class="status-badge status-danger">Offline</span>'
                     : '<span class="status-badge status-success">Online</span>'
@@ -3739,7 +3770,7 @@ const MPSM = (function() {
         const modalTitle = document.getElementById('modal-device-name');
         const modalBody = document.getElementById('modal-device-body');
 
-        const offlineDevices = state.devices.filter(d => d.IsOffline);
+        const offlineDevices = state.devices.filter(d => isDeviceOffline(d));
 
         modalTitle.textContent = 'Offline Devices';
 

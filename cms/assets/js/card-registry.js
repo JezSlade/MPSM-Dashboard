@@ -6,6 +6,37 @@
 const CardRegistry = (function () {
     'use strict';
 
+    // Offline threshold: devices not reporting for 7+ days are considered offline
+    const OFFLINE_THRESHOLD_DAYS = 7;
+
+    /**
+     * Determine if a device is offline based on IsOffline flag OR LastUpdate date
+     * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
+     */
+    const isDeviceOffline = (device) => {
+        // If API explicitly marks as offline, trust it
+        if (device.IsOffline === true) {
+            return true;
+        }
+
+        // Compute from LastUpdate if IsOffline is not set or false
+        const lastUpdate = device.LastUpdate || device.LastCounterDate || device.LastMeterDate;
+        if (!lastUpdate) {
+            // No last update info - can't determine, assume online
+            return false;
+        }
+
+        try {
+            const lastDate = new Date(lastUpdate);
+            const now = new Date();
+            const daysSinceUpdate = (now - lastDate) / (1000 * 60 * 60 * 24);
+
+            return daysSinceUpdate >= OFFLINE_THRESHOLD_DAYS;
+        } catch (e) {
+            return false;
+        }
+    };
+
     const formatDate = (value, options = { dateStyle: 'short', timeStyle: 'short' }) => {
         if (window.MPSM && typeof window.MPSM.formatDateTime === 'function') {
             return window.MPSM.formatDateTime(value, options);
@@ -35,9 +66,13 @@ const CardRegistry = (function () {
 
                 const dashboard = data.dashboard || {};
                 const totalsSource = dashboard.MpsDashboardCustomer || dashboard;
-                const contacted = Array.isArray(dashboard.ContactedDevices) ? dashboard.ContactedDevices : [];
-                const books = Array.isArray(dashboard.Books) ? dashboard.Books : [];
+                const sdsDashboard = dashboard.SdsDashboard || {};
+                const contacted = Array.isArray(totalsSource.ContactedDevices) ? totalsSource.ContactedDevices : [];
+                const books = Array.isArray(totalsSource.Books) ? totalsSource.Books : [];
                 const supplyAlerts = Array.isArray(totalsSource.SupplyAlerts) ? totalsSource.SupplyAlerts : [];
+                const toBeUpdated = Array.isArray(totalsSource.ToBeUpdated) ? totalsSource.ToBeUpdated : [];
+                const warnings = Array.isArray(totalsSource.Warnings) ? totalsSource.Warnings : [];
+                const suppliesDelivery = Array.isArray(totalsSource.SuppliesDelivery) ? totalsSource.SuppliesDelivery : [];
 
                 const toManage = supplyAlerts.find(item => (item.Key || '').toLowerCase() === 'tomanage');
 
@@ -52,40 +87,167 @@ const CardRegistry = (function () {
                         { label: 'Enabled', value: totalsSource.EnabledDevicesByContract ?? 0 }
                     ],
                     context: {
+                        totalsSource,
+                        sdsDashboard,
                         contacted,
                         books,
-                        supplyAlerts
+                        supplyAlerts,
+                        suppliesDelivery,
+                        toBeUpdated,
+                        warnings
                     }
                 };
             },
             renderModal: (helpers, context, snapshot) => {
                 const modal = helpers.createModal('Customer Overview');
-                const { contacted = [], books = [], supplyAlerts = [] } = snapshot.context || {};
+                const {
+                    totalsSource = {},
+                    sdsDashboard = {},
+                    contacted = [],
+                    books = [],
+                    supplyAlerts = [],
+                    suppliesDelivery = [],
+                    toBeUpdated = [],
+                    warnings = []
+                } = snapshot.context || {};
+
+                const getByKey = (collection, key) => {
+                    const match = collection.find(item => (item.Key || '').toLowerCase() === key);
+                    return match ? helpers.formatNumber(match.Value ?? 0) : '0';
+                };
+
+                const metrics = [
+                    { label: 'Managed Devices', icon: 'fa-print', value: helpers.formatNumber(totalsSource.TotalManagedDevices ?? 0) },
+                    { label: 'Connectors', icon: 'fa-link', value: helpers.formatNumber(totalsSource.TotalConnectors ?? 0) },
+                    { label: 'Enabled Devices', icon: 'fa-badge-check', value: helpers.formatNumber(totalsSource.EnabledDevicesByContract ?? 0) },
+                    { label: 'Maintenance Alerts', icon: 'fa-exclamation-circle', value: getByKey(supplyAlerts, 'tomanage') },
+                    { label: 'Non-communicating', icon: 'fa-plug-circle-xmark', value: helpers.formatNumber(sdsDashboard.NonCommunicatingDevices ?? 0) }
+                ];
 
                 const contactedHtml = contacted.length
-                    ? contacted.map(item => `<li><strong>${helpers.escape(item.Key)}:</strong> ${helpers.escape(item.Value)}</li>`).join('')
-                    : '<li>No recent device contact data.</li>';
+                    ? contacted.map(item => `
+                        <div class="pill">
+                            <span class="pill-label">${helpers.escape(item.Key)}</span>
+                            <span class="pill-value">${helpers.escape(item.Value)}</span>
+                        </div>
+                    `).join('')
+                    : '<div class="empty-state-inline">No recent device contact data.</div>';
+
+                const healthPills = [
+                    { label: 'Devices w/ Errors', value: sdsDashboard.DevicesWithErrors },
+                    { label: 'Devices w/ Warnings', value: sdsDashboard.DevicesWithWarnings },
+                    { label: 'Connectors w/ Errors', value: sdsDashboard.ConnectorsWithErrors },
+                    { label: 'Connectors w/ Warnings', value: sdsDashboard.ConnectorsWithWarnings },
+                    { label: 'Non-communicating Connectors', value: sdsDashboard.NonCommunicatingConnectors }
+                ].filter(item => item.value !== undefined && item.value !== null);
+
+                const supplyPipelineKeys = ['tomanage', 'shipped', 'delivered', 'installed', 'canceled'];
+                const supplyPipeline = supplyPipelineKeys.map(key => ({
+                    label: key.charAt(0).toUpperCase() + key.slice(1),
+                    value: getByKey(supplyAlerts, key)
+                })).filter(item => item.value !== '0' || supplyAlerts.length);
+
+                const suppliesDeliveryHtml = suppliesDelivery.length
+                    ? suppliesDelivery.map(item => `
+                        <div class="pill">
+                            <span class="pill-label">${helpers.escape(item.Key)}</span>
+                            <span class="pill-value">${helpers.escape(item.Value)}</span>
+                        </div>
+                    `).join('')
+                    : '';
+
+                const toBeUpdatedHtml = toBeUpdated.length
+                    ? toBeUpdated.map(item => `
+                        <li>
+                            <strong>${helpers.escape(item.Type ?? 'Unknown')}</strong>
+                            <span class="muted">Count:</span> ${helpers.formatNumber(item.Count ?? 0)}
+                        </li>
+                    `).join('')
+                    : '<li>No pending updates.</li>';
 
                 const booksHtml = books.length
-                    ? books.map(item => `<li>${helpers.escape(item.Key)}: ${helpers.escape(item.Value)}</li>`).join('')
-                    : '<li>No book statistics.</li>';
+                    ? books.map(item => `<div class="pill"><span class="pill-label">${helpers.escape(item.Key)}</span><span class="pill-value">${helpers.escape(item.Value)}</span></div>`).join('')
+                    : '<div class="empty-state-inline">No catalog data.</div>';
 
-                const alertsHtml = supplyAlerts.length
-                    ? supplyAlerts.map(item => `<li>${helpers.escape(item.Key)}: ${helpers.escape(item.Value)}</li>`).join('')
-                    : '<li>No supply alerts statistics.</li>';
+                const warningsHtml = warnings.length
+                    ? warnings.map(item => `<li><strong>${helpers.escape(item.Key)}:</strong> ${helpers.escape(item.Value)}</li>`).join('')
+                    : '<li>No warnings reported.</li>';
+
+                const explorerStatus = totalsSource.HasSentExplorerEmail ? 'Sent' : 'Not Sent';
+                const explorerDate = totalsSource.EmailExplorerInstallationSentAt
+                    ? helpers.escape(totalsSource.EmailExplorerInstallationSentAt)
+                    : 'N/A';
 
                 modal.innerHTML = `
-                    <section class="modal-section">
-                        <h3><i class="fas fa-signal"></i> Device Contact (Last 3 Days)</h3>
-                        <ul class="metric-list">${contactedHtml}</ul>
+                    <section class="customer-overview-section">
+                        <div class="modal-metrics">
+                            ${metrics.map(metric => `
+                                <div class="modal-metric">
+                                    <div class="modal-metric-icon"><i class="fas ${metric.icon}"></i></div>
+                                    <div>
+                                        <div class="modal-metric-value">${metric.value}</div>
+                                        <div class="modal-metric-label">${metric.label}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </section>
-                    <section class="modal-section">
-                        <h3><i class="fas fa-book"></i> Books & Catalogs</h3>
-                        <ul class="metric-list">${booksHtml}</ul>
+
+                    <section class="customer-overview-section">
+                        <h3><i class="fas fa-signal"></i> Communication & Health</h3>
+                        <div class="pill-grid">${contactedHtml}</div>
+                        <div class="pill-grid">
+                            ${healthPills.length
+                                ? healthPills.map(item => `
+                                    <div class="pill">
+                                        <span class="pill-label">${helpers.escape(item.label)}</span>
+                                        <span class="pill-value">${helpers.formatNumber(item.value ?? 0)}</span>
+                                    </div>
+                                `).join('')
+                                : '<div class="empty-state-inline">No device or connector health warnings.</div>'
+                            }
+                        </div>
                     </section>
-                    <section class="modal-section">
-                        <h3><i class="fas fa-exclamation-circle"></i> Supply Alert Breakdown</h3>
-                        <ul class="metric-list">${alertsHtml}</ul>
+
+                    <section class="customer-overview-section">
+                        <h3><i class="fas fa-boxes-stacked"></i> Supply Pipeline</h3>
+                        <div class="pill-grid">
+                            ${supplyPipeline.length
+                                ? supplyPipeline.map(item => `
+                                    <div class="pill">
+                                        <span class="pill-label">${helpers.escape(item.label)}</span>
+                                        <span class="pill-value">${helpers.escape(item.value)}</span>
+                                    </div>
+                                `).join('')
+                                : '<div class="empty-state-inline">No supply movement recorded.</div>'
+                            }
+                        </div>
+                        ${suppliesDeliveryHtml ? `<div class="pill-grid">${suppliesDeliveryHtml}</div>` : ''}
+                    </section>
+
+                    <section class="customer-overview-section">
+                        <h3><i class="fas fa-rotate"></i> Update Backlog</h3>
+                        <ul class="metric-list">${toBeUpdatedHtml}</ul>
+                    </section>
+
+                    <section class="customer-overview-section">
+                        <h3><i class="fas fa-book"></i> Catalog & Explorer</h3>
+                        <div class="pill-grid">${booksHtml}</div>
+                        <div class="explorer-status">
+                            <span class="pill pill-muted">
+                                <span class="pill-label">Explorer Email</span>
+                                <span class="pill-value">${explorerStatus}</span>
+                            </span>
+                            <span class="pill pill-muted">
+                                <span class="pill-label">Sent At</span>
+                                <span class="pill-value">${explorerDate}</span>
+                            </span>
+                        </div>
+                    </section>
+
+                    <section class="customer-overview-section">
+                        <h3><i class="fas fa-triangle-exclamation"></i> Warnings</h3>
+                        <ul class="metric-list">${warningsHtml}</ul>
                     </section>
                 `;
             }
@@ -187,7 +349,7 @@ const CardRegistry = (function () {
                     total = devices.length;
                 }
 
-                const offline = devices.filter(device => device.IsOffline).length;
+                const offline = devices.filter(device => isDeviceOffline(device)).length;
 
                 return {
                     headline: {
@@ -222,7 +384,7 @@ const CardRegistry = (function () {
                             id: 'IsOffline',
                             label: 'Status',
                             sortable: true,
-                            accessor: row => row.IsOffline ? 'Offline' : 'Online',
+                            accessor: row => isDeviceOffline(row) ? 'Offline' : 'Online',
                             format: value => value === 'Offline'
                                 ? '<span class="status-badge status-danger">Offline</span>'
                                 : '<span class="status-badge status-success">Online</span>'
@@ -603,7 +765,7 @@ const CardRegistry = (function () {
                 const topDevices = sorted.slice(0, 5);
                 const totalVolume = topDevices.reduce((sum, device) => sum + (Number(device.__topTotal) || 0), 0);
                 const averageVolume = topDevices.length ? totalVolume / topDevices.length : 0;
-                const offlineCount = topDevices.filter(device => device.IsOffline).length;
+                const offlineCount = topDevices.filter(device => isDeviceOffline(device)).length;
                 const colorCapable = topDevices.filter(device => {
                     const flag = device.IsColor ?? device.ColorCapable ?? device.Product?.IsColor ?? device.Product?.ColorCapable;
                     if (typeof flag === 'string') {
@@ -1328,4 +1490,6 @@ function renderTonerBadge(color, value) {
 CHANGELOG
 2025-11-23 Codex
 - Renamed Alerts metric to Maintenance Alerts and hardened Top Devices card loading to tolerate non-JSON responses without crashing.
+2025-11-24 Codex
+- Expanded Customer Snapshot modal with structured metrics, supply pipeline, health, warnings, and explorer status using existing dashboard payload data.
 */
