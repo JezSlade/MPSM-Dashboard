@@ -53,7 +53,7 @@ if ($isCLI) {
     require_once dirname(__DIR__, 2) . '/bootstrap.php';
 }
 
-define('REFRESH_CACHE_CHUNKED_VERSION', '2025-11-19a');
+define('REFRESH_CACHE_CHUNKED_VERSION', '2025-11-22b');
 
 $stateFile = __DIR__ . '/../locks/cache-refresh-state.json';
 $logFile = __DIR__ . '/../logs/cache-refresh-' . date('Y-m-d') . '.log';
@@ -186,6 +186,7 @@ if ($action === 'start') {
         'devices_cached' => 0,
         'drilldowns_cached' => 0,
         'devices_to_fetch_drilldown' => [],
+        'device_id_map' => [],  // Maps serial -> device Id for API calls
         'drilldown_index' => 0,
         'errors' => [],
         'last_activity' => date('Y-m-d H:i:s')
@@ -314,6 +315,11 @@ if ($action === 'process' || $action === 'auto') {
                 $installStatus = strtolower($device['InstallStatus'] ?? $device['installStatus'] ?? $device['install_status'] ?? '');
                 if ($installStatus !== 'uninstalled') {
                     $state['devices_to_fetch_drilldown'][] = $serial;
+                    // Store device ID for API calls (Device/Get requires Id, not SerialNumber)
+                    $deviceId = $device['Id'] ?? $device['id'] ?? $device['deviceId'] ?? null;
+                    if ($deviceId) {
+                        $state['device_id_map'][$serial] = $deviceId;
+                    }
                 }
             }
 
@@ -338,6 +344,7 @@ if ($action === 'process' || $action === 'auto') {
     // PHASE 2: Fetch drill-down data
     elseif ($state['status'] === 'fetching_drilldowns') {
         $devicesToFetch = $state['devices_to_fetch_drilldown'];
+        $deviceIdMap = $state['device_id_map'] ?? [];
         $index = $state['drilldown_index'];
         $chunkSize = 10; // Fetch 10 drill-downs per request
 
@@ -351,9 +358,37 @@ if ($action === 'process' || $action === 'auto') {
 
             foreach ($chunk as $serial) {
                 try {
-                    $drilldown = callMPSAPI('Device/Get', ['SerialNumber' => $serial]);
+                    // Get the device ID from our mapping (Device/Get requires Id, not SerialNumber)
+                    $deviceId = $deviceIdMap[$serial] ?? null;
 
-                    if ($drilldown && isset($drilldown['serial'])) {
+                    if (!$deviceId) {
+                        // Fallback: try to get ID from staging table
+                        $lookupStmt = $pdo->prepare("SELECT device_data FROM {$prefix}cache_devices_staging WHERE {$deviceSerialColumn} = :serial LIMIT 1");
+                        $lookupStmt->execute([':serial' => $serial]);
+                        $row = $lookupStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($row && !empty($row['device_data'])) {
+                            $deviceData = json_decode($row['device_data'], true);
+                            $deviceId = $deviceData['Id'] ?? $deviceData['id'] ?? null;
+                        }
+                    }
+
+                    if (!$deviceId) {
+                        logMessage("WARNING: No device ID found for serial {$serial}, skipping");
+                        continue;
+                    }
+
+                    // Call Device/Get with the correct Id parameter
+                    $apiResponse = callMPSAPI('Device/Get', ['Id' => $deviceId]);
+
+                    // MPS Cloud API wraps response in {Result: {...}, IsValid: bool, Errors: [...]}
+                    // Extract the actual device data from the Result wrapper
+                    $drilldown = $apiResponse['Result'] ?? $apiResponse;
+
+                    // Check for valid response - API returns device data with SerialNumber field
+                    $responseSerial = $drilldown['SerialNumber'] ?? $drilldown['serial'] ?? $drilldown['serialNumber'] ?? null;
+                    $isValid = $apiResponse['IsValid'] ?? true;
+
+                    if ($drilldown && $responseSerial && $isValid) {
                         $stmt = $pdo->prepare("
                             INSERT INTO {$prefix}cache_device_drilldown_staging
                             ({$drilldownSerialColumn}, drilldown_data, has_alerts, has_supplies, cached_at)
@@ -365,8 +400,9 @@ if ($action === 'process' || $action === 'auto') {
                                 cached_at = VALUES(cached_at)
                         ");
 
-                        $hasSupplyAlerts = isset($drilldown['supplyAlerts']) && count($drilldown['supplyAlerts']) > 0;
-                        $hasSupplies = isset($drilldown['supplies']) && count($drilldown['supplies']) > 0;
+                        // Check for supply alerts and supplies in response
+                        $hasSupplyAlerts = isset($drilldown['SupplyAlerts']) && count($drilldown['SupplyAlerts']) > 0;
+                        $hasSupplies = isset($drilldown['ProjectSupplies']) && count($drilldown['ProjectSupplies']) > 0;
 
                         $stmt->execute([
                             ':serial' => $serial,
@@ -376,6 +412,11 @@ if ($action === 'process' || $action === 'auto') {
                         ]);
 
                         $state['drilldowns_cached']++;
+                    } else {
+                        // Log why we skipped this device
+                        $errors = $apiResponse['Errors'] ?? [];
+                        $errorInfo = !empty($errors) ? json_encode($errors) : ($drilldown['ErrorMessage'] ?? 'No SerialNumber in response');
+                        logMessage("WARNING: Device {$serial} (ID: {$deviceId}) - {$errorInfo}");
                     }
 
                     // Rate limit protection
@@ -478,6 +519,13 @@ respondJson([
 
 /*
 CHANGELOG
+2025-11-22b Codex
+- Fixed MPS Cloud API response parsing: Response wraps device in {Result: {...}, IsValid: bool}. Now extracts Result before checking SerialNumber.
+2025-11-22a Codex
+- Fixed drill-down fetch: Device/Get API requires `Id` parameter, not `SerialNumber`. Now stores device ID mapping during Stage 1 and uses it in Stage 2.
+- Fixed response field check: API returns `SerialNumber` (PascalCase), not `serial` (lowercase). Now checks multiple case variants.
+- Added fallback: if device ID not in state map, queries staging table to extract ID from cached device_data JSON.
+- Added diagnostic logging when drill-down fetch fails to identify issues faster.
 2025-11-18 Codex
 - Fixed the staging INSERTs so they reference `serial_number`/`drilldown_data` (matching the actual cache schemas) instead of the obsolete `device_serial` columns, eliminating the SQLSTATE 42S22 cron error.
 2025-11-19 Codex

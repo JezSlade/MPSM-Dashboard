@@ -125,6 +125,10 @@ $preferences = getUserPreferences($userId);
                     <i class="fas fa-users"></i>
                     <span>User Management</span>
                 </button>
+                <button class="admin-nav-btn" data-section="tools">
+                    <i class="fas fa-tools"></i>
+                    <span>Developer Tools</span>
+                </button>
             </div>
 
             <!-- Customer Settings Section -->
@@ -354,6 +358,79 @@ $preferences = getUserPreferences($userId);
                     </div>
                 </section>
             </div>
+
+            <!-- Developer Tools Section -->
+            <div id="admin-tools" class="admin-section">
+                <section class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-tools"></i> Developer Tools</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            <i class="fas fa-info-circle"></i>
+                            Quick access to diagnostic and debugging tools. These open in new tabs.
+                        </p>
+                        <div class="tools-grid">
+                            <a href="system-diagnostics.php" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-stethoscope"></i></div>
+                                <div class="tool-info">
+                                    <h3>System Diagnostics</h3>
+                                    <p>Comprehensive system health, API connectivity, and performance metrics</p>
+                                </div>
+                            </a>
+                            <a href="db-inspector.php" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-database"></i></div>
+                                <div class="tool-info">
+                                    <h3>Database Inspector</h3>
+                                    <p>View table counts, cache progress, and database metadata</p>
+                                </div>
+                            </a>
+                            <a href="panel-error-report.php" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-bug"></i></div>
+                                <div class="tool-info">
+                                    <h3>Panel Error Report</h3>
+                                    <p>Analyze callback errors, view error trends, and debug issues</p>
+                                </div>
+                            </a>
+                            <a href="payload-debugger.php" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-code"></i></div>
+                                <div class="tool-info">
+                                    <h3>Payload Debugger</h3>
+                                    <p>Inspect API payloads, validate JSON, and debug requests</p>
+                                </div>
+                            </a>
+                            <a href="create-sample-rules.php" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-magic"></i></div>
+                                <div class="tool-info">
+                                    <h3>Rule Generator</h3>
+                                    <p>Analyze live panel messages and auto-generate notification rules</p>
+                                </div>
+                            </a>
+                            <a href="device-lifecycle.php" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-server"></i></div>
+                                <div class="tool-info">
+                                    <h3>Device Lifecycle</h3>
+                                    <p>Create, update, and retire devices with full audit trails</p>
+                                </div>
+                            </a>
+                            <a href="api/panel-cleanup.php?action=status&secret=PANEL_CLEANUP_2025" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-broom"></i></div>
+                                <div class="tool-info">
+                                    <h3>Data Cleanup</h3>
+                                    <p>Clean test data, purge old entries, and audit alert system</p>
+                                </div>
+                            </a>
+                            <a href="api/refresh-cache-chunked.php?action=status" target="_blank" class="tool-card">
+                                <div class="tool-icon"><i class="fas fa-sync"></i></div>
+                                <div class="tool-info">
+                                    <h3>Cache Refresh Status</h3>
+                                    <p>Monitor cache refresh progress and manage cache state</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
 
@@ -377,9 +454,9 @@ $preferences = getUserPreferences($userId);
     <script src="assets/js/table-utils.js"></script>
     <script src="assets/js/card-registry.js"></script>
     <script src="assets/js/card-manager.js"></script>
+    <script src="assets/hero-notifications.js"></script>
     <script src="assets/app.js"></script>
     <script src="assets/error-logs.js"></script>
     <script src="api/cache-engine.js"></script>
-    <script src="assets/hero-notifications.js"></script>
 </body>
 </html>

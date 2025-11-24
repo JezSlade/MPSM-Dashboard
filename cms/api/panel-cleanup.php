@@ -1,0 +1,489 @@
+<?php
+/**
+ * Panel Callback Data Cleanup API
+ *
+ * Cleans up old errors, test data, and maintains table health
+ *
+ * Actions:
+ * - status: Show cleanup candidates
+ * - cleanup: Execute cleanup
+ * - purge-old: Delete entries older than X days
+ *
+ * Auth: Session auth OR secret parameter
+ */
+
+require_once dirname(__DIR__) . '/config.php';
+require_once dirname(__DIR__) . '/functions.php';
+
+// Allow secret-based auth for CLI/automated cleanup
+$secret = $_GET['secret'] ?? '';
+if ($secret === 'PANEL_CLEANUP_2025') {
+    // Secret auth - proceed without session
+} else {
+    requireAuth();
+}
+
+header('Content-Type: application/json; charset=utf-8');
+
+$action = $_GET['action'] ?? 'status';
+$dryRun = ($_GET['dry_run'] ?? '1') === '1';
+$daysToKeep = (int)($_GET['days'] ?? 30);
+
+try {
+    $pdo = getDatabase();
+    $debugTable = DB_PREFIX . 'panel_callback_debug';
+    $messagesTable = DB_PREFIX . 'panel_messages';
+    $aggregationsTable = DB_PREFIX . 'alert_aggregations';
+
+    $results = [
+        'success' => true,
+        'action' => $action,
+        'dry_run' => $dryRun,
+        'timestamp' => date('Y-m-d H:i:s'),
+        'tables' => []
+    ];
+
+    // ==== Status: Analyze what can be cleaned ====
+    if ($action === 'status' || $action === 'cleanup') {
+
+        // 1. Debug table stats
+        $debugStats = $pdo->query("
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'ERROR' THEN 1 ELSE 0 END) as errors,
+                SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) as success,
+                MIN(timestamp) as oldest,
+                MAX(timestamp) as newest
+            FROM {$debugTable}
+        ")->fetch(PDO::FETCH_ASSOC);
+
+        // 2. Test data in debug table
+        $testDataCount = $pdo->query("
+            SELECT COUNT(*) as count FROM {$debugTable}
+            WHERE
+                raw_body LIKE '%TEST%'
+                OR raw_body LIKE '%test%'
+                OR raw_body LIKE '%SUCCESS_SERIAL%'
+                OR message LIKE '%test%'
+                OR unique_source LIKE '%test%'
+        ")->fetch(PDO::FETCH_ASSOC)['count'];
+
+        // 3. Old entries (older than retention period)
+        $oldEntriesCount = $pdo->query("
+            SELECT COUNT(*) as count FROM {$debugTable}
+            WHERE timestamp < DATE_SUB(NOW(), INTERVAL {$daysToKeep} DAY)
+        ")->fetch(PDO::FETCH_ASSOC)['count'];
+
+        // 4. Method/Content-Type probe errors (health check noise)
+        $probeErrorsCount = $pdo->query("
+            SELECT COUNT(*) as count FROM {$debugTable}
+            WHERE status = 'ERROR'
+            AND (message LIKE '%Method Not Allowed%' OR message LIKE '%Content-Type%')
+        ")->fetch(PDO::FETCH_ASSOC)['count'];
+
+        // 5. Panel messages table stats
+        $messagesStats = $pdo->query("
+            SELECT
+                COUNT(*) as total,
+                MIN(ny_received_at) as oldest,
+                MAX(ny_received_at) as newest
+            FROM {$messagesTable}
+        ")->fetch(PDO::FETCH_ASSOC);
+
+        // 6. Test data in panel_messages
+        $testMessagesCount = $pdo->query("
+            SELECT COUNT(*) as count FROM {$messagesTable}
+            WHERE
+                device_serial LIKE '%TEST%'
+                OR device_serial LIKE '%test%'
+                OR customer_code LIKE '%TEST%'
+                OR payload LIKE '%SUCCESS_SERIAL%'
+        ")->fetch(PDO::FETCH_ASSOC)['count'];
+
+        // 7. Check alert_aggregations table
+        $aggStats = null;
+        try {
+            $aggStats = $pdo->query("
+                SELECT
+                    COUNT(*) as total,
+                    MIN(first_occurrence_ny) as oldest,
+                    MAX(last_occurrence_ny) as newest
+                FROM {$aggregationsTable}
+            ")->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $aggStats = ['error' => 'Table may not exist'];
+        }
+
+        $results['tables'] = [
+            'panel_callback_debug' => [
+                'stats' => $debugStats,
+                'cleanup_candidates' => [
+                    'test_data' => (int)$testDataCount,
+                    'old_entries' => (int)$oldEntriesCount,
+                    'probe_errors' => (int)$probeErrorsCount
+                ]
+            ],
+            'panel_messages' => [
+                'stats' => $messagesStats,
+                'cleanup_candidates' => [
+                    'test_data' => (int)$testMessagesCount
+                ]
+            ],
+            'alert_aggregations' => $aggStats
+        ];
+    }
+
+    // ==== Execute Cleanup ====
+    if ($action === 'cleanup' && !$dryRun) {
+        $deleted = [];
+
+        // 1. Delete test data from debug table
+        $stmt = $pdo->prepare("
+            DELETE FROM {$debugTable}
+            WHERE
+                raw_body LIKE '%TEST%'
+                OR raw_body LIKE '%test%'
+                OR raw_body LIKE '%SUCCESS_SERIAL%'
+                OR message LIKE '%test%'
+                OR unique_source LIKE '%test%'
+        ");
+        $stmt->execute();
+        $deleted['debug_test_data'] = $stmt->rowCount();
+
+        // 2. Delete probe errors (Method/Content-Type)
+        $stmt = $pdo->prepare("
+            DELETE FROM {$debugTable}
+            WHERE status = 'ERROR'
+            AND (message LIKE '%Method Not Allowed%' OR message LIKE '%Content-Type%')
+        ");
+        $stmt->execute();
+        $deleted['debug_probe_errors'] = $stmt->rowCount();
+
+        // 3. Delete test data from panel_messages
+        $stmt = $pdo->prepare("
+            DELETE FROM {$messagesTable}
+            WHERE
+                device_serial LIKE '%TEST%'
+                OR device_serial LIKE '%test%'
+                OR customer_code LIKE '%TEST%'
+                OR payload LIKE '%SUCCESS_SERIAL%'
+        ");
+        $stmt->execute();
+        $deleted['messages_test_data'] = $stmt->rowCount();
+
+        $results['deleted'] = $deleted;
+        $results['message'] = 'Cleanup completed successfully';
+    }
+
+    // ==== Purge Old Entries ====
+    if ($action === 'purge-old' && !$dryRun) {
+        $deleted = [];
+
+        // Delete old debug entries
+        $stmt = $pdo->prepare("
+            DELETE FROM {$debugTable}
+            WHERE timestamp < DATE_SUB(NOW(), INTERVAL :days DAY)
+        ");
+        $stmt->execute([':days' => $daysToKeep]);
+        $deleted['debug_old_entries'] = $stmt->rowCount();
+
+        // Delete old success entries from messages (keep errors longer)
+        $stmt = $pdo->prepare("
+            DELETE FROM {$messagesTable}
+            WHERE ny_received_at < DATE_SUB(NOW(), INTERVAL :days DAY)
+        ");
+        $stmt->execute([':days' => $daysToKeep * 2]); // Keep messages twice as long
+        $deleted['messages_old_entries'] = $stmt->rowCount();
+
+        $results['deleted'] = $deleted;
+        $results['retention_days'] = $daysToKeep;
+        $results['message'] = 'Old entries purged successfully';
+    }
+
+    // ==== Alert System Audit ====
+    if ($action === 'alert-audit') {
+        $rulesTable = DB_PREFIX . 'notification_rules';
+        $notificationsTable = DB_PREFIX . 'dashboard_notifications';
+        $historyTable = DB_PREFIX . 'rule_match_history';
+
+        // Check notification rules
+        $rules = [];
+        try {
+            $rules = $pdo->query("SELECT id, name, severity, enabled, alert_code_pattern, device_serial_pattern, customer_code_pattern, frequency_count, frequency_window_hours, trigger_count, last_triggered_at FROM {$rulesTable} ORDER BY enabled DESC, severity DESC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $rules = ['error' => $e->getMessage()];
+        }
+
+        // Check active notifications
+        $notifications = [];
+        try {
+            $notifications = $pdo->query("SELECT id, title, severity, status, device_serial, alert_code, created_at_ny FROM {$notificationsTable} ORDER BY created_at_ny DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $notifications = ['error' => $e->getMessage()];
+        }
+
+        // Check recent rule matches
+        $recentMatches = [];
+        try {
+            $recentMatches = $pdo->query("SELECT rule_id, rule_name, rule_severity, device_serial, alert_code, matched_at_ny FROM {$historyTable} ORDER BY matched_at_ny DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $recentMatches = ['error' => $e->getMessage()];
+        }
+
+        // Check recent panel messages
+        $recentMessages = $pdo->query("SELECT id, device_serial, maintenance_alert_code, customer_code, ny_received_at FROM {$messagesTable} ORDER BY ny_received_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Check if alert_aggregations table has data
+        $aggCount = 0;
+        $tableExists = [];
+        try {
+            $aggCount = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+            $tableExists['alert_aggregations'] = true;
+        } catch (Exception $e) {
+            $aggCount = -1; // Table may not exist
+            $tableExists['alert_aggregations'] = false;
+        }
+
+        // Check other command center tables exist
+        foreach (['notification_rules', 'dashboard_notifications', 'rule_match_history'] as $tableName) {
+            $fullTable = DB_PREFIX . $tableName;
+            try {
+                $pdo->query("SELECT 1 FROM {$fullTable} LIMIT 1");
+                $tableExists[$tableName] = true;
+            } catch (Exception $e) {
+                $tableExists[$tableName] = false;
+            }
+        }
+
+        // Get a sample of aggregations
+        $sampleAggregations = [];
+        try {
+            $sampleAggregations = $pdo->query("SELECT device_serial, alert_code, occurrence_count, last_occurrence_ny FROM {$aggregationsTable} ORDER BY last_occurrence_ny DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $sampleAggregations = ['error' => $e->getMessage()];
+        }
+
+        $results['alert_system'] = [
+            'notification_rules' => [
+                'count' => is_array($rules) ? count($rules) : 0,
+                'enabled_count' => is_array($rules) ? count(array_filter($rules, fn($r) => $r['enabled'] ?? false)) : 0,
+                'rules' => $rules
+            ],
+            'dashboard_notifications' => [
+                'count' => is_array($notifications) ? count($notifications) : 0,
+                'active_count' => is_array($notifications) ? count(array_filter($notifications, fn($n) => ($n['status'] ?? '') === 'active')) : 0,
+                'recent' => $notifications
+            ],
+            'rule_match_history' => [
+                'recent_count' => is_array($recentMatches) ? count($recentMatches) : 0,
+                'recent' => $recentMatches
+            ],
+            'alert_aggregations' => [
+                'total_count' => $aggCount,
+                'recent' => $sampleAggregations
+            ],
+            'table_status' => $tableExists,
+            'recent_panel_messages' => $recentMessages
+        ];
+    }
+
+    // ==== Clean Alert System Test Data ====
+    if ($action === 'clean-alerts' && !$dryRun) {
+        $rulesTable = DB_PREFIX . 'notification_rules';
+        $notificationsTable = DB_PREFIX . 'dashboard_notifications';
+        $historyTable = DB_PREFIX . 'rule_match_history';
+
+        $deleted = [];
+
+        // Delete test notifications
+        $stmt = $pdo->prepare("DELETE FROM {$notificationsTable} WHERE device_serial LIKE '%TEST%' OR alert_code LIKE '%TEST%' OR title LIKE '%TEST%'");
+        $stmt->execute();
+        $deleted['test_notifications'] = $stmt->rowCount();
+
+        // Delete "Unknown Device" notifications
+        $stmt = $pdo->prepare("DELETE FROM {$notificationsTable} WHERE device_serial = 'Unknown Device' OR alert_code = 'Unknown Alert'");
+        $stmt->execute();
+        $deleted['unknown_notifications'] = $stmt->rowCount();
+
+        // Delete duplicate rules (keep lowest ID for each name)
+        $duplicateIds = $pdo->query("
+            SELECT nr.id FROM {$rulesTable} nr
+            WHERE nr.id NOT IN (
+                SELECT MIN(id) FROM {$rulesTable} GROUP BY name
+            )
+        ")->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($duplicateIds)) {
+            $placeholders = implode(',', array_fill(0, count($duplicateIds), '?'));
+            $stmt = $pdo->prepare("DELETE FROM {$rulesTable} WHERE id IN ({$placeholders})");
+            $stmt->execute($duplicateIds);
+            $deleted['duplicate_rules'] = $stmt->rowCount();
+        } else {
+            $deleted['duplicate_rules'] = 0;
+        }
+
+        // Delete orphaned rule match history
+        $stmt = $pdo->prepare("DELETE FROM {$historyTable} WHERE device_serial IS NULL AND alert_code IS NULL");
+        $stmt->execute();
+        $deleted['orphaned_matches'] = $stmt->rowCount();
+
+        $results['deleted'] = $deleted;
+        $results['message'] = 'Alert system cleanup completed';
+    }
+
+    // ==== Test Rule Processing ====
+    if ($action === 'test-rules') {
+        define('MPS_ENGINE_ACCESS', true);
+        require_once dirname(__DIR__, 2) . '/mps-api/callbacks/panel-message-common.php';  // Provides getNYTimestamp()
+        require_once dirname(__DIR__, 2) . '/mps-api/callbacks/command-center-schema.php';
+        require_once dirname(__DIR__, 2) . '/mps-api/callbacks/command-center-engine.php';
+
+        // Get the most recent panel message
+        $latestMessage = $pdo->query("SELECT * FROM {$messagesTable} ORDER BY ny_received_at DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+
+        if ($latestMessage) {
+            $messageData = [
+                'device_serial' => $latestMessage['device_serial'],
+                'maintenance_alert_code' => $latestMessage['maintenance_alert_code'],
+                'customer_code' => $latestMessage['customer_code'],
+                'customer_description' => $latestMessage['customer_description'],
+                'panel_configuration' => $latestMessage['panel_configuration'],
+            ];
+
+            // Test rule processing with error capture
+            $testError = null;
+            $aggBefore = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+            $notifBefore = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "dashboard_notifications")->fetchColumn();
+            $historyBefore = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "rule_match_history")->fetchColumn();
+
+            try {
+                ensureCommandCenterTables($pdo);
+
+                // Call individual functions directly to capture errors
+                $stepErrors = [];
+
+                // Step 1: updateAlertAggregation
+                try {
+                    updateAlertAggregation($pdo, $messageData, (int)$latestMessage['id']);
+                } catch (Throwable $e) {
+                    $stepErrors['updateAlertAggregation'] = $e->getMessage();
+                }
+
+                // Step 2: Get active rules
+                $rules = [];
+                try {
+                    $rules = getActiveNotificationRules($pdo);
+                } catch (Throwable $e) {
+                    $stepErrors['getActiveNotificationRules'] = $e->getMessage();
+                }
+
+                // Step 3: Process each rule
+                $ruleResults = [];
+                foreach ($rules as $rule) {
+                    $ruleTest = ['rule_id' => $rule['id'], 'name' => $rule['name']];
+                    try {
+                        $matches = ruleMatches($pdo, $rule, $messageData);
+                        $ruleTest['matches'] = $matches;
+                        if ($matches) {
+                            try {
+                                createDashboardNotification($pdo, $rule, $messageData, (int)$latestMessage['id']);
+                                $ruleTest['notification_created'] = true;
+                            } catch (Throwable $e) {
+                                $ruleTest['notification_error'] = $e->getMessage();
+                            }
+                            try {
+                                recordRuleMatch($pdo, $rule, $messageData, (int)$latestMessage['id']);
+                                $ruleTest['match_recorded'] = true;
+                            } catch (Throwable $e) {
+                                $ruleTest['record_error'] = $e->getMessage();
+                            }
+                        }
+                    } catch (Throwable $e) {
+                        $ruleTest['match_error'] = $e->getMessage();
+                    }
+                    $ruleResults[] = $ruleTest;
+                }
+
+                $results['step_errors'] = $stepErrors;
+                $results['rule_results'] = $ruleResults;
+            } catch (Throwable $e) {
+                $testError = $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine();
+            }
+
+            $aggAfter = (int)$pdo->query("SELECT COUNT(*) FROM {$aggregationsTable}")->fetchColumn();
+            $notifAfter = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "dashboard_notifications")->fetchColumn();
+            $historyAfter = (int)$pdo->query("SELECT COUNT(*) FROM " . DB_PREFIX . "rule_match_history")->fetchColumn();
+
+            // Check what happened
+            $rulesTable = DB_PREFIX . 'notification_rules';
+            $activeRules = $pdo->query("SELECT id, name, alert_code_pattern, device_serial_pattern, customer_code_pattern FROM {$rulesTable} WHERE enabled = 1")->fetchAll(PDO::FETCH_ASSOC);
+
+            // Test pattern matching manually
+            $patternTests = [];
+            foreach ($activeRules as $rule) {
+                $test = ['rule_id' => $rule['id'], 'rule_name' => $rule['name']];
+                if ($rule['alert_code_pattern']) {
+                    $pattern = str_replace('%', '.*', $rule['alert_code_pattern']);
+                    $pattern = str_replace('_', '.', $pattern);
+                    $regex = '/^' . $pattern . '$/i';
+                    $test['alert_pattern'] = $rule['alert_code_pattern'];
+                    $test['alert_matches'] = (bool)preg_match($regex, $messageData['maintenance_alert_code'] ?? '');
+                }
+                if ($rule['device_serial_pattern']) {
+                    $pattern = str_replace('%', '.*', $rule['device_serial_pattern']);
+                    $pattern = str_replace('_', '.', $pattern);
+                    $regex = '/^' . $pattern . '$/i';
+                    $test['device_pattern'] = $rule['device_serial_pattern'];
+                    $test['device_matches'] = (bool)preg_match($regex, $messageData['device_serial'] ?? '');
+                }
+                if ($rule['customer_code_pattern']) {
+                    $pattern = str_replace('%', '.*', $rule['customer_code_pattern']);
+                    $pattern = str_replace('_', '.', $pattern);
+                    $regex = '/^' . $pattern . '$/i';
+                    $test['customer_pattern'] = $rule['customer_code_pattern'];
+                    $test['customer_matches'] = (bool)preg_match($regex, $messageData['customer_code'] ?? '');
+                }
+                $patternTests[] = $test;
+            }
+
+            $results['test'] = [
+                'message_used' => [
+                    'id' => $latestMessage['id'],
+                    'device_serial' => $latestMessage['device_serial'],
+                    'maintenance_alert_code' => $latestMessage['maintenance_alert_code'],
+                    'customer_code' => $latestMessage['customer_code']
+                ],
+                'message_data_sent' => $messageData,
+                'active_rules_count' => count($activeRules),
+                'pattern_tests' => $patternTests,
+                'error' => $testError,
+                'counts_before' => ['aggregations' => $aggBefore, 'notifications' => $notifBefore, 'history' => $historyBefore],
+                'counts_after' => ['aggregations' => $aggAfter, 'notifications' => $notifAfter, 'history' => $historyAfter]
+            ];
+        } else {
+            $results['test'] = ['error' => 'No panel messages found'];
+        }
+    }
+
+    // Add usage instructions
+    if ($action === 'status') {
+        $results['usage'] = [
+            'status' => '?action=status - View cleanup candidates',
+            'cleanup_dry_run' => '?action=cleanup&dry_run=1 - Preview cleanup',
+            'cleanup_execute' => '?action=cleanup&dry_run=0 - Execute cleanup',
+            'purge_old' => '?action=purge-old&days=30&dry_run=0 - Purge entries older than X days',
+            'alert_audit' => '?action=alert-audit - Audit alert system rules and notifications',
+            'clean_alerts' => '?action=clean-alerts&dry_run=0 - Clean test/duplicate alert data',
+            'test_rules' => '?action=test-rules - Test rule processing with latest message'
+        ];
+    }
+
+    echo json_encode($results, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ], JSON_PRETTY_PRINT);
+}

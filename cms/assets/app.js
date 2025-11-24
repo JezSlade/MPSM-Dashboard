@@ -54,6 +54,37 @@ const MPSM = (function() {
 
     const CARD_LAYOUT_STORAGE_KEY = 'mpsm-dashboard-card-order';
 
+    // Offline threshold: devices not reporting for 7+ days are considered offline
+    const OFFLINE_THRESHOLD_DAYS = 7;
+
+    /**
+     * Determine if a device is offline based on IsOffline flag OR LastUpdate date
+     * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
+     */
+    function isDeviceOffline(device) {
+        // If API explicitly marks as offline, trust it
+        if (device.IsOffline === true) {
+            return true;
+        }
+
+        // Compute from LastUpdate if IsOffline is not set or false
+        const lastUpdate = device.LastUpdate || device.LastCounterDate || device.LastMeterDate;
+        if (!lastUpdate) {
+            // No last update info - can't determine, assume online
+            return false;
+        }
+
+        try {
+            const lastDate = new Date(lastUpdate);
+            const now = new Date();
+            const daysSinceUpdate = (now - lastDate) / (1000 * 60 * 60 * 24);
+
+            return daysSinceUpdate >= OFFLINE_THRESHOLD_DAYS;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function getAvailableCardIds() {
         if (typeof CardRegistry !== 'undefined' && typeof CardRegistry.getAll === 'function') {
             return CardRegistry.getAll().map(card => card.id);
@@ -984,7 +1015,7 @@ const MPSM = (function() {
             const metricOffline = snapshot.metrics?.find(metric => metric.label === 'Offline');
             const offlineFromMetric = Number(metricOffline?.value ?? 0);
             const offlineFromState = Array.isArray(state.devices)
-                ? state.devices.filter(device => device.IsOffline).length
+                ? state.devices.filter(device => isDeviceOffline(device)).length
                 : 0;
             const fallbackOffline = Number(state.offlineDevices ?? 0);
             const offlineCount = Math.max(offlineFromMetric, offlineFromState, fallbackOffline);
@@ -1915,11 +1946,25 @@ const MPSM = (function() {
                     </div>
                 </div>
 
-                    <div class="metrics-grid">
-                    <div class="metric-card clickable" onclick="MPSM.expandDevices()" style="cursor:pointer">
-                        <div class="metric-icon"><i class="fas fa-print"></i></div>
-                        <div class="metric-value" id="banner-device-total">${totalsSource.TotalManagedDevices ?? 0}</div>
-                        <div class="metric-label">Total Devices</div>
+            `;
+
+            // Append hero notifications into the banner area (collapsible)
+            const heroContainer = document.getElementById('hero-notifications');
+            if (heroContainer) {
+                heroContainer.classList.add('hero-inline');
+                const banner = container.querySelector('.customer-banner');
+                if (banner) {
+                    banner.classList.add('customer-banner-wrap');
+                    banner.appendChild(heroContainer);
+                }
+            }
+
+            container.innerHTML += `
+                <div class="metrics-grid">
+                <div class="metric-card clickable" onclick="MPSM.expandDevices()" style="cursor:pointer">
+                    <div class="metric-icon"><i class="fas fa-print"></i></div>
+                    <div class="metric-value" id="banner-device-total">${totalsSource.TotalManagedDevices ?? 0}</div>
+                    <div class="metric-label">Total Devices</div>
                     </div>
                     <div class="metric-card clickable" onclick="MPSM.expandOffline()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-wifi-slash"></i></div>
@@ -1929,7 +1974,7 @@ const MPSM = (function() {
                     <div class="metric-card clickable status-warning" onclick="MPSM.expandAlerts()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
                         <div class="metric-value" id="alerts-count">0</div>
-                        <div class="metric-label">Alerts</div>
+                        <div class="metric-label">Maintenance Alerts</div>
                     </div>
                     <div class="metric-card clickable" onclick="MPSM.expandConnectors()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-link"></i></div>
@@ -1939,6 +1984,10 @@ const MPSM = (function() {
                     </div>
                 </div>
             `;
+
+            // Refresh hero notifications now that the banner reflects this customer
+            window.currentCustomerCode = state.customerCode;
+            loadHeroNotifications();
 
             // Load panel alert badge
             loadPanelAlertBadge();
@@ -2030,6 +2079,14 @@ const MPSM = (function() {
     async function updateOfflineCountFromCache() {
         try {
             const response = await fetch('api/get-cached-devices.php');
+
+            // Guard against HTML error pages
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                debugLog(`Cached devices returned non-JSON (${contentType}), skipping`, 'warn');
+                return;
+            }
+
             const data = await response.json();
 
             if (data.success && Array.isArray(data.devices)) {
@@ -2039,7 +2096,7 @@ const MPSM = (function() {
                     device.Customer?.Code === state.customerCode
                 );
 
-                const offlineCount = customerDevices.filter(device => device.IsOffline).length;
+                const offlineCount = customerDevices.filter(device => isDeviceOffline(device)).length;
 
                 state.offlineDevices = offlineCount;
                 updateMetricValue('offline-count', offlineCount);
@@ -2108,7 +2165,7 @@ const MPSM = (function() {
             updateMetricValue('device-count', totalDevices);
             updateMetricValue('banner-device-total', totalDevices);
 
-            const offlineCount = state.devices.filter(device => device.IsOffline).length;
+            const offlineCount = state.devices.filter(device => isDeviceOffline(device)).length;
             state.offlineDevices = offlineCount;
             updateMetricValue('offline-count', offlineCount);
 
@@ -2204,6 +2261,14 @@ const MPSM = (function() {
             debugLog(`Fetching installed devices page ${pageNumber}, pageRows=${pageRows}, allCustomers=${options.allCustomers ? 'true' : 'false'}`, 'info');
 
             const response = await fetch('api/get-devices.php?' + params.toString());
+
+            // Guard against HTML error pages
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Expected JSON but received ${contentType}: ${text.slice(0, 100)}`);
+            }
+
             const data = await response.json();
 
             if (!data.success) {
@@ -2296,6 +2361,19 @@ const MPSM = (function() {
                 });
 
                 const deletedResponse = await fetch('api/get-deleted-devices.php?' + deletedParams.toString());
+
+                // Guard against HTML error pages (404, 500, etc.)
+                if (!deletedResponse.ok) {
+                    debugLog(`Deleted devices endpoint returned ${deletedResponse.status}, skipping`, 'warn');
+                    break;
+                }
+
+                const deletedContentType = deletedResponse.headers.get('content-type') || '';
+                if (!deletedContentType.includes('application/json')) {
+                    debugLog(`Deleted devices returned non-JSON (${deletedContentType}), skipping`, 'warn');
+                    break;
+                }
+
                 const deletedData = await deletedResponse.json();
 
                 if (!deletedData.success || !deletedData.devices || deletedData.devices.length === 0) {
@@ -3445,8 +3523,8 @@ const MPSM = (function() {
                     <div class="snapshot-item">
                         <div class="snapshot-label">Status</div>
                         <div class="snapshot-value">
-                            <span class="status-badge ${device.IsOffline ? 'status-danger' : 'status-success'}">
-                                ${device.IsOffline ? 'Offline' : 'Online'}
+                            <span class="status-badge ${isDeviceOffline(device) ? 'status-danger' : 'status-success'}">
+                                ${isDeviceOffline(device) ? 'Offline' : 'Online'}
                             </span>
                         </div>
                     </div>
@@ -3602,7 +3680,7 @@ const MPSM = (function() {
                 id: 'IsOffline',
                 label: 'Status',
                 sortable: true,
-                accessor: row => row.IsOffline ? 'Offline' : 'Online',
+                accessor: row => isDeviceOffline(row) ? 'Offline' : 'Online',
                 format: value => value === 'Offline'
                     ? '<span class="status-badge status-danger">Offline</span>'
                     : '<span class="status-badge status-success">Online</span>'
@@ -3692,7 +3770,7 @@ const MPSM = (function() {
         const modalTitle = document.getElementById('modal-device-name');
         const modalBody = document.getElementById('modal-device-body');
 
-        const offlineDevices = state.devices.filter(d => d.IsOffline);
+        const offlineDevices = state.devices.filter(d => isDeviceOffline(d));
 
         modalTitle.textContent = 'Offline Devices';
 
@@ -4095,4 +4173,8 @@ window.closeDeviceModal = () => MPSM.closeDeviceModal();
 CHANGELOG
 2025-11-11 Codex
 - Deferred the heavy card refresh and offline count fetch in `loadDashboard()` so the header renders immediately and the page stays interactive instead of freezing behind the modal overlay.
+2025-11-22 Codex
+- Moved hero notifications into the customer banner context and refresh them after the banner loads to align alerts with the selected customer.
+2025-11-23 Codex
+- Renamed the Alerts metric card to Maintenance Alerts to reduce perceived severity.
 */

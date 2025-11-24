@@ -11,6 +11,15 @@ if (!defined('MPS_ENGINE_ACCESS')) {
     exit('Access denied');
 }
 
+/*
+CHANGELOG
+2025-11-23 Codex
+- Added ensureAlertCodeDescriptionsTable for legacy alert code descriptions.
+2025-11-24 Codex
+- Added ensureAlertDefinitionsTable with comprehensive schema for user-customizable alert labels.
+- Both tables supported for backward compatibility; alert_definitions is primary.
+*/
+
 if (!function_exists('ensureCommandCenterTables')) {
     /**
      * Create all Command Center tables
@@ -22,6 +31,7 @@ if (!function_exists('ensureCommandCenterTables')) {
         ensureDashboardNotificationsTable($pdo);
         ensureRuleMatchHistoryTable($pdo);
         ensureAlertDefinitionsTable($pdo);
+        ensureAlertCodeDescriptionsTable($pdo);
     }
 }
 
@@ -29,6 +39,7 @@ if (!function_exists('ensureAlertDefinitionsTable')) {
     /**
      * Alert Definitions - User-editable mapping of alert codes to descriptions
      * Allows users to customize how alert codes are displayed throughout the system
+     * This is the PRIMARY table for alert code lookups
      */
     function ensureAlertDefinitionsTable(PDO $pdo): void
     {
@@ -70,6 +81,39 @@ if (!function_exists('ensureAlertDefinitionsTable')) {
                 INDEX idx_category (category),
                 INDEX idx_enabled (enabled),
                 INDEX idx_display_name (display_name)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $ensured = true;
+    }
+}
+
+if (!function_exists('ensureAlertCodeDescriptionsTable')) {
+    /**
+     * Alert Code Descriptions - Legacy table for backward compatibility
+     * New code should use alert_definitions table instead
+     */
+    function ensureAlertCodeDescriptionsTable(PDO $pdo): void
+    {
+        static $ensured = false;
+        if ($ensured) return;
+
+        $table = DB_PREFIX . 'alert_code_descriptions';
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS {$table} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                alert_code VARCHAR(20) NOT NULL UNIQUE COMMENT 'Numeric alert code from MPS',
+                description VARCHAR(255) NOT NULL COMMENT 'Human-readable description',
+                custom_message TEXT NULL COMMENT 'Optional custom alert message template',
+                category VARCHAR(100) NULL COMMENT 'Alert category (e.g., Input, Output, Marker)',
+                severity_hint ENUM('info', 'warning', 'high', 'critical') NULL COMMENT 'Suggested severity',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Whether to show alerts for this code',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+
+                INDEX idx_alert_code (alert_code),
+                INDEX idx_category (category),
+                INDEX idx_is_active (is_active)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 

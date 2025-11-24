@@ -6,6 +6,9 @@ requireAuth();
 ensureDeviceCrudEnabled();
 trackVisit('/device-lifecycle');
 
+$prefillCustomerCode = isset($_GET['customerCode']) ? trim((string) $_GET['customerCode']) : '';
+$prefillSearch = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
+
 // Allow iframe embedding from same origin (panel-message-monitor.php)
 header('X-Frame-Options: SAMEORIGIN');
 ?>
@@ -54,11 +57,11 @@ header('X-Frame-Options: SAMEORIGIN');
             <form id="device-filter-form" class="device-filters">
                 <div class="field">
                     <label for="filter-customer">Customer Code</label>
-                    <input id="filter-customer" name="customerCode" type="text" placeholder="Default or leave blank for all">
+                    <input id="filter-customer" name="customerCode" type="text" placeholder="Default or leave blank for all" value="<?php echo htmlspecialchars($prefillCustomerCode, ENT_QUOTES, 'UTF-8'); ?>">
                 </div>
                 <div class="field">
                     <label for="filter-search">Search</label>
-                    <input id="filter-search" name="search" type="text" placeholder="Serial, asset, model...">
+                    <input id="filter-search" name="search" type="text" placeholder="Serial, asset, model..." value="<?php echo htmlspecialchars($prefillSearch, ENT_QUOTES, 'UTF-8'); ?>">
                 </div>
                 <div class="field">
                     <label for="filter-page-rows">Rows</label>
@@ -151,38 +154,79 @@ header('X-Frame-Options: SAMEORIGIN');
                 </button>
             </header>
             <form id="device-create-form" class="device-form">
-                <div class="field">
-                    <label for="create-customer">Customer Code</label>
-                    <input id="create-customer" name="customerCode" type="text" value="<?php echo htmlspecialchars(DEFAULT_CUSTOMER_CODE, ENT_QUOTES, 'UTF-8'); ?>">
-                </div>
-                <div class="field">
-                    <label for="create-serial">Serial Number<span class="required">*</span></label>
-                    <input id="create-serial" name="serialNumber" type="text" required>
-                </div>
-                <div class="field">
-                    <label for="create-brand">Brand<span class="required">*</span></label>
-                    <input id="create-brand" name="brand" type="text" required>
-                </div>
-                <div class="field">
-                    <label for="create-model">Model<span class="required">*</span></label>
-                    <input id="create-model" name="model" type="text" required>
-                </div>
-                <div class="field">
-                    <label for="create-asset">Asset Number</label>
-                    <input id="create-asset" name="assetNumber" type="text">
-                </div>
-                <div class="field">
-                    <label for="create-contact">Contact</label>
-                    <input id="create-contact" name="contact" type="text">
-                </div>
-                <div class="field">
-                    <label for="create-note">Note</label>
-                    <textarea id="create-note" name="note" rows="2"></textarea>
-                </div>
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-info-circle"></i> Basic Information</legend>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="create-customer">Customer Code</label>
+                            <input id="create-customer" name="customerCode" type="text" value="<?php echo htmlspecialchars(DEFAULT_CUSTOMER_CODE, ENT_QUOTES, 'UTF-8'); ?>">
+                        </div>
+                        <div class="field">
+                            <label for="create-serial">Serial Number<span class="required">*</span></label>
+                            <input id="create-serial" name="serialNumber" type="text" required placeholder="e.g., ABC123456">
+                        </div>
+                        <div class="field">
+                            <label for="create-brand">Brand<span class="required">*</span></label>
+                            <input id="create-brand" name="brand" type="text" required placeholder="e.g., HP, Canon, Xerox">
+                        </div>
+                        <div class="field">
+                            <label for="create-model">Model<span class="required">*</span></label>
+                            <input id="create-model" name="model" type="text" required placeholder="e.g., LaserJet Pro M404n">
+                        </div>
+                        <div class="field">
+                            <label for="create-description">Product Description</label>
+                            <input id="create-description" name="productDescription" type="text" placeholder="Optional description">
+                        </div>
+                        <div class="field">
+                            <label for="create-asset">Asset Number</label>
+                            <input id="create-asset" name="assetNumber" type="text" placeholder="Internal asset tag">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-building"></i> Location & Contact</legend>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="create-department">Department</label>
+                            <input id="create-department" name="department" type="text" placeholder="e.g., Finance, HR">
+                        </div>
+                        <div class="field">
+                            <label for="create-contact">Contact</label>
+                            <input id="create-contact" name="contact" type="text" placeholder="Primary contact name">
+                        </div>
+                        <div class="field">
+                            <label for="create-ip">IP Address</label>
+                            <input id="create-ip" name="ipAddress" type="text" placeholder="e.g., 192.168.1.100">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-cog"></i> Settings</legend>
+                    <div class="form-grid">
+                        <div class="field checkbox-field">
+                            <label>
+                                <input id="create-managed" name="isManaged" type="checkbox" checked>
+                                Managed Device
+                            </label>
+                            <span class="field-hint">Include in managed device reports</span>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-sticky-note"></i> Notes</legend>
+                    <div class="field full-width">
+                        <label for="create-note">Note</label>
+                        <textarea id="create-note" name="note" rows="3" placeholder="Additional notes about this device..."></textarea>
+                    </div>
+                </fieldset>
+
                 <footer class="device-form-footer">
                     <button type="button" class="btn btn-secondary" data-modal-close="device-create-modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Create
+                        <i class="fas fa-plus"></i> Create Device
                     </button>
                 </footer>
             </form>
@@ -199,44 +243,94 @@ header('X-Frame-Options: SAMEORIGIN');
             </header>
             <form id="device-update-form" class="device-form">
                 <input id="update-device-id" name="deviceId" type="hidden">
-                <div class="field">
-                    <label for="update-device-label">Device</label>
-                    <input id="update-device-label" type="text" disabled>
-                </div>
-                <div class="field">
-                    <label for="update-brand">New Brand</label>
-                    <input id="update-brand" name="newProductBrand" type="text">
-                </div>
-                <div class="field">
-                    <label for="update-model">New Model</label>
-                    <input id="update-model" name="newProductModel" type="text">
-                </div>
-                <div class="field">
-                    <label for="update-project">Project ID</label>
-                    <input id="update-project" name="projectId" type="text">
-                </div>
-                <div class="field">
-                    <label for="update-office">Office ID</label>
-                    <input id="update-office" name="officeId" type="text">
-                </div>
-                <div class="field checkbox-field">
-                    <label>
-                        <input id="update-managed" name="isManaged" type="checkbox">
-                        Managed Device
-                    </label>
-                </div>
-                <div class="field checkbox-field">
-                    <label>
-                        <input id="update-alerts" name="isGenerateAlert" type="checkbox">
-                        Generate Alerts
-                    </label>
-                </div>
-                <div class="field checkbox-field">
-                    <label>
-                        <input id="update-repeat-alerts" name="manageRepeatedAlerts" type="checkbox">
-                        Manage Repeated Alerts
-                    </label>
-                </div>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-info-circle"></i> Device Info</legend>
+                    <div class="device-info-banner">
+                        <div class="device-info-item">
+                            <span class="device-info-label">Serial</span>
+                            <span id="update-device-serial" class="device-info-value">-</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="device-info-label">Device ID</span>
+                            <span id="update-device-label" class="device-info-value">-</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="device-info-label">Current Brand/Model</span>
+                            <span id="update-device-current" class="device-info-value">-</span>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-exchange-alt"></i> Change Brand/Model</legend>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="update-brand">New Brand</label>
+                            <input id="update-brand" name="newProductBrand" type="text" placeholder="Leave blank to keep current">
+                        </div>
+                        <div class="field">
+                            <label for="update-model">New Model</label>
+                            <input id="update-model" name="newProductModel" type="text" placeholder="Leave blank to keep current">
+                        </div>
+                        <div class="field">
+                            <label for="update-standard-model-id">Standard Model ID</label>
+                            <input id="update-standard-model-id" name="newStandardModelId" type="text" placeholder="MPS standard model ID">
+                        </div>
+                        <div class="field">
+                            <label for="update-standard-model-clean">Standard Model Clean</label>
+                            <input id="update-standard-model-clean" name="newStandardModelClean" type="text" placeholder="Cleaned model name">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-folder"></i> Assignment</legend>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="update-project">Project ID</label>
+                            <input id="update-project" name="projectId" type="text" placeholder="Assign to project">
+                        </div>
+                        <div class="field">
+                            <label for="update-office">Office ID</label>
+                            <input id="update-office" name="officeId" type="text" placeholder="Assign to office">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-cog"></i> Settings</legend>
+                    <div class="form-grid checkbox-grid">
+                        <div class="field checkbox-field">
+                            <label>
+                                <input id="update-managed" name="isManaged" type="checkbox">
+                                <span class="checkbox-label">
+                                    <strong>Managed Device</strong>
+                                    <span class="field-hint">Include in managed device reports and billing</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input id="update-alerts" name="isGenerateAlert" type="checkbox">
+                                <span class="checkbox-label">
+                                    <strong>Generate Alerts</strong>
+                                    <span class="field-hint">Create alerts when issues are detected</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input id="update-repeat-alerts" name="manageRepeatedAlerts" type="checkbox">
+                                <span class="checkbox-label">
+                                    <strong>Manage Repeated Alerts</strong>
+                                    <span class="field-hint">Aggregate repeated alerts to reduce noise</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+
                 <footer class="device-form-footer">
                     <button type="button" class="btn btn-secondary" data-modal-close="device-update-modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">
@@ -250,3 +344,11 @@ header('X-Frame-Options: SAMEORIGIN');
     <script src="assets/device-crud.js"></script>
 </body>
 </html>
+
+<?php
+/*
+CHANGELOG
+2025-11-25 Codex
+- Added lifecycle filter prefills from query parameters to speed duplicate-IP remediation links.
+*/
+?>

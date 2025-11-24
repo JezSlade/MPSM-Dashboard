@@ -6,6 +6,37 @@
 const CardRegistry = (function () {
     'use strict';
 
+    // Offline threshold: devices not reporting for 7+ days are considered offline
+    const OFFLINE_THRESHOLD_DAYS = 7;
+
+    /**
+     * Determine if a device is offline based on IsOffline flag OR LastUpdate date
+     * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
+     */
+    const isDeviceOffline = (device) => {
+        // If API explicitly marks as offline, trust it
+        if (device.IsOffline === true) {
+            return true;
+        }
+
+        // Compute from LastUpdate if IsOffline is not set or false
+        const lastUpdate = device.LastUpdate || device.LastCounterDate || device.LastMeterDate;
+        if (!lastUpdate) {
+            // No last update info - can't determine, assume online
+            return false;
+        }
+
+        try {
+            const lastDate = new Date(lastUpdate);
+            const now = new Date();
+            const daysSinceUpdate = (now - lastDate) / (1000 * 60 * 60 * 24);
+
+            return daysSinceUpdate >= OFFLINE_THRESHOLD_DAYS;
+        } catch (e) {
+            return false;
+        }
+    };
+
     const formatDate = (value, options = { dateStyle: 'short', timeStyle: 'short' }) => {
         if (window.MPSM && typeof window.MPSM.formatDateTime === 'function') {
             return window.MPSM.formatDateTime(value, options);
@@ -19,6 +50,112 @@ const CardRegistry = (function () {
         }
         return date.toLocaleString('en-US', options);
     };
+
+    function resolveIp(device) {
+        const raw = device?.IpAddress
+            ?? device?.IPAddress
+            ?? device?.ip_address
+            ?? device?.IP
+            ?? device?.Ip
+            ?? '';
+        const value = String(raw || '').trim();
+        if (!value || value === '0.0.0.0') {
+            return '';
+        }
+        return value;
+    }
+
+    function resolveSerial(device) {
+        return (device?.SerialNumber
+            ?? device?.DeviceSerialNumber
+            ?? device?.Serial
+            ?? device?.serial_number
+            ?? '').toString().trim();
+    }
+
+    function resolveModel(device) {
+        return (device?.Product?.Model
+            ?? device?.ProductModel
+            ?? device?.Model
+            ?? device?.model_name
+            ?? 'Unknown').toString().trim() || 'Unknown';
+    }
+
+    function resolveCustomer(device) {
+        return (device?.CustomerDescription
+            ?? device?.CustomerName
+            ?? device?.Customer?.Description
+            ?? device?.CustomerCode
+            ?? device?.customer_code
+            ?? 'Unknown').toString().trim() || 'Unknown';
+    }
+
+    function resolveLocation(device) {
+        return (device?.OfficeDescription
+            ?? device?.Location
+            ?? device?.Note
+            ?? device?.location
+            ?? '—').toString().trim() || '—';
+    }
+
+    function resolveLastContact(device) {
+        const candidates = [
+            device?.LastContactDate,
+            device?.LastContact,
+            device?.LastUpdateDateTime,
+            device?.last_seen,
+            device?.LastUpdate
+        ];
+        const value = candidates.find(item => item);
+        if (!value) return '';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+    }
+
+    function resolveDeviceIdForModal(device) {
+        return device?.Id
+            ?? device?.IdInstalledProduct
+            ?? device?.DeviceId
+            ?? device?.device_id
+            ?? null;
+    }
+
+    function buildDuplicateIpGroups(devices) {
+        if (!Array.isArray(devices)) {
+            return [];
+        }
+
+        const groups = new Map();
+        devices.forEach(device => {
+            const ip = resolveIp(device);
+            if (!ip) return;
+            const key = ip.toLowerCase();
+            if (!groups.has(key)) {
+                groups.set(key, { ip, devices: [] });
+            }
+            groups.get(key).devices.push(device);
+        });
+
+        return Array.from(groups.values())
+            .filter(group => group.devices.length > 1)
+            .map(group => {
+                const sortedDevices = group.devices.slice().sort((a, b) => {
+                    return resolveSerial(a).localeCompare(resolveSerial(b));
+                });
+                return {
+                    ip: group.ip,
+                    devices: sortedDevices,
+                    hasOffline: sortedDevices.some(device => device?.IsOffline),
+                    modelCount: new Set(sortedDevices.map(resolveModel).filter(Boolean)).size
+                };
+            })
+            .sort((a, b) => {
+                if (b.devices.length !== a.devices.length) {
+                    return b.devices.length - a.devices.length;
+                }
+                return a.ip.localeCompare(b.ip);
+            });
+    }
 
     const definitions = [
         {
@@ -35,11 +172,31 @@ const CardRegistry = (function () {
 
                 const dashboard = data.dashboard || {};
                 const totalsSource = dashboard.MpsDashboardCustomer || dashboard;
-                const contacted = Array.isArray(dashboard.ContactedDevices) ? dashboard.ContactedDevices : [];
-                const books = Array.isArray(dashboard.Books) ? dashboard.Books : [];
+                const sdsDashboard = dashboard.SdsDashboard || {};
+                const contacted = Array.isArray(totalsSource.ContactedDevices) ? totalsSource.ContactedDevices : [];
+                const books = Array.isArray(totalsSource.Books) ? totalsSource.Books : [];
                 const supplyAlerts = Array.isArray(totalsSource.SupplyAlerts) ? totalsSource.SupplyAlerts : [];
+                const toBeUpdated = Array.isArray(totalsSource.ToBeUpdated) ? totalsSource.ToBeUpdated : [];
+                const warnings = Array.isArray(totalsSource.Warnings) ? totalsSource.Warnings : [];
+                const suppliesDelivery = Array.isArray(totalsSource.SuppliesDelivery) ? totalsSource.SuppliesDelivery : [];
 
                 const toManage = supplyAlerts.find(item => (item.Key || '').toLowerCase() === 'tomanage');
+                let duplicateIpGroups = [];
+
+                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
+                    try {
+                        const result = await window.MPSM.fetchAllDevices({
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            dealerId: context.dealerId,
+                            includeUninstalled: true,
+                            pageRows: 200
+                        });
+                        duplicateIpGroups = buildDuplicateIpGroups(result?.devices || []);
+                    } catch (error) {
+                        console.error('Duplicate IP fetch failed', error);
+                    }
+                }
 
                 return {
                     headline: {
@@ -48,46 +205,366 @@ const CardRegistry = (function () {
                     },
                     metrics: [
                         { label: 'Connectors', value: totalsSource.TotalConnectors ?? 0 },
-                        { label: 'Alerts', value: Number(toManage?.Value ?? 0) },
-                        { label: 'Enabled', value: totalsSource.EnabledDevicesByContract ?? 0 }
+                        { label: 'Maintenance Alerts', value: Number(toManage?.Value ?? 0) },
+                        { label: 'Enabled', value: totalsSource.EnabledDevicesByContract ?? 0 },
+                        {
+                            label: 'Duplicate IPs',
+                            value: duplicateIpGroups.length,
+                            tone: duplicateIpGroups.length ? 'warning' : 'success'
+                        }
                     ],
                     context: {
+                        totalsSource,
+                        sdsDashboard,
                         contacted,
                         books,
-                        supplyAlerts
+                        supplyAlerts,
+                        suppliesDelivery,
+                        toBeUpdated,
+                        warnings,
+                        duplicateIpGroups
                     }
                 };
             },
             renderModal: (helpers, context, snapshot) => {
                 const modal = helpers.createModal('Customer Overview');
-                const { contacted = [], books = [], supplyAlerts = [] } = snapshot.context || {};
+                const {
+                    totalsSource = {},
+                    sdsDashboard = {},
+                    contacted = [],
+                    books = [],
+                    supplyAlerts = [],
+                    suppliesDelivery = [],
+                    toBeUpdated = [],
+                    warnings = [],
+                    duplicateIpGroups = []
+                } = snapshot.context || {};
+
+                const getByKey = (collection, key) => {
+                    const match = collection.find(item => (item.Key || '').toLowerCase() === key);
+                    return match ? helpers.formatNumber(match.Value ?? 0) : '0';
+                };
+
+                const metrics = [
+                    { label: 'Managed Devices', icon: 'fa-print', value: helpers.formatNumber(totalsSource.TotalManagedDevices ?? 0) },
+                    { label: 'Connectors', icon: 'fa-link', value: helpers.formatNumber(totalsSource.TotalConnectors ?? 0) },
+                    { label: 'Enabled Devices', icon: 'fa-badge-check', value: helpers.formatNumber(totalsSource.EnabledDevicesByContract ?? 0) },
+                    { label: 'Maintenance Alerts', icon: 'fa-exclamation-circle', value: getByKey(supplyAlerts, 'tomanage') },
+                    { label: 'Non-communicating', icon: 'fa-plug-circle-xmark', value: helpers.formatNumber(sdsDashboard.NonCommunicatingDevices ?? 0) }
+                ];
 
                 const contactedHtml = contacted.length
-                    ? contacted.map(item => `<li><strong>${helpers.escape(item.Key)}:</strong> ${helpers.escape(item.Value)}</li>`).join('')
-                    : '<li>No recent device contact data.</li>';
+                    ? contacted.map(item => `
+                        <div class="pill">
+                            <span class="pill-label">${helpers.escape(item.Key)}</span>
+                            <span class="pill-value">${helpers.escape(item.Value)}</span>
+                        </div>
+                    `).join('')
+                    : '<div class="empty-state-inline">No recent device contact data.</div>';
+
+                const healthPills = [
+                    { label: 'Devices w/ Errors', value: sdsDashboard.DevicesWithErrors },
+                    { label: 'Devices w/ Warnings', value: sdsDashboard.DevicesWithWarnings },
+                    { label: 'Connectors w/ Errors', value: sdsDashboard.ConnectorsWithErrors },
+                    { label: 'Connectors w/ Warnings', value: sdsDashboard.ConnectorsWithWarnings },
+                    { label: 'Non-communicating Connectors', value: sdsDashboard.NonCommunicatingConnectors }
+                ].filter(item => item.value !== undefined && item.value !== null);
+
+                const supplyPipelineKeys = ['tomanage', 'shipped', 'delivered', 'installed', 'canceled'];
+                const supplyPipeline = supplyPipelineKeys.map(key => ({
+                    label: key.charAt(0).toUpperCase() + key.slice(1),
+                    value: getByKey(supplyAlerts, key)
+                })).filter(item => item.value !== '0' || supplyAlerts.length);
+
+                const suppliesDeliveryHtml = suppliesDelivery.length
+                    ? suppliesDelivery.map(item => `
+                        <div class="pill">
+                            <span class="pill-label">${helpers.escape(item.Key)}</span>
+                            <span class="pill-value">${helpers.escape(item.Value)}</span>
+                        </div>
+                    `).join('')
+                    : '';
+
+                const toBeUpdatedHtml = toBeUpdated.length
+                    ? toBeUpdated.map(item => `
+                        <li>
+                            <strong>${helpers.escape(item.Type ?? 'Unknown')}</strong>
+                            <span class="muted">Count:</span> ${helpers.formatNumber(item.Count ?? 0)}
+                        </li>
+                    `).join('')
+                    : '<li>No pending updates.</li>';
 
                 const booksHtml = books.length
-                    ? books.map(item => `<li>${helpers.escape(item.Key)}: ${helpers.escape(item.Value)}</li>`).join('')
-                    : '<li>No book statistics.</li>';
+                    ? books.map(item => `<div class="pill"><span class="pill-label">${helpers.escape(item.Key)}</span><span class="pill-value">${helpers.escape(item.Value)}</span></div>`).join('')
+                    : '<div class="empty-state-inline">No catalog data.</div>';
 
-                const alertsHtml = supplyAlerts.length
-                    ? supplyAlerts.map(item => `<li>${helpers.escape(item.Key)}: ${helpers.escape(item.Value)}</li>`).join('')
-                    : '<li>No supply alerts statistics.</li>';
+                const warningsHtml = warnings.length
+                    ? warnings.map(item => `<li><strong>${helpers.escape(item.Key)}:</strong> ${helpers.escape(item.Value)}</li>`).join('')
+                    : '<li>No warnings reported.</li>';
 
-                modal.innerHTML = `
-                    <section class="modal-section">
-                        <h3><i class="fas fa-signal"></i> Device Contact (Last 3 Days)</h3>
-                        <ul class="metric-list">${contactedHtml}</ul>
-                    </section>
-                    <section class="modal-section">
-                        <h3><i class="fas fa-book"></i> Books & Catalogs</h3>
-                        <ul class="metric-list">${booksHtml}</ul>
-                    </section>
-                    <section class="modal-section">
-                        <h3><i class="fas fa-exclamation-circle"></i> Supply Alert Breakdown</h3>
-                        <ul class="metric-list">${alertsHtml}</ul>
-                    </section>
-                `;
+                const explorerStatus = totalsSource.HasSentExplorerEmail ? 'Sent' : 'Not Sent';
+                const explorerDate = totalsSource.EmailExplorerInstallationSentAt
+                    ? helpers.escape(totalsSource.EmailExplorerInstallationSentAt)
+                    : 'N/A';
+
+                const duplicateGridId = 'customer-duplicate-ip-grid';
+
+                function openLifecycle(searchTerm = '') {
+                    const params = new URLSearchParams();
+                    if (context.customerCode) {
+                        params.set('customerCode', context.customerCode);
+                    }
+                    if (searchTerm) {
+                        params.set('search', searchTerm);
+                    }
+                    const url = `device-lifecycle.php?${params.toString()}`;
+                    window.open(url, '_blank');
+                }
+
+                function renderDuplicateComparison(group) {
+                    const modalBody = helpers.createModal(`Duplicate IP: ${helpers.escape(group.ip)}`);
+                    const devices = Array.isArray(group.devices) ? group.devices : [];
+
+                    if (!devices.length) {
+                        modalBody.innerHTML = '<div class="empty-state-inline">No devices available for this IP.</div>';
+                        return;
+                    }
+
+                    const fields = [
+                        {
+                            label: 'Equipment ID',
+                            render: (device) => helpers.escape(
+                                (window.getEquipmentIdFromDevice && window.getEquipmentIdFromDevice(device))
+                                || resolveSerial(device)
+                                || 'N/A'
+                            )
+                        },
+                        { label: 'Serial', render: (device) => helpers.escape(resolveSerial(device) || '—') },
+                        { label: 'Model', render: (device) => helpers.escape(resolveModel(device)) },
+                        {
+                            label: 'Status',
+                            render: (device) => {
+                                const offline = isDeviceOffline(device) || device?.IsOffline;
+                                return `<span class="status-badge ${offline ? 'status-danger' : 'status-success'}">${offline ? 'Offline' : 'Online'}</span>`;
+                            }
+                        },
+                        { label: 'Customer', render: (device) => helpers.escape(resolveCustomer(device)) },
+                        {
+                            label: 'Asset',
+                            render: (device) => helpers.escape((device?.AssetNumber ?? device?.Asset ?? '—').toString().trim() || '—')
+                        },
+                        { label: 'Location', render: (device) => helpers.escape(resolveLocation(device)) },
+                        { label: 'Last Contact', render: (device) => helpers.escape(resolveLastContact(device) || '—') }
+                    ];
+
+                    const gridColumns = `repeat(${devices.length + 1}, minmax(0, 1fr))`;
+
+                    modalBody.innerHTML = `
+                        <div class="duplicate-comparison-actions">
+                            <button class="btn btn-secondary" data-action="back-duplicates">
+                                <i class="fas fa-arrow-left"></i> Back to duplicates
+                            </button>
+                            <div class="comparison-actions-inline">
+                                <button class="btn btn-primary" data-action="open-lifecycle-ip" data-ip="${helpers.escape(group.ip)}">
+                                    <i class="fas fa-up-right-from-square"></i> Open Device Lifecycle
+                                </button>
+                            </div>
+                        </div>
+                        <div class="duplicate-comparison-grid" style="grid-template-columns: ${gridColumns};">
+                            <div class="comparison-label">&nbsp;</div>
+                            ${devices.map(device => `
+                                <div class="comparison-header">
+                                    <div class="comparison-title">${helpers.escape(resolveModel(device))}</div>
+                                    <div class="comparison-sub">${helpers.escape(resolveSerial(device) || resolveCustomer(device))}</div>
+                                    <div class="comparison-subtle">${helpers.escape(resolveCustomer(device))}</div>
+                                </div>
+                            `).join('')}
+                            ${fields.map(field => `
+                                <div class="comparison-label">${helpers.escape(field.label)}</div>
+                                ${devices.map(device => `<div class="comparison-cell">${field.render(device)}</div>`).join('')}
+                            `).join('')}
+                            <div class="comparison-label">Actions</div>
+                            ${devices.map(device => `
+                                <div class="comparison-actions">
+                                    <button class="btn btn-secondary" data-action="view-device" data-device-id="${helpers.escape(resolveDeviceIdForModal(device) || '')}" data-serial="${helpers.escape(resolveSerial(device) || '')}">
+                                        <i class="fas fa-eye"></i> View device
+                                    </button>
+                                    <button class="btn btn-primary" data-action="edit-device-lifecycle" data-ip="${helpers.escape(group.ip)}" data-serial="${helpers.escape(resolveSerial(device) || '')}">
+                                        <i class="fas fa-pen"></i> Edit in Lifecycle
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+
+                    modalBody.querySelector('[data-action="back-duplicates"]')?.addEventListener('click', () => {
+                        renderBaseView();
+                    });
+
+                    modalBody.querySelector('[data-action="open-lifecycle-ip"]')?.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        const ip = event.currentTarget.getAttribute('data-ip') || '';
+                        openLifecycle(ip);
+                    });
+
+                    modalBody.querySelectorAll('[data-action="view-device"]').forEach(button => {
+                        button.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            const deviceId = button.getAttribute('data-device-id') || '';
+                            const serial = button.getAttribute('data-serial') || '';
+                            if (window.MPSM && typeof window.MPSM.openDeviceModal === 'function') {
+                                window.MPSM.openDeviceModal(deviceId || null, serial || null, context.customerCode);
+                            }
+                        });
+                    });
+
+                    modalBody.querySelectorAll('[data-action="edit-device-lifecycle"]').forEach(button => {
+                        button.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            const serial = button.getAttribute('data-serial') || '';
+                            const ip = button.getAttribute('data-ip') || group.ip;
+                            openLifecycle(serial || ip);
+                        });
+                    });
+                }
+
+                function wireDuplicateSection() {
+                    const duplicateGrid = modal.querySelector(`#${duplicateGridId}`);
+                    if (!duplicateGrid) {
+                        return;
+                    }
+
+                    duplicateGrid.querySelectorAll('.dup-ip-card').forEach(card => {
+                        card.addEventListener('click', () => {
+                            const ip = card.getAttribute('data-ip') || '';
+                            const match = duplicateIpGroups.find(group => group.ip === ip);
+                            if (match) {
+                                renderDuplicateComparison(match);
+                            }
+                        });
+                    });
+
+                    modal.querySelectorAll('[data-action="open-lifecycle-all"]').forEach(button => {
+                        button.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            openLifecycle('');
+                        });
+                    });
+                }
+
+                function renderBaseView() {
+                    modal.innerHTML = `
+                        <section class="customer-overview-section">
+                            <div class="modal-metrics">
+                                ${metrics.map(metric => `
+                                    <div class="modal-metric">
+                                        <div class="modal-metric-icon"><i class="fas ${metric.icon}"></i></div>
+                                        <div>
+                                            <div class="modal-metric-value">${metric.value}</div>
+                                            <div class="modal-metric-label">${metric.label}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+
+                        <section class="customer-overview-section">
+                            <h3><i class="fas fa-signal"></i> Communication & Health</h3>
+                            <div class="pill-grid">${contactedHtml}</div>
+                            <div class="pill-grid">
+                                ${healthPills.length
+                                    ? healthPills.map(item => `
+                                        <div class="pill">
+                                            <span class="pill-label">${helpers.escape(item.label)}</span>
+                                            <span class="pill-value">${helpers.formatNumber(item.value ?? 0)}</span>
+                                        </div>
+                                    `).join('')
+                                    : '<div class="empty-state-inline">No device or connector health warnings.</div>'
+                                }
+                            </div>
+                        </section>
+
+                        <section class="customer-overview-section">
+                            <h3><i class="fas fa-boxes-stacked"></i> Supply Pipeline</h3>
+                            <div class="pill-grid">
+                                ${supplyPipeline.length
+                                    ? supplyPipeline.map(item => `
+                                        <div class="pill">
+                                            <span class="pill-label">${helpers.escape(item.label)}</span>
+                                            <span class="pill-value">${helpers.escape(item.value)}</span>
+                                        </div>
+                                    `).join('')
+                                    : '<div class="empty-state-inline">No supply movement recorded.</div>'
+                                }
+                            </div>
+                                ${suppliesDeliveryHtml ? `<div class="pill-grid">${suppliesDeliveryHtml}</div>` : ''}
+                        </section>
+
+                        <section class="customer-overview-section">
+                            <h3><i class="fas fa-rotate"></i> Update Backlog</h3>
+                            <ul class="metric-list">${toBeUpdatedHtml}</ul>
+                        </section>
+
+                        <section class="customer-overview-section">
+                            <div class="section-heading with-actions">
+                                <h3><i class="fas fa-network-wired"></i> Duplicate IPs</h3>
+                                <div class="section-actions">
+                                    <button class="btn btn-secondary" data-action="open-lifecycle-all">
+                                        <i class="fas fa-up-right-from-square"></i> Open Device Lifecycle
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="dup-ip-grid" id="${duplicateGridId}">
+                                ${duplicateIpGroups.length
+                                    ? duplicateIpGroups.map(group => `
+                                        <div class="dup-ip-card" data-ip="${helpers.escape(group.ip)}">
+                                            <header>
+                                                <div>
+                                                    <p class="dup-ip-label">IP Address</p>
+                                                    <h4>${helpers.escape(group.ip)}</h4>
+                                                </div>
+                                                <span class="dup-ip-badge">${helpers.formatNumber(group.devices.length)} devices</span>
+                                            </header>
+                                            <div class="dup-ip-meta">
+                                                <span class="dup-ip-pill">${helpers.formatNumber(group.modelCount)} models</span>
+                                                ${group.hasOffline
+                                                    ? '<span class="dup-ip-pill pill-danger">Offline present</span>'
+                                                    : '<span class="dup-ip-pill pill-success">All online</span>'}
+                                            </div>
+                                            <div class="dup-ip-hint">Click to compare devices</div>
+                                        </div>
+                                    `).join('')
+                                    : '<div class="empty-state-inline">No duplicate IPs detected for this customer.</div>'
+                                }
+                            </div>
+                            <p class="section-help">Click a card to compare devices sharing the same IP.</p>
+                        </section>
+
+                        <section class="customer-overview-section">
+                            <h3><i class="fas fa-book"></i> Catalog & Explorer</h3>
+                            <div class="pill-grid">${booksHtml}</div>
+                            <div class="explorer-status">
+                                <span class="pill pill-muted">
+                                    <span class="pill-label">Explorer Email</span>
+                                    <span class="pill-value">${explorerStatus}</span>
+                                </span>
+                                <span class="pill pill-muted">
+                                    <span class="pill-label">Sent At</span>
+                                    <span class="pill-value">${explorerDate}</span>
+                                </span>
+                            </div>
+                        </section>
+
+                        <section class="customer-overview-section">
+                            <h3><i class="fas fa-triangle-exclamation"></i> Warnings</h3>
+                            <ul class="metric-list">${warningsHtml}</ul>
+                        </section>
+                    `;
+
+                    wireDuplicateSection();
+                }
+
+                renderBaseView();
             }
         },
         {
@@ -187,7 +664,7 @@ const CardRegistry = (function () {
                     total = devices.length;
                 }
 
-                const offline = devices.filter(device => device.IsOffline).length;
+                const offline = devices.filter(device => isDeviceOffline(device)).length;
 
                 return {
                     headline: {
@@ -222,7 +699,7 @@ const CardRegistry = (function () {
                             id: 'IsOffline',
                             label: 'Status',
                             sortable: true,
-                            accessor: row => row.IsOffline ? 'Offline' : 'Online',
+                            accessor: row => isDeviceOffline(row) ? 'Offline' : 'Online',
                             format: value => value === 'Offline'
                                 ? '<span class="status-badge status-danger">Offline</span>'
                                 : '<span class="status-badge status-success">Online</span>'
@@ -533,25 +1010,30 @@ const CardRegistry = (function () {
             load: async (helpers, context) => {
                 let devices = [];
 
-                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
-                    const result = await window.MPSM.fetchAllDevices({
-                        customerCode: context.customerCode,
-                        dealerCode: context.dealerCode,
-                        dealerId: context.dealerId,
-                        sortColumn: 'AssetNumber',
-                        sortOrder: 'Asc'
-                    });
-                    devices = Array.isArray(result.devices) ? result.devices : [];
-                } else {
-                    const data = await helpers.fetchJson('api/get-devices.php', {
-                        customerCode: context.customerCode,
-                        dealerCode: context.dealerCode,
-                        dealerId: context.dealerId,
-                        pageRows: 200,
-                        sortColumn: 'AssetNumber',
-                        sortOrder: 'Asc'
-                    });
-                    devices = Array.isArray(data.devices) ? data.devices : [];
+                try {
+                    if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
+                        const result = await window.MPSM.fetchAllDevices({
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            dealerId: context.dealerId,
+                            sortColumn: 'AssetNumber',
+                            sortOrder: 'Asc'
+                        });
+                        devices = Array.isArray(result.devices) ? result.devices : [];
+                    } else {
+                        const data = await helpers.fetchJson('api/get-devices.php', {
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            dealerId: context.dealerId,
+                            pageRows: 200,
+                            sortColumn: 'AssetNumber',
+                            sortOrder: 'Asc'
+                        });
+                        devices = Array.isArray(data.devices) ? data.devices : [];
+                    }
+                } catch (error) {
+                    console.error('Top Devices card failed to load devices:', error);
+                    devices = [];
                 }
 
                 const enriched = devices.map(device => {
@@ -598,7 +1080,7 @@ const CardRegistry = (function () {
                 const topDevices = sorted.slice(0, 5);
                 const totalVolume = topDevices.reduce((sum, device) => sum + (Number(device.__topTotal) || 0), 0);
                 const averageVolume = topDevices.length ? totalVolume / topDevices.length : 0;
-                const offlineCount = topDevices.filter(device => device.IsOffline).length;
+                const offlineCount = topDevices.filter(device => isDeviceOffline(device)).length;
                 const colorCapable = topDevices.filter(device => {
                     const flag = device.IsColor ?? device.ColorCapable ?? device.Product?.IsColor ?? device.Product?.ColorCapable;
                     if (typeof flag === 'string') {
@@ -1319,5 +1801,14 @@ function renderTonerBadge(color, value) {
     `;
 }
 
-
-
+/*
+CHANGELOG
+2025-11-23 Codex
+- Renamed Alerts metric to Maintenance Alerts and hardened Top Devices card loading to tolerate non-JSON responses without crashing.
+2025-11-24 Codex
+- Expanded Customer Snapshot modal with structured metrics, supply pipeline, health, warnings, and explorer status using existing dashboard payload data.
+- Added duplicate IP insights (online/offline counts) sourced from cached devices plus quick link to lifecycle workspace.
+2025-11-25 Codex
+- Built duplicate IP grouping with interactive comparison grid, lifecycle handoff, and per-device actions directly inside the Customer Snapshot modal.
+- Added lifecycle deep links and lifecycle CTA buttons that honor the active customer context.
+*/

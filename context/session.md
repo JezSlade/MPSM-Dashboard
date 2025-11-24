@@ -333,8 +333,8 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 
 ### Problem / Solution Snapshot
 - **Symptom:** Cron mails repeatedly show `status: completed` with `errors` that mention `device_serial` and OAuth token timeouts even though code changes went live.
-- **Root Cause:** Cron kept replaying an old “completed” state file while the cache tables still used `serial_number`, so every run attempted to insert into a missing `device_serial` column and the next page triggered a timeout during token refresh.
-- **Solution:** Added `REFRESH_CACHE_CHUNKED_VERSION` plus runtime detection of `serial_number` vs `device_serial`, and reran `https://.../refresh-cache-chunked.php?action=start` to reset state. Future troubleshooting now includes verifying `version` in cron JSON and checking the state file’s `device_serial_column` before editing SQL.
+- **Root Cause:** Cron kept replaying an old "completed" state file while the cache tables still used `serial_number`, so every run attempted to insert into a missing `device_serial` column and the next page triggered a timeout during token refresh.
+- **Solution:** Added `REFRESH_CACHE_CHUNKED_VERSION` plus runtime detection of `serial_number` vs `device_serial`, and reran `https://.../refresh-cache-chunked.php?action=start` to reset state. Future troubleshooting now includes verifying `version` in cron JSON and checking the state file's `device_serial_column` before editing SQL.
 
 ### Cron Progress Confirmation
 - Cron email at 08:57 UTC (page 5/34) now shows `errors: []`, `devices_cached: 400`, and `version: 2025-11-19a`; `device_serial_column` = `serial_number`, `continue: true`.
@@ -342,10 +342,24 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 
 - ### CLI Helper Outcome
 - The helper endpoint (`run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`) now runs the CLI command directly; the 11:09 UTC execution completed all 34 pages with `devices_cached: 3345`, no errors, saved `version` 2025-11-19a, and set `continue: false`. Use that response + `/home/resolut7/logs/refresh-cache-chunked.log` to confirm future runs without waiting for email.
-- 
+-
 - ### Current Drill-Down Strategy
 - Since we restart the job via `?action=start` (or the helper) whenever stage 1 completes, the next cron ticks should find `devices_to_fetch_drilldown` populated and transition into `fetching_drilldowns`. If the log still shows completion, rerun the helper after a minute so you can observe `drilldowns_cached` increasing; record those entries in the test log so the next agent knows the phase has executed.
-- Drill-down note: After stage 1 finishes, every device that isn’t explicitly `uninstalled` is now queued for drill-downs, which means state 2 will populate `drilldowns_cached` once enough devices finish processing; check `/home/resolut7/logs/refresh-cache-chunked.log` for the next chunk outputs to verify the queue was not empty and stage 2 executed.
+- Drill-down note: After stage 1 finishes, every device that isn't explicitly `uninstalled` is now queued for drill-downs, which means state 2 will populate `drilldowns_cached` once enough devices finish processing; check `/home/resolut7/logs/refresh-cache-chunked.log` for the next chunk outputs to verify the queue was not empty and stage 2 executed.
+
+---
+
+### 2025-11-23 - Hero Alerts UX and Scoping
+- Moved hero notifications into the customer banner as a collapsible "System Alerts" control; chips render inline only when toggled open.
+- Suppressed the legacy red badge and capped display to top-priority alerts to reduce header clutter.
+- Scoped alerts to the current customer using `customerCode` filter plus backfill join on related panel message when notifications lack customer_code.
+- Trimmed/lowered customer matching to avoid whitespace/casing misses.
+
+### 2025-11-23 - Maintenance Alerts UX + Dedup
+- Renamed the dashboard alerts metric to "Maintenance Alerts" to reduce perceived severity.
+- Retitled the hero toggle to "System Alerts" and kept the collapsed-in-banner behavior.
+- Added deduplication for dashboard notifications to prevent repeat triggers for the same rule/device/alert.
+- Hardened Top Devices card JSON handling to avoid crashes on malformed responses.
 
 ---
 
@@ -426,8 +440,12 @@ mpsm_alert_definitions:
 CHANGELOG
 2025-11-19 Codex
 - Logged the release of `REFRESH_CACHE_CHUNKED_VERSION`, described the remaining OAuth timeout and retry work, and updated the session metadata date.
+2025-11-23 Codex
+- Added customer-scoped, collapsible hero alerts, hid the badge, and backfilled customer matching via related panel messages.
+- Documented Maintenance Alerts renaming, notification deduplication, and Top Devices hardening.
 2025-11-24 Codex
 - Added Alert Definitions management system for customizing alert code to description mappings
 - Fixed timestamp timezone issue in hero notifications (DST handling)
 - Created admin UI, API endpoints, and database schema for alert definitions
+- Merged weekend work with alert definitions work after git conflict resolution
 */

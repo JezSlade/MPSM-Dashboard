@@ -820,7 +820,7 @@ curl -H "X-Deploy-Secret: mpsm_deploy_4089ad30f8ef64274f6d015e1aa15fad" "https:/
 ## Verification
 
 - [x] Downloaded production error data
-- [x] Analyzed error types and distribution  
+- [x] Analyzed error types and distribution
 - [x] Confirmed case-sensitivity fix working (99.96% reduction)
 - [x] Identified vendor truncation issue (7,845 errors)
 - [x] Calculated test vs production breakdown
@@ -869,3 +869,31 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?a
 ## 2025-11-21 - Drill-Down Phase Monitoring
 
 - **Plan:** After reinitializing with `?action=start`, wait for cron/helper responses showing `state.status = "fetching_drilldowns"` and `drilldowns_cached > 0`. Once visible, copy the JSON entry into this log to show the drill-down phase completed successfully and the cache now contains both device and drill-down records.
+
+## 2025-11-22 - Panel Callback Cleanup
+
+- **Action:** Ran cleanup API `panel-cleanup.php` to remove old entries and test data using secret auth.
+- **Commands:**
+  - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/panel-cleanup.php?action=purge-old&days=7&dry_run=0&secret=PANEL_CLEANUP_2025"`
+  - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/panel-cleanup.php?action=cleanup&dry_run=0&secret=PANEL_CLEANUP_2025"`
+- **Result:** Deleted `debug_old_entries=12204`, `messages_old_entries=1119`; no test data or probe errors remained. Post-cleanup stats: `panel_callback_debug` total 6,295 (errors 28, success 6,267; range 2025-11-16 to 2025-11-22), `panel_messages` total 9,204 (range 2025-11-09 to 2025-11-22).
+
+## 2025-11-23 - Dashboard UX & Alert Dedup
+
+- **Action:** Updated hero alerts to be customer-scoped, collapsible in the banner, and retitled to "System Alerts". Renamed the Alerts metric card to "Maintenance Alerts". Hardened Top Devices card JSON handling and added deduplication for dashboard notifications (rule/device/alert) to prevent repeat triggers.
+- **Verification:** Manual reload required; no automated tests run in this environment. Pending live UI smoke to confirm alerts populate for the active customer and Top Devices card renders without parse errors.
+
+## 2025-11-24 - Alert Definitions System & Merge Resolution
+
+- **Action:** Created alert definitions management system for customizing alert code to description mappings. Resolved git merge conflicts between weekend work (hero alerts UX, customer scoping, deduplication) and alert definitions work.
+- **Files Merged:**
+  - `cms/api/command-center.php` - Added alert definitions CRUD endpoints + customer filtering
+  - `mps-api/callbacks/command-center-engine.php` - Added getAlertDisplayName() + device identifier support + deduplication
+  - `mps-api/callbacks/command-center-schema.php` - Added both alert_definitions and alert_code_descriptions tables
+  - `context/session.md` - Combined documentation from both sessions
+  - `context/test-log.md` - Combined test logs from both sessions
+- **Verification Pending:**
+  - [ ] PHP syntax check on merged PHP files
+  - [ ] Live test of alert definitions admin UI
+  - [ ] Live test of hero notifications with display names
+  - [ ] Confirm no regressions in customer scoping or deduplication

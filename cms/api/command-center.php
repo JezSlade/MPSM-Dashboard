@@ -10,6 +10,7 @@ require '../functions.php';
 requireAuth();
 
 define('MPS_ENGINE_ACCESS', true);
+require_once __DIR__ . '/../../mps-api/callbacks/panel-message-common.php';  // Provides getNYTimestamp()
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-schema.php';
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-engine.php';
 
@@ -108,32 +109,50 @@ function getNotifications(PDO $pdo): void
 {
     $status = $_GET['status'] ?? 'active';
     $severity = $_GET['severity'] ?? null;
+    $customerCode = $_GET['customerCode'] ?? null;
     $limit = min((int)($_GET['limit'] ?? 50), 100);
 
     $notifTable = DB_PREFIX . 'dashboard_notifications';
     $defsTable = DB_PREFIX . 'alert_definitions';
 
     // Join with alert_definitions to get display names for alert codes
-    $sql = "SELECT n.*,
+    // Also support customer code filtering (weekend work)
+    $sql = "SELECT dn.*,
                    ad.display_name as alert_display_name,
                    ad.description as alert_description,
                    ad.category as alert_category
-            FROM {$notifTable} n
-            LEFT JOIN {$defsTable} ad ON n.alert_code = ad.alert_code AND ad.enabled = 1
-            WHERE n.status = :status";
+            FROM {$notifTable} dn
+            LEFT JOIN {$defsTable} ad ON dn.alert_code = ad.alert_code AND ad.enabled = 1
+            WHERE dn.status = :status";
 
     // Add severity filter if provided
     if ($severity) {
-        $sql .= " AND n.severity = :severity";
+        $sql .= " AND dn.severity = :severity";
     }
 
-    $sql .= " ORDER BY n.priority DESC, n.created_at_ny DESC LIMIT :limit";
+    // Restrict to current customer if provided
+    // Show notifications that either:
+    // 1. Match the customer code exactly, OR
+    // 2. Have no customer code (legacy/global notifications)
+    if ($customerCode) {
+        $sql .= " AND (
+            LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
+            OR dn.customer_code IS NULL
+            OR dn.customer_code = ''
+        )";
+    }
+
+    $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':status', $status);
 
     if ($severity) {
         $stmt->bindValue(':severity', $severity);
+    }
+
+    if ($customerCode) {
+        $stmt->bindValue(':customer_code', $customerCode);
     }
 
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -162,7 +181,8 @@ function getNotifications(PDO $pdo): void
         'count' => count($notifications),
         'filters' => [
             'status' => $status,
-            'severity' => $severity
+            'severity' => $severity,
+            'customerCode' => $customerCode
         ]
     ]);
 }
@@ -502,7 +522,7 @@ function getAggregations(PDO $pdo): void
 
     // Add display_name field (use definition or fallback to code)
     foreach ($aggregations as &$agg) {
-        $agg['alert_display_name'] = $agg['alert_display_name'] ?? $agg['alert_code'];
+        $agg['alert_display_name'] ??= $agg['alert_code'];
     }
 
     echo json_encode([
@@ -886,10 +906,16 @@ function lookupAlertDescription(PDO $pdo): void
 
 /*
 CHANGELOG
+2025-11-22 Codex
+- Added optional customerCode filter to dashboard notifications to scope alerts to the currently viewed customer.
+2025-11-23 Codex
+- Relaxed customer scoping to include legacy notifications missing customer_code.
+- Include notifications with NULL/empty customer_code (legacy/global alerts) alongside customer-specific ones.
 2025-11-24 Codex
 - Added alert definitions CRUD endpoints for managing alert code to description mappings
 - Added get_alert_definitions, get_alert_definition, create_alert_definition, update_alert_definition, delete_alert_definition
 - Added import_alert_definitions for bulk import from spreadsheet data
 - Added get_unmapped_alerts to find alert codes without definitions
 - Added lookup_alert_description for real-time alert code to display name resolution
+- Merged getNotifications to include both customer filtering AND alert definitions JOIN
 */

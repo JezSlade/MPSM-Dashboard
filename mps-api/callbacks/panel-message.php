@@ -92,9 +92,19 @@ try {
     $messageId = (int)$pdo->lastInsertId();
 
     // Process Command Center notification rules
+    // Extract device identifier (prefer asset number or system name over serial)
+    $installedProduct = $decoded['installedProduct'] ?? [];
+    $deviceIdentifier = $installedProduct['assetNumber'] ?? $installedProduct['systemName'] ?? null;
+    if (empty($deviceIdentifier)) {
+        $deviceIdentifier = extractDeviceSerial($decoded);
+    }
+
     processNotificationRules($pdo, $messageId, [
         'device_serial' => truncateField(extractDeviceSerial($decoded), 150),
+        'device_identifier' => truncateField($deviceIdentifier, 150),
+        'device_model' => truncateField(($installedProduct['product']['brand'] ?? '') . ' ' . ($installedProduct['product']['model'] ?? ''), 150),
         'maintenance_alert_code' => truncateField($decoded['maintenanceAlert']['code'] ?? $decoded['MaintenanceAlert_Code'] ?? null, 150),
+        'maintenance_alert_description' => truncateField($decoded['maintenanceAlert']['description'] ?? $decoded['MaintenanceAlert_Description'] ?? null, 500),
         'customer_code' => truncateField($decoded['customer']['code'] ?? $decoded['Customer_Code'] ?? null, 100),
         'customer_description' => truncateField($decoded['customer']['description'] ?? $decoded['Customer_Description'] ?? null, 255),
         'panel_configuration' => truncateField($decoded['maintenanceAlert']['panelConfiguration'] ?? $decoded['PanelMessageConfiguration_Description'] ?? null, 255),
