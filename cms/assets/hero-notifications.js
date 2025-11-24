@@ -164,30 +164,52 @@ function renderHeroNotifications(notifications) {
             || config.label
             || 'System Alert';
 
-        // Subtitle: Only use equipment_id if it's NOT a serial number
-        // Serial numbers are long alphanumeric strings (e.g., "A1UE0111075...")
-        // Equipment IDs are shorter codes (e.g., "xx###")
-        const rawEquipmentId = notif.equipment_id || notif.device_identifier || '';
-        const isSerialNumber = rawEquipmentId && rawEquipmentId.length > 15;
-        const equipmentId = isSerialNumber ? '' : rawEquipmentId;
+        // Parse metadata JSON if available (contains equipment_id, model, location from panel message)
+        let metadata = {};
+        try {
+            if (typeof notif.metadata === 'string') {
+                metadata = JSON.parse(notif.metadata);
+            } else if (typeof notif.metadata === 'object' && notif.metadata !== null) {
+                metadata = notif.metadata;
+            }
+        } catch (e) {
+            console.warn('[HeroNotif] Failed to parse metadata:', e);
+        }
 
-        const model = notif.model || '';
-        const department = notif.department || notif.device_location || notif.device_department || '';
-        const customerDesc = notif.customer_description || notif.customer_code || '';
+        // Subtitle: Equipment ID and Location (NEVER serial numbers)
+        // Priority: metadata > notification fields > cache_devices JOIN fields
+        const equipmentId = metadata.equipment_id
+            || notif.equipment_id
+            || notif.device_equipment_id
+            || notif.device_equipment_id_alt
+            || '';
 
-        // Build subtitle with Equipment ID, Model, and Department
-        // If none available, show customer or generic label
+        const location = metadata.location
+            || notif.location
+            || notif.department
+            || notif.device_location
+            || notif.device_department
+            || '';
+
+        const model = metadata.model
+            || notif.model
+            || notif.device_model
+            || '';
+
+        // Build subtitle: Equipment ID • Location (no model unless no location)
         const subtitleParts = [];
         if (equipmentId) subtitleParts.push(equipmentId);
-        if (model) subtitleParts.push(model);
-        if (department) subtitleParts.push(department);
+        if (location) {
+            subtitleParts.push(location);
+        } else if (model) {
+            subtitleParts.push(model);
+        }
 
         let subtitle = subtitleParts.join(' • ');
-        if (!subtitle && customerDesc) {
-            subtitle = customerDesc;
-        }
         if (!subtitle) {
-            subtitle = 'Device Alert';
+            // Fallback to customer code only if we have nothing else
+            const customerDesc = notif.customer_description || notif.customer_code || '';
+            subtitle = customerDesc || 'Device Alert';
         }
 
         const metaParts = [];

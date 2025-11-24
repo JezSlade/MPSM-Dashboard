@@ -13,14 +13,32 @@ $pdo = getDatabase();
 $table = DB_PREFIX . 'alert_definitions';
 
 // Common alert codes with human-readable descriptions
+// Reference: docs/MPSM_Code_Descriptions.md
 $definitions = [
-    ['code' => '808', 'name' => 'Paper Jam', 'description' => 'Paper jam detected in device', 'category' => 'Paper', 'severity' => 'high'],
-    ['code' => '024', 'name' => 'Toner Low', 'description' => 'Toner cartridge running low', 'category' => 'Toner', 'severity' => 'warning'],
-    ['code' => '025', 'name' => 'Toner Empty', 'description' => 'Toner cartridge is empty', 'category' => 'Toner', 'severity' => 'high'],
-    ['code' => '026', 'name' => 'Waste Toner Full', 'description' => 'Waste toner container is full', 'category' => 'Service', 'severity' => 'warning'],
-    ['code' => '116', 'name' => 'Service Required', 'description' => 'Device requires service', 'category' => 'Service', 'severity' => 'high'],
-    ['code' => '200', 'name' => 'Cover Open', 'description' => 'Device cover is open', 'category' => 'Error', 'severity' => 'warning'],
-    ['code' => '400', 'name' => 'Offline', 'description' => 'Device is offline', 'category' => 'Connectivity', 'severity' => 'critical'],
+    // Input/Paper alerts (800 series)
+    ['code' => '807', 'name' => 'Input Media Supply Low', 'description' => 'Paper tray is running low', 'category' => 'Paper', 'severity' => 'warning'],
+    ['code' => '808', 'name' => 'Input Media Supply Empty', 'description' => 'Paper tray is empty', 'category' => 'Paper', 'severity' => 'high'],
+    ['code' => '809', 'name' => 'Input Media Change Request', 'description' => 'Different paper type requested', 'category' => 'Paper', 'severity' => 'info'],
+    ['code' => '810', 'name' => 'Input Manual Input Request', 'description' => 'Manual feed requested', 'category' => 'Paper', 'severity' => 'info'],
+
+    // General alerts
+    ['code' => '8', 'name' => 'Jam', 'description' => 'Paper jam detected in device', 'category' => 'Paper', 'severity' => 'high'],
+    ['code' => '3', 'name' => 'Cover Open', 'description' => 'Device cover is open', 'category' => 'Service', 'severity' => 'warning'],
+    ['code' => '501', 'name' => 'Door Open', 'description' => 'Device door is open', 'category' => 'Service', 'severity' => 'warning'],
+
+    // Output alerts (900 series)
+    ['code' => '902', 'name' => 'Output Media Tray Almost Full', 'description' => 'Output tray is almost full', 'category' => 'Paper', 'severity' => 'warning'],
+    ['code' => '903', 'name' => 'Output Media Tray Full', 'description' => 'Output tray is full', 'category' => 'Paper', 'severity' => 'high'],
+
+    // Toner alerts (1100 series)
+    ['code' => '1101', 'name' => 'Marker Toner Empty', 'description' => 'Toner cartridge is empty', 'category' => 'Toner', 'severity' => 'critical'],
+    ['code' => '1104', 'name' => 'Marker Toner Almost Empty', 'description' => 'Toner cartridge is running low', 'category' => 'Toner', 'severity' => 'warning'],
+    ['code' => '1107', 'name' => 'Waste Toner Receptacle Almost Full', 'description' => 'Waste toner container is almost full', 'category' => 'Service', 'severity' => 'warning'],
+    ['code' => '1109', 'name' => 'Waste Toner Receptacle Full', 'description' => 'Waste toner container is full', 'category' => 'Service', 'severity' => 'high'],
+
+    // Fuser alerts (1000 series)
+    ['code' => '1001', 'name' => 'Marker Fuser Under Temperature', 'description' => 'Fuser temperature too low', 'category' => 'Service', 'severity' => 'high'],
+    ['code' => '1002', 'name' => 'Marker Fuser Over Temperature', 'description' => 'Fuser temperature too high', 'category' => 'Service', 'severity' => 'critical'],
 ];
 
 $inserted = 0;

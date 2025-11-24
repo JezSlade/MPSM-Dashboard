@@ -328,6 +328,14 @@ if (!function_exists('createDashboardNotification')) {
             ?? lookupAlertCodeDescription($pdo, $alertCode);
         $customerCode = $messageData['customer_code'] ?? '';
 
+        // Extract device metadata for display (equipment ID, model, location)
+        $deviceMetadata = [
+            'equipment_id' => $messageData['equipment_id'] ?? $messageData['EquipmentID'] ?? $messageData['EquipmentId'] ?? null,
+            'model' => $messageData['device_model'] ?? $messageData['Model'] ?? $messageData['model'] ?? null,
+            'location' => $messageData['device_location'] ?? $messageData['Location'] ?? $messageData['OfficeDescription'] ?? $messageData['Department'] ?? null,
+            'device_identifier' => $deviceIdentifier
+        ];
+
         // Get frequency data
         $frequencyCount = 1;
         $timeWindow = null;
@@ -443,9 +451,9 @@ if (!function_exists('createDashboardNotification')) {
             $sql = "INSERT INTO {$table}
                     (title, message, severity, rule_id, device_serial, alert_code, customer_code,
                      trigger_count, time_window_hours, related_message_ids, created_at_ny,
-                     expires_at_ny, icon, color, priority, status)
+                     expires_at_ny, icon, color, priority, status, metadata)
                     VALUES (:title, :message, :severity, :rule_id, :device, :alert, :customer,
-                            :count, :window, :message_ids, :created_at, :expires_at, :icon, :color, :priority, 'active')";
+                            :count, :window, :message_ids, :created_at, :expires_at, :icon, :color, :priority, 'active', :metadata)";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -463,7 +471,8 @@ if (!function_exists('createDashboardNotification')) {
                 ':expires_at' => $expiresAt,
                 ':icon' => $icon,
                 ':color' => $color,
-                ':priority' => $priority
+                ':priority' => $priority,
+                ':metadata' => json_encode($deviceMetadata)
             ]);
         }
 

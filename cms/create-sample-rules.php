@@ -18,6 +18,73 @@ $pdo = getDatabase();
 ensureCommandCenterTables($pdo);
 
 header('Content-Type: text/html; charset=utf-8');
+
+$creationMessage = null;
+$creationError = null;
+$ruleFormData = [
+    'name' => '',
+    'severity' => 'warning',
+    'alert_code_pattern' => '',
+    'device_serial_pattern' => '',
+    'customer_code_pattern' => '',
+    'frequency_count' => '',
+    'frequency_window_hours' => '',
+    'frequency_type' => 'same_device',
+    'show_dashboard' => 1,
+    'auto_dismiss_hours' => '',
+    'notification_title' => 'Alert {alert} on {device}',
+    'notification_message' => '{device} triggered {alert} for {customer}. Count: {count} in {window}.'
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rule_form_submit'])) {
+    $allowedSeverities = ['info', 'warning', 'high', 'critical'];
+    $allowedFrequencyTypes = ['same_device', 'same_alert', 'same_customer', 'any'];
+
+    $ruleFormData['name'] = trim($_POST['name'] ?? '');
+    $ruleFormData['severity'] = strtolower(trim($_POST['severity'] ?? 'warning'));
+    $ruleFormData['alert_code_pattern'] = trim($_POST['alert_code_pattern'] ?? '');
+    $ruleFormData['device_serial_pattern'] = trim($_POST['device_serial_pattern'] ?? '');
+    $ruleFormData['customer_code_pattern'] = trim($_POST['customer_code_pattern'] ?? '');
+    $ruleFormData['frequency_count'] = isset($_POST['frequency_count']) && $_POST['frequency_count'] !== '' ? (int)$_POST['frequency_count'] : '';
+    $ruleFormData['frequency_window_hours'] = isset($_POST['frequency_window_hours']) && $_POST['frequency_window_hours'] !== '' ? (int)$_POST['frequency_window_hours'] : '';
+    $ruleFormData['frequency_type'] = $_POST['frequency_type'] ?? 'same_device';
+    $ruleFormData['show_dashboard'] = isset($_POST['show_dashboard']) ? 1 : 0;
+    $ruleFormData['auto_dismiss_hours'] = isset($_POST['auto_dismiss_hours']) && $_POST['auto_dismiss_hours'] !== '' ? (int)$_POST['auto_dismiss_hours'] : '';
+    $ruleFormData['notification_title'] = trim($_POST['notification_title'] ?? '');
+    $ruleFormData['notification_message'] = trim($_POST['notification_message'] ?? '');
+
+    if ($ruleFormData['name'] === '') {
+        $creationError = 'Rule name is required.';
+    } elseif (!in_array($ruleFormData['severity'], $allowedSeverities, true)) {
+        $creationError = 'Invalid severity.';
+    } elseif (!in_array($ruleFormData['frequency_type'], $allowedFrequencyTypes, true)) {
+        $creationError = 'Invalid frequency type.';
+    } else {
+        try {
+            $newRule = [
+                'name' => $ruleFormData['name'],
+                'description' => 'Created via Rule Builder',
+                'severity' => $ruleFormData['severity'],
+                'enabled' => 1,
+                'alert_code_pattern' => $ruleFormData['alert_code_pattern'] !== '' ? $ruleFormData['alert_code_pattern'] : null,
+                'device_serial_pattern' => $ruleFormData['device_serial_pattern'] !== '' ? $ruleFormData['device_serial_pattern'] : null,
+                'customer_code_pattern' => $ruleFormData['customer_code_pattern'] !== '' ? $ruleFormData['customer_code_pattern'] : null,
+                'frequency_count' => $ruleFormData['frequency_count'] !== '' ? $ruleFormData['frequency_count'] : null,
+                'frequency_window_hours' => $ruleFormData['frequency_window_hours'] !== '' ? $ruleFormData['frequency_window_hours'] : null,
+                'frequency_type' => $ruleFormData['frequency_type'],
+                'show_dashboard' => $ruleFormData['show_dashboard'],
+                'auto_dismiss_hours' => $ruleFormData['auto_dismiss_hours'] !== '' ? $ruleFormData['auto_dismiss_hours'] : null,
+                'notification_title' => $ruleFormData['notification_title'] !== '' ? $ruleFormData['notification_title'] : null,
+                'notification_message' => $ruleFormData['notification_message'] !== '' ? $ruleFormData['notification_message'] : null
+            ];
+
+            $createdId = insertRule($pdo, $newRule);
+            $creationMessage = "Rule created successfully. ID: {$createdId}";
+        } catch (Throwable $e) {
+            $creationError = 'Failed to create rule: ' . $e->getMessage();
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -34,6 +101,24 @@ header('Content-Type: text/html; charset=utf-8');
         .rule { background: #252526; padding: 15px; margin: 10px 0; border-left: 3px solid #4ec9b0; }
         a { color: #569cd6; text-decoration: none; }
         a:hover { text-decoration: underline; }
+        .builder { background: #252526; padding: 16px; margin: 16px 0; border-left: 3px solid #9cdcfe; }
+        .builder h3 { margin-top: 0; color: #9cdcfe; }
+        .builder label { display: block; margin-top: 10px; color: #d4d4d4; }
+        .builder input[type="text"],
+        .builder input[type="number"],
+        .builder select,
+        .builder textarea { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #3c3c3c; background: #1e1e1e; color: #d4d4d4; }
+        .builder textarea { min-height: 80px; }
+        .builder .row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .builder .col { flex: 1; min-width: 220px; }
+        .builder .actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .builder button { background: #0e639c; color: #fff; border: none; padding: 8px 12px; cursor: pointer; }
+        .builder button.secondary { background: #3c3c3c; }
+        .builder .hint { color: #9cdcfe; font-size: 0.9em; margin-top: 2px; }
+        .builder .preview { background: #1e1e1e; padding: 10px; border: 1px dashed #3c3c3c; margin-top: 10px; }
+        .builder .status { margin-top: 10px; padding: 10px; }
+        .builder .status.success { border-left: 3px solid #4ec9b0; color: #4ec9b0; background: #1f2d2b; }
+        .builder .status.error { border-left: 3px solid #ce9178; color: #ce9178; background: #2a1f1c; }
     </style>
 </head>
 <body>
@@ -53,10 +138,98 @@ $sql = "SELECT DISTINCT maintenance_alert_code, COUNT(*) as count
 
 $stmt = $pdo->query($sql);
 $alertCodes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$alertDisplayNames = [];
+
+if (!empty($alertCodes)) {
+    $alertCodeValues = array_values(array_filter(array_unique(array_map(static function ($row) {
+        return $row['maintenance_alert_code'] ?? null;
+    }, $alertCodes))));
+
+    if (!empty($alertCodeValues)) {
+        $placeholders = implode(',', array_fill(0, count($alertCodeValues), '?'));
+
+        // Primary: alert_definitions (user-maintained display names)
+        try {
+            $defsTable = DB_PREFIX . 'alert_definitions';
+            $defsStmt = $pdo->prepare("SELECT alert_code, display_name, description FROM {$defsTable} WHERE alert_code IN ($placeholders) AND enabled = 1");
+            $defsStmt->execute($alertCodeValues);
+            foreach ($defsStmt->fetchAll(PDO::FETCH_ASSOC) as $def) {
+                $code = (string)($def['alert_code'] ?? '');
+                if ($code === '') {
+                    continue;
+                }
+                $displayName = trim((string)($def['display_name'] ?? ''));
+                $fallbackDescription = trim((string)($def['description'] ?? ''));
+                $alertDisplayNames[$code] = $displayName !== '' ? $displayName : $fallbackDescription;
+            }
+        } catch (Throwable $e) {
+            error_log('[create-sample-rules] Failed to load alert_definitions: ' . $e->getMessage());
+        }
+
+        // Fallback: legacy alert_code_descriptions
+        $missingCodes = array_diff($alertCodeValues, array_keys($alertDisplayNames));
+        if (!empty($missingCodes)) {
+            try {
+                $descTable = DB_PREFIX . 'alert_code_descriptions';
+                $descPlaceholders = implode(',', array_fill(0, count($missingCodes), '?'));
+                $descStmt = $pdo->prepare("SELECT alert_code, description FROM {$descTable} WHERE alert_code IN ($descPlaceholders) AND is_active = 1");
+                $descStmt->execute(array_values($missingCodes));
+                foreach ($descStmt->fetchAll(PDO::FETCH_ASSOC) as $desc) {
+                    $code = (string)($desc['alert_code'] ?? '');
+                    if ($code === '' || isset($alertDisplayNames[$code])) {
+                        continue;
+                    }
+                    $label = trim((string)($desc['description'] ?? ''));
+                    $alertDisplayNames[$code] = $label;
+                }
+            } catch (Throwable $e) {
+                error_log('[create-sample-rules] Failed to load alert_code_descriptions: ' . $e->getMessage());
+            }
+        }
+
+        // Last-resort: panel_configuration captured from payloads
+        $missingCodes = array_diff($alertCodeValues, array_keys($alertDisplayNames));
+        if (!empty($missingCodes)) {
+            try {
+                $messageTable = DB_PREFIX . 'panel_messages';
+                $configPlaceholders = implode(',', array_fill(0, count($missingCodes), '?'));
+                $configStmt = $pdo->prepare("
+                    SELECT maintenance_alert_code, MAX(panel_configuration) AS panel_configuration
+                    FROM {$messageTable}
+                    WHERE maintenance_alert_code IN ($configPlaceholders)
+                      AND panel_configuration IS NOT NULL
+                      AND panel_configuration != ''
+                    GROUP BY maintenance_alert_code
+                ");
+                $configStmt->execute(array_values($missingCodes));
+                foreach ($configStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $code = (string)($row['maintenance_alert_code'] ?? '');
+                    if ($code === '' || isset($alertDisplayNames[$code])) {
+                        continue;
+                    }
+                    $label = trim((string)($row['panel_configuration'] ?? ''));
+                    if ($label !== '') {
+                        $alertDisplayNames[$code] = $label;
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('[create-sample-rules] Failed to load panel_configuration fallback: ' . $e->getMessage());
+            }
+        }
+    }
+}
 
 echo "<div class='data'><strong class='info'>Top Alert Codes:</strong><br>\n";
 foreach ($alertCodes as $alert) {
-    echo "  • <span class='warning'>{$alert['maintenance_alert_code']}</span> ({$alert['count']} occurrences)<br>\n";
+    $code = (string)($alert['maintenance_alert_code'] ?? '');
+    $codeLabel = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+    $description = $alertDisplayNames[$code] ?? '';
+    $descriptionLabel = $description !== ''
+        ? htmlspecialchars($description, ENT_QUOTES, 'UTF-8')
+        : 'No description mapped';
+    $count = (int)$alert['count'];
+
+    echo "  • <span class='warning'>{$codeLabel}</span> - {$descriptionLabel} ({$count} occurrences)<br>\n";
 }
 echo "</div>\n";
 
@@ -246,31 +419,4 @@ function insertRule(PDO $pdo, array $rule): int
              device_serial_pattern, customer_code_pattern, frequency_count,
              frequency_window_hours, frequency_type, show_dashboard,
              auto_dismiss_hours, notification_title, notification_message)
-            VALUES (:name, :description, :severity, :enabled, :alert_pattern,
-                    :device_pattern, :customer_pattern, :freq_count,
-                    :freq_window, :freq_type, :show_dash,
-                    :auto_dismiss, :notif_title, :notif_message)";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        ':name' => $rule['name'],
-        ':description' => $rule['description'] ?? null,
-        ':severity' => $rule['severity'] ?? 'warning',
-        ':enabled' => $rule['enabled'] ?? 1,
-        ':alert_pattern' => $rule['alert_code_pattern'] ?? null,
-        ':device_pattern' => $rule['device_serial_pattern'] ?? null,
-        ':customer_pattern' => $rule['customer_code_pattern'] ?? null,
-        ':freq_count' => $rule['frequency_count'] ?? null,
-        ':freq_window' => $rule['frequency_window_hours'] ?? null,
-        ':freq_type' => $rule['frequency_type'] ?? 'same_device',
-        ':show_dash' => $rule['show_dashboard'] ?? 1,
-        ':auto_dismiss' => $rule['auto_dismiss_hours'] ?? null,
-        ':notif_title' => $rule['notification_title'] ?? null,
-        ':notif_message' => $rule['notification_message'] ?? null
-    ]);
-
-    return (int)$pdo->lastInsertId();
-}
-?>
-</body>
-</html>
+            VALUES (:name, :descr
