@@ -269,6 +269,191 @@ foreach ($customers as $customer) {
 }
 echo "</div>\n";
 
+$prefillAlertCode = htmlspecialchars($alertCodes[0]['maintenance_alert_code'] ?? '', ENT_QUOTES, 'UTF-8');
+$prefillAlertDescription = $prefillAlertCode !== '' ? htmlspecialchars($alertDisplayNames[$alertCodes[0]['maintenance_alert_code']] ?? '', ENT_QUOTES, 'UTF-8') : '';
+$prefillDeviceSerial = htmlspecialchars($devices[0]['device_serial'] ?? '', ENT_QUOTES, 'UTF-8');
+$prefillCustomerCode = htmlspecialchars($customers[0]['customer_code'] ?? '', ENT_QUOTES, 'UTF-8');
+$alertDescriptionsJson = json_encode($alertDisplayNames, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+echo "<h2>Step 1a: Build a Custom Rule</h2>\n";
+echo "<div class='builder'>\n";
+if ($creationMessage) {
+    echo "<div class='status success'>" . htmlspecialchars($creationMessage, ENT_QUOTES, 'UTF-8') . "</div>\n";
+} elseif ($creationError) {
+    echo "<div class='status error'>" . htmlspecialchars($creationError, ENT_QUOTES, 'UTF-8') . "</div>\n";
+}
+echo "<form method='POST' id='rule-builder-form'>\n";
+echo "  <input type='hidden' name='rule_form_submit' value='1'>\n";
+echo "  <div class='row'>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-name'>Rule Name *</label>\n";
+echo "      <input type='text' id='rule-name' name='name' required value='" . htmlspecialchars($ruleFormData['name'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "      <div class='hint'>Example: Paper Jam - Any Device</div>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-severity'>Severity *</label>\n";
+echo "      <select id='rule-severity' name='severity'>\n";
+foreach (['info', 'warning', 'high', 'critical'] as $severity) {
+    $selected = $ruleFormData['severity'] === $severity ? 'selected' : '';
+    echo "        <option value='{$severity}' {$selected}>" . ucfirst($severity) . "</option>\n";
+}
+echo "      </select>\n";
+echo "    </div>\n";
+echo "  </div>\n";
+
+echo "  <div class='row'>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-alert-code'>Alert Code Pattern</label>\n";
+echo "      <input type='text' id='rule-alert-code' name='alert_code_pattern' placeholder=\"e.g., {$prefillAlertCode} or JAM%\" value='" . htmlspecialchars($ruleFormData['alert_code_pattern'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "      <div class='hint' id='alert-code-hint'>" . ($prefillAlertDescription ? htmlspecialchars($prefillAlertDescription, ENT_QUOTES, 'UTF-8') : 'Use % as wildcard. Leave blank for any alert.') . "</div>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-device-pattern'>Device Serial Pattern</label>\n";
+echo "      <input type='text' id='rule-device-pattern' name='device_serial_pattern' placeholder='Optional, supports % wildcard' value='" . htmlspecialchars($ruleFormData['device_serial_pattern'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "      <div class='hint'>Example: {$prefillDeviceSerial}</div>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-customer-pattern'>Customer Code Pattern</label>\n";
+echo "      <input type='text' id='rule-customer-pattern' name='customer_code_pattern' placeholder='Optional, supports % wildcard' value='" . htmlspecialchars($ruleFormData['customer_code_pattern'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "      <div class='hint'>Example: {$prefillCustomerCode}</div>\n";
+echo "    </div>\n";
+echo "  </div>\n";
+
+echo "  <div class='row'>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-frequency-count'>Frequency Count</label>\n";
+echo "      <input type='number' id='rule-frequency-count' name='frequency_count' min='1' placeholder='e.g., 3' value='" . htmlspecialchars((string)$ruleFormData['frequency_count'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-frequency-window'>Frequency Window (hours)</label>\n";
+echo "      <input type='number' id='rule-frequency-window' name='frequency_window_hours' min='1' placeholder='e.g., 24' value='" . htmlspecialchars((string)$ruleFormData['frequency_window_hours'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-frequency-type'>Frequency Type</label>\n";
+echo "      <select id='rule-frequency-type' name='frequency_type'>\n";
+foreach (['same_device' => 'Same Device', 'same_alert' => 'Same Alert Code', 'same_customer' => 'Same Customer', 'any' => 'Any'] as $value => $label) {
+    $selected = $ruleFormData['frequency_type'] === $value ? 'selected' : '';
+    echo "        <option value='{$value}' {$selected}>{$label}</option>\n";
+}
+echo "      </select>\n";
+echo "    </div>\n";
+echo "  </div>\n";
+
+echo "  <div class='row'>\n";
+echo "    <div class='col'>\n";
+echo "      <label><input type='checkbox' name='show_dashboard' " . ($ruleFormData['show_dashboard'] ? 'checked' : '') . "> Show in Dashboard Header</label>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-auto-dismiss'>Auto Dismiss (hours)</label>\n";
+echo "      <input type='number' id='rule-auto-dismiss' name='auto_dismiss_hours' min='1' placeholder='e.g., 24' value='" . htmlspecialchars((string)$ruleFormData['auto_dismiss_hours'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "    </div>\n";
+echo "  </div>\n";
+
+echo "  <div class='row'>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-title'>Notification Title</label>\n";
+echo "      <input type='text' id='rule-title' name='notification_title' value='" . htmlspecialchars($ruleFormData['notification_title'], ENT_QUOTES, 'UTF-8') . "'>\n";
+echo "      <div class='hint'>Supports {alert}, {device}, {customer}</div>\n";
+echo "    </div>\n";
+echo "    <div class='col'>\n";
+echo "      <label for='rule-message'>Notification Message</label>\n";
+echo "      <textarea id='rule-message' name='notification_message'>" . htmlspecialchars($ruleFormData['notification_message'], ENT_QUOTES, 'UTF-8') . "</textarea>\n";
+echo "      <div class='hint'>Supports {alert}, {device}, {customer}, {count}, {window}</div>\n";
+echo "    </div>\n";
+echo "  </div>\n";
+
+echo "  <div class='actions'>\n";
+echo "    <button type='button' class='secondary' id='prefill-top-alert'>Use Top Alert</button>\n";
+echo "    <button type='button' class='secondary' id='prefill-top-device'>Use Top Device</button>\n";
+echo "    <button type='button' class='secondary' id='prefill-top-customer'>Use Top Customer</button>\n";
+echo "    <button type='submit' id='submit-rule'>Create Rule</button>\n";
+echo "  </div>\n";
+
+echo "  <div class='preview' id='rule-preview'>\n";
+echo "    <div><strong>Preview Title:</strong> <span id='preview-title'></span></div>\n";
+echo "    <div><strong>Preview Message:</strong> <span id='preview-message'></span></div>\n";
+echo "  </div>\n";
+echo "</form>\n";
+
+echo "<script>\n";
+echo "  const alertDescriptions = {$alertDescriptionsJson};\n";
+echo "  const prefillAlertCode = " . json_encode($prefillAlertCode) . ";\n";
+echo "  const prefillAlertDescription = " . json_encode($prefillAlertDescription) . ";\n";
+echo "  const prefillDeviceSerial = " . json_encode($prefillDeviceSerial) . ";\n";
+echo "  const prefillCustomerCode = " . json_encode($prefillCustomerCode) . ";\n";
+echo "  const alertHint = document.getElementById('alert-code-hint');\n";
+echo "  const alertInput = document.getElementById('rule-alert-code');\n";
+echo "  const titleInput = document.getElementById('rule-title');\n";
+echo "  const messageInput = document.getElementById('rule-message');\n";
+echo "  const previewTitle = document.getElementById('preview-title');\n";
+echo "  const previewMessage = document.getElementById('preview-message');\n";
+echo "  const submitButton = document.getElementById('submit-rule');\n";
+
+echo "  function updateAlertHint(value) {\n";
+echo "    const cleaned = value.trim();\n";
+echo "    if (cleaned && alertDescriptions[cleaned]) {\n";
+echo "      alertHint.textContent = alertDescriptions[cleaned];\n";
+echo "    } else if (cleaned) {\n";
+echo "      alertHint.textContent = 'No description mapped';\n";
+echo "    } else {\n";
+echo "      alertHint.textContent = 'Use % as wildcard. Leave blank for any alert.';\n";
+echo "    }\n";
+echo "  }\n";
+
+echo "  function renderPreview() {\n";
+echo "    const sampleData = {\n";
+echo "      alert: alertInput.value || prefillAlertCode || 'ALERT',\n";
+echo "      device: document.getElementById('rule-device-pattern').value || prefillDeviceSerial || 'DEVICE',\n";
+echo "      customer: document.getElementById('rule-customer-pattern').value || prefillCustomerCode || 'CUSTOMER',\n";
+echo "      count: document.getElementById('rule-frequency-count').value || 'N',\n";
+echo "      window: document.getElementById('rule-frequency-window').value ? document.getElementById('rule-frequency-window').value + 'h' : 'window'\n";
+echo "    };\n";
+echo "    const replaceTokens = (text) => text\n";
+echo "      .replaceAll('{alert}', sampleData.alert)\n";
+echo "      .replaceAll('{device}', sampleData.device)\n";
+echo "      .replaceAll('{customer}', sampleData.customer)\n";
+echo "      .replaceAll('{count}', sampleData.count)\n";
+echo "      .replaceAll('{window}', sampleData.window);\n";
+echo "    previewTitle.textContent = replaceTokens(titleInput.value || 'Alert {alert} on {device}');\n";
+echo "    previewMessage.textContent = replaceTokens(messageInput.value || '{device} triggered {alert} for {customer}.');\n";
+echo "  }\n";
+
+echo "  alertInput.addEventListener('input', (e) => updateAlertHint(e.target.value));\n";
+echo "  ['input', 'change'].forEach(evt => {\n";
+echo "    [alertInput, titleInput, messageInput, document.getElementById('rule-device-pattern'), document.getElementById('rule-customer-pattern'), document.getElementById('rule-frequency-count'), document.getElementById('rule-frequency-window')].forEach(el => {\n";
+echo "      el.addEventListener(evt, renderPreview);\n";
+echo "    });\n";
+echo "  });\n";
+
+echo "  document.getElementById('prefill-top-alert').addEventListener('click', () => {\n";
+echo "    if (prefillAlertCode) {\n";
+echo "      alertInput.value = prefillAlertCode;\n";
+echo "      updateAlertHint(prefillAlertCode);\n";
+echo "      renderPreview();\n";
+echo "    }\n";
+echo "  });\n";
+echo "  document.getElementById('prefill-top-device').addEventListener('click', () => {\n";
+echo "    if (prefillDeviceSerial) {\n";
+echo "      document.getElementById('rule-device-pattern').value = prefillDeviceSerial;\n";
+echo "      renderPreview();\n";
+echo "    }\n";
+echo "  });\n";
+echo "  document.getElementById('prefill-top-customer').addEventListener('click', () => {\n";
+echo "    if (prefillCustomerCode) {\n";
+echo "      document.getElementById('rule-customer-pattern').value = prefillCustomerCode;\n";
+echo "      renderPreview();\n";
+echo "    }\n";
+echo "  });\n";
+
+echo "  document.getElementById('rule-builder-form').addEventListener('submit', () => {\n";
+echo "    submitButton.disabled = true;\n";
+echo "  });\n";
+
+echo "  updateAlertHint(alertInput.value);\n";
+echo "  renderPreview();\n";
+echo "</script>\n";
+echo "</div>\n";
+
 echo "<h2>Step 2: Creating Sample Notification Rules</h2>\n";
 
 $rulesCreated = 0;
@@ -419,4 +604,39 @@ function insertRule(PDO $pdo, array $rule): int
              device_serial_pattern, customer_code_pattern, frequency_count,
              frequency_window_hours, frequency_type, show_dashboard,
              auto_dismiss_hours, notification_title, notification_message)
-            VALUES (:name, :descr
+            VALUES (:name, :description, :severity, :enabled, :alert_pattern,
+                    :device_pattern, :customer_pattern, :freq_count,
+                    :freq_window, :freq_type, :show_dash,
+                    :auto_dismiss, :notif_title, :notif_message)";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':name' => $rule['name'],
+        ':description' => $rule['description'] ?? null,
+        ':severity' => $rule['severity'] ?? 'warning',
+        ':enabled' => $rule['enabled'] ?? 1,
+        ':alert_pattern' => $rule['alert_code_pattern'] ?? null,
+        ':device_pattern' => $rule['device_serial_pattern'] ?? null,
+        ':customer_pattern' => $rule['customer_code_pattern'] ?? null,
+        ':freq_count' => $rule['frequency_count'] ?? null,
+        ':freq_window' => $rule['frequency_window_hours'] ?? null,
+        ':freq_type' => $rule['frequency_type'] ?? 'same_device',
+        ':show_dash' => $rule['show_dashboard'] ?? 1,
+        ':auto_dismiss' => $rule['auto_dismiss_hours'] ?? null,
+        ':notif_title' => $rule['notification_title'] ?? null,
+        ':notif_message' => $rule['notification_message'] ?? null
+    ]);
+
+    return (int)$pdo->lastInsertId();
+}
+?>
+</body>
+</html>
+<?php
+/*
+CHANGELOG
+2025-11-24 Codex
+- Display human-readable alert descriptions beside top alert codes using alert definitions with legacy and panel payload fallbacks.
+- Added on-page rule builder UI with guided inputs, preview, and prefill actions that reuse existing rule insertion logic.
+*/
+?>
