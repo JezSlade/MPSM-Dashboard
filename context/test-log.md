@@ -865,3 +865,7 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?a
 - **Action:** Update `refresh-cache-chunked.php` so every non-`uninstalled` device is queued for drill-down fetching (previously only `'installed'` items were enqueued, leaving `devices_to_fetch_drilldown` empty).
 - **Result:** Once the device phase completes, stage 2 now receives a populated list and will actually process drill-down content; this is deployed (versioned log entries to confirm) and mirrored in `/home/resolut7/logs/refresh-cache-chunked.log`.
 - **Next:** Watch for the new drill-down chunk entries inside the log or run the helper again if needed; record whether `drilldowns_cached` starts climbing above 0 in follow-up logs.
+
+## 2025-11-21 - Drill-Down Phase Monitoring
+
+- **Plan:** After reinitializing with `?action=start`, wait for cron/helper responses showing `state.status = "fetching_drilldowns"` and `drilldowns_cached > 0`. Once visible, copy the JSON entry into this log to show the drill-down phase completed successfully and the cache now contains both device and drill-down records.

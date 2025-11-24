@@ -21,6 +21,59 @@ if (!function_exists('ensureCommandCenterTables')) {
         ensureAlertAggregationsTable($pdo);
         ensureDashboardNotificationsTable($pdo);
         ensureRuleMatchHistoryTable($pdo);
+        ensureAlertDefinitionsTable($pdo);
+    }
+}
+
+if (!function_exists('ensureAlertDefinitionsTable')) {
+    /**
+     * Alert Definitions - User-editable mapping of alert codes to descriptions
+     * Allows users to customize how alert codes are displayed throughout the system
+     */
+    function ensureAlertDefinitionsTable(PDO $pdo): void
+    {
+        static $ensured = false;
+        if ($ensured) return;
+
+        $table = DB_PREFIX . 'alert_definitions';
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS {$table} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+
+                -- Alert Code (unique identifier from MPS Monitor)
+                alert_code VARCHAR(150) NOT NULL COMMENT 'Original alert code from MPS Monitor',
+
+                -- User-defined labels
+                display_name VARCHAR(255) NOT NULL COMMENT 'Human-readable name shown in UI',
+                description TEXT NULL COMMENT 'Detailed description of what this alert means',
+                category VARCHAR(100) NULL COMMENT 'Alert category (e.g., Paper, Toner, Service, Error)',
+
+                -- Display settings
+                severity_override ENUM('info', 'warning', 'high', 'critical') NULL COMMENT 'Override default severity',
+                icon VARCHAR(50) NULL COMMENT 'Custom icon for this alert type',
+                color VARCHAR(50) NULL COMMENT 'Custom color for this alert type',
+
+                -- Source tracking
+                source VARCHAR(50) DEFAULT 'manual' COMMENT 'manual, spreadsheet, mps_api',
+                original_description TEXT NULL COMMENT 'Original description from MPS Monitor if available',
+
+                -- Status
+                enabled TINYINT(1) DEFAULT 1 COMMENT 'Whether to use this definition',
+
+                -- Metadata
+                created_by INT NULL COMMENT 'User ID who created this',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by INT NULL COMMENT 'User ID who last updated',
+                updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+
+                UNIQUE KEY idx_alert_code (alert_code),
+                INDEX idx_category (category),
+                INDEX idx_enabled (enabled),
+                INDEX idx_display_name (display_name)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $ensured = true;
     }
 }
 

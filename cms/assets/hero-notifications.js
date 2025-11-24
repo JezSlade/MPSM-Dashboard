@@ -239,23 +239,52 @@ async function dismissHeroNotification(id) {
 }
 
 // Utility: Format timestamp for hero display
+// Timestamps from server are in NY local time (America/New_York)
 function formatHeroTimestamp(timestamp) {
     if (!timestamp) return 'N/A';
 
-    const date = new Date(timestamp + ' GMT-0500'); // NY time
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
+    // Parse the timestamp as NY time using Intl API for proper DST handling
+    // Server sends timestamps in format "YYYY-MM-DD HH:MM:SS" in NY timezone
+    try {
+        // Create date object treating the timestamp as NY local time
+        // We need to figure out the offset for NY at that specific time
+        const nyTimeStr = timestamp.replace(' ', 'T');
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    if (diffMins < 10080) return `${Math.floor(diffMins / 1440)}d ago`;
+        // Get current time in NY for comparison
+        const nowInNY = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        const nowNYDate = new Date(nowInNY);
 
-    return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-    });
+        // Parse the server timestamp (which is already in NY time)
+        // Append timezone indicator for proper parsing
+        const serverDate = new Date(nyTimeStr);
+
+        // Calculate the difference using NY local times
+        const diffMs = nowNYDate - serverDate;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 0) {
+            // Future time - likely timezone mismatch, show absolute time
+            return serverDate.toLocaleString('en-US', {
+                timeZone: 'America/New_York',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+        if (diffMins < 10080) return `${Math.floor(diffMins / 1440)}d ago`;
+
+        return serverDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+        });
+    } catch (e) {
+        console.error('Error formatting timestamp:', e, timestamp);
+        return timestamp;
+    }
 }
 
 // Utility: Escape HTML

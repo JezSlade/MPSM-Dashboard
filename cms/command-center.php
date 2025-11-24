@@ -22,6 +22,9 @@ trackVisit('/command-center');
                 <a class="btn-icon" href="index.php" title="Back to Dashboard">
                     <i class="fas fa-home"></i>
                 </a>
+                <a class="btn-icon" href="alert-definitions.php" title="Manage Alert Labels">
+                    <i class="fas fa-tags"></i>
+                </a>
                 <button id="theme-toggle" class="btn-icon" title="Toggle theme">
                     <i class="fas fa-moon"></i>
                 </button>

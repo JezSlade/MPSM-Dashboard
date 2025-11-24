@@ -80,6 +80,8 @@
   ```
   The log stores the versioned JSON for verification.
 
+- **Drill-down monitoring:** After resetting the device phase (use `?action=start` or the helper), expect the next cron ticks to write new receipts showing `state.status` progressing into `fetching_drilldowns`. Tail `/home/resolut7/logs/refresh-cache-chunked.log` to see it, and if the log stays completed you can rerun `run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` to confirm the helper reads the current queue and dumps the same JSON. Logging ensures no more emails and documents every chunk.
+
 - **Emergency trigger:** If you need to rerun the CLI process manually, call `https://mpsm.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`; it executes the same command as cron and returns the output/exit code so you can confirm the versioned script is live.
 
 ## Panel Message Diagnostics

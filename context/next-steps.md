@@ -8,6 +8,7 @@ Updated: 2025-11-06 13:50 UTC
 - Watch `cms/logs/cache-refresh-YYYY-MM-DD.log` for sustained rate-limit messages; if retries still hit the cap, consider increasing the base back-off above 0.75 s or adding a staggered queue.
 - Make sure `refresh-cache-chunked.php` cron emails show `"version": "2025-11-19a"` and `errors: []` before returning to the drill-down phase; if the OAuth token timeout survives, add retries/backoff and silence the repeated completed-state output as the follow-up fix.
 - Monitor `/home/resolut7/logs/refresh-cache-chunked.log` instead of emails; each entry should include the current `version`, `state`, and `errors`. If nothing is written, hit `run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` to regenerate the latest run output before investigating further.
+- Confirm drill-down progress after restarting the job. Once you reinitialize via `?action=start`, check that the log/helper shows `state.status = "fetching_drilldowns"` and `drilldowns_cached` begins rising; if needed rerun the helper or wait a minute before rerunning to ensure the queue processes and that log entries capture both device and drill-down phases.
 - Surface the cached timestamp inside the device modal once the cache is steady so analysts know how fresh each drill-down snapshot is.
 
 ## Payload Debugger & Callbacks

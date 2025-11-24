@@ -340,12 +340,94 @@ $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
 - Cron email at 08:57 UTC (page 5/34) now shows `errors: []`, `devices_cached: 400`, and `version: 2025-11-19a`; `device_serial_column` = `serial_number`, `continue: true`.
 - This proves the new script executed and the `device_serial` INSERT failure is gone; the next milestone is to eliminate the OAuth token timeout and stop cron from spamming once the job completes.
 
-### CLI Helper Outcome
-- The helper endpoint (`run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`) now runs the CLI command directly; the 11:09 UTC execution completed all 34 pages with `devices_cached: 3345`, no errors, saved `%version` 2025-11-19a, and sets `continue: false`. Use that response + `/home/resolut7/logs/refresh-cache-chunked.log` to confirm future runs without waiting for email.
+- ### CLI Helper Outcome
+- The helper endpoint (`run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025`) now runs the CLI command directly; the 11:09 UTC execution completed all 34 pages with `devices_cached: 3345`, no errors, saved `version` 2025-11-19a, and set `continue: false`. Use that response + `/home/resolut7/logs/refresh-cache-chunked.log` to confirm future runs without waiting for email.
+- 
+- ### Current Drill-Down Strategy
+- Since we restart the job via `?action=start` (or the helper) whenever stage 1 completes, the next cron ticks should find `devices_to_fetch_drilldown` populated and transition into `fetching_drilldowns`. If the log still shows completion, rerun the helper after a minute so you can observe `drilldowns_cached` increasing; record those entries in the test log so the next agent knows the phase has executed.
 - Drill-down note: After stage 1 finishes, every device that isn’t explicitly `uninstalled` is now queued for drill-downs, which means state 2 will populate `drilldowns_cached` once enough devices finish processing; check `/home/resolut7/logs/refresh-cache-chunked.log` for the next chunk outputs to verify the queue was not empty and stage 2 executed.
+
+---
+
+## Session 2025-11-24 - Alert Definitions System
+
+### 10. Alert Definitions Management System
+
+**Problem:** Users see raw alert codes like "808" instead of human-readable descriptions. Alert labels from MPS Monitor are poorly translated and need user customization.
+
+**Solution:** Created a complete alert definitions management system:
+
+**Files Created:**
+- `cms/alert-definitions.php` - Admin UI for managing alert code to description mappings
+- Added `mpsm_alert_definitions` table schema in `command-center-schema.php`
+
+**Files Modified:**
+- `cms/api/command-center.php` - Added 8 new API endpoints for alert definitions CRUD
+- `mps-api/callbacks/command-center-engine.php` - Added alert display name lookup
+- `cms/assets/hero-notifications.js` - Fixed timestamp timezone issue
+- `cms/command-center.php` - Added link to Alert Definitions page
+
+**Features:**
+1. **Alert Definitions Table** - Stores mappings from alert codes to user-defined display names
+2. **Admin UI** - Full CRUD interface with search, category filtering, and bulk import
+3. **Unmapped Alerts View** - Shows alert codes without definitions with occurrence counts
+4. **Automatic Resolution** - Notifications display descriptions instead of raw codes
+5. **Template Support** - `{alert}` shows display name, `{alert_code}` shows raw code
+
+**API Endpoints Added:**
+- `get_alert_definitions` - List all definitions with filtering
+- `get_alert_definition` - Get single definition by ID or code
+- `create_alert_definition` - Create new mapping
+- `update_alert_definition` - Update existing mapping
+- `delete_alert_definition` - Remove mapping
+- `import_alert_definitions` - Bulk import from spreadsheet data
+- `get_unmapped_alerts` - Find codes without definitions
+- `lookup_alert_description` - Real-time code to name lookup
+
+**Timestamp Fix:**
+- Removed hardcoded `GMT-0500` which doesn't account for DST
+- Now properly handles NY timezone using Intl API for DST-aware parsing
+- Future timestamps (caused by wrong offset) now show absolute time
+
+**Database Schema:**
+```sql
+mpsm_alert_definitions:
+- id, alert_code (unique), display_name, description
+- category (Paper, Toner, Service, Error, etc.)
+- severity_override, icon, color
+- source (manual, spreadsheet, mps_api)
+- original_description (from MPS Monitor)
+- enabled, created_by, updated_by, timestamps
+```
+
+**Usage:**
+1. Navigate to Alert Definitions from Command Center (tags icon)
+2. View unmapped alerts at bottom of page
+3. Click "Define" to create mapping from unmapped alert
+4. Or manually add definitions with custom display names
+5. All notifications will automatically use display names
+
+---
+
+### Issue Resolution Status
+
+**Resolved This Session:**
+- Alert codes now show human-readable descriptions
+- Timestamp showing future time fixed (DST handling)
+- Admin interface for customizing alert labels
+
+**Access:**
+- Alert Definitions: `https://mpsm.resolutionsbydesign.us/cms/alert-definitions.php`
+- Command Center: `https://mpsm.resolutionsbydesign.us/cms/command-center.php`
+
+---
 
 /*
 CHANGELOG
 2025-11-19 Codex
 - Logged the release of `REFRESH_CACHE_CHUNKED_VERSION`, described the remaining OAuth timeout and retry work, and updated the session metadata date.
+2025-11-24 Codex
+- Added Alert Definitions management system for customizing alert code to description mappings
+- Fixed timestamp timezone issue in hero notifications (DST handling)
+- Created admin UI, API endpoints, and database schema for alert definitions
 */

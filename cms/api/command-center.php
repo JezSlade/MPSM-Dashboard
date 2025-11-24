@@ -63,6 +63,39 @@ try {
             getRuleHistory($pdo);
             break;
 
+        // Alert Definitions CRUD
+        case 'get_alert_definitions':
+            getAlertDefinitions($pdo);
+            break;
+
+        case 'get_alert_definition':
+            getAlertDefinition($pdo);
+            break;
+
+        case 'create_alert_definition':
+            createAlertDefinition($pdo);
+            break;
+
+        case 'update_alert_definition':
+            updateAlertDefinition($pdo);
+            break;
+
+        case 'delete_alert_definition':
+            deleteAlertDefinition($pdo);
+            break;
+
+        case 'import_alert_definitions':
+            importAlertDefinitions($pdo);
+            break;
+
+        case 'get_unmapped_alerts':
+            getUnmappedAlerts($pdo);
+            break;
+
+        case 'lookup_alert_description':
+            lookupAlertDescription($pdo);
+            break;
+
         default:
             throw new Exception('Invalid action');
     }
@@ -77,15 +110,24 @@ function getNotifications(PDO $pdo): void
     $severity = $_GET['severity'] ?? null;
     $limit = min((int)($_GET['limit'] ?? 50), 100);
 
-    $table = DB_PREFIX . 'dashboard_notifications';
-    $sql = "SELECT * FROM {$table} WHERE status = :status";
+    $notifTable = DB_PREFIX . 'dashboard_notifications';
+    $defsTable = DB_PREFIX . 'alert_definitions';
+
+    // Join with alert_definitions to get display names for alert codes
+    $sql = "SELECT n.*,
+                   ad.display_name as alert_display_name,
+                   ad.description as alert_description,
+                   ad.category as alert_category
+            FROM {$notifTable} n
+            LEFT JOIN {$defsTable} ad ON n.alert_code = ad.alert_code AND ad.enabled = 1
+            WHERE n.status = :status";
 
     // Add severity filter if provided
     if ($severity) {
-        $sql .= " AND severity = :severity";
+        $sql .= " AND n.severity = :severity";
     }
 
-    $sql .= " ORDER BY priority DESC, created_at_ny DESC LIMIT :limit";
+    $sql .= " ORDER BY n.priority DESC, n.created_at_ny DESC LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':status', $status);
@@ -98,6 +140,21 @@ function getNotifications(PDO $pdo): void
     $stmt->execute();
 
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Process notifications to replace alert_code with display_name in title/message
+    foreach ($notifications as &$notif) {
+        // If we have a display name, use it; otherwise keep the original alert_code
+        $displayName = $notif['alert_display_name'] ?? $notif['alert_code'];
+
+        // Replace {alert} placeholder with display name in title and message
+        if ($displayName && $notif['alert_code']) {
+            $notif['title'] = str_replace($notif['alert_code'], $displayName, $notif['title']);
+            $notif['message'] = str_replace($notif['alert_code'], $displayName, $notif['message']);
+        }
+
+        // Add resolved display name as separate field
+        $notif['alert_display_name'] = $displayName;
+    }
 
     echo json_encode([
         'success' => true,
@@ -425,9 +482,16 @@ function getAggregations(PDO $pdo): void
 {
     $limit = min((int)($_GET['limit'] ?? 50), 100);
 
-    $table = DB_PREFIX . 'alert_aggregations';
-    $sql = "SELECT * FROM {$table}
-            ORDER BY last_occurrence_ny DESC
+    $aggTable = DB_PREFIX . 'alert_aggregations';
+    $defsTable = DB_PREFIX . 'alert_definitions';
+
+    // Join with alert_definitions to get display names
+    $sql = "SELECT a.*,
+                   ad.display_name as alert_display_name,
+                   ad.category as alert_category
+            FROM {$aggTable} a
+            LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+            ORDER BY a.last_occurrence_ny DESC
             LIMIT :limit";
 
     $stmt = $pdo->prepare($sql);
@@ -435,6 +499,11 @@ function getAggregations(PDO $pdo): void
     $stmt->execute();
 
     $aggregations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add display_name field (use definition or fallback to code)
+    foreach ($aggregations as &$agg) {
+        $agg['alert_display_name'] = $agg['alert_display_name'] ?? $agg['alert_code'];
+    }
 
     echo json_encode([
         'success' => true,
@@ -474,3 +543,353 @@ function getRuleHistory(PDO $pdo): void
         'count' => count($history)
     ]);
 }
+
+// ============================================================================
+// Alert Definitions Functions
+// ============================================================================
+
+function getAlertDefinitions(PDO $pdo): void
+{
+    $category = $_GET['category'] ?? null;
+    $search = $_GET['search'] ?? null;
+    $limit = min((int)($_GET['limit'] ?? 100), 500);
+
+    $table = DB_PREFIX . 'alert_definitions';
+    $sql = "SELECT * FROM {$table} WHERE 1=1";
+    $params = [];
+
+    if ($category) {
+        $sql .= " AND category = :category";
+        $params[':category'] = $category;
+    }
+
+    if ($search) {
+        $sql .= " AND (alert_code LIKE :search OR display_name LIKE :search OR description LIKE :search)";
+        $params[':search'] = '%' . $search . '%';
+    }
+
+    $sql .= " ORDER BY category ASC, display_name ASC LIMIT {$limit}";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $definitions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get categories for filter dropdown
+    $catStmt = $pdo->query("SELECT DISTINCT category FROM {$table} WHERE category IS NOT NULL ORDER BY category");
+    $categories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    echo json_encode([
+        'success' => true,
+        'definitions' => $definitions,
+        'count' => count($definitions),
+        'categories' => $categories
+    ]);
+}
+
+function getAlertDefinition(PDO $pdo): void
+{
+    $id = (int)($_GET['id'] ?? 0);
+    $alertCode = $_GET['alert_code'] ?? null;
+
+    if (!$id && !$alertCode) {
+        throw new Exception('ID or alert_code required');
+    }
+
+    $table = DB_PREFIX . 'alert_definitions';
+
+    if ($id) {
+        $stmt = $pdo->prepare("SELECT * FROM {$table} WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM {$table} WHERE alert_code = :code");
+        $stmt->execute([':code' => $alertCode]);
+    }
+
+    $definition = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$definition) {
+        throw new Exception('Alert definition not found');
+    }
+
+    echo json_encode([
+        'success' => true,
+        'definition' => $definition
+    ]);
+}
+
+function createAlertDefinition(PDO $pdo): void
+{
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (!$data || !isset($data['alert_code']) || !isset($data['display_name'])) {
+        throw new Exception('alert_code and display_name are required');
+    }
+
+    $table = DB_PREFIX . 'alert_definitions';
+
+    // Check if alert_code already exists
+    $stmt = $pdo->prepare("SELECT id FROM {$table} WHERE alert_code = :code");
+    $stmt->execute([':code' => $data['alert_code']]);
+    if ($stmt->fetch()) {
+        throw new Exception('Alert code already has a definition');
+    }
+
+    $validSeverities = ['info', 'warning', 'high', 'critical'];
+    if (isset($data['severity_override']) && $data['severity_override'] && !in_array($data['severity_override'], $validSeverities)) {
+        throw new Exception('Invalid severity level');
+    }
+
+    $sql = "INSERT INTO {$table}
+            (alert_code, display_name, description, category, severity_override,
+             icon, color, source, original_description, enabled, created_by)
+            VALUES (:code, :display_name, :description, :category, :severity,
+                    :icon, :color, :source, :original, :enabled, :created_by)";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':code' => $data['alert_code'],
+        ':display_name' => $data['display_name'],
+        ':description' => $data['description'] ?? null,
+        ':category' => $data['category'] ?? null,
+        ':severity' => $data['severity_override'] ?? null,
+        ':icon' => $data['icon'] ?? null,
+        ':color' => $data['color'] ?? null,
+        ':source' => $data['source'] ?? 'manual',
+        ':original' => $data['original_description'] ?? null,
+        ':enabled' => $data['enabled'] ?? 1,
+        ':created_by' => $_SESSION['user_id']
+    ]);
+
+    echo json_encode([
+        'success' => true,
+        'id' => (int)$pdo->lastInsertId(),
+        'message' => 'Alert definition created successfully'
+    ]);
+}
+
+function updateAlertDefinition(PDO $pdo): void
+{
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (!$data || !isset($data['id'])) {
+        throw new Exception('ID required');
+    }
+
+    $table = DB_PREFIX . 'alert_definitions';
+
+    // Check if exists
+    $stmt = $pdo->prepare("SELECT id FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $data['id']]);
+    if (!$stmt->fetch()) {
+        throw new Exception('Alert definition not found');
+    }
+
+    $validSeverities = ['info', 'warning', 'high', 'critical'];
+    if (isset($data['severity_override']) && $data['severity_override'] && !in_array($data['severity_override'], $validSeverities)) {
+        throw new Exception('Invalid severity level');
+    }
+
+    $sql = "UPDATE {$table} SET
+            display_name = :display_name,
+            description = :description,
+            category = :category,
+            severity_override = :severity,
+            icon = :icon,
+            color = :color,
+            enabled = :enabled,
+            updated_by = :updated_by
+            WHERE id = :id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':id' => $data['id'],
+        ':display_name' => $data['display_name'],
+        ':description' => $data['description'] ?? null,
+        ':category' => $data['category'] ?? null,
+        ':severity' => $data['severity_override'] ?? null,
+        ':icon' => $data['icon'] ?? null,
+        ':color' => $data['color'] ?? null,
+        ':enabled' => $data['enabled'] ?? 1,
+        ':updated_by' => $_SESSION['user_id']
+    ]);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Alert definition updated successfully'
+    ]);
+}
+
+function deleteAlertDefinition(PDO $pdo): void
+{
+    $id = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
+
+    if (!$id) {
+        throw new Exception('ID required');
+    }
+
+    $table = DB_PREFIX . 'alert_definitions';
+
+    $stmt = $pdo->prepare("SELECT id FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    if (!$stmt->fetch()) {
+        throw new Exception('Alert definition not found');
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM {$table} WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Alert definition deleted successfully'
+    ]);
+}
+
+function importAlertDefinitions(PDO $pdo): void
+{
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (!$data || !isset($data['definitions']) || !is_array($data['definitions'])) {
+        throw new Exception('definitions array required');
+    }
+
+    $table = DB_PREFIX . 'alert_definitions';
+    $imported = 0;
+    $skipped = 0;
+    $errors = [];
+
+    foreach ($data['definitions'] as $def) {
+        if (!isset($def['alert_code']) || !isset($def['display_name'])) {
+            $errors[] = "Missing alert_code or display_name";
+            continue;
+        }
+
+        // Check if exists
+        $stmt = $pdo->prepare("SELECT id FROM {$table} WHERE alert_code = :code");
+        $stmt->execute([':code' => $def['alert_code']]);
+
+        if ($stmt->fetch()) {
+            if ($data['skip_existing'] ?? true) {
+                $skipped++;
+                continue;
+            }
+            // Update existing
+            $sql = "UPDATE {$table} SET
+                    display_name = :display_name,
+                    description = :description,
+                    category = :category,
+                    original_description = :original,
+                    source = :source,
+                    updated_by = :updated_by
+                    WHERE alert_code = :code";
+        } else {
+            // Insert new
+            $sql = "INSERT INTO {$table}
+                    (alert_code, display_name, description, category, original_description, source, created_by)
+                    VALUES (:code, :display_name, :description, :category, :original, :source, :updated_by)";
+        }
+
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':code' => $def['alert_code'],
+                ':display_name' => $def['display_name'],
+                ':description' => $def['description'] ?? null,
+                ':category' => $def['category'] ?? null,
+                ':original' => $def['original_description'] ?? null,
+                ':source' => $data['source'] ?? 'import',
+                ':updated_by' => $_SESSION['user_id']
+            ]);
+            $imported++;
+        } catch (Exception $e) {
+            $errors[] = "Error importing {$def['alert_code']}: {$e->getMessage()}";
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'imported' => $imported,
+        'skipped' => $skipped,
+        'errors' => $errors
+    ]);
+}
+
+function getUnmappedAlerts(PDO $pdo): void
+{
+    $limit = min((int)($_GET['limit'] ?? 50), 200);
+
+    $messagesTable = DB_PREFIX . 'panel_messages';
+    $defsTable = DB_PREFIX . 'alert_definitions';
+
+    // Find alert codes in panel_messages that don't have definitions
+    $sql = "SELECT pm.maintenance_alert_code as alert_code,
+                   pm.panel_configuration as original_description,
+                   COUNT(*) as occurrence_count,
+                   MAX(pm.ny_received_at) as last_seen
+            FROM {$messagesTable} pm
+            LEFT JOIN {$defsTable} ad ON pm.maintenance_alert_code = ad.alert_code
+            WHERE pm.maintenance_alert_code IS NOT NULL
+              AND pm.maintenance_alert_code != ''
+              AND ad.id IS NULL
+            GROUP BY pm.maintenance_alert_code, pm.panel_configuration
+            ORDER BY occurrence_count DESC
+            LIMIT :limit";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $unmapped = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode([
+        'success' => true,
+        'unmapped' => $unmapped,
+        'count' => count($unmapped)
+    ]);
+}
+
+function lookupAlertDescription(PDO $pdo): void
+{
+    $alertCode = $_GET['alert_code'] ?? null;
+
+    if (!$alertCode) {
+        throw new Exception('alert_code required');
+    }
+
+    $table = DB_PREFIX . 'alert_definitions';
+
+    $stmt = $pdo->prepare("SELECT display_name, description, category, severity_override, icon, color
+                           FROM {$table}
+                           WHERE alert_code = :code AND enabled = 1");
+    $stmt->execute([':code' => $alertCode]);
+    $definition = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($definition) {
+        echo json_encode([
+            'success' => true,
+            'found' => true,
+            'display_name' => $definition['display_name'],
+            'description' => $definition['description'],
+            'category' => $definition['category'],
+            'severity_override' => $definition['severity_override'],
+            'icon' => $definition['icon'],
+            'color' => $definition['color']
+        ]);
+    } else {
+        echo json_encode([
+            'success' => true,
+            'found' => false,
+            'display_name' => $alertCode,
+            'description' => null
+        ]);
+    }
+}
+
+/*
+CHANGELOG
+2025-11-24 Codex
+- Added alert definitions CRUD endpoints for managing alert code to description mappings
+- Added get_alert_definitions, get_alert_definition, create_alert_definition, update_alert_definition, delete_alert_definition
+- Added import_alert_definitions for bulk import from spreadsheet data
+- Added get_unmapped_alerts to find alert codes without definitions
+- Added lookup_alert_description for real-time alert code to display name resolution
+*/

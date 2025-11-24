@@ -329,13 +329,14 @@ if (!function_exists('createDashboardNotification')) {
             $timeWindow = (int)$rule['frequency_window_hours'];
         }
 
-        // Parse notification templates
+        // Parse notification templates (pass $pdo to resolve alert display names)
         $title = parseNotificationTemplate(
             $rule['notification_title'] ?: '{severity} Alert - {device} has {alert}',
             $rule,
             $messageData,
             $frequencyCount,
-            $timeWindow
+            $timeWindow,
+            $pdo
         );
 
         $message = parseNotificationTemplate(
@@ -343,7 +344,8 @@ if (!function_exists('createDashboardNotification')) {
             $rule,
             $messageData,
             $frequencyCount,
-            $timeWindow
+            $timeWindow,
+            $pdo
         );
 
         // Calculate expiration
@@ -414,20 +416,59 @@ if (!function_exists('createDashboardNotification')) {
     }
 }
 
+if (!function_exists('getAlertDisplayName')) {
+    /**
+     * Look up alert display name from alert_definitions table
+     * Returns the display_name if found, otherwise returns the original alert code
+     */
+    function getAlertDisplayName(PDO $pdo, string $alertCode): string
+    {
+        static $cache = [];
+
+        // Use cache to avoid repeated DB lookups
+        if (isset($cache[$alertCode])) {
+            return $cache[$alertCode];
+        }
+
+        try {
+            $table = DB_PREFIX . 'alert_definitions';
+            $stmt = $pdo->prepare("SELECT display_name FROM {$table} WHERE alert_code = :code AND enabled = 1 LIMIT 1");
+            $stmt->execute([':code' => $alertCode]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $displayName = $result ? $result['display_name'] : $alertCode;
+            $cache[$alertCode] = $displayName;
+
+            return $displayName;
+        } catch (Throwable $e) {
+            error_log("Error looking up alert display name: " . $e->getMessage());
+            return $alertCode;
+        }
+    }
+}
+
 if (!function_exists('parseNotificationTemplate')) {
     /**
      * Parse notification template with variable substitution
+     * Uses alert display names from alert_definitions table
      */
     function parseNotificationTemplate(
         string $template,
         array $rule,
         array $messageData,
         int $count,
-        ?int $windowHours
+        ?int $windowHours,
+        ?PDO $pdo = null
     ): string {
         $deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
         $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
         $customerCode = $messageData['customer_code'] ?? 'Unknown Customer';
+
+        // Look up display name for alert code if PDO connection is available
+        $alertDisplayName = $alertCode;
+        if ($pdo && $alertCode !== 'Unknown Alert') {
+            $alertDisplayName = getAlertDisplayName($pdo, $alertCode);
+        }
 
         // Time window formatting
         $windowText = '';
@@ -443,7 +484,8 @@ if (!function_exists('parseNotificationTemplate')) {
         $replacements = [
             '{severity}' => ucfirst($rule['severity']),
             '{device}' => $deviceSerial,
-            '{alert}' => $alertCode,
+            '{alert}' => $alertDisplayName,
+            '{alert_code}' => $alertCode,
             '{customer}' => $customerCode,
             '{count}' => $count,
             '{window}' => $windowText,
