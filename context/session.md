@@ -1,6 +1,33 @@
 # Session Summary - 2025-11-24 Evening Session (Continued)
 
-## UI Refinements & Final Fixes ✅
+## Latest Fixes - November 24, 2025 (Current Session)
+
+### System Alerts Display Fix ✅
+**Issue:** Cards showed raw alert codes ("808") as titles and serial numbers as subtitles
+**Root Cause:**
+- alert_definitions table empty or missing entries for common codes like "808"
+- Device enrichment data (equipment_id, model, department) missing due to cache_devices table not existing
+- Fallback logic showed serial numbers (15+ character strings like "A1UE0111075...")
+
+**Solution:**
+- Updated hero-notifications.js (lines 157-191) to detect and skip serial numbers
+- Changed title fallback to "Alert 808" instead of just "808" for clarity
+- Subtitle now shows customer code or "Device Alert" instead of serial numbers
+- Created populate-alert-definitions.php script to add common alert descriptions
+
+**Files Modified:**
+- cms/assets/hero-notifications.js - Serial number filtering logic
+- cms/api/populate-alert-definitions.php - Alert definitions population script
+
+**Deployed:** ✅ hero-notifications.js live at 20:55 UTC
+
+**Remaining Work:**
+1. **Run populate script:** Navigate to `https://mpsm.resolutionsbydesign.us/cms/api/populate-alert-definitions.php` while logged in to populate alert_definitions table with common codes (808=Paper Jam, etc.)
+2. **Verify display:** System Alerts should now show "Alert 808" and customer codes instead of serial numbers
+
+---
+
+## UI Refinements & Final Fixes (Previous Session)
 
 ### 1. System Alerts Card Display Refinement
 **Changes:**

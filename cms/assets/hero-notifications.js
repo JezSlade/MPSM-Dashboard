@@ -156,22 +156,39 @@ function renderHeroNotifications(notifications) {
 
     const chipsHtml = topNotifications.map(notif => {
         const config = HERO_SEVERITY_CONFIG[notif.severity] || HERO_SEVERITY_CONFIG.info;
+
+        // Title: Use alert display name (from alert_definitions) or fallback to alert code
         const displayName = notif.alert_display_name
             || notif.display_name
-            || notif.title
-            || notif.alert_code
+            || (notif.alert_code ? `Alert ${notif.alert_code}` : null)
             || config.label
             || 'System Alert';
-        const equipmentId = notif.equipment_id || notif.device_identifier || notif.device_serial || '';
+
+        // Subtitle: Only use equipment_id if it's NOT a serial number
+        // Serial numbers are long alphanumeric strings (e.g., "A1UE0111075...")
+        // Equipment IDs are shorter codes (e.g., "xx###")
+        const rawEquipmentId = notif.equipment_id || notif.device_identifier || '';
+        const isSerialNumber = rawEquipmentId && rawEquipmentId.length > 15;
+        const equipmentId = isSerialNumber ? '' : rawEquipmentId;
+
         const model = notif.model || '';
         const department = notif.department || notif.device_location || notif.device_department || '';
+        const customerDesc = notif.customer_description || notif.customer_code || '';
 
         // Build subtitle with Equipment ID, Model, and Department
+        // If none available, show customer or generic label
         const subtitleParts = [];
         if (equipmentId) subtitleParts.push(equipmentId);
         if (model) subtitleParts.push(model);
         if (department) subtitleParts.push(department);
-        const subtitle = subtitleParts.join(' • ') || 'Device Alert';
+
+        let subtitle = subtitleParts.join(' • ');
+        if (!subtitle && customerDesc) {
+            subtitle = customerDesc;
+        }
+        if (!subtitle) {
+            subtitle = 'Device Alert';
+        }
 
         const metaParts = [];
         const triggerCount = notif._aggregatedTriggers || notif.trigger_count || 0;

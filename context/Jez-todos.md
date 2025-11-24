@@ -1,1 +1,4 @@
 # Jez Notices these issues:
+- Customer Snapshot Card / Customer Overview Modal lists all IP Duplicate warnings. it used to show all the devices grouped by same ip. i wanted that to open to a side by side comparison of the devices to possibly remove or update the device based on the duplicate IP. in making those changes, the area displaying the duplicate device cards vanished and we have not been able to get it back.
+- the hero header system alerts used to show alerts but useless data. I asked the data to be synced so it shows useful alert data with useful location data, but not it shows no system alerts. 
+- the top right of the dashboard shows a red pill with a number. I click on the number and I land on Panel Message Monitor. I want Panel Message Monitor to be able to filter by customer and every other available field. This pill should only indicate errors associated with the customer being displayed.
