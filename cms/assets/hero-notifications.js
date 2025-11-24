@@ -60,13 +60,17 @@ async function loadHeroNotifications() {
 
         const data = await response.json();
 
+        console.log('[HeroNotif] API response:', { success: data.success, count: data.notifications?.length, customerCode });
+
         if (!data.success) {
-            console.error('Failed to load notifications:', data.error);
+            console.error('[HeroNotif] Failed to load notifications:', data.error);
             renderHeroNotifications([]);
             return;
         }
 
         let notifications = data.notifications || [];
+
+        console.log('[HeroNotif] Loaded notifications:', notifications.length, 'before grouping');
 
         // Server already filters by customerCode via JOIN with panel_messages
         // Client filter removed - was incorrectly filtering out notifications where
@@ -82,7 +86,7 @@ async function loadHeroNotifications() {
         renderHeroNotifications(notifications);
 
     } catch (error) {
-        console.error('Error loading hero notifications:', error);
+        console.error('[HeroNotif] Error loading hero notifications:', error);
         renderHeroNotifications([]);
     }
 }
@@ -126,10 +130,14 @@ function renderHeroNotifications(notifications) {
     const groupedList = Array.from(grouped.values());
     const sourceList = groupedList.length ? groupedList : notifications;
 
+    console.log('[HeroNotif] After grouping:', { input: notifications.length, grouped: groupedList.length, using: sourceList.length });
+
     // Only show top 6 priority notifications to keep header compact
     const topNotifications = sourceList
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
         .slice(0, 6);
+
+    console.log('[HeroNotif] Top notifications:', topNotifications.length);
 
     container.style.display = 'block';
 
