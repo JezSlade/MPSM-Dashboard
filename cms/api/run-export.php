@@ -92,6 +92,61 @@ function dispatchExportRequest(string $action, array $params): array
 }
 
 /**
+ * Normalize a structured export payload (Base64Content + MimeType + FileName) into a file array.
+ *
+ * @param array<string,mixed> $payload
+ * @param string $defaultName
+ * @return array<string,mixed>|null
+ */
+function extractBase64File(array $payload, string $defaultName): ?array
+{
+    $candidates = [
+        'base64content', 'Base64Content', 'base64_content', 'data', 'content'
+    ];
+    $mimeCandidates = [
+        'MimeType', 'mimeType', 'content_type', 'ContentType', 'contentType'
+    ];
+    $nameCandidates = [
+        'FileName', 'fileName', 'name', 'filename'
+    ];
+
+    $base64 = null;
+    foreach ($candidates as $key) {
+        if (isset($payload[$key]) && is_string($payload[$key]) && $payload[$key] !== '') {
+            $base64 = $payload[$key];
+            break;
+        }
+    }
+
+    if (!$base64) {
+        return null;
+    }
+
+    $mime = 'application/octet-stream';
+    foreach ($mimeCandidates as $key) {
+        if (!empty($payload[$key]) && is_string($payload[$key])) {
+            $mime = $payload[$key];
+            break;
+        }
+    }
+
+    $name = $defaultName;
+    foreach ($nameCandidates as $key) {
+        if (!empty($payload[$key]) && is_string($payload[$key])) {
+            $name = $payload[$key];
+            break;
+        }
+    }
+
+    return [
+        'name' => $name,
+        'content_type' => $mime,
+        'size' => isset($payload['size']) ? (int)$payload['size'] : null,
+        'data' => $base64
+    ];
+}
+
+/**
  * Attempt to adjust export parameters based on an error message.
  *
  * @param string $errorMessage
@@ -221,6 +276,23 @@ try {
 
     $exportResponse = performExportWithRecovery($action, $params);
 
+    // Structured payloads that return Base64Content + MimeType + FileName
+    $structuredFile = extractBase64File($exportResponse, $action . '.bin');
+    if (!$structuredFile && isset($exportResponse['data']) && is_array($exportResponse['data'])) {
+        $structuredFile = extractBase64File($exportResponse['data'], $action . '.bin');
+    }
+
+    if ($structuredFile) {
+        jsonSuccess([
+            'file' => $structuredFile,
+            'attempts' => $exportResponse['attempts'] ?? 1,
+            'params_used' => $exportResponse['params_used'] ?? $params,
+            'duration_ms' => $exportResponse['duration_ms'] ?? null,
+            'catalog_hint' => $exportResponse['catalog_hint'] ?? null
+        ]);
+        return;
+    }
+
     if (!empty($exportResponse['is_file']) && isset($exportResponse['file']) && is_array($exportResponse['file'])) {
         $file = $exportResponse['file'];
         $fileData = $file['data'] ?? null;
@@ -265,4 +337,6 @@ try {
 CHANGELOG
 2025-11-25 Codex
 - Enabled export proxy to read HTTP error bodies (ignore_errors) and include status codes so export failures return actionable details instead of stream errors.
+2025-11-26 Codex
+- Added structured export normalization so Base64Content + MimeType payloads are delivered as downloadable files instead of JSON.
 */

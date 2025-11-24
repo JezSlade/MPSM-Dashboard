@@ -127,13 +127,28 @@ const CardRegistry = (function () {
 
     function buildDuplicateIpGroups(devices) {
         if (!Array.isArray(devices)) {
+            console.warn('[DupIP] devices is not an array:', typeof devices);
             return [];
         }
 
+        console.log('[DupIP] Processing', devices.length, 'devices');
+
+        // Debug: check what IP fields exist on first few devices
+        if (devices.length > 0) {
+            const sample = devices.slice(0, 3);
+            sample.forEach((d, i) => {
+                const ipFields = ['IpAddress', 'IPAddress', 'ip_address', 'IP', 'Ip'];
+                const found = ipFields.filter(f => d && d[f]);
+                console.log(`[DupIP] Device ${i} IP fields:`, found, 'values:', found.map(f => d[f]));
+            });
+        }
+
         const groups = new Map();
+        let devicesWithIp = 0;
         devices.forEach(device => {
             const ip = resolveIp(device);
             if (!ip) return;
+            devicesWithIp++;
             const key = ip.toLowerCase();
             if (!groups.has(key)) {
                 groups.set(key, { ip, devices: [] });
@@ -141,8 +156,18 @@ const CardRegistry = (function () {
             groups.get(key).devices.push(device);
         });
 
-        return Array.from(groups.values())
-            .filter(group => group.devices.length > 1)
+        console.log('[DupIP] Devices with valid IP:', devicesWithIp, 'of', devices.length);
+        console.log('[DupIP] Unique IPs:', groups.size);
+
+        const duplicateGroups = Array.from(groups.values())
+            .filter(group => group.devices.length > 1);
+
+        console.log('[DupIP] Groups with 2+ devices (duplicates):', duplicateGroups.length);
+        if (duplicateGroups.length > 0) {
+            console.log('[DupIP] First duplicate group:', duplicateGroups[0].ip, 'has', duplicateGroups[0].devices.length, 'devices');
+        }
+
+        return duplicateGroups
             .map(group => {
                 const sortedDevices = group.devices.slice().sort((a, b) => {
                     return resolveSerial(a).localeCompare(resolveSerial(b));
@@ -188,8 +213,11 @@ const CardRegistry = (function () {
                 const toManage = supplyAlerts.find(item => (item.Key || '').toLowerCase() === 'tomanage');
                 let duplicateIpGroups = [];
 
+                console.log('[DupIP] Checking for fetchAllDevices function:', typeof window.MPSM?.fetchAllDevices);
+
                 if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
                     try {
+                        console.log('[DupIP] Calling fetchAllDevices for customer:', context.customerCode);
                         const result = await window.MPSM.fetchAllDevices({
                             customerCode: context.customerCode,
                             dealerCode: context.dealerCode,
@@ -197,10 +225,13 @@ const CardRegistry = (function () {
                             includeUninstalled: true,
                             pageRows: 200
                         });
+                        console.log('[DupIP] fetchAllDevices returned:', result?.devices?.length, 'devices');
                         duplicateIpGroups = buildDuplicateIpGroups(result?.devices || []);
                     } catch (error) {
-                        console.error('Duplicate IP fetch failed', error);
+                        console.error('[DupIP] Duplicate IP fetch failed', error);
                     }
+                } else {
+                    console.warn('[DupIP] fetchAllDevices not available on window.MPSM');
                 }
 
                 return {
@@ -1346,7 +1377,8 @@ const CardRegistry = (function () {
                 if (context.customerCode) baseParams.customerCode = context.customerCode;
 
                 const base64ToBlob = (base64, contentType) => {
-                    const binary = atob(base64);
+                    const sanitized = (base64 || '').replace(/\s+/g, '');
+                    const binary = atob(sanitized);
                     const len = binary.length;
                     const bytes = new Uint8Array(len);
                     for (let i = 0; i < len; i++) {
@@ -1367,6 +1399,52 @@ const CardRegistry = (function () {
                     link.click();
                     document.body.removeChild(link);
                     URL.revokeObjectURL(url);
+                };
+
+                const makeSafeBase = (actionName) => {
+                    return (actionName || 'export').replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'export';
+                };
+
+                const extractFilePayload = (payload) => {
+                    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                        return null;
+                    }
+
+                    const url = payload.url || payload.Url || payload.URL;
+                    const base64Raw =
+                        (typeof payload.data === 'string' && payload.data)
+                        || (typeof payload.Base64Content === 'string' && payload.Base64Content)
+                        || (typeof payload.base64Content === 'string' && payload.base64Content)
+                        || (typeof payload.base64 === 'string' && payload.base64);
+
+                    const name = payload.name
+                        ?? payload.FileName
+                        ?? payload.filename
+                        ?? payload.fileName;
+
+                    const contentType = payload.content_type
+                        ?? payload.contentType
+                        ?? payload.MimeType
+                        ?? payload.mimeType
+                        ?? payload['Content-Type'];
+
+                    if (base64Raw && base64Raw.trim()) {
+                        return { base64: base64Raw.trim(), name, contentType };
+                    }
+                    if (url) {
+                        return { url, name, contentType };
+                    }
+                    return null;
+                };
+
+                const resolveFilePayload = (result) => {
+                    const candidates = [
+                        extractFilePayload(result?.file),
+                        extractFilePayload(result?.data),
+                        extractFilePayload(result)
+                    ];
+
+                    return candidates.find(Boolean) || null;
                 };
 
                 const renderStructuredResult = (resultPayload, actionName) => {
@@ -1525,12 +1603,14 @@ const CardRegistry = (function () {
                             throw new Error(result.error || 'Export failed');
                         }
 
-                        if (result.file && result.file.data) {
-                            const blob = base64ToBlob(result.file.data, result.file.content_type);
+                        const filePayload = resolveFilePayload(result);
+
+                        if (filePayload?.base64) {
+                            const blob = base64ToBlob(filePayload.base64, filePayload.contentType);
                             const objectUrl = URL.createObjectURL(blob);
-                            const safeBase = actionName.replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'export';
-                            const contentType = (result.file.content_type || '').toLowerCase();
-                            let filename = result.file.name;
+                            const safeBase = makeSafeBase(actionName);
+                            const contentType = (filePayload.contentType || '').toLowerCase();
+                            let filename = filePayload.name;
 
                             if (!filename || typeof filename !== 'string') {
                                 if (contentType.includes('csv')) {
@@ -1622,8 +1702,8 @@ const CardRegistry = (function () {
                             exportRow.runtimeParams = result.params_used ?? params;
                             exportRow.runtimeTestedAt = new Date().toISOString();
                             exportRow.success = true;
-                        } else if (result.file && result.file.url) {
-                            window.open(result.file.url, '_blank');
+                        } else if (filePayload?.url) {
+                            window.open(filePayload.url, '_blank');
                             if (typeof window.MPSM?.showToast === 'function') {
                                 window.MPSM.showToast('Export opened in a new tab.', 'info');
                             }
@@ -1911,4 +1991,6 @@ CHANGELOG
 - Built duplicate IP grouping with interactive comparison grid, lifecycle handoff, and per-device actions directly inside the Customer Snapshot modal.
 - Added lifecycle deep links and lifecycle CTA buttons that honor the active customer context.
 - Export Library now previews structured responses, downloads JSON when files are not returned, and surfaces richer runtime status details.
+2025-11-28 Codex
+- Export Library now prioritizes direct spreadsheet downloads when Base64Content/MimeType/FileName payloads are returned and skips JSON preview for file responses.
 */
