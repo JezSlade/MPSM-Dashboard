@@ -1470,61 +1470,7 @@ main {
     font-size: 0.85rem;
 }
 
-.dup-ip-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-}
-
-.dup-ip-card {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-secondary);
-    padding: 0.85rem 1rem;
-}
-
-.dup-ip-card header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.dup-ip-card h4 {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--text-primary);
-}
-
-.dup-ip-meta {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.dup-ip-badge {
-    padding: 0.25rem 0.65rem;
-    border-radius: 999px;
-    background: rgba(var(--primary-rgb), 0.14);
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.dup-ip-badge.badge-success {
-    background: rgba(39, 174, 96, 0.16);
-    color: var(--accent-success);
-}
-
-.dup-ip-badge.badge-danger {
-    background: rgba(231, 76, 60, 0.16);
-    color: var(--accent-danger);
-}
-
-.section-actions {
-    margin-top: 0.5rem;
-}
+/* Duplicate IP card styles moved to end of file with comparison grid */
 
 .btn-inline {
     display: inline-flex;

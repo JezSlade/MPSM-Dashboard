@@ -145,7 +145,7 @@ const CardRegistry = (function () {
                 return {
                     ip: group.ip,
                     devices: sortedDevices,
-                    hasOffline: sortedDevices.some(device => device?.IsOffline),
+                    hasOffline: sortedDevices.some(device => isDeviceOffline(device)),
                     modelCount: new Set(sortedDevices.map(resolveModel).filter(Boolean)).size
                 };
             })
@@ -344,7 +344,7 @@ const CardRegistry = (function () {
                         {
                             label: 'Status',
                             render: (device) => {
-                                const offline = isDeviceOffline(device) || device?.IsOffline;
+                                const offline = isDeviceOffline(device);
                                 return `<span class="status-badge ${offline ? 'status-danger' : 'status-success'}">${offline ? 'Offline' : 'Online'}</span>`;
                             }
                         },
