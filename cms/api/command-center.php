@@ -155,21 +155,65 @@ function getNotifications(PDO $pdo): void
 
     $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->bindValue(':status', $status);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':status', $status);
 
-    if ($severity) {
-        $stmt->bindValue(':severity', $severity);
+        if ($severity) {
+            $stmt->bindValue(':severity', $severity);
+        }
+
+        if ($customerCode) {
+            $stmt->bindValue(':customer_code', $customerCode);
+        }
+
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // If cache_devices table doesn't exist or query fails, fall back to notifications without device metadata
+        error_log("Command center query failed (possibly missing cache_devices table): " . $e->getMessage());
+
+        // Fallback query without device metadata
+        $sql = "SELECT dn.*,
+                       ad.display_name as alert_display_name,
+                       ad.description as alert_description,
+                       ad.category as alert_category
+                FROM {$notifTable} dn
+                LEFT JOIN {$defsTable} ad ON dn.alert_code = ad.alert_code AND ad.enabled = 1
+                WHERE dn.status = :status";
+
+        if ($severity) {
+            $sql .= " AND dn.severity = :severity";
+        }
+
+        if ($customerCode) {
+            $sql .= " AND (
+                LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
+                OR dn.customer_code IS NULL
+                OR dn.customer_code = ''
+            )";
+        }
+
+        $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':status', $status);
+
+        if ($severity) {
+            $stmt->bindValue(':severity', $severity);
+        }
+
+        if ($customerCode) {
+            $stmt->bindValue(':customer_code', $customerCode);
+        }
+
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
-    if ($customerCode) {
-        $stmt->bindValue(':customer_code', $customerCode);
-    }
-
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->execute();
-
-    $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Process notifications to replace alert_code with display_name in title/message and hydrate device metadata
     foreach ($notifications as &$notif) {
@@ -184,10 +228,10 @@ function getNotifications(PDO $pdo): void
 
         // Add resolved display name as separate field
         $notif['alert_display_name'] = $displayName;
-        // Normalize equipment_id and department for UI
-        $notif['equipment_id'] = $notif['device_equipment_id'] ?: $notif['device_equipment_id_alt'] ?: $notif['device_identifier'] ?: $notif['device_serial'];
-        $notif['department'] = $notif['device_department'] ?: null;
-        $notif['model'] = $notif['device_model'] ?: null;
+        // Normalize equipment_id and department for UI (may be null if cache_devices lookup failed)
+        $notif['equipment_id'] = ($notif['device_equipment_id'] ?? null) ?: ($notif['device_equipment_id_alt'] ?? null) ?: ($notif['device_identifier'] ?? null) ?: ($notif['device_serial'] ?? null);
+        $notif['department'] = $notif['device_department'] ?? null;
+        $notif['model'] = $notif['device_model'] ?? null;
         // Customer description for subtitle
         $notif['customer_description'] = $notif['customer_code'] ? ($notif['customer_description'] ?? $notif['customer_code']) : ($notif['customer_description'] ?? null);
     }

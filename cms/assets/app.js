@@ -2324,10 +2324,12 @@ const MPSM = (function() {
             }
 
             if (totalExpected !== null && devices.length >= totalExpected) {
+                debugLog(`Reached total expected (${totalExpected}), stopping pagination`, 'info');
                 break;
             }
 
             if (!chunk.length) {
+                debugLog(`Empty chunk returned, stopping pagination`, 'info');
                 break;
             }
 
@@ -2337,9 +2339,9 @@ const MPSM = (function() {
                 // Keep going - we might find unique devices on later pages
             }
 
-            if (chunk.length < pageRows) {
-                break;
-            }
+            // REMOVED: chunk.length < pageRows check - this incorrectly stops pagination
+            // when the upstream API has a hard limit (e.g., 100 devices) that's lower than
+            // our requested pageRows. We should continue until we hit totalExpected or empty chunk.
 
             pageNumber += 1;
         }
