@@ -178,6 +178,8 @@ const CardRegistry = (function () {
                     ? helpers.escape(totalsSource.EmailExplorerInstallationSentAt)
                     : 'N/A';
 
+                const duplicateGridId = 'customer-duplicate-ip-grid';
+
                 modal.innerHTML = `
                     <section class="customer-overview-section">
                         <div class="modal-metrics">
@@ -222,12 +224,22 @@ const CardRegistry = (function () {
                                 : '<div class="empty-state-inline">No supply movement recorded.</div>'
                             }
                         </div>
-                        ${suppliesDeliveryHtml ? `<div class="pill-grid">${suppliesDeliveryHtml}</div>` : ''}
+                            ${suppliesDeliveryHtml ? `<div class="pill-grid">${suppliesDeliveryHtml}</div>` : ''}
                     </section>
 
                     <section class="customer-overview-section">
                         <h3><i class="fas fa-rotate"></i> Update Backlog</h3>
                         <ul class="metric-list">${toBeUpdatedHtml}</ul>
+                    </section>
+
+                    <section class="customer-overview-section">
+                        <h3><i class="fas fa-network-wired"></i> Duplicate IPs</h3>
+                        <div class="dup-ip-grid" id="${duplicateGridId}">
+                            <div class="empty-state-inline">Loading duplicate IPs…</div>
+                        </div>
+                        <div class="section-actions">
+                            <a class="btn-inline" href="device-lifecycle.php" target="_blank" rel="noreferrer">Open Device Lifecycle</a>
+                        </div>
                     </section>
 
                     <section class="customer-overview-section">
@@ -250,6 +262,73 @@ const CardRegistry = (function () {
                         <ul class="metric-list">${warningsHtml}</ul>
                     </section>
                 `;
+
+                const resolveIpAddress = (device) => device.IpAddress
+                    || device.IPAddress
+                    || device.IP
+                    || device.AddressIP
+                    || '';
+
+                const duplicateGrid = modal.querySelector(`#${duplicateGridId}`);
+                if (duplicateGrid) {
+                    (async () => {
+                        try {
+                            const cached = await helpers.fetchJson('api/get-cached-devices.php');
+                            const devices = Array.isArray(cached.devices) ? cached.devices : [];
+                            const customerDevices = devices.filter(device =>
+                                device.CustomerCode === context.customerCode ||
+                                device.Customer?.Code === context.customerCode
+                            );
+
+                            const groups = {};
+                            customerDevices.forEach(device => {
+                                const ip = resolveIpAddress(device).trim();
+                                if (!ip) {
+                                    return;
+                                }
+                                if (!groups[ip]) {
+                                    groups[ip] = { ip, devices: [] };
+                                }
+                                groups[ip].devices.push(device);
+                            });
+
+                            const duplicates = Object.values(groups)
+                                .map(group => {
+                                    const onlineCount = group.devices.filter(d => !isDeviceOffline(d)).length;
+                                    const offlineCount = group.devices.length - onlineCount;
+                                    return {
+                                        ip: group.ip,
+                                        total: group.devices.length,
+                                        online: onlineCount,
+                                        offline: offlineCount
+                                    };
+                                })
+                                .filter(entry => entry.total > 1)
+                                .sort((a, b) => b.total - a.total)
+                                .slice(0, 8);
+
+                            if (!duplicates.length) {
+                                duplicateGrid.innerHTML = '<div class="empty-state-inline">No duplicate IPs detected for this customer.</div>';
+                                return;
+                            }
+
+                            duplicateGrid.innerHTML = duplicates.map(entry => `
+                                <div class="dup-ip-card">
+                                    <header>
+                                        <h4>${helpers.escape(entry.ip)}</h4>
+                                        <span class="dup-ip-badge">${entry.total} devices</span>
+                                    </header>
+                                    <div class="dup-ip-meta">
+                                        <span class="dup-ip-badge badge-success">${helpers.formatNumber(entry.online)} online</span>
+                                        <span class="dup-ip-badge badge-danger">${helpers.formatNumber(entry.offline)} offline</span>
+                                    </div>
+                                </div>
+                            `).join('');
+                        } catch (err) {
+                            duplicateGrid.innerHTML = `<div class="empty-state-inline">Unable to load duplicate IPs: ${helpers.escape(err.message)}</div>`;
+                        }
+                    })();
+                }
             }
         },
         {
@@ -1492,4 +1571,5 @@ CHANGELOG
 - Renamed Alerts metric to Maintenance Alerts and hardened Top Devices card loading to tolerate non-JSON responses without crashing.
 2025-11-24 Codex
 - Expanded Customer Snapshot modal with structured metrics, supply pipeline, health, warnings, and explorer status using existing dashboard payload data.
+- Added duplicate IP insights (online/offline counts) sourced from cached devices plus quick link to lifecycle workspace.
 */
