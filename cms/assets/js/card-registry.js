@@ -550,6 +550,13 @@ const CardRegistry = (function () {
                                     </button>
                                 </div>
                             </div>
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-bottom: 12px; font-size: 0.9em;">
+                                <strong>Debug Info:</strong><br>
+                                duplicateIpGroups type: ${typeof duplicateIpGroups}<br>
+                                duplicateIpGroups length: ${duplicateIpGroups?.length ?? 'undefined'}<br>
+                                isArray: ${Array.isArray(duplicateIpGroups)}<br>
+                                ${duplicateIpGroups?.length > 0 ? `First group IP: ${duplicateIpGroups[0]?.ip}, devices: ${duplicateIpGroups[0]?.devices?.length}` : ''}
+                            </div>
                             <div class="dup-ip-grid" id="${duplicateGridId}">
                                 ${duplicateIpGroups.length
                                     ? duplicateIpGroups.map(group => `
@@ -570,7 +577,7 @@ const CardRegistry = (function () {
                                             <div class="dup-ip-hint">Click to compare devices</div>
                                         </div>
                                     `).join('')
-                                    : '<div class="empty-state-inline">No duplicate IPs detected for this customer.</div>'
+                                    : '<div class="empty-state-inline">No duplicate IPs detected for this customer. Check browser console for [DupIP] logs.</div>'
                                 }
                             </div>
                             <p class="section-help">Click a card to compare devices sharing the same IP.</p>
