@@ -235,5 +235,7 @@ CHANGELOG
 2025-11-24 Codex
 - Added dedicated mobile landing page with quick alerts, device lookup, lifecycle access, and links to admin/dev tools.
 - Reused existing authentication, preferences, and device/alert APIs to keep logic DRY while enabling mobile-first navigation.
+2025-11-24 Codex
+- Simplified customer selection to a single header dropdown as the title for quick switching.
 */
 ?>

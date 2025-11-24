@@ -323,7 +323,9 @@ if (!function_exists('createDashboardNotification')) {
         $deviceSerial = $messageData['device_serial'] ?? 'Unknown Device';
         $deviceIdentifier = $messageData['device_identifier'] ?? $deviceSerial;
         $alertCode = $messageData['maintenance_alert_code'] ?? 'Unknown Alert';
-        $alertDescription = $messageData['maintenance_alert_description'] ?? '';
+        // Look up human-readable description from alert_code_descriptions table
+        $alertDescription = $messageData['maintenance_alert_description']
+            ?? lookupAlertCodeDescription($pdo, $alertCode);
         $customerCode = $messageData['customer_code'] ?? '';
 
         // Get frequency data
@@ -580,5 +582,36 @@ if (!function_exists('expireOldNotifications')) {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':ny_time' => $nyTime]);
+    }
+}
+
+if (!function_exists('lookupAlertCodeDescription')) {
+    /**
+     * Look up human-readable description for an alert code
+     */
+    function lookupAlertCodeDescription(PDO $pdo, string $alertCode): string
+    {
+        static $cache = [];
+
+        if (isset($cache[$alertCode])) {
+            return $cache[$alertCode];
+        }
+
+        $table = DB_PREFIX . 'alert_code_descriptions';
+
+        // Check if table exists first (avoid errors on first run)
+        try {
+            $stmt = $pdo->prepare("SELECT description FROM {$table} WHERE alert_code = :code AND is_active = 1");
+            $stmt->execute([':code' => $alertCode]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $description = $result ? $result['description'] : '';
+            $cache[$alertCode] = $description;
+
+            return $description;
+        } catch (PDOException $e) {
+            // Table doesn't exist yet, return empty
+            return '';
+        }
     }
 }

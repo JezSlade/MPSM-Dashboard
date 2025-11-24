@@ -21,6 +21,39 @@ if (!function_exists('ensureCommandCenterTables')) {
         ensureAlertAggregationsTable($pdo);
         ensureDashboardNotificationsTable($pdo);
         ensureRuleMatchHistoryTable($pdo);
+        ensureAlertCodeDescriptionsTable($pdo);
+    }
+}
+
+if (!function_exists('ensureAlertCodeDescriptionsTable')) {
+    /**
+     * Alert Code Descriptions - Editable human-readable alert messages
+     */
+    function ensureAlertCodeDescriptionsTable(PDO $pdo): void
+    {
+        static $ensured = false;
+        if ($ensured) return;
+
+        $table = DB_PREFIX . 'alert_code_descriptions';
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS {$table} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                alert_code VARCHAR(20) NOT NULL UNIQUE COMMENT 'Numeric alert code from MPS',
+                description VARCHAR(255) NOT NULL COMMENT 'Human-readable description',
+                custom_message TEXT NULL COMMENT 'Optional custom alert message template',
+                category VARCHAR(100) NULL COMMENT 'Alert category (e.g., Input, Output, Marker)',
+                severity_hint ENUM('info', 'warning', 'high', 'critical') NULL COMMENT 'Suggested severity',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Whether to show alerts for this code',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+
+                INDEX idx_alert_code (alert_code),
+                INDEX idx_category (category),
+                INDEX idx_is_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $ensured = true;
     }
 }
 

@@ -6,12 +6,12 @@ const MobileApp = (() => {
         activeSection: 'alerts',
         lastQuery: '',
         customers: [],
-        customerSearchTimeout: null
+        customerSearchTimeout: null,
+        customerSearchTerm: ''
     };
 
     let alertInterval = null;
     let searchTimeout = null;
-    let customerSelectTimeout = null;
 
     const fetchJson = async (url, options = {}) => {
         const response = await fetch(url, options);
@@ -291,7 +291,7 @@ const MobileApp = (() => {
             return;
         }
 
-        state.customerSearchTerm = searchTerm.trim();
+        state.customerSearchTerm = (searchTerm || '').trim();
         select.innerHTML = '<option>Loading...</option>';
 
         const params = new URLSearchParams();
@@ -320,7 +320,7 @@ const MobileApp = (() => {
 
         const currentCode = (config.customerCode || '').trim();
         const currentName = (config.customerName || '').trim();
-        const filter = state.customerSearchTerm.toLowerCase();
+        const filter = (state.customerSearchTerm || '').toLowerCase();
         select.innerHTML = '';
 
         const placeholder = document.createElement('option');
@@ -369,7 +369,7 @@ const MobileApp = (() => {
             return;
         }
         config.customerCode = code;
-        config.customerName = name || config.customerName || '';
+        config.customerName = name || config.customerName || code;
 
         const nameEl = document.getElementById('mobile-customer-name');
         const codeEl = document.getElementById('mobile-customer-code');
@@ -446,27 +446,7 @@ const MobileApp = (() => {
     };
 
     const bindCustomerSwitch = () => {
-        const searchInput = document.getElementById('mobile-customer-search');
         const select = document.getElementById('mobile-customer-select');
-
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const term = e.target.value.trim();
-                if (customerSelectTimeout) {
-                    clearTimeout(customerSelectTimeout);
-                }
-                customerSelectTimeout = setTimeout(() => {
-                    // API lacks server-side search; filter client-side on populate
-                    state.customerSearchTerm = term;
-                    populateCustomerSelect();
-                    if (term.length === 0 && state.customers.length === 0) {
-                        loadCustomers().catch(() => {});
-                    } else if (state.customers.length === 0) {
-                        loadCustomers().catch(() => {});
-                    }
-                }, 250);
-            });
-        }
 
         if (select) {
             select.addEventListener('change', (e) => {
@@ -577,4 +557,6 @@ CHANGELOG
 - Added mobile customer switcher reusing get-customers preferences flow; persists selection and reloads alerts/search context.
 2025-11-24 Codex
 - Improved customer switcher robustness (dealer-aware fetch, client-side filtering, status messaging) and refined styling hooks.
+2025-11-24 Codex
+- Simplified customer selection to a single header dropdown; removed search input and tightened preference updates.
 */
