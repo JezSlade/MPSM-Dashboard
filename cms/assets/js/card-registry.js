@@ -14,6 +14,11 @@ const CardRegistry = (function () {
      * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
      */
     const isDeviceOffline = (device) => {
+        // Guard against null/undefined devices
+        if (!device) {
+            return false;
+        }
+
         // If API explicitly marks as offline, trust it
         if (device.IsOffline === true) {
             return true;
@@ -1350,6 +1355,99 @@ const CardRegistry = (function () {
                     return new Blob([bytes], { type: contentType || 'application/octet-stream' });
                 };
 
+                const downloadJson = (data, filenameBase = 'export') => {
+                    const json = JSON.stringify(data, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${filenameBase}.json`;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                };
+
+                const renderStructuredResult = (resultPayload, actionName) => {
+                    const modalBody = helpers.createModal(`Export Result: ${helpers.escape(actionName)}`);
+                    const data = resultPayload?.data ?? resultPayload;
+
+                    const metaBits = [];
+                    if (resultPayload?.meta) {
+                        metaBits.push(`<code>${helpers.escape(JSON.stringify(resultPayload.meta))}</code>`);
+                    }
+                    if (resultPayload?.http_status) {
+                        metaBits.push(`HTTP ${helpers.escape(resultPayload.http_status)}`);
+                    }
+
+                    const footerMeta = metaBits.length ? `<div class="muted" style="margin-top:8px;">${metaBits.join(' • ')}</div>` : '';
+
+                    if (Array.isArray(data) && data.length && data.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+                        const sampleKeys = Array.from(
+                            data.slice(0, 20).reduce((set, row) => {
+                                Object.keys(row || {}).forEach(key => set.add(key));
+                                return set;
+                            }, new Set())
+                        ).slice(0, 12);
+
+                        const columns = sampleKeys.length
+                            ? sampleKeys.map(key => ({
+                                id: key,
+                                label: key,
+                                accessor: row => row[key] ?? '',
+                                sortable: true
+                            }))
+                            : [{ id: 'value', label: 'Value', accessor: row => JSON.stringify(row) }];
+
+                        const rows = data.slice(0, 200);
+
+                        helpers.renderTable(modalBody, {
+                            columns,
+                            rows,
+                            pageSize: 25,
+                            defaultSort: { column: columns[0].id, direction: 'asc' }
+                        });
+
+                        const summary = document.createElement('div');
+                        summary.className = 'muted';
+                        summary.style.marginTop = '10px';
+                        summary.innerHTML = `Showing ${rows.length} of ${data.length} records${footerMeta}`;
+                        modalBody.appendChild(summary);
+                    } else if (data && typeof data === 'object') {
+                        modalBody.innerHTML = `
+                            <pre class="code-block" style="max-height:360px; overflow:auto;">${helpers.escape(JSON.stringify(data, null, 2))}</pre>
+                            ${footerMeta}
+                        `;
+                    } else {
+                        modalBody.innerHTML = `
+                            <pre class="code-block">${helpers.escape(String(data ?? 'No data'))}</pre>
+                            ${footerMeta}
+                        `;
+                    }
+
+                    const actions = document.createElement('div');
+                    actions.className = 'section-heading with-actions';
+                    actions.style.marginTop = '12px';
+                    actions.innerHTML = `
+                        <div class="section-actions">
+                            <button class="btn btn-primary" data-action="download-json">
+                                <i class="fas fa-download"></i> Download JSON
+                            </button>
+                        </div>
+                    `;
+                    modalBody.appendChild(actions);
+
+                    actions.querySelector('[data-action="download-json"]')?.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const safeBase = (actionName || 'export').replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'export';
+                        downloadJson(data ?? resultPayload ?? {}, safeBase);
+                        if (typeof window.MPSM?.showToast === 'function') {
+                            window.MPSM.showToast('Structured export downloaded as JSON.', 'success');
+                        }
+                    });
+                };
+
                 tableContainer.addEventListener('click', async (event) => {
                     const button = event.target.closest('button.export-download');
                     if (!button) {
@@ -1538,10 +1636,11 @@ const CardRegistry = (function () {
                             exportRow.success = true;
                         } else {
                             console.log('Export response payload', result);
+                            renderStructuredResult(result, actionName);
                             if (typeof window.MPSM?.showToast === 'function') {
-                                window.MPSM.showToast('Export returned structured data. See console for details.', 'info');
+                                window.MPSM.showToast('Export returned structured data. Preview opened.', 'info');
                             }
-                            exportRow.runtimeStatus = 'Pass';
+                            exportRow.runtimeStatus = 'Data';
                             exportRow.runtimeError = null;
                             exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
                             exportRow.runtimeDuration = result.duration_ms ?? null;
@@ -1811,4 +1910,5 @@ CHANGELOG
 2025-11-25 Codex
 - Built duplicate IP grouping with interactive comparison grid, lifecycle handoff, and per-device actions directly inside the Customer Snapshot modal.
 - Added lifecycle deep links and lifecycle CTA buttons that honor the active customer context.
+- Export Library now previews structured responses, downloads JSON when files are not returned, and surfaces richer runtime status details.
 */

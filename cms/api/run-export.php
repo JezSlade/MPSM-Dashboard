@@ -53,18 +53,39 @@ function dispatchExportRequest(string $action, array $params): array
             'header' => "Content-Type: application/json\r\n",
             'content' => $requestBody,
             'timeout' => 90,
+            'ignore_errors' => true // Capture error bodies for diagnostics
         ]
     ]);
 
     $response = @file_get_contents(MPSM_EXPORT_ENDPOINT, false, $context);
+    $statusCode = 0;
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $header) {
+            if (preg_match('#^HTTP/\\d+\\.\\d+\\s+(\\d{3})#i', $header, $matches)) {
+                $statusCode = (int) $matches[1];
+                break;
+            }
+        }
+    }
+
     if ($response === false) {
         $error = error_get_last();
-        throw new Exception($error['message'] ?? 'Export request failed.');
+        $message = $error['message'] ?? 'Export request failed.';
+        if ($statusCode >= 400) {
+            $message = "HTTP {$statusCode}: {$message}";
+        }
+        throw new Exception($message);
     }
 
     $decoded = json_decode($response, true);
     if (!is_array($decoded)) {
-        throw new Exception('Invalid response from export service.');
+        $snippet = substr($response, 0, 2000);
+        $prefix = $statusCode ? "HTTP {$statusCode}: " : '';
+        throw new Exception($prefix . 'Invalid response from export service. Body: ' . $snippet);
+    }
+
+    if ($statusCode) {
+        $decoded['http_status'] = $statusCode;
     }
 
     return $decoded;
@@ -239,3 +260,9 @@ try {
 } catch (Throwable $e) {
     jsonError('Failed to execute export: ' . $e->getMessage());
 }
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Enabled export proxy to read HTTP error bodies (ignore_errors) and include status codes so export failures return actionable details instead of stream errors.
+*/
