@@ -175,7 +175,7 @@ const CardRegistry = (function () {
                 return {
                     ip: group.ip,
                     devices: sortedDevices,
-                    hasOffline: sortedDevices.some(device => isDeviceOffline(device)),
+                    hasOffline: sortedDevices.some(device => device?.IsOffline),
                     modelCount: new Set(sortedDevices.map(resolveModel).filter(Boolean)).size
                 };
             })
