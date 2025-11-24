@@ -117,12 +117,23 @@ function getNotifications(PDO $pdo): void
 
     // Join with alert_definitions to get display names for alert codes
     // Also support customer code filtering (weekend work)
+    $devicesTable = DB_PREFIX . 'cache_devices';
     $sql = "SELECT dn.*,
                    ad.display_name as alert_display_name,
                    ad.description as alert_description,
-                   ad.category as alert_category
+                   ad.category as alert_category,
+                   COALESCE(
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Department')),
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.department')),
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.OfficeDescription')),
+                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Note'))
+                   ) AS device_department,
+                   JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Product.Model')) AS device_model,
+                   JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.EquipmentId')) AS device_equipment_id,
+                   JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.EquipmentID')) AS device_equipment_id_alt
             FROM {$notifTable} dn
             LEFT JOIN {$defsTable} ad ON dn.alert_code = ad.alert_code AND ad.enabled = 1
+            LEFT JOIN {$devicesTable} cd ON cd.serial_number = dn.device_serial
             WHERE dn.status = :status";
 
     // Add severity filter if provided
@@ -160,7 +171,7 @@ function getNotifications(PDO $pdo): void
 
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Process notifications to replace alert_code with display_name in title/message
+    // Process notifications to replace alert_code with display_name in title/message and hydrate device metadata
     foreach ($notifications as &$notif) {
         // If we have a display name, use it; otherwise keep the original alert_code
         $displayName = $notif['alert_display_name'] ?? $notif['alert_code'];
@@ -173,6 +184,12 @@ function getNotifications(PDO $pdo): void
 
         // Add resolved display name as separate field
         $notif['alert_display_name'] = $displayName;
+        // Normalize equipment_id and department for UI
+        $notif['equipment_id'] = $notif['device_equipment_id'] ?: $notif['device_equipment_id_alt'] ?: $notif['device_identifier'] ?: $notif['device_serial'];
+        $notif['department'] = $notif['device_department'] ?: null;
+        $notif['model'] = $notif['device_model'] ?: null;
+        // Customer description for subtitle
+        $notif['customer_description'] = $notif['customer_code'] ? ($notif['customer_description'] ?? $notif['customer_code']) : ($notif['customer_description'] ?? null);
     }
 
     echo json_encode([

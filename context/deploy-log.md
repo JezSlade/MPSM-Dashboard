@@ -54,6 +54,14 @@
 - **Result:** Success (deployed alert display-name mapping for panel/system alerts and ensured drill-down modal sections always render).
 - **Notes:** Panel alerts now prefer payload descriptions and alert_definitions display names; code-only fallbacks are muted/secondary.
 
+## 2025-11-28 19:40 UTC
+- **Command:** Uploaded via FTP  
+  - `curl -T cms/api/search-devices.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/search-devices.php`  
+  - `curl -T cms/api/command-center.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/command-center.php`  
+  - `curl -T cms/assets/hero-notifications.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
+- **Result:** Success (hardened cache-first search fallback, enriched notifications with department/model/equipment_id, and updated hero cards to show human-readable alert names and device metadata).
+- **Notes:** System Alerts cards now render display_name, model, department, and equipment barcode; search gracefully degrades if API is unreachable.
+
 /*
 CHANGELOG
 2025-11-18 Codex

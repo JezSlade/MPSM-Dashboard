@@ -151,10 +151,25 @@ try {
 
     // Fallback to upstream API if cache misses or cache unavailable
     if (count($devices) === 0) {
-        $upstream = searchUpstream($query);
-        $devices = $upstream['devices'] ?? [];
-        $responseTime = $upstream['responseTime'] ?? $responseTime;
-        $source = $cacheError ? 'api_fallback_no_cache' : 'api';
+        try {
+            $upstream = searchUpstream($query);
+            $devices = $upstream['devices'] ?? [];
+            $responseTime = $upstream['responseTime'] ?? $responseTime;
+            $source = $cacheError ? 'api_fallback_no_cache' : 'api';
+        } catch (Exception $apiEx) {
+            // Graceful degradation: return empty set instead of hard failure
+            error_log("[search-devices] Upstream fallback failed for '{$query}': " . $apiEx->getMessage());
+            $source = $cacheError ? 'cache_unavailable_api_failed' : 'api_failed';
+            jsonSuccess([
+                'devices' => [],
+                'total' => 0,
+                'query' => $query,
+                'responseTime' => $responseTime,
+                'source' => $source,
+                'warning' => 'Upstream search unavailable; showing cached results only'
+            ]);
+            return;
+        }
     }
 
     jsonSuccess([
