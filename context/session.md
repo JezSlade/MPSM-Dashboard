@@ -452,4 +452,5 @@ CHANGELOG
 - Export Library downloads spreadsheets directly when Base64Content/MimeType/FileName are present (front-end + API normalization).
 - Global search now queries the cached devices table first, falling back to upstream only on cache miss to remove multi-minute waits.
 - Device drill-down modal now surfaces panel system alerts and maintenance alerts alongside other device details.
+- Broadened device drill-down panel message matching (case-insensitive serials and payload serial/device IDs) to surface active alerts more reliably.
 */

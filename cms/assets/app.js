@@ -3520,25 +3520,30 @@ const MPSM = (function() {
                 return 'No additional details';
             };
 
-            const renderPanelMessages = (messages) => {
-                if (!messages || !messages.length) {
-                    return '<div class="snapshot-item"><div class="snapshot-value">No recent alerts</div></div>';
-                }
-                const limited = messages.slice(0, 12);
-                return limited.map(msg => {
-                    const received = formatDateTime(msg.received_at, { dateStyle: 'short', timeStyle: 'short' }) || 'Unknown time';
-                    const code = msg.maintenance_alert_code || msg.panel_configuration || msg.id || 'Alert';
-                    const summary = summarizePanelMessage(msg);
-                    return `
-                        <div class="snapshot-item" style="grid-column: 1 / -1;">
-                            <div class="snapshot-label">${escapeHtml(received)}</div>
-                            <div class="snapshot-value">
-                                <span class="status-badge status-warning">${escapeHtml(String(code))}</span>
-                                <span class="muted" style="margin-left:8px;">${escapeHtml(String(summary))}</span>
+            const renderPanelSection = (title, messages, emptyText) => {
+                const content = (!messages || !messages.length)
+                    ? `<div class="snapshot-item"><div class="snapshot-value">${escapeHtml(emptyText || 'No recent alerts')}</div></div>`
+                    : messages.slice(0, 12).map(msg => {
+                        const received = formatDateTime(msg.received_at, { dateStyle: 'short', timeStyle: 'short' }) || 'Unknown time';
+                        const code = msg.maintenance_alert_code || msg.panel_configuration || msg.id || 'Alert';
+                        const summary = summarizePanelMessage(msg);
+                        return `
+                            <div class="snapshot-item" style="grid-column: 1 / -1;">
+                                <div class="snapshot-label">${escapeHtml(received)}</div>
+                                <div class="snapshot-value">
+                                    <span class="status-badge status-warning">${escapeHtml(String(code))}</span>
+                                    <span class="muted" style="margin-left:8px;">${escapeHtml(String(summary))}</span>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+
+                return `
+                    <h3>${escapeHtml(title)}</h3>
+                    <div class="device-snapshot">
+                        ${content}
+                    </div>
+                `;
             };
 
             const html = `
@@ -3672,19 +3677,9 @@ const MPSM = (function() {
                     </div>
                 ` : ''}
 
-                ${maintenancePanelAlerts.length ? `
-                    <h3>Maintenance Alerts (Panel)</h3>
-                    <div class="device-snapshot">
-                        ${renderPanelMessages(maintenancePanelAlerts)}
-                    </div>
-                ` : ''}
+                ${renderPanelSection('Maintenance Alerts (Panel)', maintenancePanelAlerts, 'No maintenance alerts in recent panel messages')}
 
-                ${panelHistory.length ? `
-                    <h3>System Alerts (Panel Messages)</h3>
-                    <div class="device-snapshot">
-                        ${renderPanelMessages(panelHistory)}
-                    </div>
-                ` : ''}
+                ${renderPanelSection('System Alerts (Panel Messages)', panelHistory, 'No recent panel messages')}
             `;
 
             modalBody.innerHTML = html;

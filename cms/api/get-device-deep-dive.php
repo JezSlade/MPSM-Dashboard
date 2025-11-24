@@ -373,7 +373,7 @@ try {
         }
     }
 
-    // Step 5: Get panel message history from database (most recent 100)
+    // Step 5: Get panel message history from database (most recent 150, flexible matching)
     if (!empty($foundSerial)) {
         try {
             $table = DB_PREFIX . 'panel_messages';
@@ -386,20 +386,54 @@ try {
                         maintenance_alert_code,
                         maintenance_alert_id,
                         panel_configuration,
-                        payload
+                        payload,
+                        device_serial,
+                        JSON_EXTRACT(payload, '$.device_serial') AS payload_device_serial,
+                        JSON_EXTRACT(payload, '$.serialNumber') AS payload_serial_number,
+                        JSON_EXTRACT(payload, '$.DeviceSerialNumber') AS payload_device_serial_number,
+                        JSON_EXTRACT(payload, '$.device_id') AS payload_device_id
                     FROM {$table}
-                    WHERE device_serial = :serial
                     ORDER BY received_at DESC
-                    LIMIT 100";
+                    LIMIT 300";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->bindValue(':serial', $foundSerial, PDO::PARAM_STR);
             $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $normalizedSerial = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$foundSerial));
+            $normalizedDeviceId = $deviceId ? strtolower((string)$deviceId) : '';
 
             $messages = [];
             foreach ($rows as $row) {
                 $decodedPayload = json_decode($row['payload'], true);
+
+                $payloadSerials = [];
+                if (is_array($decodedPayload)) {
+                    foreach (['device_serial', 'serialNumber', 'DeviceSerialNumber', 'serial_number'] as $key) {
+                        if (!empty($decodedPayload[$key])) {
+                            $payloadSerials[] = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$decodedPayload[$key]));
+                        }
+                    }
+                }
+
+                $rowSerial = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)($row['device_serial'] ?? '')));
+                $payloadDeviceId = '';
+                if (is_array($decodedPayload)) {
+                    foreach (['device_id', 'DeviceId'] as $key) {
+                        if (!empty($decodedPayload[$key])) {
+                            $payloadDeviceId = strtolower((string)$decodedPayload[$key]);
+                            break;
+                        }
+                    }
+                }
+
+                $matchesSerial = $normalizedSerial && ($rowSerial === $normalizedSerial || in_array($normalizedSerial, $payloadSerials, true));
+                $matchesDeviceId = $normalizedDeviceId && $payloadDeviceId === $normalizedDeviceId;
+
+                if (!$matchesSerial && !$matchesDeviceId) {
+                    continue;
+                }
+
                 $messages[] = [
                     'id' => (int)$row['id'],
                     'received_at' => $row['received_at'],
@@ -414,7 +448,7 @@ try {
 
             $result['panelHistory'] = [
                 'total' => count($messages),
-                'messages' => $messages
+                'messages' => array_slice($messages, 0, 150)
             ];
         } catch (Exception $e) {
             $result['errors'][] = "Panel history: " . $e->getMessage();
@@ -430,3 +464,15 @@ try {
 } catch (Exception $e) {
     jsonError("Failed to fetch device data: " . $e->getMessage());
 }
+
+/*
+CHANGELOG
+2025-11-28 Codex
+- Broadened panel message matching (case-insensitive serials and payload serial/device IDs), increased history window, and post-filtered results so drill-down modals surface active maintenance/system alerts reliably without unrelated rows.
+*/
+
+/*
+CHANGELOG
+2025-11-28 Codex
+- Broadened panel message matching (case-insensitive serials and payload serial/device IDs) and increased history window so drill-down modals surface active maintenance/system alerts.
+*/

@@ -35,6 +35,15 @@
 - **Result:** Success (queued all non-uninstalled devices for drill-down fetching so stage 2 actually runs).
 - **Notes:** This change ensures the drill-down phase executes even when devices don’t classify themselves as `installed`; monitor `/home/resolut7/logs/refresh-cache-chunked.log` for the next drill-down chunk outputs.
 
+## 2025-11-28 18:00 UTC
+- **Command:** Uploaded via FTP  
+  - `curl -T cms/api/get-device-deep-dive.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-device-deep-dive.php`  
+  - `curl -T cms/api/search-devices.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/search-devices.php`  
+  - `curl -T cms/assets/app.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/app.js`  
+  - `curl -T context/session.md ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/context/session.md`
+- **Result:** Success (deployed cached-first device search, expanded panel alert matching for drill-down, and modal alert display updates).
+- **Notes:** Panel message matching now normalizes serial/device IDs from payloads and surfaces in-device modal; search uses cache-first with API fallback.
+
 /*
 CHANGELOG
 2025-11-18 Codex
