@@ -67,6 +67,18 @@
 - **Result:** Success (restored alerts rendering by falling back to the raw notification list when grouping yields zero, while keeping display name/device/department metadata).
 - **Notes:** System Alerts should now appear even if alert_code/device_serial are missing in the feed.
 
+## 2025-11-24 20:55 UTC
+- **Command:**
+  - `curl -T cms/assets/hero-notifications.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
+  - `curl -T cms/api/populate-alert-definitions.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/populate-alert-definitions.php`
+- **Result:** Success (System Alerts cards no longer show serial numbers in subtitle; alert codes display as "Alert 808" format; added script to populate alert definitions)
+- **Notes:**
+  - hero-notifications.js now detects serial numbers (15+ chars) and excludes them from subtitle
+  - Subtitle shows customer code or "Device Alert" fallback
+  - populate-alert-definitions.php needs manual execution while logged in to insert human-readable descriptions
+  - Commit: cc672ed
+- **Remaining:** Run populate script, add customer filtering to Panel Message Monitor, handle 429 errors
+
 /*
 CHANGELOG
 2025-11-18 Codex
