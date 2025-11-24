@@ -1993,4 +1993,5 @@ CHANGELOG
 - Export Library now previews structured responses, downloads JSON when files are not returned, and surfaces richer runtime status details.
 2025-11-28 Codex
 - Export Library now prioritizes direct spreadsheet downloads when Base64Content/MimeType/FileName payloads are returned and skips JSON preview for file responses.
+- Search bar now prefers cached devices and device drill-down modal shows panel maintenance/system alerts alongside other device data.
 */

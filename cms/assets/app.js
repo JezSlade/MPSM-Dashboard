@@ -3454,6 +3454,8 @@ const MPSM = (function() {
             const counterDetails = data.counterDetails;
             const deviceHealth = data.deviceHealth;
             const supplyAlerts = data.supplyAlerts;
+            const panelHistory = Array.isArray(data.panelHistory?.messages) ? data.panelHistory.messages : [];
+            const maintenancePanelAlerts = panelHistory.filter(msg => msg.maintenance_alert_code || msg.maintenance_alert_id);
 
             modalName.textContent = device.Product?.Model || 'Device Details';
 
@@ -3493,6 +3495,51 @@ const MPSM = (function() {
                         </div>
                     `).join('')
                 : '<div class="supply-empty">No supply telemetry available</div>';
+
+            const summarizePanelMessage = (msg) => {
+                if (!msg) return 'No additional details';
+                const payload = msg.payload;
+                const candidates = [
+                    msg.runtime_error,
+                    msg.runtime_message,
+                    msg.maintenance_alert_code,
+                    msg.panel_configuration,
+                    payload && typeof payload === 'object' ? payload.message || payload.alert_description || payload.panel_message : null,
+                    typeof payload === 'string' ? payload : null
+                ].filter(Boolean);
+                if (candidates.length) {
+                    return candidates[0];
+                }
+                if (payload && typeof payload === 'object') {
+                    const parts = [];
+                    ['maintenance_alert_code', 'maintenance_alert_id', 'alert_code', 'code', 'status'].forEach(key => {
+                        if (payload[key]) parts.push(`${key}: ${payload[key]}`);
+                    });
+                    if (parts.length) return parts.join(' • ');
+                }
+                return 'No additional details';
+            };
+
+            const renderPanelMessages = (messages) => {
+                if (!messages || !messages.length) {
+                    return '<div class="snapshot-item"><div class="snapshot-value">No recent alerts</div></div>';
+                }
+                const limited = messages.slice(0, 12);
+                return limited.map(msg => {
+                    const received = formatDateTime(msg.received_at, { dateStyle: 'short', timeStyle: 'short' }) || 'Unknown time';
+                    const code = msg.maintenance_alert_code || msg.panel_configuration || msg.id || 'Alert';
+                    const summary = summarizePanelMessage(msg);
+                    return `
+                        <div class="snapshot-item" style="grid-column: 1 / -1;">
+                            <div class="snapshot-label">${escapeHtml(received)}</div>
+                            <div class="snapshot-value">
+                                <span class="status-badge status-warning">${escapeHtml(String(code))}</span>
+                                <span class="muted" style="margin-left:8px;">${escapeHtml(String(summary))}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
 
             const html = `
                 <div class="device-snapshot">
@@ -3622,6 +3669,20 @@ const MPSM = (function() {
                                 </div>
                             </div>
                         `).join('')}
+                    </div>
+                ` : ''}
+
+                ${maintenancePanelAlerts.length ? `
+                    <h3>Maintenance Alerts (Panel)</h3>
+                    <div class="device-snapshot">
+                        ${renderPanelMessages(maintenancePanelAlerts)}
+                    </div>
+                ` : ''}
+
+                ${panelHistory.length ? `
+                    <h3>System Alerts (Panel Messages)</h3>
+                    <div class="device-snapshot">
+                        ${renderPanelMessages(panelHistory)}
                     </div>
                 ` : ''}
             `;

@@ -448,4 +448,8 @@ CHANGELOG
 - Fixed timestamp timezone issue in hero notifications (DST handling)
 - Created admin UI, API endpoints, and database schema for alert definitions
 - Merged weekend work with alert definitions work after git conflict resolution
+2025-11-28 Codex
+- Export Library downloads spreadsheets directly when Base64Content/MimeType/FileName are present (front-end + API normalization).
+- Global search now queries the cached devices table first, falling back to upstream only on cache miss to remove multi-minute waits.
+- Device drill-down modal now surfaces panel system alerts and maintenance alerts alongside other device details.
 */
