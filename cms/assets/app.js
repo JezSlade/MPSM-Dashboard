@@ -3500,11 +3500,13 @@ const MPSM = (function() {
                 if (!msg) return 'No additional details';
                 const payload = msg.payload;
                 const candidates = [
+                    msg.display_name,
+                    payload && typeof payload === 'object' ? payload.maintenanceAlert?.description || payload.maintenanceAlert?.message || payload.alert_description : null,
+                    msg.panel_configuration,
                     msg.runtime_error,
                     msg.runtime_message,
                     msg.maintenance_alert_code,
-                    msg.panel_configuration,
-                    payload && typeof payload === 'object' ? payload.message || payload.alert_description || payload.panel_message : null,
+                    payload && typeof payload === 'object' ? payload.message || payload.panel_message : null,
                     typeof payload === 'string' ? payload : null
                 ].filter(Boolean);
                 if (candidates.length) {
@@ -3525,7 +3527,7 @@ const MPSM = (function() {
                     ? `<div class="snapshot-item"><div class="snapshot-value">${escapeHtml(emptyText || 'No recent alerts')}</div></div>`
                     : messages.slice(0, 12).map(msg => {
                         const received = formatDateTime(msg.received_at, { dateStyle: 'short', timeStyle: 'short' }) || 'Unknown time';
-                        const code = msg.maintenance_alert_code || msg.panel_configuration || msg.id || 'Alert';
+                        const code = msg.display_name || msg.panel_configuration || msg.maintenance_alert_code || msg.id || 'Alert';
                         const summary = summarizePanelMessage(msg);
                         return `
                             <div class="snapshot-item" style="grid-column: 1 / -1;">

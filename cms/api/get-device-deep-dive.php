@@ -403,6 +403,21 @@ try {
             $normalizedSerial = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$foundSerial));
             $normalizedDeviceId = $deviceId ? strtolower((string)$deviceId) : '';
 
+            // Preload alert definitions for human-readable names
+            $alertDisplay = [];
+            try {
+                $defsTable = DB_PREFIX . 'alert_definitions';
+                $defsStmt = $pdo->query("SELECT alert_code, display_name, description FROM {$defsTable} WHERE enabled = 1");
+                foreach ($defsStmt->fetchAll(PDO::FETCH_ASSOC) as $def) {
+                    $code = $def['alert_code'] ?? '';
+                    if ($code !== '') {
+                        $alertDisplay[$code] = $def['display_name'] ?: ($def['description'] ?: $code);
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('[device-deep-dive] Failed to load alert definitions: ' . $e->getMessage());
+            }
+
             $messages = [];
             foreach ($rows as $row) {
                 $decodedPayload = json_decode($row['payload'], true);
@@ -442,6 +457,7 @@ try {
                     'maintenance_alert_code' => $row['maintenance_alert_code'],
                     'maintenance_alert_id' => $row['maintenance_alert_id'],
                     'panel_configuration' => $row['panel_configuration'],
+                    'display_name' => $alertDisplay[$row['maintenance_alert_code'] ?? ''] ?? ($decodedPayload['maintenanceAlert']['description'] ?? $decodedPayload['MaintenanceAlert_Description'] ?? $row['panel_configuration'] ?? $row['maintenance_alert_code'] ?? 'Alert'),
                     'payload' => $decodedPayload ?? $row['payload']
                 ];
             }

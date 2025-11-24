@@ -44,6 +44,16 @@
 - **Result:** Success (deployed cached-first device search, expanded panel alert matching for drill-down, and modal alert display updates).
 - **Notes:** Panel message matching now normalizes serial/device IDs from payloads and surfaces in-device modal; search uses cache-first with API fallback.
 
+## 2025-11-28 19:05 UTC
+- **Command:** Uploaded via FTP  
+  - `curl -T cms/api/get-panel-messages.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-panel-messages.php`  
+  - `curl -T cms/api/get-device-deep-dive.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-device-deep-dive.php`  
+  - `curl -T cms/assets/panel-messages.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/panel-messages.js`  
+  - `curl -T cms/assets/app.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/app.js`  
+  - `curl -T context/session.md ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/context/session.md`
+- **Result:** Success (deployed alert display-name mapping for panel/system alerts and ensured drill-down modal sections always render).
+- **Notes:** Panel alerts now prefer payload descriptions and alert_definitions display names; code-only fallbacks are muted/secondary.
+
 /*
 CHANGELOG
 2025-11-18 Codex

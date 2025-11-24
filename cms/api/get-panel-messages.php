@@ -19,6 +19,21 @@ if ($hours !== null) {
 try {
     $pdo = getDatabase();
 
+    // Preload alert display names from alert_definitions (enabled only)
+    $alertDisplay = [];
+    try {
+        $defsTable = DB_PREFIX . 'alert_definitions';
+        $defsStmt = $pdo->query("SELECT alert_code, display_name, description FROM {$defsTable} WHERE enabled = 1");
+        foreach ($defsStmt->fetchAll(PDO::FETCH_ASSOC) as $def) {
+            $code = $def['alert_code'] ?? '';
+            if ($code !== '') {
+                $alertDisplay[$code] = $def['display_name'] ?: ($def['description'] ?: $code);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[get-panel-messages] Failed to load alert definitions: ' . $e->getMessage());
+    }
+
     $table = DB_PREFIX . 'panel_messages';
     $sql = "SELECT id, received_at, customer_code, customer_description, device_serial, maintenance_alert_code, maintenance_alert_id, panel_configuration, processed, payload
             FROM {$table}";
@@ -46,6 +61,26 @@ try {
 
     foreach ($rows as $row) {
         $decodedPayload = json_decode($row['payload'], true);
+        $payloadDescription = null;
+        if (is_array($decodedPayload)) {
+            $payloadDescription = $decodedPayload['maintenanceAlert']['description']
+                ?? $decodedPayload['MaintenanceAlert_Description']
+                ?? $decodedPayload['alert_description']
+                ?? $decodedPayload['description']
+                ?? null;
+        }
+        $code = $row['maintenance_alert_code'] ?? '';
+        $displayName = null;
+        if ($code !== '' && isset($alertDisplay[$code])) {
+            $displayName = $alertDisplay[$code];
+        } elseif ($payloadDescription) {
+            $displayName = $payloadDescription;
+        } elseif (!empty($row['panel_configuration'])) {
+            $displayName = $row['panel_configuration'];
+        } elseif ($code !== '') {
+            $displayName = $code;
+        }
+
         $messages[] = [
             'id' => (int)$row['id'],
             'received_at' => $row['received_at'],
@@ -56,6 +91,7 @@ try {
             'maintenance_alert_id' => $row['maintenance_alert_id'],
             'panel_configuration' => $row['panel_configuration'],
             'processed' => (bool)$row['processed'],
+            'display_name' => $displayName,
             'payload' => $decodedPayload ?? $row['payload'],
         ];
     }

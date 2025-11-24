@@ -453,4 +453,5 @@ CHANGELOG
 - Global search now queries the cached devices table first, falling back to upstream only on cache miss to remove multi-minute waits.
 - Device drill-down modal now surfaces panel system alerts and maintenance alerts alongside other device details.
 - Broadened device drill-down panel message matching (case-insensitive serials and payload serial/device IDs) to surface active alerts more reliably.
+- Resolved alert display names by pulling payload descriptions and alert_definitions mapping so panel/system alerts render human-readable text instead of raw codes.
 */
