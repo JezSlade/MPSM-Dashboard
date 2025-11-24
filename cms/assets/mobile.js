@@ -13,13 +13,39 @@ const MobileApp = (() => {
     let alertInterval = null;
     let searchTimeout = null;
 
-    const fetchJson = async (url, options = {}) => {
-        const response = await fetch(url, options);
-        const data = await response.json();
-        if (data && data.success === false) {
-            throw new Error(data.error || 'Request failed');
+    const fetchJson = async (url, options = {}, retries = 2) => {
+        let attempt = 0;
+        let lastError = null;
+
+        while (attempt <= retries) {
+            try {
+                const response = await fetch(url, options);
+
+                if (response.status === 429) {
+                    let retryAfter = 60;
+                    try {
+                        const data = await response.json();
+                        retryAfter = (data.retry_after || retryAfter);
+                    } catch (_) {
+                        // ignore parse errors, keep default
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+                    attempt += 1;
+                    continue;
+                }
+
+                const data = await response.json();
+                if (data && data.success === false) {
+                    throw new Error(data.error || 'Request failed');
+                }
+                return data;
+            } catch (error) {
+                lastError = error;
+                attempt += 1;
+            }
         }
-        return data;
+
+        throw lastError || new Error('Request failed');
     };
 
     const setActiveSection = (target) => {
@@ -559,4 +585,6 @@ CHANGELOG
 - Improved customer switcher robustness (dealer-aware fetch, client-side filtering, status messaging) and refined styling hooks.
 2025-11-24 Codex
 - Simplified customer selection to a single header dropdown; removed search input and tightened preference updates.
+2025-11-24 Codex
+- Added 429-aware fetch retry helper to keep mobile alerts and search resilient under rate limits.
 */

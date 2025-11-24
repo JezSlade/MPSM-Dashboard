@@ -149,7 +149,7 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                         <span><i class="fas fa-shield-alt"></i> Command Center</span>
                         <i class="fas fa-arrow-right"></i>
                     </a>
-                    <a class="link-item" href="panel-message-monitor.php">
+                    <a class="link-item" href="panel-message-monitor.php?customerCode=<?php echo urlencode($customerCode); ?>&hours=24">
                         <span><i class="fas fa-satellite-dish"></i> Panel Monitor</span>
                         <i class="fas fa-arrow-right"></i>
                     </a>
@@ -237,5 +237,7 @@ CHANGELOG
 - Reused existing authentication, preferences, and device/alert APIs to keep logic DRY while enabling mobile-first navigation.
 2025-11-24 Codex
 - Simplified customer selection to a single header dropdown as the title for quick switching.
+2025-11-24 Codex
+- Linked Panel Monitor navigation with the active customer so alert scoping matches the main dashboard.
 */
 ?>

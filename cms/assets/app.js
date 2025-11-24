@@ -1927,6 +1927,9 @@ const MPSM = (function() {
                 || dashboard.CustomerDescription
                 || 'Unknown Customer';
             state.customerName = resolvedName;
+            const monitorLink = state.customerCode
+                ? `panel-message-monitor.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`
+                : 'panel-message-monitor.php';
 
             container.innerHTML = `
                 <div class="customer-banner">
@@ -1939,7 +1942,7 @@ const MPSM = (function() {
                         <div class="customer-banner-code">${state.customerCode}</div>
                     </div>
                     <div class="customer-banner-actions">
-                        <a href="panel-message-monitor.php" class="panel-alert-badge" id="panel-alert-badge" title="Panel Message Alerts" style="display:none;">
+                        <a href="${monitorLink}" class="panel-alert-badge" id="panel-alert-badge" title="Panel Message Alerts" style="display:none;">
                             <i class="fas fa-satellite-dish"></i>
                             <span class="badge-count" id="panel-alert-count">0</span>
                         </a>
@@ -1957,6 +1960,12 @@ const MPSM = (function() {
                     banner.classList.add('customer-banner-wrap');
                     banner.appendChild(heroContainer);
                 }
+            }
+
+            // Keep header link in sync with active customer
+            const headerPanelLink = document.getElementById('panel-monitor-link');
+            if (headerPanelLink) {
+                headerPanelLink.setAttribute('href', monitorLink);
             }
 
             container.innerHTML += `
@@ -2236,6 +2245,8 @@ const MPSM = (function() {
         }
 
         // Fetch installed devices first
+        let rateLimitRetries = 0;
+
         while (true) {
             safetyCounter += 1;
             if (safetyCounter > 100) {
@@ -2261,6 +2272,23 @@ const MPSM = (function() {
             debugLog(`Fetching installed devices page ${pageNumber}, pageRows=${pageRows}, allCustomers=${options.allCustomers ? 'true' : 'false'}`, 'info');
 
             const response = await fetch('api/get-devices.php?' + params.toString());
+
+            if (response.status === 429) {
+                rateLimitRetries += 1;
+                let retryAfter = 60;
+                try {
+                    const limitData = await response.json();
+                    retryAfter = (limitData.retry_after || retryAfter);
+                } catch (_) {
+                    // ignore parse errors, use default retry
+                }
+                if (rateLimitRetries > 3) {
+                    throw new Error(`Rate limit exceeded after multiple retries. Retry after ${retryAfter}s`);
+                }
+                debugLog(`Rate limited on page ${pageNumber}, retrying in ${retryAfter}s`, 'warn');
+                await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+                continue;
+            }
 
             // Guard against HTML error pages
             const contentType = response.headers.get('content-type') || '';
@@ -4195,6 +4223,18 @@ const MPSM = (function() {
 
         try {
             const response = await fetch(`api/get-panel-alert-count.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`);
+            if (response.status === 429) {
+                let retryAfter = 60;
+                try {
+                    const retryData = await response.json();
+                    retryAfter = (retryData.retry_after || retryAfter);
+                } catch (_) {
+                    // ignore parse errors
+                }
+                console.warn(`Panel alert badge rate limited; retrying in ${retryAfter}s`);
+                setTimeout(loadPanelAlertBadge, retryAfter * 1000);
+                return;
+            }
             const data = await response.json();
 
             if (data.success && data.count > 0) {
@@ -4257,4 +4297,6 @@ CHANGELOG
 - Moved hero notifications into the customer banner context and refresh them after the banner loads to align alerts with the selected customer.
 2025-11-23 Codex
 - Renamed the Alerts metric card to Maintenance Alerts to reduce perceived severity.
+2025-11-24 Codex
+- Added customer-scoped panel monitor links/badge updates, 429 handling for device fetch and alert badge calls to reduce rate-limit failures.
 */

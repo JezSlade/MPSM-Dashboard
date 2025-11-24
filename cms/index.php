@@ -47,7 +47,7 @@ $preferences = getUserPreferences($userId);
                     <i class="fas fa-shield-alt"></i>
                     <span id="notification-badge" class="notification-badge" style="display:none;">0</span>
                 </a>
-                <a href="panel-message-monitor.php" class="btn-icon" title="Panel Messages">
+                <a href="panel-message-monitor.php" class="btn-icon" title="Panel Messages" id="panel-monitor-link">
                     <i class="fas fa-satellite-dish"></i>
                 </a>
                 <button id="theme-toggle" class="btn-icon" title="Toggle theme">
@@ -460,3 +460,10 @@ $preferences = getUserPreferences($userId);
     <script src="api/cache-engine.js"></script>
 </body>
 </html>
+<?php
+/*
+CHANGELOG
+2025-11-24 Codex
+- Added customer-aware panel monitor link hooks for desktop header to keep badge navigation scoped.
+*/
+?>

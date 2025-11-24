@@ -21,9 +21,15 @@
         console.log('[CACHE ENGINE] Starting background cache refresh...');
 
         try {
-            const response = await fetch('/cms/api/refresh-cache.php', {
+            const response = await fetch('/cms/api/refresh-cache-enhanced.php?force=1', {
                 credentials: 'same-origin'
             });
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Unexpected response type: ${contentType} :: ${text.slice(0, 120)}`);
+            }
 
             const data = await response.json();
 
@@ -84,3 +90,9 @@
 
     console.log('[CACHE ENGINE] Loaded - No cron job needed!');
 })();
+
+/*
+CHANGELOG
+2025-11-24 Codex
+- Pointed cache engine to refresh-cache-enhanced.php with response-type guarding to eliminate 404/HTML parse errors.
+*/

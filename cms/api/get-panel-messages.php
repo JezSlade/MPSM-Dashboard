@@ -15,6 +15,10 @@ $hours = isset($_GET['hours']) ? (int)$_GET['hours'] : null;
 if ($hours !== null) {
     $hours = max(1, min($hours, 168));
 }
+$customerCode = isset($_GET['customerCode']) ? trim((string)$_GET['customerCode']) : null;
+if ($customerCode !== null && $customerCode === '') {
+    $customerCode = null;
+}
 
 try {
     $pdo = getDatabase();
@@ -56,11 +60,22 @@ try {
             LEFT JOIN {$devicesTable} cd ON cd.serial_number = pm.device_serial";
 
     $params = [];
+    $conditions = [];
+
     if ($hours !== null) {
         // Calculate cutoff timestamp in PHP (MySQL doesn't support binding inside INTERVAL)
         $cutoff = date('Y-m-d H:i:s', strtotime("-{$hours} hours"));
-        $sql .= " WHERE received_at >= :cutoff";
+        $conditions[] = "received_at >= :cutoff";
         $params[':cutoff'] = $cutoff;
+    }
+
+    if ($customerCode !== null) {
+        $conditions[] = "pm.customer_code = :customerCode";
+        $params[':customerCode'] = $customerCode;
+    }
+
+    if ($conditions) {
+        $sql .= " WHERE " . implode(' AND ', $conditions);
     }
 
     $sql .= " ORDER BY received_at DESC LIMIT :limit";
@@ -129,4 +144,6 @@ try {
 CHANGELOG
 2025-11-28 Codex
 - Added department (physical location) to panel message responses via cache join/payload fallback and ensured human-readable alert display names take precedence over raw codes.
+2025-11-24 Codex
+- Added optional customerCode filter support and wired bindings for combined hours/customer queries to keep monitor views scoped.
 */

@@ -4,23 +4,60 @@
     const refreshBtn = document.getElementById('refresh-btn');
     const limitSelect = document.getElementById('message-limit');
     const hoursSelect = document.getElementById('hours-window');
+    const customerInput = document.getElementById('customer-filter');
     const modal = document.getElementById('payload-modal');
     const modalClose = document.getElementById('modal-close');
     const payloadViewer = document.getElementById('payload-viewer');
+    const activeCustomerFromPage = document.body?.dataset?.activeCustomer || '';
 
     let timerId = null;
+
+    async function fetchWithRetry(url, options = {}, retries = 2) {
+        let attempt = 0;
+        let lastError = null;
+
+        while (attempt <= retries) {
+            try {
+                const response = await fetch(url, options);
+
+                if (response.status === 429) {
+                    let retryAfter = 60;
+                    try {
+                        const data = await response.json();
+                        retryAfter = (data.retry_after || retryAfter);
+                    } catch (_) {
+                        // ignore parse errors, use default retryAfter
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+                    attempt += 1;
+                    continue;
+                }
+
+                return response;
+            } catch (error) {
+                lastError = error;
+                attempt += 1;
+            }
+        }
+
+        throw lastError || new Error('Request failed');
+    }
 
     async function fetchMessages() {
         try {
             const limit = limitSelect.value || '200';
             const hours = hoursSelect.value;
+            const customer = (customerInput?.value || activeCustomerFromPage || '').trim();
 
             const params = new URLSearchParams({ limit });
             if (hours) {
                 params.set('hours', hours);
             }
+            if (customer) {
+                params.set('customerCode', customer);
+            }
 
-            const response = await fetch(`api/get-panel-messages.php?${params.toString()}`, {
+            const response = await fetchWithRetry(`api/get-panel-messages.php?${params.toString()}`, {
                 credentials: 'same-origin',
                 headers: {
                     'Accept': 'application/json',
@@ -120,6 +157,12 @@
 
         limitSelect?.addEventListener('change', fetchMessages);
         hoursSelect?.addEventListener('change', fetchMessages);
+        customerInput?.addEventListener('change', fetchMessages);
+        customerInput?.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                fetchMessages();
+            }
+        });
 
         tableBody?.addEventListener('click', (event) => {
             const target = event.target.closest('button[data-action="view-payload"]');
@@ -148,12 +191,16 @@
         try {
             const limit = limitSelect.value || '200';
             const hours = hoursSelect.value;
+            const customer = (customerInput?.value || activeCustomerFromPage || '').trim();
             const params = new URLSearchParams({ limit });
             if (hours) {
                 params.set('hours', hours);
             }
+            if (customer) {
+                params.set('customerCode', customer);
+            }
 
-            const response = await fetch(`api/get-panel-messages.php?${params.toString()}`, {
+            const response = await fetchWithRetry(`api/get-panel-messages.php?${params.toString()}`, {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             });
@@ -197,3 +244,9 @@
         scheduleAutoRefresh();
     });
 })();
+
+/*
+CHANGELOG
+2025-11-24 Codex
+- Added customer filter support and 429-aware retry logic for panel message loading/view payload to keep monitor aligned with active customer and resilient to rate limits.
+*/

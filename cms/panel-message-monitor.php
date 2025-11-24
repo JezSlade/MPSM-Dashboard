@@ -4,6 +4,14 @@ require 'functions.php';
 
 requireAuth();
 trackVisit('/panel-message-monitor');
+
+$userId = $_SESSION['user_id'];
+$preferences = getUserPreferences($userId);
+$defaultCustomerCode = $preferences['customerCode'] ?? DEFAULT_CUSTOMER_CODE;
+$defaultCustomerName = $preferences['customerName'] ?? DEFAULT_CUSTOMER_NAME;
+
+$activeCustomerCode = htmlspecialchars($_GET['customerCode'] ?? $defaultCustomerCode, ENT_QUOTES, 'UTF-8');
+$activeCustomerName = htmlspecialchars($defaultCustomerName ?: $activeCustomerCode, ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -157,7 +165,7 @@ trackVisit('/panel-message-monitor');
         }
     </style>
 </head>
-<body>
+<body data-active-customer="<?php echo $activeCustomerCode; ?>">
     <header class="header">
         <div class="container">
             <h1>Panel Message Monitor</h1>
@@ -216,6 +224,11 @@ trackVisit('/panel-message-monitor');
                         <option value="72">Last 72 hours</option>
                         <option value="168">Last 7 days</option>
                     </select>
+                </div>
+                <div>
+                    <label for="customer-filter">Customer</label>
+                    <input id="customer-filter" type="text" placeholder="e.g., ABC123" value="<?php echo $activeCustomerCode; ?>">
+                    <div style="color:#64748b;font-size:0.85em;">Filters table and badge link; leave blank for all</div>
                 </div>
                 <button id="refresh-btn" class="btn btn-primary" type="button">
                     <i class="fas fa-sync-alt"></i> Refresh Now
@@ -305,5 +318,10 @@ trackVisit('/panel-message-monitor');
     </script>
 </body>
 </html>
-
-
+<?php
+/*
+CHANGELOG
+2025-11-24 Codex
+- Added customer filter input (with default from preferences/URL) and data attributes to scope panel message views to the active customer and align badge links.
+*/
+?>
