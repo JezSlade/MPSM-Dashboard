@@ -223,7 +223,7 @@ const CardRegistry = (function () {
                             dealerCode: context.dealerCode,
                             dealerId: context.dealerId,
                             includeUninstalled: true,
-                            pageRows: 200
+                            pageRows: 1000
                         });
                         console.log('[DupIP] fetchAllDevices returned:', result?.devices?.length, 'devices');
                         duplicateIpGroups = buildDuplicateIpGroups(result?.devices || []);

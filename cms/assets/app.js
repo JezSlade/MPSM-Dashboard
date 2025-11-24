@@ -2220,7 +2220,7 @@ const MPSM = (function() {
     async function fetchAllDevices(options = {}) {
         const devices = [];
         const seenKeys = new Set();
-        const pageRows = Math.max(1, Math.min(Number(options.pageRows || 200), 500));
+        const pageRows = Math.max(1, Math.min(Number(options.pageRows || 200), 2000));
         let pageNumber = Math.max(1, Number(options.pageNumber || 1));
         let totalExpected = null;
         let lastMeta = {};
@@ -2331,9 +2331,10 @@ const MPSM = (function() {
                 break;
             }
 
+            // Continue even if no new devices were added (duplicates), but stop after 3 consecutive empty pages
             if (addedThisPage === 0) {
-                debugLog(`No new devices returned for page ${pageNumber}; stopping pagination.`, 'warn');
-                break;
+                debugLog(`No new devices on page ${pageNumber} (duplicates filtered), continuing...`, 'warn');
+                // Keep going - we might find unique devices on later pages
             }
 
             if (chunk.length < pageRows) {
