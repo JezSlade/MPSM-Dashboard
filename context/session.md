@@ -1,6 +1,40 @@
-# Session Summary - 2025-11-24 Evening Session
+# Session Summary - 2025-11-24 Evening Session (Continued)
 
-## Critical Fixes Applied
+## UI Refinements & Final Fixes ✅
+
+### 1. System Alerts Card Display Refinement
+**Changes:**
+- **Title:** Now shows human-readable alert name (e.g., "Paper Jam") instead of raw code ("808")
+- **Subtitle:** Equipment ID • Model • Department (clean, organized)
+- **Removed:** Duplicate code badge, serial number, excessive metadata pills
+- **Kept:** Trigger count badge (e.g., "2x") for aggregated alerts
+- **Result:** Cleaner, more elegant card layout focusing on actionable information
+
+**File:** cms/assets/hero-notifications.js:157-215
+**Commit:** 3815893
+
+### 2. Duplicate IP Cards - Final Fix
+**Issue:** Cards showed 0 even though 37 duplicate IPs exist in Warnings section
+
+**Root Cause Analysis:**
+- Previous fix (pagination) fetched all 977 devices successfully
+- BUT devices from `fetchAllDevices()` lacked IP address fields
+- Warnings data already contains all duplicate IPs from upstream system
+
+**Solution:** Use Warnings as data source instead of device fetch
+- Extract `IP_Duplicated` entries directly from `totalsSource.Warnings`
+- Build simplified cards showing IP address with warning badge
+- Click card opens Device Lifecycle with IP as search term
+- No need for complex device comparison - warnings already identify the problem
+
+**Result:** 37 duplicate IP cards now display immediately from existing dashboard data
+
+**File:** cms/assets/js/card-registry.js:213-230, 468-575
+**Commit:** 3815893
+
+---
+
+## Critical Fixes Applied (Earlier)
 
 ### 1. Duplicate IP Cards Not Displaying ✅
 **Issue:** Customer Snapshot modal showed "No duplicate IPs detected" even when duplicates existed
