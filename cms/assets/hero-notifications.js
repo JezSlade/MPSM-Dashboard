@@ -149,7 +149,12 @@ function renderHeroNotifications(notifications) {
 
     const chipsHtml = topNotifications.map(notif => {
         const config = HERO_SEVERITY_CONFIG[notif.severity] || HERO_SEVERITY_CONFIG.info;
-        const displayName = notif.alert_display_name || notif.display_name || notif.title || config.label || 'System Alert';
+        const displayName = notif.alert_display_name
+            || notif.display_name
+            || notif.title
+            || notif.alert_code
+            || config.label
+            || 'System Alert';
         const device = notif.equipment_id || notif.device_identifier || notif.device_serial || '';
         const customer = notif.customer_description || notif.customer_code || '';
         const model = notif.model || '';
