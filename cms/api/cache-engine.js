@@ -46,36 +46,15 @@
     }
 
     function startEngine() {
-        console.log('[CACHE ENGINE] Starting auto-refresh engine (every 5 minutes)');
+        // DISABLED: Browser auto-refresh causes rate limit amplification with multiple users
+        // Server cron handles cache population safely with rate limit management
+        console.log('[CACHE ENGINE] Browser auto-refresh DISABLED - relying on server cron');
 
-        // Initial refresh on page load
-        setTimeout(() => refreshCache(), 2000); // Wait 2s for page to settle
+        // Keep manual refresh function available for testing
+        window.refreshDeviceCache = refreshCache;
 
-        // Schedule periodic refreshes
-        refreshTimer = setInterval(() => {
-            refreshCache();
-        }, REFRESH_INTERVAL);
-
-        // Refresh on page visibility change (user returns to tab)
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                const lastRefresh = localStorage.getItem('cache_last_refresh');
-                const now = Date.now();
-
-                if (!lastRefresh || (now - parseInt(lastRefresh)) > REFRESH_INTERVAL) {
-                    console.log('[CACHE ENGINE] Tab visible, triggering refresh');
-                    refreshCache();
-                    localStorage.setItem('cache_last_refresh', now.toString());
-                }
-            }
-        });
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (refreshTimer) {
-                clearInterval(refreshTimer);
-            }
-        });
+        // Log cache status on page load
+        console.log('[CACHE ENGINE] Manual refresh available via: window.refreshDeviceCache()');
     }
 
     // Auto-start on page load

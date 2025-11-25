@@ -112,7 +112,20 @@ const CardManager = (function () {
             clearCache();
         }
 
-        await Promise.all(state.enabled.map(id => refreshCard(id, force)));
+        // BATCH LOADING: Load 3 cards at a time with 500ms delay between batches
+        // Prevents rate limit by spreading API calls over 2-3 seconds instead of <1s
+        const batchSize = 3;
+        const batchDelay = 500; // ms
+
+        for (let i = 0; i < state.enabled.length; i += batchSize) {
+            const batch = state.enabled.slice(i, i + batchSize);
+            await Promise.all(batch.map(id => refreshCard(id, force)));
+
+            // Delay between batches (except after last batch)
+            if (i + batchSize < state.enabled.length) {
+                await new Promise(resolve => setTimeout(resolve, batchDelay));
+            }
+        }
     }
 
     async function refreshCard(cardId, force = false) {
