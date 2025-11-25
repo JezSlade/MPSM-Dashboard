@@ -4271,6 +4271,11 @@ const MPSM = (function() {
         }
 
         try {
+            const monitorLink = state.customerCode
+                ? `panel-message-monitor.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`
+                : 'panel-message-monitor.php';
+            badge.setAttribute('href', monitorLink);
+
             const response = await fetch(`api/get-panel-alert-count.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`);
             if (response.status === 429) {
                 let retryAfter = 60;
@@ -4350,4 +4355,6 @@ CHANGELOG
 - Added customer-scoped panel monitor links/badge updates, 429 handling for device fetch and alert badge calls to reduce rate-limit failures.
 2025-11-25 Codex
 - Added cache-based device fallback on 429 with retry_after awareness to keep the Devices card responsive during API throttling.
+2025-11-25 Codex
+- Ensured panel alert badge link is always set to the active customer filter before fetching counts.
 */
