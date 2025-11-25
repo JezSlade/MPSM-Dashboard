@@ -112,10 +112,11 @@ const CardManager = (function () {
             clearCache();
         }
 
-        // BATCH LOADING: Load 3 cards at a time with 500ms delay between batches
-        // Prevents rate limit by spreading API calls over 2-3 seconds instead of <1s
-        const batchSize = 3;
-        const batchDelay = 500; // ms
+        // BATCH LOADING: Load 2 cards at a time with 1000ms delay between batches
+        // Prevents rate limit by spreading API calls over 4-5 seconds instead of <1s
+        // Increased delay due to 8 cards still hitting live API (Phase 2 will reduce to 2)
+        const batchSize = 2;
+        const batchDelay = 1000; // ms
 
         for (let i = 0; i < state.enabled.length; i += batchSize) {
             const batch = state.enabled.slice(i, i + batchSize);
