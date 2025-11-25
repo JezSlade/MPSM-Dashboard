@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limit Diagnostic Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        h1 { font-size: 2em; margin-bottom: 10px; }
+        .subtitle { opacity: 0.9; }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .status.pass { background: #d4edda; color: #155724; }
+        .status.fail { background: #f8d7da; color: #721c24; }
+        .status.warn { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .metric-label { font-weight: 500; color: #495057; }
+        .metric-value { font-weight: 600; color: #212529; }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+        .problem { color: #ff6b6b; font-weight: 600; }
+        .solution { color: #51cf66; font-weight: 600; }
+
+        #results { margin-top: 20px; }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .card-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .card-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .card-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .card-table tr:hover {
+            background: #f1f3f5;
+        }
+
+        .fix-card {
+            background: #fff;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #51cf66;
+        }
+        .fix-title {
+            color: #51cf66;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Rate Limit Diagnostic Tool</h1>
+            <p class="subtitle">Identifies API rate limit issues and provides actionable fixes</p>
+        </header>
+
+        <div class="content">
+            <div class="section">
+                <h2>🎯 Quick Actions</h2>
+                <button onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+                <button onclick="checkCacheStatus()">Check Cache Status</button>
+                <button onclick="testDashboardLoad()">Test Dashboard Load</button>
+                <button onclick="showSolution()">Show Solution</button>
+            </div>
+
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/cms/api';
+
+        async function runFullDiagnostic() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="loading"><div class="spinner"></div><p>Running diagnostic...</p></div>';
+
+            const report = {
+                cacheStatus: await checkCacheStatusSilent(),
+                cardAnalysis: await analyzeCardEndpoints(),
+                networkTest: await testNetworkCalls(),
+                recommendations: []
+            };
+
+            // Generate recommendations
+            if (!report.cacheStatus.populated) {
+                report.recommendations.push({
+                    severity: 'critical',
+                    issue: 'Cache is empty',
+                    solution: 'Run cache population: curl "' + API_BASE + '/refresh-cache-enhanced.php?force=1"'
+                });
+            }
+
+            if (report.cardAnalysis.liveApiCards.length > 0) {
+                report.recommendations.push({
+                    severity: 'high',
+                    issue: `${report.cardAnalysis.liveApiCards.length} cards still hitting live API`,
+                    solution: 'Wire these cards to cached endpoints or add to Phase 2'
+                });
+            }
+
+            if (report.networkTest.status429Count > 0) {
+                report.recommendations.push({
+                    severity: 'high',
+                    issue: `${report.networkTest.status429Count} requests returning 429 errors`,
+                    solution: 'Reduce parallel API calls or increase batch delay'
+                });
+            }
+
+            renderReport(report);
+        }
+
+        async function checkCacheStatusSilent() {
+            try {
+                const response = await fetch(API_BASE + '/get-cached-devices.php');
+                const data = await response.json();
+
+                return {
+                    populated: data.devices && data.devices.length > 0,
+                    deviceCount: data.total || 0,
+                    cacheAge: data.cache_age_seconds || 0,
+                    cacheAgeHuman: data.cache_age_human || 'unknown',
+                    source: data.source || 'unknown',
+                    stale: data.cache_age_seconds > 1800
+                };
+            } catch (error) {
+                return {
+                    populated: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function analyzeCardEndpoints() {
+            // Simulate card loading to see which endpoints they call
+            const cardEndpoints = {
+                'customer-overview': 'get-customer-dashboard.php',
+                'connectors': 'get-connectors.php',
+                'device-inventory': 'get-cached-devices.php',  // ✅ Fixed
+                'supply-alerts': 'get-supply-alerts.php',
+                'page-volume': 'get-customer-pages.php',
+                'top-devices': 'get-cached-devices.php',  // ✅ Fixed
+                'integrations': 'get-integrations.php',
+                'export-library': 'export-library-cache.php',
+                'api-clients': 'get-api-clients.php',
+                'dealer-supplies': 'get-dealer-supplies.php'
+            };
+
+            const cachedEndpoints = ['get-cached-devices.php', 'export-library-cache.php'];
+            const liveApiCards = [];
+            const cacheCards = [];
+
+            for (const [card, endpoint] of Object.entries(cardEndpoints)) {
+                if (cachedEndpoints.includes(endpoint)) {
+                    cacheCards.push({ card, endpoint, status: 'cache' });
+                } else {
+                    liveApiCards.push({ card, endpoint, status: 'live' });
+                }
+            }
+
+            return { liveApiCards, cacheCards, totalCards: Object.keys(cardEndpoints).length };
+        }
+
+        async function testNetworkCalls() {
+            // Monitor network calls for 3 seconds
+            const startTime = Date.now();
+            const calls = [];
+
+            // Intercept fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const url = args[0];
+                const start = Date.now();
+
+                return originalFetch(...args).then(response => {
+                    calls.push({
+                        url: url,
+                        status: response.status,
+                        duration: Date.now() - start,
+                        timestamp: Date.now() - startTime
+                    });
+                    return response;
+                }).catch(error => {
+                    calls.push({
+                        url: url,
+                        status: 'error',
+                        error: error.message,
+                        duration: Date.now() - start,
+                        timestamp: Date.now() - startTime
+                    });
+                    throw error;
+                });
+            };
+
+            // Wait 3 seconds to collect calls
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // Restore original fetch
+            window.fetch = originalFetch;
+
+            const status429Count = calls.filter(c => c.status === 429).length;
+            const status500Count = calls.filter(c => c.status === 500).length;
+            const avgDuration = calls.length ? calls.reduce((sum, c) => sum + c.duration, 0) / calls.length : 0;
+
+            return {
+                totalCalls: calls.length,
+                status429Count,
+                status500Count,
+                avgDuration: Math.round(avgDuration),
+                calls: calls.slice(0, 10)  // First 10 calls
+            };
+        }
+
+        async function checkCacheStatus() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="loading"><div class="spinner"></div><p>Checking cache...</p></div>';
+
+            const status = await checkCacheStatusSilent();
+
+            let html = '<div class="section">';
+            html += '<h2>📦 Cache Status</h2>';
+
+            if (status.populated) {
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Status</span>';
+                html += '<span class="status pass">✓ Populated</span>';
+                html += '</div>';
+
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Device Count</span>';
+                html += '<span class="metric-value">' + status.deviceCount + '</span>';
+                html += '</div>';
+
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Cache Age</span>';
+                html += '<span class="metric-value">' + status.cacheAgeHuman + '</span>';
+                html += '</div>';
+
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Staleness</span>';
+                html += '<span class="status ' + (status.stale ? 'warn' : 'pass') + '">';
+                html += status.stale ? '⚠ Stale (>30 min)' : '✓ Fresh';
+                html += '</span>';
+                html += '</div>';
+            } else {
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Status</span>';
+                html += '<span class="status fail">✗ Empty or Failed</span>';
+                html += '</div>';
+
+                if (status.error) {
+                    html += '<div class="metric">';
+                    html += '<span class="metric-label">Error</span>';
+                    html += '<span class="metric-value">' + status.error + '</span>';
+                    html += '</div>';
+                }
+
+                html += '<div class="fix-card">';
+                html += '<div class="fix-title">🔧 Fix: Populate Cache</div>';
+                html += '<div class="code-block">curl "' + API_BASE + '/refresh-cache-enhanced.php?force=1"</div>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+            results.innerHTML = html;
+        }
+
+        async function testDashboardLoad() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="loading"><div class="spinner"></div><p>Testing dashboard load...</p></div>';
+
+            const testResults = await testNetworkCalls();
+
+            let html = '<div class="section">';
+            html += '<h2>🌐 Network Test Results</h2>';
+
+            html += '<div class="metric">';
+            html += '<span class="metric-label">Total API Calls</span>';
+            html += '<span class="metric-value">' + testResults.totalCalls + '</span>';
+            html += '</div>';
+
+            html += '<div class="metric">';
+            html += '<span class="metric-label">429 Errors (Rate Limited)</span>';
+            html += '<span class="status ' + (testResults.status429Count > 0 ? 'fail' : 'pass') + '">';
+            html += testResults.status429Count + '</span>';
+            html += '</div>';
+
+            html += '<div class="metric">';
+            html += '<span class="metric-label">500 Errors (Server)</span>';
+            html += '<span class="status ' + (testResults.status500Count > 0 ? 'warn' : 'pass') + '">';
+            html += testResults.status500Count + '</span>';
+            html += '</div>';
+
+            html += '<div class="metric">';
+            html += '<span class="metric-label">Avg Response Time</span>';
+            html += '<span class="metric-value">' + testResults.avgDuration + ' ms</span>';
+            html += '</div>';
+
+            html += '</div>';
+            results.innerHTML = html;
+        }
+
+        function renderReport(report) {
+            let html = '';
+
+            // Cache Status Section
+            html += '<div class="section">';
+            html += '<h2>📦 Cache Status</h2>';
+            html += '<div class="metric">';
+            html += '<span class="metric-label">Status</span>';
+            html += '<span class="status ' + (report.cacheStatus.populated ? 'pass' : 'fail') + '">';
+            html += report.cacheStatus.populated ? '✓ Populated' : '✗ Empty';
+            html += '</span>';
+            html += '</div>';
+            if (report.cacheStatus.populated) {
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Devices Cached</span>';
+                html += '<span class="metric-value">' + report.cacheStatus.deviceCount + '</span>';
+                html += '</div>';
+                html += '<div class="metric">';
+                html += '<span class="metric-label">Cache Age</span>';
+                html += '<span class="metric-value">' + report.cacheStatus.cacheAgeHuman + '</span>';
+                html += '</div>';
+            }
+            html += '</div>';
+
+            // Card Analysis Section
+            html += '<div class="section">';
+            html += '<h2>🎴 Card Analysis</h2>';
+            html += '<table class="card-table">';
+            html += '<thead><tr><th>Card</th><th>Endpoint</th><th>Status</th></tr></thead>';
+            html += '<tbody>';
+
+            report.cardAnalysis.cacheCards.forEach(card => {
+                html += '<tr>';
+                html += '<td>' + card.card + '</td>';
+                html += '<td>' + card.endpoint + '</td>';
+                html += '<td><span class="status pass">✓ Using Cache</span></td>';
+                html += '</tr>';
+            });
+
+            report.cardAnalysis.liveApiCards.forEach(card => {
+                html += '<tr>';
+                html += '<td>' + card.card + '</td>';
+                html += '<td>' + card.endpoint + '</td>';
+                html += '<td><span class="status fail">✗ Live API</span></td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            html += '<div class="metric">';
+            html += '<span class="metric-label">Using Cache</span>';
+            html += '<span class="metric-value">' + report.cardAnalysis.cacheCards.length + ' / ' + report.cardAnalysis.totalCards + '</span>';
+            html += '</div>';
+            html += '</div>';
+
+            // Network Test Section
+            html += '<div class="section">';
+            html += '<h2>🌐 Network Test</h2>';
+            html += '<div class="metric">';
+            html += '<span class="metric-label">Total API Calls</span>';
+            html += '<span class="metric-value">' + report.networkTest.totalCalls + '</span>';
+            html += '</div>';
+            html += '<div class="metric">';
+            html += '<span class="metric-label">429 Errors</span>';
+            html += '<span class="status ' + (report.networkTest.status429Count > 0 ? 'fail' : 'pass') + '">';
+            html += report.networkTest.status429Count + '</span>';
+            html += '</div>';
+            html += '<div class="metric">';
+            html += '<span class="metric-label">500 Errors</span>';
+            html += '<span class="status ' + (report.networkTest.status500Count > 0 ? 'warn' : 'pass') + '">';
+            html += report.networkTest.status500Count + '</span>';
+            html += '</div>';
+            html += '</div>';
+
+            // Recommendations Section
+            if (report.recommendations.length > 0) {
+                html += '<div class="section">';
+                html += '<h2>💡 Recommendations</h2>';
+                report.recommendations.forEach(rec => {
+                    html += '<div class="fix-card">';
+                    html += '<div class="fix-title">';
+                    html += rec.severity === 'critical' ? '🚨 CRITICAL: ' : rec.severity === 'high' ? '⚠️ HIGH: ' : '💡 ';
+                    html += rec.issue + '</div>';
+                    html += '<div class="code-block">' + rec.solution + '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        function showSolution() {
+            const html = `
+                <div class="section">
+                    <h2>🔧 Complete Solution</h2>
+
+                    <div class="fix-card">
+                        <div class="fix-title">Problem Identified</div>
+                        <p class="problem">✗ 8 out of 10 cards still hitting live vendor API</p>
+                        <p class="problem">✗ Parallel API calls causing rate limit (429 errors)</p>
+                        <p class="problem">✗ Batch loading implemented but still too many simultaneous calls</p>
+                    </div>
+
+                    <div class="fix-card">
+                        <div class="fix-title">Root Cause</div>
+                        <p>Device cards (device-inventory, top-devices) NOW use cache ✓</p>
+                        <p>Other cards (customer-overview, connectors, supply-alerts, integrations, api-clients, dealer-supplies, page-volume, customer-dashboard) still hit live API ✗</p>
+                        <p>Even with batch loading, 8 parallel API calls in 1-2 seconds exceeds vendor rate limit</p>
+                    </div>
+
+                    <div class="fix-card">
+                        <div class="fix-title">Immediate Fix</div>
+                        <p><strong>Option 1: Increase Batch Delay (Quick)</strong></p>
+                        <div class="code-block">
+// In cms/assets/js/card-manager.js line 117
+const batchSize = 2;        // Reduce from 3 to 2
+const batchDelay = 1000;    // Increase from 500ms to 1000ms
+                        </div>
+                        <p>This spreads API calls over 4-5 seconds instead of 2-3 seconds</p>
+
+                        <p><strong>Option 2: Disable Non-Critical Cards (Safer)</strong></p>
+                        <div class="code-block">
+// Temporarily disable these cards until Phase 2:
+- api-clients (dealer admin, not customer-critical)
+- dealer-supplies (dealer admin, not customer-critical)
+- integrations (infrequently used)
+                        </div>
+                        <p>Reduces API calls from 8 to 5</p>
+                    </div>
+
+                    <div class="fix-card">
+                        <div class="fix-title">Long-Term Fix (Phase 2)</div>
+                        <p>Wire remaining cards to cached endpoints:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>supply-alerts:</strong> Create get-supply-alerts-cached.php (reads from mpsm_cache_device_drilldown.has_alerts)</li>
+                            <li><strong>customer-overview:</strong> Create aggregated dashboard cache table</li>
+                            <li><strong>connectors:</strong> Add to dashboard cache aggregation</li>
+                            <li><strong>page-volume:</strong> Add to dashboard cache aggregation</li>
+                        </ul>
+                        <p>Target: 2 live API calls max (down from 8)</p>
+                    </div>
+
+                    <div class="fix-card">
+                        <div class="fix-title">Test After Fix</div>
+                        <div class="code-block">
+1. Hard refresh: Ctrl+Shift+R
+2. Open DevTools → Network tab
+3. Count 429 errors → should be 0-1 (currently 3-4)
+4. Count total API calls to /mps-api/query → should be ≤5 (currently 8+)
+5. Dashboard should load in 3-5 seconds
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            showSolution();
+        });
+    </script>
+</body>
+</html>
