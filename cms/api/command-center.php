@@ -22,6 +22,55 @@ ensureCommandCenterTables($pdo);
 
 header('Content-Type: application/json');
 
+function getAlertCodeMap(): array
+{
+    static $map = null;
+    if ($map !== null) {
+        return $map;
+    }
+
+    $map = [];
+    $file = dirname(__DIR__, 2) . '/docs/MPSM_Code_Descriptions.md';
+
+    if (!is_readable($file)) {
+        return $map;
+    }
+
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $trim = trim($line);
+        if ($trim === '' || stripos($trim, 'code') === 0) {
+            continue;
+        }
+        $parts = preg_split('/\s+/', $trim, 2);
+        if (count($parts) === 2) {
+            $map[$parts[0]] = $parts[1];
+        }
+    }
+
+    return $map;
+}
+
+function applyAlertMappingFallback(array &$notification): void
+{
+    $alertCode = (string)($notification['alert_code'] ?? '');
+    if ($alertCode === '') {
+        return;
+    }
+
+    $map = getAlertCodeMap();
+    if (isset($map[$alertCode])) {
+        if (empty($notification['alert_display_name'])) {
+            $notification['alert_display_name'] = $map[$alertCode];
+        }
+        if (empty($notification['alert_description'])) {
+            $notification['alert_description'] = $map[$alertCode];
+        }
+    } elseif (empty($notification['alert_display_name'])) {
+        $notification['alert_display_name'] = "Alert {$alertCode}";
+    }
+}
+
 try {
     switch ($action) {
         case 'get_notifications':
@@ -228,6 +277,7 @@ function getNotifications(PDO $pdo): void
 
         // Add resolved display name as separate field
         $notif['alert_display_name'] = $displayName;
+        applyAlertMappingFallback($notif);
         // Normalize equipment_id and department for UI (may be null if cache_devices lookup failed)
         $notif['equipment_id'] = ($notif['device_equipment_id'] ?? null) ?: ($notif['device_equipment_id_alt'] ?? null) ?: ($notif['device_identifier'] ?? null) ?: ($notif['device_serial'] ?? null);
         $notif['department'] = $notif['device_department'] ?? null;
@@ -955,6 +1005,22 @@ function lookupAlertDescription(PDO $pdo): void
             'icon' => $definition['icon'],
             'color' => $definition['color']
         ]);
+        return;
+    }
+
+    $map = getAlertCodeMap();
+    if (isset($map[$alertCode])) {
+        echo json_encode([
+            'success' => true,
+            'found' => true,
+            'display_name' => $map[$alertCode],
+            'description' => $map[$alertCode],
+            'category' => null,
+            'severity_override' => null,
+            'icon' => null,
+            'color' => null
+        ]);
+        return;
     } else {
         echo json_encode([
             'success' => true,
@@ -979,4 +1045,6 @@ CHANGELOG
 - Added get_unmapped_alerts to find alert codes without definitions
 - Added lookup_alert_description for real-time alert code to display name resolution
 - Merged getNotifications to include both customer filtering AND alert definitions JOIN
+2025-11-25 Codex
+- Added fallback mapping from docs/MPSM_Code_Descriptions.md so alert display names/descriptions always resolve for system alerts and lookup endpoints.
 */

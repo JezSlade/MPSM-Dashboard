@@ -26,6 +26,13 @@ Updated: 2025-11-06 13:50 UTC
 ## Maybe Later
 
 - Stand up the async worker fleet (Redis/Rabbit-backed queues for `cache.refresh.fast`, `cache.refresh.deep`, `api.prefetch`, `webhook.enrich`, `alerts.evaluate`, and `logs.rollup`) to offload heavy cache hydration, enrichment, and alert evaluation from request/response code paths while keeping ActionCache/MySQL fresh.
+- **Incrementally layer role-based access control** (no ground-up refactor):
+  - Add `role` column to `mpsm_users` (`admin`, `manager`, `viewer`)
+  - Extend `loginUser()` to load role into session: `$_SESSION['role'] = $user['role']`
+  - Add `requireRole($minRole)` helper alongside existing `requireAuth()`
+  - Guard sensitive endpoints (`refresh-cache`, `visitor-logs`, `user-admin`) with `requireRole('admin')`
+  - Frontend: inject `window.MPSM_USER_ROLE` from PHP, filter card registry by `minRole`, hide Admin tab for non-admins
+  - (Phase 2 if needed): granular permissions table (`view_devices`, `export_data`, `manage_users`) with bitfield/JSON grants
 - Introduce an OOP permission core built around `PermissionsServiceInterface`, `RoleRepositoryInterface`, and `UserRepositoryInterface`, keeping each class <30 lines while enforcing SOLID boundaries between value objects (`Permission`, `Role`, `UserPermissions`) and persistence.
 - Layer a reusable `PolicyMiddleware`/controller adapter that decorates every endpoint with `withPermission(...)` guards, so enforcing `device.manage`, `system.admin`, etc. becomes declarative and centrally audited.
 - Ship an Access Control admin panel (UI + API) that lets `system.admin` users create roles, wire inheritance, and assign users, while the client reads `/api/me/permissions` and gates buttons/tabs through a tiny `PermissionsClient`.

@@ -1,5 +1,13 @@
 # Test Log - Command Center Loading Fix
 
+## 2025-11-25 - Syntax checks (blocked)
+- Attempted: `php -l cms/api/get-devices.php cms/index.php cms/api/command-center.php mps-api/callbacks/command-center-engine.php cms/api/export-library-cache.php cms/cron-router.php`
+- Result: php CLI not available in environment (`php: command not found`). No syntax checks executed.
+
+## 2025-11-25 - Alert code map parsing (pending)
+- Added `tests/test-alert-code-map.php` to validate parsing of `docs/MPSM_Code_Descriptions.md` for codes 8, 807, 808, 809.
+- Not executed locally (php CLI unavailable). Run `php tests/test-alert-code-map.php` when PHP is available.
+
 **Date**: 2025-11-09
 **Issue**: Command Center page stuck loading, not interactive
 **Fix Commit**: bce0353

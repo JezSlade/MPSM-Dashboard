@@ -62,6 +62,12 @@ if (!function_exists('processNotificationRules')) {
     }
 }
 
+/*
+CHANGELOG
+2025-11-25 Codex
+- Added fallback alert display name lookup using docs/MPSM_Code_Descriptions.md so notifications still resolve when DB mappings are missing.
+*/
+
 if (!function_exists('updateAlertAggregation')) {
     /**
      * Update or create alert aggregation for frequency tracking
@@ -490,6 +496,31 @@ if (!function_exists('createDashboardNotification')) {
 }
 
 if (!function_exists('getAlertDisplayName')) {
+    function lookupDocAlertName(string $alertCode): ?string
+    {
+        static $map = null;
+
+        if ($map === null) {
+            $map = [];
+            $file = dirname(__DIR__, 2) . '/docs/MPSM_Code_Descriptions.md';
+            if (is_readable($file)) {
+                $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    $trim = trim($line);
+                    if ($trim === '' || stripos($trim, 'code') === 0) {
+                        continue;
+                    }
+                    $parts = preg_split('/\s+/', $trim, 2);
+                    if (count($parts) === 2) {
+                        $map[$parts[0]] = $parts[1];
+                    }
+                }
+            }
+        }
+
+        return $map[$alertCode] ?? null;
+    }
+
     /**
      * Look up alert display name from alert_definitions table
      * Returns the display_name if found, otherwise returns the original alert code
@@ -509,7 +540,15 @@ if (!function_exists('getAlertDisplayName')) {
             $stmt->execute([':code' => $alertCode]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            $displayName = $result ? $result['display_name'] : $alertCode;
+            $displayName = $result['display_name'] ?? null;
+            if (!$displayName) {
+                $docName = lookupDocAlertName($alertCode);
+                if ($docName) {
+                    $displayName = $docName;
+                }
+            }
+
+            $displayName = $displayName ?: $alertCode;
             $cache[$alertCode] = $displayName;
 
             return $displayName;

@@ -2,6 +2,29 @@
 require 'config.php';
 require 'functions.php';
 
+// Align session persistence and device preference cookies with desktop
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$isMobileUa = (bool)preg_match('/Mobile|Android|iPhone|iPad|iPod/i', $userAgent);
+$isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] === '443');
+$cookieOpts = [
+    'expires' => time() + (86400 * 30),
+    'path' => '/',
+    'secure' => $isHTTPS,
+    'httponly' => false,
+    'samesite' => 'Lax',
+];
+
+if (isset($_GET['forceDesktop'])) {
+    setcookie('mpsm_prefers_desktop', '1', $cookieOpts);
+} elseif (isset($_GET['forceMobile'])) {
+    setcookie('mpsm_prefers_desktop', '0', $cookieOpts);
+} elseif ($isMobileUa && !isset($_COOKIE['mpsm_prefers_desktop'])) {
+    // Default mobile visitors to mobile experience unless they opt out
+    setcookie('mpsm_prefers_desktop', '0', $cookieOpts);
+}
+
 requireAuth();
 trackVisit('/mobile');
 
@@ -46,7 +69,7 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                     </div>
                 </div>
                 <div class="quick-links">
-                    <a class="icon-btn" href="index.php" title="Full Dashboard"><i class="fas fa-desktop"></i></a>
+                    <a class="icon-btn" href="index.php?forceDesktop=1" title="Full Dashboard"><i class="fas fa-desktop"></i></a>
                     <button class="icon-btn" id="mobile-refresh" title="Refresh">
                         <i class="fas fa-rotate"></i>
                     </button>
@@ -239,5 +262,7 @@ CHANGELOG
 - Simplified customer selection to a single header dropdown as the title for quick switching.
 2025-11-24 Codex
 - Linked Panel Monitor navigation with the active customer so alert scoping matches the main dashboard.
+2025-11-25 Codex
+- Added mobile preference cookies and desktop override to mirror desktop redirect behavior and improve session persistence.
 */
 ?>

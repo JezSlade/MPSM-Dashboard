@@ -250,6 +250,27 @@ $tasks = [
         }
     ],
 
+    // Daily Export Prefetch - Cache export library artifacts for on-demand downloads
+    [
+        'name' => 'export-library-refresh',
+        'enabled' => true,
+        'interval' => 'daily',
+        'description' => 'Prefetch export library files into cache for the active customer',
+        'callback' => function() {
+            $scriptPath = __DIR__ . '/api/export-library-cache.php';
+            $command = "/usr/bin/php {$scriptPath} refresh 2>&1";
+            $output = shell_exec($command);
+            $data = json_decode($output, true);
+
+            return [
+                'status' => ($data['success'] ?? false) ? 'success' : 'error',
+                'message' => $data['message'] ?? (is_string($output) ? substr($output, 0, 200) : 'no output'),
+                'items' => $data['items'] ?? null,
+                'customer_code' => $data['customer_code'] ?? null,
+            ];
+        }
+    ],
+
     // Panel Message Processing (example - add if needed)
     [
         'name' => 'process-panel-messages',
@@ -345,3 +366,9 @@ if ($isHTTP) {
 }
 
 exit($tasksFailed > 0 ? 1 : 0);
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Added daily export-library-refresh task to prefetch cached export artifacts for on-demand downloads.
+*/

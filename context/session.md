@@ -1,3 +1,15 @@
+# Session Summary - 2025-11-25 Planning Session
+
+## Notes (Current Session)
+- Read context vault (README, session, decisions, test-log, deploy-log) and `docs/MPSM_Code_Descriptions.md` for alert mappings.
+- Drafting unified plan for mobile redirect/login persistence, export library prefetching, device 429 handling, customer-scoped alert badge, and accurate system alert descriptions.
+- Implemented mobile UA redirect + preference cookie for mobile.php, mobile-aware login redirect, and extended session lifetime for persistence.
+- Added export-library cache API + daily cron prefetch and rewired Export Library card to serve cached downloads only.
+- Hardened device fetch against 429 by falling back to cached devices; API now surfaces 429 with retry_after.
+- Added alert description fallback from docs/MPSM_Code_Descriptions.md in command-center API/engine so system alerts always resolve.
+- Tests pending (php CLI unavailable locally).
+- Added mobile preference handling in mobile.php (desktop override link), changelog for panel alert count API, and a parser test for alert codes 8/807/808/809.
+
 # Session Summary - 2025-11-24 Evening Session (Continued)
 
 ## Latest Fixes - November 24, 2025 (Current Session)
@@ -163,3 +175,9 @@ $providedSecret = $decoded['callbackSecret'] ?? $decoded['secret'] ?? $decoded['
 **Commit:** 4e7d8c5
 
 ---
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Logged planning session covering mobile redirect/login persistence, export library prefetching, device 429 handling, customer-scoped alert badge, and alert description mapping readiness.
+*/

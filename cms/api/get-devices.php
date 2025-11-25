@@ -80,7 +80,28 @@ try {
         if (preg_match('/HTTP\/\d\.\d\s+(\d+)/', $status_line, $matches)) {
             $http_code = (int)$matches[1];
             if ($http_code >= 400) {
-                throw new Exception("mps-api returned HTTP {$http_code}: {$response}");
+                $retryAfter = null;
+                $upstreamError = $response;
+                $decodedError = json_decode($response, true);
+
+                if (is_array($decodedError)) {
+                    $upstreamError = $decodedError['error'] ?? $upstreamError;
+                    if (isset($decodedError['retry_after'])) {
+                        $retryAfter = (int)$decodedError['retry_after'];
+                    }
+                }
+
+                if ($http_code === 429) {
+                    $retryAfter = $retryAfter ?? 60;
+                    jsonResponse([
+                        'success' => false,
+                        'error' => 'Rate limit exceeded',
+                        'retry_after' => $retryAfter,
+                        'upstream_error' => $upstreamError
+                    ], 429);
+                }
+
+                throw new Exception("mps-api returned HTTP {$http_code}: {$upstreamError}");
             }
         }
     }
@@ -150,3 +171,9 @@ try {
 } catch (Exception $e) {
     jsonError("Failed to fetch devices: " . $e->getMessage());
 }
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Propagate upstream 429 with retry_after metadata and cleaner error messages to enable rate-limit handling on the dashboard.
+*/

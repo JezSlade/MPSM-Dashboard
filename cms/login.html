@@ -144,9 +144,27 @@
     </div>
 
     <script>
+        const params = new URLSearchParams(window.location.search);
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        const forceDesktop = params.get('forceDesktop') === '1';
+        const forcedReturn = params.get('returnTo');
+
+        const setDesktopPreference = (value) => {
+            const maxAge = 60 * 60 * 24 * 30; // 30 days
+            document.cookie = `mpsm_prefers_desktop=${value};path=/;max-age=${maxAge};samesite=Lax`;
+        };
+
+        if (forceDesktop) {
+            setDesktopPreference('1');
+        } else if (isMobile) {
+            setDesktopPreference('0');
+        }
+
         const form = document.getElementById('login-form');
         const errorEl = document.getElementById('error');
         const loginBtn = document.getElementById('login-btn');
+        const preferredReturn = forcedReturn
+            || (isMobile && !forceDesktop ? 'mobile.php' : 'index.php');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -195,8 +213,8 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Successful login - redirect to dashboard
-                    window.location.href = 'index.php';
+                    // Successful login - redirect to preferred target (mobile by default on mobile)
+                    window.location.href = preferredReturn;
                 } else {
                     errorEl.textContent = data.error || 'Invalid credentials';
                     errorEl.classList.add('active');
@@ -233,3 +251,8 @@
     </script>
 </body>
 </html>
+<!--
+CHANGELOG
+2025-11-25 Codex
+- Added mobile-aware post-login redirect with desktop override and preference cookie to keep mobile users on mobile.php by default.
+-->

@@ -12,6 +12,36 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 
 /**
+ * Ensure session configuration is applied before starting the session.
+ * Extends cookie lifetime for more persistent logins while keeping secure flags.
+ */
+function ensureSessionConfigured(): void
+{
+    if (session_status() !== PHP_SESSION_NONE) {
+        return;
+    }
+
+    $lifetime = defined('SESSION_TIMEOUT') ? (int)SESSION_TIMEOUT : 604800;
+    if ($lifetime < 3600) {
+        $lifetime = 3600;
+    }
+
+    $isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] === '443');
+
+    // Configure session cookie for longer persistence and secure defaults
+    session_set_cookie_params([
+        'lifetime' => $lifetime,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $isHTTPS,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+/**
  * Get database connection
  * Following Rule 2: One Database Access Pattern (Direct PDO)
  */
@@ -154,6 +184,7 @@ function callMPSAPI($action, $params = []) {
  */
 function requireAuth() {
     if (session_status() === PHP_SESSION_NONE) {
+        ensureSessionConfigured();
         session_start();
     }
 
@@ -179,6 +210,7 @@ function requireAuth() {
  */
 function isLoggedIn() {
     if (session_status() === PHP_SESSION_NONE) {
+        ensureSessionConfigured();
         session_start();
     }
     return !empty($_SESSION['logged_in']);
@@ -201,6 +233,7 @@ function loginUser($username, $password) {
 
     // Set session
     if (session_status() === PHP_SESSION_NONE) {
+        ensureSessionConfigured();
         session_start();
     }
     session_regenerate_id(true);
@@ -217,6 +250,7 @@ function loginUser($username, $password) {
  */
 function logoutUser() {
     if (session_status() === PHP_SESSION_NONE) {
+        ensureSessionConfigured();
         session_start();
     }
     session_destroy();
@@ -1073,3 +1107,9 @@ function getQueueStats(string $queue = 'default'): array {
         return [];
     }
 }
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Added session configuration helper to extend cookie lifetime with secure defaults for more persistent logins across mobile/desktop.
+*/

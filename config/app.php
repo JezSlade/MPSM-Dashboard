@@ -79,7 +79,7 @@ return [
     // Session Configuration
     'session' => [
         'name' => 'MPSM_SESSION',
-        'lifetime' => 3600, // 1 hour
+        'lifetime' => 604800, // 7 days for persistent logins
         'secure' => true,   // HTTPS only
         'httponly' => true, // Prevent JavaScript access
         'samesite' => 'Lax', // Cross-browser compatibility
@@ -91,7 +91,7 @@ return [
         'key' => getenv('APP_KEY') ?: 'mpsm_dashboard_2025',
         'bcrypt_rounds' => 12,
         'password_min_length' => 8,
-        'session_timeout' => 3600,
+        'session_timeout' => 604800,
     ],
 
     // API Configuration
@@ -167,3 +167,9 @@ return [
         'public' => dirname(__DIR__) . '/cms',
     ],
 ];
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Extended session lifetime to 7 days (config + security timeout) to improve login persistence across mobile/desktop sessions.
+*/

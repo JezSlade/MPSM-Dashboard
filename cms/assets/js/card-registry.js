@@ -1264,27 +1264,37 @@ const CardRegistry = (function () {
             group: 'Reports',
             defaultVisible: false,
             load: async (helpers, context) => {
-                const data = await helpers.fetchJson('api/get-export-endpoints.php', {});
+                const data = await helpers.fetchJson('api/export-library-cache.php', {
+                    action: 'list',
+                    customerCode: context.customerCode
+                });
                 const exports = Array.isArray(data.exports) ? data.exports : [];
-                const working = exports.filter(entry => entry.success === true).length;
-                const excelCount = exports.filter(entry => (entry.format || '').toLowerCase() === 'excel').length;
-                const csvCount = exports.filter(entry => (entry.format || '').toLowerCase() === 'csv').length;
+                const ready = exports.filter(entry => entry.status === 'ready').length;
+                const stale = exports.filter(entry => entry.status === 'stale').length;
 
                 return {
                     headline: {
                         value: exports.length,
-                        label: 'Exportable Reports'
+                        label: 'Cached Exports'
                     },
                     metrics: [
                         {
-                            label: 'Working',
-                            value: working,
-                            tone: working === exports.length ? 'success' : (working === 0 ? 'danger' : 'warning')
+                            label: 'Ready',
+                            value: ready,
+                            tone: ready ? 'success' : 'warning'
                         },
-                        { label: 'Excel', value: excelCount || 0 },
-                        { label: 'CSV', value: csvCount || 0 }
+                        {
+                            label: 'Stale',
+                            value: stale || 0,
+                            tone: stale ? 'warning' : 'muted'
+                        },
+                        { label: 'Pending', value: Math.max(exports.length - ready - stale, 0) }
                     ],
-                    context: { exports }
+                    context: {
+                        exports,
+                        ttl: data.ttl_seconds,
+                        last_refreshed: data.last_refreshed
+                    }
                 };
             },
             renderModal: (helpers, context, snapshot) => {
@@ -1292,16 +1302,22 @@ const CardRegistry = (function () {
                 const exports = snapshot.context.exports || [];
 
                 if (!exports.length) {
-                    modal.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No exportable endpoints are currently available.</p></div>';
+                    modal.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No cached exports are currently available.</p></div>';
                     return;
                 }
+
+                const formatBytes = (bytes) => {
+                    if (!Number.isFinite(bytes) || bytes <= 0) {
+                        return '--';
+                    }
+                    const mb = bytes / (1024 * 1024);
+                    return `${mb >= 0.1 ? mb.toFixed(1) : mb.toFixed(2)} MB`;
+                };
 
                 const tableContainer = document.createElement('div');
                 modal.appendChild(tableContainer);
 
                 const escapeHtml = helpers.escape;
-                const formatNumber = helpers.formatNumber;
-
                 const columns = [
                     {
                         id: 'action',
@@ -1318,44 +1334,43 @@ const CardRegistry = (function () {
                     {
                         id: 'status',
                         label: 'Status',
-                        accessor: row => {
-                            if (row.runtimeStatus) {
-                                return row.runtimeStatus;
-                            }
-                            if (row.success === null || row.success === undefined) {
-                                return 'Untested';
-                            }
-                            return row.success ? 'Pass' : 'Fail';
-                        },
+                        accessor: row => row.status || 'pending',
                         sortable: true,
                         format: (value, row) => {
-                            const status = (row.runtimeStatus ?? value ?? 'Untested').toString();
-                            const normalized = status.toLowerCase();
+                            const status = (value || 'pending').toString().toLowerCase();
                             let tone = 'muted';
-                            if (normalized === 'pass' || normalized === 'success') {
-                                tone = 'success';
-                            } else if (normalized === 'fail' || normalized === 'error') {
-                                tone = 'danger';
-                            }
-                            const title = row.runtimeError ? ` title="${helpers.escape(row.runtimeError)}"` : '';
+                            if (status === 'ready') tone = 'success';
+                            else if (status === 'stale') tone = 'warning';
+                            else if (status === 'error') tone = 'danger';
+                            const title = row.last_error ? ` title="${helpers.escape(row.last_error)}"` : '';
                             return `<span class="status-badge status-${tone}"${title}>${helpers.escape(status)}</span>`;
                         }
                     },
                     {
-                        id: 'runtimeAttempts',
-                        label: 'Attempts',
-                        accessor: row => row.runtimeAttempts ?? '',
-                        sortable: true,
-                        format: value => value === '' ? '--' : formatNumber(Number(value) || 0)
-                    },
-                    {
                         id: 'download',
                         label: 'Download',
-                        accessor: row => row.action,
+                        accessor: row => row.download_url,
                         format: (value, row) => {
-                            const safeAction = helpers.escape(row.action);
-                            return `<button type="button" class="btn btn-primary btn-sm export-download" data-export-action="${safeAction}"><i class="fas fa-download"></i> Download</button>`;
+                            if (row.status !== 'ready' || !row.download_url) {
+                                return `<button type="button" class="btn btn-secondary btn-sm" disabled>Not ready</button>`;
+                            }
+                            const url = helpers.escape(row.download_url);
+                            return `<a class="btn btn-primary btn-sm" href="${url}" target="_blank" rel="noopener"><i class="fas fa-download"></i> Download</a>`;
                         }
+                    },
+                    {
+                        id: 'updated_at',
+                        label: 'Updated',
+                        accessor: row => row.updated_at || '',
+                        sortable: true,
+                        format: value => value ? new Date(value).toLocaleString() : '—'
+                    },
+                    {
+                        id: 'size_bytes',
+                        label: 'Size',
+                        accessor: row => row.size_bytes ?? null,
+                        sortable: true,
+                        format: value => formatBytes(Number(value) || 0)
                     }
                 ];
 
@@ -1364,381 +1379,6 @@ const CardRegistry = (function () {
                     rows: exports,
                     pageSize: 50,
                     defaultSort: { column: 'action', direction: 'asc' }
-                });
-
-                const baseParams = {};
-                if (context.dealerCode) baseParams.dealerCode = context.dealerCode;
-                if (context.dealerId) baseParams.dealerId = context.dealerId;
-                if (context.customerCode) baseParams.customerCode = context.customerCode;
-
-                const base64ToBlob = (base64, contentType) => {
-                    const sanitized = (base64 || '').replace(/\s+/g, '');
-                    const binary = atob(sanitized);
-                    const len = binary.length;
-                    const bytes = new Uint8Array(len);
-                    for (let i = 0; i < len; i++) {
-                        bytes[i] = binary.charCodeAt(i);
-                    }
-                    return new Blob([bytes], { type: contentType || 'application/octet-stream' });
-                };
-
-                const downloadJson = (data, filenameBase = 'export') => {
-                    const json = JSON.stringify(data, null, 2);
-                    const blob = new Blob([json], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${filenameBase}.json`;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                };
-
-                const makeSafeBase = (actionName) => {
-                    return (actionName || 'export').replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'export';
-                };
-
-                const extractFilePayload = (payload) => {
-                    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-                        return null;
-                    }
-
-                    const url = payload.url || payload.Url || payload.URL;
-                    const base64Raw =
-                        (typeof payload.data === 'string' && payload.data)
-                        || (typeof payload.Base64Content === 'string' && payload.Base64Content)
-                        || (typeof payload.base64Content === 'string' && payload.base64Content)
-                        || (typeof payload.base64 === 'string' && payload.base64);
-
-                    const name = payload.name
-                        ?? payload.FileName
-                        ?? payload.filename
-                        ?? payload.fileName;
-
-                    const contentType = payload.content_type
-                        ?? payload.contentType
-                        ?? payload.MimeType
-                        ?? payload.mimeType
-                        ?? payload['Content-Type'];
-
-                    if (base64Raw && base64Raw.trim()) {
-                        return { base64: base64Raw.trim(), name, contentType };
-                    }
-                    if (url) {
-                        return { url, name, contentType };
-                    }
-                    return null;
-                };
-
-                const resolveFilePayload = (result) => {
-                    const candidates = [
-                        extractFilePayload(result?.file),
-                        extractFilePayload(result?.data),
-                        extractFilePayload(result)
-                    ];
-
-                    return candidates.find(Boolean) || null;
-                };
-
-                const renderStructuredResult = (resultPayload, actionName) => {
-                    const modalBody = helpers.createModal(`Export Result: ${helpers.escape(actionName)}`);
-                    const data = resultPayload?.data ?? resultPayload;
-
-                    const metaBits = [];
-                    if (resultPayload?.meta) {
-                        metaBits.push(`<code>${helpers.escape(JSON.stringify(resultPayload.meta))}</code>`);
-                    }
-                    if (resultPayload?.http_status) {
-                        metaBits.push(`HTTP ${helpers.escape(resultPayload.http_status)}`);
-                    }
-
-                    const footerMeta = metaBits.length ? `<div class="muted" style="margin-top:8px;">${metaBits.join(' • ')}</div>` : '';
-
-                    if (Array.isArray(data) && data.length && data.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
-                        const sampleKeys = Array.from(
-                            data.slice(0, 20).reduce((set, row) => {
-                                Object.keys(row || {}).forEach(key => set.add(key));
-                                return set;
-                            }, new Set())
-                        ).slice(0, 12);
-
-                        const columns = sampleKeys.length
-                            ? sampleKeys.map(key => ({
-                                id: key,
-                                label: key,
-                                accessor: row => row[key] ?? '',
-                                sortable: true
-                            }))
-                            : [{ id: 'value', label: 'Value', accessor: row => JSON.stringify(row) }];
-
-                        const rows = data.slice(0, 200);
-
-                        helpers.renderTable(modalBody, {
-                            columns,
-                            rows,
-                            pageSize: 25,
-                            defaultSort: { column: columns[0].id, direction: 'asc' }
-                        });
-
-                        const summary = document.createElement('div');
-                        summary.className = 'muted';
-                        summary.style.marginTop = '10px';
-                        summary.innerHTML = `Showing ${rows.length} of ${data.length} records${footerMeta}`;
-                        modalBody.appendChild(summary);
-                    } else if (data && typeof data === 'object') {
-                        modalBody.innerHTML = `
-                            <pre class="code-block" style="max-height:360px; overflow:auto;">${helpers.escape(JSON.stringify(data, null, 2))}</pre>
-                            ${footerMeta}
-                        `;
-                    } else {
-                        modalBody.innerHTML = `
-                            <pre class="code-block">${helpers.escape(String(data ?? 'No data'))}</pre>
-                            ${footerMeta}
-                        `;
-                    }
-
-                    const actions = document.createElement('div');
-                    actions.className = 'section-heading with-actions';
-                    actions.style.marginTop = '12px';
-                    actions.innerHTML = `
-                        <div class="section-actions">
-                            <button class="btn btn-primary" data-action="download-json">
-                                <i class="fas fa-download"></i> Download JSON
-                            </button>
-                        </div>
-                    `;
-                    modalBody.appendChild(actions);
-
-                    actions.querySelector('[data-action="download-json"]')?.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const safeBase = (actionName || 'export').replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'export';
-                        downloadJson(data ?? resultPayload ?? {}, safeBase);
-                        if (typeof window.MPSM?.showToast === 'function') {
-                            window.MPSM.showToast('Structured export downloaded as JSON.', 'success');
-                        }
-                    });
-                };
-
-                tableContainer.addEventListener('click', async (event) => {
-                    const button = event.target.closest('button.export-download');
-                    if (!button) {
-                        return;
-                    }
-
-                    const actionName = button.dataset.exportAction;
-                    const exportRow = exports.find(entry => entry.action === actionName);
-                    if (!exportRow) {
-                        if (typeof window.MPSM?.showToast === 'function') {
-                            window.MPSM.showToast('Export definition not found in snapshot.', 'error');
-                        }
-                        return;
-                    }
-
-                    const prerequisites = Array.isArray(exportRow.prerequisites) ? exportRow.prerequisites : [];
-                    const missing = [];
-                    if (prerequisites.includes('customerCode') && !baseParams.customerCode) {
-                        missing.push('customerCode');
-                    }
-                    if (prerequisites.includes('dealerCode') && !baseParams.dealerCode) {
-                        missing.push('dealerCode');
-                    }
-
-                    if (missing.length) {
-                        if (typeof window.MPSM?.showToast === 'function') {
-                            window.MPSM.showToast(`Missing required context: ${missing.join(', ')}`, 'warning');
-                        }
-                        return;
-                    }
-
-                    const params = Object.assign({}, baseParams);
-
-                    if (actionName === 'Counter/Device/Export') {
-                        const now = new Date();
-                        const from = new Date(now.getTime());
-                        from.setDate(from.getDate() - 30);
-
-                        params.fromDate = params.fromDate || from.toISOString();
-                        params.toDate = params.toDate || now.toISOString();
-                        if (params.exportToCsv === undefined) {
-                            params.exportToCsv = false;
-                        }
-
-                        if (!params.id) {
-                            const resolver = window.MPSM && typeof window.MPSM.resolveDeviceIdForExports === 'function'
-                                ? window.MPSM.resolveDeviceIdForExports
-                                : null;
-                            const deviceId = resolver ? await resolver() : null;
-                            if (!deviceId) {
-                                throw new Error('Unable to resolve a device for Counter/Device/Export.');
-                            }
-                            params.id = deviceId;
-                        }
-                    }
-
-                    const payload = {
-                        action: actionName,
-                        params
-                    };
-
-                    const originalHtml = button.innerHTML;
-                    button.disabled = true;
-                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-                    try {
-                        const response = await fetch('api/run-export.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const result = await response.json();
-                        if (!result.success) {
-                            throw new Error(result.error || 'Export failed');
-                        }
-
-                        const filePayload = resolveFilePayload(result);
-
-                        if (filePayload?.base64) {
-                            const blob = base64ToBlob(filePayload.base64, filePayload.contentType);
-                            const objectUrl = URL.createObjectURL(blob);
-                            const safeBase = makeSafeBase(actionName);
-                            const contentType = (filePayload.contentType || '').toLowerCase();
-                            let filename = filePayload.name;
-
-                            if (!filename || typeof filename !== 'string') {
-                                if (contentType.includes('csv')) {
-                                    filename = `${safeBase}.csv`;
-                                } else if (contentType.includes('excel') || contentType.includes('spreadsheet') || contentType.includes('sheet')) {
-                                    filename = `${safeBase}.xlsx`;
-                                } else if (contentType.includes('pdf')) {
-                                    filename = `${safeBase}.pdf`;
-                                } else if (contentType.includes('json')) {
-                                    filename = `${safeBase}.json`;
-                                } else if (contentType.includes('xml')) {
-                                    filename = `${safeBase}.xml`;
-                                } else if (contentType.includes('zip')) {
-                                    filename = `${safeBase}.zip`;
-                                } else {
-                                    filename = `${safeBase}.bin`;
-                                }
-                            }
-
-                            // FIX BUG #8: Improve download trigger reliability (enhanced)
-                            console.log('[Export] Triggering download:', filename, 'Size:', blob.size, 'bytes');
-
-                            const link = document.createElement('a');
-                            link.href = objectUrl;
-                            link.download = filename;
-                            link.style.display = 'none';
-                            link.rel = 'noopener noreferrer';
-                            document.body.appendChild(link);
-
-                            // Try multiple download strategies
-                            let downloadTriggered = false;
-
-                            try {
-                                // Strategy 1: Direct click (most reliable)
-                                link.click();
-                                downloadTriggered = true;
-                                console.log('[Export] Download triggered via link.click()');
-                                if (typeof window.MPSM?.showToast === 'function') {
-                                    window.MPSM.showToast(`Export downloading: ${filename}`, 'success');
-                                }
-                            } catch (e) {
-                                console.error('[Export] link.click() failed:', e);
-                            }
-
-                            if (!downloadTriggered) {
-                                try {
-                                    // Strategy 2: Programmatic mouse event
-                                    const event = new MouseEvent('click', {
-                                        bubbles: true,
-                                        cancelable: true,
-                                        view: window
-                                    });
-                                    link.dispatchEvent(event);
-                                    downloadTriggered = true;
-                                    console.log('[Export] Download triggered via dispatchEvent');
-                                    if (typeof window.MPSM?.showToast === 'function') {
-                                        window.MPSM.showToast(`Export downloading: ${filename}`, 'success');
-                                    }
-                                } catch (e) {
-                                    console.error('[Export] dispatchEvent failed:', e);
-                                }
-                            }
-
-                            if (!downloadTriggered) {
-                                // Strategy 3: Open in new window as fallback
-                                console.log('[Export] Falling back to window.open()');
-                                const newWindow = window.open(objectUrl, '_blank');
-                                if (typeof window.MPSM?.showToast === 'function') {
-                                    if (newWindow) {
-                                        window.MPSM.showToast('Export opened in new window. Right-click and Save As...', 'info');
-                                    } else {
-                                        window.MPSM.showToast('Popup blocked! Please allow popups and try again.', 'error');
-                                    }
-                                }
-                            }
-
-                            // Cleanup after download starts
-                            setTimeout(() => {
-                                if (document.body.contains(link)) {
-                                    document.body.removeChild(link);
-                                }
-                                URL.revokeObjectURL(objectUrl);
-                                console.log('[Export] Cleanup complete');
-                            }, 5000);
-                            exportRow.runtimeStatus = 'Pass';
-                            exportRow.runtimeError = null;
-                            exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
-                            exportRow.runtimeDuration = result.duration_ms ?? null;
-                            exportRow.runtimeParams = result.params_used ?? params;
-                            exportRow.runtimeTestedAt = new Date().toISOString();
-                            exportRow.success = true;
-                        } else if (filePayload?.url) {
-                            window.open(filePayload.url, '_blank');
-                            if (typeof window.MPSM?.showToast === 'function') {
-                                window.MPSM.showToast('Export opened in a new tab.', 'info');
-                            }
-                            exportRow.runtimeStatus = 'Pass';
-                            exportRow.runtimeError = null;
-                            exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
-                            exportRow.runtimeDuration = result.duration_ms ?? null;
-                            exportRow.runtimeParams = result.params_used ?? params;
-                            exportRow.runtimeTestedAt = new Date().toISOString();
-                            exportRow.success = true;
-                        } else {
-                            console.log('Export response payload', result);
-                            renderStructuredResult(result, actionName);
-                            if (typeof window.MPSM?.showToast === 'function') {
-                                window.MPSM.showToast('Export returned structured data. Preview opened.', 'info');
-                            }
-                            exportRow.runtimeStatus = 'Data';
-                            exportRow.runtimeError = null;
-                            exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
-                            exportRow.runtimeDuration = result.duration_ms ?? null;
-                            exportRow.runtimeParams = result.params_used ?? null;
-                            exportRow.runtimeTestedAt = new Date().toISOString();
-                            exportRow.success = true;
-                        }
-                        exportTable.updateRows(exports);
-                    } catch (error) {
-                        if (typeof window.MPSM?.showToast === 'function') {
-                            window.MPSM.showToast('Export failed: ' + error.message, 'error');
-                        }
-                        exportRow.runtimeStatus = 'Fail';
-                        exportRow.runtimeError = error.message;
-                        exportRow.runtimeAttempts = (exportRow.runtimeAttempts ?? 0) + 1;
-                        exportRow.runtimeParams = params;
-                        exportRow.runtimeTestedAt = new Date().toISOString();
-                        exportRow.success = false;
-                        exportTable.updateRows(exports);
-                    } finally {
-                        button.disabled = false;
-                        button.innerHTML = originalHtml;
-                    }
                 });
             }
         },
@@ -1986,6 +1626,8 @@ CHANGELOG
 - Built duplicate IP grouping with interactive comparison grid, lifecycle handoff, and per-device actions directly inside the Customer Snapshot modal.
 - Added lifecycle deep links and lifecycle CTA buttons that honor the active customer context.
 - Export Library now previews structured responses, downloads JSON when files are not returned, and surfaces richer runtime status details.
+2025-11-25 Codex
+- Export Library consumes cached exports (daily prefetch), disables live runs, and provides ready/stale/pending status with direct cached download links.
 2025-11-28 Codex
 - Export Library now prioritizes direct spreadsheet downloads when Base64Content/MimeType/FileName payloads are returned and skips JSON preview for file responses.
 - Search bar now prefers cached devices and device drill-down modal shows panel maintenance/system alerts alongside other device data.

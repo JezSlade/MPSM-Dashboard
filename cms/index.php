@@ -7,6 +7,35 @@
 require 'config.php';
 require 'functions.php';
 
+// Redirect mobile users to the mobile dashboard unless they explicitly force desktop
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$isMobileUa = (bool)preg_match('/Mobile|Android|iPhone|iPad|iPod/i', $userAgent);
+$isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] === '443');
+$cookieOpts = [
+    'expires' => time() + (86400 * 30),
+    'path' => '/',
+    'secure' => $isHTTPS,
+    'httponly' => false,
+    'samesite' => 'Lax',
+];
+
+if (isset($_GET['forceDesktop'])) {
+    setcookie('mpsm_prefers_desktop', '1', $cookieOpts);
+}
+if (isset($_GET['forceMobile'])) {
+    setcookie('mpsm_prefers_desktop', '0', $cookieOpts);
+}
+
+$prefersDesktop = ($_COOKIE['mpsm_prefers_desktop'] ?? '') === '1';
+$prefersMobile = ($_COOKIE['mpsm_prefers_desktop'] ?? '') === '0';
+
+if (!$prefersDesktop && ($prefersMobile || $isMobileUa)) {
+    header('Location: mobile.php');
+    exit;
+}
+
 requireAuth();
 trackVisit('/');
 
@@ -465,5 +494,7 @@ $preferences = getUserPreferences($userId);
 CHANGELOG
 2025-11-24 Codex
 - Added customer-aware panel monitor link hooks for desktop header to keep badge navigation scoped.
+2025-11-25 Codex
+- Added mobile user-agent redirect with desktop/mobile overrides and persistent cookie hints to keep mobile users on mobile.php.
 */
 ?>

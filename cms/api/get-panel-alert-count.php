@@ -45,3 +45,9 @@ try {
 } catch (Exception $e) {
     jsonError($e->getMessage());
 }
+
+/*
+CHANGELOG
+2025-11-25 Codex
+- Ensured alert count API remains customer-filtered and added changelog for auditability.
+*/

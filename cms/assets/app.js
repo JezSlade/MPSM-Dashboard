@@ -2226,6 +2226,41 @@ const MPSM = (function() {
     /**
      * Load supply alerts
      */
+    async function fetchDevicesFromCache(customerCode) {
+        try {
+            const response = await fetch('api/get-cached-devices.php');
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                debugLog(`Cached devices returned non-JSON (${contentType}), skipping cache fallback`, 'warn');
+                return null;
+            }
+            const data = await response.json();
+            if (!data.success || !Array.isArray(data.devices)) {
+                return null;
+            }
+
+            const targetCustomer = customerCode || state.customerCode;
+            const filteredDevices = targetCustomer
+                ? data.devices.filter(device =>
+                    device.CustomerCode === targetCustomer ||
+                    device.Customer?.Code === targetCustomer)
+                : data.devices;
+
+            return {
+                devices: filteredDevices,
+                total: filteredDevices.length,
+                meta: {
+                    source: 'cache',
+                    cache_age_seconds: data.cache_age_seconds ?? null,
+                    cache_age_human: data.cache_age_human ?? null
+                }
+            };
+        } catch (err) {
+            debugLog(`Cache fallback failed: ${err.message}`, 'warn');
+            return null;
+        }
+    }
+
     async function fetchAllDevices(options = {}) {
         const devices = [];
         const seenKeys = new Set();
@@ -2276,14 +2311,28 @@ const MPSM = (function() {
             if (response.status === 429) {
                 rateLimitRetries += 1;
                 let retryAfter = 60;
+                let upstreamError = 'Rate limit exceeded';
                 try {
                     const limitData = await response.json();
                     retryAfter = (limitData.retry_after || retryAfter);
+                    upstreamError = limitData.error || upstreamError;
                 } catch (_) {
                     // ignore parse errors, use default retry
                 }
+                const cached = await fetchDevicesFromCache(options.customerCode);
+                if (cached && cached.devices?.length) {
+                    debugLog(`Rate limited on devices. Using cache fallback (${cached.devices.length} devices, cache age: ${cached.meta?.cache_age_human || 'unknown'})`, 'warn');
+                    return {
+                        devices: cached.devices,
+                        total: cached.total,
+                        meta: Object.assign({}, cached.meta || {}, {
+                            rate_limited: true,
+                            retry_after: retryAfter
+                        })
+                    };
+                }
                 if (rateLimitRetries > 3) {
-                    throw new Error(`Rate limit exceeded after multiple retries. Retry after ${retryAfter}s`);
+                    throw new Error(`Rate limit exceeded after multiple retries. Retry after ${retryAfter}s (${upstreamError})`);
                 }
                 debugLog(`Rate limited on page ${pageNumber}, retrying in ${retryAfter}s`, 'warn');
                 await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
@@ -4299,4 +4348,6 @@ CHANGELOG
 - Renamed the Alerts metric card to Maintenance Alerts to reduce perceived severity.
 2025-11-24 Codex
 - Added customer-scoped panel monitor links/badge updates, 429 handling for device fetch and alert badge calls to reduce rate-limit failures.
+2025-11-25 Codex
+- Added cache-based device fallback on 429 with retry_after awareness to keep the Devices card responsive during API throttling.
 */
