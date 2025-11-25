@@ -10,6 +10,7 @@
 - Tests pending (php CLI unavailable locally).
 - Added mobile preference handling in mobile.php (desktop override link), changelog for panel alert count API, and a parser test for alert codes 8/807/808/809.
 - Panel alert badge now rewrites its link per active customer before fetching counts to keep the red pill scoped.
+- Fixed mobile fetch helper to send credentials and detect non-JSON responses, preventing mobile search “Unexpected token '<'” errors.
 
 # Session Summary - 2025-11-24 Evening Session (Continued)
 

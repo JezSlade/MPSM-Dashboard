@@ -19,7 +19,13 @@ const MobileApp = (() => {
 
         while (attempt <= retries) {
             try {
-                const response = await fetch(url, options);
+                const response = await fetch(url, Object.assign({
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' }
+                }, options));
+
+                const contentType = response.headers.get('content-type') || '';
+                const isJson = contentType.includes('application/json');
 
                 if (response.status === 429) {
                     let retryAfter = 60;
@@ -32,6 +38,11 @@ const MobileApp = (() => {
                     await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
                     attempt += 1;
                     continue;
+                }
+
+                if (!isJson) {
+                    const snippet = await response.text();
+                    throw new Error(`Unexpected response (non-JSON). ${response.status} ${response.statusText}. Preview: ${snippet.slice(0, 120)}`);
                 }
 
                 const data = await response.json();
@@ -587,4 +598,6 @@ CHANGELOG
 - Simplified customer selection to a single header dropdown; removed search input and tightened preference updates.
 2025-11-24 Codex
 - Added 429-aware fetch retry helper to keep mobile alerts and search resilient under rate limits.
+2025-11-25 Codex
+- Aligned mobile fetches with dashboard by sending credentials and guarding against HTML responses to prevent “Unexpected token '<'” search errors.
 */
