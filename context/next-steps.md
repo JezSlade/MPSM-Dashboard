@@ -25,6 +25,12 @@ Updated: 2025-11-06 13:50 UTC
 
 ## Maybe Later
 
+- **Fragility Reduction Refactor** (detailed plan in `tender-tinkering-peacock.md` lines 245-638):
+  - **Phase 1 (Safety Nets)**: Health check endpoint, schema validation, cache health dashboard, error boundaries - 6 hours, zero risk
+  - **Phase 2 (Extract & Isolate)**: Split app.js into 8-10 modules, split functions.php into 6 domain files, add migration system - 2 weeks
+  - **Phase 3 (Decouple)**: Migration system to stop DDL on every request, consolidate 3 cache scripts into 1 service, API response transformers - 2-3 weeks
+  - **Phase 4 (Strengthen)**: Config consolidation, DI everywhere, error handling boundaries - ongoing
+  - Goal: Reduce coupling, eliminate fragile implicit dependencies, make system changes safe and predictable
 - Stand up the async worker fleet (Redis/Rabbit-backed queues for `cache.refresh.fast`, `cache.refresh.deep`, `api.prefetch`, `webhook.enrich`, `alerts.evaluate`, and `logs.rollup`) to offload heavy cache hydration, enrichment, and alert evaluation from request/response code paths while keeping ActionCache/MySQL fresh.
 - **Incrementally layer role-based access control** (no ground-up refactor):
   - Add `role` column to `mpsm_users` (`admin`, `manager`, `viewer`)
