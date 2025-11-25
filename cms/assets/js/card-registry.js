@@ -663,43 +663,17 @@ const CardRegistry = (function () {
                 let devices = [];
                 let total = 0;
 
-                if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
-                    const result = await window.MPSM.fetchAllDevices({
-                        customerCode: context.customerCode,
-                        dealerCode: context.dealerCode,
-                        dealerId: context.dealerId,
-                        sortColumn: 'AssetNumber',
-                        sortOrder: 'Asc'
+                // CACHE-FIRST: Always use cached endpoint to avoid rate limits
+                // Skip window.MPSM.fetchAllDevices() as it hits live API directly
+                let data;
+                try {
+                    data = await helpers.fetchJson('api/get-cached-devices.php', {
+                        customerCode: context.customerCode
                     });
-                    devices = Array.isArray(result.devices) ? result.devices : [];
-                    total = Number(result.total ?? devices.length ?? 0);
 
-                    if (typeof window.MPSM.hydrateDeviceLookup === 'function') {
-                        window.MPSM.hydrateDeviceLookup(devices);
-                    }
-                } else {
-                    // CACHE-FIRST: Read from local MySQL cache (instant response, no rate limit)
-                    // Fallback to live API if cache is empty or stale (>30 min)
-                    let data;
-                    try {
-                        data = await helpers.fetchJson('api/get-cached-devices.php', {
-                            customerCode: context.customerCode
-                        });
-
-                        // Fallback: if cache is empty or very stale, use live API
-                        if (!data.devices || data.devices.length === 0 || data.cache_age_seconds > 1800) {
-                            console.warn('[device-inventory] Cache empty or stale, falling back to live API');
-                            data = await helpers.fetchJson('api/get-devices.php', {
-                                customerCode: context.customerCode,
-                                dealerCode: context.dealerCode,
-                                dealerId: context.dealerId,
-                                pageRows: 200,
-                                sortColumn: 'AssetNumber',
-                                sortOrder: 'Asc'
-                            });
-                        }
-                    } catch (cacheError) {
-                        console.warn('[device-inventory] Cache fetch failed, using live API:', cacheError.message);
+                    // Fallback: if cache is empty or very stale, use live API
+                    if (!data.devices || data.devices.length === 0 || data.cache_age_seconds > 1800) {
+                        console.warn('[device-inventory] Cache empty or stale, falling back to live API');
                         data = await helpers.fetchJson('api/get-devices.php', {
                             customerCode: context.customerCode,
                             dealerCode: context.dealerCode,
@@ -709,9 +683,24 @@ const CardRegistry = (function () {
                             sortOrder: 'Asc'
                         });
                     }
+                } catch (cacheError) {
+                    console.warn('[device-inventory] Cache fetch failed, using live API:', cacheError.message);
+                    data = await helpers.fetchJson('api/get-devices.php', {
+                        customerCode: context.customerCode,
+                        dealerCode: context.dealerCode,
+                        dealerId: context.dealerId,
+                        pageRows: 200,
+                        sortColumn: 'AssetNumber',
+                        sortOrder: 'Asc'
+                    });
+                }
 
-                    devices = Array.isArray(data.devices) ? data.devices : [];
-                    total = Number(data.total ?? devices.length ?? 0);
+                devices = Array.isArray(data.devices) ? data.devices : [];
+                total = Number(data.total ?? devices.length ?? 0);
+
+                // Hydrate device lookup if available
+                if (typeof window.MPSM?.hydrateDeviceLookup === 'function') {
+                    window.MPSM.hydrateDeviceLookup(devices);
                 }
 
                 if (!Number.isFinite(total)) {
@@ -1065,36 +1054,16 @@ const CardRegistry = (function () {
                 let devices = [];
 
                 try {
-                    if (window.MPSM && typeof window.MPSM.fetchAllDevices === 'function') {
-                        const result = await window.MPSM.fetchAllDevices({
-                            customerCode: context.customerCode,
-                            dealerCode: context.dealerCode,
-                            dealerId: context.dealerId,
-                            sortColumn: 'AssetNumber',
-                            sortOrder: 'Asc'
+                    // CACHE-FIRST: Always use cached endpoint to avoid rate limits
+                    // Skip window.MPSM.fetchAllDevices() as it hits live API directly
+                    let data;
+                    try {
+                        data = await helpers.fetchJson('api/get-cached-devices.php', {
+                            customerCode: context.customerCode
                         });
-                        devices = Array.isArray(result.devices) ? result.devices : [];
-                    } else {
-                        // CACHE-FIRST: Same fallback logic as device-inventory
-                        let data;
-                        try {
-                            data = await helpers.fetchJson('api/get-cached-devices.php', {
-                                customerCode: context.customerCode
-                            });
 
-                            if (!data.devices || data.devices.length === 0 || data.cache_age_seconds > 1800) {
-                                console.warn('[top-devices] Cache empty or stale, falling back to live API');
-                                data = await helpers.fetchJson('api/get-devices.php', {
-                                    customerCode: context.customerCode,
-                                    dealerCode: context.dealerCode,
-                                    dealerId: context.dealerId,
-                                    pageRows: 200,
-                                    sortColumn: 'AssetNumber',
-                                    sortOrder: 'Asc'
-                                });
-                            }
-                        } catch (cacheError) {
-                            console.warn('[top-devices] Cache fetch failed, using live API:', cacheError.message);
+                        if (!data.devices || data.devices.length === 0 || data.cache_age_seconds > 1800) {
+                            console.warn('[top-devices] Cache empty or stale, falling back to live API');
                             data = await helpers.fetchJson('api/get-devices.php', {
                                 customerCode: context.customerCode,
                                 dealerCode: context.dealerCode,
@@ -1104,8 +1073,18 @@ const CardRegistry = (function () {
                                 sortOrder: 'Asc'
                             });
                         }
-                        devices = Array.isArray(data.devices) ? data.devices : [];
+                    } catch (cacheError) {
+                        console.warn('[top-devices] Cache fetch failed, using live API:', cacheError.message);
+                        data = await helpers.fetchJson('api/get-devices.php', {
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            dealerId: context.dealerId,
+                            pageRows: 200,
+                            sortColumn: 'AssetNumber',
+                            sortOrder: 'Asc'
+                        });
                     }
+                    devices = Array.isArray(data.devices) ? data.devices : [];
                 } catch (error) {
                     console.error('Top Devices card failed to load devices:', error);
                     devices = [];
