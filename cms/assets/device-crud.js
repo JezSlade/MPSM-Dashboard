@@ -38,6 +38,60 @@
     const updateAlerts = document.getElementById('update-alerts');
     const updateRepeatAlerts = document.getElementById('update-repeat-alerts');
     const createManaged = document.getElementById('create-managed');
+    const optionalFieldConfigs = [
+        {
+            key: 'assetNumber',
+            toggle: document.querySelector('[data-toggle-field="assetNumber"]'),
+            container: document.querySelector('[data-field="assetNumber"]'),
+            input: document.getElementById('update-asset-number'),
+            resolve: (device) => resolveDeviceField(device, ['AssetNumber', 'Asset', 'AssetTag']),
+        },
+        {
+            key: 'contact',
+            toggle: document.querySelector('[data-toggle-field="contact"]'),
+            container: document.querySelector('[data-field="contact"]'),
+            input: document.getElementById('update-contact'),
+            resolve: (device) => resolveDeviceField(device, ['Contact', 'ContactName']),
+        },
+        {
+            key: 'department',
+            toggle: document.querySelector('[data-toggle-field="department"]'),
+            container: document.querySelector('[data-field="department"]'),
+            input: document.getElementById('update-department'),
+            resolve: (device) => resolveDeviceField(device, ['Department', 'Location', 'DepartmentName']),
+        },
+        {
+            key: 'ipAddress',
+            toggle: document.querySelector('[data-toggle-field="ipAddress"]'),
+            container: document.querySelector('[data-field="ipAddress"]'),
+            input: document.getElementById('update-ip-address'),
+            resolve: (device) => resolveDeviceField(device, ['AddressIP', 'IPAddress', 'IpAddress', 'IP', 'Ip']),
+        },
+        {
+            key: 'note',
+            toggle: document.querySelector('[data-toggle-field="note"]'),
+            container: document.querySelector('[data-field="note"]'),
+            input: document.getElementById('update-note'),
+            resolve: (device) => resolveDeviceField(device, ['Note', 'Notes']),
+        },
+        {
+            key: 'productDescription',
+            toggle: document.querySelector('[data-toggle-field="productDescription"]'),
+            container: document.querySelector('[data-field="productDescription"]'),
+            input: document.getElementById('update-product-description'),
+            resolve: (device) => resolveDeviceField(device, ['ProductDescription', 'Description']),
+        },
+    ];
+
+    function resolveDeviceField(device, keys) {
+        if (!device) return '';
+        for (const key of keys) {
+            if (device[key] !== undefined && device[key] !== null && String(device[key]).trim() !== '') {
+                return String(device[key]).trim();
+            }
+        }
+        return '';
+    }
 
     const state = {
         page: 1,
@@ -358,6 +412,8 @@
             return;
         }
 
+        resetOptionalFields();
+
         const deviceId = resolveDeviceId(device);
         const serial = device.SerialNumber || device.Serial || '-';
         const brand = device.ProductBrand || device.Brand || '-';
@@ -385,6 +441,18 @@
         updateManaged.checked = Boolean(device.IsManaged);
         updateAlerts.checked = Boolean(device.IsGenerateAlert);
         updateRepeatAlerts.checked = Boolean(device.ManageRepeatedAlerts);
+
+        optionalFieldConfigs.forEach((field) => {
+            const value = field.resolve(device);
+            if (field.input) {
+                field.input.value = value || '';
+            }
+            const enable = Boolean(value);
+            if (field.toggle) {
+                field.toggle.checked = enable;
+            }
+            toggleOptionalField(field, enable);
+        });
     }
 
     async function handleUpdate(event) {
@@ -399,6 +467,12 @@
         payload.isManaged = updateManaged.checked;
         payload.isGenerateAlert = updateAlerts.checked;
         payload.manageRepeatedAlerts = updateRepeatAlerts.checked;
+
+        optionalFieldConfigs.forEach((field) => {
+            if (field.toggle?.checked && field.input) {
+                payload[field.input.name] = field.input.value;
+            }
+        });
 
         try {
             const response = await fetch(endpoints.update, {
@@ -482,6 +556,39 @@
         }
     }
 
+    function toggleOptionalField(field, enabled) {
+        if (field.container) {
+            if (enabled) {
+                field.container.removeAttribute('hidden');
+            } else {
+                field.container.setAttribute('hidden', 'hidden');
+            }
+        }
+        if (field.input) {
+            field.input.disabled = !enabled;
+        }
+    }
+
+    function resetOptionalFields() {
+        optionalFieldConfigs.forEach((field) => {
+            if (field.toggle) {
+                field.toggle.checked = false;
+            }
+            if (field.input) {
+                field.input.value = '';
+            }
+            toggleOptionalField(field, false);
+        });
+    }
+
+    function bindOptionalFieldToggles() {
+        optionalFieldConfigs.forEach((field) => {
+            field.toggle?.addEventListener('change', (event) => {
+                toggleOptionalField(field, event.target.checked);
+            });
+        });
+    }
+
     function bindFilters() {
         filterForm?.addEventListener('submit', (event) => {
             event.preventDefault();
@@ -529,6 +636,7 @@
         createForm?.addEventListener('submit', handleCreate);
         updateForm?.addEventListener('submit', handleUpdate);
         refreshButton?.addEventListener('click', () => loadDevices());
+        bindOptionalFieldToggles();
     }
 
     function init() {
@@ -536,6 +644,7 @@
         bindModalDismiss();
         bindFilters();
         bindEvents();
+        resetOptionalFields();
         loadDevices();
     }
 
@@ -546,4 +655,6 @@
 CHANGELOG
 2025-11-25 Codex
 - Added query-param driven filter prefills so lifecycle links from duplicate IP comparisons land on the correct customer/search scope.
+2025-11-29 Codex
+- Added dynamic optional field toggles for IP, location/department, asset, contact, note, and product description with payload inclusion only when selected.
 */

@@ -54,6 +54,21 @@ foreach ($stringMap as $inputKey => $apiKey) {
     }
 }
 
+$clearableMap = [
+    'assetNumber' => 'AssetNumber',
+    'contact' => 'Contact',
+    'department' => 'Department',
+    'ipAddress' => 'AddressIP',
+    'note' => 'Note',
+    'productDescription' => 'ProductDescription',
+];
+
+foreach ($clearableMap as $inputKey => $apiKey) {
+    if (array_key_exists($inputKey, $data)) {
+        $payload[$apiKey] = $data[$inputKey] ?? '';
+    }
+}
+
 try {
     $response = callMPSQuery('Device/Update', $payload);
 
@@ -73,3 +88,9 @@ try {
     logDeviceCrudAction('update', $payload, null, 'error', $exception->getMessage());
     jsonError('Failed to update device: ' . $exception->getMessage());
 }
+
+/*
+CHANGELOG
+2025-11-29 Codex
+- Added clearable optional fields (asset, contact, department/location, IP, note, product description) to Device/Update payload mapping.
+*/

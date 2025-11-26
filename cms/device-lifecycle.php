@@ -299,6 +299,98 @@ header('X-Frame-Options: SAMEORIGIN');
                 </fieldset>
 
                 <fieldset class="form-section">
+                    <legend><i class="fas fa-sliders-h"></i> Additional Fields (choose to edit)</legend>
+                    <div class="form-grid checkbox-grid">
+                        <div class="field checkbox-field">
+                            <label>
+                                <input type="checkbox" id="toggle-asset-number" data-toggle-field="assetNumber">
+                                <span class="checkbox-label">
+                                    <strong>Asset Tag</strong>
+                                    <span class="field-hint">Internal asset or inventory number</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input type="checkbox" id="toggle-contact" data-toggle-field="contact">
+                                <span class="checkbox-label">
+                                    <strong>Contact</strong>
+                                    <span class="field-hint">On-site point of contact</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input type="checkbox" id="toggle-department" data-toggle-field="department">
+                                <span class="checkbox-label">
+                                    <strong>Department / Location</strong>
+                                    <span class="field-hint">Where the device physically lives</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input type="checkbox" id="toggle-ip-address" data-toggle-field="ipAddress">
+                                <span class="checkbox-label">
+                                    <strong>IP Address</strong>
+                                    <span class="field-hint">Static or DHCP address</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input type="checkbox" id="toggle-note" data-toggle-field="note">
+                                <span class="checkbox-label">
+                                    <strong>Note</strong>
+                                    <span class="field-hint">Operational notes or comments</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label>
+                                <input type="checkbox" id="toggle-product-description" data-toggle-field="productDescription">
+                                <span class="checkbox-label">
+                                    <strong>Product Description</strong>
+                                    <span class="field-hint">Friendly description shown in reports</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend><i class="fas fa-pen-square"></i> Optional Field Values</legend>
+                    <div class="form-grid">
+                        <div class="field full-width" data-field="assetNumber" hidden>
+                            <label for="update-asset-number">Asset Tag</label>
+                            <input id="update-asset-number" name="assetNumber" type="text" placeholder="e.g., IT-PRN-0042">
+                            <span class="field-hint">Leave blank while checked to clear the value.</span>
+                        </div>
+                        <div class="field full-width" data-field="contact" hidden>
+                            <label for="update-contact">Contact</label>
+                            <input id="update-contact" name="contact" type="text" placeholder="Name or team">
+                            <span class="field-hint">Will be sent when the Contact box is checked.</span>
+                        </div>
+                        <div class="field full-width" data-field="department" hidden>
+                            <label for="update-department">Department / Location</label>
+                            <input id="update-department" name="department" type="text" placeholder="e.g., Finance, Building A">
+                        </div>
+                        <div class="field full-width" data-field="ipAddress" hidden>
+                            <label for="update-ip-address">IP Address</label>
+                            <input id="update-ip-address" name="ipAddress" type="text" placeholder="e.g., 192.168.1.120">
+                        </div>
+                        <div class="field full-width" data-field="note" hidden>
+                            <label for="update-note">Note</label>
+                            <textarea id="update-note" name="note" rows="3" placeholder="Usage notes, maintenance instructions..."></textarea>
+                        </div>
+                        <div class="field full-width" data-field="productDescription" hidden>
+                            <label for="update-product-description">Product Description</label>
+                            <input id="update-product-description" name="productDescription" type="text" placeholder="Friendly description for reports">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
                     <legend><i class="fas fa-cog"></i> Settings</legend>
                     <div class="form-grid checkbox-grid">
                         <div class="field checkbox-field">
@@ -350,5 +442,7 @@ header('X-Frame-Options: SAMEORIGIN');
 CHANGELOG
 2025-11-25 Codex
 - Added lifecycle filter prefills from query parameters to speed duplicate-IP remediation links.
+2025-11-29 Codex
+- Added dynamic optional-field controls for IP, department/location, asset, contact, note, and product description in the update modal.
 */
 ?>
