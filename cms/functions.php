@@ -21,9 +21,9 @@ function ensureSessionConfigured(): void
         return;
     }
 
-    $lifetime = defined('SESSION_TIMEOUT') ? (int)SESSION_TIMEOUT : 604800;
-    if ($lifetime < 3600) {
-        $lifetime = 3600;
+    $lifetime = defined('SESSION_TIMEOUT') ? (int)SESSION_TIMEOUT : 604800; // default 7 days
+    if ($lifetime < 604800) {
+        $lifetime = 604800; // enforce a sane minimum to prevent frequent logouts
     }
 
     $isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -39,6 +39,10 @@ function ensureSessionConfigured(): void
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
+
+    // Align server-side session persistence with cookie lifetime
+    ini_set('session.gc_maxlifetime', (string)$lifetime);
+    ini_set('session.cookie_lifetime', (string)$lifetime);
 }
 
 /**
@@ -201,8 +205,31 @@ function requireAuth() {
         }
     }
 
-    // Refresh session timeout
+    // Sliding session: refresh cookie expiry and last activity
     $_SESSION['last_activity'] = time();
+
+    $lifetime = defined('SESSION_TIMEOUT') ? (int)SESSION_TIMEOUT : 604800;
+    if ($lifetime < 604800) { $lifetime = 604800; }
+    $isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] === '443');
+    if (headers_sent() === false) {
+        setcookie(session_name(), session_id(), [
+            'expires' => time() + $lifetime,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $isHTTPS,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
+
+    // Periodic ID rotation for security without forcing logouts
+    $lastRotate = $_SESSION['last_rotate'] ?? 0;
+    if (time() - (int)$lastRotate > 1800) { // every 30 minutes
+        session_regenerate_id(true);
+        $_SESSION['last_rotate'] = time();
+    }
 }
 
 /**
@@ -241,9 +268,35 @@ function loginUser($username, $password) {
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['username'] = $user['username'];
     $_SESSION['last_activity'] = time();
+    $_SESSION['last_rotate'] = time();
+
+    // Set initial cookie expiry at login for persistence
+    $lifetime = defined('SESSION_TIMEOUT') ? (int)SESSION_TIMEOUT : 604800;
+    if ($lifetime < 604800) { $lifetime = 604800; }
+    $isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] === '443');
+    if (headers_sent() === false) {
+        setcookie(session_name(), session_id(), [
+            'expires' => time() + $lifetime,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $isHTTPS,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
 
     return true;
 }
+
+/*
+CHANGELOG
+2025-11-26 Codex
+- Increased minimum session lifetime to 7 days and aligned gc_maxlifetime/cookie_lifetime to reduce unexpected logouts.
+- Implemented sliding session renewal and periodic ID rotation (30 min) without interrupting the user.
+- Refreshed session cookie expiry on each authenticated request and at login.
+*/
 
 /**
  * Logout user
