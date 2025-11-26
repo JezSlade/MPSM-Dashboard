@@ -42,7 +42,16 @@ trackVisit('/command-center');
         <!-- Tab Navigation -->
         <div class="monitor-tabs">
             <button class="monitor-tab-btn active" data-tab="notifications">
-                <i class="fas fa-bell"></i> Active Notifications
+                 <i class="fas fa-bell"></i> Active Notifications</button>
+            <button class="monitor-tab-btn" data-tab="panel">
+                <i class="fas fa-stream"></i> Panel Stream
+            </button>
+            <button class="monitor-tab-btn" data-tab="rules"></button>
+            <button class="monitor-tab-btn" data-tab="definitions">
+                <i class="fas fa-tags"></i> Alert Labels
+            </button>
+            <button class="monitor-tab-btn" data-tab="tools">
+                <i class="fas fa-toolbox"></i> Tools
             </button>
             <button class="monitor-tab-btn" data-tab="rules">
                 <i class="fas fa-cog"></i> Notification Rules
@@ -105,7 +114,118 @@ trackVisit('/command-center');
         </div>
 
         <!-- Tab 3: Alert Statistics -->
-        <div id="tab-statistics" class="tab-panel" data-tab="statistics">
+                <!-- Tab: Panel Stream (Live Panel Messages) -->
+        <div id="tab-panel" class="tab-panel" data-tab="panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Panel Stream</h2>
+                        <p class="text-muted">Live panel message callbacks by time window and customer</p>
+                    </div>
+                    <div class="monitor-controls">
+                        <div>
+                            <label for="cc-panel-limit">Limit</label>
+                            <select id="cc-panel-limit" class="form-control">
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200" selected>200</option>
+                                <option value="300">300</option>
+                                <option value="500">500</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cc-panel-hours">Hours</label>
+                            <select id="cc-panel-hours" class="form-control">
+                                <option value="">All</option>
+                                <option value="1">Last 1 hour</option>
+                                <option value="6">Last 6 hours</option>
+                                <option value="12">Last 12 hours</option>
+                                <option value="24">Last 24 hours</option>
+                                <option value="48">Last 48 hours</option>
+                                <option value="72">Last 72 hours</option>
+                                <option value="168">Last 7 days</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cc-panel-customer">Customer</label>
+                            <input id="cc-panel-customer" class="form-control" type="text" placeholder="e.g., ABC123">
+                            <small class="text-muted">Filters table; leave blank for all</small>
+                        </div>
+                        <button id="cc-panel-refresh" class="btn btn-primary" type="button">
+                            <i class="fas fa-sync-alt"></i> Refresh Now
+                        </button>
+                        <span id="cc-panel-last-refresh" class="badge">Auto refresh: 30s</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Received</th>
+                                    <th>Customer</th>
+                                    <th>Device</th>
+                                    <th>Alert</th>
+                                    <th>Panel Config</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cc-panel-tbody">
+                                <tr><td colspan="6">Waiting for data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Alert Labels (Definitions) -->
+        <div id="tab-definitions" class="tab-panel" data-tab="definitions">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Alert Labels</h2>
+                        <p class="text-muted">Map MPSM alert codes to human-readable names</p>
+                    </div>
+                    <a class="btn btn-secondary" href="alert-definitions.php" target="_blank" rel="noopener">
+                        <i class="fas fa-up-right-from-square"></i> Manage in full
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div id="definitions-container">
+                        <div class="loading">Loading alert labels...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Tools (Lifecycle & Debugger) -->
+        <div id="tab-tools" class="tab-panel" data-tab="tools">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Tools</h2>
+                        <p class="text-muted">Device lifecycle and payload debugger</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="display:grid; gap:1rem; grid-template-columns: 1fr;">
+                        <div style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+                            <div style="padding:0.75rem 1rem; border-bottom:1px solid var(--border-color); font-weight:600;">
+                                <i class="fas fa-network-wired"></i> Device Lifecycle
+                            </div>
+                            <iframe src="device-lifecycle.php" title="Device Lifecycle" loading="lazy" style="width:100%; height:480px; border:0;"></iframe>
+                        </div>
+                        <div style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+                            <div style="padding:0.75rem 1rem; border-bottom:1px solid var(--border-color); font-weight:600;">
+                                <i class="fas fa-bug"></i> Payload Debugger
+                            </div>
+                            <iframe src="payload-debugger.php" title="Payload Debugger" loading="lazy" style="width:100%; height:480px; border:0;"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><div id="tab-statistics" class="tab-panel" data-tab="statistics">
             <div class="card">
                 <div class="card-header">
                     <div>
@@ -272,3 +392,7 @@ CHANGELOG
 - Added searchable datalist suggestions for Alert/Device/Customer patterns in rule modal.
 - No layout change to markup structure; relies on new modal CSS for proper sizing and scrolling.
 -->
+
+
+
+

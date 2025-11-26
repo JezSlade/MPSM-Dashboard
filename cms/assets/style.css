@@ -3764,3 +3764,5 @@ CHANGELOG
 - Ensured inactive tab panels are hidden; styling aligned with dashboard theme.
 */
 .stats-legend { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+/* Panel payload viewer */
+.payload-viewer { font-family: "Fira Code", "Courier New", monospace; font-size: 0.85rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; max-height: 60vh; overflow: auto; white-space: pre-wrap; }

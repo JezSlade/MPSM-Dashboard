@@ -960,3 +960,185 @@ CHANGELOG
 - Added searchable pattern suggestions (datalists) for alert codes, device serials, and customer codes in the rule modal.
 - Show accurate 1h tallies in notifications using get_aggregations, with 30s client-side cache.
 */
+
+
+// ========================================
+// TAB: Panel Stream (Live Messages)
+// ========================================
+let panelTimerId = null;
+let panelCache = [];
+
+function initPanelTab() {
+    const refreshBtn = document.getElementById('cc-panel-refresh');
+    const limitSel = document.getElementById('cc-panel-limit');
+    const hoursSel = document.getElementById('cc-panel-hours');
+    const customerInput = document.getElementById('cc-panel-customer');
+
+    if (!refreshBtn || !limitSel || !hoursSel) return;
+
+    refreshBtn.onclick = loadPanelMessages;
+    limitSel.onchange = loadPanelMessages;
+    hoursSel.onchange = loadPanelMessages;
+    if (customerInput) {
+        customerInput.onchange = loadPanelMessages;
+        customerInput.onkeyup = (e) => { if (e.key === 'Enter') loadPanelMessages(); };
+    }
+
+    if (customerInput && notificationCustomerFilter) {
+        customerInput.value = notificationCustomerFilter;
+    }
+
+    loadPanelMessages();
+}
+
+function startPanelAutoRefresh() {
+    stopPanelAutoRefresh();
+    panelTimerId = setInterval(() => {
+        if (currentTab === 'panel') {
+            loadPanelMessages();
+        }
+    }, 30000);
+}
+
+function stopPanelAutoRefresh() {
+    if (panelTimerId) {
+        clearInterval(panelTimerId);
+        panelTimerId = null;
+    }
+}
+
+async function loadPanelMessages() {
+    const tbody = document.getElementById('cc-panel-tbody');
+    const last = document.getElementById('cc-panel-last-refresh');
+    const limitSel = document.getElementById('cc-panel-limit');
+    const hoursSel = document.getElementById('cc-panel-hours');
+    const customerInput = document.getElementById('cc-panel-customer');
+    if (!tbody) return;
+
+    const params = new URLSearchParams({ limit: String(limitSel?.value || '200') });
+    if (hoursSel?.value) params.set('hours', String(hoursSel.value));
+    const customerCode = (customerInput?.value || notificationCustomerFilter || '').trim();
+    if (customerCode) params.set('customerCode', customerCode);
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch('api/get-panel-messages.php?' + params.toString(), {
+            credentials: 'same-origin', headers: { 'Accept': 'application/json' }, signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load panel messages');
+        panelCache = data.messages || [];
+        renderPanelRows(panelCache);
+        if (last) last.textContent = 'Last refresh: ' + new Date().toLocaleTimeString() + ' · Auto 30s';
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</td></tr>`;
+        if (last) last.textContent = 'Error';
+    }
+}
+
+function renderPanelRows(rows) {
+    const tbody = document.getElementById('cc-panel-tbody');
+    if (!tbody) return;
+    if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No panel messages captured yet.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(row => {
+        const customer = [
+            row.customer_code ? `<strong>${escapeHtml(row.customer_code)}</strong>` : '',
+            row.customer_description ? `<div>${escapeHtml(row.customer_description)}</div>` : ''
+        ].join('');
+        const displayName = row.display_name || row.panel_configuration || row.maintenance_alert_code || 'Alert';
+        const alertHtml = `
+            <div><strong>${escapeHtml(displayName)}</strong></div>
+            ${row.maintenance_alert_code ? `<div style="font-size:.85em;color:#64748b;">Code: ${escapeHtml(row.maintenance_alert_code)}</div>` : ''}
+            ${row.department ? `<div style=\"color:#334155;\">Dept: ${escapeHtml(row.department)}</div>` : ''}
+        `;
+        const received = row.received_at ? new Date(row.received_at).toLocaleString() : '';
+        return `
+            <tr data-id="${row.id}">
+                <td>${received}</td>
+                <td>${customer || ''}</td>
+                <td>${escapeHtml(row.device_serial || '')}</td>
+                <td>${alertHtml}</td>
+                <td>${escapeHtml(row.panel_configuration || '')}</td>
+                <td><button class="btn btn-secondary btn-small" data-action="view-payload"><i class="fas fa-eye"></i> View</button></td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-action="view-payload"]');
+        if (!btn) return;
+        const tr = btn.closest('tr');
+        const id = tr?.getAttribute('data-id');
+        if (id) showPanelPayload(id);
+    }, { once: true });
+}
+
+function showPanelPayload(id) {
+    const modal = buildPanelModal();
+    const viewer = modal.querySelector('#cc-panel-payload');
+    const message = panelCache.find(r => String(r.id) === String(id));
+    viewer.textContent = message?.payload ? (typeof message.payload === 'object' ? JSON.stringify(message.payload, null, 2) : String(message.payload)) : 'No payload available';
+    modal.classList.add('active');
+}
+
+function buildPanelModal() {
+    let modal = document.getElementById('cc-panel-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'cc-panel-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Payload</h3>
+                <button id="cc-panel-modal-close" class="btn-icon" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <pre id="cc-panel-payload" class="payload-viewer">{}</pre>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+    modal.querySelector('#cc-panel-modal-close')?.addEventListener('click', () => modal.classList.remove('active'));
+    return modal;
+}// ========================================
+// TAB: Alert Definitions (Labels)
+// ========================================
+async function loadDefinitions() {
+    const container = document.getElementById('definitions-container');
+    if (!container) return;
+    container.innerHTML = '<div class="loading">Loading alert labels...</div>';
+    try {
+        const res = await fetch('api/command-center.php?action=get_alert_definitions&limit=200', { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load alert labels');
+        const defs = data.definitions || [];
+        const rows = defs.map(d => `
+            <tr>
+                <td><code>${escapeHtml(d.alert_code)}</code></td>
+                <td>${escapeHtml(d.display_name || '')}</td>
+                <td>${escapeHtml(d.category || '')}</td>
+                <td>${escapeHtml(d.severity_override || '')}</td>
+            </tr>
+        `).join('');
+        container.innerHTML = `
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Severity</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4">No alert labels yet.</td></tr>'}</tbody>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = `<div class=\"error-message\"><i class=\"fas fa-exclamation-triangle\"></i> ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopPanelAutoRefresh(); else if (currentTab === 'panel') startPanelAutoRefresh(); });
+/*\nCHANGELOG\n2025-11-26 Codex\n- Unified Command Center: added Panel Stream and Alert Labels tabs (lazy-loaded) and simple tools tab wiring.\n*/
+
