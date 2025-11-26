@@ -1548,6 +1548,10 @@ const MPSM = (function() {
             });
         }
 
+        // Save customer preference to persist across sessions
+        savePreference('customerCode', code);
+        savePreference('customerName', description || state.customerName || '');
+
         debugLog(`Customer selected: ${code}`, 'info');
         loadDashboard();
     }

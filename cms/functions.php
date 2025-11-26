@@ -283,11 +283,18 @@ function getUserPreferences($userId) {
 
 /**
  * Save user preferences
+ * IMPORTANT: Merges new preferences with existing ones to avoid data loss
  */
 function saveUserPreferences($userId, $preferences) {
     $pdo = getDatabase();
 
-    $json = json_encode($preferences);
+    // Load existing preferences first to merge
+    $existing = getUserPreferences($userId);
+
+    // Merge new preferences with existing (new values override)
+    $merged = array_merge($existing, $preferences);
+
+    $json = json_encode($merged);
 
     $stmt = $pdo->prepare("
         INSERT INTO " . DB_PREFIX . "user_preferences (user_id, preferences)
