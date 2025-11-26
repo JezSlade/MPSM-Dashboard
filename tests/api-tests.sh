@@ -88,7 +88,7 @@ echo "--- Frontend Pages ---"
 
 test_api "Login Page" "GET" "${BASE_URL}/cms/login.html"
 test_api "Dashboard (requires auth)" "GET" "${BASE_URL}/cms/index.php" "302"
-test_api "Panel Message Monitor (requires auth)" "GET" "${BASE_URL}/cms/panel-message-monitor.php" "302"
+test_api "Panel Message Monitor (requires auth)" "GET" "${BASE_URL}/cms/command-center.php?tab=panel" "302"
 test_api "Payload Debugger (requires auth)" "GET" "${BASE_URL}/cms/payload-debugger.php" "302"
 
 echo ""
@@ -122,3 +122,4 @@ else
     echo -e "\n${RED}✗ Some tests failed. Please review.${NC}"
     exit 1
 fi
+

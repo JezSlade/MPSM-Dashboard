@@ -66,7 +66,7 @@ function Test-Endpoint {
 Write-Host "Frontend Tests" -ForegroundColor Yellow
 Write-Host "----------------------------------------"
 $results += Test-Endpoint "Homepage" "$baseUrl/cms/" 302 2.0
-$results += Test-Endpoint "Panel Monitor" "$baseUrl/cms/panel-message-monitor.php" 302 2.0
+$results += Test-Endpoint "Panel Monitor" "$baseUrl/cms/command-center.php?tab=panel" 302 2.0
 $results += Test-Endpoint "Payload Debugger" "$baseUrl/cms/payload-debugger.php" 302 2.0
 Write-Host ""
 
@@ -176,3 +176,4 @@ Write-Host "Fast (<500ms): $fastTests" -ForegroundColor Green
 Write-Host "Good (500ms-2s): $goodTests" -ForegroundColor Yellow
 Write-Host "Slow (>2s): $slowTests" -ForegroundColor $(if ($slowTests -eq 0) { "Green" } else { "Red" })
 Write-Host ""
+

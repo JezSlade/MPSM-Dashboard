@@ -9,7 +9,7 @@
   Summarises DB connectivity, API latency, cache stats, server metrics, and session status. Auto-refreshes every 60 s while the card is visible.
 
 - **Panel Message Monitor**  
-  Route: `/cms/panel-message-monitor.php`.  
+  Route: `/cms/command-center.php?tab=panel`.  
   Auto-refresh: 30 s. Supports hour/limit filters and exposes raw payload JSON in a modal.
 
 - **Database Monitor**  
@@ -102,3 +102,4 @@ Keep this playbook updated whenever new tooling or diagnostics are added.
 - Allow the enhanced cache refresh to complete a full run (without `skipDrilldown`) and confirm the Database Monitor card reports ≥95 % drill-down coverage; record the before/after stats in `BACKGROUND_REFRESH_SYSTEM.md`.
 - Refactor `test-payloads.ps1` to remove non-ASCII characters so it can be executed without parse errors, then check the payload debugger to ensure the expected 2 success / 6 error mix is recorded.
 - After the next live payload arrives from MPS Monitor, capture a screenshot of the debugger showing the populated `Completed` column for support documentation (`PAYLOAD_DEBUGGER_GUIDE.md`).
+

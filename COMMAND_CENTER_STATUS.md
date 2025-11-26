@@ -273,7 +273,7 @@ None currently. System is fully functional and ready for production use.
 
 ## Support Resources
 
-- **Panel Messages Monitor**: https://mpsm.resolutionsbydesign.us/cms/panel-message-monitor.php
+- **Panel Stream (in Command Center)**: https://mpsm.resolutionsbydesign.us/cms/command-center.php?tab=panel
 - **Payload Debugger**: https://mpsm.resolutionsbydesign.us/cms/payload-debugger.php
 - **Command Center**: https://mpsm.resolutionsbydesign.us/cms/command-center.php
 - **Create Sample Rules**: https://mpsm.resolutionsbydesign.us/cms/create-sample-rules.php
@@ -281,4 +281,5 @@ None currently. System is fully functional and ready for production use.
 ---
 
 **Status**: ✅ PRODUCTION READY - Awaiting first notification rules
+
 

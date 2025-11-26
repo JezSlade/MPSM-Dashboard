@@ -213,3 +213,5 @@ Files: cms/command-center.php, cms/assets/command-center.js, cms/assets/style.cs
 - API enhancement: added /cms/api/get-panel-message.php to fetch a single panel message by id for payload modal
 - Pagination: /cms/api/get-panel-messages.php accepts offset (LIMIT/OFFSET)
 - Wired Panel Stream modal to use new single-message endpoint with fallback to cache
+## 2025-11-26 16:36:54 -05:00 - Retire legacy panel monitor
+- panel-message-monitor.php now redirects to unified Command Center (Panel tab); forwards customerCode when available; includes fallback message

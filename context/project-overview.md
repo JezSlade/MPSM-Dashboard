@@ -9,7 +9,7 @@
 Deliver a web dashboard that surfaces dealer-wide device telemetry from MPS Monitor with instant response times, real-time alerting, and auditable diagnostics. The platform now bundles:
 
 - **Dashboard UI:** Rich cards, device drill-down, search, alert management (`cms/index.php`, `cms/assets/app.js`).
-- **Command Center:** Panel message monitor plus payload debugger (pending UI tab integration) (`cms/panel-message-monitor.php`, `cms/payload-debugger.php`).
+- **Command Center:** Panel message monitor plus payload debugger (pending UI tab integration) (`cms/command-center.php?tab=panel`, `cms/payload-debugger.php`).
 - **Background Cache:** Database-backed caches for devices and drill-down payloads (`cms/api/refresh-cache-enhanced.php`).
 - **API Engine:** Hardened proxy and automation layer for the official MPS Monitor API (`mps-api/index.php`, `mps-api/engine.php`).
 - **Panel Message Intake:** Live webhook endpoint with full persistence and UI visualization (`mps-api/callbacks/panel-message.php`, `cms/api/get-panel-messages.php`).
@@ -38,7 +38,7 @@ Deliver a web dashboard that surfaces dealer-wide device telemetry from MPS Moni
 ## High-Value Initiatives In Flight
 
 1. **Cache Population:** Confirm `refresh-cache-enhanced.php` succeeds against live API, then wire CMS endpoints to database cache.
-2. **Command Center Integration:** Add payload debugger tab/iframe inside `cms/panel-message-monitor.php`.
+2. **Command Center Integration:** Add payload debugger tab/iframe inside `cms/command-center.php?tab=panel`.
 3. **Panel Message UI Enhancements:** Add modal tab to visualize `panelHistory` from `get-device-deep-dive.php`.
 
 ## External Dependencies
@@ -51,7 +51,8 @@ Deliver a web dashboard that surfaces dealer-wide device telemetry from MPS Moni
 ## Quick Orientation Checklist
 
 1. Sign in at `/cms/login.html` (default credentials `admin/admin`, auto-created if table empty).
-2. Visit the command center (`/cms/panel-message-monitor.php`) and payload debugger (`/cms/payload-debugger.php`) to confirm live logging.
+2. Visit the command center (`/cms/command-center.php?tab=panel`) and payload debugger (`/cms/payload-debugger.php`) to confirm live logging.
 3. Run `refresh-cache-enhanced.php` manually and inspect `cms/logs/cache-refresh-*.log`.
 4. Review `PAYLOAD_DEBUGGER_GUIDE.md` and `PANEL_INTEGRATION_SUMMARY.md` for the exact payload contract sent to us by MPS Monitor.
 5. Keep `IMMEDIATE_ACTION_ITEMS.md` open for the short list of unresolved follow-ups.
+

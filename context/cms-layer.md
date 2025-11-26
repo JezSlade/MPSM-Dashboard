@@ -1,6 +1,6 @@
-﻿# CMS Layer Guide
+# CMS Layer Guide
 
-> Files referenced: `cms/config.php`, `cms/functions.php`, `cms/index.php`, `cms/assets/`, `cms/api/`, `cms/panel-message-monitor.php`, `cms/payload-debugger.php`
+> Files referenced: `cms/config.php`, `cms/functions.php`, `cms/index.php`, `cms/assets/`, `cms/api/`, `cms/command-center.php`, `cms/payload-debugger.php`
 
 ## Directory Layout
 
@@ -10,7 +10,7 @@ cms/
 |- functions.php             // database + API helpers + caching
 |- index.php                 // authenticated dashboard shell
 |- login.html                // public login page
-|- panel-message-monitor.php // command center (panel stream)
+|- command-center.php // command center (panel stream)
 |- device-lifecycle.php      // device CRUD workspace (feature flagged)
 |- payload-debugger.php      // standalone payload debugger UI
 |- assets/
@@ -31,11 +31,11 @@ cms/
 
 ## Core Utilities (`functions.php`)
 
-- `getDatabase()` â€” PDO singleton with exception mode enabled.
-- `getMPSToken()` / `callMPSAPI()` â€” vendor OAuth helper (CMS still uses direct OAuth for legacy endpoints).
-- `requireAuth()` / `loginUser()` / `trackVisit()` â€” session enforcement and analytics.
-- `getSystemHealth()` â€” comprehensive system diagnostics consumed by the Admin tab.
-- `cacheGet()`, `cacheStore()`, `cacheClear()`, `getCacheStats()` â€” file-based cache located under `cms/api/cache/`.
+- `getDatabase()` — PDO singleton with exception mode enabled.
+- `getMPSToken()` / `callMPSAPI()` — vendor OAuth helper (CMS still uses direct OAuth for legacy endpoints).
+- `requireAuth()` / `loginUser()` / `trackVisit()` — session enforcement and analytics.
+- `getSystemHealth()` — comprehensive system diagnostics consumed by the Admin tab.
+- `cacheGet()`, `cacheStore()`, `cacheClear()`, `getCacheStats()` — file-based cache located under `cms/api/cache/`.
 - All JSON responses funnel through `jsonSuccess()` / `jsonError()` to normalise headers and formatting.
 
 ## Frontend Shell (`index.php`)
@@ -68,8 +68,8 @@ All endpoints call `requireAuth()` and respond with `{success: bool, ...}` JSON 
 
 ## Command Center Surfaces
 
-- **Panel Message Monitor** (`panel-message-monitor.php` + `assets/panel-messages.js`): filters by time window, displays message metadata, opens payload modal.
-- **Payload Debugger** (`payload-debugger.php` + inline JS): auto-refresh UI that consumes `api/get-payload-debug-logs.php`, renders stats, payloads, headers, and a unique-source roll-up. Embedded as a tab inside `panel-message-monitor.php` for same-screen diagnostics.
+- **Panel Message Monitor** (`command-center.php` + `assets/panel-messages.js`): filters by time window, displays message metadata, opens payload modal.
+- **Payload Debugger** (`payload-debugger.php` + inline JS): auto-refresh UI that consumes `api/get-payload-debug-logs.php`, renders stats, payloads, headers, and a unique-source roll-up. Embedded as a tab inside `command-center.php` for same-screen diagnostics.
 - **Device Lifecycle** (`device-lifecycle.php` + `assets/device-crud.js`): feature-flagged CRUD workspace reachable from the monitor. Proxies create/update/delete actions through `mps-api/query`, clears cached device inventories on mutation, and logs every change to `cms/logs/device-crud-YYYY-MM-DD.log` for auditing.
 
 ## Background Cache Flow
@@ -85,8 +85,8 @@ cms/api/refresh-cache-enhanced.php orchestrates the background cache:
 
 ## Next Steps / TODOs
 
-- Schedule a full `refresh-cache-enhanced.php?force=1` run (no `skipDrilldown`) during a quiet window, then confirm the Database Monitor shows ≥95 % drill-down coverage and capture the before/after counts.
-- Add a lightweight alert (badge/toast) when coverage drops below 90 % so operators can trigger the warm-up without digging through logs.
+- Schedule a full `refresh-cache-enhanced.php?force=1` run (no `skipDrilldown`) during a quiet window, then confirm the Database Monitor shows =95?% drill-down coverage and capture the before/after counts.
+- Add a lightweight alert (badge/toast) when coverage drops below 90?% so operators can trigger the warm-up without digging through logs.
 - Surface the cached timestamp inside the device modal once the cache stabilises, helping analysts judge data freshness.
 
 ## Authentication Failure Handling
@@ -94,4 +94,5 @@ cms/api/refresh-cache-enhanced.php orchestrates the background cache:
 - On API errors the frontend surfaces the JSON error message and the log viewer captures the exception.
 - login failures log detail via `error_log()` with anonymised credential info (`cms/api/login.php` lines 36-51).
 - Cross-origin requests from the CMS honour CORS whitelisting in `setSecurityHeaders()` (only same-origin + localhost).
+
 

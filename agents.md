@@ -325,7 +325,7 @@ EOF
 ### Key URLs
 - **Production Dashboard:** https://mpsm.resolutionsbydesign.us/cms/
 - **Production API:** https://mpsm.resolutionsbydesign.us/mps-api/
-- **Panel Monitor:** https://mpsm.resolutionsbydesign.us/cms/panel-message-monitor.php
+- **Command Center (Panel Stream):** https://mpsm.resolutionsbydesign.us/cms/command-center.php?tab=panel
 - **GitHub Actions:** https://github.com/JezSlade/MPSM-Dashboard/actions
 - **cPanel:** https://mpsm.resolutionsbydesign.us:2083
 

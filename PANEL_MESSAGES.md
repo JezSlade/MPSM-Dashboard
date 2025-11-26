@@ -60,19 +60,19 @@ CREATE TABLE mpsm_panel_messages (
 - POST-only method restriction
 
 ### 2. Monitoring UI
-**File**: [`cms/panel-message-monitor.php`](cms/panel-message-monitor.php)
+**Page**: [`cms/command-center.php?tab=panel`](cms/command-center.php)
 
-**Purpose**: Real-time dashboard for viewing incoming panel messages
+**Purpose**: Real-time dashboard for viewing incoming panel messages (Panel Stream tab)
 
 **Features**:
 - Live table view with auto-refresh (30 seconds)
 - Time window filtering (1h, 6h, 12h, 24h, 48h, 72h, 7 days)
 - Limit control (50, 100, 200, 300, 500 messages)
-- Payload viewer modal (formatted JSON)
+- Payload viewer modal (formatted JSON) via `api/get-panel-message.php`
 - Clean, professional UI matching dashboard theme
 
 **Access**:
-- Direct link: `https://mpsm.resolutionsbydesign.us/cms/panel-message-monitor.php`
+- Direct link: `https://mpsm.resolutionsbydesign.us/cms/command-center.php?tab=panel`
 - Dashboard header: Satellite dish icon (📡)
 - Requires authentication
 
@@ -450,3 +450,4 @@ Developed as part of the MPSM Dashboard real-time monitoring initiative. This sy
 **Version**: 1.0
 **Last Updated**: November 5, 2025
 **Next Review**: When processing workflows are implemented
+

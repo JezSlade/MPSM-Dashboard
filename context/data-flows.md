@@ -1,6 +1,6 @@
 # Data & Workflow Flows
 
-> Verified against: `cms/api/*.php`, `cms/assets/app.js`, `cms/assets/panel-messages.js`, `cms/api/refresh-cache-enhanced.php`, `mps-api/callbacks/*.php`
+> Verified against: `cms/api/*.php`, `cms/assets/app.js`, `cms/assets/command-center.js`, `cms/api/refresh-cache-enhanced.php`, `mps-api/callbacks/*.php`
 
 ## 1. Login ➝ Dashboard Load
 
@@ -70,9 +70,9 @@ Refer to `BACKGROUND_REFRESH_SYSTEM.md` and `cms/api/refresh-cache-enhanced.php`
 
 **Monitoring**
 
-1. `cms/panel-message-monitor.php` polls `GET /cms/api/get-panel-messages.php`.
+1. Command Center Panel Stream (`/cms/command-center.php?tab=panel`) polls `GET /cms/api/get-panel-messages.php`.
 2. Query supports `limit` (1-500) and `hours` (1-168) filters.
-3. `assets/panel-messages.js` renders table, updates “Last refresh” badge, and modal payload viewer.
+3. `assets/command-center.js` (Panel tab) renders table, updates “Last refresh” badge, and modal payload viewer (via `api/get-panel-message.php?id=...`).
 4. Future work: add tab/iframe to surface payload debugger within the command center.
 
 ## 6. Payload Debugger UI

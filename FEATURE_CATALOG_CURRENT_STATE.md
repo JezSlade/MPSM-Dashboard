@@ -226,7 +226,7 @@
 ## Panel Message Monitoring
 
 ### Panel Message Monitor Page
-- **File:** [cms/panel-message-monitor.php](cms/panel-message-monitor.php)
+- **File:** [cms/command-center.php?tab=panel](cms/command-center.php?tab=panel)
 - **API:** [cms/api/get-panel-messages.php](cms/api/get-panel-messages.php)
 - **Features:**
   - Panel message list table
@@ -239,7 +239,7 @@
   - Tabs: Messages, Device CRUD (disabled), Payload Debugger
 - **Access Level:** Authenticated users (should be Admin only)
 - **Status:** ✅ Working
-- **Test:** Visit /cms/panel-message-monitor.php
+- **Test:** Visit /cms/command-center.php?tab=panel
 
 ---
 
@@ -629,3 +629,4 @@
 **Status:** Complete Feature Catalog
 **Last Updated:** 2025-11-07
 **Purpose:** Baseline for refactor validation - NO FEATURES SHALL BE LOST
+

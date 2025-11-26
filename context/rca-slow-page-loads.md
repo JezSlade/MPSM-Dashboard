@@ -1,7 +1,7 @@
 # RCA: Slow Initial Load Times for Panel Message Monitor & Command Center
 
 **Date**: 2025-11-10
-**Issue**: Both panel-message-monitor.php and command-center.php have slow initial page loads when navigating from the main dashboard
+**Issue**: Both command-center.php?tab=panel and command-center.php have slow initial page loads when navigating from the main dashboard
 **Reporter**: User
 **Status**: Analysis Complete
 
@@ -12,7 +12,7 @@
 After analyzing both pages, I've identified **5 primary bottlenecks** causing slow initial load times:
 
 1. **External CDN dependency** (Font Awesome) blocks page rendering
-2. **Heavy inline CSS** in panel-message-monitor.php (140+ lines)
+2. **Heavy inline CSS** in command-center.php?tab=panel (140+ lines)
 3. **Multiple synchronous API calls** without preloading hints
 4. **Lazy-loaded iframes** still consume initial parse time
 5. **Missing caching headers** force re-validation on every visit
@@ -23,7 +23,7 @@ After analyzing both pages, I've identified **5 primary bottlenecks** causing sl
 
 ## Detailed Analysis
 
-### Panel Message Monitor ([panel-message-monitor.php](cms/panel-message-monitor.php))
+### Panel Message Monitor ([command-center.php?tab=panel](cms/command-center.php?tab=panel))
 
 #### Blocking Resources (Critical Path)
 
@@ -51,7 +51,7 @@ After analyzing both pages, I've identified **5 primary bottlenecks** causing sl
 
 **Line 285**: panel-messages.js loads synchronously
 ```html
-<script src="assets/panel-messages.js"></script>
+<script src="assets/command-center.js"></script>
 ```
 - **Impact**: Blocks page from becoming interactive until script loads, parses, and executes
 - **Flow**:
@@ -294,7 +294,7 @@ The user has **already experienced** this exact symptom on Command Center. The f
 
 **Panel Message Monitor**:
 ```html
-<script src="assets/panel-messages.js" defer></script>
+<script src="assets/command-center.js" defer></script>
 ```
 
 **Command Center** (after extracting shared.js):
@@ -340,7 +340,7 @@ The user has **already experienced** this exact symptom on Command Center. The f
 
 **4. Move inline CSS to external stylesheet**
 
-**File**: [cms/panel-message-monitor.php:16-158](cms/panel-message-monitor.php#L16-L158)
+**File**: [cms/command-center.php?tab=panel:16-158](cms/command-center.php?tab=panel#L16-L158)
 
 **Fix**: Extract to `cms/assets/panel-monitor.css`
 ```html
@@ -360,7 +360,7 @@ The user has **already experienced** this exact symptom on Command Center. The f
 
 **5. Defer iframe loading until tab clicked**
 
-**File**: [cms/panel-message-monitor.php:260-269](cms/panel-message-monitor.php#L260-L269)
+**File**: [cms/command-center.php?tab=panel:260-269](cms/command-center.php?tab=panel#L260-L269)
 
 **Current**:
 ```html
@@ -478,7 +478,7 @@ button.addEventListener('click', () => {
 
 Use browser DevTools Performance tab:
 
-1. **Navigate** from dashboard to panel-message-monitor.php
+1. **Navigate** from dashboard to command-center.php?tab=panel
 2. **Measure**:
    - Time to First Paint (FP)
    - Time to First Contentful Paint (FCP)
@@ -578,3 +578,4 @@ Use browser DevTools Performance tab:
 **Commit Context**: Recent fixes include command-center.js timeout protection (06a182b), modal CSS fixes (617e750), panel alert descriptions (617e750)
 **Estimated Fix Time**: 4-6 hours for P0+P1 fixes
 **Expected Performance Gain**: 60-70% reduction in Time to Interactive
+

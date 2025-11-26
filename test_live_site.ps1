@@ -38,7 +38,7 @@ try {
 # Test 3: Panel message monitor
 Write-Host "Test 3: Panel message monitor..." -NoNewline
 try {
-    $response = Invoke-WebRequest -Uri "$baseUrl/cms/panel-message-monitor.php" -TimeoutSec 10 -UseBasicParsing
+    $response = Invoke-WebRequest -Uri "$baseUrl/cms/command-center.php?tab=panel" -TimeoutSec 10 -UseBasicParsing
     if ($response.StatusCode -eq 200) {
         Write-Host " PASS" -ForegroundColor Green
     } else {
@@ -100,3 +100,4 @@ Write-Host "3. Rename get-cached-devices.php.NEW to .php on server" -ForegroundC
 Write-Host "4. Run cache refresh: $baseUrl/cms/api/refresh-cache-enhanced.php" -ForegroundColor White
 Write-Host "5. Schedule cron job for cache refresh (every 5 min)" -ForegroundColor White
 Write-Host ""
+

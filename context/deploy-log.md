@@ -86,3 +86,18 @@ CHANGELOG
 2025-11-19 Codex
 - Added the deployment log entry for the versioned response patch to track this upload.
 */
+2025-11-26 15:12:59 -05:00 Commit: Refine Command Center UI & API
+- Files: cms/api/command-center.php, cms/assets/command-center.js, cms/assets/style.css, cms/command-center.php
+- Notes: 1h tallies, alert-type aggregations, customer filter, modal fixes
+2025-11-26 15:13:08 -05:00 Deploy: GitHub Actions auto-FTP (push to main)
+- Command: git push origin main
+- Workflow: .github/workflows/deploy.yml
+- Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
+2025-11-26 15:31:26 -05:00 Deploy: GitHub Actions auto-FTP (push to main)
+- Command: git push origin main
+- Workflow: .github/workflows/deploy.yml
+- Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
+2025-11-26 15:47:42 -05:00 Deploy: GitHub Actions auto-FTP (push to main)
+- Command: git push origin main
+- Workflow: .github/workflows/deploy.yml
+- Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
