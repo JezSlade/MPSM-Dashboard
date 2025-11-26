@@ -209,21 +209,19 @@ function groupNotificationsForDisplay(notifications) {
         const key = `${notif.device_serial || ''}|${notif.alert_code || ''}`;
         const existing = grouped.get(key);
 
-        // Prefer the notification with the highest priority and use the MAX trigger count
-        if (!existing || (notif.priority || 0) > (existing.priority || 0)) {
-            const baseCount = Math.max(
-                existing ? (existing._aggregatedTriggers || existing.trigger_count || 1) : 1,
-                (notif.trigger_count || 1)
-            );
-            grouped.set(key, { ...notif, _aggregatedTriggers: baseCount });
+        if (!existing) {
+            // First occurrence of this key
+            grouped.set(key, { ...notif, _aggregatedTriggers: 1 });
         } else {
-            // Same key, lower or equal priority: keep existing and raise count to the max seen
-            const maxCount = Math.max(
-                existing._aggregatedTriggers || existing.trigger_count || 1,
-                notif.trigger_count || 1
-            );
-            existing._aggregatedTriggers = maxCount;
-            grouped.set(key, existing);
+            // Duplicate found: prefer higher priority and increment count
+            if ((notif.priority || 0) > (existing.priority || 0)) {
+                // Replace with higher priority notification, carry over count
+                grouped.set(key, { ...notif, _aggregatedTriggers: (existing._aggregatedTriggers || 1) + 1 });
+            } else {
+                // Keep existing, increment count
+                existing._aggregatedTriggers = (existing._aggregatedTriggers || 1) + 1;
+                grouped.set(key, existing);
+            }
         }
     });
 
@@ -874,6 +872,9 @@ function populatePatternDatalists() {
 
 /*
 CHANGELOG
+2025-11-26 Claude
+- Fixed trigger count aggregation: Changed from Math.max() to COUNT duplicates to show accurate occurrence numbers.
+
 2025-11-26 Codex
 - Collapsed duplicate notifications (same device + alert) into a single card; use MAX trigger count to avoid inflation.
 - Switched "Alert Aggregations" to a list layout to prevent overflow and improve readability.
