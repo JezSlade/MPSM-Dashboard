@@ -1160,3 +1160,20 @@ async function ccShowPanelPayload(id) {
   }
   modal.classList.add('active');
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  try {
+    const params = new URLSearchParams(location.search);
+    const t = (params.get('tab') || '').trim();
+    const c = (params.get('customerCode') || '').trim();
+    if (c) {
+      notificationCustomerFilter = c;
+      const sel = document.getElementById('notification-customer-filter');
+      if (sel) sel.value = c;
+    }
+    if (t) {
+      const btn = document.querySelector('.monitor-tab-btn[data-tab="' + t + '"]');
+      if (btn) { setTimeout(() => btn.click(), 0); }
+    }
+  } catch (e) { /* ignore */ }
+});
