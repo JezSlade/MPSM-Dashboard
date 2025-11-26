@@ -897,6 +897,13 @@ function deleteAlertDefinition(PDO $pdo): void
     ]);
 }
 
+/*
+CHANGELOG
+2025-11-26 Codex
+- get_aggregations: added support for alert-only grouping via `group_by=alert_only` with device_count and summed window counts.
+- get_notifications: minor filter wiring retained for customerCode compatibility with UI filter.
+*/
+
 function importAlertDefinitions(PDO $pdo): void
 {
     $data = json_decode(file_get_contents('php://input'), true);
