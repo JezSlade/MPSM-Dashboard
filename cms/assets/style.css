@@ -1206,6 +1206,67 @@ main {
     transition: width 0.3s ease;
 }
 
+/* Command Center / Monitor Tabs */
+.monitor-container {
+    margin: 2rem auto;
+    max-width: 1200px;
+}
+
+.monitor-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.monitor-tab-btn {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.monitor-tab-btn i { font-size: 0.95rem; }
+
+.monitor-tab-btn:hover { background: var(--bg-secondary); }
+
+.monitor-tab-btn.active {
+    background: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.monitor-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.monitor-controls .form-control {
+    min-width: 160px;
+}
+
+.toggle-label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+/*
+CHANGELOG
+2025-11-26 Codex
+- Added tab styles (.monitor-tabs, .monitor-tab-btn, .tab-panel) so only active panel shows.
+- Minor monitor layout and controls styling to align with dashboard theme.
+*/
+
 .toner-chip__label {
     position: relative;
     z-index: 1;
@@ -3640,4 +3701,7 @@ CHANGELOG
 - Added badges/cards for duplicate IP summaries and inline lifecycle link styling.
 2025-11-25 Codex
 - Added clickable duplicate IP cards and comparison grid styling with lifecycle action buttons for the Customer Snapshot modal.
+2025-11-26 Codex
+- Added Command Center tab styles (.monitor-tabs, .monitor-tab-btn, .tab-panel) and monitor layout controls.
+- Ensured inactive tab panels are hidden; styling aligned with dashboard theme.
 */

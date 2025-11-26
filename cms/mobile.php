@@ -114,13 +114,13 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                         <div class="quick-value">Devices</div>
                     </div>
                 </button>
-                <a class="quick-card" href="device-lifecycle.php">
+                <button class="quick-card" data-target="lifecycle">
                     <div class="quick-icon success"><i class="fas fa-server"></i></div>
                     <div>
                         <div class="quick-label">Lifecycle</div>
                         <div class="quick-value">Manage</div>
                     </div>
-                </a>
+                </button>
             </section>
 
             <section id="mobile-alerts" class="mobile-section active" data-section="alerts">
@@ -157,6 +157,52 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                         <i class="fas fa-search"></i>
                         <p>Start typing to search devices</p>
                     </div>
+                </div>
+            </section>
+
+            <section id="mobile-lifecycle" class="mobile-section" data-section="lifecycle">
+                <div class="section-header">
+                    <div>
+                        <p class="section-eyebrow">Device lifecycle</p>
+                        <h2>Manage devices</h2>
+                    </div>
+                    <div class="section-actions">
+                        <button id="lifecycle-refresh" class="icon-btn small" title="Refresh lifecycle list"><i class="fas fa-sync-alt"></i></button>
+                        <button id="lifecycle-create-open" class="icon-btn small" title="Add device"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <form id="lifecycle-filters" class="lifecycle-filters">
+                    <div class="field">
+                        <label for="lifecycle-customer">Customer</label>
+                        <input id="lifecycle-customer" name="customerCode" type="text" inputmode="text" placeholder="Default or leave blank" value="<?php echo $customerCode; ?>">
+                    </div>
+                    <div class="field">
+                        <label for="lifecycle-search">Search</label>
+                        <input id="lifecycle-search" name="search" type="search" inputmode="search" placeholder="Serial, asset, model...">
+                    </div>
+                    <div class="field field-inline">
+                        <label for="lifecycle-rows">Rows</label>
+                        <select id="lifecycle-rows" name="pageRows">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="field actions">
+                        <button type="submit" class="btn-primary small"><i class="fas fa-filter"></i> Apply</button>
+                        <button type="button" id="lifecycle-reset" class="btn-secondary small">Reset</button>
+                    </div>
+                </form>
+                <div id="lifecycle-list" class="mobile-card-list">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading devices...</p>
+                    </div>
+                </div>
+                <div class="lifecycle-pagination">
+                    <button id="lifecycle-prev" class="btn-secondary small" disabled><i class="fas fa-chevron-left"></i></button>
+                    <div id="lifecycle-meta" class="pagination-meta">Page 1</div>
+                    <button id="lifecycle-next" class="btn-secondary small" disabled><i class="fas fa-chevron-right"></i></button>
                 </div>
             </section>
 
@@ -201,15 +247,147 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                 <i class="fas fa-print"></i>
                 <span>Lookup</span>
             </button>
-            <a class="nav-btn" href="device-lifecycle.php">
+            <button class="nav-btn" data-target="lifecycle">
                 <i class="fas fa-server"></i>
                 <span>Lifecycle</span>
-            </a>
+            </button>
             <button class="nav-btn" data-target="more">
                 <i class="fas fa-ellipsis-h"></i>
                 <span>More</span>
             </button>
         </nav>
+    </div>
+
+    <div id="lifecycle-overlay" class="sheet-overlay" aria-hidden="true"></div>
+
+    <div id="lifecycle-create-sheet" class="mobile-sheet" aria-hidden="true">
+        <header class="sheet-header">
+            <div>
+                <p class="section-eyebrow">Create</p>
+                <h3>Add device</h3>
+            </div>
+            <button class="icon-btn" data-close-sheet="lifecycle-create-sheet"><i class="fas fa-times"></i></button>
+        </header>
+        <form id="lifecycle-create-form" class="sheet-form">
+            <div class="field">
+                <label for="create-customer">Customer Code</label>
+                <input id="create-customer" name="customerCode" type="text" value="<?php echo $customerCode; ?>" required>
+            </div>
+            <div class="field">
+                <label for="create-serial">Serial Number</label>
+                <input id="create-serial" name="serialNumber" type="text" required>
+            </div>
+            <div class="field">
+                <label for="create-brand">Brand</label>
+                <input id="create-brand" name="brand" type="text" required>
+            </div>
+            <div class="field">
+                <label for="create-model">Model</label>
+                <input id="create-model" name="model" type="text" required>
+            </div>
+            <div class="field">
+                <label for="create-product-description">Product Description</label>
+                <input id="create-product-description" name="productDescription" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="create-asset">Asset Number</label>
+                <input id="create-asset" name="assetNumber" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="create-department">Department / Location</label>
+                <input id="create-department" name="department" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="create-contact">Contact</label>
+                <input id="create-contact" name="contact" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="create-ip">IP Address</label>
+                <input id="create-ip" name="ipAddress" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="create-note">Note</label>
+                <textarea id="create-note" name="note" rows="3" placeholder="Optional"></textarea>
+            </div>
+            <div class="field checkbox-field">
+                <label>
+                    <input id="create-managed" name="isManaged" type="checkbox" checked>
+                    <span>Managed device</span>
+                </label>
+            </div>
+            <footer class="sheet-actions">
+                <button type="button" class="btn-secondary" data-close-sheet="lifecycle-create-sheet">Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Create</button>
+            </footer>
+        </form>
+    </div>
+
+    <div id="lifecycle-update-sheet" class="mobile-sheet" aria-hidden="true">
+        <header class="sheet-header">
+            <div>
+                <p class="section-eyebrow">Update</p>
+                <h3 id="update-sheet-title">Edit device</h3>
+            </div>
+            <button class="icon-btn" data-close-sheet="lifecycle-update-sheet"><i class="fas fa-times"></i></button>
+        </header>
+        <form id="lifecycle-update-form" class="sheet-form">
+            <input type="hidden" id="update-device-id" name="deviceId">
+            <div class="pill-row" id="update-device-meta"></div>
+            <div class="field">
+                <label for="update-brand">New Brand</label>
+                <input id="update-brand" name="newProductBrand" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-model">New Model</label>
+                <input id="update-model" name="newProductModel" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-asset">Asset Number</label>
+                <input id="update-asset" name="assetNumber" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-department">Department / Location</label>
+                <input id="update-department" name="department" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-contact">Contact</label>
+                <input id="update-contact" name="contact" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-ip">IP Address</label>
+                <input id="update-ip" name="ipAddress" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-product-description">Product Description</label>
+                <input id="update-product-description" name="productDescription" type="text" placeholder="Optional">
+            </div>
+            <div class="field">
+                <label for="update-note">Note</label>
+                <textarea id="update-note" name="note" rows="3" placeholder="Optional"></textarea>
+            </div>
+            <div class="field checkbox-field">
+                <label>
+                    <input id="update-managed" name="isManaged" type="checkbox">
+                    <span>Managed device</span>
+                </label>
+            </div>
+            <div class="field checkbox-field">
+                <label>
+                    <input id="update-alerts" name="isGenerateAlert" type="checkbox">
+                    <span>Generate alerts</span>
+                </label>
+            </div>
+            <div class="field checkbox-field">
+                <label>
+                    <input id="update-repeat-alerts" name="manageRepeatedAlerts" type="checkbox">
+                    <span>Manage repeated alerts</span>
+                </label>
+            </div>
+            <footer class="sheet-actions">
+                <button type="button" class="btn-secondary" data-close-sheet="lifecycle-update-sheet">Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save</button>
+            </footer>
+        </form>
     </div>
 
     <div id="mobile-device-modal" class="mobile-modal" aria-hidden="true">
@@ -264,5 +442,7 @@ CHANGELOG
 - Linked Panel Monitor navigation with the active customer so alert scoping matches the main dashboard.
 2025-11-25 Codex
 - Added mobile preference cookies and desktop override to mirror desktop redirect behavior and improve session persistence.
+2025-11-29 Codex
+- Added mobile-native lifecycle list with filters, pagination, and create/update sheets to match desktop CRUD fields on small screens.
 */
 ?>

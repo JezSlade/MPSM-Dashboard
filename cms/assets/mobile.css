@@ -622,6 +622,173 @@ body {
     border: 1px solid var(--border);
 }
 
+.lifecycle-filters {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-bottom: 12px;
+}
+
+.lifecycle-filters .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lifecycle-filters input,
+.lifecycle-filters select {
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+}
+
+.lifecycle-filters .actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.btn-primary.small,
+.btn-secondary.small {
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.lifecycle-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lifecycle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.lifecycle-row.meta {
+    color: var(--text-muted);
+    font-size: 14px;
+    flex-wrap: wrap;
+}
+
+.lifecycle-serial {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.lifecycle-sub {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.lifecycle-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.lifecycle-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.pagination-meta {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 2000;
+}
+
+.sheet-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mobile-sheet {
+    position: fixed;
+    inset: auto 0 0 0;
+    background: #0f172a;
+    color: var(--text);
+    border-radius: 18px 18px 0 0;
+    box-shadow: var(--shadow);
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    z-index: 2001;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.mobile-sheet.active {
+    transform: translateY(0);
+}
+
+.sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.sheet-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sheet-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sheet-form input,
+.sheet-form select,
+.sheet-form textarea {
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+}
+
+.sheet-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pill {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -651,4 +818,6 @@ CHANGELOG
 - Refined mobile visual design (gradient header, stronger contrast, blur nav, clearer switch status) for a cleaner look.
 2025-11-24 Codex
 - Restyled header to use a single inline customer dropdown as the title for faster switching.
+2025-11-29 Codex
+- Styled mobile lifecycle list, pagination, and create/update sheets to mirror desktop CRUD ergonomics on phones.
 */

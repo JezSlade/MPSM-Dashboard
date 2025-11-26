@@ -175,12 +175,43 @@ async function loadNotifications(silent = false) {
             throw new Error(data.error || 'Failed to load notifications');
         }
 
-        renderNotifications(data.notifications || []);
+        // Group duplicate notifications (same device + alert) into a single card
+        const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        const grouped = groupNotificationsForDisplay(notifications);
+        renderNotifications(grouped);
     } catch (error) {
         console.error('Error loading notifications:', error);
         const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
         container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
     }
+}
+
+// Group notifications by device + alert to prevent duplicates
+function groupNotificationsForDisplay(notifications) {
+    if (!notifications || notifications.length === 0) return [];
+
+    const grouped = new Map();
+
+    notifications.forEach((notif) => {
+        const key = `${notif.device_serial || ''}|${notif.alert_code || ''}|${notif.alert_display_name || ''}`;
+        const existing = grouped.get(key);
+
+        // Prefer the notification with the highest priority
+        if (!existing || (notif.priority || 0) > (existing.priority || 0)) {
+            const aggregatedCount = existing
+                ? (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1)
+                : (notif.trigger_count || 1);
+
+            grouped.set(key, { ...notif, _aggregatedTriggers: aggregatedCount });
+        } else {
+            // Same key, lower or equal priority: accumulate triggers only
+            existing._aggregatedTriggers = (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1);
+            grouped.set(key, existing);
+        }
+    });
+
+    // Preserve order by severity/priority then time similar to API default
+    return Array.from(grouped.values()).sort((a, b) => (b.priority || 0) - (a.priority || 0));
 }
 
 function renderNotifications(notifications) {
@@ -194,6 +225,7 @@ function renderNotifications(notifications) {
     const html = notifications.map(notif => {
         const config = SEVERITY_CONFIG[notif.severity] || SEVERITY_CONFIG.info;
         const statusClass = notif.status === 'acknowledged' ? 'acknowledged' : '';
+        const triggerCount = notif._aggregatedTriggers || notif.trigger_count || 0;
 
         return `
             <div class="notification-card ${statusClass}" data-id="${notif.id}" data-severity="${notif.severity}">
@@ -221,10 +253,10 @@ function renderNotifications(notifications) {
                     </div>
                 </div>
                 <div class="notification-message">${escapeHtml(notif.message)}</div>
-                ${notif.trigger_count && notif.time_window_hours ? `
+                ${triggerCount > 1 ? `
                     <div class="notification-stats">
-                        <span><i class="fas fa-chart-line"></i> ${notif.trigger_count} occurrences</span>
-                        <span><i class="fas fa-clock"></i> Last ${notif.time_window_hours} hours</span>
+                        <span><i class="fas fa-chart-line"></i> ${triggerCount} occurrences</span>
+                        ${notif.time_window_hours ? `<span><i class=\"fas fa-clock\"></i> Last ${notif.time_window_hours} hours</span>` : ''}
                     </div>
                 ` : ''}
             </div>
@@ -716,3 +748,10 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+/*
+CHANGELOG
+2025-11-26 Codex
+- Collapsed duplicate notifications (same device + alert) into a single card with aggregated trigger count.
+- Updated render to display aggregated occurrences consistently with hero header behavior.
+*/

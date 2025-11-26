@@ -7,11 +7,22 @@ const MobileApp = (() => {
         lastQuery: '',
         customers: [],
         customerSearchTimeout: null,
-        customerSearchTerm: ''
+        customerSearchTerm: '',
+        lifecycle: {
+            page: 1,
+            pageRows: 50,
+            total: 0,
+            totalPages: 1,
+            search: '',
+            customerCode: (config.customerCode || '').trim(),
+            devices: [],
+            loading: false
+        }
     };
 
     let alertInterval = null;
     let searchTimeout = null;
+    let lifecycleSnapshot = null;
 
     const fetchJson = async (url, options = {}, retries = 2) => {
         let attempt = 0;
@@ -71,6 +82,10 @@ const MobileApp = (() => {
         });
 
         state.activeSection = target;
+
+        if (target === 'lifecycle') {
+            loadLifecycle().catch(() => {});
+        }
     };
 
     const renderAlerts = (list) => {
@@ -118,6 +133,273 @@ const MobileApp = (() => {
         const alerts = Array.isArray(data.notifications) ? data.notifications : [];
         state.alerts = alerts;
         renderAlerts(alerts);
+    };
+
+    const updateLifecycleMeta = () => {
+        const meta = document.getElementById('lifecycle-meta');
+        if (!meta) return;
+        meta.textContent = `Page ${state.lifecycle.page} of ${state.lifecycle.totalPages} • ${state.lifecycle.total} devices`;
+    };
+
+    const renderLifecycleList = () => {
+        const container = document.getElementById('lifecycle-list');
+        if (!container) return;
+
+        if (!state.lifecycle.devices.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-search"></i>
+                    <p>No devices matched the filters</p>
+                </div>
+            `;
+            updateLifecycleMeta();
+            return;
+        }
+
+        container.innerHTML = state.lifecycle.devices.map(device => {
+            const serial = escapeHtml(device.SerialNumber || device.DeviceSerialNumber || '—');
+            const customer = escapeHtml(device.CustomerDescription || device.CustomerName || device.CustomerCode || '—');
+            const model = escapeHtml(device.ProductModel || device.Model || '—');
+            const brand = escapeHtml(device.ProductBrand || device.Brand || '—');
+            const asset = escapeHtml(device.AssetNumber || device.Asset || '—');
+            const status = device.IsUninstalled ? 'Uninstalled' : (device.IsOffline ? 'Offline' : 'Active');
+            const deviceId = device.DeviceId || device.Id || device.InstalledProductId || '';
+
+            return `
+                <article class="lifecycle-card" data-device-id="${escapeHtml(deviceId)}">
+                    <div class="lifecycle-row">
+                        <div>
+                            <div class="lifecycle-serial">${serial}</div>
+                            <div class="lifecycle-sub">${customer}</div>
+                        </div>
+                        <span class="badge ${status.toLowerCase()}">${status}</span>
+                    </div>
+                    <div class="lifecycle-row meta">
+                        <span><i class="fas fa-box"></i> ${brand} / ${model}</span>
+                        <span><i class="fas fa-barcode"></i> ${asset}</span>
+                    </div>
+                    <div class="lifecycle-actions">
+                        <button class="btn-secondary small" data-action="edit"><i class="fas fa-pen"></i> Edit</button>
+                        <button class="btn-danger small" data-action="delete"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        container.querySelectorAll('[data-action="edit"]').forEach(btn => {
+            btn.addEventListener('click', (event) => {
+                const card = event.target.closest('.lifecycle-card');
+                const deviceId = card?.dataset.deviceId;
+                const device = state.lifecycle.devices.find(d => String(d.DeviceId || d.Id || d.InstalledProductId || '') === deviceId);
+                if (device) {
+                    openUpdateSheet(device);
+                }
+            });
+        });
+
+        container.querySelectorAll('[data-action="delete"]').forEach(btn => {
+            btn.addEventListener('click', (event) => {
+                const card = event.target.closest('.lifecycle-card');
+                const deviceId = card?.dataset.deviceId;
+                if (deviceId) {
+                    deleteDevice(deviceId);
+                }
+            });
+        });
+
+        updateLifecycleMeta();
+    };
+
+    const updateLifecycleControls = () => {
+        const prevBtn = document.getElementById('lifecycle-prev');
+        const nextBtn = document.getElementById('lifecycle-next');
+        if (prevBtn) prevBtn.disabled = state.lifecycle.page <= 1;
+        if (nextBtn) nextBtn.disabled = state.lifecycle.page >= state.lifecycle.totalPages;
+    };
+
+    const loadLifecycle = async () => {
+        if (state.lifecycle.loading) return;
+        const container = document.getElementById('lifecycle-list');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading devices...</p>
+                </div>
+            `;
+        }
+        state.lifecycle.loading = true;
+        try {
+            const params = new URLSearchParams();
+            params.set('page', String(state.lifecycle.page));
+            params.set('pageRows', String(state.lifecycle.pageRows));
+            params.set('sortColumn', 'AssetNumber');
+            params.set('sortOrder', 'Asc');
+            if (state.lifecycle.customerCode) {
+                params.set('customerCode', state.lifecycle.customerCode);
+            }
+            if (state.lifecycle.search) {
+                params.set('search', state.lifecycle.search);
+            }
+
+            const data = await fetchJson(`api/device-list.php?${params.toString()}`);
+            state.lifecycle.devices = Array.isArray(data.devices) ? data.devices : [];
+            state.lifecycle.total = data.total || state.lifecycle.devices.length;
+            state.lifecycle.totalPages = Math.max(1, Math.ceil(state.lifecycle.total / state.lifecycle.pageRows));
+            renderLifecycleList();
+            updateLifecycleControls();
+        } catch (error) {
+            if (container) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        } finally {
+            state.lifecycle.loading = false;
+            updateLifecycleMeta();
+            updateLifecycleControls();
+        }
+    };
+
+    const openSheet = (id) => {
+        const sheet = document.getElementById(id);
+        const overlay = document.getElementById('lifecycle-overlay');
+        if (sheet && overlay) {
+            sheet.setAttribute('aria-hidden', 'false');
+            sheet.classList.add('active');
+            overlay.setAttribute('aria-hidden', 'false');
+            overlay.classList.add('active');
+            overlay.dataset.target = id;
+        }
+    };
+
+    const closeSheet = (id) => {
+        const sheet = document.getElementById(id);
+        const overlay = document.getElementById('lifecycle-overlay');
+        if (sheet) {
+            sheet.setAttribute('aria-hidden', 'true');
+            sheet.classList.remove('active');
+        }
+        if (overlay && (!id || overlay.dataset.target === id)) {
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.classList.remove('active');
+            overlay.dataset.target = '';
+        }
+    };
+
+    const resetCreateSheet = () => {
+        const form = document.getElementById('lifecycle-create-form');
+        if (!form) return;
+        form.reset();
+        const defaultCustomer = document.getElementById('create-customer');
+        if (defaultCustomer) {
+            defaultCustomer.value = (config.customerCode || '').trim();
+        }
+        const managed = document.getElementById('create-managed');
+        if (managed) {
+            managed.checked = true;
+        }
+    };
+
+    const lifecycleSnapshotFromDevice = (device) => ({
+        assetNumber: device.AssetNumber || device.Asset || '',
+        department: device.Department || device.Location || '',
+        contact: device.Contact || device.ContactName || '',
+        ipAddress: device.AddressIP || device.IPAddress || device.IpAddress || device.IP || '',
+        note: device.Note || device.Notes || '',
+        productDescription: device.ProductDescription || device.Description || '',
+        isManaged: Boolean(device.IsManaged),
+        isGenerateAlert: Boolean(device.IsGenerateAlert),
+        manageRepeatedAlerts: Boolean(device.ManageRepeatedAlerts),
+        brand: device.ProductBrand || device.Brand || '',
+        model: device.ProductModel || device.Model || ''
+    });
+
+    const openUpdateSheet = (device) => {
+        const form = document.getElementById('lifecycle-update-form');
+        const meta = document.getElementById('update-device-meta');
+        const title = document.getElementById('update-sheet-title');
+        if (!form) return;
+
+        lifecycleSnapshot = lifecycleSnapshotFromDevice(device);
+
+        form.reset();
+        form.querySelector('#update-device-id').value = device.DeviceId || device.Id || device.InstalledProductId || '';
+        form.querySelector('#update-brand').value = '';
+        form.querySelector('#update-model').value = '';
+        form.querySelector('#update-asset').value = lifecycleSnapshot.assetNumber;
+        form.querySelector('#update-department').value = lifecycleSnapshot.department;
+        form.querySelector('#update-contact').value = lifecycleSnapshot.contact;
+        form.querySelector('#update-ip').value = lifecycleSnapshot.ipAddress;
+        form.querySelector('#update-product-description').value = lifecycleSnapshot.productDescription;
+        form.querySelector('#update-note').value = lifecycleSnapshot.note;
+
+        const managed = form.querySelector('#update-managed');
+        const alerts = form.querySelector('#update-alerts');
+        const repeats = form.querySelector('#update-repeat-alerts');
+        if (managed) managed.checked = lifecycleSnapshot.isManaged;
+        if (alerts) alerts.checked = lifecycleSnapshot.isGenerateAlert;
+        if (repeats) repeats.checked = lifecycleSnapshot.manageRepeatedAlerts;
+
+        if (meta) {
+            const serial = escapeHtml(device.SerialNumber || device.DeviceSerialNumber || '—');
+            const customer = escapeHtml(device.CustomerDescription || device.CustomerCode || '—');
+            meta.innerHTML = `
+                <span class="pill">${serial}</span>
+                <span class="pill">${customer}</span>
+            `;
+        }
+        if (title) {
+            title.textContent = `Edit ${device.SerialNumber || device.DeviceSerialNumber || 'device'}`;
+        }
+
+        openSheet('lifecycle-update-sheet');
+    };
+
+    const collectUpdatePayload = (form) => {
+        const payload = { deviceId: form.querySelector('#update-device-id').value };
+        const snapshot = lifecycleSnapshot || {};
+
+        const diffField = (name, value, originalValue) => {
+            const current = (value ?? '').trim();
+            const original = (originalValue ?? '').toString().trim();
+            if (current !== original) {
+                payload[name] = current;
+            }
+        };
+
+        diffField('newProductBrand', form.querySelector('#update-brand').value, '');
+        diffField('newProductModel', form.querySelector('#update-model').value, '');
+        diffField('assetNumber', form.querySelector('#update-asset').value, snapshot.assetNumber);
+        diffField('department', form.querySelector('#update-department').value, snapshot.department);
+        diffField('contact', form.querySelector('#update-contact').value, snapshot.contact);
+        diffField('ipAddress', form.querySelector('#update-ip').value, snapshot.ipAddress);
+        diffField('productDescription', form.querySelector('#update-product-description').value, snapshot.productDescription);
+        diffField('note', form.querySelector('#update-note').value, snapshot.note);
+
+        const managed = form.querySelector('#update-managed')?.checked ?? snapshot.isManaged;
+        const alerts = form.querySelector('#update-alerts')?.checked ?? snapshot.isGenerateAlert;
+        const repeats = form.querySelector('#update-repeat-alerts')?.checked ?? snapshot.manageRepeatedAlerts;
+        if (managed !== snapshot.isManaged) payload.isManaged = managed;
+        if (alerts !== snapshot.isGenerateAlert) payload.isGenerateAlert = alerts;
+        if (repeats !== snapshot.manageRepeatedAlerts) payload.manageRepeatedAlerts = repeats;
+
+        return payload;
+    };
+
+    const deleteDevice = async (deviceId) => {
+        if (!deviceId) return;
+        const confirmed = window.confirm('Delete this device? This cannot be undone.');
+        if (!confirmed) return;
+        await fetchJson('api/device-delete.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId })
+        });
+        await loadLifecycle();
     };
 
     const renderLookupResults = (results, query) => {
@@ -426,6 +708,11 @@ const MobileApp = (() => {
         if (state.lastQuery && state.lastQuery.length >= 2) {
             searchDevices(state.lastQuery).catch(() => {});
         }
+        state.lifecycle.customerCode = code;
+        if (state.activeSection === 'lifecycle') {
+            state.lifecycle.page = 1;
+            loadLifecycle().catch(() => {});
+        }
     };
 
     const escapeHtml = (value) => {
@@ -518,6 +805,117 @@ const MobileApp = (() => {
         }, 30000);
     };
 
+    const bindLifecycle = () => {
+        const form = document.getElementById('lifecycle-filters');
+        const resetBtn = document.getElementById('lifecycle-reset');
+        const refreshBtn = document.getElementById('lifecycle-refresh');
+        const createBtn = document.getElementById('lifecycle-create-open');
+        const prevBtn = document.getElementById('lifecycle-prev');
+        const nextBtn = document.getElementById('lifecycle-next');
+        const overlay = document.getElementById('lifecycle-overlay');
+        const createForm = document.getElementById('lifecycle-create-form');
+        const updateForm = document.getElementById('lifecycle-update-form');
+
+        form?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const customer = document.getElementById('lifecycle-customer')?.value.trim() || '';
+            const search = document.getElementById('lifecycle-search')?.value.trim() || '';
+            const rows = parseInt(document.getElementById('lifecycle-rows')?.value || '50', 10);
+            state.lifecycle.customerCode = customer;
+            state.lifecycle.search = search;
+            state.lifecycle.pageRows = Number.isNaN(rows) ? 50 : rows;
+            state.lifecycle.page = 1;
+            loadLifecycle().catch(() => {});
+        });
+
+        resetBtn?.addEventListener('click', () => {
+            const customerInput = document.getElementById('lifecycle-customer');
+            const searchInput = document.getElementById('lifecycle-search');
+            const rowsSelect = document.getElementById('lifecycle-rows');
+            if (customerInput) customerInput.value = (config.customerCode || '').trim();
+            if (searchInput) searchInput.value = '';
+            if (rowsSelect) rowsSelect.value = '50';
+            state.lifecycle.customerCode = (config.customerCode || '').trim();
+            state.lifecycle.search = '';
+            state.lifecycle.pageRows = 50;
+            state.lifecycle.page = 1;
+            loadLifecycle().catch(() => {});
+        });
+
+        refreshBtn?.addEventListener('click', () => {
+            loadLifecycle().catch(() => {});
+        });
+
+        createBtn?.addEventListener('click', () => {
+            resetCreateSheet();
+            openSheet('lifecycle-create-sheet');
+        });
+
+        prevBtn?.addEventListener('click', () => {
+            if (state.lifecycle.page > 1) {
+                state.lifecycle.page -= 1;
+                loadLifecycle().catch(() => {});
+            }
+        });
+
+        nextBtn?.addEventListener('click', () => {
+            if (state.lifecycle.page < state.lifecycle.totalPages) {
+                state.lifecycle.page += 1;
+                loadLifecycle().catch(() => {});
+            }
+        });
+
+        overlay?.addEventListener('click', () => {
+            closeSheet(overlay.dataset.target || '');
+        });
+
+        document.querySelectorAll('[data-close-sheet]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget.getAttribute('data-close-sheet');
+                closeSheet(target);
+            });
+        });
+
+        createForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(createForm);
+            const payload = Object.fromEntries(formData.entries());
+            payload.isManaged = document.getElementById('create-managed')?.checked ?? false;
+            try {
+                await fetchJson('api/device-create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                closeSheet('lifecycle-create-sheet');
+                await loadLifecycle();
+            } catch (error) {
+                window.alert(error.message || 'Create failed');
+            }
+        });
+
+        updateForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!updateForm) return;
+            const payload = collectUpdatePayload(updateForm);
+            if (Object.keys(payload).length <= 1) {
+                window.alert('No changes to save.');
+                return;
+            }
+            try {
+                await fetchJson('api/device-update.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                closeSheet('lifecycle-update-sheet');
+                await loadLifecycle();
+            } catch (error) {
+                window.alert(error.message || 'Update failed');
+            }
+        });
+    };
+
     const bindModal = () => {
         const modal = document.getElementById('mobile-device-modal');
         const closeBtn = document.getElementById('mobile-modal-close');
@@ -574,6 +972,7 @@ const MobileApp = (() => {
         bindSearch();
         bindCustomerSwitch();
         bindAlerts();
+        bindLifecycle();
         bindModal();
         bindHeaderActions();
         loadAlerts().catch(() => {});
@@ -600,4 +999,6 @@ CHANGELOG
 - Added 429-aware fetch retry helper to keep mobile alerts and search resilient under rate limits.
 2025-11-25 Codex
 - Aligned mobile fetches with dashboard by sending credentials and guarding against HTML responses to prevent “Unexpected token '<'” search errors.
+2025-11-29 Codex
+- Added mobile lifecycle section with filters, pagination, create/update sheets, and delete actions mirroring desktop CRUD fields (IP, location, asset, contact, note, description).
 */
