@@ -171,18 +171,22 @@ trackVisit('/command-center');
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="rule-alert-pattern">Alert Code Pattern</label>
-                                <input type="text" id="rule-alert-pattern" name="alert_code_pattern" class="form-control" placeholder="e.g., JAM% or E-001">
+                                <input type="text" id="rule-alert-pattern" name="alert_code_pattern" class="form-control" list="alert-code-options" placeholder="e.g., JAM% or E-001">
                             </div>
                             <div class="form-group">
                                 <label for="rule-device-pattern">Device Serial Pattern</label>
-                                <input type="text" id="rule-device-pattern" name="device_serial_pattern" class="form-control" placeholder="e.g., SN-%">
+                                <input type="text" id="rule-device-pattern" name="device_serial_pattern" class="form-control" list="device-serial-options" placeholder="e.g., SN-%">
                             </div>
                             <div class="form-group">
                                 <label for="rule-customer-pattern">Customer Code Pattern</label>
-                                <input type="text" id="rule-customer-pattern" name="customer_code_pattern" class="form-control" placeholder="e.g., CUST-%">
+                                <input type="text" id="rule-customer-pattern" name="customer_code_pattern" class="form-control" list="customer-code-options" placeholder="e.g., CUST-%">
                             </div>
                         </div>
                     </div>
+                    <!-- Pattern suggestion lists (populated by JS) -->
+                    <datalist id="alert-code-options"></datalist>
+                    <datalist id="device-serial-options"></datalist>
+                    <datalist id="customer-code-options"></datalist>
 
                     <!-- Frequency Threshold -->
                     <div class="form-section">
@@ -259,3 +263,9 @@ trackVisit('/command-center');
     <script src="assets/command-center.js"></script>
 </body>
 </html>
+<!--
+CHANGELOG
+2025-11-26 Codex
+- Added searchable datalist suggestions for Alert/Device/Customer patterns in rule modal.
+- No layout change to markup structure; relies on new modal CSS for proper sizing and scrolling.
+-->

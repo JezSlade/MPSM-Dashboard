@@ -7,6 +7,8 @@
 let autoRefreshInterval = null;
 let currentTab = 'notifications';
 let notificationFilter = '';
+let _aggMap = null; // cache of alert aggregations keyed by device|alert
+let _aggMapLoadedAt = 0;
 
 // Severity Configuration
 const SEVERITY_CONFIG = {
@@ -178,6 +180,17 @@ async function loadNotifications(silent = false) {
         // Group duplicate notifications (same device + alert) into a single card
         const notifications = Array.isArray(data.notifications) ? data.notifications : [];
         const grouped = groupNotificationsForDisplay(notifications);
+
+        // Enrich with 1h aggregation counts for accurate last-hour tallies
+        const agg = await ensureAggregationsMap();
+        grouped.forEach(n => {
+            const key = `${n.device_serial || ''}|${n.alert_code || ''}`;
+            const a = agg.get(key);
+            if (a) {
+                n._count_1h = a.count_1h || 0;
+            }
+        });
+
         renderNotifications(grouped);
     } catch (error) {
         console.error('Error loading notifications:', error);
@@ -193,19 +206,23 @@ function groupNotificationsForDisplay(notifications) {
     const grouped = new Map();
 
     notifications.forEach((notif) => {
-        const key = `${notif.device_serial || ''}|${notif.alert_code || ''}|${notif.alert_display_name || ''}`;
+        const key = `${notif.device_serial || ''}|${notif.alert_code || ''}`;
         const existing = grouped.get(key);
 
-        // Prefer the notification with the highest priority
+        // Prefer the notification with the highest priority and use the MAX trigger count
         if (!existing || (notif.priority || 0) > (existing.priority || 0)) {
-            const aggregatedCount = existing
-                ? (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1)
-                : (notif.trigger_count || 1);
-
-            grouped.set(key, { ...notif, _aggregatedTriggers: aggregatedCount });
+            const baseCount = Math.max(
+                existing ? (existing._aggregatedTriggers || existing.trigger_count || 1) : 1,
+                (notif.trigger_count || 1)
+            );
+            grouped.set(key, { ...notif, _aggregatedTriggers: baseCount });
         } else {
-            // Same key, lower or equal priority: accumulate triggers only
-            existing._aggregatedTriggers = (existing._aggregatedTriggers || existing.trigger_count || 1) + (notif.trigger_count || 1);
+            // Same key, lower or equal priority: keep existing and raise count to the max seen
+            const maxCount = Math.max(
+                existing._aggregatedTriggers || existing.trigger_count || 1,
+                notif.trigger_count || 1
+            );
+            existing._aggregatedTriggers = maxCount;
             grouped.set(key, existing);
         }
     });
@@ -226,6 +243,7 @@ function renderNotifications(notifications) {
         const config = SEVERITY_CONFIG[notif.severity] || SEVERITY_CONFIG.info;
         const statusClass = notif.status === 'acknowledged' ? 'acknowledged' : '';
         const triggerCount = notif._aggregatedTriggers || notif.trigger_count || 0;
+        const count1h = typeof notif._count_1h === 'number' ? notif._count_1h : null;
 
         return `
             <div class="notification-card ${statusClass}" data-id="${notif.id}" data-severity="${notif.severity}">
@@ -253,12 +271,17 @@ function renderNotifications(notifications) {
                     </div>
                 </div>
                 <div class="notification-message">${escapeHtml(notif.message)}</div>
-                ${triggerCount > 1 ? `
+                ${count1h !== null ? `
                     <div class="notification-stats">
-                        <span><i class="fas fa-chart-line"></i> ${triggerCount} occurrences</span>
+                        <span><i class="fas fa-chart-line"></i> ${count1h} occurrences</span>
+                        <span><i class=\"fas fa-clock\"></i> Last 1h</span>
+                    </div>
+                ` : (triggerCount > 1 ? `
+                    <div class="notification-stats">
+                        <span><i class=\"fas fa-chart-line\"></i> ${triggerCount} occurrences</span>
                         ${notif.time_window_hours ? `<span><i class=\"fas fa-clock\"></i> Last ${notif.time_window_hours} hours</span>` : ''}
                     </div>
-                ` : ''}
+                ` : '')}
             </div>
         `;
     }).join('');
@@ -511,6 +534,9 @@ function openRuleModal(rule = null) {
     // Reset form
     form.reset();
 
+    // Ensure pattern suggestions are loaded and datalists populated
+    ensurePatternSuggestions().then(populatePatternDatalists).catch(() => {});
+
     if (rule) {
         // Edit mode
         title.textContent = 'Edit Notification Rule';
@@ -650,44 +676,33 @@ function renderStatistics(aggregations) {
     // Sort based on user preference
     const sortBy = document.getElementById('stats-sort')?.value || 'recent';
     const sorted = [...aggregations].sort((a, b) => {
-        if (sortBy === 'recent') {
-            return new Date(b.last_occurrence_ny) - new Date(a.last_occurrence_ny);
-        } else if (sortBy === 'frequent') {
-            return b.occurrence_count - a.occurrence_count;
-        }
+        if (sortBy === 'recent') return new Date(b.last_occurrence_ny) - new Date(a.last_occurrence_ny);
+        if (sortBy === 'frequent') return (b.occurrence_count || 0) - (a.occurrence_count || 0);
         return 0;
     });
 
     const html = `
-        <div class="stats-grid">
+        <div class="stats-list">
             ${sorted.map(agg => `
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div class="stat-device"><i class="fas fa-hdd"></i> ${escapeHtml(agg.device_serial)}</div>
-                        <div class="stat-alert">${escapeHtml(agg.alert_code)}</div>
+                <div class="stat-row">
+                    <div class="stat-main">
+                        <div class="stat-title truncate">
+                            <i class="fas fa-hdd"></i> ${escapeHtml(agg.device_serial || 'Unknown device')}
+                        </div>
+                        <div class="stat-subtitle truncate">
+                            ${escapeHtml(agg.alert_display_name || agg.alert_code || 'Unknown alert')}
+                            ${agg.customer_code ? ` · <i class=\"fas fa-building\"></i> ${escapeHtml(agg.customer_code)}` : ''}
+                        </div>
                     </div>
-                    ${agg.customer_code ? `<div class="stat-customer"><i class="fas fa-building"></i> ${escapeHtml(agg.customer_code)}</div>` : ''}
-                    <div class="stat-counts">
-                        <div class="count-badge">
-                            <div class="count-label">1 Hour</div>
-                            <div class="count-value">${agg.count_1h || 0}</div>
-                        </div>
-                        <div class="count-badge">
-                            <div class="count-label">24 Hours</div>
-                            <div class="count-value">${agg.count_24h || 0}</div>
-                        </div>
-                        <div class="count-badge">
-                            <div class="count-label">7 Days</div>
-                            <div class="count-value">${agg.count_7d || 0}</div>
-                        </div>
-                        <div class="count-badge">
-                            <div class="count-label">30 Days</div>
-                            <div class="count-value">${agg.count_30d || 0}</div>
-                        </div>
+                    <div class="stat-badges">
+                        <span class="count-badge"><span class="count-label">1h</span><span class="count-value">${agg.count_1h || 0}</span></span>
+                        <span class="count-badge"><span class="count-label">24h</span><span class="count-value">${agg.count_24h || 0}</span></span>
+                        <span class="count-badge"><span class="count-label">7d</span><span class="count-value">${agg.count_7d || 0}</span></span>
+                        <span class="count-badge"><span class="count-label">30d</span><span class="count-value">${agg.count_30d || 0}</span></span>
                     </div>
                     <div class="stat-meta">
-                        <span><i class="fas fa-clock"></i> Last: ${formatTimestamp(agg.last_occurrence_ny)}</span>
-                        <span><i class="fas fa-chart-line"></i> Total: ${agg.occurrence_count}</span>
+                        <span class="truncate"><i class="fas fa-clock"></i> ${formatTimestamp(agg.last_occurrence_ny)}</span>
+                        <span class="truncate"><i class="fas fa-chart-line"></i> ${agg.occurrence_count || 0} total</span>
                     </div>
                 </div>
             `).join('')}
@@ -749,9 +764,119 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// Load and cache alert aggregations so notifications can show accurate 1h tallies
+async function ensureAggregationsMap() {
+    const now = Date.now();
+    if (_aggMap && (now - _aggMapLoadedAt) < 30000) { // 30s cache
+        return _aggMap;
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('api/command-center.php?action=get_aggregations&limit=1000', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const data = res.ok ? await res.json() : { success: false };
+        const map = new Map();
+        if (data.success && Array.isArray(data.aggregations)) {
+            data.aggregations.forEach(a => {
+                const key = `${a.device_serial || ''}|${a.alert_code || ''}`;
+                map.set(key, a);
+            });
+        }
+        _aggMap = map;
+        _aggMapLoadedAt = now;
+        return _aggMap;
+    } catch (_e) {
+        _aggMap = new Map();
+        _aggMapLoadedAt = now;
+        return _aggMap;
+    }
+}
+
+// ================================
+// Pattern Suggestions (Datalists)
+// ================================
+let _patternLoaded = false;
+let _patternSuggestions = { alerts: [], devices: [], customers: [] };
+
+async function ensurePatternSuggestions() {
+    if (_patternLoaded) return _patternSuggestions;
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        // Fetch alert definitions and recent aggregations
+        const [defsRes, aggsRes] = await Promise.all([
+            fetch('api/command-center.php?action=get_alert_definitions&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal }),
+            fetch('api/command-center.php?action=get_aggregations&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal })
+        ]);
+
+        clearTimeout(timeout);
+
+        const defs = defsRes.ok ? await defsRes.json() : { success: false };
+        const aggs = aggsRes.ok ? await aggsRes.json() : { success: false };
+
+        const alertSet = new Map();
+        if (defs.success && Array.isArray(defs.definitions)) {
+            defs.definitions.forEach(d => {
+                if (d.alert_code) alertSet.set(d.alert_code, d.display_name || d.alert_code);
+            });
+        }
+        if (aggs.success && Array.isArray(aggs.aggregations)) {
+            aggs.aggregations.forEach(a => {
+                if (a.alert_code && !alertSet.has(a.alert_code)) alertSet.set(a.alert_code, a.alert_display_name || a.alert_code);
+            });
+        }
+
+        const deviceSet = new Set();
+        const customerSet = new Set();
+        if (aggs.success && Array.isArray(aggs.aggregations)) {
+            aggs.aggregations.forEach(a => {
+                if (a.device_serial) deviceSet.add(a.device_serial);
+                if (a.customer_code) customerSet.add(a.customer_code);
+            });
+        }
+
+        _patternSuggestions = {
+            alerts: Array.from(alertSet.entries()).map(([code, name]) => ({ code, name })),
+            devices: Array.from(deviceSet.values()),
+            customers: Array.from(customerSet.values())
+        };
+        _patternLoaded = true;
+        return _patternSuggestions;
+    } catch (_e) {
+        // Ignore; leave suggestions empty
+        _patternLoaded = true;
+        return _patternSuggestions;
+    }
+}
+
+function populatePatternDatalists() {
+    try {
+        const alertList = document.getElementById('alert-code-options');
+        const deviceList = document.getElementById('device-serial-options');
+        const customerList = document.getElementById('customer-code-options');
+        if (!alertList || !deviceList || !customerList) return;
+
+        alertList.innerHTML = _patternSuggestions.alerts.map(a => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} - ${escapeHtml(a.name)}</option>`).join('');
+        deviceList.innerHTML = _patternSuggestions.devices.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
+        customerList.innerHTML = _patternSuggestions.customers.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+    } catch (_e) {
+        // no-op
+    }
+}
+
 /*
 CHANGELOG
 2025-11-26 Codex
-- Collapsed duplicate notifications (same device + alert) into a single card with aggregated trigger count.
-- Updated render to display aggregated occurrences consistently with hero header behavior.
+- Collapsed duplicate notifications (same device + alert) into a single card; use MAX trigger count to avoid inflation.
+- Switched "Alert Aggregations" to a list layout to prevent overflow and improve readability.
+- Added searchable pattern suggestions (datalists) for alert codes, device serials, and customer codes in the rule modal.
+- Show accurate 1h tallies in notifications using get_aggregations, with 30s client-side cache.
 */
