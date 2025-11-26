@@ -76,9 +76,6 @@ $preferences = getUserPreferences($userId);
                     <i class="fas fa-shield-alt"></i>
                     <span id="notification-badge" class="notification-badge" style="display:none;">0</span>
                 </a>
-                <a href="panel-message-monitor.php" class="btn-icon" title="Panel Messages" id="panel-monitor-link">
-                    <i class="fas fa-satellite-dish"></i>
-                </a>
                 <button id="theme-toggle" class="btn-icon" title="Toggle theme">
                     <i class="fas fa-moon"></i>
                 </button>

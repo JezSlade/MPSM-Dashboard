@@ -218,8 +218,8 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                         <span><i class="fas fa-shield-alt"></i> Command Center</span>
                         <i class="fas fa-arrow-right"></i>
                     </a>
-                    <a class="link-item" href="panel-message-monitor.php?customerCode=<?php echo urlencode($customerCode); ?>&hours=24">
-                        <span><i class="fas fa-satellite-dish"></i> Panel Monitor</span>
+                    <a class="link-item" href="command-center.php?tab=panel&customerCode=<?php echo urlencode($customerCode); ?>&hours=24">
+                        <span><i class="fas fa-satellite-dish"></i> Panel Stream</span>
                         <i class="fas fa-arrow-right"></i>
                     </a>
                     <a class="link-item" href="payload-debugger.php">
@@ -446,3 +446,4 @@ CHANGELOG
 - Added mobile-native lifecycle list with filters, pagination, and create/update sheets to match desktop CRUD fields on small screens.
 */
 ?>
+

@@ -9,7 +9,7 @@ trackVisit('/device-lifecycle');
 $prefillCustomerCode = isset($_GET['customerCode']) ? trim((string) $_GET['customerCode']) : '';
 $prefillSearch = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
 
-// Allow iframe embedding from same origin (panel-message-monitor.php)
+// Allow iframe embedding from same origin (command-center.php?tab=panel)
 header('X-Frame-Options: SAMEORIGIN');
 ?>
 <!DOCTYPE html>
@@ -30,7 +30,7 @@ header('X-Frame-Options: SAMEORIGIN');
                 <p class="subtitle">Create, update, and retire devices while keeping audit trails.</p>
             </div>
             <div class="header-actions">
-                <a class="btn-icon" href="panel-message-monitor.php" title="Back to Panel Monitor">
+                <a class="btn-icon" href="command-center.php?tab=panel" title="Back to Panel Monitor">
                     <i class="fas fa-arrow-left"></i>
                 </a>
             </div>
@@ -446,3 +446,4 @@ CHANGELOG
 - Added dynamic optional-field controls for IP, department/location, asset, contact, note, and product description in the update modal.
 */
 ?>
+
