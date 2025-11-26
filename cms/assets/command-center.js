@@ -84,27 +84,14 @@ function initializeControls() {
         });
     }
 
-    // Notification customer filter
+    // Notification customer filter (populate with Names, value=Code)
     const customerFilterSelect = document.getElementById('notification-customer-filter');
     if (customerFilterSelect) {
         customerFilterSelect.addEventListener('change', (e) => {
             notificationCustomerFilter = e.target.value;
             loadNotifications();
         });
-        // Populate options from suggestions
-        ensurePatternSuggestions().then(() => {
-            if (Array.isArray(_patternSuggestions.customers)) {
-                const unique = Array.from(new Set(_patternSuggestions.customers)).sort();
-                // Preserve first option (All Customers)
-                while (customerFilterSelect.options.length > 1) customerFilterSelect.remove(1);
-                unique.forEach(code => {
-                    const opt = document.createElement('option');
-                    opt.value = code;
-                    opt.textContent = code;
-                    customerFilterSelect.appendChild(opt);
-                });
-            }
-        }).catch(() => {});
+        loadCustomerOptionsForCC(customerFilterSelect);
     }
 
     // Auto-refresh toggle
@@ -569,9 +556,11 @@ function editRule(id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            const rule = data.rules.find(r => r.id === id);
+            const rule = (data.rules || []).find(r => Number(r.id) === Number(id));
             if (rule) {
                 openRuleModal(rule);
+            } else {
+                console.warn('Rule not found for edit:', id);
             }
         }
     })
@@ -737,23 +726,24 @@ function renderStatistics(aggregations) {
     });
 
     const html = `
-        <div class="alert-type-grid">
+        <div class="stats-legend"><i class="fas fa-info-circle"></i> Counts show alert occurrences in the last 1h, 24h, 7d, and 30d windows.</div>
+        <div class="stats-list">
             ${sorted.map(agg => `
-                <div class="alert-type-card">
-                    <div class="alert-type-header">
-                        <div class="alert-type-title">${escapeHtml(agg.alert_display_name || agg.alert_code || 'Unknown alert')}</div>
-                        <div class="alert-type-subtitle">${escapeHtml(agg.alert_category || '')}</div>
+                <div class="stat-row">
+                    <div class="stat-main">
+                        <div class="stat-title truncate">${escapeHtml(agg.alert_display_name || 'Unknown alert')} (${escapeHtml(agg.alert_code || '')})</div>
+                        <div class="stat-subtitle truncate">${escapeHtml(agg.alert_category || '')}</div>
                     </div>
-                    <div class="alert-type-counts">
-                        <div class="count-badge"><div class="count-label">1h</div><div class="count-value">${agg.count_1h || 0}</div></div>
-                        <div class="count-badge"><div class="count-label">24h</div><div class="count-value">${agg.count_24h || 0}</div></div>
-                        <div class="count-badge"><div class="count-label">7d</div><div class="count-value">${agg.count_7d || 0}</div></div>
-                        <div class="count-badge"><div class="count-label">30d</div><div class="count-value">${agg.count_30d || 0}</div></div>
+                    <div class="stat-badges">
+                        <span class="count-badge"><span class="count-label">1h</span><span class="count-value">${agg.count_1h || 0}</span></span>
+                        <span class="count-badge"><span class="count-label">24h</span><span class="count-value">${agg.count_24h || 0}</span></span>
+                        <span class="count-badge"><span class="count-label">7d</span><span class="count-value">${agg.count_7d || 0}</span></span>
+                        <span class="count-badge"><span class="count-label">30d</span><span class="count-value">${agg.count_30d || 0}</span></span>
                     </div>
-                    <div class="alert-type-meta">
-                        <span><i class="fas fa-microchip"></i> ${agg.device_count || 0} devices</span>
-                        <span><i class="fas fa-chart-line"></i> ${agg.occurrence_count || 0} total</span>
-                        <span><i class="fas fa-clock"></i> ${formatTimestamp(agg.last_occurrence_ny)}</span>
+                    <div class="stat-meta">
+                        <span class="truncate"><i class="fas fa-microchip"></i> ${agg.device_count || 0} devices</span>
+                        <span class="truncate"><i class="fas fa-chart-line"></i> ${agg.occurrence_count || 0} total</span>
+                        <span class="truncate"><i class="fas fa-clock"></i> ${formatTimestamp(agg.last_occurrence_ny)}</span>
                     </div>
                 </div>
             `).join('')}
@@ -862,16 +852,18 @@ async function ensurePatternSuggestions() {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10000);
 
-        // Fetch alert definitions and recent aggregations
-        const [defsRes, aggsRes] = await Promise.all([
+        // Fetch alert definitions, recent aggregations, and customers (for names)
+        const [defsRes, aggsRes, custRes] = await Promise.all([
             fetch('api/command-center.php?action=get_alert_definitions&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal }),
-            fetch('api/command-center.php?action=get_aggregations&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal })
+            fetch('api/command-center.php?action=get_aggregations&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal }),
+            fetch('api/get-customers.php', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal })
         ]);
 
         clearTimeout(timeout);
 
         const defs = defsRes.ok ? await defsRes.json() : { success: false };
         const aggs = aggsRes.ok ? await aggsRes.json() : { success: false };
+        const cust = custRes.ok ? await custRes.json() : { success: false };
 
         const alertSet = new Map();
         if (defs.success && Array.isArray(defs.definitions)) {
@@ -886,18 +878,25 @@ async function ensurePatternSuggestions() {
         }
 
         const deviceSet = new Set();
-        const customerSet = new Set();
+        const customerPairs = new Map(); // code => name
         if (aggs.success && Array.isArray(aggs.aggregations)) {
             aggs.aggregations.forEach(a => {
                 if (a.device_serial) deviceSet.add(a.device_serial);
-                if (a.customer_code) customerSet.add(a.customer_code);
+                if (a.customer_code && !customerPairs.has(a.customer_code)) customerPairs.set(a.customer_code, a.customer_description || '');
+            });
+        }
+        if (cust.success && Array.isArray(cust.customers)) {
+            cust.customers.forEach(c => {
+                const code = c.Code || c.code;
+                const name = c.Description || c.description || '';
+                if (code && !customerPairs.has(code)) customerPairs.set(code, name);
             });
         }
 
         _patternSuggestions = {
             alerts: Array.from(alertSet.entries()).map(([code, name]) => ({ code, name })),
             devices: Array.from(deviceSet.values()),
-            customers: Array.from(customerSet.values())
+            customers: Array.from(customerPairs.entries()).map(([code, name]) => ({ code, name }))
         };
         _patternLoaded = true;
         return _patternSuggestions;
@@ -917,9 +916,36 @@ function populatePatternDatalists() {
 
         alertList.innerHTML = _patternSuggestions.alerts.map(a => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} - ${escapeHtml(a.name)}</option>`).join('');
         deviceList.innerHTML = _patternSuggestions.devices.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
-        customerList.innerHTML = _patternSuggestions.customers.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+        customerList.innerHTML = _patternSuggestions.customers.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.name || c.code)}</option>`).join('');
     } catch (_e) {
         // no-op
+    }
+}
+
+// Populate Active Notifications customer filter with Names (value=Code)
+async function loadCustomerOptionsForCC(selectEl) {
+    try {
+        // Keep first option (All Customers)
+        while (selectEl.options.length > 1) selectEl.remove(1);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('api/get-customers.php', { credentials: 'same-origin', headers: { 'Accept': 'application/json' }, signal: controller.signal });
+        clearTimeout(timeoutId);
+        const data = res.ok ? await res.json() : { success: false };
+        if (data.success && Array.isArray(data.customers)) {
+            data.customers.forEach(c => {
+                const code = c.Code || c.code;
+                const name = c.Description || c.description || code;
+                if (!code) return;
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = name;
+                selectEl.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.warn('Failed to load customers for filter:', e);
     }
 }
 

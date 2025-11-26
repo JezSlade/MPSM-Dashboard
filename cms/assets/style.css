@@ -3763,3 +3763,4 @@ CHANGELOG
 - Added Command Center tab styles (.monitor-tabs, .monitor-tab-btn, .tab-panel) and monitor layout controls.
 - Ensured inactive tab panels are hidden; styling aligned with dashboard theme.
 */
+.stats-legend { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }

@@ -180,9 +180,9 @@ trackVisit('/command-center');
                                 <input type="text" id="rule-device-pattern" name="device_serial_pattern" class="form-control" list="device-serial-options" placeholder="e.g., SN-%">
                             </div>
                             <div class="form-group">
-                                <label for="rule-customer-pattern">Customer Code Pattern</label>
-                                <input type="text" id="rule-customer-pattern" name="customer_code_pattern" class="form-control" list="customer-code-options" placeholder="e.g., CUST-%">
-                                <small class="field-hint">Match by customer code; use % as wildcard</small>
+                                <label for="rule-customer-pattern">Customer (Name) Pattern</label>
+                                <input type="text" id="rule-customer-pattern" name="customer_code_pattern" class="form-control" list="customer-code-options" placeholder="e.g., CAPE FEAR%">
+                                <small class="field-hint">Select by customer name; the rule uses customer code under the hood. Use % as wildcard.</small>
                             </div>
                         </div>
                     </div>
