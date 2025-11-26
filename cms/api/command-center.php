@@ -611,19 +611,40 @@ function dismissNotification(PDO $pdo): void
 
 function getAggregations(PDO $pdo): void
 {
-    $limit = min((int)($_GET['limit'] ?? 50), 100);
+    $limit = min((int)($_GET['limit'] ?? 50), 1000);
+    $groupBy = $_GET['group_by'] ?? 'device_alert'; // 'device_alert' or 'alert_only'
 
     $aggTable = DB_PREFIX . 'alert_aggregations';
     $defsTable = DB_PREFIX . 'alert_definitions';
 
-    // Join with alert_definitions to get display names
-    $sql = "SELECT a.*,
-                   ad.display_name as alert_display_name,
-                   ad.category as alert_category
-            FROM {$aggTable} a
-            LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
-            ORDER BY a.last_occurrence_ny DESC
-            LIMIT :limit";
+    if ($groupBy === 'alert_only') {
+        // Group by alert code only - aggregate across all devices
+        $sql = "SELECT
+                    a.alert_code,
+                    ad.display_name as alert_display_name,
+                    ad.category as alert_category,
+                    COUNT(DISTINCT a.device_serial) as device_count,
+                    SUM(a.count_1h) as count_1h,
+                    SUM(a.count_24h) as count_24h,
+                    SUM(a.count_7d) as count_7d,
+                    SUM(a.count_30d) as count_30d,
+                    SUM(a.occurrence_count) as occurrence_count,
+                    MAX(a.last_occurrence_ny) as last_occurrence_ny
+                FROM {$aggTable} a
+                LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+                GROUP BY a.alert_code, ad.display_name, ad.category
+                ORDER BY last_occurrence_ny DESC
+                LIMIT :limit";
+    } else {
+        // Default: Group by device + alert (current behavior)
+        $sql = "SELECT a.*,
+                       ad.display_name as alert_display_name,
+                       ad.category as alert_category
+                FROM {$aggTable} a
+                LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+                ORDER BY a.last_occurrence_ny DESC
+                LIMIT :limit";
+    }
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -639,7 +660,8 @@ function getAggregations(PDO $pdo): void
     echo json_encode([
         'success' => true,
         'aggregations' => $aggregations,
-        'count' => count($aggregations)
+        'count' => count($aggregations),
+        'group_by' => $groupBy
     ]);
 }
 

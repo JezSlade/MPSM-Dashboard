@@ -68,12 +68,14 @@ trackVisit('/command-center');
                             <option value="warning">Warning</option>
                             <option value="info">Info</option>
                         </select>
+                        <select id="notification-customer-filter" class="form-control">
+                            <option value="">All Customers</option>
+                        </select>
                         <label class="toggle-label">
                             <input type="checkbox" id="notification-auto-refresh" checked>
                             <span>Auto-refresh (10s)</span>
                         </label>
-                    </div>
-                </div>
+                    </div>                </div>
                 <div class="card-body">
                     <div id="notifications-container">
                         <div class="loading">Loading notifications...</div>
@@ -180,6 +182,7 @@ trackVisit('/command-center');
                             <div class="form-group">
                                 <label for="rule-customer-pattern">Customer Code Pattern</label>
                                 <input type="text" id="rule-customer-pattern" name="customer_code_pattern" class="form-control" list="customer-code-options" placeholder="e.g., CUST-%">
+                                <small class="field-hint">Match by customer code; use % as wildcard</small>
                             </div>
                         </div>
                     </div>

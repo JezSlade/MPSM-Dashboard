@@ -3413,6 +3413,15 @@ CHANGELOG
     .stats-list .count-value { font-size: 0.85rem; }
 }
 
+
+/* Command Center - Alert Type Cards */
+.alert-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.alert-type-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.alert-type-header { display: flex; flex-direction: column; gap: 0.25rem; }
+.alert-type-title { font-weight: 700; color: var(--text-primary); }
+.alert-type-subtitle { font-size: 0.85rem; color: var(--text-secondary); }
+.alert-type-counts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.alert-type-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem; }
 /* Modal Enhancements */
 .modal-lg {
     max-width: 800px;
@@ -3423,6 +3432,7 @@ CHANGELOG
 .modal.active { display: flex; }
 .modal-content { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: var(--shadow-md); width: 100%; max-width: 900px; display: flex; flex-direction: column; max-height: 90vh; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+.modal-content form { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .modal-body { padding: 1rem 1.25rem; overflow-y: auto; flex: 1; min-height: 0; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0; }
 

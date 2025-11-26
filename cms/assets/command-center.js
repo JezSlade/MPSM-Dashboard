@@ -7,6 +7,7 @@
 let autoRefreshInterval = null;
 let currentTab = 'notifications';
 let notificationFilter = '';
+let notificationCustomerFilter = '';
 let _aggMap = null; // cache of alert aggregations keyed by device|alert
 let _aggMapLoadedAt = 0;
 
@@ -74,13 +75,36 @@ function initializeTabs() {
 
 // Initialize Controls
 function initializeControls() {
-    // Notification filter
+    // Notification severity filter
     const filterSelect = document.getElementById('notification-filter');
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
             notificationFilter = e.target.value;
             loadNotifications();
         });
+    }
+
+    // Notification customer filter
+    const customerFilterSelect = document.getElementById('notification-customer-filter');
+    if (customerFilterSelect) {
+        customerFilterSelect.addEventListener('change', (e) => {
+            notificationCustomerFilter = e.target.value;
+            loadNotifications();
+        });
+        // Populate options from suggestions
+        ensurePatternSuggestions().then(() => {
+            if (Array.isArray(_patternSuggestions.customers)) {
+                const unique = Array.from(new Set(_patternSuggestions.customers)).sort();
+                // Preserve first option (All Customers)
+                while (customerFilterSelect.options.length > 1) customerFilterSelect.remove(1);
+                unique.forEach(code => {
+                    const opt = document.createElement('option');
+                    opt.value = code;
+                    opt.textContent = code;
+                    customerFilterSelect.appendChild(opt);
+                });
+            }
+        }).catch(() => {});
     }
 
     // Auto-refresh toggle
@@ -155,6 +179,9 @@ async function loadNotifications(silent = false) {
         if (notificationFilter) {
             params.set('severity', notificationFilter);
         }
+        if (notificationCustomerFilter) {
+            params.set('customerCode', notificationCustomerFilter);
+        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -192,10 +219,41 @@ async function loadNotifications(silent = false) {
         });
 
         renderNotifications(grouped);
+        populateCustomerFilter(data.notifications || []);
     } catch (error) {
         console.error('Error loading notifications:', error);
         const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
         container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
+    }
+}
+
+function populateCustomerFilter(notifications) {
+    const customerFilter = document.getElementById('notification-customer-filter');
+    if (!customerFilter) return;
+
+    // Extract unique customers
+    const customers = new Map();
+    notifications.forEach(n => {
+        if (n.customer_code) {
+            customers.set(n.customer_code, n.customer_description || n.customer_code);
+        }
+    });
+
+    // Sort by customer description
+    const sortedCustomers = Array.from(customers.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+
+    // Preserve current selection
+    const currentValue = customerFilter.value;
+
+    // Rebuild options
+    customerFilter.innerHTML = '<option value="">All Customers</option>' +
+        sortedCustomers.map(([code, desc]) =>
+            `<option value="${escapeHtml(code)}">${escapeHtml(desc)}</option>`
+        ).join('');
+
+    // Restore selection if still valid
+    if (currentValue && customers.has(currentValue)) {
+        customerFilter.value = currentValue;
     }
 }
 
@@ -637,7 +695,7 @@ async function loadStatistics(silent = false) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        const response = await fetch('api/command-center.php?action=get_aggregations', {
+        const response = await fetch('api/command-center.php?action=get_aggregations&group_by=alert_only', {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
             signal: controller.signal
@@ -666,12 +724,11 @@ async function loadStatistics(silent = false) {
 function renderStatistics(aggregations) {
     const container = document.getElementById('statistics-container');
 
-    if (aggregations.length === 0) {
+    if (!Array.isArray(aggregations) || aggregations.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-chart-bar"></i> No alert data available</div>';
         return;
     }
 
-    // Sort based on user preference
     const sortBy = document.getElementById('stats-sort')?.value || 'recent';
     const sorted = [...aggregations].sort((a, b) => {
         if (sortBy === 'recent') return new Date(b.last_occurrence_ny) - new Date(a.last_occurrence_ny);
@@ -680,27 +737,23 @@ function renderStatistics(aggregations) {
     });
 
     const html = `
-        <div class="stats-list">
+        <div class="alert-type-grid">
             ${sorted.map(agg => `
-                <div class="stat-row">
-                    <div class="stat-main">
-                        <div class="stat-title truncate">
-                            <i class="fas fa-hdd"></i> ${escapeHtml(agg.device_serial || 'Unknown device')}
-                        </div>
-                        <div class="stat-subtitle truncate">
-                            ${escapeHtml(agg.alert_display_name || agg.alert_code || 'Unknown alert')}
-                            ${agg.customer_code ? ` · <i class=\"fas fa-building\"></i> ${escapeHtml(agg.customer_code)}` : ''}
-                        </div>
+                <div class="alert-type-card">
+                    <div class="alert-type-header">
+                        <div class="alert-type-title">${escapeHtml(agg.alert_display_name || agg.alert_code || 'Unknown alert')}</div>
+                        <div class="alert-type-subtitle">${escapeHtml(agg.alert_category || '')}</div>
                     </div>
-                    <div class="stat-badges">
-                        <span class="count-badge"><span class="count-label">1h</span><span class="count-value">${agg.count_1h || 0}</span></span>
-                        <span class="count-badge"><span class="count-label">24h</span><span class="count-value">${agg.count_24h || 0}</span></span>
-                        <span class="count-badge"><span class="count-label">7d</span><span class="count-value">${agg.count_7d || 0}</span></span>
-                        <span class="count-badge"><span class="count-label">30d</span><span class="count-value">${agg.count_30d || 0}</span></span>
+                    <div class="alert-type-counts">
+                        <div class="count-badge"><div class="count-label">1h</div><div class="count-value">${agg.count_1h || 0}</div></div>
+                        <div class="count-badge"><div class="count-label">24h</div><div class="count-value">${agg.count_24h || 0}</div></div>
+                        <div class="count-badge"><div class="count-label">7d</div><div class="count-value">${agg.count_7d || 0}</div></div>
+                        <div class="count-badge"><div class="count-label">30d</div><div class="count-value">${agg.count_30d || 0}</div></div>
                     </div>
-                    <div class="stat-meta">
-                        <span class="truncate"><i class="fas fa-clock"></i> ${formatTimestamp(agg.last_occurrence_ny)}</span>
-                        <span class="truncate"><i class="fas fa-chart-line"></i> ${agg.occurrence_count || 0} total</span>
+                    <div class="alert-type-meta">
+                        <span><i class="fas fa-microchip"></i> ${agg.device_count || 0} devices</span>
+                        <span><i class="fas fa-chart-line"></i> ${agg.occurrence_count || 0} total</span>
+                        <span><i class="fas fa-clock"></i> ${formatTimestamp(agg.last_occurrence_ny)}</span>
                     </div>
                 </div>
             `).join('')}
