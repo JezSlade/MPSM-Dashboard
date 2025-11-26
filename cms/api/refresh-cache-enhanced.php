@@ -167,6 +167,12 @@ try {
     logMessage("Step 3: Caching panel message history");
     $stats['devices_with_panels'] = cachePanelMessages($pdo);
 
+    // Step 6: Phase 2 - Cache connectors and page volume per customer
+    logMessage("Step 4: Caching Phase 2 data (connectors, page volume)");
+    $phase2Stats = cachePhase2Data($pdo);
+    $stats['customers_cached_phase2'] = $phase2Stats['customers_cached'];
+    $stats['phase2_errors'] = $phase2Stats['errors'];
+
     // Calculate stats
     $stats['duration'] = round(microtime(true) - $startTime, 2);
 
@@ -860,6 +866,120 @@ function cacheDeviceList(PDO $pdo, array $devices): void {
     if ($errorCount > 0) {
         logMessage("Batch cache summary: {$successCount} succeeded, {$errorCount} failed");
     }
+}
+
+/**
+ * Phase 2: Cache connectors and page volume per customer
+ * Fetches CustomerDashboard/Connectors and CustomerDashboard/Pages for each customer
+ */
+function cachePhase2Data(PDO $pdo): array {
+    global $stats;
+    $prefix = DB_PREFIX;
+    $customersCached = 0;
+    $errors = 0;
+
+    // Get unique customer codes from cached devices
+    $stmt = $pdo->query("
+        SELECT DISTINCT customer_code
+        FROM {$prefix}cache_devices
+        WHERE customer_code IS NOT NULL AND customer_code != ''
+        ORDER BY customer_code
+    ");
+    $customerCodes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    logMessage("Phase 2: Processing " . count($customerCodes) . " customers for connectors and page volume");
+
+    // Check if Phase 2 tables exist
+    $stmt = $pdo->query("SHOW TABLES LIKE '{$prefix}cache_connectors'");
+    $connectorsTableExists = $stmt->rowCount() > 0;
+    $stmt = $pdo->query("SHOW TABLES LIKE '{$prefix}cache_page_volume'");
+    $volumeTableExists = $stmt->rowCount() > 0;
+
+    if (!$connectorsTableExists || !$volumeTableExists) {
+        logMessage("Phase 2 tables not initialized. Run init-phase2-cache-tables.php first. Skipping Phase 2 cache.");
+        return ['customers_cached' => 0, 'errors' => 0];
+    }
+
+    // Truncate Phase 2 tables
+    $pdo->exec("TRUNCATE TABLE {$prefix}cache_connectors");
+    $pdo->exec("TRUNCATE TABLE {$prefix}cache_page_volume");
+
+    foreach ($customerCodes as $customerCode) {
+        try {
+            // Fetch connectors
+            $connectorsData = callMPSMAPI('CustomerDashboard/Connectors', ['Code' => $customerCode]);
+            $stats['api_calls_made']++;
+
+            if ($connectorsData) {
+                // Cache connectors
+                $stmt = $pdo->prepare("
+                    INSERT INTO {$prefix}cache_connectors
+                    (customer_code, total_win, total_embedded, last_day, sds_total_win, connector_data, cached_at)
+                    VALUES (:customer_code, :total_win, :total_embedded, :last_day, :sds_total_win, :connector_data, NOW())
+                    ON DUPLICATE KEY UPDATE
+                        total_win = VALUES(total_win),
+                        total_embedded = VALUES(total_embedded),
+                        last_day = VALUES(last_day),
+                        sds_total_win = VALUES(sds_total_win),
+                        connector_data = VALUES(connector_data),
+                        cached_at = NOW()
+                ");
+                $stmt->execute([
+                    ':customer_code' => $customerCode,
+                    ':total_win' => (int)($connectorsData['TotalWin'] ?? 0),
+                    ':total_embedded' => (int)($connectorsData['TotalEmbedded'] ?? 0),
+                    ':last_day' => (int)($connectorsData['LastDay'] ?? 0),
+                    ':sds_total_win' => (int)($connectorsData['SdsTotalWin'] ?? 0),
+                    ':connector_data' => json_encode($connectorsData)
+                ]);
+            }
+
+            // Small delay to avoid rate limits
+            usleep(200000); // 200ms
+
+            // Fetch page volume
+            $pagesData = callMPSMAPI('CustomerDashboard/Pages', ['code' => $customerCode]);
+            $stats['api_calls_made']++;
+
+            if ($pagesData) {
+                // Cache page volume
+                $stmt = $pdo->prepare("
+                    INSERT INTO {$prefix}cache_page_volume
+                    (customer_code, monthly_mono_managed, monthly_color_managed, monthly_mono_unmanaged, monthly_color_unmanaged, pages_data, cached_at)
+                    VALUES (:customer_code, :mono_managed, :color_managed, :mono_unmanaged, :color_unmanaged, :pages_data, NOW())
+                    ON DUPLICATE KEY UPDATE
+                        monthly_mono_managed = VALUES(monthly_mono_managed),
+                        monthly_color_managed = VALUES(monthly_color_managed),
+                        monthly_mono_unmanaged = VALUES(monthly_mono_unmanaged),
+                        monthly_color_unmanaged = VALUES(monthly_color_unmanaged),
+                        pages_data = VALUES(pages_data),
+                        cached_at = NOW()
+                ");
+                $stmt->execute([
+                    ':customer_code' => $customerCode,
+                    ':mono_managed' => (int)($pagesData['MonthlyMonoManaged'] ?? 0),
+                    ':color_managed' => (int)($pagesData['MonthlyColorManaged'] ?? 0),
+                    ':mono_unmanaged' => (int)($pagesData['MonthlyMonoUnManaged'] ?? 0),
+                    ':color_unmanaged' => (int)($pagesData['MonthlyColorUnManaged'] ?? 0),
+                    ':pages_data' => json_encode($pagesData)
+                ]);
+            }
+
+            if ($connectorsData && $pagesData) {
+                $customersCached++;
+            }
+
+            // Small delay between customers
+            usleep(200000); // 200ms
+
+        } catch (Exception $e) {
+            logMessage("Phase 2 error for customer {$customerCode}: " . $e->getMessage());
+            $errors++;
+        }
+    }
+
+    logMessage("Phase 2 complete: {$customersCached} customers cached, {$errors} errors");
+    return ['customers_cached' => $customersCached, 'errors' => $errors];
 }
 
 /**

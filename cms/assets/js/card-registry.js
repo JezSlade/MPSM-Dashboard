@@ -621,11 +621,28 @@ const CardRegistry = (function () {
             icon: 'fas fa-network-wired',
             description: 'Windows and SDS connector activity',
             group: 'Summary',
-            defaultVisible: false,
+            defaultVisible: true,
             load: async (helpers, context) => {
-                const data = await helpers.fetchJson('api/get-connectors.php', {
-                    customerCode: context.customerCode
-                });
+                // CACHE-FIRST: Try cached endpoint first
+                let data;
+                try {
+                    data = await helpers.fetchJson('api/get-connectors-cached.php', {
+                        customerCode: context.customerCode
+                    });
+
+                    // Fallback: if cache is empty or very stale, use live API
+                    if (!data.connectors || data.cache_age_seconds > 1800) {
+                        console.warn('[connectors] Cache empty or stale, falling back to live API');
+                        data = await helpers.fetchJson('api/get-connectors.php', {
+                            customerCode: context.customerCode
+                        });
+                    }
+                } catch (cacheError) {
+                    console.warn('[connectors] Cache fetch failed, using live API:', cacheError.message);
+                    data = await helpers.fetchJson('api/get-connectors.php', {
+                        customerCode: context.customerCode
+                    });
+                }
 
                 const summary = data.connectors || {};
                 const total = Number(summary.TotalWin ?? 0) + Number(summary.TotalEmbedded ?? 0);
@@ -1040,11 +1057,28 @@ const CardRegistry = (function () {
             icon: 'fas fa-chart-area',
             description: 'Monthly mono and color volumes',
             group: 'Analytics',
-            defaultVisible: false,
+            defaultVisible: true,
             load: async (helpers, context) => {
-                const data = await helpers.fetchJson('api/get-customer-pages.php', {
-                    customerCode: context.customerCode
-                });
+                // CACHE-FIRST: Try cached endpoint first
+                let data;
+                try {
+                    data = await helpers.fetchJson('api/get-customer-pages-cached.php', {
+                        customerCode: context.customerCode
+                    });
+
+                    // Fallback: if cache is empty or very stale, use live API
+                    if (!data.pages || data.cache_age_seconds > 1800) {
+                        console.warn('[page-volume] Cache empty or stale, falling back to live API');
+                        data = await helpers.fetchJson('api/get-customer-pages.php', {
+                            customerCode: context.customerCode
+                        });
+                    }
+                } catch (cacheError) {
+                    console.warn('[page-volume] Cache fetch failed, using live API:', cacheError.message);
+                    data = await helpers.fetchJson('api/get-customer-pages.php', {
+                        customerCode: context.customerCode
+                    });
+                }
 
                 const pages = data.pages || {};
 
