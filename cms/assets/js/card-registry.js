@@ -196,9 +196,26 @@ const CardRegistry = (function () {
             group: 'Summary',
             defaultVisible: true,
             load: async (helpers, context) => {
-                const data = await helpers.fetchJson('api/get-customer-dashboard.php', {
-                    customerCode: context.customerCode
-                });
+                // CACHE-FIRST: Try cached endpoint first
+                let data;
+                try {
+                    data = await helpers.fetchJson('api/get-customer-dashboard-cached.php', {
+                        customerCode: context.customerCode
+                    });
+
+                    // Fallback: if cache is empty or very stale, use live API
+                    if (!data.dashboard || data.cache_age_seconds > 1800) {
+                        console.warn('[customer-overview] Cache empty or stale, falling back to live API');
+                        data = await helpers.fetchJson('api/get-customer-dashboard.php', {
+                            customerCode: context.customerCode
+                        });
+                    }
+                } catch (cacheError) {
+                    console.warn('[customer-overview] Cache fetch failed, using live API:', cacheError.message);
+                    data = await helpers.fetchJson('api/get-customer-dashboard.php', {
+                        customerCode: context.customerCode
+                    });
+                }
 
                 const dashboard = data.dashboard || {};
                 const totalsSource = dashboard.MpsDashboardCustomer || dashboard;
@@ -604,7 +621,7 @@ const CardRegistry = (function () {
             icon: 'fas fa-network-wired',
             description: 'Windows and SDS connector activity',
             group: 'Summary',
-            defaultVisible: true,
+            defaultVisible: false,
             load: async (helpers, context) => {
                 const data = await helpers.fetchJson('api/get-connectors.php', {
                     customerCode: context.customerCode
@@ -678,7 +695,7 @@ const CardRegistry = (function () {
                             customerCode: context.customerCode,
                             dealerCode: context.dealerCode,
                             dealerId: context.dealerId,
-                            pageRows: 200,
+                            pageRows: 10000,
                             sortColumn: 'AssetNumber',
                             sortOrder: 'Asc'
                         });
@@ -689,7 +706,7 @@ const CardRegistry = (function () {
                         customerCode: context.customerCode,
                         dealerCode: context.dealerCode,
                         dealerId: context.dealerId,
-                        pageRows: 200,
+                        pageRows: 10000,
                         sortColumn: 'AssetNumber',
                         sortOrder: 'Asc'
                     });
@@ -793,17 +810,43 @@ const CardRegistry = (function () {
             load: async (helpers, context) => {
                 let alerts = [];
                 let totalAlerts = 0;
-                if (window.MPSM && typeof window.MPSM.fetchAllSupplyAlerts === 'function') {
-                    const result = await window.MPSM.fetchAllSupplyAlerts({
+
+                // CACHE-FIRST: Try cached endpoint first
+                try {
+                    let data = await helpers.fetchJson('api/get-supply-alerts-cached.php', {
                         customerCode: context.customerCode,
-                        dealerCode: context.dealerCode,
                         pageRows: 500,
                         sortColumn: 'InitialDate',
                         sortOrder: 'Desc'
                     });
-                    alerts = Array.isArray(result.alerts) ? result.alerts : [];
-                    totalAlerts = Number(result.total ?? alerts.length ?? 0);
-                } else {
+
+                    // Fallback: if cache is empty or very stale, use live API
+                    if (!data.alerts || data.alerts.length === 0 || data.meta?.cache_age_seconds > 1800) {
+                        console.warn('[supply-alerts] Cache empty or stale, falling back to live API');
+                        data = await helpers.fetchJson('api/get-supply-alerts.php', {
+                            customerCode: context.customerCode,
+                            dealerCode: context.dealerCode,
+                            pageRows: 500,
+                            sortColumn: 'InitialDate',
+                            sortOrder: 'Desc'
+                        });
+                    }
+
+                    const meta = data.meta || {};
+                    const payload = data.alerts ?? [];
+                    alerts = Array.isArray(payload)
+                        ? payload
+                        : Array.isArray(payload.Items) ? payload.Items : [];
+                    totalAlerts = Number(
+                        meta.total_rows
+                        ?? meta.total_count
+                        ?? meta.total
+                        ?? data.total
+                        ?? alerts.length
+                        ?? 0
+                    );
+                } catch (cacheError) {
+                    console.warn('[supply-alerts] Cache fetch failed, using live API:', cacheError.message);
                     const data = await helpers.fetchJson('api/get-supply-alerts.php', {
                         customerCode: context.customerCode,
                         dealerCode: context.dealerCode,
@@ -997,7 +1040,7 @@ const CardRegistry = (function () {
             icon: 'fas fa-chart-area',
             description: 'Monthly mono and color volumes',
             group: 'Analytics',
-            defaultVisible: true,
+            defaultVisible: false,
             load: async (helpers, context) => {
                 const data = await helpers.fetchJson('api/get-customer-pages.php', {
                     customerCode: context.customerCode
@@ -1068,7 +1111,7 @@ const CardRegistry = (function () {
                                 customerCode: context.customerCode,
                                 dealerCode: context.dealerCode,
                                 dealerId: context.dealerId,
-                                pageRows: 200,
+                                pageRows: 10000,
                                 sortColumn: 'AssetNumber',
                                 sortOrder: 'Asc'
                             });
@@ -1079,7 +1122,7 @@ const CardRegistry = (function () {
                             customerCode: context.customerCode,
                             dealerCode: context.dealerCode,
                             dealerId: context.dealerId,
-                            pageRows: 200,
+                            pageRows: 10000,
                             sortColumn: 'AssetNumber',
                             sortOrder: 'Asc'
                         });
