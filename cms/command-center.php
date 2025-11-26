@@ -382,6 +382,7 @@ trackVisit('/command-center');
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
+    <script src="assets/shared.js"></script>
     <script src="assets/app.js"></script>
     <script src="assets/command-center.js"></script>
 </body>
@@ -392,6 +393,7 @@ CHANGELOG
 - Added searchable datalist suggestions for Alert/Device/Customer patterns in rule modal.
 - No layout change to markup structure; relies on new modal CSS for proper sizing and scrolling.
 -->
+
 
 
 

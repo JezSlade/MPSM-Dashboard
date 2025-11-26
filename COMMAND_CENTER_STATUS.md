@@ -35,16 +35,7 @@ The Command Center notification system is now complete with UI, backend, and das
   - `get_statistics` - Alert aggregation data
   - `get_history` - Notification audit trail
 
-### 2. Command Center UI (Unified)
-- **Main Page**: [cms/command-center.php](cms/command-center.php)
-  - Tabs:
-    - Active Notifications (ack/dismiss)
-    - Panel Stream (live panel messages)
-    - Notification Rules (CRUD)
-    - Alert Aggregations (list of types)
-    - Alert Labels (definitions)
-    - Tools (Device Lifecycle, Payload Debugger)
-  - Access via: https://mpsm.resolutionsbydesign.us/cms/command-center.php
+### 2. Command Center UI (Unified)\n- **Main Page**: [cms/command-center.php](cms/command-center.php)\n  - Tabs:\n    - Active Notifications (ack/dismiss)\n    - Panel Stream (live panel messages)\n    - Notification Rules (CRUD)\n    - Alert Aggregations (list of types)\n    - Alert Labels (definitions)\n    - Tools (Device Lifecycle, Payload Debugger)\n  - Access via: https://mpsm.resolutionsbydesign.us/cms/command-center.php\n
   - Navigation link in header (shield icon)
 
 **Three Tabs:**
@@ -290,3 +281,4 @@ None currently. System is fully functional and ready for production use.
 ---
 
 **Status**: ✅ PRODUCTION READY - Awaiting first notification rules
+

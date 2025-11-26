@@ -10,6 +10,8 @@ requireAuth();
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 200;
 $limit = max(1, min($limit, 500));
+$offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+$offset = max(0, $offset);
 
 $hours = isset($_GET['hours']) ? (int)$_GET['hours'] : null;
 if ($hours !== null) {
@@ -78,7 +80,7 @@ try {
         $sql .= " WHERE " . implode(' AND ', $conditions);
     }
 
-    $sql .= " ORDER BY received_at DESC LIMIT :limit";
+    $sql .= " ORDER BY received_at DESC LIMIT :limit OFFSET :offset";
 
     $stmt = $pdo->prepare($sql);
     foreach ($params as $key => $value) {
@@ -86,6 +88,7 @@ try {
         $stmt->bindValue($key, $value, PDO::PARAM_STR);
     }
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

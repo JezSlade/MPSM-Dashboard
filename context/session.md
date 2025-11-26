@@ -185,3 +185,31 @@ CHANGELOG
 2025-11-25 Codex
 - Logged planning session covering mobile redirect/login persistence, export library prefetching, device 429 handling, customer-scoped alert badge, and alert description mapping readiness.
 */
+### 2025-11-26 15:13:17 -05:00 - Command Center Refinement
+- Implemented UI aggregation (single card per device+alert) using 1h tally from aggregations
+- Added customer filter control + JS integration (populated from aggregations)
+- Fixed Rule CRUD: corrected customer pattern label; modal height/scroll ensured via CSS
+- Aggregations: backend supports alert-only grouping; frontend shows alert-type cards
+- Recorded commit and deployment to main; see context/deploy-log.md
+## 2025-11-26 15:31:15 -05:00 - Command Center refinement (round 2)
+- Customer filter now populates with Names (value=Code) via api/get-customers.php (Active Notifications tab)
+- Rule Edit button fixed to open modal and prefill fields (type-safe id match)
+- Create Rule modal: customer suggestions show Names; input uses Code; helper text clarified
+- Alert Aggregations: switched to a single-column list; each row shows Name (CODE), badges for 1h/24h/7d/30d, device count, total, last occurrence; added legend
+## 2025-11-26 15:47:05 -05:00 - Session persistence improvements
+- Increased minimum session lifetime to 7 days; aligned session.gc_maxlifetime and session.cookie_lifetime
+- Sliding session renewal: refresh cookie expiry on each authenticated request and at login; rotate ID every 30 minutes
+- Set SESSION_TIMEOUT to 7 days for CMS config alignment
+- Locked logout endpoint to POST to avoid accidental logouts
+Files: cms/functions.php, cms/config.php, cms/api/logout.php
+## 2025-11-26 16:01:57 -05:00 - Command Center unification (Phase 1)
+- Added Panel Stream tab (live panel messages) with filters and payload modal
+- Added Alert Labels tab (definitions list) with link to full manager
+- Added Tools tab (device lifecycle + payload debugger) as iframes
+- Wired lazy loading in JS; preserved existing APIs to avoid regressions
+Files: cms/command-center.php, cms/assets/command-center.js, cms/assets/style.css, COMMAND_CENTER_STATUS.md
+## 2025-11-26 16:19:36 -05:00 - Command Center Phase 2 & 3
+- JS consolidation: added cms/assets/shared.js (fetchJson, escapeHtml, showToast) and used it in unified CC panel payload flow
+- API enhancement: added /cms/api/get-panel-message.php to fetch a single panel message by id for payload modal
+- Pagination: /cms/api/get-panel-messages.php accepts offset (LIMIT/OFFSET)
+- Wired Panel Stream modal to use new single-message endpoint with fallback to cache

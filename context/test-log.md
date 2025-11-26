@@ -905,3 +905,38 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?a
   - [ ] Live test of alert definitions admin UI
   - [ ] Live test of hero notifications with display names
   - [ ] Confirm no regressions in customer scoping or deduplication
+## 2025-11-26 15:13:13 -05:00 - Command Center refinement report
+
+- Verified ack/dismiss wiring in cms/assets/command-center.js:334 and hero widget.
+- Added customer filter control and JS wiring; options populated from recent aggregations.
+- Fixed Rule CRUD label for customer pattern (code vs name) and ensured modal is fully visible via CSS flex/scroll.
+- Aggregations backend now supports group_by=alert_only; frontend renders alert-type cards with device counts and time window tallies.
+- Active Notifications counts now use 1h aggregation when available to avoid inflated sums.
+
+Test plan (post-deploy, LIVE):
+- Open /cms/command-center.php; verify single card per device+alert and sane Last 1h count.
+- Acknowledge and Dismiss actions update status without error.
+- Use customer filter to narrow results; verify API param customerCode applied.
+- Check Aggregations tab shows alert-type cards; no overflow on small screens.
+- Open rule modal; scroll works and Save button visible; pattern inputs show suggestions.
+## 2025-11-26 15:31:19 -05:00 - Command Center verification (round 2)
+- Active Notifications: Customer filter shows Names; selecting filters API via customerCode param
+- Rules: Clicking Edit opens modal with rule prefilled; Save works
+- Create Rule: customer datalist shows Names; selection fills code; helper visible
+- Aggregations: list layout renders Name (CODE), badges meanings clarified in legend
+## 2025-11-26 15:47:13 -05:00 - Session fixes verification plan
+- Confirm cookie MPSM_SESSION has 7d expiry and refreshes upon navigation/API calls
+- Idle test: stay on page > 1h, verify session persists
+- Force logout via GET: should return 405; POST should work
+- Check PHP ini_get('session.gc_maxlifetime') and ini_get('session.cookie_lifetime') reflect 604800 via /cms/api/show-config-session.php
+## 2025-11-26 16:02:02 -05:00 - Unified Command Center tests
+- Open /cms/command-center.php: Verify new tabs (Panel Stream, Alert Labels, Tools)
+- Panel Stream: Change hours/limit, filter by customer; table updates; click View shows payload modal
+- Alert Labels: List renders codes and names; Manage in full opens alert-definitions in new tab
+- Tools: Iframes load lifecycle and debugger lazily
+- No regressions in Notifications, Rules, Aggregations
+## 2025-11-26 16:19:40 -05:00 - Phase 2&3 verification
+- Panel Stream modal uses single-message endpoint: /cms/api/get-panel-message.php?id=...
+- get-panel-messages supports offset: verify paging (offset=200)
+- Shared utils loaded: assets/shared.js; ensure no duplicates in toasts/escape
+- Tabs switch cancels panel auto-refresh; resumes on focus

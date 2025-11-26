@@ -1075,11 +1075,11 @@ function renderPanelRows(rows) {
         if (!btn) return;
         const tr = btn.closest('tr');
         const id = tr?.getAttribute('data-id');
-        if (id) showPanelPayload(id);
+        if (id) ccShowPanelPayload(id);
     }, { once: true });
 }
 
-function showPanelPayload(id) {
+function ccShowPanelPayload(id) {
     const modal = buildPanelModal();
     const viewer = modal.querySelector('#cc-panel-payload');
     const message = panelCache.find(r => String(r.id) === String(id));
@@ -1142,3 +1142,21 @@ async function loadDefinitions() {
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopPanelAutoRefresh(); else if (currentTab === 'panel') startPanelAutoRefresh(); });
 /*\nCHANGELOG\n2025-11-26 Codex\n- Unified Command Center: added Panel Stream and Alert Labels tabs (lazy-loaded) and simple tools tab wiring.\n*/
 
+
+
+async function ccShowPanelPayload(id) {
+  const modal = buildPanelModal();
+  const viewer = modal.querySelector('#cc-panel-payload');
+  try {
+    const data = await fetchJson(pi/get-panel-message.php?id=, { timeoutMs: 10000 });
+    if (!data.success) throw new Error(data.error || 'Failed to fetch message');
+    const msg = data.message || panelCache.find(r => String(r.id) === String(id));
+    const pretty = msg?.payload ? (typeof msg.payload === 'object' ? JSON.stringify(msg.payload, null, 2) : String(msg.payload)) : 'No payload available';
+    viewer.textContent = pretty;
+  } catch (e) {
+    const message = panelCache.find(r => String(r.id) === String(id));
+    const fallback = message?.payload ? (typeof message.payload === 'object' ? JSON.stringify(message.payload, null, 2) : String(message.payload)) : '';
+    viewer.textContent = fallback || Error loading payload: ;
+  }
+  modal.classList.add('active');
+}
