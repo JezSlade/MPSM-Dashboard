@@ -77,7 +77,7 @@ All agents follow these exact steps for each task:
 
 ### Standard Deployment Process
 ```bash
-# 1. Commit changes
+# 1. Commit changes (Claude Code can do this)
 git add .
 git commit -m "Description
 
@@ -85,7 +85,9 @@ git commit -m "Description
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
-# 2. Push to trigger automatic deployment
+# 2. Push to trigger automatic deployment (USER MUST DO THIS MANUALLY)
+# ⚠️ CRITICAL: Claude Code CANNOT push due to authentication requirements
+# User must execute in their terminal:
 git push origin main
 
 # 3. Monitor deployment
@@ -94,8 +96,35 @@ git push origin main
 
 # 4. Verify live site
 # Visit: https://mpsm.resolutionsbydesign.us/cms/
-# Hard refresh: Ctrl+Shift+R
+# Hard refresh: Ctrl+Shift+R or Ctrl+F5
 ```
+
+### Troubleshooting: Changes Not Deployed
+
+**Symptom**: Live site doesn't reflect committed changes
+
+**Diagnosis**:
+
+```bash
+# Check if commits are local only
+git status
+# Look for: "Your branch is ahead of 'origin/main' by X commits"
+```
+
+**Root Cause**: Commits exist locally but weren't pushed to GitHub
+
+**Fix**: User must manually push from terminal
+
+```bash
+cd /home/jez/projects/MPSM-Dashboard
+git push origin main
+```
+
+**Why Claude Code Can't Push**:
+
+- Requires GitHub authentication (username/password or SSH key)
+- Claude Code runs in sandboxed environment without credentials
+- Security design: prevents automated unauthorized pushes
 
 ### Alternative Methods (Fallback Only)
 1. **SSH/Git Pull** (manual):
