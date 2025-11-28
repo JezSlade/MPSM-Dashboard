@@ -14,7 +14,18 @@ require_once __DIR__ . '/../../mps-api/callbacks/panel-message-common.php';  // 
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-schema.php';
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-engine.php';
 
+// Get action from GET, POST, or JSON body
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// If no action in GET/POST, check JSON body
+if (empty($action) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $jsonInput = file_get_contents('php://input');
+    $jsonData = json_decode($jsonInput, true);
+    if (isset($jsonData['action'])) {
+        $action = $jsonData['action'];
+    }
+}
+
 $pdo = getDatabase();
 
 // Ensure tables exist
@@ -1076,4 +1087,8 @@ CHANGELOG
 - Merged getNotifications to include both customer filtering AND alert definitions JOIN
 2025-11-25 Codex
 - Added fallback mapping from docs/MPSM_Code_Descriptions.md so alert display names/descriptions always resolve for system alerts and lookup endpoints.
+2025-11-27 Codex
+- CRITICAL FIX: Added JSON body parsing for action parameter to fix "Invalid action" error when saving rules.
+- Rule create/update requests send action in JSON body, but API was only checking GET/POST.
+- Now checks JSON body if action not found in GET/POST parameters.
 */
