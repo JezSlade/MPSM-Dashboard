@@ -241,12 +241,16 @@ if (!function_exists('ruleMatches')) {
 if (!function_exists('matchesPattern')) {
     /**
      * Check if value matches pattern (supports SQL LIKE wildcards)
+     * Protected against ReDoS attacks by escaping special regex characters
      */
     function matchesPattern(string $value, string $pattern): bool
     {
-        // Convert SQL LIKE pattern to regex
-        $pattern = str_replace('%', '.*', $pattern);
-        $pattern = str_replace('_', '.', $pattern);
+        // Escape regex special characters first to prevent ReDoS
+        $pattern = preg_quote($pattern, '/');
+
+        // Convert escaped SQL LIKE wildcards to regex
+        $pattern = str_replace('\\%', '.*', $pattern);
+        $pattern = str_replace('\\_', '.', $pattern);
         $pattern = '/^' . $pattern . '$/i';
 
         return (bool)preg_match($pattern, $value);

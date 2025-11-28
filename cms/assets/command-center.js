@@ -37,28 +37,70 @@ const SEVERITY_CONFIG = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function () {
-    initializeTabs();
-    initializeControls();
-    loadNotifications();
-    startAutoRefresh();
+    try {
+        // Initialize core functionality
+        initializeTabs();
+        initializeControls();
 
-    // Header refresh button handler
-    const refreshBtn = document.getElementById('refresh-btn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            // Refresh current tab
-            if (currentTab === 'notifications') {
-                loadNotifications();
-            } else if (currentTab === 'rules') {
-                loadRules();
-            } else if (currentTab === 'statistics') {
-                loadStatistics();
-            } else if (currentTab === 'panel') {
-                loadPanelMessages();
-            } else if (currentTab === 'definitions') {
-                loadDefinitions();
+        // Initialize panel stream tab functionality
+        initPanelTab();
+        startPanelAutoRefresh();
+
+        // Load initial data
+        loadNotifications();
+        startAutoRefresh();
+
+        // Header refresh button handler
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                // Refresh current tab
+                if (currentTab === 'notifications') {
+                    loadNotifications();
+                } else if (currentTab === 'rules') {
+                    loadRules();
+                } else if (currentTab === 'statistics') {
+                    loadStatistics();
+                } else if (currentTab === 'panel') {
+                    loadPanelMessages();
+                } else if (currentTab === 'definitions') {
+                    loadDefinitions();
+                }
+            });
+        }
+
+        // Handle URL parameters for deep linking
+        const params = new URLSearchParams(location.search);
+        const tab = (params.get('tab') || '').trim();
+        const customerCode = (params.get('customerCode') || '').trim();
+
+        // Apply customer filter if provided
+        if (customerCode) {
+            notificationCustomerFilter = customerCode;
+            const notificationFilter = document.getElementById('notification-customer-filter');
+            if (notificationFilter) notificationFilter.value = customerCode;
+
+            const panelFilter = document.getElementById('cc-panel-customer');
+            if (panelFilter) panelFilter.value = customerCode;
+        }
+
+        // Switch to requested tab if provided
+        if (tab) {
+            const tabBtn = document.querySelector('.monitor-tab-btn[data-tab="' + tab + '"]');
+            if (tabBtn) {
+                setTimeout(() => {
+                    tabBtn.click();
+                    // Load tab-specific data
+                    if (tab === 'panel') {
+                        loadPanelMessages();
+                    } else if (tab === 'definitions') {
+                        loadDefinitions();
+                    }
+                }, 100);
             }
-        });
+        }
+    } catch (e) {
+        console.error('Error initializing Command Center:', e);
     }
 });
 
@@ -162,7 +204,10 @@ function startAutoRefresh() {
             loadRules(true);
         } else if (currentTab === 'statistics') {
             loadStatistics(true);
+        } else if (currentTab === 'definitions') {
+            loadDefinitions(true);
         }
+        // Note: Panel tab has its own 30s auto-refresh via startPanelAutoRefresh()
     }, 10000); // 10 seconds
 }
 
@@ -1138,10 +1183,12 @@ function buildPanelModal() {
 }// ========================================
 // TAB: Alert Definitions (Labels)
 // ========================================
-async function loadDefinitions() {
+async function loadDefinitions(silent = false) {
     const container = document.getElementById('definitions-container');
     if (!container) return;
-    container.innerHTML = '<div class="loading">Loading alert labels...</div>';
+    if (!silent) {
+        container.innerHTML = '<div class="loading">Loading alert labels...</div>';
+    }
     try {
         const res = await fetch('api/command-center.php?action=get_alert_definitions&limit=200', { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
         const data = await res.json();
@@ -1174,48 +1221,6 @@ document.addEventListener('visibilitychange', () => {
     else if (currentTab === 'panel') startPanelAutoRefresh(); 
 });
 
-// Handle URL parameters for deep linking (tab and customer filter)
-document.addEventListener('DOMContentLoaded', function () {
-    try {
-        // Initialize panel stream tab functionality
-        initPanelTab();
-        startPanelAutoRefresh();
-
-        // Handle URL parameters
-        const params = new URLSearchParams(location.search);
-        const tab = (params.get('tab') || '').trim();
-        const customerCode = (params.get('customerCode') || '').trim();
-        
-        // Apply customer filter if provided
-        if (customerCode) {
-            notificationCustomerFilter = customerCode;
-            const notificationFilter = document.getElementById('notification-customer-filter');
-            if (notificationFilter) notificationFilter.value = customerCode;
-            
-            const panelFilter = document.getElementById('cc-panel-customer');
-            if (panelFilter) panelFilter.value = customerCode;
-        }
-        
-        // Switch to requested tab if provided
-        if (tab) {
-            const tabBtn = document.querySelector('.monitor-tab-btn[data-tab="' + tab + '"]');
-            if (tabBtn) {
-                setTimeout(() => {
-                    tabBtn.click();
-                    // Load tab-specific data
-                    if (tab === 'panel') {
-                        loadPanelMessages();
-                    } else if (tab === 'definitions') {
-                        loadDefinitions();
-                    }
-                }, 100);
-            }
-        }
-    } catch (e) {
-        console.error('Error initializing Command Center:', e);
-    }
-});
-
 /*
 CHANGELOG
 2025-11-26 Claude
@@ -1237,4 +1242,7 @@ CHANGELOG
 - Fixed initializeTabs to load Panel Stream and Alert Labels data when tabs are clicked.
 - Implemented "Critical First" sort option (uses 1h + 24h activity as critical indicator).
 - Fixed bad character in panel refresh badge (replaced � with proper bullet •).
+- CRITICAL FIX: Merged duplicate DOMContentLoaded handlers that caused double initialization.
+- CRITICAL FIX: Added Alert Labels tab to auto-refresh (now refreshes every 10s).
+- Added silent parameter to loadDefinitions() for background refresh support.
 */
