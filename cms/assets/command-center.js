@@ -41,6 +41,25 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeControls();
     loadNotifications();
     startAutoRefresh();
+
+    // Header refresh button handler
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            // Refresh current tab
+            if (currentTab === 'notifications') {
+                loadNotifications();
+            } else if (currentTab === 'rules') {
+                loadRules();
+            } else if (currentTab === 'statistics') {
+                loadStatistics();
+            } else if (currentTab === 'panel') {
+                loadPanelMessages();
+            } else if (currentTab === 'definitions') {
+                loadDefinitions();
+            }
+        });
+    }
 });
 
 // Tab Switching
@@ -1145,7 +1164,7 @@ async function loadDefinitions() {
             </div>
         `;
     } catch (err) {
-        container.innerHTML = `<div class=\"error-message\"><i class=\"fas fa-exclamation-triangle\"></i> ${escapeHtml(err.message)}</div>`;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</div>`;
     }
 }
 
