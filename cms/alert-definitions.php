@@ -8,6 +8,9 @@ require 'functions.php';
 
 requireAuth();
 trackVisit('/alert-definitions');
+$userId = $_SESSION['user_id'] ?? null;
+$preferences = getUserPreferences($userId);
+$theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -328,7 +331,7 @@ trackVisit('/alert-definitions');
         }
     </style>
 </head>
-<body>
+<body data-theme="<?= $theme ?>">
     <header class="header">
         <div class="container">
             <h1><i class="fas fa-tags"></i> Alert Definitions</h1>

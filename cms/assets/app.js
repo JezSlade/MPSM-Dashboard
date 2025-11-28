@@ -1932,8 +1932,8 @@ const MPSM = (function() {
                 || 'Unknown Customer';
             state.customerName = resolvedName;
             const monitorLink = state.customerCode
-                ? `panel-message-monitor.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`
-                : 'panel-message-monitor.php';
+                ? `command-center.php?tab=panel&customerCode=${encodeURIComponent(state.customerCode)}`
+                : 'command-center.php?tab=panel';
 
             container.innerHTML = `
                 <div class="customer-banner">
@@ -4276,8 +4276,8 @@ const MPSM = (function() {
 
         try {
             const monitorLink = state.customerCode
-                ? `panel-message-monitor.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`
-                : 'panel-message-monitor.php';
+                ? `command-center.php?tab=panel&customerCode=${encodeURIComponent(state.customerCode)}`
+                : 'command-center.php?tab=panel';
             badge.setAttribute('href', monitorLink);
 
             const response = await fetch(`api/get-panel-alert-count.php?customerCode=${encodeURIComponent(state.customerCode)}&hours=24`);

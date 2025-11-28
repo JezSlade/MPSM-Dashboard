@@ -4,6 +4,9 @@ require 'functions.php';
 
 requireAuth();
 trackVisit('/command-center');
+$userId = $_SESSION['user_id'] ?? null;
+$preferences = getUserPreferences($userId);
+$theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -14,7 +17,7 @@ trackVisit('/command-center');
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
 </head>
-<body>
+<body data-theme="<?= $theme ?>">
     <header class="header">
         <div class="container">
             <h1><i class="fas fa-shield-alt"></i> Command Center</h1>
@@ -42,19 +45,19 @@ trackVisit('/command-center');
         <!-- Tab Navigation -->
         <div class="monitor-tabs">
             <button class="monitor-tab-btn active" data-tab="notifications">
-                 <i class="fas fa-bell"></i> Active Notifications</button>
+                <i class="fas fa-bell"></i> Active Notifications
+            </button>
             <button class="monitor-tab-btn" data-tab="panel">
                 <i class="fas fa-stream"></i> Panel Stream
             </button>
-            <button class="monitor-tab-btn" data-tab="rules"></button>
+            <button class="monitor-tab-btn" data-tab="rules">
+                <i class="fas fa-cog"></i> Notification Rules
+            </button>
             <button class="monitor-tab-btn" data-tab="definitions">
                 <i class="fas fa-tags"></i> Alert Labels
             </button>
             <button class="monitor-tab-btn" data-tab="tools">
                 <i class="fas fa-toolbox"></i> Tools
-            </button>
-            <button class="monitor-tab-btn" data-tab="rules">
-                <i class="fas fa-cog"></i> Notification Rules
             </button>
             <button class="monitor-tab-btn" data-tab="statistics">
                 <i class="fas fa-chart-bar"></i> Alert Statistics
@@ -393,8 +396,6 @@ CHANGELOG
 - Added searchable datalist suggestions for Alert/Device/Customer patterns in rule modal.
 - No layout change to markup structure; relies on new modal CSS for proper sizing and scrolling.
 -->
-
-
 
 
 

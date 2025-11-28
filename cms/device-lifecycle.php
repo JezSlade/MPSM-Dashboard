@@ -6,6 +6,10 @@ requireAuth();
 ensureDeviceCrudEnabled();
 trackVisit('/device-lifecycle');
 
+$userId = $_SESSION['user_id'] ?? null;
+$preferences = getUserPreferences($userId);
+$theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8');
+
 $prefillCustomerCode = isset($_GET['customerCode']) ? trim((string) $_GET['customerCode']) : '';
 $prefillSearch = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
 
@@ -22,7 +26,7 @@ header('X-Frame-Options: SAMEORIGIN');
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/device-crud.css">
 </head>
-<body data-theme="light">
+<body data-theme="<?= $theme ?>">
     <header class="monitor-header sticky">
         <div class="monitor-header-content">
             <div>
@@ -446,4 +450,3 @@ CHANGELOG
 - Added dynamic optional-field controls for IP, department/location, asset, contact, note, and product description in the update modal.
 */
 ?>
-

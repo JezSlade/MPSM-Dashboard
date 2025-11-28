@@ -16,6 +16,21 @@
     --radius-xs: 10px;
 }
 
+[data-theme="light"] {
+    --bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 60%, #f1f5f9 100%);
+    --bg-card: #ffffff;
+    --bg-muted: #fbfdff;
+    --border: rgba(15, 23, 42, 0.12);
+    --text: #0f172a;
+    --text-muted: #475569;
+    --accent: #2563eb;
+    --accent-strong: #1d4ed8;
+    --critical: #dc2626;
+    --warning: #d97706;
+    --success: #059669;
+    --shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
 *,
 *::before,
 *::after {
@@ -787,6 +802,43 @@ body {
     padding: 6px 10px;
     border-radius: 999px;
     font-size: 12px;
+}
+
+body[data-theme="light"] .mobile-header {
+    background: linear-gradient(160deg, #ffffff 0%, #e2e8f0 60%, #f8fafc 100%);
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.15);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+body[data-theme="light"] .icon-btn {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.12);
+    color: var(--text);
+}
+
+body[data-theme="light"] .icon-btn:hover {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+body[data-theme="light"] .search-input,
+body[data-theme="light"] .customer-switch,
+body[data-theme="light"] .switch-input,
+body[data-theme="light"] #mobile-customer-select {
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+body[data-theme="light"] .mobile-nav {
+    background: rgba(255, 255, 255, 0.95);
+    border-top-color: rgba(15, 23, 42, 0.12);
+}
+
+body[data-theme="light"] .mobile-sheet {
+    background: #ffffff;
+    color: var(--text);
+}
+
+body[data-theme="light"] .sheet-overlay {
+    background: rgba(15, 23, 42, 0.25);
 }
 
 .sr-only {

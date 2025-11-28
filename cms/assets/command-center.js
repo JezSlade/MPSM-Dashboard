@@ -68,6 +68,10 @@ function initializeTabs() {
                 loadRules();
             } else if (target === 'statistics') {
                 loadStatistics();
+            } else if (target === 'panel') {
+                loadPanelMessages();
+            } else if (target === 'definitions') {
+                loadDefinitions();
             }
         });
     });
@@ -722,6 +726,12 @@ function renderStatistics(aggregations) {
     const sorted = [...aggregations].sort((a, b) => {
         if (sortBy === 'recent') return new Date(b.last_occurrence_ny) - new Date(a.last_occurrence_ny);
         if (sortBy === 'frequent') return (b.occurrence_count || 0) - (a.occurrence_count || 0);
+        if (sortBy === 'critical') {
+            // Sort by most active in last hour (critical activity indicator)
+            const bScore = (b.count_1h || 0) * 100 + (b.count_24h || 0);
+            const aScore = (a.count_1h || 0) * 100 + (a.count_24h || 0);
+            return bScore - aScore;
+        }
         return 0;
     });
 
@@ -1032,7 +1042,7 @@ async function loadPanelMessages() {
         if (!data.success) throw new Error(data.error || 'Failed to load panel messages');
         panelCache = data.messages || [];
         renderPanelRows(panelCache);
-        if (last) last.textContent = 'Last refresh: ' + new Date().toLocaleTimeString() + ' � Auto 30s';
+        if (last) last.textContent = 'Last refresh: ' + new Date().toLocaleTimeString() + ' • Auto 30s';
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</td></tr>`;
         if (last) last.textContent = 'Error';
@@ -1139,41 +1149,73 @@ async function loadDefinitions() {
     }
 }
 
-document.addEventListener('visibilitychange', () => { if (document.hidden) stopPanelAutoRefresh(); else if (currentTab === 'panel') startPanelAutoRefresh(); });
-/*\nCHANGELOG\n2025-11-26 Codex\n- Unified Command Center: added Panel Stream and Alert Labels tabs (lazy-loaded) and simple tools tab wiring.\n*/
 
-
-
-async function ccShowPanelPayload(id) {
-  const modal = buildPanelModal();
-  const viewer = modal.querySelector('#cc-panel-payload');
-  try {
-    const data = await fetchJson(pi/get-panel-message.php?id=, { timeoutMs: 10000 });
-    if (!data.success) throw new Error(data.error || 'Failed to fetch message');
-    const msg = data.message || panelCache.find(r => String(r.id) === String(id));
-    const pretty = msg?.payload ? (typeof msg.payload === 'object' ? JSON.stringify(msg.payload, null, 2) : String(msg.payload)) : 'No payload available';
-    viewer.textContent = pretty;
-  } catch (e) {
-    const message = panelCache.find(r => String(r.id) === String(id));
-    const fallback = message?.payload ? (typeof message.payload === 'object' ? JSON.stringify(message.payload, null, 2) : String(message.payload)) : '';
-    viewer.textContent = fallback || Error loading payload: ;
-  }
-  modal.classList.add('active');
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-  try {
-    const params = new URLSearchParams(location.search);
-    const t = (params.get('tab') || '').trim();
-    const c = (params.get('customerCode') || '').trim();
-    if (c) {
-      notificationCustomerFilter = c;
-      const sel = document.getElementById('notification-customer-filter');
-      if (sel) sel.value = c;
-    }
-    if (t) {
-      const btn = document.querySelector('.monitor-tab-btn[data-tab="' + t + '"]');
-      if (btn) { setTimeout(() => btn.click(), 0); }
-    }
-  } catch (e) { /* ignore */ }
+document.addEventListener('visibilitychange', () => { 
+    if (document.hidden) stopPanelAutoRefresh(); 
+    else if (currentTab === 'panel') startPanelAutoRefresh(); 
 });
+
+// Handle URL parameters for deep linking (tab and customer filter)
+document.addEventListener('DOMContentLoaded', function () {
+    try {
+        // Initialize panel stream tab functionality
+        initPanelTab();
+        startPanelAutoRefresh();
+
+        // Handle URL parameters
+        const params = new URLSearchParams(location.search);
+        const tab = (params.get('tab') || '').trim();
+        const customerCode = (params.get('customerCode') || '').trim();
+        
+        // Apply customer filter if provided
+        if (customerCode) {
+            notificationCustomerFilter = customerCode;
+            const notificationFilter = document.getElementById('notification-customer-filter');
+            if (notificationFilter) notificationFilter.value = customerCode;
+            
+            const panelFilter = document.getElementById('cc-panel-customer');
+            if (panelFilter) panelFilter.value = customerCode;
+        }
+        
+        // Switch to requested tab if provided
+        if (tab) {
+            const tabBtn = document.querySelector('.monitor-tab-btn[data-tab="' + tab + '"]');
+            if (tabBtn) {
+                setTimeout(() => {
+                    tabBtn.click();
+                    // Load tab-specific data
+                    if (tab === 'panel') {
+                        loadPanelMessages();
+                    } else if (tab === 'definitions') {
+                        loadDefinitions();
+                    }
+                }, 100);
+            }
+        }
+    } catch (e) {
+        console.error('Error initializing Command Center:', e);
+    }
+});
+
+/*
+CHANGELOG
+2025-11-26 Claude
+- Fixed trigger count aggregation: Changed from Math.max() to COUNT duplicates to show accurate occurrence numbers.
+
+2025-11-26 Codex
+- Collapsed duplicate notifications (same device + alert) into a single card; use MAX trigger count to avoid inflation.
+- Switched "Alert Aggregations" to a list layout to prevent overflow and improve readability.
+- Added searchable pattern suggestions (datalists) for alert codes, device serials, and customer codes in the rule modal.
+- Show accurate 1h tallies in notifications using get_aggregations, with 30s client-side cache.
+- Unified Command Center: added Panel Stream and Alert Labels tabs (lazy-loaded) and simple tools tab wiring.
+
+2025-11-27 Codex
+- Removed duplicate ccShowPanelPayload function definition (kept working sync version at line 1082).
+- Fixed broken async version that had syntax errors (missing backticks, incomplete error message).
+- Enhanced DOMContentLoaded handler to properly initialize Panel Stream tab and Alert Labels tab.
+- Added deep-link support for tab switching via URL parameters.
+- Added customer filter sync between notification and panel stream filters.
+- Fixed initializeTabs to load Panel Stream and Alert Labels data when tabs are clicked.
+- Implemented "Critical First" sort option (uses 1h + 24h activity as critical indicator).
+- Fixed bad character in panel refresh badge (replaced � with proper bullet •).
+*/
