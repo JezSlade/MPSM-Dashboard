@@ -190,9 +190,9 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
                         <h2>Alert Labels</h2>
                         <p class="text-muted">Map MPSM alert codes to human-readable names</p>
                     </div>
-                    <a class="btn btn-secondary" href="alert-definitions.php" target="_blank" rel="noopener">
-                        <i class="fas fa-up-right-from-square"></i> Manage in full
-                    </a>
+                    <button class="btn btn-primary" onclick="openDefinitionModal()">
+                        <i class="fas fa-plus"></i> Create Label
+                    </button>
                 </div>
                 <div class="card-body">
                     <div id="definitions-container">
@@ -207,28 +207,53 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
             <div class="card">
                 <div class="card-header">
                     <div>
-                        <h2>Tools</h2>
-                        <p class="text-muted">Device lifecycle and payload debugger</p>
+                        <h2>Developer Tools</h2>
+                        <p class="text-muted">Device management and payload testing utilities</p>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div style="display:grid; gap:1rem; grid-template-columns: 1fr;">
-                        <div style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
-                            <div style="padding:0.75rem 1rem; border-bottom:1px solid var(--border-color); font-weight:600;">
-                                <i class="fas fa-network-wired"></i> Device Lifecycle
+                    <div style="display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); padding: 1rem;">
+                        <!-- Device Lifecycle Tool -->
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <i class="fas fa-network-wired"></i>
                             </div>
-                            <iframe src="device-lifecycle.php" title="Device Lifecycle" loading="lazy" style="width:100%; height:480px; border:0;"></iframe>
+                            <h3>Device Lifecycle Management</h3>
+                            <p>Create, update, and retire devices while maintaining complete audit trails. Search by serial number, filter by customer, and manage device inventory.</p>
+                            <div class="tool-features">
+                                <div><i class="fas fa-check"></i> Create new devices</div>
+                                <div><i class="fas fa-check"></i> Update device details</div>
+                                <div><i class="fas fa-check"></i> Retire/archive devices</div>
+                                <div><i class="fas fa-check"></i> Full audit history</div>
+                            </div>
+                            <a href="device-lifecycle.php" class="btn btn-primary" target="_blank" rel="noopener">
+                                <i class="fas fa-external-link-alt"></i> Open Device Lifecycle
+                            </a>
                         </div>
-                        <div style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
-                            <div style="padding:0.75rem 1rem; border-bottom:1px solid var(--border-color); font-weight:600;">
-                                <i class="fas fa-bug"></i> Payload Debugger
+
+                        <!-- Payload Debugger Tool -->
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <i class="fas fa-bug"></i>
                             </div>
-                            <iframe src="payload-debugger.php" title="Payload Debugger" loading="lazy" style="width:100%; height:480px; border:0;"></iframe>
+                            <h3>Payload Debugger</h3>
+                            <p>Test and validate panel message payloads before sending to production. Inspect JSON structure, verify field mappings, and troubleshoot integration issues.</p>
+                            <div class="tool-features">
+                                <div><i class="fas fa-check"></i> Test JSON payloads</div>
+                                <div><i class="fas fa-check"></i> Validate field mappings</div>
+                                <div><i class="fas fa-check"></i> Debug API responses</div>
+                                <div><i class="fas fa-check"></i> View processed output</div>
+                            </div>
+                            <a href="payload-debugger.php" class="btn btn-primary" target="_blank" rel="noopener">
+                                <i class="fas fa-external-link-alt"></i> Open Payload Debugger
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
-        </div><div id="tab-statistics" class="tab-panel" data-tab="statistics">
+        </div>
+
+        <div id="tab-statistics" class="tab-panel" data-tab="statistics">
             <div class="card">
                 <div class="card-header">
                     <div>
@@ -382,6 +407,62 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
         </div>
     </div>
 
+    <!-- Definition Editor Modal -->
+    <div id="definition-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="definition-modal-title">Create Alert Label</h2>
+                <button class="modal-close" onclick="closeDefinitionModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="definition-form">
+                <div class="modal-body">
+                    <input type="hidden" id="definition-id" name="id">
+
+                    <div class="form-group">
+                        <label for="definition-alert-code">Alert Code <span class="required">*</span></label>
+                        <input type="text" id="definition-alert-code" name="alert_code" class="form-control" required placeholder="e.g., E-001">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="definition-display-name">Display Name <span class="required">*</span></label>
+                        <input type="text" id="definition-display-name" name="display_name" class="form-control" required placeholder="e.g., Emergency Stop">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="definition-category">Category</label>
+                        <input type="text" id="definition-category" name="category" class="form-control" placeholder="e.g., Safety">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="definition-severity">Severity Override</label>
+                        <select id="definition-severity" name="severity_override" class="form-control">
+                            <option value="">None</option>
+                            <option value="info">Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="definition-description">Description</label>
+                        <textarea id="definition-description" name="description" class="form-control" rows="3" placeholder="Optional detailed description"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDefinitionModal()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Label
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
@@ -395,6 +476,11 @@ CHANGELOG
 2025-11-26 Codex
 - Added searchable datalist suggestions for Alert/Device/Customer patterns in rule modal.
 - No layout change to markup structure; relies on new modal CSS for proper sizing and scrolling.
+2025-11-28 Codex
+- Added Alert Labels CRUD: Create Label button, definition modal, Edit/Delete action buttons
+- Removed "Manage in full" link (functionality now integrated into Command Center)
+- Fixed Tools tab: Removed iframes, replaced with tool cards linking to standalone tools
+- Tool cards now open device-lifecycle.php and payload-debugger.php in new tabs
 -->
 
 

@@ -695,6 +695,7 @@ async function handleRuleSubmit(e) {
         name: formData.get('name'),
         description: formData.get('description') || null,
         severity: formData.get('severity'),
+        enabled: 1, // Default to enabled (no UI toggle currently)
         alert_code_pattern: formData.get('alert_code_pattern') || null,
         device_serial_pattern: formData.get('device_serial_pattern') || null,
         customer_code_pattern: formData.get('customer_code_pattern') || null,
@@ -1190,7 +1191,7 @@ async function loadDefinitions(silent = false) {
         container.innerHTML = '<div class="loading">Loading alert labels...</div>';
     }
     try {
-        const res = await fetch('api/command-center.php?action=get_alert_definitions&limit=200', { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
+        const res = await fetch('api/command-center.php?action=get_alert_definitions&limit=500', { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to load alert labels');
         const defs = data.definitions || [];
@@ -1200,13 +1201,21 @@ async function loadDefinitions(silent = false) {
                 <td>${escapeHtml(d.display_name || '')}</td>
                 <td>${escapeHtml(d.category || '')}</td>
                 <td>${escapeHtml(d.severity_override || '')}</td>
+                <td>
+                    <button class="btn btn-secondary btn-small" onclick="editDefinition(${d.id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-danger btn-small" onclick="deleteDefinition(${d.id}, '${escapeHtml(d.alert_code)}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
             </tr>
         `).join('');
         container.innerHTML = `
             <div class="table-wrapper">
                 <table class="table">
-                    <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Severity</th></tr></thead>
-                    <tbody>${rows || '<tr><td colspan="4">No alert labels yet.</td></tr>'}</tbody>
+                    <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Severity</th><th>Actions</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="5">No alert labels yet.</td></tr>'}</tbody>
                 </table>
             </div>
         `;
@@ -1214,6 +1223,146 @@ async function loadDefinitions(silent = false) {
         container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</div>`;
     }
 }
+
+function openDefinitionModal(definition = null) {
+    const modal = document.getElementById('definition-modal');
+    const form = document.getElementById('definition-form');
+    const title = document.getElementById('definition-modal-title');
+
+    form.reset();
+
+    if (definition) {
+        title.textContent = 'Edit Alert Label';
+        document.getElementById('definition-id').value = definition.id;
+        document.getElementById('definition-alert-code').value = definition.alert_code || '';
+        document.getElementById('definition-display-name').value = definition.display_name || '';
+        document.getElementById('definition-category').value = definition.category || '';
+        document.getElementById('definition-severity').value = definition.severity_override || '';
+        document.getElementById('definition-description').value = definition.description || '';
+    } else {
+        title.textContent = 'Create Alert Label';
+        document.getElementById('definition-id').value = '';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeDefinitionModal() {
+    const modal = document.getElementById('definition-modal');
+    modal.style.display = 'none';
+}
+
+async function editDefinition(id) {
+    try {
+        const response = await fetch(`api/command-center.php?action=get_alert_definitions`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const definition = (data.definitions || []).find(d => Number(d.id) === Number(id));
+            if (definition) {
+                openDefinitionModal(definition);
+            } else {
+                showToast('Alert label not found', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading definition:', error);
+        showToast('Failed to load alert label', 'error');
+    }
+}
+
+async function deleteDefinition(id, alertCode) {
+    if (!confirm(`Delete alert label "${alertCode}"? This cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('api/command-center.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'delete_alert_definition',
+                id: id
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to delete alert label');
+        }
+
+        showToast('Alert label deleted successfully', 'success');
+        loadDefinitions();
+    } catch (error) {
+        console.error('Error deleting definition:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+async function handleDefinitionSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const definitionId = formData.get('id');
+    const action = definitionId ? 'update_alert_definition' : 'create_alert_definition';
+
+    const body = {
+        action: action,
+        alert_code: formData.get('alert_code'),
+        display_name: formData.get('display_name'),
+        category: formData.get('category') || null,
+        severity_override: formData.get('severity_override') || null,
+        description: formData.get('description') || null
+    };
+
+    if (definitionId) {
+        body.id = definitionId;
+    }
+
+    try {
+        const response = await fetch('api/command-center.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to save alert label');
+        }
+
+        showToast(`Alert label ${definitionId ? 'updated' : 'created'} successfully`, 'success');
+        closeDefinitionModal();
+        loadDefinitions();
+
+        // Refresh pattern suggestions for rule modal
+        patternSuggestions = null;
+        ensurePatternSuggestions();
+    } catch (error) {
+        console.error('Error saving definition:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// Wire up definition form submit handler
+document.addEventListener('DOMContentLoaded', function() {
+    const definitionForm = document.getElementById('definition-form');
+    if (definitionForm) {
+        definitionForm.addEventListener('submit', handleDefinitionSubmit);
+    }
+});
 
 
 document.addEventListener('visibilitychange', () => { 
@@ -1245,4 +1394,13 @@ CHANGELOG
 - CRITICAL FIX: Merged duplicate DOMContentLoaded handlers that caused double initialization.
 - CRITICAL FIX: Added Alert Labels tab to auto-refresh (now refreshes every 10s).
 - Added silent parameter to loadDefinitions() for background refresh support.
+
+2025-11-28 Codex
+- CRITICAL FIX: Added enabled field to rule submission to fix "HTML error toast" when editing rules
+- Default enabled to 1 (no UI toggle currently)
+- Implemented Alert Labels CRUD: openDefinitionModal, closeDefinitionModal, editDefinition, deleteDefinition, handleDefinitionSubmit
+- Added Edit/Delete action buttons to Alert Labels table
+- Definition modal supports create and update operations
+- Refreshes pattern suggestions after definition changes
+- Increased limit to 500 alert labels, added Actions column
 */
