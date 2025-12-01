@@ -171,6 +171,7 @@ function getNotifications(PDO $pdo): void
     $severity = $_GET['severity'] ?? null;
     $customerCode = $_GET['customerCode'] ?? null;
     $limit = min((int)($_GET['limit'] ?? 50), 100);
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
 
     $notifTable = DB_PREFIX . 'dashboard_notifications';
     $defsTable = DB_PREFIX . 'alert_definitions';
@@ -213,7 +214,7 @@ function getNotifications(PDO $pdo): void
         )";
     }
 
-    $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
+    $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit OFFSET :offset";
 
     try {
         $stmt = $pdo->prepare($sql);
@@ -228,6 +229,7 @@ function getNotifications(PDO $pdo): void
         }
 
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
 
         $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -256,7 +258,7 @@ function getNotifications(PDO $pdo): void
             )";
         }
 
-        $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit";
+        $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':status', $status);
@@ -270,6 +272,7 @@ function getNotifications(PDO $pdo): void
         }
 
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
 
         $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -717,6 +720,7 @@ function getAlertDefinitions(PDO $pdo): void
     $category = $_GET['category'] ?? null;
     $search = $_GET['search'] ?? null;
     $limit = min((int)($_GET['limit'] ?? 100), 500);
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
 
     $table = DB_PREFIX . 'alert_definitions';
     $sql = "SELECT * FROM {$table} WHERE 1=1";
@@ -732,10 +736,15 @@ function getAlertDefinitions(PDO $pdo): void
         $params[':search'] = '%' . $search . '%';
     }
 
-    $sql .= " ORDER BY category ASC, display_name ASC LIMIT {$limit}";
+    $sql .= " ORDER BY category ASC, display_name ASC LIMIT :limit OFFSET :offset";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $definitions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get categories for filter dropdown

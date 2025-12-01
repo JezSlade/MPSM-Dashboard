@@ -95,7 +95,22 @@ async function loadHeroNotifications() {
 function updateNotificationBadge() {
     const badge = document.getElementById('notification-badge');
     if (!badge) return;
-    badge.style.display = 'none';
+    const parentLink = badge.closest('a');
+
+    if (activeNotificationsCount > 0) {
+        badge.textContent = activeNotificationsCount;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
+
+    if (parentLink && !parentLink.dataset.notifModalBound) {
+        parentLink.dataset.notifModalBound = '1';
+        parentLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openNotificationModal();
+        });
+    }
 }
 
 // Get currently selected customer code from banner or global
@@ -385,8 +400,84 @@ function formatHeroTimestamp(timestamp) {
                 day: 'numeric',
                 hour: 'numeric',
                 minute: '2-digit'
-            });
+    });
+}
+
+function ensureNotificationModal() {
+    let modal = document.getElementById('notification-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'notification-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>Active Alerts</h2>
+                <button class="modal-close" id="notification-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="notification-modal-list" class="notification-modal-list"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
         }
+    });
+    modal.querySelector('#notification-modal-close')?.addEventListener('click', () => modal.classList.remove('active'));
+    return modal;
+}
+
+function openNotificationModal() {
+    const modal = ensureNotificationModal();
+    const list = document.getElementById('notification-modal-list');
+    if (!list) return;
+
+    if (!lastHeroNotifications.length) {
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i> No active alerts for this customer.</div>';
+    } else {
+        list.innerHTML = lastHeroNotifications.map(notif => {
+            const severity = (notif.severity || 'info').toLowerCase();
+            const device = notif.device_serial || notif.device_identifier || 'Device';
+            const customer = notif.customer_code || 'Customer';
+            const title = notif.alert_display_name || notif.title || notif.alert_code || 'Alert';
+            const message = notif.message || '';
+            const time = notif.created_at_ny || notif.created_at || '';
+            return `
+                <div class="notification-card modal-card" data-severity="${severity}">
+                    <div class="notification-header">
+                        <div class="notification-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">${escapeHtml(title)}</div>
+                            <div class="notification-meta">
+                                <span class="badge badge-${severity}">${severity}</span>
+                                <span class="notification-time">${escapeHtml(formatModalTime(time))}</span>
+                                <span class="notification-device"><i class="fas fa-hdd"></i> ${escapeHtml(device)}</span>
+                                <span class="notification-device"><i class="fas fa-user"></i> ${escapeHtml(customer)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${message ? `<div class="notification-message">${escapeHtml(message)}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    modal.classList.add('active');
+}
+
+function formatModalTime(ts) {
+    if (!ts) return 'N/A';
+    const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return ts;
+    return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
         if (diffMins < 1) return 'Just now';
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;

@@ -10,6 +10,8 @@ let notificationFilter = '';
 let notificationCustomerFilter = '';
 let _aggMap = null; // cache of alert aggregations keyed by device|alert
 let _aggMapLoadedAt = 0;
+const NOTIFICATION_PAGE_SIZE = 50;
+let notificationOffset = 0;
 
 // Severity Configuration
 const SEVERITY_CONFIG = {
@@ -154,7 +156,15 @@ function initializeControls() {
     if (customerFilterSelect) {
         customerFilterSelect.addEventListener('change', (e) => {
             notificationCustomerFilter = e.target.value;
+            const panelCustomer = document.getElementById('cc-panel-customer');
+            if (panelCustomer) {
+                panelCustomer.value = notificationCustomerFilter;
+                panelOffset = 0;
+            }
             loadNotifications();
+            if (currentTab === 'panel') {
+                loadPanelMessages();
+            }
         });
         loadCustomerOptionsForCC(customerFilterSelect);
     }
@@ -192,6 +202,22 @@ function initializeControls() {
             loadStatistics();
         });
     }
+
+    const notifLoadMore = document.getElementById('notification-load-more');
+    if (notifLoadMore) {
+        notifLoadMore.addEventListener('click', () => {
+            notifLoadMore.disabled = true;
+            loadNotifications(true, true);
+        });
+    }
+}
+
+function syncNotificationCustomer(code) {
+    notificationCustomerFilter = (code || '').trim();
+    const notifSel = document.getElementById('notification-customer-filter');
+    if (notifSel) {
+        notifSel.value = notificationCustomerFilter;
+    }
 }
 
 // Auto-refresh Management
@@ -222,15 +248,19 @@ function stopAutoRefresh() {
 // TAB 1: Active Notifications
 // ========================================
 
-async function loadNotifications(silent = false) {
+async function loadNotifications(silent = false, append = false) {
     const container = document.getElementById('notifications-container');
 
-    if (!silent) {
+    if (!silent && !append) {
         container.innerHTML = '<div class="loading">Loading notifications...</div>';
     }
 
     try {
-        const params = new URLSearchParams({ action: 'get_notifications' });
+        if (!append) {
+            notificationOffset = 0;
+        }
+
+        const params = new URLSearchParams({ action: 'get_notifications', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
         if (notificationFilter) {
             params.set('severity', notificationFilter);
         }
@@ -261,6 +291,7 @@ async function loadNotifications(silent = false) {
 
         // Group duplicate notifications (same device + alert) into a single card
         const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        notificationOffset += notifications.length;
         const grouped = groupNotificationsForDisplay(notifications);
 
         // Enrich with 1h aggregation counts for accurate last-hour tallies
@@ -273,13 +304,36 @@ async function loadNotifications(silent = false) {
             }
         });
 
-        renderNotifications(grouped);
+        renderNotifications(append ? (lastRenderedNotifications().concat(grouped)) : grouped);
         populateCustomerFilter(data.notifications || []);
+
+        const loadMoreBtn = document.getElementById('notification-load-more');
+        if (loadMoreBtn) {
+            if (notifications.length >= NOTIFICATION_PAGE_SIZE) {
+                loadMoreBtn.style.display = 'inline-flex';
+                loadMoreBtn.disabled = false;
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
     } catch (error) {
         console.error('Error loading notifications:', error);
         const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
         container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
     }
+}
+
+function lastRenderedNotifications() {
+    const cards = document.querySelectorAll('#notifications-container .notification-card');
+    return Array.from(cards).map(card => ({
+        id: Number(card.dataset.id),
+        severity: card.dataset.severity,
+        title: card.querySelector('.notification-title')?.textContent || '',
+        message: card.querySelector('.notification-message')?.textContent || '',
+        created_at_ny: card.querySelector('.notification-time')?.textContent || '',
+        device_serial: card.querySelector('.notification-device')?.textContent || '',
+        status: card.classList.contains('acknowledged') ? 'acknowledged' : 'active'
+    }));
 }
 
 function populateCustomerFilter(notifications) {
@@ -1042,25 +1096,52 @@ CHANGELOG
 // ========================================
 let panelTimerId = null;
 let panelCache = [];
+let panelOffset = 0;
+let panelHasNext = false;
 
 function initPanelTab() {
     const refreshBtn = document.getElementById('cc-panel-refresh');
     const limitSel = document.getElementById('cc-panel-limit');
     const hoursSel = document.getElementById('cc-panel-hours');
     const customerInput = document.getElementById('cc-panel-customer');
+    const prevBtn = document.getElementById('cc-panel-prev');
+    const nextBtn = document.getElementById('cc-panel-next');
+    const pageBadge = document.getElementById('cc-panel-page');
 
     if (!refreshBtn || !limitSel || !hoursSel) return;
 
-    refreshBtn.onclick = loadPanelMessages;
-    limitSel.onchange = loadPanelMessages;
-    hoursSel.onchange = loadPanelMessages;
+    refreshBtn.onclick = () => { panelOffset = 0; loadPanelMessages(); };
+    limitSel.onchange = () => { panelOffset = 0; loadPanelMessages(); };
+    hoursSel.onchange = () => { panelOffset = 0; loadPanelMessages(); };
     if (customerInput) {
-        customerInput.onchange = loadPanelMessages;
-        customerInput.onkeyup = (e) => { if (e.key === 'Enter') loadPanelMessages(); };
+        customerInput.onchange = () => { panelOffset = 0; loadPanelMessages(); syncNotificationCustomer(customerInput.value); };
+        customerInput.onkeyup = (e) => { if (e.key === 'Enter') { panelOffset = 0; loadPanelMessages(); syncNotificationCustomer(customerInput.value); } };
     }
 
     if (customerInput && notificationCustomerFilter) {
         customerInput.value = notificationCustomerFilter;
+    }
+
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (panelOffset > 0) {
+                panelOffset = Math.max(0, panelOffset - getPanelLimit());
+                loadPanelMessages();
+            }
+        };
+    }
+
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (panelHasNext) {
+                panelOffset += getPanelLimit();
+                loadPanelMessages();
+            }
+        };
+    }
+
+    if (pageBadge) {
+        pageBadge.textContent = 'Page 1';
     }
 
     loadPanelMessages();
@@ -1088,13 +1169,18 @@ async function loadPanelMessages() {
     const limitSel = document.getElementById('cc-panel-limit');
     const hoursSel = document.getElementById('cc-panel-hours');
     const customerInput = document.getElementById('cc-panel-customer');
+    const pageBadge = document.getElementById('cc-panel-page');
+    const prevBtn = document.getElementById('cc-panel-prev');
+    const nextBtn = document.getElementById('cc-panel-next');
     if (!tbody) return;
 
-    const params = new URLSearchParams({ limit: String(limitSel?.value || '200') });
+    const limit = getPanelLimit();
+    const params = new URLSearchParams({ limit: String(limit), offset: String(panelOffset) });
     if (hoursSel?.value) params.set('hours', String(hoursSel.value));
     const customerCode = (customerInput?.value || notificationCustomerFilter || '').trim();
     if (customerCode) params.set('customerCode', customerCode);
 
+    panelHasNext = false;
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -1106,12 +1192,27 @@ async function loadPanelMessages() {
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to load panel messages');
         panelCache = data.messages || [];
+        panelHasNext = panelCache.length === limit;
         renderPanelRows(panelCache);
         if (last) last.textContent = 'Last refresh: ' + new Date().toLocaleTimeString() + ' • Auto 30s';
+        if (pageBadge) {
+            const page = Math.floor(panelOffset / limit) + 1;
+            pageBadge.textContent = `Page ${page}`;
+        }
+        if (prevBtn) prevBtn.disabled = panelOffset === 0;
+        if (nextBtn) nextBtn.disabled = !panelHasNext;
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</td></tr>`;
         if (last) last.textContent = 'Error';
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
     }
+}
+
+function getPanelLimit() {
+    const limitSel = document.getElementById('cc-panel-limit');
+    const limit = parseInt(limitSel?.value || '200', 10);
+    return Number.isNaN(limit) ? 200 : limit;
 }
 
 function renderPanelRows(rows) {
@@ -1145,13 +1246,13 @@ function renderPanelRows(rows) {
         `;
     }).join('');
 
-    tbody.addEventListener('click', (ev) => {
+    tbody.onclick = (ev) => {
         const btn = ev.target.closest('button[data-action="view-payload"]');
         if (!btn) return;
         const tr = btn.closest('tr');
         const id = tr?.getAttribute('data-id');
         if (id) ccShowPanelPayload(id);
-    }, { once: true });
+    };
 }
 
 function ccShowPanelPayload(id) {
@@ -1184,18 +1285,47 @@ function buildPanelModal() {
 }// ========================================
 // TAB: Alert Definitions (Labels)
 // ========================================
-async function loadDefinitions(silent = false) {
+const DEFINITIONS_PAGE_SIZE = 200;
+let definitionsOffset = 0;
+
+async function loadDefinitions(silent = false, append = false) {
     const container = document.getElementById('definitions-container');
     if (!container) return;
-    if (!silent) {
+    if (!append) {
+        definitionsOffset = 0;
+    }
+    if (!append && !silent) {
         container.innerHTML = '<div class="loading">Loading alert labels...</div>';
     }
     try {
-        const res = await fetch('api/command-center.php?action=get_alert_definitions&limit=500', { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
+        const params = new URLSearchParams({ action: 'get_alert_definitions', limit: String(DEFINITIONS_PAGE_SIZE), offset: String(definitionsOffset) });
+        const res = await fetch('api/command-center.php?' + params.toString(), { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to load alert labels');
         const defs = data.definitions || [];
-        const rows = defs.map(d => `
+
+        let table = container.querySelector('table');
+        if (!table || !append) {
+            container.innerHTML = `
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Severity</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="definitions-actions">
+                    <button id="definitions-load-more" class="btn btn-secondary" style="display:none;">Load More</button>
+                </div>
+            `;
+            table = container.querySelector('table');
+        }
+
+        const tbody = table.querySelector('tbody');
+        if (!append) {
+            tbody.innerHTML = '';
+        }
+
+        tbody.insertAdjacentHTML('beforeend', defs.map(d => `
             <tr>
                 <td><code>${escapeHtml(d.alert_code)}</code></td>
                 <td>${escapeHtml(d.display_name || '')}</td>
@@ -1210,15 +1340,19 @@ async function loadDefinitions(silent = false) {
                     </button>
                 </td>
             </tr>
-        `).join('');
-        container.innerHTML = `
-            <div class="table-wrapper">
-                <table class="table">
-                    <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Severity</th><th>Actions</th></tr></thead>
-                    <tbody>${rows || '<tr><td colspan="5">No alert labels yet.</td></tr>'}</tbody>
-                </table>
-            </div>
-        `;
+        `).join(''));
+
+        definitionsOffset += defs.length;
+
+        const loadMoreBtn = document.getElementById('definitions-load-more');
+        if (loadMoreBtn) {
+            if (defs.length >= DEFINITIONS_PAGE_SIZE) {
+                loadMoreBtn.style.display = 'inline-flex';
+                loadMoreBtn.onclick = () => loadDefinitions(true, true);
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
     } catch (err) {
         container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</div>`;
     }
@@ -1348,8 +1482,9 @@ async function handleDefinitionSubmit(e) {
         loadDefinitions();
 
         // Refresh pattern suggestions for rule modal
-        patternSuggestions = null;
-        ensurePatternSuggestions();
+        _patternLoaded = false;
+        _patternSuggestions = { alerts: [], devices: [], customers: [] };
+        ensurePatternSuggestions().then(populatePatternDatalists).catch(() => {});
     } catch (error) {
         console.error('Error saving definition:', error);
         showToast(error.message, 'error');

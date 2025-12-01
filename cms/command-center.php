@@ -92,6 +92,11 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
                     <div id="notifications-container">
                         <div class="loading">Loading notifications...</div>
                     </div>
+                    <div class="section-actions" style="margin-top:1rem; display:flex; justify-content:flex-end;">
+                        <button id="notification-load-more" class="btn btn-secondary" style="display:none;">
+                            <i class="fas fa-plus"></i> Load More
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -153,6 +158,18 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
                             <label for="cc-panel-customer">Customer</label>
                             <input id="cc-panel-customer" class="form-control" type="text" placeholder="e.g., ABC123">
                             <small class="text-muted">Filters table; leave blank for all</small>
+                        </div>
+                        <div class="panel-paging">
+                            <label>&nbsp;</label>
+                            <div class="panel-paging-controls">
+                                <button id="cc-panel-prev" class="btn btn-secondary" type="button">
+                                    <i class="fas fa-chevron-left"></i> Prev
+                                </button>
+                                <span id="cc-panel-page" class="badge">Page 1</span>
+                                <button id="cc-panel-next" class="btn btn-secondary" type="button">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                         <button id="cc-panel-refresh" class="btn btn-primary" type="button">
                             <i class="fas fa-sync-alt"></i> Refresh Now
@@ -482,6 +499,4 @@ CHANGELOG
 - Fixed Tools tab: Removed iframes, replaced with tool cards linking to standalone tools
 - Tool cards now open device-lifecycle.php and payload-debugger.php in new tabs
 -->
-
-
 

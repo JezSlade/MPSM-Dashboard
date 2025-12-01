@@ -455,7 +455,12 @@ const MobileApp = (() => {
             </div>
         `;
 
-        const data = await fetchJson(`api/search-devices.php?query=${encodeURIComponent(query)}`);
+        const params = new URLSearchParams({ query });
+        if (config.customerCode) {
+            params.set('customerCode', config.customerCode);
+        }
+
+        const data = await fetchJson(`api/search-devices.php?${params.toString()}`);
         const devices = Array.isArray(data.devices) ? data.devices : [];
 
         state.searchResults = devices;
@@ -616,6 +621,9 @@ const MobileApp = (() => {
         const params = new URLSearchParams();
         if (config.dealerCode) {
             params.append('dealerCode', config.dealerCode);
+        }
+        if (state.customerSearchTerm && state.customerSearchTerm.length >= 2) {
+            params.append('search', state.customerSearchTerm);
         }
 
         try {

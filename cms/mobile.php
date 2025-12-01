@@ -61,6 +61,7 @@ $dealerId = htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID, ENT_
                     <span class="brand-icon"><i class="fas fa-bolt"></i></span>
                     <div class="brand-text">
                         <div class="brand-label">Active customer</div>
+                        <div class="brand-name" id="mobile-customer-name"><?php echo $customerName ?: 'Select customer'; ?></div>
                         <select id="mobile-customer-select" class="customer-select" aria-label="Select customer">
                             <option value="<?php echo $customerCode; ?>" selected>
                                 <?php echo $customerName ? $customerName . ' (' . $customerCode . ')' : $customerCode; ?>
@@ -446,4 +447,3 @@ CHANGELOG
 - Added mobile-native lifecycle list with filters, pagination, and create/update sheets to match desktop CRUD fields on small screens.
 */
 ?>
-

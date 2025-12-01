@@ -13,6 +13,12 @@
 - Fixed mobile fetch helper to send credentials and detect non-JSON responses, preventing mobile search “Unexpected token '<'” errors.
 - Added status/content-type checks and 429 retry_after propagation to get-customers.php so selectors stay resilient under upstream throttling and HTML responses.
 - Added status/content-type checks and 429 propagation to get-customer-dashboard.php to stop HTML/429 responses from breaking customer header load.
+- 2025-12-01 Codex - Validation pass and UI fixes
+  - Synced theme preferences across command center, alert definitions, and device lifecycle shells (data-theme now set from user prefs).
+  - Mobile: header shows active customer name/code; customer fetch honors search; device search includes customerCode to keep results scoped.
+  - Command Center: panel tab supports paging (offset/prev/next), notification list has “Load More”, customer filters stay in sync, alert definitions load in pages, pattern suggestions refresh after label edits, and panel “View” buttons no longer die after one click.
+  - Hero badge shows active-alert count and opens an inline modal listing current-customer alerts instead of a broken link.
+  - Dark mode header contrast improved; alert-definition and notification APIs support offset/limit. Lint clean; could not run php -S here due to port bind restriction.
 
 # Session Summary - 2025-11-24 Evening Session (Continued)
 

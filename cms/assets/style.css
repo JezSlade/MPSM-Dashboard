@@ -171,6 +171,14 @@ main {
     color: var(--text-primary);
 }
 
+[data-theme="dark"] .card-header h2 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .card-header .text-muted {
+    color: #cbd5e1;
+}
+
 .card-body {
     padding: 1.5rem;
 }
@@ -1259,6 +1267,12 @@ main {
 }
 
 .toggle-label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.panel-paging-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 
 /*
 CHANGELOG
@@ -3146,6 +3160,9 @@ CHANGELOG
 
 .notification-stats i {
     margin-right: 0.25rem;
+}
+.notification-modal-list .notification-card {
+    margin-bottom: 1rem;
 }
 
 /* Command Center - Rule Cards */
