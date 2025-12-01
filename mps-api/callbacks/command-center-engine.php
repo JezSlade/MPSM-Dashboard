@@ -242,15 +242,27 @@ if (!function_exists('matchesPattern')) {
     /**
      * Check if value matches pattern (supports SQL LIKE wildcards)
      * Protected against ReDoS attacks by escaping special regex characters
+     *
+     * CRITICAL FIX 2025-11-28: preg_quote() does NOT escape % and _ (they're not regex special chars)
+     * This caused wildcards to be treated as literals, breaking ALL wildcard pattern matching.
+     * Fixed by manually escaping regex special chars EXCEPT % and _, then converting wildcards.
      */
     function matchesPattern(string $value, string $pattern): bool
     {
-        // Escape regex special characters first to prevent ReDoS
-        $pattern = preg_quote($pattern, '/');
+        // Escape backslash first to prevent escaping issues
+        $pattern = str_replace('\\', '\\\\', $pattern);
 
-        // Convert escaped SQL LIKE wildcards to regex
-        $pattern = str_replace('\\%', '.*', $pattern);
-        $pattern = str_replace('\\_', '.', $pattern);
+        // Manually escape regex special characters (but NOT % and _ - we need those for wildcards)
+        $regexSpecialChars = ['.', '^', '$', '+', '?', '[', ']', '{', '}', '(', ')', '|', '*', '/'];
+        foreach ($regexSpecialChars as $char) {
+            $pattern = str_replace($char, '\\' . $char, $pattern);
+        }
+
+        // Now convert SQL LIKE wildcards to regex
+        $pattern = str_replace('%', '.*', $pattern);  // % matches zero or more characters
+        $pattern = str_replace('_', '.', $pattern);   // _ matches exactly one character
+
+        // Build final regex with case-insensitive flag
         $pattern = '/^' . $pattern . '$/i';
 
         return (bool)preg_match($pattern, $value);
