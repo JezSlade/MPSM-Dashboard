@@ -205,11 +205,8 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
                 <div class="card-header">
                     <div>
                         <h2>Alert Labels</h2>
-                        <p class="text-muted">Map MPSM alert codes to human-readable names</p>
+                        <p class="text-muted">Interpret MPSM alert codes with human-readable names - edit directly in the table</p>
                     </div>
-                    <button class="btn btn-primary" onclick="openDefinitionModal()">
-                        <i class="fas fa-plus"></i> Create Label
-                    </button>
                 </div>
                 <div class="card-body">
                     <div id="definitions-container">

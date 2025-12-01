@@ -3856,3 +3856,54 @@ CHANGELOG
 2025-11-28 Codex
 - Added tool-card styles for Tools tab with hover effects and feature lists
 */
+
+/* Inline Edit Inputs for Alert Labels */
+.inline-edit-input,
+.inline-edit-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.inline-edit-input:focus,
+.inline-edit-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: var(--card-bg);
+}
+
+.inline-edit-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.status-cell {
+    text-align: center;
+    min-width: 80px;
+}
+
+.save-status {
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Alert Labels Table Styling */
+#tab-definitions table td {
+    vertical-align: middle;
+}
+
+#tab-definitions table code {
+    background: var(--bg-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9rem;
+}

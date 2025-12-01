@@ -1326,21 +1326,45 @@ async function loadDefinitions(silent = false, append = false) {
         }
 
         tbody.insertAdjacentHTML('beforeend', defs.map(d => `
-            <tr>
+            <tr data-definition-id="${d.id}">
                 <td><code>${escapeHtml(d.alert_code)}</code></td>
-                <td>${escapeHtml(d.display_name || '')}</td>
-                <td>${escapeHtml(d.category || '')}</td>
-                <td>${escapeHtml(d.severity_override || '')}</td>
                 <td>
-                    <button class="btn btn-secondary btn-small" onclick="editDefinition(${d.id})">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="btn btn-danger btn-small" onclick="deleteDefinition(${d.id}, '${escapeHtml(d.alert_code)}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                    <input type="text"
+                           class="inline-edit-input"
+                           value="${escapeHtml(d.display_name || '')}"
+                           data-field="display_name"
+                           data-definition-id="${d.id}"
+                           placeholder="Display name">
+                </td>
+                <td>
+                    <input type="text"
+                           class="inline-edit-input"
+                           value="${escapeHtml(d.category || '')}"
+                           data-field="category"
+                           data-definition-id="${d.id}"
+                           placeholder="Category (e.g. Paper, Sensor)">
+                </td>
+                <td>
+                    <select class="inline-edit-select"
+                            data-field="severity_override"
+                            data-definition-id="${d.id}">
+                        <option value="">-- None --</option>
+                        <option value="info" ${d.severity_override === 'info' ? 'selected' : ''}>Info</option>
+                        <option value="warning" ${d.severity_override === 'warning' ? 'selected' : ''}>Warning</option>
+                        <option value="high" ${d.severity_override === 'high' ? 'selected' : ''}>High</option>
+                        <option value="critical" ${d.severity_override === 'critical' ? 'selected' : ''}>Critical</option>
+                    </select>
+                </td>
+                <td class="status-cell">
+                    <span class="save-status" style="display:none;">
+                        <i class="fas fa-check-circle" style="color: green;"></i> Saved
+                    </span>
                 </td>
             </tr>
         `).join(''));
+
+        // Attach inline edit handlers
+        attachInlineEditHandlers(tbody);
 
         definitionsOffset += defs.length;
 
@@ -1437,6 +1461,102 @@ async function deleteDefinition(id, alertCode) {
     } catch (error) {
         console.error('Error deleting definition:', error);
         showToast(error.message, 'error');
+    }
+}
+
+// Inline Edit Handlers for Alert Labels
+function attachInlineEditHandlers(tbody) {
+    const inputs = tbody.querySelectorAll('.inline-edit-input');
+    const selects = tbody.querySelectorAll('.inline-edit-select');
+
+    // Debounced save function
+    let saveTimeout;
+    const debouncedSave = (element) => {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => saveInlineEdit(element), 800); // Save 800ms after user stops typing
+    };
+
+    inputs.forEach(input => {
+        input.addEventListener('input', () => debouncedSave(input));
+        input.addEventListener('blur', () => saveInlineEdit(input));
+    });
+
+    selects.forEach(select => {
+        select.addEventListener('change', () => saveInlineEdit(select));
+    });
+}
+
+async function saveInlineEdit(element) {
+    const definitionId = element.dataset.definitionId;
+    const field = element.dataset.field;
+    const value = element.value.trim();
+
+    // Get the row to show status
+    const row = element.closest('tr');
+    const statusSpan = row.querySelector('.save-status');
+
+    try {
+        // Get current definition data
+        const response = await fetch(`api/command-center.php?action=get_alert_definitions`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error('Failed to load current data');
+        }
+
+        const definition = data.definitions.find(d => String(d.id) === String(definitionId));
+        if (!definition) {
+            throw new Error('Definition not found');
+        }
+
+        // Update only the changed field
+        const body = {
+            action: 'update_alert_definition',
+            id: definitionId,
+            alert_code: definition.alert_code,
+            display_name: field === 'display_name' ? value : definition.display_name,
+            category: field === 'category' ? value : definition.category,
+            severity_override: field === 'severity_override' ? value : definition.severity_override,
+            description: definition.description
+        };
+
+        const updateResponse = await fetch('api/command-center.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        const updateData = await updateResponse.json();
+
+        if (!updateData.success) {
+            throw new Error(updateData.error || 'Failed to save');
+        }
+
+        // Show success indicator
+        if (statusSpan) {
+            statusSpan.style.display = 'inline-block';
+            setTimeout(() => {
+                statusSpan.style.display = 'none';
+            }, 2000);
+        }
+
+        // Refresh pattern suggestions for rule modal
+        _patternLoaded = false;
+        _patternSuggestions = { alerts: [], devices: [], customers: [] };
+
+    } catch (error) {
+        console.error('Error saving inline edit:', error);
+        showToast(error.message || 'Failed to save changes', 'error');
+
+        // Reload to revert changes
+        loadDefinitions(true);
     }
 }
 
