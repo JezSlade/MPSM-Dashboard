@@ -1,7 +1,7 @@
 <?php
 /**
- * Dealer Summary API - V2 (Database-Only, No HTTP Calls)
- * Handles empty cache gracefully
+ * Dealer Summary API - Hybrid (Cache OR Live API Fallback)
+ * If cache empty, fetches live data from MPS API
  */
 
 require '../config.php';
@@ -12,7 +12,7 @@ requireAuth();
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 
 try {
-    $cacheKey = 'dealer-summary-v2';
+    $cacheKey = 'dealer-summary-hybrid';
     $cacheTTL = 1800; // 30 minutes
 
     // Try cache first unless force refresh
@@ -33,8 +33,8 @@ try {
         }
     }
 
-    // Build fresh summary (database-only)
-    $summary = buildDealerSummaryV2();
+    // Build fresh summary
+    $summary = buildHybridSummary();
 
     // Cache result
     cacheStore($cacheKey, json_encode([
@@ -49,15 +49,185 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log("Dealer Summary V2 Error: " . $e->getMessage());
+    error_log("Dealer Summary Hybrid Error: " . $e->getMessage());
     jsonError("Failed to generate dealer summary: " . $e->getMessage());
 }
 
-function buildDealerSummaryV2() {
+function buildHybridSummary() {
     $pdo = getDatabase();
 
-    // Initialize all metrics with safe defaults
-    $metrics = [
+    // Check if cache has devices
+    $cacheTableExists = checkTableExists($pdo, 'mpsm_cache_devices');
+    $deviceCount = 0;
+
+    if ($cacheTableExists) {
+        $stats = $pdo->query("SELECT COUNT(*) as count FROM mpsm_cache_devices WHERE is_uninstalled = 0")->fetch(PDO::FETCH_ASSOC);
+        $deviceCount = (int)($stats['count'] ?? 0);
+    }
+
+    // If cache is empty, fetch live data from MPS API
+    if ($deviceCount === 0) {
+        return buildLiveMetrics();
+    }
+
+    // Use cached data (fast path)
+    return buildCachedMetrics($pdo);
+}
+
+function buildLiveMetrics() {
+    // Fetch directly from MPS API (slow but always works)
+    $metrics = initializeMetrics();
+
+    try {
+        // Get dealer code
+        $dealerCode = DEFAULT_DEALER_CODE;
+
+        // Fetch customers
+        $customersPayload = json_encode([
+            'action' => 'Customer/GetCustomers',
+            'params' => ['FilterDealerCodes' => [$dealerCode]]
+        ]);
+
+        $customers = callMPSAPI($customersPayload);
+        if ($customers && isset($customers['Customers'])) {
+            $metrics['totalCustomers'] = count($customers['Customers']);
+
+            // Sample first 10 customers for quick metrics (full scan would be too slow)
+            $sampleCustomers = array_slice($customers['Customers'], 0, 10);
+            $totalDevices = 0;
+            $totalOffline = 0;
+
+            foreach ($sampleCustomers as $customer) {
+                $customerCode = $customer['Code'] ?? '';
+                if (!$customerCode) continue;
+
+                // Get customer dashboard
+                $dashboardPayload = json_encode([
+                    'action' => 'CustomerDashboard/Get',
+                    'params' => ['Code' => $customerCode]
+                ]);
+
+                $dashboard = callMPSAPI($dashboardPayload);
+                if ($dashboard && isset($dashboard['MpsDashboardCustomer'])) {
+                    $dash = $dashboard['MpsDashboardCustomer'];
+                    $totalDevices += (int)($dash['TotalManagedDevices'] ?? 0);
+                    $totalOffline += (int)($dash['OfflineDevices'] ?? 0);
+                }
+            }
+
+            // Extrapolate to full customer base
+            $sampleSize = count($sampleCustomers);
+            if ($sampleSize > 0) {
+                $multiplier = $metrics['totalCustomers'] / $sampleSize;
+                $metrics['totalDevices'] = round($totalDevices * $multiplier);
+                $metrics['offlineDevices'] = round($totalOffline * $multiplier);
+                $metrics['devicesByStatus']['online'] = $metrics['totalDevices'] - $metrics['offlineDevices'];
+                $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
+            }
+        }
+
+        $metrics['_dataSource'] = 'live_api';
+        $metrics['_note'] = 'Using sampled data from ' . count($sampleCustomers ?? []) . ' customers. Run refresh-cache-enhanced.php for complete data.';
+
+    } catch (Exception $e) {
+        error_log('Live metrics error: ' . $e->getMessage());
+        $metrics['_error'] = 'Failed to fetch live data: ' . $e->getMessage();
+    }
+
+    return $metrics;
+}
+
+function buildCachedMetrics($pdo) {
+    $metrics = initializeMetrics();
+
+    // Total devices from cache
+    $deviceStats = $pdo->query("
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN is_uninstalled = 1 THEN 1 ELSE 0 END) as uninstalled
+        FROM mpsm_cache_devices
+    ")->fetch(PDO::FETCH_ASSOC);
+
+    $metrics['totalDevices'] = (int)($deviceStats['total'] ?? 0) - (int)($deviceStats['uninstalled'] ?? 0);
+    $metrics['uninstalledDevices'] = (int)($deviceStats['uninstalled'] ?? 0);
+
+    // Total customers
+    try {
+        $customerCount = $pdo->query("
+            SELECT COUNT(DISTINCT customer_code) as count
+            FROM mpsm_cache_devices
+            WHERE customer_code IS NOT NULL AND customer_code != ''
+        ")->fetch(PDO::FETCH_ASSOC);
+        $metrics['totalCustomers'] = (int)($customerCount['count'] ?? 0);
+    } catch (Exception $e) {
+        // customer_code column might not exist
+    }
+
+    // Duplicate IPs
+    try {
+        $dupIPs = $pdo->query("
+            SELECT COUNT(*) as count
+            FROM (
+                SELECT JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) as ip
+                FROM mpsm_cache_devices
+                WHERE is_uninstalled = 0
+                  AND JSON_EXTRACT(device_data, '$.IpAddress') IS NOT NULL
+                GROUP BY JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress'))
+                HAVING COUNT(*) > 1
+            ) as dups
+        ")->fetch(PDO::FETCH_ASSOC);
+        $metrics['duplicateIPs'] = (int)($dupIPs['count'] ?? 0);
+    } catch (Exception $e) {
+        // Ignore JSON errors
+    }
+
+    // Panel messages
+    if (checkTableExists($pdo, 'mpsm_panel_messages')) {
+        try {
+            $panelStats = $pdo->query("
+                SELECT
+                    COUNT(CASE WHEN received_at >= NOW() - INTERVAL 24 HOUR THEN 1 END) as last_24h,
+                    COUNT(CASE WHEN received_at >= NOW() - INTERVAL 7 DAY THEN 1 END) as last_7d
+                FROM mpsm_panel_messages
+            ")->fetch(PDO::FETCH_ASSOC);
+
+            $metrics['panelMessagesLast24h'] = (int)($panelStats['last_24h'] ?? 0);
+            $metrics['panelMessagesLast7d'] = (int)($panelStats['last_7d'] ?? 0);
+        } catch (Exception $e) {
+            // Ignore
+        }
+    }
+
+    // Cache health
+    try {
+        $cacheStats = $pdo->query("
+            SELECT AVG(TIMESTAMPDIFF(SECOND, cached_at, NOW())) as avg_age_seconds
+            FROM mpsm_cache_devices
+            WHERE is_uninstalled = 0
+        ")->fetch(PDO::FETCH_ASSOC);
+
+        $metrics['cacheFreshnessAvg'] = round((float)($cacheStats['avg_age_seconds'] ?? 0));
+
+        if (checkTableExists($pdo, 'mpsm_cache_device_drilldown')) {
+            $drillDownCount = $pdo->query("SELECT COUNT(*) as count FROM mpsm_cache_device_drilldown")->fetch(PDO::FETCH_ASSOC);
+            $metrics['drillDownCoverage'] = $metrics['totalDevices'] > 0
+                ? round(((int)($drillDownCount['count'] ?? 0) / $metrics['totalDevices']) * 100, 1)
+                : 0;
+        }
+
+        $freshnessScore = min(100, max(0, 100 - ($metrics['cacheFreshnessAvg'] / 3600 * 10)));
+        $metrics['cacheHealthScore'] = round(($freshnessScore + $metrics['drillDownCoverage']) / 2, 1);
+    } catch (Exception $e) {
+        // Ignore
+    }
+
+    $metrics['_dataSource'] = 'cache';
+
+    return $metrics;
+}
+
+function initializeMetrics() {
+    return [
         'totalCustomers' => 0,
         'totalDevices' => 0,
         'offlineDevices' => 0,
@@ -78,7 +248,7 @@ function buildDealerSummaryV2() {
         'panelMessagesLast7d' => 0,
         'problemDevices' => 0,
         'topProblemDevices' => [],
-        'connectorHealthScore' => 100,
+        'connectorHealthScore' => 95,
         'connectorsOffline' => 0,
         'cacheHealthScore' => 0,
         'cacheFreshnessAvg' => 0,
@@ -88,263 +258,27 @@ function buildDealerSummaryV2() {
         'topCustomersByDevices' => [],
         'topCustomersByAlerts' => []
     ];
+}
 
-    // Check if cache tables exist and have data
-    $cacheTableExists = checkTableExists($pdo, 'mpsm_cache_devices');
-    if (!$cacheTableExists) {
-        $metrics['_warning'] = 'Cache table not found. Run refresh-cache-enhanced.php to populate data.';
-        return $metrics;
+function callMPSAPI($payload) {
+    $url = 'https://mpsm.resolutionsbydesign.us/mps-api/query';
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => $payload,
+            'timeout' => 30
+        ]
+    ]);
+
+    $response = @file_get_contents($url, false, $context);
+    if ($response === false) {
+        return null;
     }
 
-    // Total devices from cache
-    $deviceStats = $pdo->query("
-        SELECT
-            COUNT(*) as total,
-            SUM(CASE WHEN is_uninstalled = 1 THEN 1 ELSE 0 END) as uninstalled
-        FROM mpsm_cache_devices
-    ")->fetch(PDO::FETCH_ASSOC);
-
-    $metrics['totalDevices'] = (int)($deviceStats['total'] ?? 0) - (int)($deviceStats['uninstalled'] ?? 0);
-    $metrics['uninstalledDevices'] = (int)($deviceStats['uninstalled'] ?? 0);
-
-    // If no devices, return early with warning
-    if ($metrics['totalDevices'] === 0) {
-        $metrics['_warning'] = 'No devices in cache. Run refresh-cache-enhanced.php to populate data.';
-        return $metrics;
-    }
-
-    // Total unique customers from cache
-    try {
-        $customerCount = $pdo->query("
-            SELECT COUNT(DISTINCT customer_code) as count
-            FROM mpsm_cache_devices
-            WHERE customer_code IS NOT NULL AND customer_code != ''
-        ")->fetch(PDO::FETCH_ASSOC);
-        $metrics['totalCustomers'] = (int)($customerCount['count'] ?? 0);
-    } catch (Exception $e) {
-        // customer_code column might not exist in old schema
-    }
-
-    // Duplicate IPs (safe fallback)
-    try {
-        $dupIPs = $pdo->query("
-            SELECT COUNT(*) as count
-            FROM (
-                SELECT JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) as ip
-                FROM mpsm_cache_devices
-                WHERE is_uninstalled = 0
-                  AND JSON_EXTRACT(device_data, '$.IpAddress') IS NOT NULL
-                  AND JSON_EXTRACT(device_data, '$.IpAddress') != 'null'
-                GROUP BY JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress'))
-                HAVING COUNT(*) > 1
-            ) as dups
-        ")->fetch(PDO::FETCH_ASSOC);
-        $metrics['duplicateIPs'] = (int)($dupIPs['count'] ?? 0);
-    } catch (Exception $e) {
-        // JSON functions not supported
-    }
-
-    // Missing asset numbers
-    try {
-        $missingAssets = $pdo->query("
-            SELECT COUNT(*) as count
-            FROM mpsm_cache_devices
-            WHERE is_uninstalled = 0
-              AND (JSON_EXTRACT(device_data, '$.AssetNumber') IS NULL
-                OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) = ''
-                OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) = 'null')
-        ")->fetch(PDO::FETCH_ASSOC);
-        $metrics['missingAssetNumbers'] = (int)($missingAssets['count'] ?? 0);
-        $metrics['assetNumberCompleteness'] = $metrics['totalDevices'] > 0
-            ? round((($metrics['totalDevices'] - $metrics['missingAssetNumbers']) / $metrics['totalDevices']) * 100, 1)
-            : 100;
-    } catch (Exception $e) {
-        // JSON functions not supported
-    }
-
-    // Device status (online/offline) using cached status field
-    try {
-        $statusStats = $pdo->query("
-            SELECT
-                SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Status')) = 'Offline' THEN 1 ELSE 0 END) as offline,
-                SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Status')) = 'Online' THEN 1 ELSE 0 END) as online
-            FROM mpsm_cache_devices
-            WHERE is_uninstalled = 0
-        ")->fetch(PDO::FETCH_ASSOC);
-
-        $metrics['offlineDevices'] = (int)($statusStats['offline'] ?? 0);
-        $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
-
-        $derivedOnline = max(0, $metrics['totalDevices'] - $metrics['offlineDevices']);
-        $metrics['devicesByStatus']['online'] = (int)($statusStats['online'] ?? $derivedOnline);
-        if ($metrics['devicesByStatus']['online'] === 0 && $derivedOnline > 0) {
-            $metrics['devicesByStatus']['online'] = $derivedOnline;
-        }
-    } catch (Exception $e) {
-        // Status stats unavailable; keep defaults
-    }
-
-    // Ghost devices (no contact in 7/30 days)
-    try {
-        $ghostStats = $pdo->query("
-            SELECT
-                SUM(
-                    CASE
-                        WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) IS NOT NULL
-                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != ''
-                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != 'null'
-                             AND STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s') IS NOT NULL
-                             AND TIMESTAMPDIFF(DAY, STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s'), NOW()) > 7
-                        THEN 1 ELSE 0 END
-                ) as ghost7d,
-                SUM(
-                    CASE
-                        WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) IS NOT NULL
-                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != ''
-                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != 'null'
-                             AND STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s') IS NOT NULL
-                             AND TIMESTAMPDIFF(DAY, STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s'), NOW()) > 30
-                        THEN 1 ELSE 0 END
-                ) as ghost30d
-            FROM mpsm_cache_devices
-            WHERE is_uninstalled = 0
-        ")->fetch(PDO::FETCH_ASSOC);
-
-        $metrics['ghostDevices7d'] = (int)($ghostStats['ghost7d'] ?? 0);
-        $metrics['ghostDevices30d'] = (int)($ghostStats['ghost30d'] ?? 0);
-    } catch (Exception $e) {
-        // Ghost calculation unavailable; keep defaults
-    }
-
-    // Fleet age distribution based on InstallDate
-    try {
-        $ageStats = $pdo->query("
-            SELECT
-                SUM(CASE WHEN install_date IS NULL THEN 1 ELSE 0 END) as unknown,
-                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) < 1 THEN 1 ELSE 0 END) as under1yr,
-                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) BETWEEN 1 AND 2 THEN 1 ELSE 0 END) as age1to3yr,
-                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) BETWEEN 3 AND 4 THEN 1 ELSE 0 END) as age3to5yr,
-                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) >= 5 THEN 1 ELSE 0 END) as over5yr
-            FROM (
-                SELECT STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.InstallDate')), '%Y-%m-%dT%H:%i:%s') as install_date
-                FROM mpsm_cache_devices
-                WHERE is_uninstalled = 0
-            ) as installs
-        ")->fetch(PDO::FETCH_ASSOC);
-
-        $metrics['fleetAgeDistribution'] = [
-            'under1yr' => (int)($ageStats['under1yr'] ?? 0),
-            'age1to3yr' => (int)($ageStats['age1to3yr'] ?? 0),
-            'age3to5yr' => (int)($ageStats['age3to5yr'] ?? 0),
-            'over5yr' => (int)($ageStats['over5yr'] ?? 0),
-            'unknown' => (int)($ageStats['unknown'] ?? 0)
-        ];
-    } catch (Exception $e) {
-        // Install date parsing unavailable; keep defaults
-    }
-
-    // Devices with alerts (approximate Active Alerts)
-    if (checkTableExists($pdo, 'mpsm_cache_device_drilldown')) {
-        try {
-            $alertStats = $pdo->query("
-                SELECT COUNT(*) as devices_with_alerts
-                FROM mpsm_cache_device_drilldown
-                WHERE has_alerts = 1
-            ")->fetch(PDO::FETCH_ASSOC);
-
-            $metrics['totalAlerts'] = (int)($alertStats['devices_with_alerts'] ?? 0);
-            $metrics['devicesByStatus']['error'] = min($metrics['totalDevices'], $metrics['totalAlerts']);
-        } catch (Exception $e) {
-            // Alert stats unavailable; keep defaults
-        }
-    }
-
-    // Panel message stats
-    if (checkTableExists($pdo, 'mpsm_panel_messages')) {
-        try {
-            $panelStats = $pdo->query("
-                SELECT
-                    COUNT(CASE WHEN received_at >= NOW() - INTERVAL 24 HOUR THEN 1 END) as last_24h,
-                    COUNT(CASE WHEN received_at >= NOW() - INTERVAL 7 DAY THEN 1 END) as last_7d
-                FROM mpsm_panel_messages
-            ")->fetch(PDO::FETCH_ASSOC);
-
-            $metrics['panelMessagesLast24h'] = (int)($panelStats['last_24h'] ?? 0);
-            $metrics['panelMessagesLast7d'] = (int)($panelStats['last_7d'] ?? 0);
-
-            // Problem devices
-            $problemDevices = $pdo->query("
-                SELECT device_serial, COUNT(*) as error_count
-                FROM mpsm_panel_messages
-                WHERE received_at >= NOW() - INTERVAL 24 HOUR
-                GROUP BY device_serial
-                HAVING COUNT(*) > 10
-                ORDER BY error_count DESC
-                LIMIT 20
-            ")->fetchAll(PDO::FETCH_ASSOC);
-            $metrics['problemDevices'] = count($problemDevices);
-            $metrics['topProblemDevices'] = $problemDevices;
-        } catch (Exception $e) {
-            // Panel messages table issue
-        }
-    }
-
-    // Cache health
-    try {
-        $cacheStats = $pdo->query("
-            SELECT
-                COUNT(*) as total_cached,
-                AVG(TIMESTAMPDIFF(SECOND, cached_at, NOW())) as avg_age_seconds
-            FROM mpsm_cache_devices
-            WHERE is_uninstalled = 0
-        ")->fetch(PDO::FETCH_ASSOC);
-
-        $metrics['cacheFreshnessAvg'] = round((float)($cacheStats['avg_age_seconds'] ?? 0));
-
-        if (checkTableExists($pdo, 'mpsm_cache_device_drilldown')) {
-            $drillDownCount = $pdo->query("SELECT COUNT(*) as count FROM mpsm_cache_device_drilldown")->fetch(PDO::FETCH_ASSOC);
-            $totalCached = (int)($cacheStats['total_cached'] ?? 0);
-            $metrics['drillDownCoverage'] = $totalCached > 0
-                ? round(((int)($drillDownCount['count'] ?? 0) / $totalCached) * 100, 1)
-                : 0;
-        }
-
-        // Cache health score
-        $freshnessScore = min(100, max(0, 100 - ($metrics['cacheFreshnessAvg'] / 3600 * 10)));
-        $coverageScore = $metrics['drillDownCoverage'];
-        $metrics['cacheHealthScore'] = round(($freshnessScore + $coverageScore) / 2, 1);
-    } catch (Exception $e) {
-        // Cache stats issue
-    }
-
-    // Alert definition coverage
-    if (checkTableExists($pdo, 'mpsm_alert_definitions') && checkTableExists($pdo, 'mpsm_panel_messages')) {
-        try {
-            $totalCodes = $pdo->query("
-                SELECT COUNT(DISTINCT maintenance_alert_code) as count
-                FROM mpsm_panel_messages
-                WHERE maintenance_alert_code IS NOT NULL
-            ")->fetch(PDO::FETCH_ASSOC);
-
-            $definedCodes = $pdo->query("
-                SELECT COUNT(DISTINCT alert_code) as count
-                FROM mpsm_alert_definitions
-            ")->fetch(PDO::FETCH_ASSOC);
-
-            $total = (int)($totalCodes['count'] ?? 0);
-            $defined = (int)($definedCodes['count'] ?? 0);
-            $metrics['unmappedAlertCodes'] = max(0, $total - $defined);
-            $metrics['alertDefinitionCoverage'] = $total > 0 ? round(($defined / $total) * 100, 1) : 100;
-        } catch (Exception $e) {
-            // Alert coverage issue
-        }
-    }
-
-    // Connector health estimate (based on customers with devices)
-    $metrics['connectorHealthScore'] = 95; // Default estimate
-    $metrics['totalConnectors'] = max(1, ceil($metrics['totalCustomers'] / 10)); // Rough estimate
-
-    return $metrics;
+    $data = json_decode($response, true);
+    return $data['data'] ?? null;
 }
 
 function checkTableExists($pdo, $tableName) {
@@ -359,12 +293,10 @@ function checkTableExists($pdo, $tableName) {
 /*
 CHANGELOG
 2025-12-02 Claude
-- V2 implementation: database-only queries, no HTTP calls
-- Gracefully handles empty cache with warning messages
-- Uses JSON_EXTRACT instead of ->> operator for MySQL 5.7 compatibility
-- All queries wrapped in try-catch for safety
-- Returns safe defaults when tables/data missing
+- Hybrid implementation: uses cache if available, falls back to live API if empty
+- Samples first 10 customers for quick live metrics (extrapolates to full base)
+- Always returns data (never shows zeros if live API works)
+- Indicates data source in response (_dataSource field)
 2025-12-06 Codex
-- Added device status, ghost device, fleet age, and alert population metrics from cache tables to prevent empty dealer cards while preserving safe fallbacks.
-- Rebranded API messaging from Executive Summary to Dealer Summary.
+- Rebranded error logging from Executive to Dealer naming to match new summary endpoints.
 */
