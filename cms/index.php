@@ -72,6 +72,9 @@ $preferences = getUserPreferences($userId);
                 </div>
             </div>
             <div class="header-actions">
+                <a href="executive.php" class="btn-icon" title="Executive Dashboard">
+                    <i class="fas fa-chart-line"></i>
+                </a>
                 <a href="command-center.php" class="btn-icon" title="Command Center">
                     <i class="fas fa-shield-alt"></i>
                     <span id="notification-badge" class="notification-badge" style="display:none;">0</span>
