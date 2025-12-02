@@ -161,9 +161,9 @@ function buildExecutiveSummary() {
     $missingAssets = $pdo->query("
         SELECT COUNT(*) as count
         FROM mpsm_cache_devices
-        WHERE (device_data->>'AssetNumber' IS NULL
-            OR device_data->>'AssetNumber' = ''
-            OR device_data->>'AssetNumber' = 'null')
+        WHERE (device_data->>'$.AssetNumber' IS NULL
+            OR device_data->>'$.AssetNumber' = ''
+            OR device_data->>'$.AssetNumber' = 'null')
         AND is_uninstalled = 0
     ")->fetch(PDO::FETCH_ASSOC);
     $metrics['missingAssetNumbers'] = (int)($missingAssets['count'] ?? 0);
@@ -173,13 +173,13 @@ function buildExecutiveSummary() {
 
     // Data Quality: Duplicate IPs
     $duplicateIPs = $pdo->query("
-        SELECT device_data->>'IpAddress' as ip, COUNT(*) as count
+        SELECT device_data->>'$.IpAddress' as ip, COUNT(*) as count
         FROM mpsm_cache_devices
-        WHERE device_data->>'IpAddress' IS NOT NULL
-        AND device_data->>'IpAddress' != ''
-        AND device_data->>'IpAddress' != 'null'
+        WHERE device_data->>'$.IpAddress' IS NOT NULL
+        AND device_data->>'$.IpAddress' != ''
+        AND device_data->>'$.IpAddress' != 'null'
         AND is_uninstalled = 0
-        GROUP BY device_data->>'IpAddress'
+        GROUP BY device_data->>'$.IpAddress'
         HAVING COUNT(*) > 1
         ORDER BY count DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -192,8 +192,8 @@ function buildExecutiveSummary() {
     $ghostCount30d = 0;
 
     $stmt = $pdo->query("
-        SELECT device_data->>'LastContact' as last_contact,
-               device_data->>'LastUpdate' as last_update
+        SELECT device_data->>'$.LastContact' as last_contact,
+               device_data->>'$.LastUpdate' as last_update
         FROM mpsm_cache_devices
         WHERE is_uninstalled = 0
     ");
@@ -216,7 +216,7 @@ function buildExecutiveSummary() {
 
     // Fleet Age Distribution
     $stmt = $pdo->query("
-        SELECT device_data->>'InstallDate' as install_date
+        SELECT device_data->>'$.InstallDate' as install_date
         FROM mpsm_cache_devices
         WHERE is_uninstalled = 0
     ");

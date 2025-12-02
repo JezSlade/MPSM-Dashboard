@@ -532,14 +532,7 @@ async function fetchJson(url, options = {}) {
     return data;
 }
 
-function showToast(message, type = 'info') {
-    // Reuse existing toast from shared.js if available, otherwise fallback
-    if (typeof window.showToast === 'function') {
-        window.showToast(message, type);
-    } else {
-        console.log(`[Toast ${type}]`, message);
-    }
-}
+// showToast is provided by shared.js - no need to redefine
 
 function toggleTheme() {
     const html = document.documentElement;
