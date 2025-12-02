@@ -162,6 +162,103 @@ function buildExecutiveSummaryV2() {
         // JSON functions not supported
     }
 
+    // Device status (online/offline) using cached status field
+    try {
+        $statusStats = $pdo->query("
+            SELECT
+                SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Status')) = 'Offline' THEN 1 ELSE 0 END) as offline,
+                SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Status')) = 'Online' THEN 1 ELSE 0 END) as online
+            FROM mpsm_cache_devices
+            WHERE is_uninstalled = 0
+        ")->fetch(PDO::FETCH_ASSOC);
+
+        $metrics['offlineDevices'] = (int)($statusStats['offline'] ?? 0);
+        $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
+
+        $derivedOnline = max(0, $metrics['totalDevices'] - $metrics['offlineDevices']);
+        $metrics['devicesByStatus']['online'] = (int)($statusStats['online'] ?? $derivedOnline);
+        if ($metrics['devicesByStatus']['online'] === 0 && $derivedOnline > 0) {
+            $metrics['devicesByStatus']['online'] = $derivedOnline;
+        }
+    } catch (Exception $e) {
+        // Status stats unavailable; keep defaults
+    }
+
+    // Ghost devices (no contact in 7/30 days)
+    try {
+        $ghostStats = $pdo->query("
+            SELECT
+                SUM(
+                    CASE
+                        WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) IS NOT NULL
+                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != ''
+                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != 'null'
+                             AND STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s') IS NOT NULL
+                             AND TIMESTAMPDIFF(DAY, STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s'), NOW()) > 7
+                        THEN 1 ELSE 0 END
+                ) as ghost7d,
+                SUM(
+                    CASE
+                        WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) IS NOT NULL
+                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != ''
+                             AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')) != 'null'
+                             AND STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s') IS NOT NULL
+                             AND TIMESTAMPDIFF(DAY, STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '%Y-%m-%dT%H:%i:%s'), NOW()) > 30
+                        THEN 1 ELSE 0 END
+                ) as ghost30d
+            FROM mpsm_cache_devices
+            WHERE is_uninstalled = 0
+        ")->fetch(PDO::FETCH_ASSOC);
+
+        $metrics['ghostDevices7d'] = (int)($ghostStats['ghost7d'] ?? 0);
+        $metrics['ghostDevices30d'] = (int)($ghostStats['ghost30d'] ?? 0);
+    } catch (Exception $e) {
+        // Ghost calculation unavailable; keep defaults
+    }
+
+    // Fleet age distribution based on InstallDate
+    try {
+        $ageStats = $pdo->query("
+            SELECT
+                SUM(CASE WHEN install_date IS NULL THEN 1 ELSE 0 END) as unknown,
+                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) < 1 THEN 1 ELSE 0 END) as under1yr,
+                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) BETWEEN 1 AND 2 THEN 1 ELSE 0 END) as age1to3yr,
+                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) BETWEEN 3 AND 4 THEN 1 ELSE 0 END) as age3to5yr,
+                SUM(CASE WHEN install_date IS NOT NULL AND TIMESTAMPDIFF(YEAR, install_date, NOW()) >= 5 THEN 1 ELSE 0 END) as over5yr
+            FROM (
+                SELECT STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.InstallDate')), '%Y-%m-%dT%H:%i:%s') as install_date
+                FROM mpsm_cache_devices
+                WHERE is_uninstalled = 0
+            ) as installs
+        ")->fetch(PDO::FETCH_ASSOC);
+
+        $metrics['fleetAgeDistribution'] = [
+            'under1yr' => (int)($ageStats['under1yr'] ?? 0),
+            'age1to3yr' => (int)($ageStats['age1to3yr'] ?? 0),
+            'age3to5yr' => (int)($ageStats['age3to5yr'] ?? 0),
+            'over5yr' => (int)($ageStats['over5yr'] ?? 0),
+            'unknown' => (int)($ageStats['unknown'] ?? 0)
+        ];
+    } catch (Exception $e) {
+        // Install date parsing unavailable; keep defaults
+    }
+
+    // Devices with alerts (approximate Active Alerts)
+    if (checkTableExists($pdo, 'mpsm_cache_device_drilldown')) {
+        try {
+            $alertStats = $pdo->query("
+                SELECT COUNT(*) as devices_with_alerts
+                FROM mpsm_cache_device_drilldown
+                WHERE has_alerts = 1
+            ")->fetch(PDO::FETCH_ASSOC);
+
+            $metrics['totalAlerts'] = (int)($alertStats['devices_with_alerts'] ?? 0);
+            $metrics['devicesByStatus']['error'] = min($metrics['totalDevices'], $metrics['totalAlerts']);
+        } catch (Exception $e) {
+            // Alert stats unavailable; keep defaults
+        }
+    }
+
     // Panel message stats
     if (checkTableExists($pdo, 'mpsm_panel_messages')) {
         try {
@@ -267,4 +364,6 @@ CHANGELOG
 - Uses JSON_EXTRACT instead of ->> operator for MySQL 5.7 compatibility
 - All queries wrapped in try-catch for safety
 - Returns safe defaults when tables/data missing
+2025-12-06 Codex
+- Added device status, ghost device, fleet age, and alert population metrics from cache tables to prevent empty executive cards while preserving safe fallbacks.
 */
