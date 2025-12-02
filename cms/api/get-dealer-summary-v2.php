@@ -1,6 +1,6 @@
 <?php
 /**
- * Executive Summary API - V2 (Database-Only, No HTTP Calls)
+ * Dealer Summary API - V2 (Database-Only, No HTTP Calls)
  * Handles empty cache gracefully
  */
 
@@ -12,7 +12,7 @@ requireAuth();
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 
 try {
-    $cacheKey = 'executive-summary-v2';
+    $cacheKey = 'dealer-summary-v2';
     $cacheTTL = 1800; // 30 minutes
 
     // Try cache first unless force refresh
@@ -34,7 +34,7 @@ try {
     }
 
     // Build fresh summary (database-only)
-    $summary = buildExecutiveSummaryV2();
+    $summary = buildDealerSummaryV2();
 
     // Cache result
     cacheStore($cacheKey, json_encode([
@@ -49,11 +49,11 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log("Executive Summary V2 Error: " . $e->getMessage());
-    jsonError("Failed to generate executive summary: " . $e->getMessage());
+    error_log("Dealer Summary V2 Error: " . $e->getMessage());
+    jsonError("Failed to generate dealer summary: " . $e->getMessage());
 }
 
-function buildExecutiveSummaryV2() {
+function buildDealerSummaryV2() {
     $pdo = getDatabase();
 
     // Initialize all metrics with safe defaults
@@ -365,5 +365,6 @@ CHANGELOG
 - All queries wrapped in try-catch for safety
 - Returns safe defaults when tables/data missing
 2025-12-06 Codex
-- Added device status, ghost device, fleet age, and alert population metrics from cache tables to prevent empty executive cards while preserving safe fallbacks.
+- Added device status, ghost device, fleet age, and alert population metrics from cache tables to prevent empty dealer cards while preserving safe fallbacks.
+- Rebranded API messaging from Executive Summary to Dealer Summary.
 */

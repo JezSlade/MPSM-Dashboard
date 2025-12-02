@@ -1,4 +1,4 @@
-# Executive Dashboard - Implementation Complete
+# Dealer Dashboard - Implementation Complete
 **Date:** 2025-12-02
 **Status:** ✅ Ready for Deployment
 **Total Files:** 5 new + 1 modified
@@ -7,7 +7,7 @@
 
 ## 📦 FILES CREATED
 
-### 1. **cms/api/get-executive-summary.php** (430 lines)
+### 1. **cms/api/get-dealer-summary.php** (430 lines)
 **Purpose:** Dealer-wide metrics aggregation API
 
 **Metrics Provided (30+):**
@@ -59,11 +59,11 @@ score = 100
 
 ---
 
-### 3. **cms/assets/executive.css** (530 lines)
-**Purpose:** Executive-specific styling
+### 3. **cms/assets/dealer.css** (530 lines)
+**Purpose:** Dealer-specific styling
 
 **Components Styled:**
-- Executive Scorecard Grid (responsive, 12 metric cards)
+- Dealer Scorecard Grid (responsive, 12 metric cards)
 - Metric Cards (with status colors: success/warning/danger)
 - Section Containers (header, actions, filters)
 - Portfolio Table (sortable, filterable, responsive)
@@ -81,11 +81,11 @@ score = 100
 
 ---
 
-### 4. **cms/assets/executive.js** (580 lines)
+### 4. **cms/assets/dealer.js** (580 lines)
 **Purpose:** Dashboard interactivity and data rendering
 
 **Key Functions:**
-- `loadExecutiveDashboard()` - Fetches summary + portfolio data in parallel
+- `loadDealerDashboard()` - Fetches summary + portfolio data in parallel
 - `renderScorecard()` - Renders 12 metric cards with color coding
 - `renderPortfolioTable()` - Renders filterable/sortable customer table
 - `renderDataQualityCards()` - Renders 4 quality metric cards
@@ -103,11 +103,11 @@ score = 100
 
 ---
 
-### 5. **cms/executive.php** (120 lines)
-**Purpose:** Executive dashboard page shell
+### 5. **cms/dealer.php** (120 lines)
+**Purpose:** Dealer dashboard page shell
 
 **Sections:**
-1. **Executive Scorecard** - 12 top KPIs in grid layout
+1. **Dealer Scorecard** - 12 top KPIs in grid layout
 2. **Data Quality Dashboard** - 4 quality metrics with progress bars
 3. **Customer Portfolio** - Filterable/sortable table with health scores
 
@@ -127,10 +127,10 @@ score = 100
 ---
 
 ### 6. **cms/index.php** (Modified - 1 line)
-**Change:** Added Executive Dashboard link to header
+**Change:** Added Dealer Dashboard link to header
 
 ```php
-<a href="executive.php" class="btn-icon" title="Executive Dashboard">
+<a href="dealer.php" class="btn-icon" title="Dealer Dashboard">
     <i class="fas fa-chart-line"></i>
 </a>
 ```
@@ -141,7 +141,7 @@ score = 100
 
 ## 🎯 METRICS IMPLEMENTED
 
-### Executive Scorecard (12 Cards)
+### Dealer Scorecard (12 Cards)
 
 | Metric | Data Source | Threshold Logic |
 |--------|-------------|-----------------|
@@ -198,18 +198,18 @@ cd c:\Users\jez.slade\Desktop\Projects\MPSM-Dashboard
 git status
 
 # 3. Stage new files
-git add cms/executive.php
-git add cms/api/get-executive-summary.php
+git add cms/dealer.php
+git add cms/api/get-dealer-summary.php
 git add cms/api/get-customer-portfolio.php
-git add cms/assets/executive.css
-git add cms/assets/executive.js
+git add cms/assets/dealer.css
+git add cms/assets/dealer.js
 git add cms/index.php
 
 # 4. Commit
-git commit -m "Executive Dashboard: dealer-level intelligence view
+git commit -m "Dealer Dashboard: dealer-level intelligence view
 
 Features:
-- Executive scorecard with 12 key metrics
+- Dealer scorecard with 12 key metrics
 - Data quality dashboard with 4 health indicators
 - Customer portfolio table with health scoring
 - Real-time filtering, sorting, search
@@ -240,13 +240,13 @@ Testing:
 - Dark/light theme support
 - Session authentication enforced
 
-Closes #executive-dashboard"
+Closes #dealer-dashboard"
 
 # 5. Push to GitHub
 git push origin main
 
 # 6. Verify deployment (GitHub Actions auto-deploy)
-# Check https://mpsm.resolutionsbydesign.us/cms/executive.php
+# Check https://mpsm.resolutionsbydesign.us/cms/dealer.php
 ```
 
 ---
@@ -256,11 +256,11 @@ git push origin main
 ### Test Sequence
 
 1. **Authentication Test**
-   - Access `https://mpsm.resolutionsbydesign.us/cms/executive.php` without login
+   - Access `https://mpsm.resolutionsbydesign.us/cms/dealer.php` without login
    - ✅ Expected: Redirect to login.html
 
 2. **Load Test**
-   - Login and access executive.php
+   - Login and access dealer.php
    - ✅ Expected: Scorecard renders 12 cards within 2 seconds
    - ✅ Expected: Portfolio table shows all customers
    - ✅ Expected: Data quality cards display
@@ -268,7 +268,7 @@ git push origin main
 3. **API Response Test**
    ```bash
    # Check summary API (should return JSON)
-   curl -b cookies.txt https://mpsm.resolutionsbydesign.us/cms/api/get-executive-summary.php
+   curl -b cookies.txt https://mpsm.resolutionsbydesign.us/cms/api/get-dealer-summary.php
 
    # Check portfolio API (should return JSON)
    curl -b cookies.txt https://mpsm.resolutionsbydesign.us/cms/api/get-customer-portfolio.php
@@ -295,7 +295,7 @@ git push origin main
 
 7. **Regression Test**
    - ✅ Load index.php → verify customer dashboard still works
-   - ✅ Verify executive link appears in header
+   - ✅ Verify dealer link appears in header
    - ✅ Verify no JavaScript errors in console
 
 ---
@@ -304,7 +304,7 @@ git push origin main
 
 | Category | Metrics Count | Data Sources |
 |----------|---------------|--------------|
-| Executive Scorecard | 12 | APIs + Database |
+| Dealer Scorecard | 12 | APIs + Database |
 | Data Quality Dashboard | 4 | Database queries |
 | Customer Portfolio | 8 columns | APIs + Database |
 | **Total Unique Metrics** | **30+** | Existing infrastructure |
@@ -352,18 +352,18 @@ If issues arise:
 
 1. **Quick Disable:**
    ```bash
-   # Remove executive link from index.php
+   # Remove dealer link from index.php
    git revert <commit-hash>
    git push origin main
    ```
 
 2. **Delete Files:**
    ```bash
-   rm cms/executive.php
-   rm cms/api/get-executive-summary.php
+   rm cms/dealer.php
+   rm cms/api/get-dealer-summary.php
    rm cms/api/get-customer-portfolio.php
-   rm cms/assets/executive.css
-   rm cms/assets/executive.js
+   rm cms/assets/dealer.css
+   rm cms/assets/dealer.js
    ```
 
 3. **Verify:**
@@ -378,7 +378,7 @@ If issues arise:
 ## 📈 FUTURE ENHANCEMENTS (Out of Scope for V1)
 
 1. **Trend Charts** - Page volume over time (requires charting library)
-2. **Export to PDF** - Generate executive report (requires PDF library)
+2. **Export to PDF** - Generate dealer report (requires PDF library)
 3. **Scheduled Email** - Daily/weekly summary (requires email service)
 4. **Advanced Filters** - By industry, location, contract type
 5. **Predictive Analytics** - Forecasting, anomaly detection
@@ -389,7 +389,7 @@ If issues arise:
 ## ✅ SUCCESS CRITERIA
 
 ### Functional Requirements
-- ✅ Executive dashboard loads in <2 seconds
+- ✅ Dealer dashboard loads in <2 seconds
 - ✅ Scorecard displays 12 key metrics accurately
 - ✅ Portfolio table shows all customers with health scores
 - ✅ Search filters customers in real-time
@@ -409,9 +409,9 @@ If issues arise:
 - ✅ Error handling with graceful fallbacks
 
 ### User Acceptance
-- Executive can see dealer-wide device count at a glance ✅
-- Executive can identify customers needing attention (low health score) ✅
-- Executive can drill down to customer details ✅
+- Dealer can see dealer-wide device count at a glance ✅
+- Dealer can identify customers needing attention (low health score) ✅
+- Dealer can drill down to customer details ✅
 - Dashboard loads fast (sub-2 second) ✅
 - Design is elegant and intuitive ✅
 

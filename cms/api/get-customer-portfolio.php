@@ -2,7 +2,7 @@
 /**
  * Customer Portfolio API
  * Returns customer list with aggregated metrics and health scores
- * Used for executive dashboard portfolio table
+ * Used for dealer dashboard portfolio table
  */
 
 require '../config.php';

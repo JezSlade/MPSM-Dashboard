@@ -4,7 +4,7 @@ Perfect! A **dealer-focused dashboard** shifts the perspective from individual c
 
 ## 🏢 **Dealer-Focused Dashboard Architecture**
 
-### **Level 1: Executive Scorecard (Top Metrics)**
+### **Level 1: Dealer Scorecard (Top Metrics)**
 **"Your Business at a Glance"**
 ```
 🟢 Total Managed Pages: 12.4M (↑15% MoM)

@@ -1,14 +1,14 @@
 /**
- * Executive Dashboard Styles
- * Extends existing style.css with executive-specific components
+ * Dealer Dashboard Styles
+ * Extends existing style.css with dealer-specific components
  * Maintains dark/light theme consistency
  */
 
 /* ========================================
-   EXECUTIVE SCORECARD GRID
+   DEALER SCORECARD GRID
    ======================================== */
 
-.executive-scorecard {
+.dealer-scorecard {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
@@ -453,13 +453,13 @@
    LOADING STATES
    ======================================== */
 
-.executive-loading {
+.dealer-loading {
     text-align: center;
     padding: 3rem;
     color: var(--text-secondary);
 }
 
-.executive-loading i {
+.dealer-loading i {
     font-size: 2rem;
     animation: spin 1s linear infinite;
     color: var(--primary-color);
@@ -496,7 +496,7 @@
    ======================================== */
 
 @media (max-width: 768px) {
-    .executive-scorecard {
+    .dealer-scorecard {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 0.75rem;
     }
@@ -605,3 +605,9 @@
     background: var(--bg-secondary);
     color: var(--text-secondary);
 }
+
+/*
+CHANGELOG
+2025-12-06 Codex
+- Rebranded dashboard styling comments from Executive to Dealer to match UI copy.
+*/

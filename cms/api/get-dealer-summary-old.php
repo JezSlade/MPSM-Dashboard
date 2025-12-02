@@ -1,8 +1,8 @@
 <?php
 /**
- * Executive Summary API
+ * Dealer Summary API
  * Aggregates dealer-wide metrics from existing cached endpoints
- * Returns comprehensive KPIs for executive dashboard
+ * Returns comprehensive KPIs for dealer dashboard
  */
 
 require '../config.php';
@@ -13,7 +13,7 @@ requireAuth();
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 
 try {
-    $cacheKey = 'executive-summary';
+    $cacheKey = 'dealer-summary';
     $cacheTTL = 1800; // 30 minutes
 
     // Try cache first unless force refresh
@@ -35,7 +35,7 @@ try {
     }
 
     // Build fresh summary
-    $summary = buildExecutiveSummary();
+    $summary = buildDealerSummary();
 
     // Cache result
     cacheStore($cacheKey, json_encode([
@@ -50,11 +50,11 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log("Executive Summary Error: " . $e->getMessage());
-    jsonError("Failed to generate executive summary: " . $e->getMessage());
+    error_log("Dealer Summary Error: " . $e->getMessage());
+    jsonError("Failed to generate dealer summary: " . $e->getMessage());
 }
 
-function buildExecutiveSummary() {
+function buildDealerSummary() {
     $pdo = getDatabase();
 
     // Initialize metrics structure
@@ -381,19 +381,19 @@ function fetchAllCustomers() {
 
         $response = @file_get_contents($url, false, $context);
         if ($response === false) {
-            error_log('Executive Summary: Failed to fetch customers');
+            error_log('Dealer Summary: Failed to fetch customers');
             return [];
         }
 
         $data = json_decode($response, true);
         if (!$data || !isset($data['customers'])) {
-            error_log('Executive Summary: Invalid customer response');
+            error_log('Dealer Summary: Invalid customer response');
             return [];
         }
 
         return $data['customers'];
     } catch (Exception $e) {
-        error_log('Executive Summary: Exception fetching customers - ' . $e->getMessage());
+        error_log('Dealer Summary: Exception fetching customers - ' . $e->getMessage());
         return [];
     }
 }
@@ -447,7 +447,7 @@ function fetchCustomerMetrics($customerCode) {
             'connectorsActive' => $connectorsActive
         ];
     } catch (Exception $e) {
-        error_log('Executive Summary: Exception fetching metrics for ' . $customerCode . ' - ' . $e->getMessage());
+        error_log('Dealer Summary: Exception fetching metrics for ' . $customerCode . ' - ' . $e->getMessage());
         return getEmptyCustomerMetrics($customerCode);
     }
 }
@@ -479,8 +479,10 @@ function fetchDealerDeviceData($pdo) {
 /*
 CHANGELOG
 2025-12-02 Claude
-- Initial implementation: Executive summary API aggregating 30+ dealer-wide metrics
+- Initial implementation: Dealer summary API aggregating 30+ dealer-wide metrics
 - Includes device health, data quality, fleet age, panel messages, connectors, cache health
 - Uses existing cached endpoints and database tables (no new backend)
 - 30-minute cache TTL with force refresh option
+2025-12-06 Codex
+- Rebranded legacy summary API logs and labels from Executive to Dealer.
 */

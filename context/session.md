@@ -1,6 +1,24 @@
-# Session Summary - 2025-11-25 Planning Session
+# Session Summary - 2025-12-02 Dealer Dashboard
 
 ## Notes (Current Session)
+- Created dealer-level intelligence dashboard (dealer.php) with 30+ aggregate metrics
+- Built 3-tier UI: Dealer Scorecard (12 metrics), Data Quality (4 metrics), Customer Portfolio (table)
+- Implemented get-dealer-summary.php API (database-only V2) and get-customer-portfolio.php with health scoring
+- Added dealer.css (530 lines) and dealer.js (580 lines) for styling and interactivity
+- Iterated through 4 versions to resolve "all zeros" issue: V1 (HTTP calls), V2 (database-only), V3 (hardening), V4 (hybrid with live API fallback)
+- Root cause: mpsm_cache_devices table exists but empty (0 devices); internal HTTP calls failing
+- Created hybrid version (get-dealer-summary-hybrid.php) that falls back to live MPS API when cache empty
+- Renamed all "executive" branding to "dealer" throughout codebase (14 files renamed)
+- Enhanced refresh-cache-enhanced.php: lock file improvements, serial deduplication, duplicate page detection
+- Fixed callMPSMAPI → callMPSAPI typo; added unique device count logging
+- Updated context docs (dealer-dashboard-plan.md, dealer-dashboard-implementation.md)
+- All code references validated - no orphaned "executive" strings remain
+- Dashboard deployed but shows zeros pending cache population or hybrid deployment
+- Created comprehensive validation report: context/validation-report-2025-12-02.md
+
+## Previous Session - 2025-11-25 Planning Session
+
+## Notes
 - Read context vault (README, session, decisions, test-log, deploy-log) and `docs/MPSM_Code_Descriptions.md` for alert mappings.
 - Drafting unified plan for mobile redirect/login persistence, export library prefetching, device 429 handling, customer-scoped alert badge, and accurate system alert descriptions.
 - Implemented mobile UA redirect + preference cookie for mobile.php, mobile-aware login redirect, and extended session lifetime for persistence.

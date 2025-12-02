@@ -1,6 +1,6 @@
 <?php
 /**
- * Executive Summary API - Hybrid (Cache OR Live API Fallback)
+ * Dealer Summary API - Hybrid (Cache OR Live API Fallback)
  * If cache empty, fetches live data from MPS API
  */
 
@@ -12,7 +12,7 @@ requireAuth();
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 
 try {
-    $cacheKey = 'executive-summary-hybrid';
+    $cacheKey = 'dealer-summary-hybrid';
     $cacheTTL = 1800; // 30 minutes
 
     // Try cache first unless force refresh
@@ -49,8 +49,8 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log("Executive Summary Hybrid Error: " . $e->getMessage());
-    jsonError("Failed to generate executive summary: " . $e->getMessage());
+    error_log("Dealer Summary Hybrid Error: " . $e->getMessage());
+    jsonError("Failed to generate dealer summary: " . $e->getMessage());
 }
 
 function buildHybridSummary() {
@@ -297,4 +297,6 @@ CHANGELOG
 - Samples first 10 customers for quick live metrics (extrapolates to full base)
 - Always returns data (never shows zeros if live API works)
 - Indicates data source in response (_dataSource field)
+2025-12-06 Codex
+- Rebranded error logging from Executive to Dealer naming to match new summary endpoints.
 */

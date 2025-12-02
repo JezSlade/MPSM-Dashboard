@@ -1,6 +1,6 @@
-# Executive Dashboard Implementation Plan
+# Dealer Dashboard Implementation Plan
 **Created:** 2025-12-02
-**Target:** Dealer-level executive intelligence dashboard
+**Target:** Dealer-level dealer intelligence dashboard
 **Constraint:** No new backend (reuse existing 96 APIs)
 
 ---
@@ -8,7 +8,7 @@
 ## 1. INTENT & SCOPE
 
 ### Business Objective
-Create an elegant, executive-focused dashboard presenting dealer-level aggregate data:
+Create an elegant, dealer-focused dashboard presenting dealer-level aggregate data:
 - All customer portfolio metrics (devices, errors, alerts, status)
 - Infrastructure health (connectors, integrations, dead machines, offline devices)
 - Operational intelligence (duplicate IPs, page volumes, service efficiency)
@@ -17,9 +17,9 @@ Create an elegant, executive-focused dashboard presenting dealer-level aggregate
 
 ### Scope Boundaries
 **IN SCOPE:**
-- Single new file: `cms/executive.php` (frontend shell)
+- Single new file: `cms/dealer.php` (frontend shell)
 - 2-3 new API endpoints for dealer-wide aggregation
-- Executive-specific cards using existing card framework
+- Dealer-specific cards using existing card framework
 - Reuse ALL existing APIs via cached endpoints (sub-100ms)
 - Dark/light theme support matching current design
 - Session-based authentication (existing flow)
@@ -45,7 +45,7 @@ Create an elegant, executive-focused dashboard presenting dealer-level aggregate
 1. **API calls are expensive** → Must use cached endpoints (`get-*-cached.php`)
 2. **Rate limits exist** → Background refresh strategy required
 3. **142 active customers** → Iterating per-customer is slow (need aggregation API)
-4. **Data freshness** → Cache TTL is 30min (acceptable for executive view)
+4. **Data freshness** → Cache TTL is 30min (acceptable for dealer view)
 5. **Mobile-first user base** → Must remain responsive
 
 ---
@@ -54,7 +54,7 @@ Create an elegant, executive-focused dashboard presenting dealer-level aggregate
 
 ### Phase 1: Backend Aggregation APIs (Minimal New Code)
 
-#### File: `cms/api/get-executive-summary.php` (NEW)
+#### File: `cms/api/get-dealer-summary.php` (NEW)
 **Purpose:** Single endpoint returning dealer-wide rollup metrics
 **Data Sources:**
 - `get-customers.php` → List all customers (142 active)
@@ -99,7 +99,7 @@ Create an elegant, executive-focused dashboard presenting dealer-level aggregate
 - Loop through customers calling cached endpoints (parallel if possible)
 - Aggregate totals (sum devices, sum alerts, count offline, etc.)
 - Sort and slice for "Top 10" lists
-- Cache result in `cms/api/cache/executive-summary.json` (30min TTL)
+- Cache result in `cms/api/cache/dealer-summary.json` (30min TTL)
 
 #### File: `cms/api/get-customer-portfolio.php` (NEW)
 **Purpose:** Customer list with aggregated metrics for portfolio table
@@ -138,9 +138,9 @@ healthScore = 100
 
 ---
 
-### Phase 2: Frontend Dashboard (executive.php)
+### Phase 2: Frontend Dashboard (dealer.php)
 
-#### File: `cms/executive.php` (NEW ~350 lines)
+#### File: `cms/dealer.php` (NEW ~350 lines)
 **Structure:** Copy `index.php` as base template
 
 **Key Modifications:**
@@ -150,7 +150,7 @@ require 'config.php';
 require 'functions.php';
 
 requireAuth();
-trackVisit('/executive');
+trackVisit('/dealer');
 
 $userId = $_SESSION['user_id'];
 $preferences = getUserPreferences($userId);
@@ -160,16 +160,16 @@ $preferences = getUserPreferences($userId);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= APP_NAME ?> - Executive Dashboard</title>
+    <title><?= APP_NAME ?> - Dealer Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
-    <link rel="stylesheet" href="assets/executive.css"> <!-- NEW: Executive-specific styles -->
+    <link rel="stylesheet" href="assets/dealer.css"> <!-- NEW: Dealer-specific styles -->
 </head>
 <body data-theme="<?= htmlspecialchars($preferences['theme'] ?? 'light') ?>">
-    <!-- Header (same as index.php with "Executive View" title) -->
+    <!-- Header (same as index.php with "Dealer View" title) -->
     <header class="header">
         <div class="container">
-            <h1><i class="fas fa-chart-line"></i> Executive Dashboard</h1>
+            <h1><i class="fas fa-chart-line"></i> Dealer Dashboard</h1>
             <div class="header-actions">
                 <a href="index.php" class="btn-secondary" title="Customer View">
                     <i class="fas fa-user"></i> Customer View
@@ -192,8 +192,8 @@ $preferences = getUserPreferences($userId);
 
     <!-- Main Content -->
     <main class="container">
-        <!-- Level 1: Executive Scorecard -->
-        <section id="executive-scorecard" class="scorecard-grid">
+        <!-- Level 1: Dealer Scorecard -->
+        <section id="dealer-scorecard" class="scorecard-grid">
             <div class="loading">Loading metrics...</div>
         </section>
 
@@ -216,23 +216,23 @@ $preferences = getUserPreferences($userId);
 
         <!-- Level 3: Operational Intelligence Grid -->
         <div class="dashboard-grid">
-            <div id="executive-cards-container" class="dashboard-card-grid"></div>
+            <div id="dealer-cards-container" class="dashboard-card-grid"></div>
         </div>
     </main>
 
     <script src="assets/shared.js"></script>
-    <script src="assets/executive.js"></script> <!-- NEW: Executive dashboard logic -->
+    <script src="assets/dealer.js"></script> <!-- NEW: Dealer dashboard logic -->
 </body>
 </html>
 ```
 
 ---
 
-### Phase 3: Executive JavaScript Logic
+### Phase 3: Dealer JavaScript Logic
 
-#### File: `cms/assets/executive.js` (NEW ~600 lines)
+#### File: `cms/assets/dealer.js` (NEW ~600 lines)
 **Responsibilities:**
-1. Fetch executive summary on load
+1. Fetch dealer summary on load
 2. Render scorecard metrics (8-10 top KPIs)
 3. Render customer portfolio table with sorting/filtering
 4. Render operational cards (connectors, errors, duplicates, etc.)
@@ -242,7 +242,7 @@ $preferences = getUserPreferences($userId);
 
 ```javascript
 // State management
-const executiveState = {
+const dealerState = {
     summary: null,
     customers: null,
     filters: {
@@ -255,31 +255,31 @@ const executiveState = {
     }
 };
 
-// Load executive data
-async function loadExecutiveDashboard() {
+// Load dealer data
+async function loadDealerDashboard() {
     try {
         // Fetch summary (cached)
-        const summaryResp = await fetchJson('api/get-executive-summary.php');
-        executiveState.summary = summaryResp.summary;
+        const summaryResp = await fetchJson('api/get-dealer-summary.php');
+        dealerState.summary = summaryResp.summary;
 
         // Fetch customer portfolio (cached)
         const portfolioResp = await fetchJson('api/get-customer-portfolio.php');
-        executiveState.customers = portfolioResp.customers;
+        dealerState.customers = portfolioResp.customers;
 
         // Render all sections
-        renderScorecard(executiveState.summary);
-        renderPortfolioTable(executiveState.customers);
-        renderOperationalCards(executiveState.summary);
+        renderScorecard(dealerState.summary);
+        renderPortfolioTable(dealerState.customers);
+        renderOperationalCards(dealerState.summary);
 
     } catch (error) {
-        console.error('[Executive] Load failed:', error);
-        showToast('Failed to load executive dashboard', 'error');
+        console.error('[Dealer] Load failed:', error);
+        showToast('Failed to load dealer dashboard', 'error');
     }
 }
 
 // Scorecard rendering
 function renderScorecard(summary) {
-    const scorecard = document.getElementById('executive-scorecard');
+    const scorecard = document.getElementById('dealer-scorecard');
     scorecard.innerHTML = `
         <div class="metric-card">
             <div class="metric-value">${summary.totalCustomers.toLocaleString()}</div>
@@ -330,20 +330,20 @@ function renderScorecard(summary) {
 function renderPortfolioTable(customers) {
     // Apply filters
     let filtered = customers.filter(c => {
-        const matchesSearch = !executiveState.filters.searchTerm
-            || c.name.toLowerCase().includes(executiveState.filters.searchTerm.toLowerCase())
-            || c.code.toLowerCase().includes(executiveState.filters.searchTerm.toLowerCase());
+        const matchesSearch = !dealerState.filters.searchTerm
+            || c.name.toLowerCase().includes(dealerState.filters.searchTerm.toLowerCase())
+            || c.code.toLowerCase().includes(dealerState.filters.searchTerm.toLowerCase());
 
-        const matchesHealth = executiveState.filters.healthFilter === 'all'
-            || (executiveState.filters.healthFilter === 'healthy' && c.healthScore >= 90)
-            || (executiveState.filters.healthFilter === 'attention' && c.healthScore >= 70 && c.healthScore < 90)
-            || (executiveState.filters.healthFilter === 'critical' && c.healthScore < 70);
+        const matchesHealth = dealerState.filters.healthFilter === 'all'
+            || (dealerState.filters.healthFilter === 'healthy' && c.healthScore >= 90)
+            || (dealerState.filters.healthFilter === 'attention' && c.healthScore >= 70 && c.healthScore < 90)
+            || (dealerState.filters.healthFilter === 'critical' && c.healthScore < 70);
 
         return matchesSearch && matchesHealth;
     });
 
     // Apply sorting
-    const { column, direction } = executiveState.sort;
+    const { column, direction } = dealerState.sort;
     filtered.sort((a, b) => {
         const aVal = a[column];
         const bVal = b[column];
@@ -421,18 +421,18 @@ function drillDownToCustomer(customerCode) {
 }
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', loadExecutiveDashboard);
+document.addEventListener('DOMContentLoaded', loadDealerDashboard);
 ```
 
 ---
 
-### Phase 4: Executive-Specific Styling
+### Phase 4: Dealer-Specific Styling
 
-#### File: `cms/assets/executive.css` (NEW ~200 lines)
+#### File: `cms/assets/dealer.css` (NEW ~200 lines)
 **Additions to existing design system:**
 
 ```css
-/* Executive Scorecard Grid */
+/* Dealer Scorecard Grid */
 .scorecard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', loadExecutiveDashboard);
 
 2. **Session/auth system**
    - Shield: Use identical auth flow (`requireAuth()`)
-   - Test: Login, access executive.php, verify session persists
+   - Test: Login, access dealer.php, verify session persists
 
 3. **API endpoints**
    - Shield: New APIs are read-only, no mutations
@@ -585,18 +585,18 @@ document.addEventListener('DOMContentLoaded', loadExecutiveDashboard);
 
 4. **Mobile responsiveness**
    - Shield: Use same CSS variables and breakpoints
-   - Test: Load executive.php on mobile, verify grid wraps
+   - Test: Load dealer.php on mobile, verify grid wraps
 
 ### Proposed Checks
 ```bash
 # 1. Verify existing customer dashboard unchanged
 curl -b cookies.txt https://mpsm.resolutionsbydesign.us/cms/index.php | grep "dashboard-card-grid"
 
-# 2. Verify new executive APIs respond
-curl -b cookies.txt https://mpsm.resolutionsbydesign.us/cms/api/get-executive-summary.php
+# 2. Verify new dealer APIs respond
+curl -b cookies.txt https://mpsm.resolutionsbydesign.us/cms/api/get-dealer-summary.php
 
 # 3. Verify auth enforcement
-curl https://mpsm.resolutionsbydesign.us/cms/executive.php | grep "Login required"
+curl https://mpsm.resolutionsbydesign.us/cms/dealer.php | grep "Login required"
 
 # 4. Verify no PHP errors
 tail -f cms/logs/error-*.log
@@ -607,20 +607,20 @@ tail -f cms/logs/error-*.log
 ## 5. FILE INVENTORY
 
 ### New Files (3)
-1. **cms/executive.php** (~350 lines) - Executive dashboard shell
-2. **cms/assets/executive.js** (~600 lines) - Executive dashboard logic
-3. **cms/assets/executive.css** (~200 lines) - Executive-specific styles
+1. **cms/dealer.php** (~350 lines) - Dealer dashboard shell
+2. **cms/assets/dealer.js** (~600 lines) - Dealer dashboard logic
+3. **cms/assets/dealer.css** (~200 lines) - Dealer-specific styles
 
 ### New API Endpoints (2-3)
-4. **cms/api/get-executive-summary.php** (~250 lines) - Dealer-wide rollup
+4. **cms/api/get-dealer-summary.php** (~250 lines) - Dealer-wide rollup
 5. **cms/api/get-customer-portfolio.php** (~180 lines) - Customer table data
 6. **cms/api/save-preference.php** (~40 lines) - Update user prefs (may already exist)
 
 ### Modified Files (1)
-7. **cms/index.php** - Add header link to executive view:
+7. **cms/index.php** - Add header link to dealer view:
    ```php
-   <a href="executive.php" class="btn-secondary" title="Executive View">
-       <i class="fas fa-chart-line"></i> Executive
+   <a href="dealer.php" class="btn-secondary" title="Dealer View">
+       <i class="fas fa-chart-line"></i> Dealer
    </a>
    ```
 
@@ -630,7 +630,7 @@ tail -f cms/logs/error-*.log
 
 ## 6. ROLLBACK PLAN
 
-If executive dashboard breaks or causes issues:
+If dealer dashboard breaks or causes issues:
 
 1. **Immediate rollback:**
    ```bash
@@ -638,8 +638,8 @@ If executive dashboard breaks or causes issues:
    git push origin main
    ```
 
-2. **Remove executive.php access:**
-   - Delete/rename `cms/executive.php` to disable access
+2. **Remove dealer.php access:**
+   - Delete/rename `cms/dealer.php` to disable access
    - Existing customer dashboard unaffected
 
 3. **API cleanup:**
@@ -647,7 +647,7 @@ If executive dashboard breaks or causes issues:
    - No database changes to roll back (read-only APIs)
 
 4. **Header navigation:**
-   - Remove executive link from index.php header
+   - Remove dealer link from index.php header
    - No functional impact on existing features
 
 **Recovery Time:** <5 minutes (single file operations)
@@ -657,14 +657,14 @@ If executive dashboard breaks or causes issues:
 ## 7. TESTING PLAN
 
 ### Pre-deployment Tests (Local)
-1. ✅ PHP syntax check: `php -l executive.php`
+1. ✅ PHP syntax check: `php -l dealer.php`
 2. ✅ Verify auth redirect: Access without login → redirects to login.html
 3. ✅ Verify API responses: Mock customer data, test aggregation logic
 4. ✅ Verify CSS: Check scorecard grid responsive breakpoints
 5. ✅ Verify JS: Test portfolio filtering/sorting without backend
 
 ### Post-deployment Tests (Live)
-1. ✅ Load executive.php while logged in
+1. ✅ Load dealer.php while logged in
 2. ✅ Verify scorecard renders 8 metric cards
 3. ✅ Verify portfolio table loads 142 customers
 4. ✅ Test search: Filter customers by name
@@ -681,44 +681,44 @@ If executive dashboard breaks or causes issues:
 
 ```bash
 # 1. Create branch
-git checkout -b feature/executive-dashboard
+git checkout -b feature/dealer-dashboard
 
 # 2. Create new files (order matters for dependencies)
-# - cms/api/get-executive-summary.php
+# - cms/api/get-dealer-summary.php
 # - cms/api/get-customer-portfolio.php
-# - cms/assets/executive.css
-# - cms/assets/executive.js
-# - cms/executive.php
+# - cms/assets/dealer.css
+# - cms/assets/dealer.js
+# - cms/dealer.php
 
 # 3. Modify existing file (optional)
-# - cms/index.php (add executive link to header)
+# - cms/index.php (add dealer link to header)
 
 # 4. Test locally
-php -l cms/executive.php
-php -l cms/api/get-executive-summary.php
+php -l cms/dealer.php
+php -l cms/api/get-dealer-summary.php
 php -l cms/api/get-customer-portfolio.php
 
 # 5. Commit
-git add cms/executive.php cms/api/get-executive-* cms/assets/executive.*
-git commit -m "Executive dashboard: dealer-level aggregate view
+git add cms/dealer.php cms/api/get-dealer-* cms/assets/dealer.*
+git commit -m "Dealer dashboard: dealer-level aggregate view
 
-- Add executive.php shell with scorecard and portfolio table
-- Add get-executive-summary.php API for dealer-wide rollup
+- Add dealer.php shell with scorecard and portfolio table
+- Add get-dealer-summary.php API for dealer-wide rollup
 - Add get-customer-portfolio.php API for customer list
-- Add executive.css for scorecard and health score styling
-- Add executive.js for data fetching, filtering, sorting, drill-down
+- Add dealer.css for scorecard and health score styling
+- Add dealer.js for data fetching, filtering, sorting, drill-down
 - Reuse existing cached APIs (no new backend)
 - Maintain design system consistency (dark/light theme)
 
 Closes #[issue-number]"
 
 # 6. Push and deploy
-git push origin feature/executive-dashboard
+git push origin feature/dealer-dashboard
 # Create PR, review, merge to main
 # GitHub Actions auto-deploy to live (or manual FTP)
 
 # 7. Verify live
-curl -I https://mpsm.resolutionsbydesign.us/cms/executive.php
+curl -I https://mpsm.resolutionsbydesign.us/cms/dealer.php
 # Should return 200 OK (or 302 redirect to login if not authenticated)
 ```
 
@@ -727,7 +727,7 @@ curl -I https://mpsm.resolutionsbydesign.us/cms/executive.php
 ## 9. SUCCESS CRITERIA
 
 ### Functional Requirements
-- ✅ Executive dashboard loads in <2 seconds
+- ✅ Dealer dashboard loads in <2 seconds
 - ✅ Scorecard displays 8 key metrics accurately
 - ✅ Portfolio table shows all 142 customers
 - ✅ Search filters customers in real-time
@@ -747,9 +747,9 @@ curl -I https://mpsm.resolutionsbydesign.us/cms/executive.php
 - ✅ Error handling with graceful fallbacks
 
 ### User Acceptance
-- Executive can see dealer-wide device count at a glance
-- Executive can identify customers needing attention (low health score)
-- Executive can drill down to customer details
+- Dealer can see dealer-wide device count at a glance
+- Dealer can identify customers needing attention (low health score)
+- Dealer can drill down to customer details
 - Dashboard loads fast (sub-2 second)
 - Design is elegant and intuitive (matches current theme)
 
@@ -758,7 +758,7 @@ curl -I https://mpsm.resolutionsbydesign.us/cms/executive.php
 ## 10. FUTURE ENHANCEMENTS (Out of Scope for V1)
 
 1. **Trend charts** - Page volume over time (requires charting library)
-2. **Export to PDF** - Generate executive report (requires PDF library)
+2. **Export to PDF** - Generate dealer report (requires PDF library)
 3. **Scheduled email** - Daily/weekly summary email (requires email service)
 4. **Advanced filters** - Customer by industry, location, contract type
 5. **Predictive analytics** - Forecasting, anomaly detection (requires ML)
@@ -771,11 +771,11 @@ curl -I https://mpsm.resolutionsbydesign.us/cms/executive.php
 **Does this plan meet your requirements?**
 
 **Your Request:**
-> "I need an executive.php dashboard that will present all dealer level data beautifully to present to the executives so they can see all devices, all errors, all duplicate IP addresses, all dead machines, offline, connectors, everything from the dealer level. it must be elegant and intuitive."
+> "I need an dealer.php dashboard that will present all dealer level data beautifully to present to the dealers so they can see all devices, all errors, all duplicate IP addresses, all dead machines, offline, connectors, everything from the dealer level. it must be elegant and intuitive."
 > "No new back end."
 
 **This Plan Delivers:**
-- ✅ `executive.php` dashboard (new file)
+- ✅ `dealer.php` dashboard (new file)
 - ✅ Dealer-level aggregation (all customers rolled up)
 - ✅ All devices, errors, duplicate IPs, dead machines, offline, connectors
 - ✅ Elegant design (scorecard + portfolio table + operational cards)

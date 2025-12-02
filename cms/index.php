@@ -72,7 +72,7 @@ $preferences = getUserPreferences($userId);
                 </div>
             </div>
             <div class="header-actions">
-                <a href="executive.php" class="btn-icon" title="Executive Dashboard">
+                <a href="dealer.php" class="btn-icon" title="Dealer Dashboard">
                     <i class="fas fa-chart-line"></i>
                 </a>
                 <a href="command-center.php" class="btn-icon" title="Command Center">
@@ -496,5 +496,7 @@ CHANGELOG
 - Added customer-aware panel monitor link hooks for desktop header to keep badge navigation scoped.
 2025-11-25 Codex
 - Added mobile user-agent redirect with desktop/mobile overrides and persistent cookie hints to keep mobile users on mobile.php.
+2025-12-06 Codex
+- Rebranded dealer dashboard header link and updated path to dealer.php.
 */
 ?>

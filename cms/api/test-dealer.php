@@ -1,6 +1,6 @@
 <?php
 /**
- * Test Executive Summary API - Minimal Version
+ * Test Dealer Summary API - Minimal Version
  */
 
 require '../config.php';
@@ -86,3 +86,9 @@ try {
         'trace' => $e->getTraceAsString()
     ], JSON_PRETTY_PRINT);
 }
+
+/*
+CHANGELOG
+2025-12-06 Codex
+- Rebranded test harness description from Executive to Dealer and ensured changelog compliance.
+*/

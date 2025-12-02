@@ -69,12 +69,13 @@ class RateLimitException extends RuntimeException
 $forceRun = isset($_GET['force']) && $_GET['force'] === '1';
 if (file_exists($lockFile)) {
     $lockAge = time() - filemtime($lockFile);
-    if ($forceRun || $lockAge >= 600) {
-        logMessage("Existing lock cleared (force=" . ($forceRun ? 'true' : 'false') . ", age={$lockAge}s)");
+    if ($forceRun) {
+        logMessage("Existing lock cleared (force=true, age={$lockAge}s)");
         unlink($lockFile);
     } else {
-        logMessage("Refresh skipped - already in progress");
-        die(json_encode(['status' => 'skipped', 'reason' => 'refresh in progress']));
+        // Do NOT auto-clear; avoid overlapping runs that truncate tables mid-refresh
+        logMessage("Refresh skipped - already in progress (lock age {$lockAge}s). Use force=1 only if the run is truly stuck.");
+        die(json_encode(['status' => 'skipped', 'reason' => 'refresh in progress', 'lock_age_seconds' => $lockAge]));
     }
 }
 
@@ -311,7 +312,7 @@ function fetchAllDevices(): array {
         });
 
         try {
-            $response = callMPSMAPI('Device/List', $params);
+            $response = callMPSAPI('Device/List', $params);
             $retryCount = 0; // Reset retry count on successful call
         } catch (RateLimitException $e) {
             $stats['rate_limit_retries']++;
@@ -341,6 +342,30 @@ function fetchAllDevices(): array {
         $pageDevices = extractDevicesFromResponse($response);
         $deviceCount = count($pageDevices);
 
+        // Deduplicate by serial to avoid pagination loops/out-of-range noise
+        $newDevices = [];
+        $duplicatesThisPage = 0;
+        foreach ($pageDevices as $device) {
+            $serial = $device['SerialNumber'] ?? $device['serialNumber'] ?? $device['serial_number'] ?? null;
+            if ($serial === null) {
+                $newDevices[] = $device; // Keep unknown serials to avoid data loss
+                continue;
+            }
+            if (isset($seenSerials[$serial])) {
+                $duplicatesThisPage++;
+                continue;
+            }
+            $seenSerials[$serial] = true;
+            $newDevices[] = $device;
+        }
+
+        $uniqueAdded = count($newDevices);
+        if ($uniqueAdded === 0) {
+            $duplicatePageStreak++;
+        } else {
+            $duplicatePageStreak = 0;
+        }
+
         // Handle empty page (circuit breaker pattern)
         if ($deviceCount === 0) {
             $consecutiveEmptyPages++;
@@ -359,18 +384,33 @@ function fetchAllDevices(): array {
         $stats['page_samples'][] = [
             'type' => 'installed',
             'page' => $pageNumber,
-            'count' => $deviceCount
+            'count' => $deviceCount,
+            'unique_added' => $uniqueAdded,
+            'duplicates' => $duplicatesThisPage
         ];
 
-        $totalSoFar = count($allDevices) + $deviceCount;
-        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices (Total: {$totalSoFar})");
+        $totalSoFar = count($seenSerials);
+        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices ({$uniqueAdded} new, {$duplicatesThisPage} dupes). Unique total: {$totalSoFar}");
 
         // Progress reporting every 10 pages
         if ($pageNumber % 10 === 0) {
-            logMessage("=== PROGRESS: Page {$pageNumber}, Total devices: {$totalSoFar} ===");
+            logMessage("=== PROGRESS: Page {$pageNumber}, Unique devices: {$totalSoFar} ===");
         }
 
-        $allDevices = array_merge($allDevices, $pageDevices);
+        if (!empty($newDevices)) {
+            $allDevices = array_merge($allDevices, $newDevices);
+            $deviceBatch = array_merge($deviceBatch, $newDevices);
+        }
+
+        // Stop if repeated duplicate pages (pagination likely looping)
+        if ($uniqueAdded === 0) {
+            if ($duplicatePageStreak >= 3) {
+                logMessage("Stopping pagination due to duplicate pages (streak {$duplicatePageStreak}, page {$pageNumber})");
+                break;
+            }
+            // Try the next page in case the API resumes unique results
+            continue;
+        }
 
         // CRITICAL FIX: API returns 100 devices per page, check for < 100 (not < 50)
         // But don't stop immediately - might be a partial page followed by more data
@@ -393,7 +433,7 @@ function fetchAllDevices(): array {
         $params['PageNumber'] = $deletedPageNumber;
 
         try {
-            $response = callMPSMAPI('Device/Deleted/ListByDealer', $params);
+            $response = callMPSAPI('Device/Deleted/ListByDealer', $params);
         } catch (RateLimitException $e) {
             $stats['rate_limit_retries']++;
             logMessage("Rate limit while fetching deleted device page {$deletedPageNumber}; cooling {$e->getRetryAfter()}s before retry.");
@@ -448,6 +488,13 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo, bool $willFetchDrilldown =
     $totalDeletedDevices = 0;
     $batchSize = 10; // Cache every 10 pages (1000 devices) to prevent MySQL timeout
     $deviceBatch = [];
+    $seenSerials = [];
+    $duplicatePageStreak = 0;
+    $expectedRows = null;
+    $expectedPages = null;
+    $pageRows = $installedBaseParams['PageRows'];
+    $seenSerials = [];
+    $duplicatePageStreak = 0;
 
     // SAFETY: Truncate tables before fetch begins
     // Incremental batching (every 1000 devices) provides protection
@@ -493,7 +540,7 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo, bool $willFetchDrilldown =
         });
 
         try {
-            $response = callMPSMAPI('Device/List', $params);
+            $response = callMPSAPI('Device/List', $params);
             $retryCount = 0;
         } catch (RateLimitException $e) {
             $stats['rate_limit_retries']++;
@@ -522,6 +569,30 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo, bool $willFetchDrilldown =
         $pageDevices = extractDevicesFromResponse($response);
         $deviceCount = count($pageDevices);
 
+        // Deduplicate by serial to avoid pagination loops/out-of-range noise
+        $newDevices = [];
+        $duplicatesThisPage = 0;
+        foreach ($pageDevices as $device) {
+            $serial = $device['SerialNumber'] ?? $device['serialNumber'] ?? $device['serial_number'] ?? null;
+            if ($serial === null) {
+                $newDevices[] = $device;
+                continue;
+            }
+            if (isset($seenSerials[$serial])) {
+                $duplicatesThisPage++;
+                continue;
+            }
+            $seenSerials[$serial] = true;
+            $newDevices[] = $device;
+        }
+
+        $uniqueAdded = count($newDevices);
+        if ($uniqueAdded === 0) {
+            $duplicatePageStreak++;
+        } else {
+            $duplicatePageStreak = 0;
+        }
+
         if ($deviceCount === 0) {
             $consecutiveEmptyPages++;
             logMessage("Empty page at {$pageNumber} (consecutive empty: {$consecutiveEmptyPages}/{$maxEmptyPages})");
@@ -538,15 +609,37 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo, bool $willFetchDrilldown =
         $stats['page_samples'][] = [
             'type' => 'installed',
             'page' => $pageNumber,
-            'count' => $deviceCount
+            'count' => $deviceCount,
+            'unique_added' => $uniqueAdded,
+            'duplicates' => $duplicatesThisPage
         ];
 
-        $deviceBatch = array_merge($deviceBatch, $pageDevices);
-        $totalSoFar = $totalDevicesCached + count($deviceBatch);
-        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices (Total: {$totalSoFar})");
+        if ($expectedPages === null && isset($response['TotalRows'])) {
+            $expectedRows = (int)$response['TotalRows'];
+            $expectedPages = max(1, (int)ceil($expectedRows / $pageRows));
+            logMessage("Detected TotalRows={$expectedRows}; expecting ~{$expectedPages} pages at {$pageRows} per page");
+        }
+
+        if (!empty($newDevices)) {
+            $deviceBatch = array_merge($deviceBatch, $newDevices);
+        }
+        $totalSoFar = count($seenSerials);
+        logMessage("Page {$pageNumber}: Fetched {$deviceCount} devices ({$uniqueAdded} new, {$duplicatesThisPage} dupes). Unique total: {$totalSoFar}");
 
         if ($pageNumber % 10 === 0) {
-            logMessage("=== PROGRESS: Page {$pageNumber}, Total devices: {$totalSoFar} ===");
+            logMessage("=== PROGRESS: Page {$pageNumber}, Unique devices: {$totalSoFar} ===");
+        }
+
+        // Stop if this page yielded no new unique devices (pagination likely looping)
+        if ($uniqueAdded === 0 || $duplicatePageStreak >= 2) {
+            logMessage("Stopping pagination due to duplicate pages (streak {$duplicatePageStreak}, page {$pageNumber})");
+            break;
+        }
+
+        // Stop once expected pages reached (based on TotalRows), allowing one extra for safety
+        if ($expectedPages !== null && $pageNumber >= ($expectedPages + 1)) {
+            logMessage("Stopping pagination at page {$pageNumber} (expected pages {$expectedPages}, TotalRows {$expectedRows})");
+            break;
         }
 
         // Cache batch every $batchSize pages to prevent memory issues
@@ -590,7 +683,7 @@ function fetchAndCacheAllDevicesIncremental(PDO $pdo, bool $willFetchDrilldown =
         $params['PageNumber'] = $deletedPageNumber;
 
         try {
-            $response = callMPSMAPI('Device/Deleted/ListByDealer', $params);
+            $response = callMPSAPI('Device/Deleted/ListByDealer', $params);
         } catch (RateLimitException $e) {
             $stats['rate_limit_retries']++;
             logMessage("Rate limit while fetching deleted device page {$deletedPageNumber}; cooling {$e->getRetryAfter()}s before retry.");
@@ -653,7 +746,7 @@ function fetchDeviceDrillDown(array $device): ?array {
         return null;
     }
 
-    $response = callMPSMAPI('Device/Get', $params);
+    $response = callMPSAPI('Device/Get', $params);
 
     return is_array($response) ? $response : null;
 }
@@ -1013,4 +1106,13 @@ CHANGELOG
 - Restored dealer scoping in incremental fetch (FilterDealerId/FilterDealerCodes) and aligned PageRows to 100.
 - Made drill-down truncation conditional: quick warmup (skipDrilldown=1) no longer wipes drilldown cache.
 - Passed drilldown intent into fetchAndCacheAllDevicesIncremental() to control truncation behavior.
+*/
+
+/*
+CHANGELOG
+2025-12-06 Codex
+- Hardened locking to avoid overlapping refresh runs; lock is only cleared with force=1.
+- Added serial-based deduplication and duplicate-page detection to stop runaway pagination and keep totals correct.
+- Logged per-page unique counts to improve observability of cache population.
+- Swapped Device/List, Device/Deleted, and Device/Get calls to callMPSAPI (direct vendor) since mps-api/query returns empty data.
 */

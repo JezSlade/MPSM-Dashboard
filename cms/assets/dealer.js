@@ -1,10 +1,10 @@
 /**
- * Executive Dashboard JavaScript
- * Handles data fetching, rendering, filtering, and sorting for executive view
+ * Dealer Dashboard JavaScript
+ * Handles data fetching, rendering, filtering, and sorting for dealer view
  */
 
 // Global state
-const executiveState = {
+const dealerState = {
     summary: null,
     customers: null,
     loading: false,
@@ -20,17 +20,17 @@ const executiveState = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    initializeExecutiveDashboard();
+    initializeDealerDashboard();
 });
 
-async function initializeExecutiveDashboard() {
-    console.log('[Executive] Initializing dashboard...');
+async function initializeDealerDashboard() {
+    console.log('[Dealer] Initializing dashboard...');
 
     // Set up event listeners
     setupEventListeners();
 
     // Load dashboard data
-    await loadExecutiveDashboard();
+    await loadDealerDashboard();
 }
 
 function setupEventListeners() {
@@ -43,7 +43,7 @@ function setupEventListeners() {
     // Refresh button
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => loadExecutiveDashboard(true));
+        refreshBtn.addEventListener('click', () => loadDealerDashboard(true));
     }
 
     // Logout button
@@ -56,8 +56,8 @@ function setupEventListeners() {
     const portfolioSearch = document.getElementById('portfolio-search');
     if (portfolioSearch) {
         portfolioSearch.addEventListener('input', (e) => {
-            executiveState.filters.searchTerm = e.target.value;
-            renderPortfolioTable(executiveState.customers);
+            dealerState.filters.searchTerm = e.target.value;
+            renderPortfolioTable(dealerState.customers);
         });
     }
 
@@ -65,48 +65,48 @@ function setupEventListeners() {
     const portfolioFilter = document.getElementById('portfolio-filter');
     if (portfolioFilter) {
         portfolioFilter.addEventListener('change', (e) => {
-            executiveState.filters.healthFilter = e.target.value;
-            renderPortfolioTable(executiveState.customers);
+            dealerState.filters.healthFilter = e.target.value;
+            renderPortfolioTable(dealerState.customers);
         });
     }
 }
 
-async function loadExecutiveDashboard(forceRefresh = false) {
-    if (executiveState.loading) {
-        console.log('[Executive] Already loading, skipping...');
+async function loadDealerDashboard(forceRefresh = false) {
+    if (dealerState.loading) {
+        console.log('[Dealer] Already loading, skipping...');
         return;
     }
 
-    executiveState.loading = true;
+    dealerState.loading = true;
 
     try {
-        console.log('[Executive] Loading dashboard data...');
+        console.log('[Dealer] Loading dashboard data...');
 
         // Show loading states
-        showLoading('executive-scorecard');
+        showLoading('dealer-scorecard');
         showLoading('portfolio-table-container');
         showLoading('data-quality-container');
 
         // Fetch summary and portfolio in parallel
         const forceParam = forceRefresh ? '?force=1' : '';
         const [summaryResp, portfolioResp] = await Promise.all([
-            fetchJson(`api/get-executive-summary.php${forceParam}`),
+            fetchJson(`api/get-dealer-summary.php${forceParam}`),
             fetchJson(`api/get-customer-portfolio.php${forceParam}`)
         ]);
 
-        executiveState.summary = summaryResp.summary;
-        executiveState.customers = portfolioResp.customers;
+        dealerState.summary = summaryResp.summary;
+        dealerState.customers = portfolioResp.customers;
 
-        console.log('[Executive] Data loaded:', {
-            totalCustomers: executiveState.customers.length,
-            totalDevices: executiveState.summary.totalDevices,
+        console.log('[Dealer] Data loaded:', {
+            totalCustomers: dealerState.customers.length,
+            totalDevices: dealerState.summary.totalDevices,
             cached: summaryResp.cached
         });
 
         // Render all sections
-        renderScorecard(executiveState.summary);
-        renderPortfolioTable(executiveState.customers);
-        renderDataQualityCards(executiveState.summary);
+        renderScorecard(dealerState.summary);
+        renderPortfolioTable(dealerState.customers);
+        renderDataQualityCards(dealerState.summary);
 
         // Show cache age toast if not fresh
         if (summaryResp.cached && summaryResp.cache_age_seconds > 300) {
@@ -115,17 +115,17 @@ async function loadExecutiveDashboard(forceRefresh = false) {
         }
 
     } catch (error) {
-        console.error('[Executive] Load failed:', error);
-        showToast('Failed to load executive dashboard', 'error');
-        showError('executive-scorecard', 'Failed to load metrics');
+        console.error('[Dealer] Load failed:', error);
+        showToast('Failed to load dealer dashboard', 'error');
+        showError('dealer-scorecard', 'Failed to load metrics');
         showError('portfolio-table-container', 'Failed to load customer portfolio');
     } finally {
-        executiveState.loading = false;
+        dealerState.loading = false;
     }
 }
 
 function renderScorecard(summary) {
-    const container = document.getElementById('executive-scorecard');
+    const container = document.getElementById('dealer-scorecard');
     if (!container) return;
 
     // Calculate derived metrics
@@ -246,20 +246,20 @@ function renderPortfolioTable(customers) {
 
     // Apply filters
     let filtered = customers.filter(c => {
-        const matchesSearch = !executiveState.filters.searchTerm
-            || c.name.toLowerCase().includes(executiveState.filters.searchTerm.toLowerCase())
-            || c.code.toLowerCase().includes(executiveState.filters.searchTerm.toLowerCase());
+        const matchesSearch = !dealerState.filters.searchTerm
+            || c.name.toLowerCase().includes(dealerState.filters.searchTerm.toLowerCase())
+            || c.code.toLowerCase().includes(dealerState.filters.searchTerm.toLowerCase());
 
-        const matchesHealth = executiveState.filters.healthFilter === 'all'
-            || (executiveState.filters.healthFilter === 'healthy' && c.healthScore >= 90)
-            || (executiveState.filters.healthFilter === 'attention' && c.healthScore >= 70 && c.healthScore < 90)
-            || (executiveState.filters.healthFilter === 'critical' && c.healthScore < 70);
+        const matchesHealth = dealerState.filters.healthFilter === 'all'
+            || (dealerState.filters.healthFilter === 'healthy' && c.healthScore >= 90)
+            || (dealerState.filters.healthFilter === 'attention' && c.healthScore >= 70 && c.healthScore < 90)
+            || (dealerState.filters.healthFilter === 'critical' && c.healthScore < 70);
 
         return matchesSearch && matchesHealth;
     });
 
     // Apply sorting
-    const { column, direction } = executiveState.sort;
+    const { column, direction } = dealerState.sort;
     filtered.sort((a, b) => {
         let aVal = a[column];
         let bVal = b[column];
@@ -342,7 +342,7 @@ function renderPortfolioTable(customers) {
         </table>
         <div class="table-footer">
             Showing ${filtered.length} of ${customers.length} customers
-            ${executiveState.filters.searchTerm || executiveState.filters.healthFilter !== 'all' ? ' (filtered)' : ''}
+            ${dealerState.filters.searchTerm || dealerState.filters.healthFilter !== 'all' ? ' (filtered)' : ''}
         </div>
     `;
 }
@@ -425,23 +425,23 @@ function renderDataQualityCards(summary) {
 }
 
 function sortPortfolio(column) {
-    if (executiveState.sort.column === column) {
+    if (dealerState.sort.column === column) {
         // Toggle direction
-        executiveState.sort.direction = executiveState.sort.direction === 'asc' ? 'desc' : 'asc';
+        dealerState.sort.direction = dealerState.sort.direction === 'asc' ? 'desc' : 'asc';
     } else {
         // New column, default direction
-        executiveState.sort.column = column;
-        executiveState.sort.direction = column === 'healthScore' || column === 'name' ? 'asc' : 'desc';
+        dealerState.sort.column = column;
+        dealerState.sort.direction = column === 'healthScore' || column === 'name' ? 'asc' : 'desc';
     }
 
-    renderPortfolioTable(executiveState.customers);
+    renderPortfolioTable(dealerState.customers);
 }
 
 function getSortIcon(column) {
-    if (executiveState.sort.column !== column) {
+    if (dealerState.sort.column !== column) {
         return '<i class="fas fa-sort"></i>';
     }
-    return executiveState.sort.direction === 'asc'
+    return dealerState.sort.direction === 'asc'
         ? '<i class="fas fa-sort-up"></i>'
         : '<i class="fas fa-sort-down"></i>';
 }
@@ -465,7 +465,7 @@ async function drillDownToCustomer(customerCode) {
         // Redirect to customer dashboard
         window.location.href = 'index.php';
     } catch (error) {
-        console.error('[Executive] Failed to set customer:', error);
+        console.error('[Dealer] Failed to set customer:', error);
         // Redirect anyway with query param
         window.location.href = `index.php?customerCode=${encodeURIComponent(customerCode)}`;
     }
@@ -477,7 +477,7 @@ function showLoading(containerId) {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="executive-loading">
+        <div class="dealer-loading">
             <i class="fas fa-spinner"></i>
             <p>Loading...</p>
         </div>
@@ -569,4 +569,11 @@ function logout() {
     }
 }
 
-console.log('[Executive] Script loaded');
+console.log('[Dealer] Script loaded');
+
+/*
+CHANGELOG
+2025-12-06 Codex
+- Rebranded dashboard labels and logs from Executive to Dealer across the JS controller.
+- Updated IDs/endpoints to dealer-scorecard/dealer-summary and aligned loading UI classes.
+*/

@@ -1,7 +1,7 @@
 <?php
 /**
- * Executive Dashboard - Dealer-Level Intelligence View
- * Presents aggregate metrics across all customers for executive decision-making
+ * Dealer Dashboard - Dealer-Level Intelligence View
+ * Presents aggregate metrics across all customers for dealer decision-making
  * Following Engineering Standards Rule 5: Flat File Structure
  */
 
@@ -9,7 +9,7 @@ require 'config.php';
 require 'functions.php';
 
 requireAuth();
-trackVisit('/executive');
+trackVisit('/dealer');
 
 // Get user preferences
 $userId = $_SESSION['user_id'];
@@ -20,16 +20,16 @@ $preferences = getUserPreferences($userId);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= APP_NAME ?> - Executive Dashboard</title>
+    <title><?= APP_NAME ?> - Dealer Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
-    <link rel="stylesheet" href="assets/executive.css">
+    <link rel="stylesheet" href="assets/dealer.css">
 </head>
 <body data-theme="<?= htmlspecialchars($preferences['theme'] ?? 'light') ?>">
     <!-- Header -->
     <header class="header">
         <div class="container">
-            <h1><i class="fas fa-chart-line"></i> Executive Dashboard</h1>
+            <h1><i class="fas fa-chart-line"></i> Dealer Dashboard</h1>
             <div class="header-actions">
                 <a href="index.php" class="btn-icon" title="Customer View">
                     <i class="fas fa-user"></i>
@@ -53,17 +53,17 @@ $preferences = getUserPreferences($userId);
 
     <!-- Main Content -->
     <main class="container">
-        <!-- Executive Scorecard -->
+        <!-- Dealer Scorecard -->
         <section class="section">
             <div class="section-header">
-                <h2><i class="fas fa-tachometer-alt"></i> Executive Scorecard</h2>
+                <h2><i class="fas fa-tachometer-alt"></i> Dealer Scorecard</h2>
                 <div class="section-actions">
-                    <button class="btn-refresh" onclick="loadExecutiveDashboard(true)">
+                    <button class="btn-refresh" onclick="loadDealerDashboard(true)">
                         <i class="fas fa-sync-alt"></i> Force Refresh
                     </button>
                 </div>
             </div>
-            <div id="executive-scorecard" class="executive-scorecard">
+            <div id="dealer-scorecard" class="dealer-scorecard">
                 <div class="loading">Loading metrics...</div>
             </div>
         </section>
@@ -99,7 +99,7 @@ $preferences = getUserPreferences($userId);
 
         <!-- Footer -->
         <footer style="text-align: center; padding: 2rem 0; color: var(--text-secondary); font-size: 0.875rem;">
-            <p><?= APP_NAME ?> Executive Dashboard &copy; <?= date('Y') ?></p>
+            <p><?= APP_NAME ?> Dealer Dashboard &copy; <?= date('Y') ?></p>
             <p style="margin-top: 0.5rem;">
                 Dealer: <strong><?= DEFAULT_DEALER_CODE ?></strong> |
                 User: <strong><?= htmlspecialchars($_SESSION['username'] ?? 'Unknown') ?></strong>
@@ -109,7 +109,7 @@ $preferences = getUserPreferences($userId);
 
     <!-- Scripts -->
     <script src="assets/shared.js"></script>
-    <script src="assets/executive.js"></script>
+    <script src="assets/dealer.js"></script>
 </body>
 </html>
 
@@ -117,10 +117,12 @@ $preferences = getUserPreferences($userId);
 /*
 CHANGELOG
 2025-12-02 Claude
-- Initial implementation: Executive dashboard for dealer-level intelligence
-- Three main sections: Executive Scorecard (12 metrics), Data Quality Dashboard (4 metrics), Customer Portfolio (table)
+- Initial implementation: Dealer dashboard for dealer-level intelligence
+- Three main sections: Dealer Scorecard (12 metrics), Data Quality Dashboard (4 metrics), Customer Portfolio (table)
 - Reuses existing authentication, theme system, and UI patterns from index.php
-- Integrates with executive.js for data fetching and rendering
+- Integrates with dealer.js for data fetching and rendering
 - Provides drill-down to customer view via portfolio table
+2025-12-06 Codex
+- Rebranded page strings, assets, IDs, and tracking path from Executive to Dealer throughout the dashboard shell.
 */
 ?>
