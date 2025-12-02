@@ -279,23 +279,29 @@ function buildExecutiveSummary() {
     $metrics['topProblemDevices'] = $problemDevices;
 
     // Alert Definition Coverage
-    $totalAlertCodes = $pdo->query("
-        SELECT COUNT(DISTINCT maintenance_alert_code) as count
-        FROM mpsm_panel_messages
-        WHERE maintenance_alert_code IS NOT NULL
-    ")->fetch(PDO::FETCH_ASSOC);
+    try {
+        $totalAlertCodes = $pdo->query("
+            SELECT COUNT(DISTINCT maintenance_alert_code) as count
+            FROM mpsm_panel_messages
+            WHERE maintenance_alert_code IS NOT NULL
+        ")->fetch(PDO::FETCH_ASSOC);
 
-    $definedAlertCodes = $pdo->query("
-        SELECT COUNT(DISTINCT alert_code) as count
-        FROM mpsm_alert_definitions
-    ")->fetch(PDO::FETCH_ASSOC);
+        $definedAlertCodes = $pdo->query("
+            SELECT COUNT(DISTINCT alert_code) as count
+            FROM mpsm_alert_definitions
+        ")->fetch(PDO::FETCH_ASSOC);
 
-    $totalCodes = (int)($totalAlertCodes['count'] ?? 0);
-    $definedCodes = (int)($definedAlertCodes['count'] ?? 0);
-    $metrics['unmappedAlertCodes'] = max(0, $totalCodes - $definedCodes);
-    $metrics['alertDefinitionCoverage'] = $totalCodes > 0
-        ? round(($definedCodes / $totalCodes) * 100, 1)
-        : 100;
+        $totalCodes = (int)($totalAlertCodes['count'] ?? 0);
+        $definedCodes = (int)($definedAlertCodes['count'] ?? 0);
+        $metrics['unmappedAlertCodes'] = max(0, $totalCodes - $definedCodes);
+        $metrics['alertDefinitionCoverage'] = $totalCodes > 0
+            ? round(($definedCodes / $totalCodes) * 100, 1)
+            : 100;
+    } catch (PDOException $e) {
+        // Table might not exist yet
+        $metrics['unmappedAlertCodes'] = 0;
+        $metrics['alertDefinitionCoverage'] = 0;
+    }
 
     // Cache Health Metrics
     $cacheStats = $pdo->query("
@@ -362,71 +368,99 @@ function buildExecutiveSummary() {
 }
 
 function fetchAllCustomers() {
-    $url = 'https://mpsm.resolutionsbydesign.us/cms/api/get-customers.php?dealerCode=' . DEFAULT_DEALER_CODE;
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 30
-        ]
-    ]);
+    try {
+        $url = 'https://mpsm.resolutionsbydesign.us/cms/api/get-customers.php?dealerCode=' . DEFAULT_DEALER_CODE;
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 10,
+                'ignore_errors' => true,
+                'header' => 'Cookie: ' . ($_SERVER['HTTP_COOKIE'] ?? '')
+            ]
+        ]);
 
-    $response = @file_get_contents($url, false, $context);
-    if ($response === false) {
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            error_log('Executive Summary: Failed to fetch customers');
+            return [];
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['customers'])) {
+            error_log('Executive Summary: Invalid customer response');
+            return [];
+        }
+
+        return $data['customers'];
+    } catch (Exception $e) {
+        error_log('Executive Summary: Exception fetching customers - ' . $e->getMessage());
         return [];
     }
-
-    $data = json_decode($response, true);
-    return $data['customers'] ?? [];
 }
 
 function fetchCustomerMetrics($customerCode) {
-    $url = 'https://mpsm.resolutionsbydesign.us/cms/api/get-customer-dashboard-cached.php?customerCode=' . urlencode($customerCode);
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 15
-        ]
-    ]);
+    try {
+        $url = 'https://mpsm.resolutionsbydesign.us/cms/api/get-customer-dashboard-cached.php?customerCode=' . urlencode($customerCode);
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 5,
+                'ignore_errors' => true,
+                'header' => 'Cookie: ' . ($_SERVER['HTTP_COOKIE'] ?? '')
+            ]
+        ]);
 
-    $response = @file_get_contents($url, false, $context);
-    if ($response === false) {
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            return getEmptyCustomerMetrics($customerCode);
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['dashboard'])) {
+            return getEmptyCustomerMetrics($customerCode);
+        }
+
+        $dashboard = $data['dashboard']['MpsDashboardCustomer'] ?? [];
+
+        $totalDevices = (int)($dashboard['TotalManagedDevices'] ?? 0);
+        $offlineDevices = (int)($dashboard['OfflineDevices'] ?? 0);
+
+        // Sum all supply alert categories
+        $alertCount = 0;
+        $supplyAlerts = $dashboard['SupplyAlerts'] ?? [];
+        foreach ($supplyAlerts as $alert) {
+            $alertCount += (int)($alert['Value'] ?? 0);
+        }
+
+        // Connector counts
+        $connectors = $data['dashboard']['Connectors'] ?? [];
+        $connectorCount = (int)($connectors['TotalWin'] ?? 0) + (int)($connectors['TotalEmbedded'] ?? 0);
+        $connectorsActive = (int)($connectors['LastDay'] ?? 0);
+
         return [
             'code' => $customerCode,
             'name' => $customerCode,
-            'totalDevices' => 0,
-            'offlineDevices' => 0,
-            'alertCount' => 0,
-            'connectorCount' => 0,
-            'connectorsActive' => 0
+            'totalDevices' => $totalDevices,
+            'offlineDevices' => $offlineDevices,
+            'alertCount' => $alertCount,
+            'connectorCount' => $connectorCount,
+            'connectorsActive' => $connectorsActive
         ];
+    } catch (Exception $e) {
+        error_log('Executive Summary: Exception fetching metrics for ' . $customerCode . ' - ' . $e->getMessage());
+        return getEmptyCustomerMetrics($customerCode);
     }
+}
 
-    $data = json_decode($response, true);
-    $dashboard = $data['dashboard']['MpsDashboardCustomer'] ?? [];
-
-    $totalDevices = (int)($dashboard['TotalManagedDevices'] ?? 0);
-    $offlineDevices = (int)($dashboard['OfflineDevices'] ?? 0);
-
-    // Sum all supply alert categories
-    $alertCount = 0;
-    $supplyAlerts = $dashboard['SupplyAlerts'] ?? [];
-    foreach ($supplyAlerts as $alert) {
-        $alertCount += (int)($alert['Value'] ?? 0);
-    }
-
-    // Connector counts
-    $connectors = $data['dashboard']['Connectors'] ?? [];
-    $connectorCount = (int)($connectors['TotalWin'] ?? 0) + (int)($connectors['TotalEmbedded'] ?? 0);
-    $connectorsActive = (int)($connectors['LastDay'] ?? 0);
-
+function getEmptyCustomerMetrics($customerCode) {
     return [
         'code' => $customerCode,
-        'name' => $customerCode, // Will be enriched later
-        'totalDevices' => $totalDevices,
-        'offlineDevices' => $offlineDevices,
-        'alertCount' => $alertCount,
-        'connectorCount' => $connectorCount,
-        'connectorsActive' => $connectorsActive
+        'name' => $customerCode,
+        'totalDevices' => 0,
+        'offlineDevices' => 0,
+        'alertCount' => 0,
+        'connectorCount' => 0,
+        'connectorsActive' => 0
     ];
 }
 
