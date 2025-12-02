@@ -21,20 +21,20 @@ try {
         FROM mpsm_cache_devices
     ")->fetch(PDO::FETCH_ASSOC);
 
-    // Get offline count (last contact > 24h ago)
+    // Get offline count (cached > 24h ago, likely offline)
     $offlineCount = $pdo->query("
         SELECT COUNT(*) as count
         FROM mpsm_cache_devices
         WHERE is_uninstalled = 0
-        AND last_contact < DATE_SUB(NOW(), INTERVAL 1 DAY)
+        AND cached_at < DATE_SUB(NOW(), INTERVAL 1 DAY)
     ")->fetch(PDO::FETCH_ASSOC);
 
-    // Get ghost devices (7+ days no contact)
+    // Get ghost devices (7+ days not refreshed)
     $ghostCount = $pdo->query("
         SELECT COUNT(*) as count
         FROM mpsm_cache_devices
         WHERE is_uninstalled = 0
-        AND last_contact < DATE_SUB(NOW(), INTERVAL 7 DAY)
+        AND cached_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
     ")->fetch(PDO::FETCH_ASSOC);
 
     // Get duplicate IPs
