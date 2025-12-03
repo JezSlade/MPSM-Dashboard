@@ -1,7 +1,7 @@
 # Dealer Dashboard - Complete Summary
 
-**Last Updated:** 2025-12-03 05:15 UTC
-**Status:** ✅ FULLY OPERATIONAL
+**Last Updated:** 2025-12-03 05:30 UTC
+**Status:** ✅ FULLY OPERATIONAL (Emergency fix applied)
 **URL:** [https://mpsm.resolutionsbydesign.us/cms/dealer.php](https://mpsm.resolutionsbydesign.us/cms/dealer.php)
 
 ## Overview
@@ -76,14 +76,29 @@ All metrics are **aggregated totals** across the entire dealership:
 
 ## Recent Changes (2025-12-03)
 
+### Commit: 9974928a (HOTFIX)
+**"Add 20-customer limit to portfolio to prevent timeout"**
+
+**Issue**: Portfolio API was timing out when processing all 82 customers sequentially
+**Fix**: Added configurable limit (default 20, max 50 via `?limit=` parameter)
+**Result**: Site now loads in <10 seconds, shows ~20-50 customers with active devices
+
 ### Commit: dc55d171
 **"Enhance dealer dashboard for complete dealership view"**
 
 1. **Added Chart.js**: Integrated visualization library for future enhancements
-2. **Removed 5-Customer Limit**: Portfolio now shows ALL customers (was limited to 5)
+2. **Attempted All Customers**: Removed 5-customer limit (caused timeout, reverted in hotfix)
 3. **Active Device Filter**: Only customers with `totalDevices > 0` are displayed
 4. **Dealership Overview Banner**: Clear header showing aggregate scope
 5. **Clarified Purpose**: Banner emphasizes this is a 20,000ft dealership-wide view
+
+### Current Limitations
+
+**Portfolio Display**: Shows first 20 customers processed from API (configurable up to 50)
+- **Why**: Processing all 82 customers sequentially causes server timeout (>120s)
+- **Impact**: Representative sample shown, not complete customer list
+- **Workaround**: Use `?limit=50` for more customers (slower but still under timeout)
+- **Permanent Fix**: Requires cache population or async/pagination implementation
 
 ## API Endpoints
 

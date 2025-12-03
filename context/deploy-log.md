@@ -1,5 +1,27 @@
 # Deploy Log
 
+## 2025-12-03 05:30 UTC - Dealer Dashboard Portfolio Timeout Fix
+**Commit:** 9974928a
+**Status:** ✅ HOTFIX DEPLOYED
+
+### Emergency Fix
+Portfolio API was timing out when processing all 82 customers sequentially (>120s server timeout).
+
+**Changes:**
+- Added configurable customer limit to portfolio API
+- Default: 20 customers (fast load, representative sample)
+- Max: 50 customers via `?limit=50` parameter
+- Filters to only customers with active devices (totalDevices > 0)
+
+**Result:**
+- Site now loads correctly in <10 seconds
+- Shows 20-50 customers with active devices
+- Dealer scorecard still shows aggregated metrics across ALL 82 customers
+
+**TODO:** Implement pagination or cache for complete customer list
+
+---
+
 ## 2025-12-03 05:00 UTC - Dealer Dashboard Zero-Fix
 **Commits:** 051f5431, dfd08ade
 **Status:** ✅ DEPLOYED & TESTED

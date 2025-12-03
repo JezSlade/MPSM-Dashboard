@@ -24,7 +24,25 @@ try {
 }
 
 function buildDeviceAgeReport() {
+    $warnings = [];
+    $source = 'api';
+
     $devices = fetchAllDevices();
+    if (empty($devices)) {
+        $warnings[] = 'Primary API (OAuth) returned no devices; trying query endpoint';
+        $devices = fetchAllDevicesViaQuery();
+        if (!empty($devices)) {
+            $source = 'api-query';
+        }
+    }
+    if (empty($devices)) {
+        $warnings[] = 'API returned no devices; falling back to cache';
+        $source = 'cache';
+        $devices = fetchDevicesFromCache();
+    }
+    if (empty($devices)) {
+        $warnings[] = 'Cache is empty or unavailable; no devices to process';
+    }
     $now = new DateTimeImmutable('now');
 
     $summary = [
@@ -37,7 +55,8 @@ function buildDeviceAgeReport() {
             'threeTo5' => 0,
             'over5' => 0,
             'unknown' => 0
-        ]
+        ],
+        'unknownReasons' => []
     ];
 
     $customers = [];
@@ -49,6 +68,9 @@ function buildDeviceAgeReport() {
         $customerCode = $device['CustomerCode'] ?? $device['customerCode'] ?? 'UNKNOWN';
         $customerName = $device['CustomerName'] ?? $device['customerName'] ?? $customerCode;
         $manufacturer = strtoupper($device['Manufacturer'] ?? $device['Make'] ?? $device['make'] ?? '');
+        if ($manufacturer === '' && isset($device['Product']['Brand'])) {
+            $manufacturer = strtoupper($device['Product']['Brand']);
+        }
         $serial = $device['SerialNumber'] ?? $device['serialNumber'] ?? $device['serial_number'] ?? '';
 
         if (!isset($customers[$customerCode])) {
@@ -71,7 +93,8 @@ function buildDeviceAgeReport() {
 
         $customers[$customerCode]['totalDevices']++;
 
-        $ageYears = calculateAgeYears($manufacturer, $serial, $now);
+        $reason = null;
+        $ageYears = attemptAgeDecode($manufacturer, $serial, $now, $reason);
         $bucket = getAgeBucket($ageYears);
 
         $summary['buckets'][$bucket]++;
@@ -82,6 +105,10 @@ function buildDeviceAgeReport() {
             $customers[$customerCode]['withAge']++;
             $ageSum += $ageYears;
             $customers[$customerCode]['ageSum'] += $ageYears;
+        } else {
+            $reasonKey = $reason ?? 'undetermined';
+            $summary['unknownReasons'][$reasonKey] = ($summary['unknownReasons'][$reasonKey] ?? 0) + 1;
+            $customers[$customerCode]['unknownReasons'][$reasonKey] = ($customers[$customerCode]['unknownReasons'][$reasonKey] ?? 0) + 1;
         }
     }
 
@@ -94,11 +121,16 @@ function buildDeviceAgeReport() {
             $customer['avgAgeYears'] = round($customer['ageSum'] / $customer['withAge'], 2);
         }
         unset($customer['ageSum']);
+        if (!isset($customer['unknownReasons'])) {
+            $customer['unknownReasons'] = new stdClass();
+        }
     }
 
     return [
         'generated_at' => (new DateTimeImmutable('now'))->format('c'),
         'total_devices_processed' => $summary['totalDevices'],
+        'source' => $source,
+        'warnings' => $warnings,
         'summary' => $summary,
         'customers' => array_values($customers)
     ];
@@ -108,6 +140,7 @@ function fetchAllDevices() {
     $devices = [];
     $pageRows = 100;
     $emptyStreak = 0;
+    $dealerCode = defined('DEFAULT_DEALER_CODE') ? DEFAULT_DEALER_CODE : null;
 
     for ($page = 1; $page <= 500; $page++) {
         $response = callMPSAPI('Device/List', [
@@ -131,6 +164,100 @@ function fetchAllDevices() {
     return $devices;
 }
 
+function fetchAllDevicesViaQuery() {
+    $devices = [];
+    $pageRows = 100;
+    $emptyStreak = 0;
+    $dealerCode = defined('DEFAULT_DEALER_CODE') ? DEFAULT_DEALER_CODE : null;
+
+    for ($page = 1; $page <= 500; $page++) {
+        $response = callMPSQuery('Device/List', [
+            'PageNumber' => $page,
+            'PageRows' => $pageRows
+        ]);
+
+        $chunk = extractDevicesFromResponse($response);
+        if (empty($chunk)) {
+            $emptyStreak++;
+            if ($emptyStreak >= 2) {
+                break;
+            }
+            continue;
+        }
+
+        $emptyStreak = 0;
+        $devices = array_merge($devices, $chunk);
+    }
+
+    return $devices;
+}
+
+function fetchDevicesFromCache() {
+    $pdo = getDatabase();
+    $exists = checkTableExistsLocal($pdo, 'mpsm_cache_devices');
+    if (!$exists) {
+        return [];
+    }
+
+    $stmt = $pdo->query("
+        SELECT
+            customer_code AS CustomerCode,
+            COALESCE(
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerName')),
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerDescription')),
+                customer_code
+            ) AS CustomerName,
+            serial_number AS SerialNumber,
+            COALESCE(
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Manufacturer')),
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Make')),
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Vendor')),
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Brand'))
+            ) AS Manufacturer
+        FROM mpsm_cache_devices
+        WHERE is_uninstalled = 0
+    ");
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+function checkTableExistsLocal(PDO $pdo, string $table): bool {
+    try {
+        $quoted = $pdo->quote($table);
+        $stmt = $pdo->query("SHOW TABLES LIKE {$quoted}");
+        return $stmt->rowCount() > 0;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function attemptAgeDecode(string $manufacturer, string $serial, DateTimeImmutable $now, ?string &$reason): ?float {
+    $manufacturer = trim($manufacturer);
+    $serial = trim($serial);
+
+    if ($serial === '') {
+        $reason = 'missing_serial';
+        return null;
+    }
+
+    if ($manufacturer === '') {
+        $reason = 'missing_manufacturer';
+        return null;
+    }
+
+    $manufactureDate = decodeManufactureDate($manufacturer, $serial, $reason);
+    if (!$manufactureDate) {
+        if ($reason === null) {
+            $reason = 'decode_failed';
+        }
+        return null;
+    }
+
+    $interval = $manufactureDate->diff($now);
+    $years = $interval->y + ($interval->m / 12) + ($interval->d / 365.25);
+    return round($years, 2);
+}
+
 function calculateAgeYears(string $manufacturer, string $serial, DateTimeImmutable $now): ?float {
     $manufactureDate = decodeManufactureDate($manufacturer, $serial);
     if (!$manufactureDate) {
@@ -142,9 +269,10 @@ function calculateAgeYears(string $manufacturer, string $serial, DateTimeImmutab
     return round($years, 2);
 }
 
-function decodeManufactureDate(string $manufacturer, string $serial): ?DateTimeImmutable {
+function decodeManufactureDate(string $manufacturer, string $serial, ?string &$reason = null): ?DateTimeImmutable {
     $serial = trim($serial);
     if ($serial === '') {
+        $reason = 'missing_serial';
         return null;
     }
 
@@ -162,6 +290,7 @@ function decodeManufactureDate(string $manufacturer, string $serial): ?DateTimeI
         case str_contains($manu, 'SHARP'):
             return decodeSharpDate($serial);
         default:
+            $reason = 'unsupported_manufacturer';
             return null;
     }
 }
@@ -313,4 +442,6 @@ function getAgeBucket(?float $ageYears): string {
 CHANGELOG
 2025-12-03 Codex
 - Added device-age-report.php to calculate device age from serial numbers per manufacturer rules and emit age-bucket metrics per customer and overall using live API pagination only.
+2025-12-03 Codex
+- Added query-endpoint fallback, cache fallback, manufacturer extraction from Product.Brand, and diagnostics (source/warnings/unknownReasons) to handle empty cache/API responses and surface decode coverage.
 */
