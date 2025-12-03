@@ -153,11 +153,74 @@ function buildLiveMetrics() {
                 }
             }
 
-            // Extrapolate to full customer base
+            // Fetch ALL devices to calculate duplicate IPs, ages, uninstalled (MISSION CRITICAL)
+            // Note: This is slower but necessary for accurate duplicate IP detection
+            $allDevices = callMPSQuery('Device/List', [
+                'DealerCode' => $dealerCode,
+                'FilterDealerCodes' => [$dealerCode],
+                'PageNumber' => 1,
+                'PageRows' => 10000,  // Get all devices
+                'SortColumn' => 'SerialNumber'
+            ]);
+
+            if ($allDevices && is_array($allDevices)) {
+                $ipAddresses = [];
+                $ages = ['under1yr' => 0, 'age1to3yr' => 0, 'age3to5yr' => 0, 'over5yr' => 0, 'unknown' => 0];
+                $uninstalledCount = 0;
+
+                foreach ($allDevices as $device) {
+                    // Count uninstalled devices
+                    if (!empty($device['Uninstall'])) {
+                        $uninstalledCount++;
+                        continue; // Skip uninstalled devices from other calcs
+                    }
+
+                    // Track IP addresses for duplicate detection
+                    $ip = $device['IpAddress'] ?? null;
+                    if ($ip && $ip !== '' && $ip !== '0.0.0.0') {
+                        if (!isset($ipAddresses[$ip])) {
+                            $ipAddresses[$ip] = 0;
+                        }
+                        $ipAddresses[$ip]++;
+                    }
+
+                    // Calculate device age
+                    $installDate = $device['Install'] ?? null;
+                    if ($installDate) {
+                        $install = strtotime($installDate);
+                        $ageYears = (time() - $install) / (365.25 * 24 * 3600);
+                        if ($ageYears < 1) {
+                            $ages['under1yr']++;
+                        } elseif ($ageYears < 3) {
+                            $ages['age1to3yr']++;
+                        } elseif ($ageYears < 5) {
+                            $ages['age3to5yr']++;
+                        } else {
+                            $ages['over5yr']++;
+                        }
+                    } else {
+                        $ages['unknown']++;
+                    }
+                }
+
+                // Count duplicate IPs
+                $duplicateIPCount = 0;
+                foreach ($ipAddresses as $ip => $count) {
+                    if ($count > 1) {
+                        $duplicateIPCount++;
+                    }
+                }
+
+                $metrics['duplicateIPs'] = $duplicateIPCount;
+                $metrics['fleetAgeDistribution'] = $ages;
+                $metrics['uninstalledDevices'] = $uninstalledCount;
+                $metrics['totalDevices'] = count($allDevices) - $uninstalledCount;
+            }
+
+            // Extrapolate sampled customer metrics to full customer base
             $sampleSize = count($sampleCustomers);
             if ($sampleSize > 0) {
                 $multiplier = $metrics['totalCustomers'] / $sampleSize;
-                $metrics['totalDevices'] = round($totalDevices * $multiplier);
                 $metrics['offlineDevices'] = round($totalOffline * $multiplier);
                 $metrics['totalAlerts'] = round($totalAlerts * $multiplier);
                 $metrics['totalConnectors'] = round($totalConnectors * $multiplier);
@@ -168,7 +231,7 @@ function buildLiveMetrics() {
         }
 
         $metrics['_dataSource'] = 'live_api';
-        $metrics['_note'] = 'Using sampled data from ' . count($sampleCustomers ?? []) . ' customers. Run refresh-cache-enhanced.php for complete data.';
+        $metrics['_note'] = 'Using complete device data for duplicate IPs and ages. Sampled ' . count($sampleCustomers ?? []) . ' customers for dashboard metrics.';
 
     } catch (Exception $e) {
         error_log('Live metrics error: ' . $e->getMessage());
