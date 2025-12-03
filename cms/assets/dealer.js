@@ -85,7 +85,6 @@ async function loadDealerDashboard(forceRefresh = false) {
         // Show loading states
         showLoading('dealer-scorecard');
         showLoading('portfolio-table-container');
-        showLoading('data-quality-container');
 
         // Fetch summary and portfolio in parallel
         const forceParam = forceRefresh ? '?force=1' : '';
@@ -106,7 +105,6 @@ async function loadDealerDashboard(forceRefresh = false) {
         // Render all sections
         renderScorecard(dealerState.summary);
         renderPortfolioTable(dealerState.customers);
-        renderDataQualityCards(dealerState.summary);
 
         // Show cache age toast if not fresh
         if (summaryResp.cached && summaryResp.cache_age_seconds > 300) {
@@ -334,83 +332,6 @@ function renderPortfolioTable(customers) {
     `;
 }
 
-function renderDataQualityCards(summary) {
-    const container = document.getElementById('data-quality-container');
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class="data-quality-grid">
-            <!-- Asset Completeness -->
-            <div class="quality-card">
-                <div class="quality-card-header">
-                    <div class="quality-card-title">Asset Number Completeness</div>
-                    <div class="quality-score ${getQualityClass(summary.assetNumberCompleteness)}">
-                        ${summary.assetNumberCompleteness}%
-                    </div>
-                </div>
-                <div class="quality-progress">
-                    <div class="quality-progress-bar ${getQualityClass(summary.assetNumberCompleteness)}"
-                         style="width: ${summary.assetNumberCompleteness}%"></div>
-                </div>
-                <div class="quality-details">
-                    ${summary.missingAssetNumbers} devices missing asset numbers
-                </div>
-            </div>
-
-            <!-- Cache Health -->
-            <div class="quality-card">
-                <div class="quality-card-header">
-                    <div class="quality-card-title">Cache Health Score</div>
-                    <div class="quality-score ${getQualityClass(summary.cacheHealthScore)}">
-                        ${summary.cacheHealthScore}%
-                    </div>
-                </div>
-                <div class="quality-progress">
-                    <div class="quality-progress-bar ${getQualityClass(summary.cacheHealthScore)}"
-                         style="width: ${summary.cacheHealthScore}%"></div>
-                </div>
-                <div class="quality-details">
-                    Drill-down coverage: ${summary.drillDownCoverage}% | Avg age: ${formatSeconds(summary.cacheFreshnessAvg)}
-                </div>
-            </div>
-
-            <!-- Alert Definition Coverage -->
-            <div class="quality-card">
-                <div class="quality-card-header">
-                    <div class="quality-card-title">Alert Definition Coverage</div>
-                    <div class="quality-score ${getQualityClass(summary.alertDefinitionCoverage)}">
-                        ${summary.alertDefinitionCoverage}%
-                    </div>
-                </div>
-                <div class="quality-progress">
-                    <div class="quality-progress-bar ${getQualityClass(summary.alertDefinitionCoverage)}"
-                         style="width: ${summary.alertDefinitionCoverage}%"></div>
-                </div>
-                <div class="quality-details">
-                    ${summary.unmappedAlertCodes} alert codes need descriptions
-                </div>
-            </div>
-
-            <!-- Connector Health -->
-            <div class="quality-card">
-                <div class="quality-card-header">
-                    <div class="quality-card-title">Connector Health</div>
-                    <div class="quality-score ${getQualityClass(summary.connectorHealthScore)}">
-                        ${summary.connectorHealthScore}%
-                    </div>
-                </div>
-                <div class="quality-progress">
-                    <div class="quality-progress-bar ${getQualityClass(summary.connectorHealthScore)}"
-                         style="width: ${summary.connectorHealthScore}%"></div>
-                </div>
-                <div class="quality-details">
-                    ${summary.connectorsOffline} of ${summary.totalConnectors} connectors offline
-                </div>
-            </div>
-        </div>
-    `;
-}
-
 function sortPortfolio(column) {
     if (dealerState.sort.column === column) {
         // Toggle direction
@@ -431,13 +352,6 @@ function getSortIcon(column) {
     return dealerState.sort.direction === 'asc'
         ? '<i class="fas fa-sort-up"></i>'
         : '<i class="fas fa-sort-down"></i>';
-}
-
-function getQualityClass(score) {
-    if (score >= 90) return 'excellent';
-    if (score >= 75) return 'good';
-    if (score >= 60) return 'fair';
-    return 'poor';
 }
 
 async function drillDownToCustomer(customerCode) {
