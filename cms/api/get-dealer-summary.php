@@ -101,8 +101,8 @@ function buildLiveMetrics() {
         if ($customers && is_array($customers)) {
             $metrics['totalCustomers'] = count($customers);
 
-            // Sample first 10 customers for quick metrics (full scan would be too slow)
-            $sampleCustomers = array_slice($customers, 0, 10);
+            // Process ALL customers for accurate dealer-wide metrics
+            // Note: This takes longer but ensures complete accuracy
             $totalDevices = 0;
             $totalOffline = 0;
 
@@ -112,7 +112,7 @@ function buildLiveMetrics() {
             $totalDuplicateIPs = 0;
             $totalPanelErrors = 0;
 
-            foreach ($sampleCustomers as $customer) {
+            foreach ($customers as $customer) {
                 $customerCode = $customer['Code'] ?? '';
                 if (!$customerCode) continue;
 
@@ -243,26 +243,19 @@ function buildLiveMetrics() {
                 $metrics['totalDevices'] = count($allDevices) - $uninstalledCount;
             }
 
-            // Extrapolate sampled customer metrics to full customer base
-            $sampleSize = count($sampleCustomers);
-            if ($sampleSize > 0) {
-                $multiplier = $metrics['totalCustomers'] / $sampleSize;
-                $metrics['offlineDevices'] = round($totalOffline * $multiplier);
-                $metrics['totalAlerts'] = round($totalAlerts * $multiplier);
-                $metrics['totalConnectors'] = round($totalConnectors * $multiplier);
-                $metrics['ghostDevices7d'] = round($totalGhost7d * $multiplier);
-
-                // Extrapolate Warnings-based metrics
-                $metrics['duplicateIPs'] = round($totalDuplicateIPs * $multiplier);
-                $metrics['panelMessagesLast24h'] = round($totalPanelErrors * $multiplier);
-
-                $metrics['devicesByStatus']['online'] = $metrics['totalDevices'] - $metrics['offlineDevices'];
-                $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
-            }
+            // Use actual totals from ALL customers (no extrapolation needed)
+            $metrics['offlineDevices'] = $totalOffline;
+            $metrics['totalAlerts'] = $totalAlerts;
+            $metrics['totalConnectors'] = $totalConnectors;
+            $metrics['ghostDevices7d'] = $totalGhost7d;
+            $metrics['duplicateIPs'] = $totalDuplicateIPs;
+            $metrics['panelMessagesLast24h'] = $totalPanelErrors;
+            $metrics['devicesByStatus']['online'] = $metrics['totalDevices'] - $metrics['offlineDevices'];
+            $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
         }
 
         $metrics['_dataSource'] = 'live_api';
-        $metrics['_note'] = 'Sampled ' . count($sampleCustomers ?? []) . ' customers. Fetched ' . count($allDevices ?? []) . ' devices for fleet age. Duplicate IPs and panel errors from Warnings.';
+        $metrics['_note'] = 'Processed ALL ' . $metrics['totalCustomers'] . ' customers. Fetched ' . count($allDevices ?? []) . ' devices for fleet age. Duplicate IPs and panel errors from Warnings.';
 
     } catch (Exception $e) {
         error_log('Live metrics error: ' . $e->getMessage());

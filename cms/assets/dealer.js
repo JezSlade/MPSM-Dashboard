@@ -104,6 +104,7 @@ async function loadDealerDashboard(forceRefresh = false) {
 
         // Render all sections
         renderScorecard(dealerState.summary);
+        renderCharts(dealerState.summary);
         renderPortfolioTable(dealerState.customers);
 
         // Show cache age toast if not fresh
@@ -223,6 +224,300 @@ function renderScorecard(summary) {
             <div class="metric-subtitle">Removed from service</div>
         </div>
     `;
+}
+
+// Chart instances - store globally to destroy on re-render
+let chartInstances = {
+    fleetAge: null,
+    deviceStatus: null,
+    quality: null,
+    connector: null
+};
+
+function renderCharts(summary) {
+    console.log('[Charts] Rendering visualizations...');
+
+    // Destroy existing charts to prevent memory leaks
+    Object.keys(chartInstances).forEach(key => {
+        if (chartInstances[key]) {
+            chartInstances[key].destroy();
+            chartInstances[key] = null;
+        }
+    });
+
+    // Color scheme
+    const colors = {
+        success: '#27ae60',
+        warning: '#f39c12',
+        danger: '#e74c3c',
+        info: '#3498db',
+        neutral: '#95a5a6',
+        primary: '#2c3e50'
+    };
+
+    // Chart 1: Fleet Age Distribution (Doughnut)
+    const fleetAgeCtx = document.getElementById('fleet-age-chart');
+    if (fleetAgeCtx) {
+        const fleetData = summary.fleetAgeDistribution || {};
+        chartInstances.fleetAge = new Chart(fleetAgeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Under 1 Year', '1-3 Years', '3-5 Years', 'Over 5 Years', 'Unknown'],
+                datasets: [{
+                    data: [
+                        fleetData.under1yr || 0,
+                        fleetData.age1to3yr || 0,
+                        fleetData.age3to5yr || 0,
+                        fleetData.over5yr || 0,
+                        fleetData.unknown || 0
+                    ],
+                    backgroundColor: [
+                        colors.success,
+                        colors.info,
+                        colors.warning,
+                        colors.danger,
+                        colors.neutral
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} devices (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+    }
+
+    // Chart 2: Device Health Status (Doughnut)
+    const deviceStatusCtx = document.getElementById('device-status-chart');
+    if (deviceStatusCtx) {
+        const statusData = summary.devicesByStatus || {};
+        const online = statusData.online || 0;
+        const offline = statusData.offline || 0;
+        const ghost = summary.ghostDevices7d || 0;
+        const healthy = Math.max(0, online - ghost);
+
+        chartInstances.deviceStatus = new Chart(deviceStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Healthy', 'Ghost (7d)', 'Offline'],
+                datasets: [{
+                    data: [healthy, ghost, offline],
+                    backgroundColor: [
+                        colors.success,
+                        colors.warning,
+                        colors.danger
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} devices (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+    }
+
+    // Chart 3: Data Quality Metrics (Horizontal Bar)
+    const qualityCtx = document.getElementById('quality-metrics-chart');
+    if (qualityCtx) {
+        chartInstances.quality = new Chart(qualityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Duplicate IPs', 'Ghost Devices', 'Panel Errors (24h)', 'Uninstalled'],
+                datasets: [{
+                    label: 'Count',
+                    data: [
+                        summary.duplicateIPs || 0,
+                        summary.ghostDevices7d || 0,
+                        summary.panelMessagesLast24h || 0,
+                        summary.uninstalledDevices || 0
+                    ],
+                    backgroundColor: [
+                        summary.duplicateIPs > 0 ? colors.danger : colors.success,
+                        summary.ghostDevices7d > 0 ? colors.warning : colors.success,
+                        summary.panelMessagesLast24h > 100 ? colors.danger : colors.warning,
+                        colors.neutral
+                    ],
+                    borderWidth: 0,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.x} issues`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            font: { size: 10 }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+    }
+
+    // Chart 4: Connector Health (Bar)
+    const connectorCtx = document.getElementById('connector-health-chart');
+    if (connectorCtx) {
+        const activeConnectors = Math.max(0, (summary.totalConnectors || 0) - (summary.connectorsOffline || 0));
+        const offlineConnectors = summary.connectorsOffline || 0;
+
+        chartInstances.connector = new Chart(connectorCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Active', 'Offline', 'Health Score'],
+                datasets: [{
+                    label: 'Connectors',
+                    data: [
+                        activeConnectors,
+                        offlineConnectors,
+                        summary.connectorHealthScore || 0
+                    ],
+                    backgroundColor: [
+                        colors.success,
+                        colors.danger,
+                        summary.connectorHealthScore >= 95 ? colors.success :
+                        summary.connectorHealthScore >= 85 ? colors.warning : colors.danger
+                    ],
+                    borderWidth: 0,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label;
+                                const value = context.parsed.y;
+                                if (label === 'Health Score') {
+                                    return `Health Score: ${value}%`;
+                                }
+                                return `${label}: ${value} connectors`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            font: { size: 10 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+    }
+
+    console.log('[Charts] Rendered successfully');
 }
 
 function renderPortfolioTable(customers) {

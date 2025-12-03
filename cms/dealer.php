@@ -69,6 +69,31 @@ $preferences = getUserPreferences($userId);
             </div>
         </section>
 
+        <!-- Visual Analytics Dashboard -->
+        <section class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-pie"></i> Visual Analytics</h2>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Fleet Age Distribution</h3>
+                    <canvas id="fleet-age-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Device Health Status</h3>
+                    <canvas id="device-status-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Data Quality Metrics</h3>
+                    <canvas id="quality-metrics-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Connector Health</h3>
+                    <canvas id="connector-health-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
         <!-- Customer Portfolio Table -->
         <section class="section">
             <div class="section-header">
