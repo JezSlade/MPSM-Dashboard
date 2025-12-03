@@ -155,13 +155,34 @@ function buildLiveMetrics() {
 
             // Fetch ALL devices to calculate duplicate IPs, ages, uninstalled (MISSION CRITICAL)
             // Note: This is slower but necessary for accurate duplicate IP detection
-            $allDevices = callMPSQuery('Device/List', [
-                'DealerCode' => $dealerCode,
-                'FilterDealerCodes' => [$dealerCode],
-                'PageNumber' => 1,
-                'PageRows' => 10000,  // Get all devices
-                'SortColumn' => 'SerialNumber'
-            ]);
+            // PAGINATION LOOP: Device/List may return limited results per page
+            $allDevices = [];
+            $pageNumber = 1;
+            $pageRows = 1000;  // Request 1000 per page for reasonable performance
+            $maxPages = 50;    // Safety limit (50 pages * 1000 = 50,000 devices max)
+
+            do {
+                $pageDevices = callMPSQuery('Device/List', [
+                    'DealerCode' => $dealerCode,
+                    'FilterDealerCodes' => [$dealerCode],
+                    'PageNumber' => $pageNumber,
+                    'PageRows' => $pageRows,
+                    'SortColumn' => 'SerialNumber'
+                ]);
+
+                if (!$pageDevices || !is_array($pageDevices) || count($pageDevices) === 0) {
+                    break;  // No more devices
+                }
+
+                $allDevices = array_merge($allDevices, $pageDevices);
+                $pageNumber++;
+
+                // If we got fewer devices than requested, we're on the last page
+                if (count($pageDevices) < $pageRows) {
+                    break;
+                }
+
+            } while ($pageNumber <= $maxPages);
 
             if ($allDevices && is_array($allDevices)) {
                 $ipAddresses = [];
@@ -231,7 +252,7 @@ function buildLiveMetrics() {
         }
 
         $metrics['_dataSource'] = 'live_api';
-        $metrics['_note'] = 'Using complete device data for duplicate IPs and ages. Sampled ' . count($sampleCustomers ?? []) . ' customers for dashboard metrics.';
+        $metrics['_note'] = 'Fetched ' . count($allDevices ?? []) . ' devices across ' . ($pageNumber - 1) . ' pages. Sampled ' . count($sampleCustomers ?? []) . ' customers for dashboard metrics.';
 
     } catch (Exception $e) {
         error_log('Live metrics error: ' . $e->getMessage());
