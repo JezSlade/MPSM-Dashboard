@@ -1,0 +1,422 @@
+/**
+ * Device Aging Dashboard Styles
+ * Extends existing style.css with device aging-specific components
+ * Maintains dark/light theme consistency
+ */
+
+/* ========================================
+   ALERT BANNER
+   ======================================== */
+
+.alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.alert-banner i {
+    font-size: 2rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.alert-content p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.alert-banner.alert-critical {
+    background: rgba(192, 57, 43, 0.1);
+    border-color: #c0392b;
+    color: #c0392b;
+}
+
+.alert-banner.alert-high {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: var(--accent-danger);
+    color: var(--accent-danger);
+}
+
+.alert-banner.alert-medium {
+    background: rgba(243, 156, 18, 0.1);
+    border-color: var(--accent-warning);
+    color: var(--accent-warning);
+}
+
+/* ========================================
+   SUMMARY GRID
+   ======================================== */
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Reuse metric-card from dealer.css */
+
+/* ========================================
+   CHARTS GRID (Reused from dealer.css)
+   ======================================== */
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.chart-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.chart-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-card h3::before {
+    content: '';
+    width: 4px;
+    height: 1.2rem;
+    background: var(--accent-primary);
+    border-radius: 2px;
+}
+
+.chart-card canvas {
+    max-height: 280px;
+}
+
+/* ========================================
+   CUSTOMERS TABLE
+   ======================================== */
+
+.customers-table-wrapper {
+    overflow-x: auto;
+}
+
+.customers-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.customers-table thead {
+    background: var(--bg-secondary);
+}
+
+.customers-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.customers-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.15s ease;
+}
+
+.customers-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.customers-table tbody tr:hover {
+    background: var(--bg-secondary);
+}
+
+.customers-table td {
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+}
+
+.customers-table td strong {
+    color: var(--text-primary);
+}
+
+.customers-table .text-muted {
+    color: var(--text-secondary);
+}
+
+/* Age Badge */
+.age-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    text-align: center;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge.status-excellent {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--accent-success);
+}
+
+.status-badge.status-good {
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+
+.status-badge.status-warning {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--accent-warning);
+}
+
+.status-badge.status-critical {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--accent-danger);
+}
+
+/* ========================================
+   LOADING & EMPTY STATES
+   ======================================== */
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.loading::before {
+    content: "\f110";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 2rem;
+    animation: spin 1s linear infinite;
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.error-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--accent-danger);
+}
+
+.error-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.error-state p {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+}
+
+/* ========================================
+   TABLE FOOTER
+   ======================================== */
+
+.table-footer {
+    margin-top: 1rem;
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+/* ========================================
+   TOAST NOTIFICATIONS
+   ======================================== */
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: opacity 0.3s ease;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+.toast i {
+    font-size: 1.25rem;
+}
+
+.toast.toast-success {
+    border-left: 4px solid var(--accent-success);
+}
+
+.toast.toast-success i {
+    color: var(--accent-success);
+}
+
+.toast.toast-error {
+    border-left: 4px solid var(--accent-danger);
+}
+
+.toast.toast-error i {
+    color: var(--accent-danger);
+}
+
+.toast.toast-info {
+    border-left: 4px solid var(--accent-primary);
+}
+
+.toast.toast-info i {
+    color: var(--accent-primary);
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+
+@media (max-width: 1024px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .customers-table {
+        font-size: 0.8rem;
+    }
+
+    .customers-table th,
+    .customers-table td {
+        padding: 0.5rem;
+    }
+
+    /* Stack table on mobile */
+    .customers-table thead {
+        display: none;
+    }
+
+    .customers-table tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .customers-table td {
+        display: block;
+        text-align: right;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .customers-table td:last-child {
+        border-bottom: none;
+    }
+
+    .customers-table td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+}
+
+/* ========================================
+   DARK THEME OVERRIDES
+   ======================================== */
+
+[data-theme="dark"] .chart-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .chart-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .customers-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .toast {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/*
+CHANGELOG
+2025-12-03 Claude
+- Initial implementation: Device aging dashboard styling
+- Alert banner with severity levels (critical, high, medium)
+- Customer table with age badges and status indicators
+- Chart grid layout matching duplicate IPs dashboard
+- Toast notifications for user feedback
+- Dark theme support
+- Responsive design for mobile devices
+*/
