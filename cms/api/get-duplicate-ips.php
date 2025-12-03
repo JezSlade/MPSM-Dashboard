@@ -67,10 +67,11 @@ function analyzeDuplicateIPs() {
     $dealerCode = DEFAULT_DEALER_CODE;
 
     // Fetch all devices with pagination
+    // CRITICAL: Vendor API hard-limits to 100 devices per page
     $allDevices = [];
     $pageNumber = 1;
-    $pageRows = 1000;
-    $maxPages = 50;
+    $pageRows = 100;   // Vendor hard-limit
+    $maxPages = 600;   // Safety limit (~60,000 devices max)
 
     do {
         $pageDevices = callMPSQuery('Device/List', [
@@ -82,15 +83,11 @@ function analyzeDuplicateIPs() {
         ]);
 
         if (!$pageDevices || !is_array($pageDevices) || count($pageDevices) === 0) {
-            break;
+            break;  // No more devices
         }
 
         $allDevices = array_merge($allDevices, $pageDevices);
         $pageNumber++;
-
-        if (count($pageDevices) < $pageRows) {
-            break;
-        }
 
     } while ($pageNumber <= $maxPages);
 
@@ -221,4 +218,5 @@ CHANGELOG
 - Calculates severity based on device count
 - Returns summary statistics and detailed device listings
 - 15-minute cache for performance
+- HOTFIX: Corrected PageRows to 100 (vendor hard-limit, was 1000 causing incomplete data)
 */
