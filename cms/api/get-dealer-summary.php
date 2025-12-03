@@ -109,6 +109,8 @@ function buildLiveMetrics() {
             $totalAlerts = 0;
             $totalConnectors = 0;
             $totalGhost7d = 0;
+            $totalDuplicateIPs = 0;
+            $totalPanelErrors = 0;
 
             foreach ($sampleCustomers as $customer) {
                 $customerCode = $customer['Code'] ?? '';
@@ -148,6 +150,17 @@ function buildLiveMetrics() {
                     foreach ($supplyAlerts as $alert) {
                         if ($alert['Key'] === 'ToManage') {
                             $totalAlerts += (int)($alert['Value'] ?? 0);
+                        }
+                    }
+
+                    // Extract duplicate IPs from Warnings (same as single customer dashboard)
+                    $warnings = $dashboard['Warnings'] ?? [];
+                    foreach ($warnings as $warning) {
+                        if (isset($warning['Key']) && $warning['Key'] === 'IP_Duplicated') {
+                            $totalDuplicateIPs++;
+                        }
+                        if (isset($warning['Key']) && $warning['Key'] === 'PanelErrorCount') {
+                            $totalPanelErrors += (int)($warning['Value'] ?? 0);
                         }
                     }
                 }
@@ -224,15 +237,7 @@ function buildLiveMetrics() {
                     }
                 }
 
-                // Count duplicate IPs
-                $duplicateIPCount = 0;
-                foreach ($ipAddresses as $ip => $count) {
-                    if ($count > 1) {
-                        $duplicateIPCount++;
-                    }
-                }
-
-                $metrics['duplicateIPs'] = $duplicateIPCount;
+                // Store fleet age and uninstalled data from Device/List
                 $metrics['fleetAgeDistribution'] = $ages;
                 $metrics['uninstalledDevices'] = $uninstalledCount;
                 $metrics['totalDevices'] = count($allDevices) - $uninstalledCount;
@@ -246,13 +251,18 @@ function buildLiveMetrics() {
                 $metrics['totalAlerts'] = round($totalAlerts * $multiplier);
                 $metrics['totalConnectors'] = round($totalConnectors * $multiplier);
                 $metrics['ghostDevices7d'] = round($totalGhost7d * $multiplier);
+
+                // Extrapolate Warnings-based metrics
+                $metrics['duplicateIPs'] = round($totalDuplicateIPs * $multiplier);
+                $metrics['panelMessagesLast24h'] = round($totalPanelErrors * $multiplier);
+
                 $metrics['devicesByStatus']['online'] = $metrics['totalDevices'] - $metrics['offlineDevices'];
                 $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
             }
         }
 
         $metrics['_dataSource'] = 'live_api';
-        $metrics['_note'] = 'Fetched ' . count($allDevices ?? []) . ' devices across ' . ($pageNumber - 1) . ' pages. Sampled ' . count($sampleCustomers ?? []) . ' customers for dashboard metrics.';
+        $metrics['_note'] = 'Sampled ' . count($sampleCustomers ?? []) . ' customers. Fetched ' . count($allDevices ?? []) . ' devices for fleet age. Duplicate IPs and panel errors from Warnings.';
 
     } catch (Exception $e) {
         error_log('Live metrics error: ' . $e->getMessage());
