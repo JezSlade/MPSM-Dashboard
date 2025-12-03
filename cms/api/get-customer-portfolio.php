@@ -69,7 +69,11 @@ function buildCustomerPortfolio() {
     // Fetch all customers from API
     $customersResponse = fetchAllCustomers();
 
-    // Process ALL customers for complete dealership view
+    // LIMIT: Process first 20 customers to avoid timeout (TODO: implement pagination)
+    // Filter to customers with devices happens later, so this gives us ~20 customers with devices
+    $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 50) : 20;
+    $customersResponse = array_slice($customersResponse, 0, $limit);
+
     $portfolio = [];
 
     foreach ($customersResponse as $customer) {
