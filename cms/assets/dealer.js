@@ -182,14 +182,6 @@ function renderScorecard(summary) {
             <div class="metric-subtitle">${summary.connectorsOffline} of ${summary.totalConnectors} offline</div>
         </div>
 
-        <!-- Asset Completeness -->
-        <div class="metric-card ${summary.assetNumberCompleteness >= 90 ? 'status-success' : summary.assetNumberCompleteness >= 75 ? 'status-warning' : 'status-danger'}">
-            <div class="metric-icon"><i class="fas fa-tags"></i></div>
-            <div class="metric-value">${summary.assetNumberCompleteness}%</div>
-            <div class="metric-label">Asset Completeness</div>
-            <div class="metric-subtitle">${summary.missingAssetNumbers} missing</div>
-        </div>
-
         <!-- Duplicate IPs -->
         <div class="metric-card ${summary.duplicateIPs === 0 ? 'status-success' : summary.duplicateIPs > 20 ? 'status-danger' : 'status-warning'}">
             <div class="metric-icon"><i class="fas fa-network-wired"></i></div>
@@ -204,22 +196,6 @@ function renderScorecard(summary) {
             <div class="metric-value">${fleetAgeRate}%</div>
             <div class="metric-label">Fleet Age (5yr+)</div>
             <div class="metric-subtitle">${fleetOver5yr} devices aging out</div>
-        </div>
-
-        <!-- Cache Health -->
-        <div class="metric-card ${summary.cacheHealthScore >= 90 ? 'status-success' : summary.cacheHealthScore >= 75 ? 'status-warning' : 'status-danger'}">
-            <div class="metric-icon"><i class="fas fa-database"></i></div>
-            <div class="metric-value">${summary.cacheHealthScore}%</div>
-            <div class="metric-label">Cache Health</div>
-            <div class="metric-subtitle">${formatSeconds(summary.cacheFreshnessAvg)} avg age</div>
-        </div>
-
-        <!-- Alert Definition Coverage -->
-        <div class="metric-card ${summary.alertDefinitionCoverage >= 90 ? 'status-success' : summary.alertDefinitionCoverage >= 70 ? 'status-warning' : 'status-danger'}">
-            <div class="metric-icon"><i class="fas fa-book"></i></div>
-            <div class="metric-value">${summary.alertDefinitionCoverage}%</div>
-            <div class="metric-label">Alert Definitions</div>
-            <div class="metric-subtitle">${summary.unmappedAlertCodes} unmapped codes</div>
         </div>
 
         <!-- Panel Messages -->

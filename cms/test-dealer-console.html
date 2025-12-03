@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dealer Dashboard Console Test</title>
+    <style>
+        body {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            background: #0d1117;
+            color: #e6edf3;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #1f6feb; }
+        h2 { color: #58a6ff; margin-top: 30px; }
+        pre {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            overflow: auto;
+            font-size: 12px;
+        }
+        .test {
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success { color: #3fb950; }
+        .error { color: #f85149; }
+        .warning { color: #d29922; }
+        button {
+            background: #238636;
+            color: white;
+            border: 1px solid #2ea043;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+        }
+        button:hover { background: #2ea043; }
+        .metric { display: inline-block; margin: 10px 20px 10px 0; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #1f6feb; }
+        .metric-label { font-size: 12px; color: #8b949e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Dealer Dashboard API Test Console</h1>
+        <p>This page tests the dealer dashboard APIs while authenticated. Open browser console (F12) for detailed logs.</p>
+
+        <div>
+            <button onclick="testDealerSummary()">Test Dealer Summary API</button>
+            <button onclick="testCustomerPortfolio()">Test Customer Portfolio API</button>
+            <button onclick="testBoth()">Run All Tests</button>
+            <button onclick="window.location.href='dealer.php'">Open Dealer Dashboard</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const color = type === 'success' ? '#3fb950' : type === 'error' ? '#f85149' : '#58a6ff';
+            console.log(`%c${message}`, `color: ${color}`);
+        }
+
+        async function testDealerSummary() {
+            resultsDiv.innerHTML += `<div class="test"><h2>Testing Dealer Summary API...</h2><div id="summary-results">Loading...</div></div>`;
+            const output = document.getElementById('summary-results');
+
+            try {
+                log('[Test] Fetching dealer summary...', 'info');
+                const response = await fetch('api/get-dealer-summary.php', {
+                    credentials: 'same-origin'
+                });
+
+                log(`[Test] HTTP ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+                log('[Test] Response data:', 'info');
+                console.log(data);
+
+                if (data.success) {
+                    const s = data.summary;
+                    output.innerHTML = `
+                        <p class="success">✓ API Success</p>
+                        <div class="metric">
+                            <div class="metric-value">${s.totalCustomers || 0}</div>
+                            <div class="metric-label">Total Customers</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${s.totalDevices || 0}</div>
+                            <div class="metric-label">Total Devices</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${s._dataSource || 'unknown'}</div>
+                            <div class="metric-label">Data Source</div>
+                        </div>
+                        ${s._note ? `<p class="warning">Note: ${s._note}</p>` : ''}
+                        <details><summary>Full Response</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>
+                    `;
+                    log('[Test] Dealer Summary test PASSED', 'success');
+                } else {
+                    output.innerHTML = `<p class="error">✗ API Error: ${data.error || 'Unknown'}</p>`;
+                    log('[Test] Dealer Summary test FAILED', 'error');
+                }
+            } catch (error) {
+                output.innerHTML = `<p class="error">✗ Exception: ${error.message}</p>`;
+                log(`[Test] Exception: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function testCustomerPortfolio() {
+            resultsDiv.innerHTML += `<div class="test"><h2>Testing Customer Portfolio API...</h2><div id="portfolio-results">Loading...</div></div>`;
+            const output = document.getElementById('portfolio-results');
+
+            try {
+                log('[Test] Fetching customer portfolio...', 'info');
+                const response = await fetch('api/get-customer-portfolio.php', {
+                    credentials: 'same-origin'
+                });
+
+                log(`[Test] HTTP ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+                log('[Test] Response data:', 'info');
+                console.log(data);
+
+                if (data.success) {
+                    const customers = data.customers || [];
+                    output.innerHTML = `
+                        <p class="success">✓ API Success</p>
+                        <div class="metric">
+                            <div class="metric-value">${customers.length}</div>
+                            <div class="metric-label">Customers Returned</div>
+                        </div>
+                        ${customers.length > 0 ? `
+                            <p>Sample customer:</p>
+                            <pre>${JSON.stringify(customers[0], null, 2)}</pre>
+                        ` : '<p class="warning">No customers returned</p>'}
+                    `;
+                    log('[Test] Customer Portfolio test PASSED', 'success');
+                } else {
+                    output.innerHTML = `<p class="error">✗ API Error: ${data.error || 'Unknown'}</p>`;
+                    log('[Test] Customer Portfolio test FAILED', 'error');
+                }
+            } catch (error) {
+                output.innerHTML = `<p class="error">✗ Exception: ${error.message}</p>`;
+                log(`[Test] Exception: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function testBoth() {
+            resultsDiv.innerHTML = '';
+            await testDealerSummary();
+            await testCustomerPortfolio();
+        }
+
+        // Auto-run on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('[Console] Dealer Dashboard API Test Console Ready', 'success');
+            log('[Console] Click buttons to run tests or check browser console for logs', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -68,16 +68,6 @@ $preferences = getUserPreferences($userId);
             </div>
         </section>
 
-        <!-- Data Quality Dashboard -->
-        <section class="section">
-            <div class="section-header">
-                <h2><i class="fas fa-clipboard-check"></i> Data Quality Dashboard</h2>
-            </div>
-            <div id="data-quality-container">
-                <div class="loading">Loading quality metrics...</div>
-            </div>
-        </section>
-
         <!-- Customer Portfolio Table -->
         <section class="section">
             <div class="section-header">
