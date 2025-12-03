@@ -69,9 +69,7 @@ function buildCustomerPortfolio() {
     // Fetch all customers from API
     $customersResponse = fetchAllCustomers();
 
-    // LIMIT: Only process first 5 customers to avoid timeout (until cache is populated)
-    $customersResponse = array_slice($customersResponse, 0, 5);
-
+    // Process ALL customers for complete dealership view
     $portfolio = [];
 
     foreach ($customersResponse as $customer) {
@@ -101,24 +99,27 @@ function buildCustomerPortfolio() {
         // Calculate health score
         $healthScore = calculateHealthScore($metrics, $dbMetrics);
 
-        $portfolio[] = [
-            'code' => $customerCode,
-            'name' => $customerName,
-            'totalDevices' => $metrics['totalDevices'],
-            'onlineDevices' => $metrics['totalDevices'] - $metrics['offlineDevices'],
-            'offlineDevices' => $metrics['offlineDevices'],
-            'alertCount' => $metrics['alertCount'],
-            'connectorCount' => $metrics['connectorCount'],
-            'connectorsActive' => $metrics['connectorsActive'],
-            'connectorsOffline' => max(0, $metrics['connectorCount'] - $metrics['connectorsActive']),
-            'ghostDevices' => $dbMetrics['ghostDevices'],
-            'missingAssets' => $dbMetrics['missingAssets'],
-            'duplicateIPs' => $dbMetrics['duplicateIPs'],
-            'panelErrors24h' => $dbMetrics['panelErrors24h'],
-            'lastContact' => $dbMetrics['lastContact'],
-            'healthScore' => $healthScore,
-            'healthStatus' => getHealthStatus($healthScore)
-        ];
+        // Only include customers with active devices (non-zero)
+        if ($metrics['totalDevices'] > 0) {
+            $portfolio[] = [
+                'code' => $customerCode,
+                'name' => $customerName,
+                'totalDevices' => $metrics['totalDevices'],
+                'onlineDevices' => $metrics['totalDevices'] - $metrics['offlineDevices'],
+                'offlineDevices' => $metrics['offlineDevices'],
+                'alertCount' => $metrics['alertCount'],
+                'connectorCount' => $metrics['connectorCount'],
+                'connectorsActive' => $metrics['connectorsActive'],
+                'connectorsOffline' => max(0, $metrics['connectorCount'] - $metrics['connectorsActive']),
+                'ghostDevices' => $dbMetrics['ghostDevices'],
+                'missingAssets' => $dbMetrics['missingAssets'],
+                'duplicateIPs' => $dbMetrics['duplicateIPs'],
+                'panelErrors24h' => $dbMetrics['panelErrors24h'],
+                'lastContact' => $dbMetrics['lastContact'],
+                'healthScore' => $healthScore,
+                'healthStatus' => getHealthStatus($healthScore)
+            ];
+        }
     }
 
     // Sort by health score (lowest first = needs attention)

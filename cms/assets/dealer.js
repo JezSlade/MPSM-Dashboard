@@ -143,6 +143,17 @@ function renderScorecard(summary) {
         : 0;
 
     container.innerHTML = `
+        <!-- Dealership Overview Banner -->
+        <div class="dealership-banner">
+            <div class="banner-content">
+                <i class="fas fa-chart-line"></i>
+                <div class="banner-text">
+                    <h3>Dealership Overview - All ${summary.totalCustomers} Customers</h3>
+                    <p>Aggregated metrics across ${summary.totalDevices} managed devices</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Total Customers -->
         <div class="metric-card status-neutral">
             <div class="metric-icon"><i class="fas fa-building"></i></div>
