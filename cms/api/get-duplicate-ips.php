@@ -91,10 +91,10 @@ function analyzeDuplicateIPs() {
 
     } while ($pageNumber <= $maxPages);
 
-    // Group devices by IP address
-    $ipGroups = [];
+    // CRITICAL: Group by CUSTOMER first, then by IP within each customer
+    // Duplicate IPs are only problematic WITHIN the same customer
+    $customerGroups = [];
     $validDevices = [];
-    $customerCodes = [];
 
     foreach ($allDevices as $device) {
         // Skip uninstalled devices
@@ -112,20 +112,27 @@ function analyzeDuplicateIPs() {
         // Track valid devices
         $validDevices[] = $device;
 
-        // Track customer codes
         $customerCode = $device['CustomerCode'] ?? 'Unknown';
-        $customerCodes[$customerCode] = true;
+        $customerName = $device['CustomerName'] ?? 'Unknown';
 
-        // Group by IP
-        if (!isset($ipGroups[$ip])) {
-            $ipGroups[$ip] = [];
+        // Group by customer, then by IP
+        if (!isset($customerGroups[$customerCode])) {
+            $customerGroups[$customerCode] = [
+                'customerCode' => $customerCode,
+                'customerName' => $customerName,
+                'ipGroups' => []
+            ];
         }
 
-        $ipGroups[$ip][] = [
+        if (!isset($customerGroups[$customerCode]['ipGroups'][$ip])) {
+            $customerGroups[$customerCode]['ipGroups'][$ip] = [];
+        }
+
+        $customerGroups[$customerCode]['ipGroups'][$ip][] = [
             'serialNumber' => $device['SerialNumber'] ?? 'Unknown',
             'model' => $device['Model'] ?? 'Unknown',
             'customerCode' => $customerCode,
-            'customerName' => $device['CustomerName'] ?? 'Unknown',
+            'customerName' => $customerName,
             'location' => $device['Location'] ?? 'Unknown',
             'department' => $device['Department'] ?? null,
             'assetNumber' => $device['AssetNumber'] ?? null,
@@ -135,18 +142,34 @@ function analyzeDuplicateIPs() {
         ];
     }
 
-    // Filter to only duplicate IPs (2+ devices)
+    // Find duplicates WITHIN each customer
     $duplicates = [];
-    foreach ($ipGroups as $ip => $devices) {
-        if (count($devices) > 1) {
-            $duplicates[] = [
-                'ipAddress' => $ip,
-                'deviceCount' => count($devices),
-                'devices' => $devices,
-                'customerCount' => count(array_unique(array_column($devices, 'customerCode'))),
-                'severity' => calculateSeverity(count($devices)),
-                'affectedCustomers' => array_values(array_unique(array_column($devices, 'customerName')))
-            ];
+    $customersAffected = 0;
+    $totalDevicesAffected = 0;
+
+    foreach ($customerGroups as $customerData) {
+        $customerHasDuplicates = false;
+
+        foreach ($customerData['ipGroups'] as $ip => $devices) {
+            // Duplicate only if 2+ devices share IP WITHIN this customer
+            if (count($devices) > 1) {
+                $customerHasDuplicates = true;
+                $totalDevicesAffected += count($devices);
+
+                $duplicates[] = [
+                    'ipAddress' => $ip,
+                    'deviceCount' => count($devices),
+                    'devices' => $devices,
+                    'customerCode' => $customerData['customerCode'],
+                    'customerName' => $customerData['customerName'],
+                    'severity' => calculateSeverity(count($devices)),
+                    'affectedCustomers' => [$customerData['customerName']] // Always single customer
+                ];
+            }
+        }
+
+        if ($customerHasDuplicates) {
+            $customersAffected++;
         }
     }
 
@@ -158,12 +181,12 @@ function analyzeDuplicateIPs() {
     // Calculate summary statistics
     $summary = [
         'totalDuplicateIPs' => count($duplicates),
-        'totalDevicesAffected' => array_sum(array_column($duplicates, 'deviceCount')),
+        'totalDevicesAffected' => $totalDevicesAffected,
         'totalValidDevices' => count($validDevices),
         'percentageAffected' => count($validDevices) > 0
-            ? round((array_sum(array_column($duplicates, 'deviceCount')) / count($validDevices)) * 100, 1)
+            ? round(($totalDevicesAffected / count($validDevices)) * 100, 1)
             : 0,
-        'customersAffected' => count($customerCodes),
+        'customersAffected' => $customersAffected,
         'severityBreakdown' => [
             'critical' => count(array_filter($duplicates, fn($d) => $d['severity'] === 'critical')),
             'high' => count(array_filter($duplicates, fn($d) => $d['severity'] === 'high')),
@@ -219,4 +242,8 @@ CHANGELOG
 - Returns summary statistics and detailed device listings
 - 15-minute cache for performance
 - HOTFIX: Corrected PageRows to 100 (vendor hard-limit, was 1000 causing incomplete data)
+- CRITICAL FIX: Changed logic to find duplicates WITHIN each customer only
+  * Multiple customers can have same IP (e.g., 192.168.1.1) - this is normal
+  * Only flag as duplicate when 2+ devices share IP at SAME customer location
+  * Grouped by customer first, then by IP within each customer
 */
