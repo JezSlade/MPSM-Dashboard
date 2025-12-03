@@ -82,18 +82,20 @@ function buildLiveMetrics() {
         // Get dealer code
         $dealerCode = DEFAULT_DEALER_CODE;
 
-        // Fetch customers
-        $customersPayload = json_encode([
-            'action' => 'Customer/GetCustomers',
-            'params' => ['FilterDealerCodes' => [$dealerCode]]
+        // Fetch customers with required pagination params
+        $customers = callMPSQuery('Customer/GetCustomers', [
+            'DealerCode' => $dealerCode,
+            'FilterDealerCodes' => [$dealerCode],
+            'PageNumber' => 1,
+            'PageRows' => 1000,
+            'SortColumn' => 'Code'
         ]);
 
-        $customers = callMPSAPI($customersPayload);
-        if ($customers && isset($customers['Customers'])) {
-            $metrics['totalCustomers'] = count($customers['Customers']);
+        if ($customers && is_array($customers)) {
+            $metrics['totalCustomers'] = count($customers);
 
             // Sample first 10 customers for quick metrics (full scan would be too slow)
-            $sampleCustomers = array_slice($customers['Customers'], 0, 10);
+            $sampleCustomers = array_slice($customers, 0, 10);
             $totalDevices = 0;
             $totalOffline = 0;
 
@@ -102,16 +104,13 @@ function buildLiveMetrics() {
                 if (!$customerCode) continue;
 
                 // Get customer dashboard
-                $dashboardPayload = json_encode([
-                    'action' => 'CustomerDashboard/Get',
-                    'params' => ['Code' => $customerCode]
+                $dashboard = callMPSQuery('CustomerDashboard/Get', [
+                    'Code' => $customerCode,
+                    'DealerCode' => $dealerCode
                 ]);
-
-                $dashboard = callMPSAPI($dashboardPayload);
-                if ($dashboard && isset($dashboard['MpsDashboardCustomer'])) {
-                    $dash = $dashboard['MpsDashboardCustomer'];
-                    $totalDevices += (int)($dash['TotalManagedDevices'] ?? 0);
-                    $totalOffline += (int)($dash['OfflineDevices'] ?? 0);
+                if ($dashboard && is_array($dashboard)) {
+                    $totalDevices += (int)($dashboard['TotalManagedDevices'] ?? 0);
+                    $totalOffline += (int)($dashboard['OfflineDevices'] ?? 0);
                 }
             }
 
@@ -260,27 +259,6 @@ function initializeMetrics() {
     ];
 }
 
-function callMPSAPI($payload) {
-    $url = 'https://mpsm.resolutionsbydesign.us/mps-api/query';
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $payload,
-            'timeout' => 30
-        ]
-    ]);
-
-    $response = @file_get_contents($url, false, $context);
-    if ($response === false) {
-        return null;
-    }
-
-    $data = json_decode($response, true);
-    return $data['data'] ?? null;
-}
-
 function checkTableExists($pdo, $tableName) {
     try {
         $stmt = $pdo->query("SHOW TABLES LIKE '{$tableName}'");
@@ -299,4 +277,6 @@ CHANGELOG
 - Indicates data source in response (_dataSource field)
 2025-12-06 Codex
 - Rebranded error logging from Executive to Dealer naming to match new summary endpoints.
+2025-12-03 Codex
+- Removed duplicate callMPSAPI helper and now use shared callMPSQuery() for live customer/dashboard fetches to avoid redeclaration fatals.
 */

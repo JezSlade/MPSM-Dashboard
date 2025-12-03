@@ -107,6 +107,9 @@ $preferences = getUserPreferences($userId);
         </footer>
     </main>
 
+    <!-- Toast Container -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
     <!-- Scripts -->
     <script src="assets/shared.js"></script>
     <script src="assets/dealer.js"></script>

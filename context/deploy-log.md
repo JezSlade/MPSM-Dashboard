@@ -101,3 +101,20 @@ CHANGELOG
 - Command: git push origin main
 - Workflow: .github/workflows/deploy.yml
 - Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
+2025-12-03 03:59:10 UTC
+- Command: curl -T cms/api/get-dealer-summary.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
+- Command: curl -T cms/api/get-dealer-summary-hybrid.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary-hybrid.php
+- Result: Success (redeclaration fix deployed)
+- Notes: Removed local callMPSAPI duplicates; APIs now rely on shared callMPSQuery to avoid fatal errors when loading dealer dashboard.
+
+2025-12-03 04:25:00 UTC
+- Command: curl -T cms/dealer.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/dealer.php
+- Command: curl -T cms/api/get-dealer-summary.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
+- Command: curl -T cms/api/get-dealer-summary-hybrid.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary-hybrid.php
+- Result: Success (dealer dashboard fixes deployed)
+- Notes:
+  * Added toast-container div to dealer.php for showToast() function
+  * Fixed callMPSQuery parameters: added required DealerCode, PageNumber, PageRows, SortColumn
+  * Fixed response parsing: API returns data array directly, not nested in Customers/MpsDashboardCustomer
+  * Cache table exists but is empty (0 devices), so APIs fall back to live MPS API
+  * Live API now returns actual customer/device data instead of zeros
