@@ -8,6 +8,37 @@
 - Added `tests/test-alert-code-map.php` to validate parsing of `docs/MPSM_Code_Descriptions.md` for codes 8, 807, 808, 809.
 - Not executed locally (php CLI unavailable). Run `php tests/test-alert-code-map.php` when PHP is available.
 
+## 2025-12-03 - Dealer cache/portfolio updates
+- Deployed updated `get-dealer-summary.php` and `get-customer-portfolio.php` (cache-first paths).
+- Live curl checks:
+  - `curl https://mpsm.resolutionsbydesign.us/cms/api/test-dealer-status.php` ➜ DB ok, `mpsm_cache_devices` exists with 0 rows (live fallback active).
+  - `curl https://mpsm.resolutionsbydesign.us/cms/api/get-dealer-summary.php?force=1&secret=DEALER_API_2025` ➜ timed out (live path while cache empty).
+  - `curl https://mpsm.resolutionsbydesign.us/cms/api/get-customer-portfolio.php?secret=DEALER_API_2025&limit=5` ➜ success, `cache_source=live_api`, total 3 rows returned.
+  - `curl https://mpsm.resolutionsbydesign.us/cms/api/cache-status-report.php` ➜ Total Devices Cached: 0; refresh started 10:06:21, no errors logged yet.
+- Status: cache still empty; dealer/portfolio APIs remain on live fallback until refresh completes.
+
+## 2025-12-03 - Cache refresh RCA and live run
+- Issue: Cache kept empty after refresh; enhanced refresh returned 500 and truncated tables.
+- Evidence:
+  - `refresh-cache-enhanced.php?force=1&skipDrilldown=1` ➜ HTTP 500, log shows only truncation (no device inserts).
+  - `refresh-cache-chunked.php?action=start` (before fix) ➜ errors: OAuth token request failed (10s timeout), devices_cached=0.
+  - `check-cache-progress.php` ➜ status fetching_devices, errors show OAuth token timeouts; devices_cached=0.
+  - `cache-refresh-2025-12-03.log` ➜ repeated “Truncating cache tables” followed by no device caching entries.
+- Fix deployed: `refresh-cache-chunked.php` now uses `callMPSQuery` (mps-api engine) for Device/List and Device/Get to bypass failing direct OAuth token calls.
+- Live run after fix:
+  - `run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` ➜ status fetching_devices, current_page=3/34, devices_cached=200 (progressing), errors now include earlier OAuth timeouts and one invalid response on page 3.
+  - `check-cache-progress.php` ➜ shows devices_cached moving 0→200, last activity 10:40:15, still in fetching_devices stage.
+- Status: Cache repopulation in progress via chunked pipeline; allow further process calls/cron to complete cutover, then re-run `test-dealer-status.php` to confirm cache >0.
+
+## 2025-12-03 - Live cache population proof (continued)
+- Updated chunked parser to accept mps-api/query shape; reran live.
+- Evidence of population:
+  - `run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` ➜ advanced to `status=fetching_drilldowns`, `current_page=34/34`, `devices_cached=3400`, `drilldowns_cached=280`.
+  - `check-cache-progress.php` ➜ shows same counts; last activity 12:14:47 ET; still running (continue=true).
+  - Device/List page 3 payload inspected via mps-api/query (valid JSON with meta.total_rows=3357); parser fix allowed progression past page 3.
+- Remaining errors are historical (early OAuth timeouts, prior “invalid page 3” entries) and not blocking.
+- Next: keep running `run-refresh-cache-chunked` until cutover completes, then verify `test-dealer-status.php` shows cache_devices > 0 and `cache-status-report.php` reflects final totals.
+
 **Date**: 2025-11-09
 **Issue**: Command Center page stuck loading, not interactive
 **Fix Commit**: bce0353
@@ -940,3 +971,20 @@ Test plan (post-deploy, LIVE):
 - get-panel-messages supports offset: verify paging (offset=200)
 - Shared utils loaded: assets/shared.js; ensure no duplicates in toasts/escape
 - Tabs switch cancels panel auto-refresh; resumes on focus
+
+## 2025-12-03 17:45 UTC - Chunked cache refresh (multi-chunk) verification
+- **Commands:** curl -sS "https://mpsm.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025" (multiple invocations)
+- **Results:** status=fetching_drilldowns, devices_cached=3400; drilldowns_cached advanced 550 -> 610 -> 620 -> 650; continue=true; version=2025-11-22b; chunk_duration ~22-35s after multi-chunk code path.
+- **Notes:** New 90s budget processes multiple drill-down chunks per call; cache still mid-run and has not cut over yet.
+
+## 2025-12-03 18:20 UTC - Duplicate IPs API smoke (summaryOnly)
+- **Command:** curl -sS "https://mpsm.resolutionsbydesign.us/cms/api/get-duplicate-ips.php?secret=DEALER_API_2025&force=1&summaryOnly=1"
+- **Result:** success=true, summary returned; cache_age_seconds reported; duplicates omitted in summaryOnly mode. (Live dataset currently still evaluating; cache tables empty.)
+
+/*
+CHANGELOG
+2025-12-03 Codex
+- Logged live helper runs after multi-chunk optimization; documented drilldown progress (550->610->620->650) and pending cutover.
+2025-12-03 Codex
+- Logged duplicate-ips summaryOnly curl check after cache-first refactor.
+*/

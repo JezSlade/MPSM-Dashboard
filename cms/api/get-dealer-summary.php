@@ -22,26 +22,49 @@ try {
     $cacheKey = 'dealer-summary-hybrid';
     $cacheTTL = 1800; // 30 minutes
 
+    $pdo = getDatabase();
+    $cachedDeviceCount = getCachedDeviceCount($pdo);
+
     // Try cache first unless force refresh
+    $cachedPayload = null;
+    $cachedAgeSeconds = null;
     if (!$forceRefresh) {
         $cached = cacheGet($cacheKey);
         if ($cached !== null) {
-            $data = json_decode($cached, true);
-            if ($data && isset($data['timestamp'])) {
-                $age = time() - $data['timestamp'];
-                if ($age < $cacheTTL) {
-                    jsonSuccess([
-                        'summary' => $data['summary'],
-                        'cached' => true,
-                        'cache_age_seconds' => $age
-                    ]);
-                }
+            $decoded = is_string($cached) ? json_decode($cached, true) : $cached;
+            if (is_array($decoded) && isset($decoded['timestamp'], $decoded['summary'])) {
+                $cachedPayload = $decoded;
+                $cachedAgeSeconds = time() - (int)$decoded['timestamp'];
             }
         }
     }
 
-    // Build fresh summary
-    $summary = buildHybridSummary();
+    // Return cached snapshot only when it matches current data-source state
+    if ($cachedPayload !== null && $cachedAgeSeconds !== null && $cachedAgeSeconds < $cacheTTL) {
+        $cachedSource = $cachedPayload['summary']['_dataSource'] ?? null;
+        $cachedTotalDevices = $cachedPayload['summary']['totalDevices'] ?? 0;
+
+        if ($cachedDeviceCount > 0 && $cachedSource === 'cache' && $cachedTotalDevices > 0) {
+            jsonSuccess([
+                'summary' => $cachedPayload['summary'],
+                'cached' => true,
+                'cache_age_seconds' => $cachedAgeSeconds
+            ]);
+        }
+
+        if ($cachedDeviceCount === 0 && $cachedSource === 'live_api') {
+            jsonSuccess([
+                'summary' => $cachedPayload['summary'],
+                'cached' => true,
+                'cache_age_seconds' => $cachedAgeSeconds
+            ]);
+        }
+    }
+
+    // Build fresh summary preferring cache data when available
+    $summary = $cachedDeviceCount > 0
+        ? buildCachedMetrics($pdo)
+        : buildLiveMetrics();
 
     // Cache result
     cacheStore($cacheKey, json_encode([
@@ -61,24 +84,8 @@ try {
 }
 
 function buildHybridSummary() {
-    $pdo = getDatabase();
-
-    // Check if cache has devices
-    $cacheTableExists = checkTableExists($pdo, 'mpsm_cache_devices');
-    $deviceCount = 0;
-
-    if ($cacheTableExists) {
-        $stats = $pdo->query("SELECT COUNT(*) as count FROM mpsm_cache_devices WHERE is_uninstalled = 0")->fetch(PDO::FETCH_ASSOC);
-        $deviceCount = (int)($stats['count'] ?? 0);
-    }
-
-    // If cache is empty, fetch live data from MPS API
-    if ($deviceCount === 0) {
-        return buildLiveMetrics();
-    }
-
-    // Use cached data (fast path)
-    return buildCachedMetrics($pdo);
+    // Deprecated: retained for backward compatibility. Main flow computes summary directly.
+    return buildLiveMetrics();
 }
 
 function buildLiveMetrics() {
@@ -171,8 +178,9 @@ function buildLiveMetrics() {
             // PAGINATION LOOP: Device/List may return limited results per page
             $allDevices = [];
             $pageNumber = 1;
-            $pageRows = 1000;  // Request 1000 per page for reasonable performance
-            $maxPages = 50;    // Safety limit (50 pages * 1000 = 50,000 devices max)
+            $pageRows = 100;   // Vendor hard-limits to 100 per page
+            $maxPages = 600;   // Safety limit (~60,000 devices at 100/page)
+            $ipCounts = [];
 
             do {
                 $pageDevices = callMPSQuery('Device/List', [
@@ -190,17 +198,12 @@ function buildLiveMetrics() {
                 $allDevices = array_merge($allDevices, $pageDevices);
                 $pageNumber++;
 
-                // If we got fewer devices than requested, we're on the last page
-                if (count($pageDevices) < $pageRows) {
-                    break;
-                }
-
             } while ($pageNumber <= $maxPages);
 
             if ($allDevices && is_array($allDevices)) {
-                $ipAddresses = [];
                 $ages = ['under1yr' => 0, 'age1to3yr' => 0, 'age3to5yr' => 0, 'over5yr' => 0, 'unknown' => 0];
                 $uninstalledCount = 0;
+                $computedDuplicateIPs = 0;
 
                 foreach ($allDevices as $device) {
                     // Count uninstalled devices
@@ -212,10 +215,7 @@ function buildLiveMetrics() {
                     // Track IP addresses for duplicate detection
                     $ip = $device['IpAddress'] ?? null;
                     if ($ip && $ip !== '' && $ip !== '0.0.0.0') {
-                        if (!isset($ipAddresses[$ip])) {
-                            $ipAddresses[$ip] = 0;
-                        }
-                        $ipAddresses[$ip]++;
+                        $ipCounts[$ip] = ($ipCounts[$ip] ?? 0) + 1;
                     }
 
                     // Calculate device age
@@ -237,20 +237,29 @@ function buildLiveMetrics() {
                     }
                 }
 
+                foreach ($ipCounts as $count) {
+                    if ($count > 1) {
+                        $computedDuplicateIPs++;
+                    }
+                }
+
                 // Store fleet age and uninstalled data from Device/List
                 $metrics['fleetAgeDistribution'] = $ages;
                 $metrics['uninstalledDevices'] = $uninstalledCount;
-                $metrics['totalDevices'] = count($allDevices) - $uninstalledCount;
+                $metrics['totalDevices'] = max(0, count($allDevices) - $uninstalledCount);
+                $metrics['duplicateIPs'] = $computedDuplicateIPs;
             }
 
             // Use actual totals from ALL customers (no extrapolation needed)
-            $metrics['offlineDevices'] = $totalOffline;
+            $metrics['offlineDevices'] = max(0, min($totalOffline, $metrics['totalDevices']));
             $metrics['totalAlerts'] = $totalAlerts;
             $metrics['totalConnectors'] = $totalConnectors;
             $metrics['ghostDevices7d'] = $totalGhost7d;
-            $metrics['duplicateIPs'] = $totalDuplicateIPs;
+            if (empty($metrics['duplicateIPs'])) {
+                $metrics['duplicateIPs'] = $totalDuplicateIPs;
+            }
             $metrics['panelMessagesLast24h'] = $totalPanelErrors;
-            $metrics['devicesByStatus']['online'] = $metrics['totalDevices'] - $metrics['offlineDevices'];
+            $metrics['devicesByStatus']['online'] = max(0, $metrics['totalDevices'] - $metrics['offlineDevices']);
             $metrics['devicesByStatus']['offline'] = $metrics['offlineDevices'];
         }
 
@@ -397,6 +406,16 @@ function checkTableExists($pdo, $tableName) {
     }
 }
 
+function getCachedDeviceCount($pdo) {
+    try {
+        $stats = $pdo->query("SELECT COUNT(*) as count FROM mpsm_cache_devices WHERE is_uninstalled = 0")->fetch(PDO::FETCH_ASSOC);
+        return (int)($stats['count'] ?? 0);
+    } catch (Exception $e) {
+        error_log('getCachedDeviceCount error: ' . $e->getMessage());
+        return 0;
+    }
+}
+
 /*
 CHANGELOG
 2025-12-02 Claude
@@ -408,4 +427,7 @@ CHANGELOG
 - Rebranded error logging from Executive to Dealer naming to match new summary endpoints.
 2025-12-03 Codex
 - Removed duplicate callMPSAPI helper and now use shared callMPSQuery() for live customer/dashboard fetches to avoid redeclaration fatals.
+2025-12-03 Codex
+- Enforced cache-first summaries when cache tables are populated and bypass stale live snapshots; re-cache fresh data on every rebuild.
+- Fixed live pagination (100-per-page vendor limit), duplicate IP counting, and clamped device status totals to prevent negative online values and truncated device totals.
 */

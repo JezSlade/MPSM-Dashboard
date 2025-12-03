@@ -9,6 +9,9 @@
 - **MPS Monitor OAuth:** Defined in root `.env` (mirrored in `cms/config.php` and `mps-api/config.php` loader). Dealer code `NY06AGDWUQ`, dealer ID `SZ13qRwU5GtFLj0i_CbEgQ2`.
 - **FTP/Deployment:** Scripts reference `ftp.resolutionsbydesign.us` with credentials stored inside `deploy-*.ps1`.
 
+## Mandatory Patch Loop
+All agents follow this loop until the live site is healthy: **RCA ➝ plan patch ➝ refine patch plan ➝ optimize plan against regression ➝ patch ➝ deploy ➝ analyze live site ➝ repeat**. No patch stops before deploy + live verification.
+
 ## Daily Checks
 
 1. **Login Smoke Test**
@@ -108,86 +111,25 @@
 
 ## Deployment Workflow
 
-### Automatic Deployment (Preferred)
+### Primary Path — Agent push to main (GitHub Actions FTP)
+1. Prepare changes and run smoke checks (curl tokens where needed).  
+2. Push directly to `main` (agent-owned): `git push origin main`.  
+3. Monitor GitHub Actions (`.github/workflows/deploy.yml`) until green (2–5 minutes). The workflow FTPs to `ftp.resolutionsbydesign.us` and skips `.git`, logs, tests, and documentation; do not rely on it to ship secrets (`.env` stays server-side).
 
-**GitHub Actions automatically deploys on push to main:**
+### Fallback — Direct FTP (Agent-operated)
+- Use `deploy-all.ps1`, `deploy-critical-fix.ps1`, or manual FTP to upload the changed files to the web root when git is blocked.  
+- Do not overwrite `cms/config.php`, `.env*`, or server-managed cache/log directories.  
+- After FTP, run the same post-deploy checks as below.
 
-1. Make changes locally
-2. Test locally (run relevant smoke checks)
-3. Commit with descriptive message:
-   ```bash
-   git add .
-   git commit -m "Your descriptive message"
-   ```
-4. Push to main:
-   ```bash
-   git push origin main
-   ```
-5. **Automatic deployment begins** (GitHub Actions workflow: `.github/workflows/deploy.yml`)
-   - Takes 2-5 minutes
-   - Deploys via FTP to: `ftp.resolutionsbydesign.us`
-   - Excludes: logs, tests, .git, documentation, scripts
-   - Includes: .env files (OAuth credentials)
-
-**Monitor deployment:**
-- Go to: https://github.com/JezSlade/MPSM-Dashboard/actions
-- View latest workflow run
-- Check for green checkmark (success) or red X (failure)
-
-### Manual Deployment (Alternative)
-
-For urgent hotfixes or when GitHub Actions unavailable:
-
-```powershell
-# Use one of the deployment scripts:
-.\deploy-critical-fix.ps1
-.\deploy-performance-refactor.ps1
-# etc.
-```
-
-Scripts upload selected files via FTP and can invalidate caches if necessary.
-
-### Post-Deployment Actions (REQUIRED - AUTOMATED)
-
-**CRITICAL: When AI agent pushes code, ALL post-deployment actions MUST be completed programmatically:**
-
-1. **Monitor GitHub Actions deployment** (wait for completion, check status)
-   ```bash
-   # Poll GitHub Actions API or check workflow status
-   # Wait for green checkmark before proceeding
-   ```
-
-2. **Trigger cache population** (programmatic)
-   ```bash
-   curl -X GET "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"
-   # Wait for response, verify success
-   ```
-
-3. **Verify live site functionality** (automated testing)
-   ```bash
-   # Run test_live_site.ps1 or equivalent curl-based tests
-   # Test: homepage, cache endpoint, panel monitor, payload debugger, API engine
-   ```
-
-4. **Check error logs** (programmatic)
-   ```bash
-   # Query live error log endpoints if available
-   # Or use cPanel API to check logs
-   ```
-
-5. **Validate performance** (automated benchmarking)
-   ```bash
-   # Test response times for key endpoints
-   # Verify < 3s dashboard load, < 500ms modals, < 100ms cache hits
-   ```
-
-**AI Agent Behavior Requirements:**
-- ✅ MUST complete all post-deployment actions programmatically
-- ✅ MUST verify deployment success before completing task
-- ✅ MUST run automated tests to confirm functionality
-- ✅ MUST NOT just provide instructions - execute all steps
-- ✅ MUST report actual test results and status
-- ❌ DO NOT delegate manual steps to user unless technically impossible
+### Post-Deployment Actions (Mandatory, agent-run)
+1. Confirm deploy completion (Actions green or FTP transfer finished).  
+2. Warm and verify cache via no-auth endpoints:  
+   - `curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"`  
+   - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/cache-status-report.php" | head -30`  
+   - If chunked refresh is stalled, `curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=status"` and restart only if needed.  
+3. Live UI smoke: dashboard cards, Command Center tabs, dealer dashboard; hard refresh.  
+4. Logs: `cms/logs/cache-refresh-*.log`, browser console, and any curl error output.  
+5. Record results in the session/test logs when applicable.
 
 **Manual Steps (Only if Programmatic Access Unavailable):**
 - Database index application (requires phpMyAdmin/MySQL access)
@@ -195,13 +137,11 @@ Scripts upload selected files via FTP and can invalidate caches if necessary.
 - Cron job scheduling (if cPanel API unavailable)
 
 ### Post-Deployment Verification Checklist
-
-After automated actions complete, verify:
-1. **Live site loads:** https://mpsm.resolutionsbydesign.us/cms/
-2. **Cache operational:** get-cached-devices.php returns data
-3. **Core features working:** Login, dashboard, search, device modal
-4. **No errors:** Clean logs, no console errors
-5. **Performance targets met:** Dashboard < 3s, modals < 500ms
+1. Live site loads: https://mpsm.resolutionsbydesign.us/cms/ (no JS errors).  
+2. Cache operational: `cache-status-report.php` shows advancing timestamps and non-zero device counts.  
+3. Core features: login, dashboard cards, device modal, Command Center tabs, dealer dashboard load.  
+4. No errors: clean logs and console.  
+5. Performance: dashboard under 3s, modals under 500ms when cache is warm.
 
 ## Incident Response
 
@@ -224,3 +164,11 @@ After automated actions complete, verify:
 3. **Payload Debugger QA:** Periodically review the Unique Sources roll-up to ensure only trusted origins are reaching the callback endpoints.
 
   Keep this section in sync with the live action item document whenever new high-priority tasks arise.
+
+/*
+CHANGELOG
+2025-12-03 Codex
+- Added mandatory RCA→plan→refine→optimize→patch→deploy→analyze loop for all agents.
+- Updated deployment workflow to require agent-driven git/FTP pushes and no-auth cache verification.
+- Clarified post-deploy checks and preserved safety around config/.env during FTP.
+*/

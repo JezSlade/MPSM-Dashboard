@@ -8,12 +8,20 @@
 require '../config.php';
 require '../functions.php';
 
-requireAuth();
+// Optional secret for programmatic access (matches dealer API secret)
+$bypassSecret = 'DEALER_API_2025';
+$providedSecret = $_GET['secret'] ?? $_POST['secret'] ?? '';
+$authBypassed = ($providedSecret === $bypassSecret);
+
+if (!$authBypassed) {
+    requireAuth();
+}
 
 header('Content-Type: application/json');
 
 try {
-    $report = buildDeviceAgeReport();
+    $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
+    $report = buildDeviceAgeReport($forceRefresh);
     jsonSuccess($report);
 } catch (Exception $e) {
     http_response_code(500);
@@ -23,26 +31,34 @@ try {
     ]);
 }
 
-function buildDeviceAgeReport() {
+function buildDeviceAgeReport(bool $forceRefresh = false) {
     $warnings = [];
-    $source = 'api';
+    $source = 'cache';
+    $cacheAgeSeconds = null;
 
-    $devices = fetchAllDevices();
+    // Prefer cache for completeness; fallback to live query/API
+    if (!$forceRefresh) {
+        $devices = fetchDevicesFromCache($cacheAgeSeconds);
+    } else {
+        $devices = [];
+    }
+
     if (empty($devices)) {
-        $warnings[] = 'Primary API (OAuth) returned no devices; trying query endpoint';
+        $warnings[] = 'Cache empty or force refresh requested; using live query endpoint';
+        $source = 'live-query';
         $devices = fetchAllDevicesViaQuery();
-        if (!empty($devices)) {
-            $source = 'api-query';
-        }
     }
+
     if (empty($devices)) {
-        $warnings[] = 'API returned no devices; falling back to cache';
-        $source = 'cache';
-        $devices = fetchDevicesFromCache();
+        $warnings[] = 'Query endpoint returned no devices; falling back to OAuth helper';
+        $source = 'live-api';
+        $devices = fetchAllDevices();
     }
+
     if (empty($devices)) {
-        $warnings[] = 'Cache is empty or unavailable; no devices to process';
+        $warnings[] = 'No devices available from cache or live API; cannot compute age metrics';
     }
+
     $now = new DateTimeImmutable('now');
 
     $summary = [
@@ -61,6 +77,7 @@ function buildDeviceAgeReport() {
 
     $customers = [];
     $ageSum = 0.0;
+    $deviceCountWithIp = 0;
 
     foreach ($devices as $device) {
         $summary['totalDevices']++;
@@ -93,8 +110,25 @@ function buildDeviceAgeReport() {
 
         $customers[$customerCode]['totalDevices']++;
 
+        // Prefer install date if available; fall back to serial decode
+        $installRaw = $device['Install'] ?? $device['install'] ?? $device['InstallDate'] ?? null;
+        $ageYears = null;
         $reason = null;
-        $ageYears = attemptAgeDecode($manufacturer, $serial, $now, $reason);
+
+        if ($installRaw) {
+            try {
+                $installDate = new DateTimeImmutable($installRaw);
+                $interval = $installDate->diff($now);
+                $ageYears = round($interval->y + ($interval->m / 12) + ($interval->d / 365.25), 2);
+            } catch (Exception $e) {
+                // Ignore parse errors and fall back to serial decode
+                $ageYears = null;
+            }
+        }
+
+        if ($ageYears === null) {
+            $ageYears = attemptAgeDecode($manufacturer, $serial, $now, $reason);
+        }
         $bucket = getAgeBucket($ageYears);
 
         $summary['buckets'][$bucket]++;
@@ -130,6 +164,7 @@ function buildDeviceAgeReport() {
         'generated_at' => (new DateTimeImmutable('now'))->format('c'),
         'total_devices_processed' => $summary['totalDevices'],
         'source' => $source,
+        'cache_age_seconds' => $cacheAgeSeconds,
         'warnings' => $warnings,
         'summary' => $summary,
         'customers' => array_values($customers)
@@ -144,8 +179,11 @@ function fetchAllDevices() {
 
     for ($page = 1; $page <= 500; $page++) {
         $response = callMPSAPI('Device/List', [
+            'DealerCode' => $dealerCode,
+            'FilterDealerCodes' => $dealerCode ? [$dealerCode] : null,
             'PageNumber' => $page,
-            'PageRows' => $pageRows
+            'PageRows' => $pageRows,
+            'SortColumn' => 'SerialNumber'
         ]);
 
         $chunk = extractDevicesFromResponse($response);
@@ -172,8 +210,11 @@ function fetchAllDevicesViaQuery() {
 
     for ($page = 1; $page <= 500; $page++) {
         $response = callMPSQuery('Device/List', [
+            'DealerCode' => $dealerCode,
+            'FilterDealerCodes' => $dealerCode ? [$dealerCode] : null,
             'PageNumber' => $page,
-            'PageRows' => $pageRows
+            'PageRows' => $pageRows,
+            'SortColumn' => 'SerialNumber'
         ]);
 
         $chunk = extractDevicesFromResponse($response);
@@ -192,11 +233,18 @@ function fetchAllDevicesViaQuery() {
     return $devices;
 }
 
-function fetchDevicesFromCache() {
+function fetchDevicesFromCache(?int &$cacheAgeSeconds = null) {
     $pdo = getDatabase();
     $exists = checkTableExistsLocal($pdo, 'mpsm_cache_devices');
     if (!$exists) {
         return [];
+    }
+
+    try {
+        $ageRow = $pdo->query("SELECT TIMESTAMPDIFF(SECOND, MAX(cached_at), NOW()) AS newest_age FROM mpsm_cache_devices")->fetch(PDO::FETCH_ASSOC);
+        $cacheAgeSeconds = isset($ageRow['newest_age']) ? (int)$ageRow['newest_age'] : null;
+    } catch (Exception $e) {
+        $cacheAgeSeconds = null;
     }
 
     $stmt = $pdo->query("
@@ -212,7 +260,8 @@ function fetchDevicesFromCache() {
                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Manufacturer')),
                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Make')),
                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Vendor')),
-                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Brand'))
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Brand')),
+                JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Product.Brand'))
             ) AS Manufacturer
         FROM mpsm_cache_devices
         WHERE is_uninstalled = 0
@@ -444,4 +493,6 @@ CHANGELOG
 - Added device-age-report.php to calculate device age from serial numbers per manufacturer rules and emit age-bucket metrics per customer and overall using live API pagination only.
 2025-12-03 Codex
 - Added query-endpoint fallback, cache fallback, manufacturer extraction from Product.Brand, and diagnostics (source/warnings/unknownReasons) to handle empty cache/API responses and surface decode coverage.
+2025-12-03 Codex
+- Added secret bypass and force flag, made cache-first (with cache age), then live-query, then API fallback; added install-date preference for age math and vendor DealerCode filters for accuracy.
 */

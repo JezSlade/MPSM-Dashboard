@@ -17,6 +17,7 @@ if (!$authBypassed) {
 }
 
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
+$summaryOnly = isset($_GET['summaryOnly']) && $_GET['summaryOnly'] === '1';
 
 try {
     $cacheKey = 'duplicate-ips-analysis';
@@ -30,19 +31,22 @@ try {
             if ($data && isset($data['timestamp'])) {
                 $age = time() - $data['timestamp'];
                 if ($age < $cacheTTL) {
-                    jsonSuccess([
-                        'duplicates' => $data['duplicates'],
+                    $payload = [
                         'summary' => $data['summary'],
                         'cached' => true,
                         'cache_age_seconds' => $age
-                    ]);
+                    ];
+                    if (!$summaryOnly) {
+                        $payload['duplicates'] = $data['duplicates'];
+                    }
+                    jsonSuccess($payload);
                 }
             }
         }
     }
 
-    // Build fresh analysis
-    $result = analyzeDuplicateIPs();
+    // Build fresh analysis (cache-first, live fallback)
+    $result = analyzeDuplicateIPs($forceRefresh);
 
     // Cache result
     cacheStore($cacheKey, json_encode([
@@ -51,54 +55,189 @@ try {
         'summary' => $result['summary']
     ]));
 
-    jsonSuccess([
-        'duplicates' => $result['duplicates'],
+    $payload = [
         'summary' => $result['summary'],
         'cached' => false,
-        'cache_age_seconds' => 0
-    ]);
+        'cache_age_seconds' => $result['summary']['cache_age_seconds']
+    ];
+
+    if (!$summaryOnly) {
+        $payload['duplicates'] = $result['duplicates'];
+    }
+
+    jsonSuccess($payload);
 
 } catch (Exception $e) {
     error_log("Duplicate IPs API Error: " . $e->getMessage());
     jsonError("Failed to analyze duplicate IPs: " . $e->getMessage());
 }
 
-function analyzeDuplicateIPs() {
+function analyzeDuplicateIPs(bool $forceRefresh = false) {
+    $cacheAgeSeconds = null;
+    $source = 'cache';
+
+    // Prefer cache table for dealership-wide accuracy and speed
+    $devices = fetchDevicesFromCache($cacheAgeSeconds);
+
+    // Force or fallback to live API if cache empty/stale
+    if ($forceRefresh || empty($devices)) {
+        $source = 'live-query';
+        $devices = fetchDevicesViaQuery();
+    }
+
+    // Last resort: legacy API helper
+    if (empty($devices)) {
+        $source = 'live-api';
+        $devices = fetchDevicesViaApi();
+    }
+
+    if (empty($devices)) {
+        throw new Exception('No devices returned from cache or API');
+    }
+
+    $report = buildDuplicateReport($devices);
+    $report['summary']['source'] = $source;
+    $report['summary']['cache_age_seconds'] = $cacheAgeSeconds;
+
+    return $report;
+}
+
+function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
+    $pdo = getDatabase();
+
+    // Check cache presence
+    try {
+        $ageRow = $pdo->query("SELECT TIMESTAMPDIFF(SECOND, MAX(cached_at), NOW()) AS newest_age FROM mpsm_cache_devices")->fetch(PDO::FETCH_ASSOC);
+        $cacheAgeSeconds = isset($ageRow['newest_age']) ? (int)$ageRow['newest_age'] : null;
+    } catch (Exception $e) {
+        $cacheAgeSeconds = null;
+    }
+
+    try {
+        $stmt = $pdo->query("
+            SELECT serial_number, customer_code, device_data, cached_at
+            FROM mpsm_cache_devices
+            WHERE is_uninstalled = 0
+              AND JSON_EXTRACT(device_data, '$.IpAddress') IS NOT NULL
+              AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) NOT IN ('', '0.0.0.0', 'N/A')
+        ");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+
+    $devices = [];
+    foreach ($rows as $row) {
+        $data = json_decode($row['device_data'] ?? '', true) ?: [];
+        $devices[] = [
+            'SerialNumber' => $data['SerialNumber'] ?? $row['serial_number'],
+            'CustomerCode' => $row['customer_code'] ?? ($data['CustomerCode'] ?? 'UNKNOWN'),
+            'CustomerName' => $data['CustomerName'] ?? $data['CustomerDescription'] ?? ($row['customer_code'] ?? 'UNKNOWN'),
+            'IpAddress' => $data['IpAddress'] ?? null,
+            'Model' => $data['Model'] ?? ($data['Product']['Model'] ?? 'Unknown'),
+            'Location' => $data['Location'] ?? ($data['OfficeName'] ?? ($data['Department'] ?? 'N/A')),
+            'Department' => $data['Department'] ?? null,
+            'AssetNumber' => $data['AssetNumber'] ?? null,
+            'InstallStatus' => $data['InstallStatus'] ?? null,
+            'Install' => $data['Install'] ?? null,
+            'LastContact' => $data['LastContact'] ?? null
+        ];
+    }
+
+    return $devices;
+}
+
+function fetchDevicesViaQuery(): array {
     $dealerCode = DEFAULT_DEALER_CODE;
-
-    // Fetch all devices with pagination
-    // CRITICAL: Vendor API hard-limits to 100 devices per page
     $allDevices = [];
-    $pageNumber = 1;
-    $pageRows = 100;   // Vendor hard-limit
-    $maxPages = 600;   // Safety limit (~60,000 devices max)
+    $pageRows = 100;   // vendor hard-limit
+    $emptyStreak = 0;
+    $maxPages = 600;   // ~60k devices
 
-    do {
-        $pageDevices = callMPSQuery('Device/List', [
+    for ($page = 1; $page <= $maxPages; $page++) {
+        $response = callMPSQuery('Device/List', [
             'DealerCode' => $dealerCode,
             'FilterDealerCodes' => [$dealerCode],
-            'PageNumber' => $pageNumber,
+            'PageNumber' => $page,
             'PageRows' => $pageRows,
             'SortColumn' => 'SerialNumber'
         ]);
 
-        if (!$pageDevices || !is_array($pageDevices) || count($pageDevices) === 0) {
-            break;  // No more devices
+        $chunk = normalizeDeviceListResponse($response);
+        if (empty($chunk)) {
+            $emptyStreak++;
+            if ($emptyStreak >= 2) {
+                break;
+            }
+            continue;
         }
 
-        $allDevices = array_merge($allDevices, $pageDevices);
-        $pageNumber++;
+        $emptyStreak = 0;
+        $allDevices = array_merge($allDevices, $chunk);
+    }
 
-    } while ($pageNumber <= $maxPages);
+    return $allDevices;
+}
 
+function fetchDevicesViaApi(): array {
+    $allDevices = [];
+    $pageRows = 100;
+    $emptyStreak = 0;
+    $maxPages = 600;
+
+    for ($page = 1; $page <= $maxPages; $page++) {
+        $response = callMPSAPI('Device/List', [
+            'PageNumber' => $page,
+            'PageRows' => $pageRows
+        ]);
+
+        $chunk = normalizeDeviceListResponse($response);
+        if (empty($chunk)) {
+            $emptyStreak++;
+            if ($emptyStreak >= 2) {
+                break;
+            }
+            continue;
+        }
+
+        $emptyStreak = 0;
+        $allDevices = array_merge($allDevices, $chunk);
+    }
+
+    return $allDevices;
+}
+
+function normalizeDeviceListResponse($response): array {
+    if (!$response || !is_array($response)) {
+        return [];
+    }
+
+    if (isset($response['data']) && is_array($response['data'])) {
+        return $response['data'];
+    }
+
+    if (isset($response['Result']) && is_array($response['Result'])) {
+        return $response['Result'];
+    }
+
+    if (isset($response[0])) {
+        return $response;
+    }
+
+    return [];
+}
+
+function buildDuplicateReport(array $allDevices): array {
     // CRITICAL: Group by CUSTOMER first, then by IP within each customer
     // Duplicate IPs are only problematic WITHIN the same customer
     $customerGroups = [];
     $validDevices = [];
+    $seen = [];
 
     foreach ($allDevices as $device) {
         // Skip uninstalled devices
-        if (!empty($device['Uninstall'])) {
+        $installStatus = strtolower($device['InstallStatus'] ?? '');
+        if (!empty($device['Uninstall']) || $installStatus === 'uninstalled') {
             continue;
         }
 
@@ -109,11 +248,17 @@ function analyzeDuplicateIPs() {
             continue;
         }
 
-        // Track valid devices
-        $validDevices[] = $device;
-
         $customerCode = $device['CustomerCode'] ?? 'Unknown';
         $customerName = $device['CustomerName'] ?? 'Unknown';
+        $serial = $device['SerialNumber'] ?? 'Unknown';
+        $dedupeKey = "{$customerCode}|{$serial}|{$ip}";
+        if (isset($seen[$dedupeKey])) {
+            continue; // de-dup same device repeated in feed
+        }
+        $seen[$dedupeKey] = true;
+
+        // Track valid devices count
+        $validDevices[] = true;
 
         // Group by customer, then by IP
         if (!isset($customerGroups[$customerCode])) {
@@ -129,7 +274,7 @@ function analyzeDuplicateIPs() {
         }
 
         $customerGroups[$customerCode]['ipGroups'][$ip][] = [
-            'serialNumber' => $device['SerialNumber'] ?? 'Unknown',
+            'serialNumber' => $serial,
             'model' => $device['Model'] ?? 'Unknown',
             'customerCode' => $customerCode,
             'customerName' => $customerName,
@@ -138,7 +283,7 @@ function analyzeDuplicateIPs() {
             'assetNumber' => $device['AssetNumber'] ?? null,
             'install' => $device['Install'] ?? null,
             'lastContact' => $device['LastContact'] ?? null,
-            'status' => determineDeviceStatus($device)
+            'status' => determineDeviceStatusFromContact($device['LastContact'] ?? null)
         ];
     }
 
@@ -162,6 +307,7 @@ function analyzeDuplicateIPs() {
                     'devices' => $devices,
                     'customerCode' => $customerData['customerCode'],
                     'customerName' => $customerData['customerName'],
+                    'customerCount' => 1,
                     'severity' => calculateSeverity(count($devices)),
                     'affectedCustomers' => [$customerData['customerName']] // Always single customer
                 ];
@@ -193,7 +339,9 @@ function analyzeDuplicateIPs() {
             'medium' => count(array_filter($duplicates, fn($d) => $d['severity'] === 'medium')),
             'low' => count(array_filter($duplicates, fn($d) => $d['severity'] === 'low'))
         ],
-        'topOffenders' => array_slice($duplicates, 0, 5) // Top 5 worst IPs
+        'topOffenders' => array_slice($duplicates, 0, 5), // Top 5 worst IPs
+        'source' => null,
+        'cache_age_seconds' => null
     ];
 
     return [
@@ -202,22 +350,25 @@ function analyzeDuplicateIPs() {
     ];
 }
 
-function determineDeviceStatus($device) {
-    $lastContact = $device['LastContact'] ?? null;
+function determineDeviceStatusFromContact(?string $lastContact): string {
     if (!$lastContact) {
         return 'unknown';
     }
 
     $contactTime = strtotime($lastContact);
+    if ($contactTime === false) {
+        return 'unknown';
+    }
+
     $hoursSince = (time() - $contactTime) / 3600;
 
     if ($hoursSince <= 24) {
         return 'online';
     } elseif ($hoursSince <= 168) { // 7 days
         return 'recent';
-    } else {
-        return 'ghost';
     }
+
+    return 'ghost';
 }
 
 function calculateSeverity($deviceCount) {
@@ -246,4 +397,8 @@ CHANGELOG
   * Multiple customers can have same IP (e.g., 192.168.1.1) - this is normal
   * Only flag as duplicate when 2+ devices share IP at SAME customer location
   * Grouped by customer first, then by IP within each customer
+2025-12-03 Codex
+- Switched to cache-first analysis with live query/API fallback, added cache age/source metadata, and kept dealership-wide scope while filtering out uninstalled/invalid-IP devices.
+- Normalized Device/List parsing to the mps-api/query shape and hardened pagination to vendor limits.
+- Added customerCount field for UI and improved status calculation based on LastContact.
 */

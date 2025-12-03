@@ -18,6 +18,7 @@ if (!$authBypassed) {
 }
 
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
+$source = 'live_api';
 
 try {
     $cacheKey = 'customer-portfolio';
@@ -35,27 +36,39 @@ try {
                         'customers' => $data['customers'],
                         'total' => count($data['customers']),
                         'cached' => true,
-                        'cache_age_seconds' => $age
+                        'cache_age_seconds' => $age,
+                        'cache_source' => $data['source'] ?? 'unknown'
                     ]);
                 }
             }
         }
     }
 
-    // Build fresh portfolio
-    $customers = buildCustomerPortfolio();
+    $pdo = getDatabase();
+    $cacheDeviceCount = getCachedDeviceCount($pdo);
+
+    // Build fresh portfolio (prefer cache when populated)
+    if (!$forceRefresh && $cacheDeviceCount > 0) {
+        $customers = buildCustomerPortfolioFromCache($pdo);
+        $source = 'cache';
+    } else {
+        $customers = buildCustomerPortfolioLive();
+        $source = 'live_api';
+    }
 
     // Cache result
     cacheStore($cacheKey, json_encode([
         'timestamp' => time(),
-        'customers' => $customers
+        'customers' => $customers,
+        'source' => $source
     ]));
 
     jsonSuccess([
         'customers' => $customers,
         'total' => count($customers),
         'cached' => false,
-        'cache_age_seconds' => 0
+        'cache_age_seconds' => 0,
+        'cache_source' => $source
     ]);
 
 } catch (Exception $e) {
@@ -63,7 +76,7 @@ try {
     jsonError("Failed to generate customer portfolio: " . $e->getMessage());
 }
 
-function buildCustomerPortfolio() {
+function buildCustomerPortfolioLive() {
     $pdo = getDatabase();
 
     // Fetch all customers from API
@@ -127,6 +140,130 @@ function buildCustomerPortfolio() {
     }
 
     // Sort by health score (lowest first = needs attention)
+    usort($portfolio, function($a, $b) {
+        return $a['healthScore'] - $b['healthScore'];
+    });
+
+    return $portfolio;
+}
+
+function buildCustomerPortfolioFromCache($pdo) {
+    $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 50) : 20;
+
+    $stmt = $pdo->prepare("
+        SELECT
+            customer_code,
+            MAX(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerName'))) as customer_name,
+            COUNT(*) as total_devices,
+            SUM(CASE WHEN is_uninstalled = 0 THEN 1 ELSE 0 END) as active_devices,
+            SUM(CASE
+                    WHEN COALESCE(
+                        STR_TO_DATE(device_data->>'$.LastContact', '%Y-%m-%dT%H:%i:%s'),
+                        cached_at
+                    ) <= DATE_SUB(NOW(), INTERVAL 2 DAY)
+                    THEN 1 ELSE 0 END
+            ) as offline_devices,
+            SUM(CASE
+                    WHEN COALESCE(
+                        STR_TO_DATE(device_data->>'$.LastContact', '%Y-%m-%dT%H:%i:%s'),
+                        cached_at
+                    ) <= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    THEN 1 ELSE 0 END
+            ) as ghost_devices,
+            SUM(CASE
+                    WHEN device_data->>'$.AssetNumber' IS NULL
+                      OR device_data->>'$.AssetNumber' = ''
+                      OR device_data->>'$.AssetNumber' = 'null'
+                    THEN 1 ELSE 0 END
+            ) as missing_assets
+        FROM mpsm_cache_devices
+        WHERE customer_code IS NOT NULL
+          AND customer_code != ''
+          AND is_uninstalled = 0
+        GROUP BY customer_code
+        ORDER BY total_devices DESC
+        LIMIT :limit
+    ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $portfolio = [];
+
+    foreach ($rows as $row) {
+        $customerCode = $row['customer_code'];
+        $customerName = $row['customer_name'] ?: $customerCode;
+
+        $totalDevices = (int)$row['total_devices'];
+        $offlineDevices = (int)$row['offline_devices'];
+        $ghostDevices = (int)$row['ghost_devices'];
+        $missingAssets = (int)$row['missing_assets'];
+
+        // Duplicate IPs within customer
+        $dupStmt = $pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM (
+                SELECT device_data->>'$.IpAddress' as ip
+                FROM mpsm_cache_devices
+                WHERE customer_code = :customerCode
+                  AND is_uninstalled = 0
+                  AND device_data->>'$.IpAddress' IS NOT NULL
+                  AND device_data->>'$.IpAddress' != ''
+                  AND device_data->>'$.IpAddress' != 'null'
+                GROUP BY device_data->>'$.IpAddress'
+                HAVING COUNT(*) > 1
+            ) as duplicates
+        ");
+        $dupStmt->execute(['customerCode' => $customerCode]);
+        $duplicateIPs = (int)($dupStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+
+        // Panel errors in last 24h
+        $panelStmt = $pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM mpsm_panel_messages pm
+            INNER JOIN mpsm_cache_devices cd ON pm.device_serial = cd.serial_number
+            WHERE cd.customer_code = :customerCode
+              AND pm.received_at >= NOW() - INTERVAL 24 HOUR
+        ");
+        $panelStmt->execute(['customerCode' => $customerCode]);
+        $panelErrors24h = (int)($panelStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+
+        $connectorCount = 0;
+        $connectorsActive = 0;
+
+        $healthScore = calculateHealthScore([
+            'totalDevices' => $totalDevices,
+            'offlineDevices' => $offlineDevices,
+            'alertCount' => 0,
+            'connectorCount' => $connectorCount,
+            'connectorsActive' => $connectorsActive
+        ], [
+            'ghostDevices' => $ghostDevices,
+            'missingAssets' => $missingAssets,
+            'duplicateIPs' => $duplicateIPs,
+            'panelErrors24h' => $panelErrors24h
+        ]);
+
+        $portfolio[] = [
+            'code' => $customerCode,
+            'name' => $customerName,
+            'totalDevices' => $totalDevices,
+            'onlineDevices' => max(0, $totalDevices - $offlineDevices),
+            'offlineDevices' => $offlineDevices,
+            'alertCount' => 0,
+            'connectorCount' => $connectorCount,
+            'connectorsActive' => $connectorsActive,
+            'connectorsOffline' => max(0, $connectorCount - $connectorsActive),
+            'ghostDevices' => $ghostDevices,
+            'missingAssets' => $missingAssets,
+            'duplicateIPs' => $duplicateIPs,
+            'panelErrors24h' => $panelErrors24h,
+            'lastContact' => null,
+            'healthScore' => $healthScore,
+            'healthStatus' => getHealthStatus($healthScore)
+        ];
+    }
+
     usort($portfolio, function($a, $b) {
         return $a['healthScore'] - $b['healthScore'];
     });
@@ -339,6 +476,16 @@ function checkTableExists($pdo, $tableName) {
     }
 }
 
+function getCachedDeviceCount($pdo) {
+    try {
+        $stats = $pdo->query("SELECT COUNT(*) as count FROM mpsm_cache_devices WHERE is_uninstalled = 0")->fetch(PDO::FETCH_ASSOC);
+        return (int)($stats['count'] ?? 0);
+    } catch (Exception $e) {
+        error_log('getCachedDeviceCount error (portfolio): ' . $e->getMessage());
+        return 0;
+    }
+}
+
 /*
 CHANGELOG
 2025-12-02 Claude
@@ -347,4 +494,8 @@ CHANGELOG
 - Includes customer-specific metrics: ghost devices, missing assets, duplicate IPs, panel errors
 - Uses cached endpoints for performance (30-minute TTL)
 - Returns sorted list (lowest health score first = needs attention)
+2025-12-03 Codex
+- Added cache-first path to serve portfolio from mpsm_cache_devices when populated, falling back to live API only when empty or forced; cached payload now records its source.
+- Derived portfolio metrics from cache (offline/ghost/missing assets, duplicate IPs, panel errors) while defaulting connector/alert counts to zero when absent from cache to avoid blocking the UI.
+- Improved resiliency of cached responses by including cache_source metadata and keeping the TTL guard.
 */

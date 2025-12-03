@@ -273,15 +273,29 @@ if ($action === 'process' || $action === 'auto') {
             });
 
             // Call the API using the correct function
-            $response = callMPSAPI('Device/List', $params);
+            // Prefer the mps-api engine (handles OAuth and retries); fallback already handled in callMPSQuery
+            $response = callMPSQuery('Device/List', $params);
 
-            if (!$response || !isset($response['Result'])) {
+            if (!is_array($response)) {
                 throw new Exception("Invalid API response for page {$page}");
             }
 
-            $devices = $response['Result'];
-            $totalRows = $response['TotalRows'] ?? 0;
-            $totalPages = ($totalRows > 0) ? (int)ceil($totalRows / $perPage) : 1;
+            // mps-api/query returns {success, data, meta.total_rows}; legacy may return {Result, TotalRows}
+            if (isset($response['data']) && is_array($response['data'])) {
+                $devices = $response['data'];
+                $totalRows = $response['meta']['total_rows'] ?? $response['TotalRows'] ?? 0;
+            } elseif (isset($response['Result']) && is_array($response['Result'])) {
+                $devices = $response['Result'];
+                $totalRows = $response['TotalRows'] ?? 0;
+            } elseif (isset($response[0])) {
+                // Bare array of devices
+                $devices = $response;
+                $totalRows = 0;
+            } else {
+                throw new Exception("Invalid API response for page {$page}");
+            }
+
+            $totalPages = ($totalRows > 0) ? (int)ceil($totalRows / $perPage) : ($state['total_pages'] ?? null ?? 1);
 
             if ($state['total_pages'] === null) {
                 $state['total_pages'] = $totalPages;
@@ -345,16 +359,18 @@ if ($action === 'process' || $action === 'auto') {
     elseif ($state['status'] === 'fetching_drilldowns') {
         $devicesToFetch = $state['devices_to_fetch_drilldown'];
         $deviceIdMap = $state['device_id_map'] ?? [];
-        $index = $state['drilldown_index'];
         $chunkSize = 10; // Fetch 10 drill-downs per request
+        $totalToFetch = count($devicesToFetch);
+        $chunkBudgetSeconds = 90; // Process multiple chunks per invocation but stay under HTTP timeout
 
-        if ($index >= count($devicesToFetch)) {
-            // All drill-downs complete - move to cutover
-            $state['status'] = 'ready_for_cutover';
-            logMessage("Drill-down fetch complete. Ready for atomic cutover.");
-        } else {
+        while ($state['drilldown_index'] < $totalToFetch && (microtime(true) - $chunkStartTime) < $chunkBudgetSeconds) {
+            $index = $state['drilldown_index'];
             $chunk = array_slice($devicesToFetch, $index, $chunkSize);
-            logMessage("Fetching drill-downs {$index}-" . ($index + count($chunk)) . "/" . count($devicesToFetch));
+            if (empty($chunk)) {
+                break;
+            }
+
+            logMessage("Fetching drill-downs {$index}-" . ($index + count($chunk)) . "/{$totalToFetch}");
 
             foreach ($chunk as $serial) {
                 try {
@@ -378,7 +394,8 @@ if ($action === 'process' || $action === 'auto') {
                     }
 
                     // Call Device/Get with the correct Id parameter
-                    $apiResponse = callMPSAPI('Device/Get', ['Id' => $deviceId]);
+                    // Fetch drilldown via mps-api engine to avoid direct OAuth token issues
+                    $apiResponse = callMPSQuery('Device/Get', ['Id' => $deviceId]);
 
                     // MPS Cloud API wraps response in {Result: {...}, IsValid: bool, Errors: [...]}
                     // Extract the actual device data from the Result wrapper
@@ -430,6 +447,12 @@ if ($action === 'process' || $action === 'auto') {
             }
 
             $state['drilldown_index'] += count($chunk);
+        }
+
+        if ($state['drilldown_index'] >= $totalToFetch) {
+            // All drill-downs complete - move to cutover
+            $state['status'] = 'ready_for_cutover';
+            logMessage("Drill-down fetch complete. Ready for atomic cutover.");
         }
     }
 
@@ -534,4 +557,9 @@ CHANGELOG
 - Queried and enqueued every device that is not explicitly `uninstalled` so the drill-down stage actually runs once the device list completes (earlier we only queued devices claiming to be `installed` and never executed stage 2).
 2025-11-14 Codex
 - Hardened CLI detection so cron executions running via cgi-fcgi wrappers skip HTTP headers and return pure JSON to the router.
+2025-12-03 Codex
+- Swapped Device/List and Device/Get fetches to use the mps-api engine via callMPSQuery to avoid direct OAuth token timeouts; keeps refresh running even when vendor token endpoint is slow.
+- Normalized Device/List parsing to accept the mps-api/query shape ({success,data,meta.total_rows}) so pagination no longer flags valid pages as invalid.
+2025-12-03 Codex
+- Allow each invocation to process multiple drill-down chunks (90s budget) so helper/cron runs advance the queue faster without manual re-triggering.
 */
