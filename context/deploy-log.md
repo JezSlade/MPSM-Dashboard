@@ -205,3 +205,51 @@ CHANGELOG
   * Fixed response parsing: API returns data array directly, not nested in Customers/MpsDashboardCustomer
   * Cache table exists but is empty (0 devices), so APIs fall back to live MPS API
   * Live API now returns actual customer/device data instead of zeros
+
+2025-12-03 10:04:40 UTC
+- Command: curl -T cms/api/get-dealer-summary.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
+- Result: Success (uploaded pagination/cache-fallback fix for dealer summary)
+- Tests:
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/test-dealer-status.php -> ✅ DB connected, cache_devices exists but 0 rows; strategy = LIVE API fallback
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/test-dealer-data.php -> totals all 0, panelErrors24h=1087 (cache empty)
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/get-dealer-summary.php?force=1&secret=DEALER_API_2025 -> timed out (live fallback path still long when cache empty)
+- Notes: Cache needs repopulation (refresh-cache-enhanced.php) to avoid live API timeouts and restore full device totals on dealer.php.
+
+2025-12-03 10:09:00 UTC
+- Command: curl -T cms/api/get-customer-portfolio.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-customer-portfolio.php
+- Result: Success (cache-first portfolio path deployed)
+- Tests:
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/get-customer-portfolio.php?secret=DEALER_API_2025&limit=5 -> success (live_api source, total=3, connectors/alerts present); cache still empty so live fallback used
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/cache-status-report.php -> Total Devices Cached: 0 (refresh still in progress)
+- Notes: Portfolio API now serves from DB cache when populated; cached payload records source; live fallback remains until cache repopulated.
+
+2025-12-03 10:33:00 UTC
+- Command: curl -T cms/api/refresh-cache-chunked.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php
+- Result: Success (swapped device/drilldown fetches to use mps-api/query engine to avoid direct OAuth timeouts)
+- Tests (live):
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1&skipDrilldown=1 -> HTTP 500 (enhanced path still failing; do not use)
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=start -> initialized new run; state shows OAuth timeout error before fix
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025 -> after deploy, state progressed to page 3, devices_cached=200 (live mps-api engine path now fetching)
+  * curl https://mpsm.resolutionsbydesign.us/cms/api/check-cache-progress.php -> shows status fetching_devices, devices_cached moving from 0 → 200; previous errors recorded were OAuth timeouts and one invalid response on page 3
+- Notes: Root cause identified—direct OAuth token endpoint times out, leaving cache empty after truncation. Chunked refresh now uses the working mps-api/query engine. Allow chunked run to continue or rerun helper until cutover completes, then verify cache counts.
+
+2025-12-03 14:40:00 UTC (09:40 EST)
+- Commit: 39b13e9 - "Add Chart.js visualizations to dealer dashboard"
+- Method: GitHub Actions (git push to main)
+- Status: ✅ DEPLOYED
+- Files Modified:
+  * cms/dealer.php - Added Visual Analytics section with 4 chart canvases
+  * cms/assets/dealer.css - Added .charts-grid and .chart-card styling
+  * cms/assets/dealer.js - Added renderCharts() function (291 lines, lines 237-521)
+  * cms/api/get-dealer-summary.php - Changed to process ALL 82 customers (not sampled)
+- Features:
+  * 4 animated Chart.js charts (Fleet Age, Device Health, Data Quality, Connector Health)
+  * Smooth easeInOutQuart animations (1-second duration)
+  * Memory-safe chart instance management (destroys on re-render)
+  * Responsive grid layout (2x2 desktop, stacked mobile)
+  * Color-coded severity indicators
+- Backend Fix:
+  * Process all 82 customers instead of extrapolating from 10
+  * Removed $sampleCustomers undefined variable error
+  * Ensures accurate dealer-wide metrics
+- Notes: Chart.js 4.4.0 already loaded via CDN in dealer.php. Charts render on page load and data refresh.
