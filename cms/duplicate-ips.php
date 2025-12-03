@@ -89,12 +89,8 @@ $preferences = getUserPreferences($userId);
             </div>
             <div class="charts-grid">
                 <div class="chart-card">
-                    <h3>Severity Distribution</h3>
-                    <canvas id="severity-chart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Top 10 Duplicate IPs</h3>
-                    <canvas id="top-ips-chart"></canvas>
+                    <h3>Customers with Duplicate IPs</h3>
+                    <canvas id="customers-chart"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3>Devices by Status</h3>

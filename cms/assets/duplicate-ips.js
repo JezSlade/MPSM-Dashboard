@@ -16,8 +16,7 @@ const dupIPState = {
 
 // Chart instances
 let chartInstances = {
-    severity: null,
-    topIPs: null,
+    customers: null,
     status: null,
     health: null
 };
@@ -199,94 +198,75 @@ function renderCharts(duplicates, summary) {
         danger: '#e74c3c',
         info: '#3498db',
         neutral: '#95a5a6',
-        critical: '#c0392b'
+        critical: '#c0392b',
+        primary: '#3498db'
     };
 
-    // Chart 1: Severity Distribution (Doughnut)
-    const severityCtx = document.getElementById('severity-chart');
-    if (severityCtx) {
-        chartInstances.severity = new Chart(severityCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Critical (10+)', 'High (5-9)', 'Medium (3-4)', 'Low (2)'],
-                datasets: [{
-                    data: [
-                        summary.severityBreakdown.critical || 0,
-                        summary.severityBreakdown.high || 0,
-                        summary.severityBreakdown.medium || 0,
-                        summary.severityBreakdown.low || 0
-                    ],
-                    backgroundColor: [colors.critical, colors.danger, colors.warning, colors.info],
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'bottom', labels: { padding: 15, font: { size: 11 } } },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return `${context.label}: ${value} IPs (${percentage}%)`;
+    // Chart 1: Customers with Duplicate IPs (Horizontal Bar)
+    const customersCtx = document.getElementById('customers-chart');
+    if (customersCtx && duplicates.length > 0) {
+        // Group duplicates by customer
+        const customerMap = {};
+        duplicates.forEach(dup => {
+            dup.affectedCustomers.forEach(customerName => {
+                if (!customerMap[customerName]) {
+                    customerMap[customerName] = { name: customerName, duplicateIPs: 0, devices: 0 };
+                }
+                customerMap[customerName].duplicateIPs++;
+                customerMap[customerName].devices += dup.deviceCount;
+            });
+        });
+
+        // Convert to sorted array (top 10 by device count)
+        const customerList = Object.values(customerMap)
+            .sort((a, b) => b.devices - a.devices)
+            .slice(0, 10);
+
+        if (customerList.length > 0) {
+            chartInstances.customers = new Chart(customersCtx, {
+                type: 'bar',
+                data: {
+                    labels: customerList.map(c => c.name.substring(0, 25)),
+                    datasets: [{
+                        label: 'Duplicate IPs',
+                        data: customerList.map(c => c.duplicateIPs),
+                        backgroundColor: colors.danger,
+                        borderWidth: 0,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const customer = customerList[context.dataIndex];
+                                    return `${customer.duplicateIPs} duplicate IPs (${customer.devices} devices)`;
+                                }
                             }
                         }
-                    }
-                },
-                animation: { duration: 1000, easing: 'easeInOutQuart' }
-            }
-        });
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Number of Duplicate IPs' },
+                            ticks: { font: { size: 10 }, stepSize: 1 }
+                        },
+                        y: { ticks: { font: { size: 10 } } }
+                    },
+                    animation: { duration: 1000, easing: 'easeInOutQuart' }
+                }
+            });
+        } else {
+            customersCtx.parentElement.innerHTML = '<p class="text-muted" style="padding: 2rem; text-align: center;">No customer data available</p>';
+        }
     }
 
-    // Chart 2: Top 10 Duplicate IPs (Horizontal Bar)
-    const topIPsCtx = document.getElementById('top-ips-chart');
-    if (topIPsCtx && duplicates.length > 0) {
-        const top10 = duplicates.slice(0, 10);
-        chartInstances.topIPs = new Chart(topIPsCtx, {
-            type: 'bar',
-            data: {
-                labels: top10.map(d => d.ipAddress),
-                datasets: [{
-                    label: 'Device Count',
-                    data: top10.map(d => d.deviceCount),
-                    backgroundColor: top10.map(d => {
-                        if (d.severity === 'critical') return colors.critical;
-                        if (d.severity === 'high') return colors.danger;
-                        if (d.severity === 'medium') return colors.warning;
-                        return colors.info;
-                    }),
-                    borderWidth: 0,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.parsed.x} devices`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { beginAtZero: true, ticks: { font: { size: 10 } } },
-                    y: { ticks: { font: { size: 10 } } }
-                },
-                animation: { duration: 1000, easing: 'easeInOutQuart' }
-            }
-        });
-    }
-
-    // Chart 3: Devices by Status (Pie)
+    // Chart 2: Devices by Status (Pie)
     const statusCtx = document.getElementById('status-chart');
     if (statusCtx && duplicates.length > 0) {
         const statusCounts = { online: 0, recent: 0, ghost: 0, unknown: 0 };
@@ -333,7 +313,7 @@ function renderCharts(duplicates, summary) {
         });
     }
 
-    // Chart 4: Affected vs Healthy (Doughnut)
+    // Chart 3: Affected vs Healthy (Doughnut)
     const healthCtx = document.getElementById('health-chart');
     if (healthCtx) {
         chartInstances.health = new Chart(healthCtx, {
@@ -410,7 +390,7 @@ function renderDuplicatesTable(duplicates) {
                     <div class="duplicate-header">
                         <div class="duplicate-ip">
                             <i class="fas fa-network-wired"></i>
-                            <strong>${escapeHtml(dup.ipAddress)}</strong>
+                            <strong style="font-size: 1.25rem; color: var(--accent-primary);">${escapeHtml(dup.ipAddress)}</strong>
                             <span class="severity-badge severity-${dup.severity}">${dup.severity.toUpperCase()}</span>
                         </div>
                         <div class="duplicate-stats">
@@ -422,6 +402,7 @@ function renderDuplicatesTable(duplicates) {
                         <table class="devices-table">
                             <thead>
                                 <tr>
+                                    <th>IP Address</th>
                                     <th>Serial Number</th>
                                     <th>Model</th>
                                     <th>Customer</th>
@@ -432,11 +413,12 @@ function renderDuplicatesTable(duplicates) {
                             <tbody>
                                 ${dup.devices.map(dev => `
                                     <tr>
+                                        <td><strong style="font-family: 'Courier New', monospace; color: var(--accent-primary);">${escapeHtml(dup.ipAddress)}</strong></td>
                                         <td><strong>${escapeHtml(dev.serialNumber)}</strong></td>
                                         <td>${escapeHtml(dev.model)}</td>
                                         <td>
-                                            ${escapeHtml(dev.customerName)}<br>
-                                            <small style="color: var(--text-muted);">${escapeHtml(dev.customerCode)}</small>
+                                            <strong>${escapeHtml(dev.customerName)}</strong><br>
+                                            <small style="color: var(--text-secondary);">${escapeHtml(dev.customerCode)}</small>
                                         </td>
                                         <td>${escapeHtml(dev.location || 'N/A')}</td>
                                         <td>
@@ -510,6 +492,11 @@ async function fetchJson(url, options = {}) {
     return data;
 }
 
+function showToast(message, type = 'info') {
+    console.log(`[Toast] ${type}: ${message}`);
+    // Toast implementation would go here
+}
+
 function toggleTheme() {
     const html = document.documentElement;
     const currentTheme = html.getAttribute('data-theme');
@@ -546,10 +533,9 @@ console.log('[DupIP] Script loaded');
 /*
 CHANGELOG
 2025-12-03 Claude
-- Initial implementation: Duplicate IPs dashboard JavaScript
-- Fetches data from get-duplicate-ips.php API
-- Renders 4 Chart.js visualizations
-- Dynamic table with expandable device details
-- Search and severity filtering
-- Reuses shared authentication and theme functions
+- HOTFIX: Changed charts to show customers with duplicate IPs (not severity)
+- HOTFIX: Removed worthless "Top 10 IPs" chart
+- HOTFIX: Added IP Address as first column in devices table for clarity
+- HOTFIX: Made IP addresses more prominent with monospace font and color
+- Charts now: Customers with Duplicate IPs, Device Status, Affected vs Healthy
 */
