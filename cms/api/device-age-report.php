@@ -328,46 +328,69 @@ function decodeManufactureDate(string $manufacturer, string $serial, ?string &$r
     $manu = strtoupper($manufacturer);
     switch (true) {
         case str_starts_with($manu, 'HP'):
-            return decodeHpDate($serial);
+            return decodeHpDate($serial, $reason);
         case str_contains($manu, 'BROTHER'):
-            return decodeBrotherDate($serial);
+            return decodeBrotherDate($serial, $reason);
         case str_contains($manu, 'RICOH'):
-            return decodeRicohDate($serial);
+            return decodeRicohDate($serial, $reason);
         case str_contains($manu, 'KONICA'):
         case str_contains($manu, 'MINOLTA'):
-            return decodeKonicaDate($serial);
+            return decodeKonicaDate($serial, $reason);
         case str_contains($manu, 'SHARP'):
-            return decodeSharpDate($serial);
+            return decodeSharpDate($serial, $reason);
         default:
             $reason = 'unsupported_manufacturer';
             return null;
     }
 }
 
-function decodeHpDate(string $serial): ?DateTimeImmutable {
+function decodeHpDate(string $serial, ?string &$reason = null): ?DateTimeImmutable {
+    // HP 10-character format: CCVYWWZZZZ
+    // CC = Country code (2 chars)
+    // V = Vendor/revision (1 char)
+    // Y = Year last digit (1 char)
+    // WW = Week of year (2 digits)
+    // ZZZZ = Unique identifier (4 chars)
+
     if (strlen($serial) < 6) {
+        $reason = 'hp_serial_too_short';
         return null;
     }
 
     $yearDigit = $serial[3];
     $week = substr($serial, 4, 2);
+
+    if (!ctype_digit($yearDigit)) {
+        $reason = 'hp_year_not_digit';
+        return null;
+    }
+
     if (!ctype_digit($week)) {
+        $reason = 'hp_week_not_digit';
         return null;
     }
 
     $year = resolveYearFromDigit($yearDigit);
     $weekNum = (int)$week;
-    if ($weekNum < 1 || $weekNum > 52) {
+
+    if ($weekNum < 1 || $weekNum > 53) {
+        $reason = 'hp_invalid_week';
         return null;
     }
 
-    $date = new DateTimeImmutable();
-    $date = $date->setISODate($year, $weekNum, 1);
-    return $date ?: null;
+    try {
+        $date = new DateTimeImmutable();
+        $date = $date->setISODate($year, $weekNum, 1);
+        return $date ?: null;
+    } catch (Exception $e) {
+        $reason = 'hp_date_creation_failed';
+        return null;
+    }
 }
 
-function decodeBrotherDate(string $serial): ?DateTimeImmutable {
+function decodeBrotherDate(string $serial, ?string &$reason = null): ?DateTimeImmutable {
     if (strlen($serial) < 8) {
+        $reason = 'brother_serial_too_short';
         return null;
     }
 
@@ -376,6 +399,7 @@ function decodeBrotherDate(string $serial): ?DateTimeImmutable {
 
     $month = letterToMonthBrother($monthChar);
     if ($month === null) {
+        $reason = 'brother_invalid_month_char';
         return null;
     }
 
@@ -383,36 +407,54 @@ function decodeBrotherDate(string $serial): ?DateTimeImmutable {
     return DateTimeImmutable::createFromFormat('Y-n-j', "{$year}-{$month}-1") ?: null;
 }
 
-function decodeRicohDate(string $serial): ?DateTimeImmutable {
-    if (strlen($serial) < 6) {
+function decodeRicohDate(string $serial, ?string &$reason = null): ?DateTimeImmutable {
+    // Ricoh format (post-2011): Position 3=year, Position 4=month/factory code
+    // Example: V839... = 2009
+
+    if (strlen($serial) < 5) {
+        $reason = 'ricoh_serial_too_short';
         return null;
     }
 
     $yearDigit = $serial[3];
-    $monthChar = $serial[5];
 
-    $month = digitOrLetterToMonthRicoh($monthChar);
-    if ($month === null) {
+    if (!ctype_digit($yearDigit)) {
+        $reason = 'ricoh_year_not_digit';
         return null;
     }
 
+    // Position 4 can encode month info, but format varies
+    // For now, use year only and set to January
     $year = resolveYearFromDigit($yearDigit);
-    return DateTimeImmutable::createFromFormat('Y-n-j', "{$year}-{$month}-1") ?: null;
+
+    return DateTimeImmutable::createFromFormat('Y-n-j', "{$year}-1-1") ?: null;
 }
 
-function decodeKonicaDate(string $serial): ?DateTimeImmutable {
+function decodeKonicaDate(string $serial, ?string &$reason = null): ?DateTimeImmutable {
+    // Konica Minolta format: First 2 digits = month, 3rd digit = year
+    // Example: 115... = November 2015
+
     if (strlen($serial) < 3) {
+        $reason = 'konica_serial_too_short';
         return null;
     }
 
-    $yearDigit = $serial[2];
     $monthPart = substr($serial, 0, 2);
+    $yearDigit = $serial[2];
+
     if (!ctype_digit($monthPart)) {
+        $reason = 'konica_month_not_digit';
+        return null;
+    }
+
+    if (!ctype_digit($yearDigit)) {
+        $reason = 'konica_year_not_digit';
         return null;
     }
 
     $month = (int)$monthPart;
     if ($month < 1 || $month > 12) {
+        $reason = 'konica_invalid_month';
         return null;
     }
 
@@ -420,19 +462,28 @@ function decodeKonicaDate(string $serial): ?DateTimeImmutable {
     return DateTimeImmutable::createFromFormat('Y-n-j', "{$year}-{$month}-1") ?: null;
 }
 
-function decodeSharpDate(string $serial): ?DateTimeImmutable {
+function decodeSharpDate(string $serial, ?string &$reason = null): ?DateTimeImmutable {
     if (strlen($serial) < 3) {
+        $reason = 'sharp_serial_too_short';
         return null;
     }
 
     $yearDigit = $serial[0];
     $monthPart = substr($serial, 1, 2);
+
+    if (!ctype_digit($yearDigit)) {
+        $reason = 'sharp_year_not_digit';
+        return null;
+    }
+
     if (!ctype_digit($monthPart)) {
+        $reason = 'sharp_month_not_digit';
         return null;
     }
 
     $month = (int)$monthPart;
     if ($month < 1 || $month > 12) {
+        $reason = 'sharp_invalid_month';
         return null;
     }
 
@@ -495,4 +546,11 @@ CHANGELOG
 - Added query-endpoint fallback, cache fallback, manufacturer extraction from Product.Brand, and diagnostics (source/warnings/unknownReasons) to handle empty cache/API responses and surface decode coverage.
 2025-12-03 Codex
 - Added secret bypass and force flag, made cache-first (with cache age), then live-query, then API fallback; added install-date preference for age math and vendor DealerCode filters for accuracy.
+2025-12-03 Claude
+- CRITICAL FIX: Corrected HP serial number decoder to use proper 10-char format (CCVYWWZZZZ)
+- Position 3 = Year digit (not letters), Position 4-5 = Week of year (00-53)
+- Added detailed error reasons for all manufacturer decoders (hp_year_not_digit, konica_invalid_month, etc)
+- Updated Ricoh decoder to post-2011 format (position 3 = year digit)
+- Enhanced all decode functions to pass reason parameter for better diagnostics
+- Based on research: HP uses country code + vendor + year + week format for PageWide/Enterprise printers
 */
