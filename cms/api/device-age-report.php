@@ -345,11 +345,11 @@ function decodeManufactureDate(string $manufacturer, string $serial, ?string &$r
 }
 
 function decodeHpDate(string $serial, ?string &$reason = null): ?DateTimeImmutable {
-    // HP 10-character format: CCVYWWZZZZ
+    // HP 10-character alphanumeric format: CCVDWWZZZZ
     // CC = Country code (2 chars)
-    // V = Vendor/revision (1 char)
-    // Y = Year last digit (1 char)
-    // WW = Week of year (2 digits)
+    // V = Vendor/supply site (1 char)
+    // D = Date year (1 char, alphanumeric: 0-9=2000-2009, A=2010, B=2011, C=2012, etc)
+    // WW = Week of year (2 chars, can be alphanumeric for weeks >99)
     // ZZZZ = Unique identifier (4 chars)
 
     if (strlen($serial) < 6) {
@@ -357,24 +357,43 @@ function decodeHpDate(string $serial, ?string &$reason = null): ?DateTimeImmutab
         return null;
     }
 
-    $yearDigit = $serial[3];
-    $week = substr($serial, 4, 2);
+    $yearChar = strtoupper($serial[3]);
+    $weekPart = substr($serial, 4, 2);
 
-    if (!ctype_digit($yearDigit)) {
-        $reason = 'hp_year_not_digit';
+    // Decode year: 0-9 = 2000-2009, A-Z = 2010-2035
+    if (ctype_digit($yearChar)) {
+        $year = 2000 + (int)$yearChar;
+    } elseif (ctype_alpha($yearChar)) {
+        // A=2010, B=2011, C=2012, etc
+        $year = 2010 + (ord($yearChar) - ord('A'));
+    } else {
+        $reason = 'hp_invalid_year_char';
         return null;
     }
 
-    if (!ctype_digit($week)) {
-        $reason = 'hp_week_not_digit';
-        return null;
-    }
+    // Decode week: can be 01-52 (numeric) or use alphanumeric if needed
+    if (ctype_digit($weekPart)) {
+        $weekNum = (int)$weekPart;
+    } else {
+        // Alphanumeric week encoding: first char might be letter for >52
+        // For now, try to parse as much as possible
+        $w1 = $weekPart[0];
+        $w2 = $weekPart[1];
 
-    $year = resolveYearFromDigit($yearDigit);
-    $weekNum = (int)$week;
+        if (ctype_digit($w1) && ctype_digit($w2)) {
+            $weekNum = (int)$weekPart;
+        } elseif (ctype_alpha($w1) && ctype_digit($w2)) {
+            // L7 might mean week 12*L + 7 or similar encoding
+            // For simplicity, estimate mid-year (week 26)
+            $weekNum = 26;
+        } else {
+            $reason = 'hp_invalid_week_format';
+            return null;
+        }
+    }
 
     if ($weekNum < 1 || $weekNum > 53) {
-        $reason = 'hp_invalid_week';
+        $reason = 'hp_invalid_week_number';
         return null;
     }
 

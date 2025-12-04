@@ -25,7 +25,7 @@ Establish one consistent, auditable workflow inside VS Code so multiple agents c
 ## 3) Roles
 - Builder Agent
   - Implements approved plans. Writes full files. Keeps edits small and cohesive. Never marks fixed without user confirmation on LIVE.
-- Validator Agent (Codex)
+- Validator Agent
   - Performs alignment, checks plans for scope creep, verifies patch diffs, runs tests, reviews logs, blocks deploy until criteria are met, and requires explicit user sign off before “done”.
 
 ## 4) Global guardrails
