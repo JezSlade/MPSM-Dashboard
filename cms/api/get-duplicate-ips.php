@@ -16,6 +16,38 @@ if (!$authBypassed) {
     requireAuth();
 }
 
+if (!function_exists('callMpsQueryWithMeta')) {
+    function callMpsQueryWithMeta(string $action, array $params = []): array {
+        $payload = json_encode([
+            'action' => $action,
+            'params' => $params
+        ]);
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/json',
+                'content' => $payload,
+                'timeout' => 25,
+                'ignore_errors' => true
+            ]
+        ]);
+
+        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+        if ($response === false) {
+            throw new Exception('Failed to reach mps-api/query');
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || !($decoded['success'] ?? false)) {
+            $errorMessage = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : 'Unknown query failure';
+            throw new Exception("Query failed: {$errorMessage}");
+        }
+
+        return $decoded;
+    }
+}
+
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 $summaryOnly = isset($_GET['summaryOnly']) && $_GET['summaryOnly'] === '1';
 
@@ -154,21 +186,27 @@ function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
 
 function fetchDevicesViaQuery(): array {
     $dealerCode = DEFAULT_DEALER_CODE;
+    $dealerFilter = ($dealerCode && strtoupper($dealerCode) !== 'TEST') ? $dealerCode : null;
     $allDevices = [];
     $pageRows = 100;   // vendor hard-limit
     $emptyStreak = 0;
     $maxPages = 600;   // ~60k devices
+    $totalPages = null;
 
     for ($page = 1; $page <= $maxPages; $page++) {
-        $response = callMPSQuery('Device/List', [
-            'DealerCode' => $dealerCode,
-            'FilterDealerCodes' => [$dealerCode],
-            'PageNumber' => $page,
-            'PageRows' => $pageRows,
-            'SortColumn' => 'SerialNumber'
-        ]);
+        try {
+            $response = callMpsQueryWithMeta('Device/List', array_filter([
+                'DealerCode' => $dealerFilter,
+                'FilterDealerCodes' => $dealerFilter ? [$dealerFilter] : null,
+                'PageNumber' => $page,
+                'PageRows' => $pageRows,
+                'SortColumn' => 'SerialNumber'
+            ]));
+        } catch (Exception $e) {
+            break;
+        }
 
-        $chunk = normalizeDeviceListResponse($response);
+        $chunk = normalizeDeviceListResponse($response['data'] ?? $response);
         if (empty($chunk)) {
             $emptyStreak++;
             if ($emptyStreak >= 2) {
@@ -179,6 +217,15 @@ function fetchDevicesViaQuery(): array {
 
         $emptyStreak = 0;
         $allDevices = array_merge($allDevices, $chunk);
+
+        if ($totalPages === null && isset($response['meta']['total_rows'])) {
+            $totalRows = (int)$response['meta']['total_rows'];
+            $totalPages = max(1, (int)ceil($totalRows / $pageRows));
+        }
+
+        if ($totalPages !== null && $page >= $totalPages) {
+            break;
+        }
     }
 
     return $allDevices;
@@ -410,4 +457,6 @@ CHANGELOG
 - Switched to cache-first analysis with live query/API fallback, added cache age/source metadata, and kept dealership-wide scope while filtering out uninstalled/invalid-IP devices.
 - Normalized Device/List parsing to the mps-api/query shape and hardened pagination to vendor limits.
 - Added customerCount field for UI and improved status calculation based on LastContact.
+2025-12-04 Codex
+- Only apply DealerCode/FilterDealerCodes when a real code is configured (not TEST) so live queries include all customers and devices, strip null params before calling Device/List to avoid upstream rejection, and drive pagination using meta.total_rows from mps-api/query.
 */

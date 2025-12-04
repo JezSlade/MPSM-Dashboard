@@ -6,7 +6,8 @@ This file tracks long-running or pending tasks delegated to the ollama-subagent 
 
 ## Background Monitors
 
-None currently active.
+- None currently active.
+- Manual loop (no PID) running via repeated `refresh-cache-chunked.php?action=auto` calls; primary agent is invoking directly, not a detached process.
 
 ## Pending Reviews
 
@@ -59,4 +60,10 @@ None currently pending.
 
 ## Last updated
 
-2025-12-04 - File created
+2025-12-04 - Added live cache loop note; still no detached monitors.
+
+<!--
+CHANGELOG
+2025-12-04 Codex
+- Logged active manual cache loop and clarified last-updated note.
+-->

@@ -53,7 +53,7 @@ if ($isCLI) {
     require_once dirname(__DIR__, 2) . '/bootstrap.php';
 }
 
-define('REFRESH_CACHE_CHUNKED_VERSION', '2025-11-22b');
+define('REFRESH_CACHE_CHUNKED_VERSION', '2025-12-04a');
 
 $stateFile = __DIR__ . '/../locks/cache-refresh-state.json';
 $logFile = __DIR__ . '/../logs/cache-refresh-' . date('Y-m-d') . '.log';
@@ -102,6 +102,39 @@ function respondJson($data) {
         echo json_encode($data, JSON_PRETTY_PRINT);
     }
     exit;
+}
+
+/**
+ * Call mps-api/query and return the full decoded payload (including meta)
+ */
+function callMpsQueryWithMeta(string $action, array $params = []): array {
+    $payload = json_encode([
+        'action' => $action,
+        'params' => $params
+    ]);
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => $payload,
+            'timeout' => 25,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+    if ($response === false) {
+        throw new Exception('Failed to reach mps-api/query');
+    }
+
+    $decoded = json_decode($response, true);
+    if (!is_array($decoded) || !($decoded['success'] ?? false)) {
+        $errorMessage = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : 'Unknown query failure';
+        throw new Exception("Query failed: {$errorMessage}");
+    }
+
+    return $decoded;
 }
 
 function resolveSerialColumn(PDO $pdo, string $table): string {
@@ -272,9 +305,8 @@ if ($action === 'process' || $action === 'auto') {
                 return $value !== null;
             });
 
-            // Call the API using the correct function
-            // Prefer the mps-api engine (handles OAuth and retries); fallback already handled in callMPSQuery
-            $response = callMPSQuery('Device/List', $params);
+            // Call the API using the mps-api/query endpoint (returns data + meta.total_rows)
+            $response = callMpsQueryWithMeta('Device/List', $params);
 
             if (!is_array($response)) {
                 throw new Exception("Invalid API response for page {$page}");
@@ -287,19 +319,26 @@ if ($action === 'process' || $action === 'auto') {
             } elseif (isset($response['Result']) && is_array($response['Result'])) {
                 $devices = $response['Result'];
                 $totalRows = $response['TotalRows'] ?? 0;
-            } elseif (isset($response[0])) {
-                // Bare array of devices
+            } elseif (isset($response[0]) && is_array($response[0])) {
+                // Bare array of devices (meta missing)
                 $devices = $response;
                 $totalRows = 0;
             } else {
                 throw new Exception("Invalid API response for page {$page}");
             }
 
-            $totalPages = ($totalRows > 0) ? (int)ceil($totalRows / $perPage) : ($state['total_pages'] ?? null ?? 1);
+            if ($totalRows > 0) {
+                $totalPages = (int)ceil($totalRows / $perPage);
+            } elseif (!empty($state['total_pages'])) {
+                $totalPages = (int)$state['total_pages'];
+            } else {
+                // Meta missing; pessimistically assume there is at least one more page until we hit an empty page
+                $totalPages = $page + 1;
+            }
 
             if ($state['total_pages'] === null) {
                 $state['total_pages'] = $totalPages;
-                logMessage("Total pages detected: {$totalPages}");
+                logMessage("Total pages detected: {$totalPages} (rows={$totalRows})");
             }
 
             // Cache devices to staging table
@@ -312,6 +351,8 @@ if ($action === 'process' || $action === 'auto') {
                     device_data = VALUES(device_data),
                     cached_at = VALUES(cached_at)
             ");
+
+            $deviceCount = count($devices);
 
             foreach ($devices as $device) {
                 $serial = $device['SerialNumber'] ?? $device['serial'] ?? $device['deviceSerial'] ?? null;
@@ -337,14 +378,26 @@ if ($action === 'process' || $action === 'auto') {
                 }
             }
 
-            logMessage("Page {$page}/{$totalPages}: Cached " . count($devices) . " devices");
+            logMessage("Page {$page}/{$totalPages}: Cached {$deviceCount} devices");
+
+            // If this page returned nothing, treat pagination as complete even if meta was missing
+            if ($deviceCount === 0) {
+                $state['status'] = 'fetching_drilldowns';
+                $state['drilldown_index'] = 0;
+                logMessage("Empty device page encountered at {$page}; moving to drill-down stage.");
+            }
 
             // Move to next page or next phase
-            if ($page >= $totalPages) {
+            if ($page >= $totalPages && $state['status'] === 'fetching_devices') {
                 $state['status'] = 'fetching_drilldowns';
                 $state['drilldown_index'] = 0;
                 logMessage("Device fetch complete. Starting drill-down fetch for " . count($state['devices_to_fetch_drilldown']) . " devices");
-            } else {
+            } elseif ($state['status'] === 'fetching_devices') {
+                // Meta missing and we still got a full page? Extend the page budget to keep scanning.
+                if ($totalRows === 0 && $deviceCount === $perPage && $page >= $state['total_pages']) {
+                    $state['total_pages'] = $page + 1;
+                    logMessage("Meta missing; extending total_pages to {$state['total_pages']} after full page {$page}");
+                }
                 $state['current_page']++;
             }
 
@@ -359,9 +412,9 @@ if ($action === 'process' || $action === 'auto') {
     elseif ($state['status'] === 'fetching_drilldowns') {
         $devicesToFetch = $state['devices_to_fetch_drilldown'];
         $deviceIdMap = $state['device_id_map'] ?? [];
-        $chunkSize = 10; // Fetch 10 drill-downs per request
+        $chunkSize = 20; // Fetch 20 drill-downs per request to avoid HTTP timeouts
         $totalToFetch = count($devicesToFetch);
-        $chunkBudgetSeconds = 90; // Process multiple chunks per invocation but stay under HTTP timeout
+        $chunkBudgetSeconds = 60; // Keep each call short enough for shared hosting
 
         while ($state['drilldown_index'] < $totalToFetch && (microtime(true) - $chunkStartTime) < $chunkBudgetSeconds) {
             $index = $state['drilldown_index'];
@@ -562,4 +615,9 @@ CHANGELOG
 - Normalized Device/List parsing to accept the mps-api/query shape ({success,data,meta.total_rows}) so pagination no longer flags valid pages as invalid.
 2025-12-03 Codex
 - Allow each invocation to process multiple drill-down chunks (90s budget) so helper/cron runs advance the queue faster without manual re-triggering.
+2025-12-04 Codex
+- Added callMpsQueryWithMeta() so stage 1 gets meta.total_rows from mps-api/query and pagination can iterate all pages.
+- Added safeguards for missing meta: extend total_pages when pages are full, bail to drill-downs when an empty page arrives, and log rows/total_pages clearly.
+- Bumped version to 2025-12-04a.
+- Tuned drill-down chunk sizing/budget for shared hosting to reduce HTTP timeouts while still advancing refresh.
 */

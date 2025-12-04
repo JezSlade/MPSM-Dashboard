@@ -10,6 +10,8 @@
 - Subagent hub accessible at ~/.local/bin/ollama-subagent (CLI) and http://127.0.0.1:11435 (HTTP)
 - Available models: llama3.2:1b (fast), deepseek-coder:6.7b (code-specialized), deepseek-r1:7b (reasoning)
 - Key benefits: local execution (no API costs), parallel queries, bypass session limits, safe patch application
+- Mandate: always offload heavy analysis/loops to the Ollama subagent; primary agent focuses on orchestration and verification.
+- Active cache run: chunked refresh via `...?action=auto` progressing (devices_cached=3400, drilldowns_cached=877+ at last poll); continuing automated calls until cutover.
 
 ## Previous Session - 2025-12-02 Dealer Dashboard
 
@@ -252,3 +254,9 @@ Files: cms/command-center.php, cms/assets/command-center.js, cms/assets/style.cs
 - Wired Panel Stream modal to use new single-message endpoint with fallback to cache
 ## 2025-11-26 16:36:54 -05:00 - Retire legacy panel monitor
 - panel-message-monitor.php now redirects to unified Command Center (Panel tab); forwards customerCode when available; includes fallback message
+
+<!--
+CHANGELOG
+2025-12-04 Codex
+- Added subagent mandate note and documented active chunked cache refresh progress for current session.
+-->

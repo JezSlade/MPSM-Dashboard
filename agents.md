@@ -714,4 +714,15 @@ Maintain `context/subagent-tasks.md`:
 - /tmp/cache-analysis.txt (completed 2025-11-17 16:00)
 ```
 
-End of file.
+## Ollama subagent mandate
+- Always delegate heavy analysis, mass code generation, cache-driving loops, and log sweeps to the local Ollama hub (`~/.local/bin/ollama-subagent`).
+- Default models: `deepseek-coder:6.7b-instruct-q4_K_M` (code), `deepseek-r1:7b` (reasoning), `llama3.2:1b` (fast drafts).
+- Standard call: `ollama-subagent generate --model <model> "<prompt>"` and capture outputs to `/tmp/...` for review.
+- Track every long-running subagent invocation (PID, output path, start time) in `context/subagent-tasks.md`; summarize outcomes in `context/session.md`.
+- Use subagent scripts for repetitive fetch loops (e.g., cache refresh auto calls) while the primary agent focuses on orchestration and verification.
+
+<!--
+CHANGELOG
+2025-12-04 Codex
+- Added mandatory Ollama subagent policy, defaults, and tracking rules.
+-->

@@ -19,6 +19,41 @@ if (!$authBypassed) {
 
 header('Content-Type: application/json');
 
+if (!function_exists('callMpsQueryWithMeta')) {
+    /**
+     * Call mps-api/query and return full payload (data + meta)
+     */
+    function callMpsQueryWithMeta(string $action, array $params = []): array {
+        $payload = json_encode([
+            'action' => $action,
+            'params' => $params
+        ]);
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/json',
+                'content' => $payload,
+                'timeout' => 25,
+                'ignore_errors' => true
+            ]
+        ]);
+
+        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+        if ($response === false) {
+            throw new Exception('Failed to reach mps-api/query');
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || !($decoded['success'] ?? false)) {
+            $errorMessage = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : 'Unknown query failure';
+            throw new Exception("Query failed: {$errorMessage}");
+        }
+
+        return $decoded;
+    }
+}
+
 try {
     $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
     $report = buildDeviceAgeReport($forceRefresh);
@@ -176,15 +211,16 @@ function fetchAllDevices() {
     $pageRows = 100;
     $emptyStreak = 0;
     $dealerCode = defined('DEFAULT_DEALER_CODE') ? DEFAULT_DEALER_CODE : null;
+    $dealerFilter = ($dealerCode && strtoupper($dealerCode) !== 'TEST') ? $dealerCode : null;
 
     for ($page = 1; $page <= 500; $page++) {
-        $response = callMPSAPI('Device/List', [
-            'DealerCode' => $dealerCode,
-            'FilterDealerCodes' => $dealerCode ? [$dealerCode] : null,
+        $response = callMPSAPI('Device/List', array_filter([
+            'DealerCode' => $dealerFilter,
+            'FilterDealerCodes' => $dealerFilter ? [$dealerFilter] : null,
             'PageNumber' => $page,
             'PageRows' => $pageRows,
             'SortColumn' => 'SerialNumber'
-        ]);
+        ]));
 
         $chunk = extractDevicesFromResponse($response);
         if (empty($chunk)) {
@@ -207,17 +243,23 @@ function fetchAllDevicesViaQuery() {
     $pageRows = 100;
     $emptyStreak = 0;
     $dealerCode = defined('DEFAULT_DEALER_CODE') ? DEFAULT_DEALER_CODE : null;
+    $dealerFilter = ($dealerCode && strtoupper($dealerCode) !== 'TEST') ? $dealerCode : null;
+    $totalPages = null;
 
     for ($page = 1; $page <= 500; $page++) {
-        $response = callMPSQuery('Device/List', [
-            'DealerCode' => $dealerCode,
-            'FilterDealerCodes' => $dealerCode ? [$dealerCode] : null,
-            'PageNumber' => $page,
-            'PageRows' => $pageRows,
-            'SortColumn' => 'SerialNumber'
-        ]);
+        try {
+            $response = callMpsQueryWithMeta('Device/List', array_filter([
+                'DealerCode' => $dealerFilter,
+                'FilterDealerCodes' => $dealerFilter ? [$dealerFilter] : null,
+                'PageNumber' => $page,
+                'PageRows' => $pageRows,
+                'SortColumn' => 'SerialNumber'
+            ]));
+        } catch (Exception $e) {
+            break;
+        }
 
-        $chunk = extractDevicesFromResponse($response);
+        $chunk = extractDevicesFromResponse($response['data'] ?? $response);
         if (empty($chunk)) {
             $emptyStreak++;
             if ($emptyStreak >= 2) {
@@ -228,6 +270,15 @@ function fetchAllDevicesViaQuery() {
 
         $emptyStreak = 0;
         $devices = array_merge($devices, $chunk);
+
+        if ($totalPages === null && isset($response['meta']['total_rows'])) {
+            $totalRows = (int)$response['meta']['total_rows'];
+            $totalPages = max(1, (int)ceil($totalRows / $pageRows));
+        }
+
+        if ($totalPages !== null && $page >= $totalPages) {
+            break;
+        }
     }
 
     return $devices;
@@ -584,4 +635,8 @@ CHANGELOG
 - Added Install date field to cache query for better age accuracy
 - Added cache completeness check: if cache has <1000 devices, fall back to live API to ensure full fleet coverage
 - This ensures all customers and all devices are processed, not just cached subset
+2025-12-04 Codex
+- Removed placeholder dealer filter (TEST) from live queries; only apply FilterDealerCodes when a real dealer code is configured so all customers/devices are included.
+- Filtered out null query params before calling Device/List to avoid upstream rejecting null filters.
+- Added mps-api/query helper with meta and drive pagination from total_rows so all Device/List pages are processed.
 */
