@@ -262,12 +262,20 @@ function fetchDevicesFromCache(?int &$cacheAgeSeconds = null) {
                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Vendor')),
                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Brand')),
                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Product.Brand'))
-            ) AS Manufacturer
+            ) AS Manufacturer,
+            JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Install')) AS Install
         FROM mpsm_cache_devices
         WHERE is_uninstalled = 0
     ");
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $devices = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    // If cache has fewer than 1000 devices, it's incomplete - return empty to trigger live API
+    if (count($devices) < 1000) {
+        return [];
+    }
+
+    return $devices;
 }
 
 function checkTableExistsLocal(PDO $pdo, string $table): bool {
@@ -566,10 +574,14 @@ CHANGELOG
 2025-12-03 Codex
 - Added secret bypass and force flag, made cache-first (with cache age), then live-query, then API fallback; added install-date preference for age math and vendor DealerCode filters for accuracy.
 2025-12-03 Claude
-- CRITICAL FIX: Corrected HP serial number decoder to use proper 10-char format (CCVYWWZZZZ)
-- Position 3 = Year digit (not letters), Position 4-5 = Week of year (00-53)
+- CRITICAL FIX: Corrected HP serial number decoder to use proper 10-char alphanumeric format (CCVDWWZZZZ)
+- Position 3 = Year (alphanumeric: 0-9=2000-2009, A=2010, B=2011, C=2012, etc)
+- Position 4-5 = Week (can be alphanumeric, fallback to week 26 if non-numeric)
 - Added detailed error reasons for all manufacturer decoders (hp_year_not_digit, konica_invalid_month, etc)
 - Updated Ricoh decoder to post-2011 format (position 3 = year digit)
 - Enhanced all decode functions to pass reason parameter for better diagnostics
-- Based on research: HP uses country code + vendor + year + week format for PageWide/Enterprise printers
+- Based on research: HP uses country code + vendor + alphanumeric year + week format
+- Added Install date field to cache query for better age accuracy
+- Added cache completeness check: if cache has <1000 devices, fall back to live API to ensure full fleet coverage
+- This ensures all customers and all devices are processed, not just cached subset
 */
