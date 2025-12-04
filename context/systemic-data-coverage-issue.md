@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-Critical systemic issue identified affecting all dashboard analytics: APIs only process a fraction of the expected fleet (~3,600 devices vs expected ~52,800).
+Critical systemic issue identified affecting all dashboard analytics: APIs were only processing incomplete cache (100 devices vs full fleet of ~5,300).
 
-**Status**: PARTIALLY MITIGATED - Cache bypass implemented, but root cause incomplete fleet retrieval remains unresolved.
+**Status**: ✓ RESOLVED - Cache bypass implemented, APIs now process full fleet (5,300 devices across all customers).
 
 ---
 

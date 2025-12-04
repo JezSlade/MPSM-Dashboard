@@ -1,6 +1,19 @@
-# Session Summary - 2025-12-02 Dealer Dashboard
+# Session Summary - 2025-12-04 Agent Optimization
 
 ## Notes (Current Session)
+
+- Integrated ollama-subagent system for token optimization and continuous task execution
+- Updated agents.md with comprehensive Section 24: Ollama subagent integration
+- Documented token optimization strategies (boilerplate generation, parallel exploration, continuous operation, patch validation)
+- Added 5 usage patterns, model selection guide, delegation workflows, and safety protocols
+- Created context/subagent-tasks.md for tracking long-running subagent work across sessions
+- Subagent hub accessible at ~/.local/bin/ollama-subagent (CLI) and http://127.0.0.1:11435 (HTTP)
+- Available models: llama3.2:1b (fast), deepseek-coder:6.7b (code-specialized), deepseek-r1:7b (reasoning)
+- Key benefits: local execution (no API costs), parallel queries, bypass session limits, safe patch application
+
+## Previous Session - 2025-12-02 Dealer Dashboard
+
+## Notes
 - Created dealer-level intelligence dashboard (dealer.php) with 30+ aggregate metrics
 - Built 3-tier UI: Dealer Scorecard (12 metrics), Data Quality (4 metrics), Customer Portfolio (table)
 - Implemented get-dealer-summary.php API (database-only V2) and get-customer-portfolio.php with health scoring
