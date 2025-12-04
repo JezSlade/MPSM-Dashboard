@@ -126,6 +126,11 @@ function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
         return [];
     }
 
+    // If cache has fewer than 1000 devices, it's incomplete - return empty to trigger live API
+    if (count($rows) < 1000) {
+        return [];
+    }
+
     $devices = [];
     foreach ($rows as $row) {
         $data = json_decode($row['device_data'] ?? '', true) ?: [];
@@ -397,6 +402,10 @@ CHANGELOG
   * Multiple customers can have same IP (e.g., 192.168.1.1) - this is normal
   * Only flag as duplicate when 2+ devices share IP at SAME customer location
   * Grouped by customer first, then by IP within each customer
+2025-12-03 Claude
+- Added cache completeness check: if cache has <1000 devices, fall back to live API
+- This ensures all customers and all devices are analyzed, not just incomplete cache subset
+- Matches same fix applied to device-age-report.php to resolve systemic cache issue
 2025-12-03 Codex
 - Switched to cache-first analysis with live query/API fallback, added cache age/source metadata, and kept dealership-wide scope while filtering out uninstalled/invalid-IP devices.
 - Normalized Device/List parsing to the mps-api/query shape and hardened pagination to vendor limits.
