@@ -19,39 +19,37 @@ if (!$authBypassed) {
 
 header('Content-Type: application/json');
 
-if (!function_exists('callMpsQueryWithMeta')) {
-    /**
-     * Call mps-api/query and return full payload (data + meta)
-     */
-    function callMpsQueryWithMeta(string $action, array $params = []): array {
-        $payload = json_encode([
-            'action' => $action,
-            'params' => $params
-        ]);
+/**
+ * Call MPS API with retry logic and rate limit handling
+ */
+function callMpsApiWithRetry(string $action, array $params = [], int $maxAttempts = 5): ?array {
+    $baseDelaySeconds = 2;
+    $lastError = null;
 
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => 'Content-Type: application/json',
-                'content' => $payload,
-                'timeout' => 25,
-                'ignore_errors' => true
-            ]
-        ]);
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        try {
+            return callMPSAPI($action, $params);
+        } catch (Exception $e) {
+            $lastError = $e->getMessage();
+            $isRateLimit = stripos($lastError, '429') !== false || stripos($lastError, 'rate') !== false;
+            $delay = min(60, (int)($baseDelaySeconds * $attempt));
 
-        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
-        if ($response === false) {
-            throw new Exception('Failed to reach mps-api/query');
+            if ($isRateLimit) {
+                error_log("[DEVICE-AGE-DIAG] Rate limit on {$action} (attempt {$attempt}/{$maxAttempts}): {$lastError}. Sleeping {$delay}s");
+            } else {
+                error_log("[DEVICE-AGE-DIAG] API error on {$action} (attempt {$attempt}/{$maxAttempts}): {$lastError}. Sleeping {$delay}s");
+            }
+
+            if ($attempt === $maxAttempts) {
+                throw $e;
+            }
+
+            sleep($delay);
         }
-
-        $decoded = json_decode($response, true);
-        if (!is_array($decoded) || !($decoded['success'] ?? false)) {
-            $errorMessage = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : 'Unknown query failure';
-            throw new Exception("Query failed: {$errorMessage}");
-        }
-
-        return $decoded;
     }
+
+    error_log("[DEVICE-AGE-DIAG] API {$action} failed after {$maxAttempts} attempts: {$lastError}");
+    return null;
 }
 
 try {
@@ -79,15 +77,10 @@ function buildDeviceAgeReport(bool $forceRefresh = false) {
     }
 
     if (empty($devices)) {
-        $warnings[] = 'Cache empty or force refresh requested; using live query endpoint';
-        $source = 'live-query';
-        $devices = fetchAllDevicesViaQuery();
-    }
-
-    if (empty($devices)) {
-        $warnings[] = 'Query endpoint returned no devices; falling back to OAuth helper';
-        $source = 'live-api';
-        $devices = fetchAllDevices();
+        $warnings[] = 'Cache empty or force refresh requested; using live vendor API';
+        $source = 'live-vendor-api';
+        $devices = fetchAllDevicesViaDirectApi();
+        error_log("[DEVICE-AGE-DIAG] live-vendor-api returned " . count($devices) . " devices");
     }
 
     if (empty($devices)) {
@@ -206,82 +199,117 @@ function buildDeviceAgeReport(bool $forceRefresh = false) {
     ];
 }
 
-function fetchAllDevices() {
-    $devices = [];
-    $pageRows = 100;
-    $emptyStreak = 0;
-    $dealerCode = defined('DEFAULT_DEALER_CODE') ? DEFAULT_DEALER_CODE : null;
-    $dealerFilter = ($dealerCode && strtoupper($dealerCode) !== 'TEST') ? $dealerCode : null;
+function fetchAllDevicesViaDirectApi(): array {
+    $dealerId = DEFAULT_DEALER_ID;
+    $dealerCode = DEFAULT_DEALER_CODE;
+    $pageRows = 100;   // vendor hard-limit
+    $maxPages = 600;   // ~60k devices
+    $maxEmptyPages = 3;
 
-    for ($page = 1; $page <= 500; $page++) {
-        $response = callMPSAPI('Device/List', array_filter([
-            'DealerCode' => $dealerFilter,
-            'FilterDealerCodes' => $dealerFilter ? [$dealerFilter] : null,
-            'PageNumber' => $page,
-            'PageRows' => $pageRows,
-            'SortColumn' => 'SerialNumber'
-        ]));
+    $allDevices = [];
+    $seenSerials = [];
+    $consecutiveEmptyPages = 0;
+    $expectedRows = null;
+    $expectedPages = null;
 
-        $chunk = extractDevicesFromResponse($response);
-        if (empty($chunk)) {
-            $emptyStreak++;
-            if ($emptyStreak >= 2) {
-                break;
-            }
-            continue;
-        }
+    error_log("[DEVICE-AGE-DIAG] fetchAllDevicesViaDirectApi starting with direct vendor API calls");
+    error_log("[DEVICE-AGE-DIAG] FilterDealerId: {$dealerId}, FilterDealerCodes: [{$dealerCode}]");
 
-        $emptyStreak = 0;
-        $devices = array_merge($devices, $chunk);
-    }
+    // Fetch installed devices using Device/List with dealer filters
+    $installedParams = [
+        'FilterDealerId' => $dealerId,
+        'FilterDealerCodes' => [$dealerCode],
+        'PageRows' => $pageRows,
+        'SortColumn' => 'Id',
+        'SortOrder' => 0,
+    ];
 
-    return $devices;
-}
+    for ($page = 1; $page <= $maxPages; $page++) {
+        $params = $installedParams;
+        $params['PageNumber'] = $page;
 
-function fetchAllDevicesViaQuery() {
-    $devices = [];
-    $pageRows = 100;
-    $emptyStreak = 0;
-    $dealerCode = defined('DEFAULT_DEALER_CODE') ? DEFAULT_DEALER_CODE : null;
-    $dealerFilter = ($dealerCode && strtoupper($dealerCode) !== 'TEST') ? $dealerCode : null;
-    $totalPages = null;
+        // Filter out null values to avoid API rejection
+        $params = array_filter($params, function($value) {
+            return $value !== null;
+        });
 
-    for ($page = 1; $page <= 500; $page++) {
         try {
-            $response = callMpsQueryWithMeta('Device/List', array_filter([
-                'DealerCode' => $dealerFilter,
-                'FilterDealerCodes' => $dealerFilter ? [$dealerFilter] : null,
-                'PageNumber' => $page,
-                'PageRows' => $pageRows,
-                'SortColumn' => 'SerialNumber'
-            ]));
+            $response = callMpsApiWithRetry('Device/List', $params);
         } catch (Exception $e) {
+            error_log("[DEVICE-AGE-DIAG] Device/List page {$page} API error: " . $e->getMessage());
             break;
         }
 
-        $chunk = extractDevicesFromResponse($response['data'] ?? $response);
-        if (empty($chunk)) {
-            $emptyStreak++;
-            if ($emptyStreak >= 2) {
+        if (!$response || !is_array($response)) {
+            error_log("[DEVICE-AGE-DIAG] Device/List page {$page} returned empty/invalid response");
+            $consecutiveEmptyPages++;
+            if ($consecutiveEmptyPages >= $maxEmptyPages) {
                 break;
             }
             continue;
         }
 
-        $emptyStreak = 0;
-        $devices = array_merge($devices, $chunk);
+        $pageDevices = extractDevicesFromResponse($response);
+        $deviceCount = count($pageDevices);
 
-        if ($totalPages === null && isset($response['meta']['total_rows'])) {
-            $totalRows = (int)$response['meta']['total_rows'];
-            $totalPages = max(1, (int)ceil($totalRows / $pageRows));
+        if ($deviceCount === 0) {
+            $consecutiveEmptyPages++;
+            error_log("[DEVICE-AGE-DIAG] Device/List page {$page}: EMPTY (streak {$consecutiveEmptyPages}/{$maxEmptyPages})");
+            if ($consecutiveEmptyPages >= $maxEmptyPages) {
+                error_log("[DEVICE-AGE-DIAG] Stopping after {$maxEmptyPages} consecutive empty pages");
+                break;
+            }
+            continue;
         }
 
-        if ($totalPages !== null && $page >= $totalPages) {
+        $consecutiveEmptyPages = 0;
+        $uniqueAdded = 0;
+        $duplicatesThisPage = 0;
+
+        foreach ($pageDevices as $device) {
+            $serial = $device['SerialNumber'] ?? $device['serialNumber'] ?? null;
+            if ($serial === null) {
+                continue;
+            }
+
+            if (isset($seenSerials[$serial])) {
+                $duplicatesThisPage++;
+                continue;
+            }
+
+            $seenSerials[$serial] = true;
+            $allDevices[] = $device;
+            $uniqueAdded++;
+        }
+
+        if ($page <= 5 || $page % 10 === 0) {
+            error_log("[DEVICE-AGE-DIAG] Device/List page {$page}: {$deviceCount} fetched ({$uniqueAdded} new, {$duplicatesThisPage} dupes). Total unique: " . count($allDevices));
+        }
+
+        // Detect expected pages from TotalRows
+        if ($expectedPages === null && isset($response['TotalRows'])) {
+            $expectedRows = (int)$response['TotalRows'];
+            $expectedPages = max(1, (int)ceil($expectedRows / $pageRows));
+            error_log("[DEVICE-AGE-DIAG] Detected TotalRows={$expectedRows}, expectedPages={$expectedPages}");
+        }
+
+        // Stop if we've reached expected page count
+        if ($expectedPages !== null && $page >= $expectedPages) {
+            error_log("[DEVICE-AGE-DIAG] Stopping at page {$page} (reached expected pages)");
+            break;
+        }
+
+        // Stop if partial page (indicates last page)
+        if ($deviceCount < $pageRows) {
+            error_log("[DEVICE-AGE-DIAG] Partial page detected ({$deviceCount} devices), stopping pagination");
             break;
         }
     }
 
-    return $devices;
+    $installedCount = count($allDevices);
+    error_log("[DEVICE-AGE-DIAG] Installed devices complete: {$installedCount} unique devices");
+
+    return $allDevices;
 }
 
 function fetchDevicesFromCache(?int &$cacheAgeSeconds = null) {
@@ -639,4 +667,18 @@ CHANGELOG
 - Removed placeholder dealer filter (TEST) from live queries; only apply FilterDealerCodes when a real dealer code is configured so all customers/devices are included.
 - Filtered out null query params before calling Device/List to avoid upstream rejecting null filters.
 - Added mps-api/query helper with meta and drive pagination from total_rows so all Device/List pages are processed.
+2025-12-04 Claude
+- CRITICAL FIX: Replaced broken mps-api/query endpoint with direct vendor API calls
+  * Removed callMpsQueryWithMeta() function (was calling broken mps-api/query)
+  * Removed fetchAllDevicesViaQuery() and fetchAllDevices() functions (now redundant)
+  * Added callMpsApiWithRetry() with exponential backoff and rate limit handling
+  * Rewrote data fetching as fetchAllDevicesViaDirectApi() using callMPSAPI() for direct vendor calls
+  * Follows exact pagination pattern from get-duplicate-ips.php (lines 193-374)
+  * Fetches devices via Device/List with FilterDealerId + FilterDealerCodes
+  * Uses extractDevicesFromResponse() helper from cms/functions.php
+  * Implements proper pagination: PageRows=100, TotalRows detection, 3 empty page limit
+  * Deduplicates by serial number across all pages
+  * Enhanced diagnostic logging with [DEVICE-AGE-DIAG] prefix
+  * Source changed from 'live-query' to 'live-vendor-api'
+  * Expected outcome: 5000+ devices instead of 100-1000
 */

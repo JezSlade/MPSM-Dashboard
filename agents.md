@@ -2,10 +2,10 @@
 
 Repository-standard rules for any AI agent operating in this workspace. Applies to Claude Code, Copilot Chat, ChatGPT extensions, and other validators.
 
-Version: 1.1.0
+Version: 1.1.1
 Owner: Jez
 Scope: Entire repository
-Last Updated: 2025-11-17
+Last Updated: 2025-12-04
 
 ---
 

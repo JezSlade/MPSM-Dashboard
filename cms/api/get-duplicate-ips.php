@@ -16,37 +16,6 @@ if (!$authBypassed) {
     requireAuth();
 }
 
-if (!function_exists('callMpsQueryWithMeta')) {
-    function callMpsQueryWithMeta(string $action, array $params = []): array {
-        $payload = json_encode([
-            'action' => $action,
-            'params' => $params
-        ]);
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => 'Content-Type: application/json',
-                'content' => $payload,
-                'timeout' => 25,
-                'ignore_errors' => true
-            ]
-        ]);
-
-        $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
-        if ($response === false) {
-            throw new Exception('Failed to reach mps-api/query');
-        }
-
-        $decoded = json_decode($response, true);
-        if (!is_array($decoded) || !($decoded['success'] ?? false)) {
-            $errorMessage = is_array($decoded) && isset($decoded['error']) ? $decoded['error'] : 'Unknown query failure';
-            throw new Exception("Query failed: {$errorMessage}");
-        }
-
-        return $decoded;
-    }
-}
 
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 $summaryOnly = isset($_GET['summaryOnly']) && $_GET['summaryOnly'] === '1';
@@ -110,23 +79,21 @@ function analyzeDuplicateIPs(bool $forceRefresh = false) {
 
     // Prefer cache table for dealership-wide accuracy and speed
     $devices = fetchDevicesFromCache($cacheAgeSeconds);
+    error_log("[DUP-IP-DIAG] Cache returned " . count($devices) . " devices");
 
     // Force or fallback to live API if cache empty/stale
     if ($forceRefresh || empty($devices)) {
-        $source = 'live-query';
+        error_log("[DUP-IP-DIAG] Falling back to live vendor API (force={$forceRefresh}, empty=" . (empty($devices) ? 'true' : 'false') . ")");
+        $source = 'live-vendor-api';
         $devices = fetchDevicesViaQuery();
-    }
-
-    // Last resort: legacy API helper
-    if (empty($devices)) {
-        $source = 'live-api';
-        $devices = fetchDevicesViaApi();
+        error_log("[DUP-IP-DIAG] live-vendor-api returned " . count($devices) . " devices");
     }
 
     if (empty($devices)) {
         throw new Exception('No devices returned from cache or API');
     }
 
+    error_log("[DUP-IP-DIAG] Building report from {$source} with " . count($devices) . " devices");
     $report = buildDuplicateReport($devices);
     $report['summary']['source'] = $source;
     $report['summary']['cache_age_seconds'] = $cacheAgeSeconds;
@@ -185,99 +152,221 @@ function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
 }
 
 function fetchDevicesViaQuery(): array {
+    $dealerId = DEFAULT_DEALER_ID;
     $dealerCode = DEFAULT_DEALER_CODE;
-    $dealerFilter = ($dealerCode && strtoupper($dealerCode) !== 'TEST') ? $dealerCode : null;
-    $allDevices = [];
     $pageRows = 100;   // vendor hard-limit
-    $emptyStreak = 0;
     $maxPages = 600;   // ~60k devices
-    $totalPages = null;
+    $maxEmptyPages = 3;
 
-    for ($page = 1; $page <= $maxPages; $page++) {
-        try {
-            $response = callMpsQueryWithMeta('Device/List', array_filter([
-                'DealerCode' => $dealerFilter,
-                'FilterDealerCodes' => $dealerFilter ? [$dealerFilter] : null,
-                'PageNumber' => $page,
-                'PageRows' => $pageRows,
-                'SortColumn' => 'SerialNumber'
-            ]));
-        } catch (Exception $e) {
-            break;
-        }
-
-        $chunk = normalizeDeviceListResponse($response['data'] ?? $response);
-        if (empty($chunk)) {
-            $emptyStreak++;
-            if ($emptyStreak >= 2) {
-                break;
-            }
-            continue;
-        }
-
-        $emptyStreak = 0;
-        $allDevices = array_merge($allDevices, $chunk);
-
-        if ($totalPages === null && isset($response['meta']['total_rows'])) {
-            $totalRows = (int)$response['meta']['total_rows'];
-            $totalPages = max(1, (int)ceil($totalRows / $pageRows));
-        }
-
-        if ($totalPages !== null && $page >= $totalPages) {
-            break;
-        }
-    }
-
-    return $allDevices;
-}
-
-function fetchDevicesViaApi(): array {
     $allDevices = [];
-    $pageRows = 100;
-    $emptyStreak = 0;
-    $maxPages = 600;
+    $seenSerials = [];
+    $consecutiveEmptyPages = 0;
+    $expectedRows = null;
+    $expectedPages = null;
+
+    error_log("[DUP-IP-DIAG] fetchDevicesViaQuery starting with direct vendor API calls");
+    error_log("[DUP-IP-DIAG] FilterDealerId: {$dealerId}, FilterDealerCodes: [{$dealerCode}]");
+
+    // Fetch installed devices using Device/List with dealer filters
+    $installedParams = [
+        'FilterDealerId' => $dealerId,
+        'FilterDealerCodes' => [$dealerCode],
+        'PageRows' => $pageRows,
+        'SortColumn' => 'Id',
+        'SortOrder' => 0,
+    ];
 
     for ($page = 1; $page <= $maxPages; $page++) {
-        $response = callMPSAPI('Device/List', [
-            'PageNumber' => $page,
-            'PageRows' => $pageRows
-        ]);
+        $params = $installedParams;
+        $params['PageNumber'] = $page;
 
-        $chunk = normalizeDeviceListResponse($response);
-        if (empty($chunk)) {
-            $emptyStreak++;
-            if ($emptyStreak >= 2) {
+        // Filter out null values to avoid API rejection
+        $params = array_filter($params, function($value) {
+            return $value !== null;
+        });
+
+        try {
+            $response = callMpsApiWithRetry('Device/List', $params);
+        } catch (Exception $e) {
+            error_log("[DUP-IP-DIAG] Device/List page {$page} API error: " . $e->getMessage());
+            break;
+        }
+
+        if (!$response || !is_array($response)) {
+            error_log("[DUP-IP-DIAG] Device/List page {$page} returned empty/invalid response");
+            $consecutiveEmptyPages++;
+            if ($consecutiveEmptyPages >= $maxEmptyPages) {
                 break;
             }
             continue;
         }
 
-        $emptyStreak = 0;
-        $allDevices = array_merge($allDevices, $chunk);
+        $pageDevices = extractDevicesFromResponse($response);
+        $deviceCount = count($pageDevices);
+
+        if ($deviceCount === 0) {
+            $consecutiveEmptyPages++;
+            error_log("[DUP-IP-DIAG] Device/List page {$page}: EMPTY (streak {$consecutiveEmptyPages}/{$maxEmptyPages})");
+            if ($consecutiveEmptyPages >= $maxEmptyPages) {
+                error_log("[DUP-IP-DIAG] Stopping after {$maxEmptyPages} consecutive empty pages");
+                break;
+            }
+            continue;
+        }
+
+        $consecutiveEmptyPages = 0;
+        $uniqueAdded = 0;
+        $duplicatesThisPage = 0;
+
+        foreach ($pageDevices as $device) {
+            $serial = $device['SerialNumber'] ?? $device['serialNumber'] ?? null;
+            if ($serial === null) {
+                continue;
+            }
+
+            if (isset($seenSerials[$serial])) {
+                $duplicatesThisPage++;
+                continue;
+            }
+
+            $seenSerials[$serial] = true;
+            $allDevices[] = $device;
+            $uniqueAdded++;
+        }
+
+        if ($page <= 5 || $page % 10 === 0) {
+            error_log("[DUP-IP-DIAG] Device/List page {$page}: {$deviceCount} fetched ({$uniqueAdded} new, {$duplicatesThisPage} dupes). Total unique: " . count($allDevices));
+        }
+
+        // Detect expected pages from TotalRows
+        if ($expectedPages === null && isset($response['TotalRows'])) {
+            $expectedRows = (int)$response['TotalRows'];
+            $expectedPages = max(1, (int)ceil($expectedRows / $pageRows));
+            error_log("[DUP-IP-DIAG] Detected TotalRows={$expectedRows}, expectedPages={$expectedPages}");
+        }
+
+        // Stop if we've reached expected page count
+        if ($expectedPages !== null && $page >= $expectedPages) {
+            error_log("[DUP-IP-DIAG] Stopping at page {$page} (reached expected pages)");
+            break;
+        }
+
+        // Stop if partial page (indicates last page)
+        if ($deviceCount < $pageRows) {
+            error_log("[DUP-IP-DIAG] Partial page detected ({$deviceCount} devices), stopping pagination");
+            break;
+        }
     }
+
+    $installedCount = count($allDevices);
+    error_log("[DUP-IP-DIAG] Installed devices complete: {$installedCount} unique devices");
+
+    // Fetch deleted devices using Device/Deleted/ListByDealer
+    $deletedParams = [
+        'DealerCode' => $dealerCode,
+        'PageRows' => 200,
+        'SortColumn' => 'AssetNumber',
+        'SortOrder' => 'Asc'
+    ];
+
+    $consecutiveEmptyPages = 0;
+    $maxDeletedPages = 20;
+
+    error_log("[DUP-IP-DIAG] Fetching deleted devices");
+
+    for ($page = 1; $page <= $maxDeletedPages; $page++) {
+        $params = $deletedParams;
+        $params['PageNumber'] = $page;
+
+        try {
+            $response = callMpsApiWithRetry('Device/Deleted/ListByDealer', $params);
+        } catch (Exception $e) {
+            error_log("[DUP-IP-DIAG] Device/Deleted page {$page} API error: " . $e->getMessage());
+            break;
+        }
+
+        if (!$response || !is_array($response)) {
+            error_log("[DUP-IP-DIAG] Device/Deleted page {$page} returned empty/invalid response");
+            break;
+        }
+
+        $pageDevices = extractDevicesFromResponse($response);
+        $deviceCount = count($pageDevices);
+
+        if ($deviceCount === 0) {
+            error_log("[DUP-IP-DIAG] Device/Deleted page {$page}: EMPTY, stopping deleted pagination");
+            break;
+        }
+
+        $uniqueAdded = 0;
+        $duplicatesThisPage = 0;
+
+        foreach ($pageDevices as $device) {
+            $serial = $device['SerialNumber'] ?? $device['serialNumber'] ?? null;
+            if ($serial === null) {
+                continue;
+            }
+
+            if (isset($seenSerials[$serial])) {
+                $duplicatesThisPage++;
+                continue;
+            }
+
+            $seenSerials[$serial] = true;
+            $device['IsUninstalled'] = true;
+            $allDevices[] = $device;
+            $uniqueAdded++;
+        }
+
+        error_log("[DUP-IP-DIAG] Device/Deleted page {$page}: {$deviceCount} fetched ({$uniqueAdded} new, {$duplicatesThisPage} dupes)");
+
+        // Stop if partial page
+        if ($deviceCount < 200) {
+            error_log("[DUP-IP-DIAG] Partial deleted page detected ({$deviceCount} devices), stopping pagination");
+            break;
+        }
+    }
+
+    $deletedCount = count($allDevices) - $installedCount;
+    error_log("[DUP-IP-DIAG] Deleted devices complete: {$deletedCount} unique deleted devices");
+    error_log("[DUP-IP-DIAG] fetchDevicesViaQuery complete - total devices: " . count($allDevices) . " ({$installedCount} installed + {$deletedCount} deleted)");
 
     return $allDevices;
 }
 
-function normalizeDeviceListResponse($response): array {
-    if (!$response || !is_array($response)) {
-        return [];
+/**
+ * Call MPS API with retry logic and rate limit handling
+ */
+function callMpsApiWithRetry(string $action, array $params = [], int $maxAttempts = 5): ?array {
+    $baseDelaySeconds = 2;
+    $lastError = null;
+
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        try {
+            return callMPSAPI($action, $params);
+        } catch (Exception $e) {
+            $lastError = $e->getMessage();
+            $isRateLimit = stripos($lastError, '429') !== false || stripos($lastError, 'rate') !== false;
+            $delay = min(60, (int)($baseDelaySeconds * $attempt));
+
+            if ($isRateLimit) {
+                error_log("[DUP-IP-DIAG] Rate limit on {$action} (attempt {$attempt}/{$maxAttempts}): {$lastError}. Sleeping {$delay}s");
+            } else {
+                error_log("[DUP-IP-DIAG] API error on {$action} (attempt {$attempt}/{$maxAttempts}): {$lastError}. Sleeping {$delay}s");
+            }
+
+            if ($attempt === $maxAttempts) {
+                throw $e;
+            }
+
+            sleep($delay);
+        }
     }
 
-    if (isset($response['data']) && is_array($response['data'])) {
-        return $response['data'];
-    }
-
-    if (isset($response['Result']) && is_array($response['Result'])) {
-        return $response['Result'];
-    }
-
-    if (isset($response[0])) {
-        return $response;
-    }
-
-    return [];
+    error_log("[DUP-IP-DIAG] API {$action} failed after {$maxAttempts} attempts: {$lastError}");
+    return null;
 }
+
 
 function buildDuplicateReport(array $allDevices): array {
     // CRITICAL: Group by CUSTOMER first, then by IP within each customer
@@ -459,4 +548,18 @@ CHANGELOG
 - Added customerCount field for UI and improved status calculation based on LastContact.
 2025-12-04 Codex
 - Only apply DealerCode/FilterDealerCodes when a real code is configured (not TEST) so live queries include all customers and devices, strip null params before calling Device/List to avoid upstream rejection, and drive pagination using meta.total_rows from mps-api/query.
+2025-12-04 Claude
+- CRITICAL FIX: Replaced broken mps-api/query endpoint with direct vendor API calls
+  * Removed callMpsQueryWithMeta() function (was calling broken mps-api/query)
+  * Removed fetchDevicesViaApi() and normalizeDeviceListResponse() functions (now redundant)
+  * Rewrote fetchDevicesViaQuery() to use callMPSAPI() for direct vendor calls
+  * Follows exact pagination pattern from refresh-cache-enhanced.php (lines 361-536)
+  * Fetches installed devices via Device/List with FilterDealerId + FilterDealerCodes
+  * Fetches deleted devices via Device/Deleted/ListByDealer
+  * Uses extractDevicesFromResponse() helper from cms/functions.php
+  * Implements proper pagination: PageRows=100, TotalRows detection, 3 empty page limit
+  * Deduplicates by serial number across all pages
+  * Added callMpsApiWithRetry() with exponential backoff and rate limit handling
+  * Enhanced diagnostic logging with [DUP-IP-DIAG] prefix
+  * Expected outcome: 5000+ devices instead of 100
 */

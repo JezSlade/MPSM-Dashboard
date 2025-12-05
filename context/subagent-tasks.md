@@ -8,6 +8,7 @@ This file tracks long-running or pending tasks delegated to the ollama-subagent 
 
 - None currently active.
 - Manual loop (no PID) running via repeated `refresh-cache-chunked.php?action=auto` calls; primary agent is invoking directly, not a detached process.
+- Dealer cache push: Ollama-assisted scripts are hammering the chunked refresher (devices_cached=3400; drilldowns advancing); continue until `status=completed`.
 
 ## Pending Reviews
 
@@ -60,10 +61,12 @@ None currently pending.
 
 ## Last updated
 
-2025-12-04 - Added live cache loop note; still no detached monitors.
+2025-12-04 - Added live cache loop note and dealer cache push status; still no detached monitors.
 
 <!--
 CHANGELOG
 2025-12-04 Codex
 - Logged active manual cache loop and clarified last-updated note.
+2025-12-04 Codex
+- Added dealer cache push status with ongoing hammering instructions.
 -->

@@ -11,7 +11,7 @@
 - Available models: llama3.2:1b (fast), deepseek-coder:6.7b (code-specialized), deepseek-r1:7b (reasoning)
 - Key benefits: local execution (no API costs), parallel queries, bypass session limits, safe patch application
 - Mandate: always offload heavy analysis/loops to the Ollama subagent; primary agent focuses on orchestration and verification.
-- Active cache run: chunked refresh via `...?action=auto` progressing (devices_cached=3400, drilldowns_cached=877+ at last poll); continuing automated calls until cutover.
+- Active cache run: chunked refresh via `...?action=auto` progressing (devices_cached=3400, drilldowns_cached=1600+ at last poll); continuing automated calls until cutover completes.
 
 ## Previous Session - 2025-12-02 Dealer Dashboard
 
