@@ -1,6 +1,13 @@
-# Living Audit TODO (Updated 2025-11-10)
+# Living Audit TODO (Updated 2026-05-20)
 
 > **Guidance:** These entries are unverified suggestions collected from live forensics. Agents must read the entire file, treat each bullet as a symptom to diagnose deeper root causes, and only pick an item once systemic issues have been ruled out.
+
+## Current Validation Notes
+
+- PowerShell deployment/test scripts have been retired from the active repository. Use the portable Python scripts in `scripts/` for checks, FTP backup/deploy, and live smoke testing.
+- Direct FTP is the current production deployment path. Historical GitHub Actions and HTTP deploy endpoint notes are not active unless explicitly re-established.
+- `cms/api/refresh-cache-chunked.php` is the current production-safe cache refresh path. Items below that cite `refresh-cache-enhanced.php` are retained as legacy audit findings against that file, not as instructions for current deployment operations.
+- The 2026-05-20 live checkpoint showed 3,351 live devices, 1,425 live drilldowns, and an active staged chunked run with 3,370 devices, 300 drilldowns, and 0 errors.
 
 ## How to Work This List
 - Review everything below before coding; items are interrelated.
@@ -31,13 +38,15 @@
    - Diagnostics endpoints recompute file sizes, permissions, and `.env` contents on every call (lines 111-178). Since monitoring hits `/mps-api/health` frequently, the overhead is self-inflicted, leading to the 1–2 s health-check latency captured during manual tests.
 
 5. **Operational Observability & Tooling**
-   - `context/operations-playbook.md` and scripts such as `scripts/cache-population-loop.ps1` still document */5 cron schedules even though code now takes ~30 minutes per run. Operators re-trigger refreshes before the previous job finishes, reproducing the truncation issue noted above.
+   - Resolved for repository docs/scripts on 2026-05-20: active docs now point operators at the chunked refresh flow, and the PowerShell cache loop scripts were retired. Verify the live cPanel cron still follows the same chunked, non-overlapping process before relying on unattended refreshes.
    - No synthetic watchdog hits `/cms/api/system-health.php` or `/mps-api/health`, so regressions (e.g., cache counts stuck at 0) go unnoticed until someone opens the Admin tab. This gap explains why production ran for days with empty cache tables despite cron “success” logs.
    - Observability tables (`mpsm_panel_messages`, `mpsm_panel_callback_debug`, `mpsm_visitor_log`) lack retention jobs; as they grow, endpoints like `get-payload-debug-logs.php` and `get-visitor-logs.php` slow down (each runs full-table scans for stats: see lines 96-108 in visitor logs). The increasing latency is therefore due to missing lifecycle tooling rather than isolated query bugs.
 
 ---
 
-## Immediate Failures (Triage First)
+## Immediate Failures (Legacy Enhanced Refresh Triage)
+
+The following cache items were collected against `cms/api/refresh-cache-enhanced.php`. The current live refresh workflow uses `cms/api/refresh-cache-chunked.php`, which stages data before cutover. Keep these items as technical debt for the legacy script and for any future refresh implementation review.
 - [ ] **(1) Cache truncates before refill succeeds** – `cms/api/refresh-cache-enhanced.php:439-444` wipes both cache tables before a successful run; switch to staging/transactional swaps so old data survives crashes.
 - [ ] **(2) Batch writes overwhelm MySQL** – The crawler buffers 50 pages (~5k devices) before inserting (`cms/api/refresh-cache-enhanced.php:436-537`); stream smaller batches to prevent disconnects.
 - [ ] **(3) Drilldown preload exhausts RAM** – `cms/api/refresh-cache-enhanced.php:102-157` loads every cached row into an array before processing; iterate via paged queries/streaming cursor.
@@ -155,8 +164,8 @@
 - [ ] **(109) mps-api diagnostics expose file sizes on every request** – `getSystemDiagnostics()` recomputes file metadata each time; memoize so `/health` stays sub-100 ms.
 - [ ] **(110) mps-api `MAX_REQUESTS_PER_MINUTE` static** – Rate limit constant (line 70) should be env-configurable per deployment tier.
 - [ ] **(111) mps-api logs huge “security events” to disk** – `logSecurityEvent()` writes per violation but no rotation; use central logger/structured records.
-- [ ] **(112) Cron helper scripts duplicate curl invocations** – `cache-population-loop.ps1` and `refresh-cache-cron.php` overlap; consolidate to one job definition.
-- [ ] **(113) PowerShell scripts lack parameter validation** – e.g., `scripts/panel-message-diagnostics.ps1` assumes MySQL creds; add mandatory parameter blocks.
+- [x] **(112) Cron helper scripts duplicate curl invocations** – Resolved for the active repository on 2026-05-20 by retiring PowerShell helpers and documenting the chunked cache path. Verify live cPanel cron separately.
+- [x] **(113) PowerShell scripts lack parameter validation** – Resolved for the active repository on 2026-05-20 by removing PowerShell from the supported workflow and replacing deploy/test helpers with portable Python scripts.
 - [ ] **(114) No automated smoke tests for `/cms` endpoints** – `tests/api-tests.sh` still references legacy URLs; regenerate it to match the current API surface.
 - [ ] **(115) `bootstrap.php` sets timezone before reading config overrides** – If `.env` sets `APP_TIMEZONE`, it’s ignored; load config first, then set timezone.
 - [ ] **(116) `cacheDeviceDrilldown()` calculates `has_supplies` incorrectly** – `src/Repositories/DeviceRepository.php:200-237` only checks for supply arrays, ignoring flags in Device/Get; refine heuristics.
@@ -167,7 +176,7 @@
 - [ ] **(121) Visitor log table grows without retention** – `mpsm_visitor_log` is never pruned; implement 90-day cleanup job.
 - [ ] **(122) Panel callback debug table logs raw headers forever** – Add retention job or optional auto-prune in `panel-message-common.php`.
 - [ ] **(123) Command center notifications processed synchronously** – See `command-center-engine.php`; move heavy rule evaluation into a queue to prevent callback lag.
-- [ ] **(124) Cron docs out of sync with code** – `context/operations-playbook.md` still references the deprecated 5-minute cron; align documentation with the hourly cadence.
+- [x] **(124) Cron docs out of sync with code** – Resolved in the active context docs on 2026-05-20. Current docs describe the chunked cache status/process/cutover flow and call out live cPanel cron verification as a follow-up.
 - [ ] **(125) Device CRUD endpoints bypass cache invalidation** – `cms/api/device-create.php`/`update.php` don’t clear `mpsm_cache_devices`; ensure caches flush on mutations.
 - [ ] **(126) Device CRUD logging grows unbounded** – `logDeviceCrudAction()` writes to `cms/logs/device-crud-*.log` with no rotation; add size/time pruning.
 - [ ] **(127) `get-drilldown-count.php` recalculates stats each poll** – Replace the three `COUNT(*)` queries with a cached materialized view so the Admin card doesn’t scan both tables every refresh.
@@ -180,8 +189,8 @@
 - [ ] **(134) Error toasts auto-hide too quickly** – Five concurrent API calls all produce 3 s toasts; extend or stack errors so analysts can read them.
 - [ ] **(135) `/mps-api/diagnostics` exposes PHP internals publicly** – Restrict diagnostics to authenticated CMS sessions or behind a secret token so bots can’t scrape phpinfo-style data.
 - [ ] **(136) `/mps-api/health` pings the vendor on every check** – Current implementation calls `AlertLimit/Dealer/Get` for each health probe, tying uptime alarms to upstream latency; cache the last success for a minute.
-- [ ] **(137) PowerShell cache scripts still document */5 cron** – Update `cache-population-loop.ps1` comments to match the new hourly schedule to avoid misconfiguration.
-- [ ] **(138) PowerShell scripts swallow curl exit codes** – `cache-population-loop.ps1` writes “Completed” even when curl fails; propagate exit status for monitoring.
+- [x] **(137) PowerShell cache scripts still document */5 cron** – Resolved for active repository operations on 2026-05-20 by retiring PowerShell cache scripts.
+- [x] **(138) PowerShell scripts swallow curl exit codes** – Resolved for active repository operations on 2026-05-20 by retiring PowerShell cache scripts and using Python helpers that return non-zero on failures.
 - [ ] **(139) Command-center rule definitions duplicated** – `create-live-rules.php` and `create-sample-rules.php` each hard-code JSON; extract shared config to avoid drift.
 - [ ] **(140) No synthetic monitoring of `/cms/api/system-health.php`** – Add an external cron that hits the endpoint, validates JSON schema, and alerts when fields go missing.
 

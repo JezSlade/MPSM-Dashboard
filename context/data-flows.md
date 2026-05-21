@@ -1,6 +1,6 @@
 # Data & Workflow Flows
 
-> Verified against: `cms/api/*.php`, `cms/assets/app.js`, `cms/assets/command-center.js`, `cms/api/refresh-cache-enhanced.php`, `mps-api/callbacks/*.php`
+> Verified against: `cms/api/*.php`, `cms/assets/app.js`, `cms/assets/command-center.js`, `cms/api/refresh-cache-chunked.php`, `mps-api/callbacks/*.php` on 2026-05-20.
 
 ## 1. Login ➝ Dashboard Load
 
@@ -35,15 +35,14 @@
 
 ## 4. Background Cache Refresh
 
-Refer to `BACKGROUND_REFRESH_SYSTEM.md` and `cms/api/refresh-cache-enhanced.php`.
+Use `cms/api/refresh-cache-chunked.php` for current shared-host refreshes. `refresh-cache-enhanced.php` remains available but timed out during the 2026-05-20 post-deploy warmup and should not be used as the full refresh path without retesting server timeout behavior.
 
-1. Invocation (manual `curl` or scheduled task) hits `refresh-cache-enhanced.php`.
-2. Script obtains lock, ensures cache tables (`ensureCacheTables()`), and begins pagination.
-3. Each device entry is upserted into `mpsm_cache_devices`.
-4. Per-device deep dives are cached into `mpsm_cache_device_drilldown` with flags (`has_alerts`, `has_supplies`).
-5. Progress logged every 50 devices; rate limit enforced with a 50 ms `usleep`.
-6. Panel message coverage counted via `cachePanelMessages()`.
-7. Final stats returned as JSON and log file appended.
+1. `action=start` creates staging tables from live `mpsm_cache_devices` and `mpsm_cache_device_drilldown` schemas.
+2. `action=process` fetches `Device/List` pages, inserts into `mpsm_cache_devices_staging`, and queues non-uninstalled devices for drill-down.
+3. Once pages complete, `action=process` fetches `Device/Get` drill-downs in small chunks and writes `mpsm_cache_device_drilldown_staging`.
+4. `action=status` reports live counts, staging counts, current state, page, drill-down index, and errors.
+5. `action=cutover` is only valid when status is `ready_for_cutover`; it swaps staging tables into live tables and restores old live tables if verification fails.
+6. Current checkpoint: `fetching_drilldowns`, page `34/34`, `3370` devices staged, `300` drill-downs staged, `0` errors.
 
 **CRITICAL API BEHAVIOR (discovered 2025-11-08):**
 - The `Device/List` API endpoint **ignores the `PageRows` parameter**
@@ -81,7 +80,7 @@ Refer to `BACKGROUND_REFRESH_SYSTEM.md` and `cms/api/refresh-cache-enhanced.php`
 2. JavaScript fetches `GET /cms/api/get-payload-debug-logs.php?limit=n&status=...` every 5 seconds by default.
 3. API ensures `mpsm_panel_callback_debug` exists, returns logs with parsed headers and bodies alongside aggregate stats.
 4. UI supports filtering by status, toggling auto-refresh, expanding payloads, and inspecting headers.
-5. Run `test-payloads.ps1` from repo root to populate sample SUCCESS/ERROR events (documented in `PAYLOAD_DEBUGGER_GUIDE.md`).
+5. Historical PowerShell payload scripts are no longer active; recreate this as a portable Python or shell helper if sample SUCCESS/ERROR events are needed.
 
 ## 7. System Health & Diagnostics
 
@@ -98,9 +97,11 @@ Refer to `BACKGROUND_REFRESH_SYSTEM.md` and `cms/api/refresh-cache-enhanced.php`
 
 ## 9. Deployment Loop
 
-1. Code pushes to `main` trigger GitHub Actions deployment (workflow defined in `.github/workflows/deploy.yml`).
-2. Numerous PowerShell deployment scripts (`deploy-*.ps1`) exist for manual FTP pushes; they set up credentials and copy changed files.
-3. Production often caches assets aggressively; after deployment, hard refresh (`Ctrl+Shift+R`) or cache-busting query parameters may be needed for `app.js`.
+1. Run `python3 scripts/run_checks.py`.
+2. Run `python3 scripts/ftp_backup.py`.
+3. Run `python3 scripts/ftp_deploy.py --delete`.
+4. Run `python3 scripts/live_smoke.py` plus targeted live endpoint checks.
+5. Production often caches assets aggressively; after deployment, hard refresh (`Ctrl+Shift+R`) or cache-busting query parameters may be needed for `app.js`.
 
 ## 10. Device Lifecycle CRUD
 

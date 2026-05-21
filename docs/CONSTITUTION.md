@@ -28,16 +28,16 @@ This Constitution serves as the supreme governing document for the MPSM Dashboar
 All contributors must read and follow these core guides:
 
 ### Essential Documentation
-- [Architecture Guide](./ARCHITECTURE.md) - System design and component interactions
-- [Style Guide](./STYLE_GUIDE.md) - Code formatting and naming conventions
-- [API Documentation](./API.md) - Backend API endpoints and contracts
-- [Onboarding Guide](./ONBOARDING.md) - Setup and getting started
-- [Pain Points](./PAIN_POINTS.md) - Known issues and workarounds
+- [Current Project Map](../README.md) - current structure, configuration, and runtime surfaces
+- [Documentation Index](INDEX.md) - organized documentation map
+- [Repository Audit](REPOSITORY_AUDIT.md) - code-verified documentation audit and cleanup notes
+- [Onboarding Guide](ONBOARDING.md) - setup and getting started
+- [Pain Points](PAIN_POINTS.md) - known issues and workarounds
 
 ### Process Documentation
-- [Handoff Protocol](./HANDOFF_PROTOCOL.md) - Agent transition procedures
-- [PR Process](../.github/PULL_REQUEST_TEMPLATE.md) - Pull request requirements
-- [Changelog](../CHANGELOG.md) - Version history and changes
+- [Context Notes](../context/README.md) - historical operating memory guidance
+- [Operations Playbook](../context/operations-playbook.md) - operational procedures
+- [Changelog](CHANGELOG.md) - Version history and changes
 
 ### Decision Records
 - [ADR Index](./adr/README.md) - Architectural Decision Records
@@ -275,9 +275,11 @@ MPSM-Dashboard/
 │   └── query              # Query endpoint
 ├── docs/                  # Documentation
 │   ├── CONSTITUTION.md    # This file
-│   ├── ARCHITECTURE.md    # Architecture guide
 │   ├── adr/              # Architectural Decision Records
 │   └── ...
+├── tools/                 # Diagnostics and maintenance tools
+├── tests/                 # Test scripts and reports
+├── database/              # Migrations, rollback SQL, and queries
 └── .github/              # GitHub configuration
     └── PULL_REQUEST_TEMPLATE.md
 ```
@@ -412,7 +414,7 @@ Amendments must meet these criteria:
 
 Before starting work:
 - [ ] Read CONSTITUTION.md (this file)
-- [ ] Review ARCHITECTURE.md
+- [ ] Review ../README.md and REPOSITORY_AUDIT.md
 - [ ] Check PAIN_POINTS.md for known issues
 - [ ] Read recent ADRs in `/docs/adr/`
 - [ ] Review CHANGELOG.md for recent changes

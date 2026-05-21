@@ -19,9 +19,10 @@ if (!$authBypassed) {
 
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 $source = 'live_api';
+$limit = isset($_GET['limit']) ? min(max((int)$_GET['limit'], 1), 200) : 100;
 
 try {
-    $cacheKey = 'customer-portfolio';
+    $cacheKey = 'customer-portfolio-v2-limit-' . $limit;
     $cacheTTL = 1800; // 30 minutes
 
     // Try cache first unless force refresh
@@ -49,10 +50,10 @@ try {
 
     // Build fresh portfolio (prefer cache when populated)
     if (!$forceRefresh && $cacheDeviceCount > 0) {
-        $customers = buildCustomerPortfolioFromCache($pdo);
+        $customers = buildCustomerPortfolioFromCache($pdo, $limit);
         $source = 'cache';
     } else {
-        $customers = buildCustomerPortfolioLive();
+        $customers = buildCustomerPortfolioLive($limit);
         $source = 'live_api';
     }
 
@@ -76,20 +77,19 @@ try {
     jsonError("Failed to generate customer portfolio: " . $e->getMessage());
 }
 
-function buildCustomerPortfolioLive() {
+function buildCustomerPortfolioLive(int $limit) {
     $pdo = getDatabase();
 
     // Fetch all customers from API
     $customersResponse = fetchAllCustomers();
 
-    // LIMIT: Process first 20 customers to avoid timeout (TODO: implement pagination)
-    // Filter to customers with devices happens later, so this gives us ~20 customers with devices
-    $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 50) : 20;
-    $customersResponse = array_slice($customersResponse, 0, $limit);
-
     $portfolio = [];
 
     foreach ($customersResponse as $customer) {
+        if (count($portfolio) >= $limit) {
+            break;
+        }
+
         $customerCode = $customer['Code'] ?? '';
         $customerName = $customer['Description'] ?? $customer['Code'];
 
@@ -102,7 +102,15 @@ function buildCustomerPortfolioLive() {
 
         // Check if cache table exists and has data for this customer
         $cacheTableExists = checkTableExists($pdo, 'mpsm_cache_devices');
-        $dbMetrics = ['ghostDevices' => 0, 'missingAssets' => 0, 'duplicateIPs' => 0, 'panelErrors24h' => 0, 'lastContact' => null];
+        $dbMetrics = [
+            'offlineDevices' => 0,
+            'ghostDevices' => 0,
+            'noContactDataDevices' => 0,
+            'missingAssets' => 0,
+            'duplicateIPs' => 0,
+            'panelErrors24h' => 0,
+            'lastContact' => null
+        ];
 
         if ($cacheTableExists) {
             try {
@@ -129,6 +137,7 @@ function buildCustomerPortfolioLive() {
                 'connectorsActive' => $metrics['connectorsActive'],
                 'connectorsOffline' => max(0, $metrics['connectorCount'] - $metrics['connectorsActive']),
                 'ghostDevices' => $dbMetrics['ghostDevices'],
+                'noContactDataDevices' => $dbMetrics['noContactDataDevices'],
                 'missingAssets' => $dbMetrics['missingAssets'],
                 'duplicateIPs' => $dbMetrics['duplicateIPs'],
                 'panelErrors24h' => $dbMetrics['panelErrors24h'],
@@ -147,33 +156,50 @@ function buildCustomerPortfolioLive() {
     return $portfolio;
 }
 
-function buildCustomerPortfolioFromCache($pdo) {
-    $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 50) : 20;
+function buildCustomerPortfolioFromCache($pdo, int $limit) {
+    $lastContactExpr = "STR_TO_DATE(
+        REPLACE(
+            REPLACE(
+                SUBSTRING_INDEX(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '.', 1),
+                'T',
+                ' '
+            ),
+            'Z',
+            ''
+        ),
+        '%Y-%m-%d %H:%i:%s'
+    )";
+    $isOfflineExpr = "LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IsOffline')), ''))";
+    $offlineFlagExpr = "({$isOfflineExpr} IN ('1','true','yes'))";
 
     $stmt = $pdo->prepare("
         SELECT
             customer_code,
-            MAX(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerName'))) as customer_name,
+            MAX(
+                COALESCE(
+                    NULLIF(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerName')), ''),
+                    NULLIF(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerDescription')), ''),
+                    NULLIF(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Description')), ''),
+                    customer_code
+                )
+            ) as customer_name,
             COUNT(*) as total_devices,
-            SUM(CASE WHEN is_uninstalled = 0 THEN 1 ELSE 0 END) as active_devices,
             SUM(CASE
-                    WHEN COALESCE(
-                        STR_TO_DATE(device_data->>'$.LastContact', '%Y-%m-%dT%H:%i:%s'),
-                        cached_at
-                    ) <= DATE_SUB(NOW(), INTERVAL 2 DAY)
+                    WHEN {$offlineFlagExpr} THEN 1
+                    WHEN {$lastContactExpr} IS NOT NULL
+                     AND {$lastContactExpr} <= DATE_SUB(NOW(), INTERVAL 2 DAY)
                     THEN 1 ELSE 0 END
             ) as offline_devices,
             SUM(CASE
-                    WHEN COALESCE(
-                        STR_TO_DATE(device_data->>'$.LastContact', '%Y-%m-%dT%H:%i:%s'),
-                        cached_at
-                    ) <= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    WHEN {$lastContactExpr} IS NOT NULL
+                     AND {$lastContactExpr} <= DATE_SUB(NOW(), INTERVAL 7 DAY)
                     THEN 1 ELSE 0 END
             ) as ghost_devices,
+            SUM(CASE WHEN {$lastContactExpr} IS NULL THEN 1 ELSE 0 END) as no_contact_data_devices,
             SUM(CASE
-                    WHEN device_data->>'$.AssetNumber' IS NULL
-                      OR device_data->>'$.AssetNumber' = ''
-                      OR device_data->>'$.AssetNumber' = 'null'
+                    WHEN JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) IS NULL
+                      OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) = ''
+                      OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) = 'null'
                     THEN 1 ELSE 0 END
             ) as missing_assets
         FROM mpsm_cache_devices
@@ -187,46 +213,55 @@ function buildCustomerPortfolioFromCache($pdo) {
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $customerNameMap = fetchCustomerNameMap();
 
     $portfolio = [];
 
     foreach ($rows as $row) {
         $customerCode = $row['customer_code'];
         $customerName = $row['customer_name'] ?: $customerCode;
+        if ($customerName === $customerCode && isset($customerNameMap[$customerCode])) {
+            $customerName = $customerNameMap[$customerCode];
+        }
 
         $totalDevices = (int)$row['total_devices'];
         $offlineDevices = (int)$row['offline_devices'];
         $ghostDevices = (int)$row['ghost_devices'];
+        $noContactDataDevices = (int)$row['no_contact_data_devices'];
         $missingAssets = (int)$row['missing_assets'];
 
         // Duplicate IPs within customer
         $dupStmt = $pdo->prepare("
             SELECT COUNT(*) as count
             FROM (
-                SELECT device_data->>'$.IpAddress' as ip
+                SELECT JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) as ip
                 FROM mpsm_cache_devices
                 WHERE customer_code = :customerCode
                   AND is_uninstalled = 0
-                  AND device_data->>'$.IpAddress' IS NOT NULL
-                  AND device_data->>'$.IpAddress' != ''
-                  AND device_data->>'$.IpAddress' != 'null'
-                GROUP BY device_data->>'$.IpAddress'
+                  AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) IS NOT NULL
+                  AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) != ''
+                  AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) != 'null'
+                GROUP BY JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress'))
                 HAVING COUNT(*) > 1
             ) as duplicates
         ");
         $dupStmt->execute(['customerCode' => $customerCode]);
         $duplicateIPs = (int)($dupStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
 
-        // Panel errors in last 24h
-        $panelStmt = $pdo->prepare("
-            SELECT COUNT(*) as count
-            FROM mpsm_panel_messages pm
-            INNER JOIN mpsm_cache_devices cd ON pm.device_serial = cd.serial_number
-            WHERE cd.customer_code = :customerCode
-              AND pm.received_at >= NOW() - INTERVAL 24 HOUR
-        ");
-        $panelStmt->execute(['customerCode' => $customerCode]);
-        $panelErrors24h = (int)($panelStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+        $hasPanelMessagesTable = $hasPanelMessagesTable ?? checkTableExists($pdo, 'mpsm_panel_messages');
+        $panelErrors24h = 0;
+        if ($hasPanelMessagesTable) {
+            // Panel errors in last 24h
+            $panelStmt = $pdo->prepare("
+                SELECT COUNT(*) as count
+                FROM mpsm_panel_messages pm
+                INNER JOIN mpsm_cache_devices cd ON pm.device_serial = cd.serial_number
+                WHERE cd.customer_code = :customerCode
+                  AND pm.received_at >= NOW() - INTERVAL 24 HOUR
+            ");
+            $panelStmt->execute(['customerCode' => $customerCode]);
+            $panelErrors24h = (int)($panelStmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+        }
 
         $connectorCount = 0;
         $connectorsActive = 0;
@@ -255,6 +290,7 @@ function buildCustomerPortfolioFromCache($pdo) {
             'connectorsActive' => $connectorsActive,
             'connectorsOffline' => max(0, $connectorCount - $connectorsActive),
             'ghostDevices' => $ghostDevices,
+            'noContactDataDevices' => $noContactDataDevices,
             'missingAssets' => $missingAssets,
             'duplicateIPs' => $duplicateIPs,
             'panelErrors24h' => $panelErrors24h,
@@ -310,7 +346,8 @@ function fetchCustomerDashboardMetrics($customerCode) {
     }
 
     $totalDevices = (int)($dashboard['TotalManagedDevices'] ?? 0);
-    $offlineDevices = (int)($dashboard['OfflineDevices'] ?? 0);
+    $offlineRaw = $dashboard['OfflineDevices'] ?? null;
+    $offlineDevices = is_numeric($offlineRaw) ? (int)$offlineRaw : null;
 
     // Sum all supply alert categories
     $alertCount = 0;
@@ -322,36 +359,96 @@ function fetchCustomerDashboardMetrics($customerCode) {
     $connectorCount = $dashboard['TotalConnectors'] ?? 0;
     // ContactedDevices shows activity by day
     $contacted = $dashboard['ContactedDevices'] ?? [];
-    $connectorsActive = 0;
+    $contactedTodayOrYesterday = 0;
+    $contactedBeforeYesterday = 0;
     foreach ($contacted as $day) {
-        if ($day['Key'] === 'Today' || $day['Key'] === 'Yesterday') {
-            $connectorsActive += (int)($day['Value'] ?? 0);
+        if (!isset($day['Key'])) {
+            continue;
+        }
+        $key = (string)$day['Key'];
+        $value = (int)($day['Value'] ?? 0);
+        if ($key === 'Today' || $key === 'Yesterday') {
+            $contactedTodayOrYesterday += $value;
+        } elseif ($key === 'BeforeYesterday') {
+            $contactedBeforeYesterday += $value;
         }
     }
+
+    // Current upstream payload does not expose active connector count directly in this endpoint.
+    // Keep connector fields bounded and avoid deriving connector activity from device-contact counts.
+    $connectorsActive = (int)$connectorCount;
+
+    // If OfflineDevices is not returned, estimate offline from recent contact windows.
+    // "BeforeYesterday" devices are stale for a 48-hour freshness threshold.
+    if ($offlineDevices === null) {
+        // Fallback from ContactedDevices buckets:
+        // devices contacted today/yesterday are "online";
+        // "BeforeYesterday" devices are stale for a 48-hour threshold.
+        $offlineDevices = max(0, $totalDevices - $contactedTodayOrYesterday);
+    }
+
+    // CustomerDashboard/Get does not provide a reliable 7-day no-contact bucket.
+    // Keep this metric sourced from cache-device contact timestamps when available.
+    $ghostDevices = 0;
 
     return [
         'totalDevices' => $totalDevices,
         'offlineDevices' => $offlineDevices,
         'alertCount' => $alertCount,
         'connectorCount' => $connectorCount,
-        'connectorsActive' => $connectorsActive
+        'connectorsActive' => $connectorsActive,
+        'ghostDevices' => $ghostDevices
     ];
 }
 
 function fetchCustomerDatabaseMetrics($pdo, $customerCode) {
-    // Ghost devices (no contact in 7+ days)
+    $hasPanelMessagesTable = checkTableExists($pdo, 'mpsm_panel_messages');
+
+    $lastContactExpr = "STR_TO_DATE(
+        REPLACE(
+            REPLACE(
+                SUBSTRING_INDEX(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '.', 1),
+                'T',
+                ' '
+            ),
+            'Z',
+            ''
+        ),
+        '%Y-%m-%d %H:%i:%s'
+    )";
+    $isOfflineExpr = "LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IsOffline')), ''))";
+    $offlineFlagExpr = "({$isOfflineExpr} IN ('1','true','yes'))";
+
+    // Contact health metrics sourced from per-device cache payload fields.
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count
+        SELECT
+            SUM(
+                CASE
+                    WHEN {$offlineFlagExpr} THEN 1
+                    WHEN {$lastContactExpr} IS NOT NULL
+                     AND {$lastContactExpr} <= DATE_SUB(NOW(), INTERVAL 2 DAY)
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS offline_devices,
+            SUM(
+                CASE
+                    WHEN {$lastContactExpr} IS NOT NULL
+                     AND {$lastContactExpr} <= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS ghost_devices,
+            SUM(CASE WHEN {$lastContactExpr} IS NULL THEN 1 ELSE 0 END) AS no_contact_data_devices
         FROM mpsm_cache_devices
         WHERE customer_code = :customerCode
         AND is_uninstalled = 0
-        AND (
-            TIMESTAMPDIFF(DAY, STR_TO_DATE(device_data->>'$.LastContact', '%Y-%m-%dT%H:%i:%s'), NOW()) > 7
-            OR (device_data->>'$.LastContact' IS NULL AND TIMESTAMPDIFF(DAY, cached_at, NOW()) > 7)
-        )
     ");
     $stmt->execute(['customerCode' => $customerCode]);
-    $ghostDevices = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+    $contactMetrics = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $offlineDevices = (int)($contactMetrics['offline_devices'] ?? 0);
+    $ghostDevices = (int)($contactMetrics['ghost_devices'] ?? 0);
+    $noContactDataDevices = (int)($contactMetrics['no_contact_data_devices'] ?? 0);
 
     // Missing asset numbers
     $stmt = $pdo->prepare("
@@ -359,9 +456,9 @@ function fetchCustomerDatabaseMetrics($pdo, $customerCode) {
         FROM mpsm_cache_devices
         WHERE customer_code = :customerCode
         AND is_uninstalled = 0
-        AND (device_data->>'$.AssetNumber' IS NULL
-            OR device_data->>'$.AssetNumber' = ''
-            OR device_data->>'$.AssetNumber' = 'null')
+        AND (JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) IS NULL
+            OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) = ''
+            OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.AssetNumber')) = 'null')
     ");
     $stmt->execute(['customerCode' => $customerCode]);
     $missingAssets = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
@@ -370,36 +467,51 @@ function fetchCustomerDatabaseMetrics($pdo, $customerCode) {
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as count
         FROM (
-            SELECT device_data->>'$.IpAddress' as ip
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) as ip
             FROM mpsm_cache_devices
             WHERE customer_code = :customerCode
             AND is_uninstalled = 0
-            AND device_data->>'$.IpAddress' IS NOT NULL
-            AND device_data->>'$.IpAddress' != ''
-            AND device_data->>'$.IpAddress' != 'null'
-            GROUP BY device_data->>'$.IpAddress'
+            AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) IS NOT NULL
+            AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) != ''
+            AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) != 'null'
+            GROUP BY JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress'))
             HAVING COUNT(*) > 1
         ) as duplicates
     ");
     $stmt->execute(['customerCode' => $customerCode]);
     $duplicateIPs = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
 
-    // Panel errors in last 24h
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count
-        FROM mpsm_panel_messages pm
-        INNER JOIN mpsm_cache_devices cd ON pm.device_serial = cd.serial_number
-        WHERE cd.customer_code = :customerCode
-        AND pm.received_at >= NOW() - INTERVAL 24 HOUR
-    ");
-    $stmt->execute(['customerCode' => $customerCode]);
-    $panelErrors24h = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+    $hasPanelMessagesTable = $hasPanelMessagesTable ?? checkTableExists($pdo, 'mpsm_panel_messages');
+    $panelErrors24h = 0;
+    if ($hasPanelMessagesTable) {
+        // Panel errors in last 24h
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM mpsm_panel_messages pm
+            INNER JOIN mpsm_cache_devices cd ON pm.device_serial = cd.serial_number
+            WHERE cd.customer_code = :customerCode
+            AND pm.received_at >= NOW() - INTERVAL 24 HOUR
+        ");
+        $stmt->execute(['customerCode' => $customerCode]);
+        $panelErrors24h = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+    }
 
     // Last contact (most recent device update)
     $stmt = $pdo->prepare("
         SELECT MAX(
             COALESCE(
-                STR_TO_DATE(device_data->>'$.LastContact', '%Y-%m-%dT%H:%i:%s'),
+                STR_TO_DATE(
+                    REPLACE(
+                        REPLACE(
+                            SUBSTRING_INDEX(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.LastContact')), '.', 1),
+                            'T',
+                            ' '
+                        ),
+                        'Z',
+                        ''
+                    ),
+                    '%Y-%m-%d %H:%i:%s'
+                ),
                 cached_at
             )
         ) as last_contact
@@ -412,12 +524,31 @@ function fetchCustomerDatabaseMetrics($pdo, $customerCode) {
     $lastContact = $lastContactRow['last_contact'] ?? null;
 
     return [
+        'offlineDevices' => $offlineDevices,
         'ghostDevices' => $ghostDevices,
+        'noContactDataDevices' => $noContactDataDevices,
         'missingAssets' => $missingAssets,
         'duplicateIPs' => $duplicateIPs,
         'panelErrors24h' => $panelErrors24h,
         'lastContact' => $lastContact
     ];
+}
+
+function fetchCustomerNameMap() {
+    $map = [];
+    try {
+        $customers = fetchAllCustomers();
+        foreach ($customers as $customer) {
+            $code = trim((string)($customer['Code'] ?? ''));
+            $description = trim((string)($customer['Description'] ?? ''));
+            if ($code !== '' && $description !== '') {
+                $map[$code] = $description;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('fetchCustomerNameMap error: ' . $e->getMessage());
+    }
+    return $map;
 }
 
 function calculateHealthScore($metrics, $dbMetrics) {

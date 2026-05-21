@@ -1,5 +1,38 @@
 # Deploy Log
 
+## 2026-05-20 - Documentation refresh deploy
+
+- Backup: `python3 scripts/ftp_backup.py`.
+- Backup result: `backups/live-site-20260520-160537`, 3114 files, 0 errors.
+- Local gate: `python3 scripts/run_checks.py` passed.
+- Deploy: `python3 scripts/ftp_deploy.py --delete`.
+- Deploy result: 441 files uploaded, 0 errors.
+- Live verification:
+  - `python3 scripts/live_smoke.py` passed.
+  - `/mps-api/health` returned 200 with `success: true`, `status: healthy`, `api_reachable: true`, and `api_response: true`.
+- Cache state after deploy: chunked refresh in progress at `fetching_drilldowns`, page `34/34`, 3370 devices staged, 300 drilldowns staged, 0 errors, last activity `2026-05-20 16:16:04`.
+
+## 2026-05-20 - Repository cleanup and portable FTP deploy
+
+- Method: direct FTP through portable Python scripts.
+- Backup: `python3 scripts/ftp_backup.py`.
+- Backup result: `backups/live-site-20260520-141426`, 3659 files, 0 errors.
+- Local gate: `python3 scripts/run_checks.py` passed.
+- Deploy: `python3 scripts/ftp_deploy.py --delete`.
+- Deploy result: 440 files uploaded, 0 errors.
+- Preserved server-managed `.env`, `cms/config.php`, cache/log/lock paths, and `mps-api/cache/storage/`.
+- Removed stale remote files from previous root clutter and deleted unsafe `cms/api/tmp-secret-bc2f7.php`.
+- Follow-up deploys:
+  - Fixed `bootstrap.php` autoloading and `src/Router.php` v1 path normalization.
+  - Updated `scripts/live_smoke.py` to treat `cache-status-report.php` as text.
+  - Tuned `cms/api/refresh-cache-chunked.php` drill-down chunks to fit shared-host HTTP timeouts.
+- Live verification:
+  - `python3 scripts/live_smoke.py` passed.
+  - `/cms/api/v1/health` returned 200 JSON.
+  - `/mps-api/health` returned 200 and reported upstream API connection successful.
+  - `/cms/api/tmp-secret-bc2f7.php` returned 404.
+- Cache state after deploy: chunked refresh in progress at `fetching_drilldowns`, page `34/34`, 3370 devices staged, 300 drilldowns staged, 0 errors.
+
 ## 2025-12-03 12:20 UTC - CRITICAL: Remove Orphaned Data Quality References
 **Commit:** 26f7db7
 **Status:** ✅ DEPLOYED
@@ -124,40 +157,40 @@ Portfolio API was timing out when processing all 82 customers sequentially (>120
 
 ## 2025-11-28 18:00 UTC
 - **Command:** Uploaded via FTP  
-  - `curl -T cms/api/get-device-deep-dive.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-device-deep-dive.php`  
-  - `curl -T cms/api/search-devices.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/search-devices.php`  
-  - `curl -T cms/assets/app.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/app.js`  
-  - `curl -T context/session.md ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/context/session.md`
+  - `curl -T cms/api/get-device-deep-dive.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-device-deep-dive.php`  
+  - `curl -T cms/api/search-devices.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/search-devices.php`  
+  - `curl -T cms/assets/app.js ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/assets/app.js`  
+  - `curl -T context/session.md ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/context/session.md`
 - **Result:** Success (deployed cached-first device search, expanded panel alert matching for drill-down, and modal alert display updates).
 - **Notes:** Panel message matching now normalizes serial/device IDs from payloads and surfaces in-device modal; search uses cache-first with API fallback.
 
 ## 2025-11-28 19:05 UTC
 - **Command:** Uploaded via FTP  
-  - `curl -T cms/api/get-panel-messages.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-panel-messages.php`  
-  - `curl -T cms/api/get-device-deep-dive.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-device-deep-dive.php`  
-  - `curl -T cms/assets/panel-messages.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/panel-messages.js`  
-  - `curl -T cms/assets/app.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/app.js`  
-  - `curl -T context/session.md ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/context/session.md`
+  - `curl -T cms/api/get-panel-messages.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-panel-messages.php`  
+  - `curl -T cms/api/get-device-deep-dive.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-device-deep-dive.php`  
+  - `curl -T cms/assets/panel-messages.js ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/assets/panel-messages.js`  
+  - `curl -T cms/assets/app.js ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/assets/app.js`  
+  - `curl -T context/session.md ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/context/session.md`
 - **Result:** Success (deployed alert display-name mapping for panel/system alerts and ensured drill-down modal sections always render).
 - **Notes:** Panel alerts now prefer payload descriptions and alert_definitions display names; code-only fallbacks are muted/secondary.
 
 ## 2025-11-28 19:40 UTC
 - **Command:** Uploaded via FTP  
-  - `curl -T cms/api/search-devices.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/search-devices.php`  
-  - `curl -T cms/api/command-center.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/command-center.php`  
-  - `curl -T cms/assets/hero-notifications.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
+  - `curl -T cms/api/search-devices.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/search-devices.php`  
+  - `curl -T cms/api/command-center.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/command-center.php`  
+  - `curl -T cms/assets/hero-notifications.js ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
 - **Result:** Success (hardened cache-first search fallback, enriched notifications with department/model/equipment_id, and updated hero cards to show human-readable alert names and device metadata).
 - **Notes:** System Alerts cards now render display_name, model, department, and equipment barcode; search gracefully degrades if API is unreachable.
 
 ## 2025-11-28 19:55 UTC
-- **Command:** `curl -T cms/assets/hero-notifications.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
+- **Command:** `curl -T cms/assets/hero-notifications.js ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
 - **Result:** Success (restored alerts rendering by falling back to the raw notification list when grouping yields zero, while keeping display name/device/department metadata).
 - **Notes:** System Alerts should now appear even if alert_code/device_serial are missing in the feed.
 
 ## 2025-11-24 20:55 UTC
 - **Command:**
-  - `curl -T cms/assets/hero-notifications.js ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
-  - `curl -T cms/api/populate-alert-definitions.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/populate-alert-definitions.php`
+  - `curl -T cms/assets/hero-notifications.js ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/assets/hero-notifications.js`
+  - `curl -T cms/api/populate-alert-definitions.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/populate-alert-definitions.php`
 - **Result:** Success (System Alerts cards no longer show serial numbers in subtitle; alert codes display as "Alert 808" format; added script to populate alert definitions)
 - **Notes:**
   - hero-notifications.js now detects serial numbers (15+ chars) and excludes them from subtitle
@@ -176,28 +209,28 @@ CHANGELOG
 2025-11-26 15:12:59 -05:00 Commit: Refine Command Center UI & API
 - Files: cms/api/command-center.php, cms/assets/command-center.js, cms/assets/style.css, cms/command-center.php
 - Notes: 1h tallies, alert-type aggregations, customer filter, modal fixes
-2025-11-26 15:13:08 -05:00 Deploy: GitHub Actions auto-FTP (push to main)
-- Command: git push origin main
-- Workflow: .github/workflows/deploy.yml
+2025-11-26 15:13:08 -05:00 Historical deploy: GitHub Actions auto-FTP
+- Command: historical main-branch push
+- Workflow: historical GitHub Actions workflow, not present in current working tree
 - Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
-2025-11-26 15:31:26 -05:00 Deploy: GitHub Actions auto-FTP (push to main)
-- Command: git push origin main
-- Workflow: .github/workflows/deploy.yml
+2025-11-26 15:31:26 -05:00 Historical deploy: GitHub Actions auto-FTP
+- Command: historical main-branch push
+- Workflow: historical GitHub Actions workflow, not present in current working tree
 - Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
-2025-11-26 15:47:42 -05:00 Deploy: GitHub Actions auto-FTP (push to main)
-- Command: git push origin main
-- Workflow: .github/workflows/deploy.yml
+2025-11-26 15:47:42 -05:00 Historical deploy: GitHub Actions auto-FTP
+- Command: historical main-branch push
+- Workflow: historical GitHub Actions workflow, not present in current working tree
 - Monitor: https://github.com/JezSlade/MPSM-Dashboard/actions
 2025-12-03 03:59:10 UTC
-- Command: curl -T cms/api/get-dealer-summary.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
-- Command: curl -T cms/api/get-dealer-summary-hybrid.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary-hybrid.php
+- Command: curl -T cms/api/get-dealer-summary.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
+- Command: curl -T cms/api/get-dealer-summary-hybrid.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary-hybrid.php
 - Result: Success (redeclaration fix deployed)
 - Notes: Removed local callMPSAPI duplicates; APIs now rely on shared callMPSQuery to avoid fatal errors when loading dealer dashboard.
 
 2025-12-03 04:25:00 UTC
-- Command: curl -T cms/dealer.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/dealer.php
-- Command: curl -T cms/api/get-dealer-summary.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
-- Command: curl -T cms/api/get-dealer-summary-hybrid.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary-hybrid.php
+- Command: curl -T cms/dealer.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/dealer.php
+- Command: curl -T cms/api/get-dealer-summary.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
+- Command: curl -T cms/api/get-dealer-summary-hybrid.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary-hybrid.php
 - Result: Success (dealer dashboard fixes deployed)
 - Notes:
   * Added toast-container div to dealer.php for showToast() function
@@ -207,7 +240,7 @@ CHANGELOG
   * Live API now returns actual customer/device data instead of zeros
 
 2025-12-03 10:04:40 UTC
-- Command: curl -T cms/api/get-dealer-summary.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
+- Command: curl -T cms/api/get-dealer-summary.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-dealer-summary.php
 - Result: Success (uploaded pagination/cache-fallback fix for dealer summary)
 - Tests:
   * curl https://mpsm.resolutionsbydesign.us/cms/api/test-dealer-status.php -> ✅ DB connected, cache_devices exists but 0 rows; strategy = LIVE API fallback
@@ -216,7 +249,7 @@ CHANGELOG
 - Notes: Cache needs repopulation (refresh-cache-enhanced.php) to avoid live API timeouts and restore full device totals on dealer.php.
 
 2025-12-03 10:09:00 UTC
-- Command: curl -T cms/api/get-customer-portfolio.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/get-customer-portfolio.php
+- Command: curl -T cms/api/get-customer-portfolio.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/get-customer-portfolio.php
 - Result: Success (cache-first portfolio path deployed)
 - Tests:
   * curl https://mpsm.resolutionsbydesign.us/cms/api/get-customer-portfolio.php?secret=DEALER_API_2025&limit=5 -> success (live_api source, total=3, connectors/alerts present); cache still empty so live fallback used
@@ -224,10 +257,10 @@ CHANGELOG
 - Notes: Portfolio API now serves from DB cache when populated; cached payload records source; live fallback remains until cache repopulated.
 
 2025-12-03 10:33:00 UTC
-- Command: curl -T cms/api/refresh-cache-chunked.php ftp://mpsm%40mpsm.resolutionsbydesign.us:Deploy123%21@ftp.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php
+- Command: curl -T cms/api/refresh-cache-chunked.php ftp://<FTP_USER>:<FTP_PASSWORD>@ftp.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php
 - Result: Success (swapped device/drilldown fetches to use mps-api/query engine to avoid direct OAuth timeouts)
 - Tests (live):
-  * curl https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1&skipDrilldown=1 -> HTTP 500 (enhanced path still failing; do not use)
+  * Legacy enhanced refresh force/skip-drilldown check -> HTTP 500 (enhanced path still failing; do not use)
   * curl https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=start -> initialized new run; state shows OAuth timeout error before fix
   * curl https://mpsm.resolutionsbydesign.us/cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025 -> after deploy, state progressed to page 3, devices_cached=200 (live mps-api engine path now fetching)
   * curl https://mpsm.resolutionsbydesign.us/cms/api/check-cache-progress.php -> shows status fetching_devices, devices_cached moving from 0 → 200; previous errors recorded were OAuth timeouts and one invalid response on page 3

@@ -1,19 +1,18 @@
 # Project Next Steps / TODOs
 
-Updated: 2025-11-06 13:50 UTC
+Updated: 2026-05-20
 
 ## Data Refresh & Coverage
 
-- Allow a full `cms/api/refresh-cache-enhanced.php?force=1` run to complete (without `skipDrilldown`) and confirm the Database Monitor card reports ≥95 % drill-down coverage; capture the before/after metrics in `BACKGROUND_REFRESH_SYSTEM.md`.
-- Watch `cms/logs/cache-refresh-YYYY-MM-DD.log` for sustained rate-limit messages; if retries still hit the cap, consider increasing the base back-off above 0.75 s or adding a staggered queue.
-- Make sure `refresh-cache-chunked.php` cron emails show `"version": "2025-11-19a"` and `errors: []` before returning to the drill-down phase; if the OAuth token timeout survives, add retries/backoff and silence the repeated completed-state output as the follow-up fix.
-- Monitor `/home/resolut7/logs/refresh-cache-chunked.log` instead of emails; each entry should include the current `version`, `state`, and `errors`. If nothing is written, hit `run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` to regenerate the latest run output before investigating further.
-- Confirm drill-down progress after restarting the job. Once you reinitialize via `?action=start`, check that the log/helper shows `state.status = "fetching_drilldowns"` and `drilldowns_cached` begins rising; if needed rerun the helper or wait a minute before rerunning to ensure the queue processes and that log entries capture both device and drill-down phases.
+- Continue the current `cms/api/refresh-cache-chunked.php` staged run until `action=status` reports completion with no errors, then run `action=cutover`.
+- Current checkpoint from the 2026-05-20 documentation pass: 3,351 live devices, 1,425 live drilldowns, 3,370 staged devices, 300 staged drilldowns, 0 staged errors.
+- Do not use `refresh-cache-enhanced.php` as the full shared-host warmup path unless timeout behavior is retested; it timed out during the 2026-05-20 post-deploy warmup.
+- Verify the live cPanel cron, if enabled, follows the chunked start/process/status/cutover flow and does not overlap long-running refreshes.
 - Surface the cached timestamp inside the device modal once the cache is steady so analysts know how fresh each drill-down snapshot is.
 
 ## Payload Debugger & Callbacks
 
-- Clean up `test-payloads.ps1` (remove non-ASCII quotes) so the eight-case harness runs without parse errors; rerun and verify the debugger reflects the expected mix (2 success / 6 error).
+- Recreate the callback payload harness as a portable Python or shell helper if the eight-case success/error matrix needs to be rerun.
 - Monitor `mpsm_panel_callback_debug` for live MPS Monitor traffic to validate `unique_source`, `forwarded_for`, and `completed_at` data; record any production IP ranges for future allow-listing.
 - After the next vendor callback, grab a debugger screenshot highlighting the “Completed” column for support documentation (`PAYLOAD_DEBUGGER_GUIDE.md`).
 

@@ -41,7 +41,7 @@ Alert system is **functional** but has **no pre-configured rules** for common de
 **Severity**: High
 **Rationale**: Recurring motor overload suggests mechanical binding, excessive resistance, belt tension problems, or bearing wear.
 
-**Insertion Script**: [insert-alert-rules.php](../insert-alert-rules.php)
+**Insertion Script**: [insert-alert-rules.php](../tools/command-center/insert-alert-rules.php)
 **SQL Backup**: [common-sense-alert-rules.sql](common-sense-alert-rules.sql)
 
 ---
@@ -359,7 +359,7 @@ ORDER BY created_at DESC LIMIT 1;
 
 ### Created
 - [context/common-sense-alert-rules.sql](common-sense-alert-rules.sql) - SQL INSERT statements
-- [insert-alert-rules.php](../insert-alert-rules.php) - PHP insertion script
+- [insert-alert-rules.php](../tools/command-center/insert-alert-rules.php) - PHP insertion script
 - [context/alert-system-audit.md](alert-system-audit.md) - This document
 
 ### To Modify (Mobile Notifications)

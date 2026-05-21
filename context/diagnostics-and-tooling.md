@@ -1,6 +1,6 @@
 # Diagnostics & Tooling
 
-> Pulling from: `PAYLOAD_DEBUGGER_GUIDE.md`, `AUDIT_REPORT.md`, `docs/PAIN_POINTS.md`, `scripts/README.md`, `battle_test.html`, `scripts/panel-message-diagnostics.ps1`
+> Pulling from: `docs/INDEX.md`, `scripts/README.md`, `context/current-state.md`, live smoke checks, and current script inventory.
 
 ## Built-In Dashboards
 
@@ -25,14 +25,14 @@
 - **Battle Test Harness** (`battle_test.html`, `battle_test_results.txt`)  
   Launch in a browser for end-to-end smoke checks (login, devices, deep dive, panel messages, payload debugger, exports). Documented in `AUDIT_REPORT.md`.
 
-- **Panel Message Diagnostics** (`scripts/panel-message-diagnostics.ps1`)  
-  ```powershell
-  .\scripts\panel-message-diagnostics.ps1 -Limit 10
-  ```
-  Emits recent panel message summaries, counts, and sample payload details.
+- **Portable Local Gate** (`scripts/run_checks.py`)  
+  Runs Python compile checks, shell syntax checks, `Swagger.json` parsing, active doc-link validation, known secret scanning, PHP linting, and pure PHP tests. It auto-loads ignored `.runtime/php-ext` MySQL extensions when available.
 
-- **Payload Debugger Stress Test** (`test-payloads.ps1`)  
-  Sends curated success/error requests to `panel-message-debug.php`. Expect totals to align with `PAYLOAD_DEBUGGER_GUIDE.md` cases.
+- **FTP Backup/Deploy** (`scripts/ftp_backup.py`, `scripts/ftp_deploy.py`)  
+  Cross-platform FTP backup/deploy helpers. Credentials come from environment variables or ignored `.runtime/ftp.env`.
+
+- **Live Smoke Test** (`scripts/live_smoke.py`)  
+  Verifies `/cms/login.html`, `/cms/`, `/cms/api/cache-status-report.php`, `/cms/api/v1/health`, and `/robots.txt` on the live site.
 
 - **API Discovery Suite** (`scripts/run_discovery.py`, `generate_endpoint_sample_catalog.py`, etc.)  
   Maintains `.canonical/EndpointCatalog.php`. Requires Python 3.7+ and a populated `.env`. Preferred for large-scale API validation.
@@ -49,7 +49,7 @@
 | Engine errors | `mps-api/logs/php_errors_YYYY-MM-DD.log` | OAuth failures, upstream errors. |
 | Config issues | `mps-api/logs/config_error_YYYY-MM-DD.log` | `.env` parsing problems. |
 
-Use `tail -f` equivalents (PowerShell: `Get-Content -Wait`) for live monitoring during deployments.
+Use `tail -f` equivalents or repeated `curl` calls for live monitoring during deployments.
 
 ## Quick Command Library
 
@@ -71,8 +71,14 @@ curl -s "https://mpsm.resolutionsbydesign.us/cms/api/get-device-deep-dive.php?se
 curl -s "https://mpsm.resolutionsbydesign.us/cms/api/get-payload-debug-logs.php?limit=20" \
   -b cookies.txt | jq '.stats'
 
-# Run enhanced cache refresh (manual)
-curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"
+# Run local gate
+python3 scripts/run_checks.py
+
+# Run live smoke
+python3 scripts/live_smoke.py
+
+# Check guarded chunked refresh status
+curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=status"
 
 # Engine health diagnostics
 curl -s "https://mpsm.resolutionsbydesign.us/mps-api/diagnostics" | jq '.status'
@@ -92,14 +98,13 @@ curl -s "https://mpsm.resolutionsbydesign.us/mps-api/diagnostics" | jq '.status'
 1. **Reproduce:** Capture request URL, payload, and console logs.  
 2. **Check Known Fixes:** See `context/verified-fixes.md` to ensure the issue was not previously resolved.  
 3. **Look at Logs/Tables:** `mpsm_panel_callback_debug`, PHP error logs, cache refresh logs.  
-4. **Run Targeted Script:** e.g. `panel-message-diagnostics.ps1` for panel issues, `test-payloads.ps1` for callback validation.  
+4. **Run Targeted Script:** use `scripts/run_checks.py`, `scripts/live_smoke.py`, or endpoint-specific curl checks.  
 5. **Compare With Battle Test:** If a scenario fails, inspect the referenced files in `AUDIT_REPORT.md`.
 
 Keep this playbook updated whenever new tooling or diagnostics are added.
 
 ## Next Steps / TODOs
 
-- Allow the enhanced cache refresh to complete a full run (without `skipDrilldown`) and confirm the Database Monitor card reports ≥95 % drill-down coverage; record the before/after stats in `BACKGROUND_REFRESH_SYSTEM.md`.
-- Refactor `test-payloads.ps1` to remove non-ASCII characters so it can be executed without parse errors, then check the payload debugger to ensure the expected 2 success / 6 error mix is recorded.
+- Let the active chunked cache refresh complete and perform guarded cutover; record final live counts in `context/test-log.md`.
+- Replace historical PowerShell-only callback test references with portable Python or shell equivalents if those flows are needed again.
 - After the next live payload arrives from MPS Monitor, capture a screenshot of the debugger showing the populated `Completed` column for support documentation (`PAYLOAD_DEBUGGER_GUIDE.md`).
-

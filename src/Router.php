@@ -79,9 +79,22 @@ class Router
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
         // Remove script name from URI if present
-        $scriptName = $_SERVER['SCRIPT_NAME'];
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         if (strpos($uri, $scriptName) === 0) {
             $uri = substr($uri, strlen($scriptName));
+        }
+
+        // The app is usually mounted under /cms, while routes are registered
+        // from the API root (/api/v1/*).
+        $scriptDir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+        $apiPrefix = '/api/v1';
+        if (
+            $scriptDir !== ''
+            && $scriptDir !== '.'
+            && substr($scriptDir, -strlen($apiPrefix)) === $apiPrefix
+            && strpos($uri, $scriptDir) === 0
+        ) {
+            $uri = $apiPrefix . substr($uri, strlen($scriptDir));
         }
 
         // Remove leading slash

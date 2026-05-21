@@ -159,17 +159,31 @@ class QueueManager
         $stmt = $this->pdo->prepare("
             SELECT
                 COUNT(*) as total_jobs,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_jobs,
-                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing_jobs,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_jobs,
-                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_jobs,
+                COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) as pending_jobs,
+                COALESCE(SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END), 0) as processing_jobs,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as completed_jobs,
+                COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed_jobs,
                 AVG(TIMESTAMPDIFF(SECOND, started_at, completed_at)) as avg_duration_seconds
             FROM {$this->table}
             WHERE queue = ?
         ");
 
         $stmt->execute([$queue]);
-        return $stmt->fetch() ?: [];
+        $stats = $stmt->fetch() ?: [];
+        if (!$stats) {
+            return [];
+        }
+
+        $stats['total_jobs'] = (int)($stats['total_jobs'] ?? 0);
+        $stats['pending_jobs'] = (int)($stats['pending_jobs'] ?? 0);
+        $stats['processing_jobs'] = (int)($stats['processing_jobs'] ?? 0);
+        $stats['completed_jobs'] = (int)($stats['completed_jobs'] ?? 0);
+        $stats['failed_jobs'] = (int)($stats['failed_jobs'] ?? 0);
+        $stats['avg_duration_seconds'] = isset($stats['avg_duration_seconds'])
+            ? (float)$stats['avg_duration_seconds']
+            : null;
+
+        return $stats;
     }
 
     /**

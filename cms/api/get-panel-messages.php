@@ -42,6 +42,25 @@ try {
 
     $table = DB_PREFIX . 'panel_messages';
     $devicesTable = DB_PREFIX . 'cache_devices';
+    $tableExists = (bool)$pdo->query("SHOW TABLES LIKE '{$table}'")->fetchColumn();
+    if (!$tableExists) {
+        jsonSuccess([
+            'messages' => [],
+            'warning' => "Panel message table '{$table}' is not initialized."
+        ]);
+        return;
+    }
+
+    $devicesTableExists = (bool)$pdo->query("SHOW TABLES LIKE '{$devicesTable}'")->fetchColumn();
+    $departmentSelect = $devicesTableExists
+        ? "COALESCE(
+               JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Department')),
+               JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.department')),
+               JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.OfficeDescription')),
+               JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Note'))
+           ) AS department"
+        : "NULL AS department";
+
     $sql = "SELECT pm.id,
                    pm.received_at,
                    pm.customer_code,
@@ -52,14 +71,12 @@ try {
                    pm.panel_configuration,
                    pm.processed,
                    pm.payload,
-                   COALESCE(
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Department')),
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.department')),
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.OfficeDescription')),
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Note'))
-                   ) AS department
-            FROM {$table} pm
-            LEFT JOIN {$devicesTable} cd ON cd.serial_number = pm.device_serial";
+                   {$departmentSelect}
+            FROM {$table} pm";
+
+    if ($devicesTableExists) {
+        $sql .= " LEFT JOIN {$devicesTable} cd ON cd.serial_number = pm.device_serial";
+    }
 
     $params = [];
     $conditions = [];

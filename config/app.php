@@ -7,27 +7,30 @@
  * This file replaces scattered configuration across cms/config.php and mps-api/config.php
  */
 
+require_once __DIR__ . '/env.php';
+mpsm_load_env(dirname(__DIR__) . '/.env');
+
 return [
     // Application Settings
     'app' => [
-        'name' => 'MPS Monitor Dashboard',
-        'version' => '3.0.0',
-        'env' => getenv('APP_ENV') ?: 'production',
-        'debug' => getenv('APP_DEBUG') === 'true',
-        'timezone' => 'America/New_York',
+        'name' => mpsm_env('APP_NAME', 'MPS Monitor Dashboard'),
+        'version' => mpsm_env('APP_VERSION', '3.0.0'),
+        'env' => mpsm_env('APP_ENV', 'production'),
+        'debug' => mpsm_env('APP_DEBUG') === 'true',
+        'timezone' => mpsm_env('TIMEZONE', 'America/New_York'),
     ],
 
     // Database Configuration
     'database' => [
         'driver' => 'mysql',
-        'host' => getenv('DB_HOST') ?: 'localhost',
-        'port' => getenv('DB_PORT') ?: 3306,
-        'database' => getenv('DB_NAME') ?: 'resolut7_mpsm',
-        'username' => getenv('DB_USER') ?: 'resolut7_mpsm_agent',
-        'password' => getenv('DB_PASS') ?: '!C@S@lcd6McFceb8',
-        'charset' => 'utf8mb4',
+        'host' => mpsm_env('DB_HOST', 'localhost'),
+        'port' => (int) mpsm_env('DB_PORT', 3306),
+        'database' => mpsm_env('DB_NAME', ''),
+        'username' => mpsm_env('DB_USER', ''),
+        'password' => mpsm_env('DB_PASS', ''),
+        'charset' => mpsm_env('DB_CHARSET', 'utf8mb4'),
         'collation' => 'utf8mb4_unicode_ci',
-        'prefix' => 'mpsm_',
+        'prefix' => mpsm_env('DB_PREFIX', 'mpsm_'),
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -37,21 +40,21 @@ return [
 
     // MPS API Configuration (Vendor API)
     'mps_api' => [
-        'base_url' => getenv('MPS_API_BASE') ?: 'https://api.abassetmanagement.com/api3/',
-        'token_url' => getenv('MPS_API_TOKEN_URL') ?: 'https://api.abassetmanagement.com/api3/token',
-        'client_id' => getenv('MPS_CLIENT_ID') ?: 'G0bYZyS9bjOjx6oRv-MQ6vGF3VkVTvZy5hzhVEOWQs8',
-        'client_secret' => getenv('MPS_CLIENT_SECRET') ?: 'wFFXo9TQvvuCGVBb0_MMNZkZP5YuTPJqe_eRRdHCPQo',
-        'username' => getenv('MPS_USERNAME') ?: 'rbd.connect@resolutionsbydesign.com',
-        'password' => getenv('MPS_PASSWORD') ?: 'connect.RBD24!',
+        'base_url' => mpsm_env(['MPS_API_BASE', 'MPS_BASE_URL', 'API_BASE_URL'], 'https://api.abassetmanagement.com/api3/'),
+        'token_url' => mpsm_env(['MPS_API_TOKEN_URL', 'MPS_TOKEN_URL', 'TOKEN_URL'], 'https://api.abassetmanagement.com/api3/token'),
+        'client_id' => mpsm_env(['MPS_CLIENT_ID', 'CLIENT_ID'], ''),
+        'client_secret' => mpsm_env(['MPS_CLIENT_SECRET', 'CLIENT_SECRET'], ''),
+        'username' => mpsm_env(['MPS_USERNAME', 'USERNAME'], ''),
+        'password' => mpsm_env(['MPS_PASSWORD', 'PASSWORD'], ''),
         'grant_type' => 'password',
-        'scope' => getenv('MPS_SCOPE') ?: 'rbd.connect@resolutionsbydesign.com MpsMonitorApiAll',
+        'scope' => mpsm_env(['MPS_SCOPE', 'SCOPE'], ''),
         'timeout' => 30,
         'retries' => 3,
     ],
 
     // Cache Configuration
     'cache' => [
-        'default' => getenv('CACHE_DRIVER') ?: 'database',
+        'default' => mpsm_env('CACHE_DRIVER', 'database'),
         'ttl' => [
             'default' => 3600,        // 1 hour
             'devices_list' => 300,    // 5 minutes
@@ -68,9 +71,9 @@ return [
                 'path' => __DIR__ . '/../storage/cache',
             ],
             'redis' => [
-                'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
-                'port' => getenv('REDIS_PORT') ?: 6379,
-                'password' => getenv('REDIS_PASSWORD'),
+                'host' => mpsm_env('REDIS_HOST', '127.0.0.1'),
+                'port' => (int) mpsm_env('REDIS_PORT', 6379),
+                'password' => mpsm_env('REDIS_PASSWORD'),
                 'database' => 0,
             ],
         ],
@@ -88,7 +91,7 @@ return [
 
     // Security Configuration
     'security' => [
-        'key' => getenv('APP_KEY') ?: 'mpsm_dashboard_2025',
+        'key' => mpsm_env('APP_KEY', 'change-me'),
         'bcrypt_rounds' => 12,
         'password_min_length' => 8,
         'session_timeout' => 604800,
@@ -98,7 +101,7 @@ return [
     'api' => [
         'version' => 'v1',
         'rate_limit' => [
-            'enabled' => getenv('API_RATE_LIMIT') === 'true',
+            'enabled' => mpsm_env('API_RATE_LIMIT') === 'true',
             'requests_per_minute' => 60,
         ],
         'cors' => [
@@ -110,25 +113,25 @@ return [
 
     // Feature Flags
     'features' => [
-        'device_crud' => getenv('FEATURE_DEVICE_CRUD') !== 'false', // Default enabled
-        'multi_tenancy' => getenv('FEATURE_MULTI_TENANCY') === 'true',
-        'websockets' => getenv('FEATURE_WEBSOCKETS') === 'true',
-        'job_queue' => getenv('FEATURE_JOB_QUEUE') === 'true',
+        'device_crud' => mpsm_env('FEATURE_DEVICE_CRUD') !== 'false', // Default enabled
+        'multi_tenancy' => mpsm_env('FEATURE_MULTI_TENANCY') === 'true',
+        'websockets' => mpsm_env('FEATURE_WEBSOCKETS') === 'true',
+        'job_queue' => mpsm_env('FEATURE_JOB_QUEUE') === 'true',
     ],
 
     // Default Values (Dealer/Customer)
     'defaults' => [
-        'dealer_code' => getenv('DEFAULT_DEALER_CODE') ?: 'NY06AGDWUQ',
-        'dealer_id' => getenv('DEFAULT_DEALER_ID') ?: 'SZ13qRwU5GtFLj0i_CbEgQ2',
-        'customer_code' => getenv('DEFAULT_CUSTOMER_CODE') ?: 'W9OPXL0YDK',
-        'customer_id' => getenv('DEFAULT_CUSTOMER_ID') ?: '0xUi5WEYLzOCrZ8ILowOvA2',
-        'customer_name' => getenv('DEFAULT_CUSTOMER_NAME') ?: 'CAPE FEAR VALLEY MED CTR.',
+        'dealer_code' => mpsm_env(['DEFAULT_DEALER_CODE', 'DEALER_CODE'], ''),
+        'dealer_id' => mpsm_env(['DEFAULT_DEALER_ID', 'DEALER_ID'], ''),
+        'customer_code' => mpsm_env('DEFAULT_CUSTOMER_CODE', ''),
+        'customer_id' => mpsm_env('DEFAULT_CUSTOMER_ID', ''),
+        'customer_name' => mpsm_env('DEFAULT_CUSTOMER_NAME', ''),
     ],
 
     // Logging Configuration
     'logging' => [
         'enabled' => true,
-        'level' => getenv('LOG_LEVEL') ?: 'info', // debug, info, warning, error
+        'level' => mpsm_env('LOG_LEVEL', 'info'), // debug, info, warning, error
         'path' => __DIR__ . '/../storage/logs',
         'channels' => [
             'application' => 'app.log',

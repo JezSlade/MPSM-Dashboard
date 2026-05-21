@@ -2,10 +2,10 @@
 
 Repository-standard rules for any AI agent operating in this workspace. Applies to Claude Code, Copilot Chat, ChatGPT extensions, and other validators.
 
-Version: 1.1.1
+Version: 1.2.0
 Owner: Jez
 Scope: Entire repository
-Last Updated: 2025-12-04
+Last Updated: 2026-05-20
 
 ---
 
@@ -32,7 +32,7 @@ Establish one consistent, auditable workflow inside VS Code so multiple agents c
 - Style: terse, precise. One clarifying question only if ambiguity would change the deliverable. No emojis. No em dashes.
 - Outputs: full files only. For 1–4 files, emit as separate artifacts. If 5 or more are required, propose a zip and await approval.
 - No placeholders or stubs. If inputs are missing, stop and ask.
-- Paths: always relative. Global CSS lives at `/public/css/styles.css`.
+- Paths: always relative. CMS styles live under `cms/assets/`.
 - OOP size and complexity limits
   - File: target 200–400 LOC; split at 800 plus
   - Class: target 150–300 LOC; one public class per file by default
@@ -65,92 +65,53 @@ All agents follow these exact steps for each task:
 
 ## 8) Deployment policy
 
-### Primary Method: GitHub Actions (Automatic FTP)
-- **Trigger:** Push to `main` branch automatically deploys via FTP
-- **Workflow:** `.github/workflows/deploy.yml`
-- **Duration:** 2-5 minutes
-- **Monitor:** https://github.com/JezSlade/MPSM-Dashboard/actions
-- **FTP Server:** ftp.resolutionsbydesign.us
-- **FTP User:** mpsm@mpsm.resolutionsbydesign.us
-- **FTP Password:** Deploy123!
-- **Target:** Web root `/`
+### Primary Method: Direct FTP
+- Current deployment is direct FTP from this working tree to the production web root `/`.
+- The repository currently has no active git remote and no `.github/workflows/deploy.yml`; do not assume `git push` deploys anything.
+- FTP credentials must live outside the repository, either in environment variables or `.runtime/ftp.env`.
+- The deployment scripts intentionally preserve server-managed paths such as `.runtime/`, `.git/`, `backups/`, logs, cache files, and local credential files.
 
 ### Standard Deployment Process
 ```bash
-# 1. Commit changes (Claude Code can do this)
-git add .
-git commit -m "Description
+# 1. Validate local code and documentation links.
+python3 scripts/run_checks.py
 
-🤖 Generated with Claude Code
+# 2. Back up the live site before overwriting files.
+python3 scripts/ftp_backup.py
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
+# 3. Deploy local files to the FTP web root.
+python3 scripts/ftp_deploy.py --delete
 
-# 2. Push to trigger automatic deployment (USER MUST DO THIS MANUALLY)
-# ⚠️ CRITICAL: Claude Code CANNOT push due to authentication requirements
-# User must execute in their terminal:
-git push origin main
-
-# 3. Monitor deployment
-# Go to: https://github.com/JezSlade/MPSM-Dashboard/actions
-# Wait for green checkmark (2-5 minutes)
-
-# 4. Verify live site
-# Visit: https://mpsm.resolutionsbydesign.us/cms/
-# Hard refresh: Ctrl+Shift+R or Ctrl+F5
+# 4. Verify production endpoints.
+python3 scripts/live_smoke.py
 ```
 
 ### Troubleshooting: Changes Not Deployed
 
-**Symptom**: Live site doesn't reflect committed changes
+**Symptom**: Live site doesn't reflect the local working tree.
 
 **Diagnosis**:
 
 ```bash
-# Check if commits are local only
-git status
-# Look for: "Your branch is ahead of 'origin/main' by X commits"
+python3 scripts/ftp_deploy.py --dry-run --delete
+python3 scripts/live_smoke.py
 ```
 
-**Root Cause**: Commits exist locally but weren't pushed to GitHub
+**Common causes**:
+- The FTP deploy was not run after local edits.
+- The browser is serving cached assets; hard refresh with `Ctrl+Shift+R` or `Ctrl+F5`.
+- The local file is intentionally excluded by `.deployignore`.
+- The production path is server-managed and intentionally preserved.
 
-**Fix**: User must manually push from terminal
-
-```bash
-cd /home/jez/projects/MPSM-Dashboard
-git push origin main
-```
-
-**Why Claude Code Can't Push**:
-
-- Requires GitHub authentication (username/password or SSH key)
-- Claude Code runs in sandboxed environment without credentials
-- Security design: prevents automated unauthorized pushes
-
-### Alternative Methods (Fallback Only)
-1. **SSH/Git Pull** (manual):
-   ```bash
-   ssh resolut7@mpsm.resolutionsbydesign.us
-   cd public_html
-   git pull origin main
-   ```
-
-2. **PowerShell FTP Scripts** (hotfix):
-   ```powershell
-   .\deploy-critical-fix.ps1
-   .\deploy-all.ps1
-   ```
-
-3. **HTTP Deploy Endpoint** (if configured):
-   ```bash
-   curl "https://mpsm.resolutionsbydesign.us/deploy.php?secret=..."
-   ```
+### Fallback Methods
+Do not use historical GitHub Actions, SSH/git pull, or HTTP deploy endpoint notes unless a current operator has re-established that infrastructure and updated the docs.
 
 ### Deployment Rules
 - All deploys require explicit user approval
 - Record exact command, timestamp, result in `context/deploy-log.md`
 - Never deploy without user confirmation
-- Never push to main without user request
-- Always verify live site after deployment (hard refresh)
+- Never assume a git push deploy path exists
+- Always verify live site after deployment
 - Check error logs after deployment: `cms/logs/php_errors.log`
 
 ## 9) Testing policy
@@ -344,8 +305,8 @@ EOF
 
 ### Common error patterns
 - **Function not found:** Check spelling, imports, namespace
-- **Cache stuck:** Run `refresh-cache-enhanced.php` manually
-- **Deployment old version:** Hard refresh browser, verify GitHub Actions completed
+- **Cache stuck:** Check `refresh-cache-chunked.php?action=status`, then run guarded `process` calls and `cutover` only when staging is complete
+- **Deployment old version:** Hard refresh browser, then verify `scripts/ftp_deploy.py --delete` completed successfully
 - **Database errors:** Check table names, column names, indexes
 - **Timeout:** Check CRON jobs, API endpoint availability
 
@@ -355,26 +316,26 @@ EOF
 - **Production Dashboard:** https://mpsm.resolutionsbydesign.us/cms/
 - **Production API:** https://mpsm.resolutionsbydesign.us/mps-api/
 - **Command Center (Panel Stream):** https://mpsm.resolutionsbydesign.us/cms/command-center.php?tab=panel
-- **GitHub Actions:** https://github.com/JezSlade/MPSM-Dashboard/actions
 - **cPanel:** https://mpsm.resolutionsbydesign.us:2083
 
 ### Key files
-- **Deployment:** `.github/workflows/deploy.yml`, `deploy-*.ps1`, `DEPLOY-INSTRUCTIONS.md`
+- **Deployment:** `scripts/ftp_backup.py`, `scripts/ftp_deploy.py`, `scripts/live_smoke.py`, `docs/operations/DEPLOY-INSTRUCTIONS.md`
 - **Context:** `context/*.md` (read on start, update on changes)
 - **Documentation:** `context/deployment-guide.md`, `context/operations-playbook.md`
-- **Database:** `cms/config.php` (database credentials), `database_optimizations.sql`
-- **Cache:** `cms/api/refresh-cache-enhanced.php`, `cms/api/cache-status-report.php`
+- **Database:** `cms/config.php` (database credentials), `database/migrations/database_optimizations.sql`
+- **Cache:** `cms/api/refresh-cache-chunked.php`, `cms/api/cache-status-report.php`
 
 ### Database details
 - **Prefix:** `mpsm_`
 - **Key tables:** `mpsm_cache_devices`, `mpsm_cache_device_drilldown`, `mpsm_panel_messages`
-- **Indexes:** Applied via `database_optimizations.sql`
+- **Indexes:** Applied via `database/migrations/database_optimizations.sql`
 
 ### Cache system
-- **Refresh endpoint:** `/cms/api/refresh-cache-enhanced.php`
+- **Refresh endpoint:** `/cms/api/refresh-cache-chunked.php`
 - **Status endpoint:** `/cms/api/cache-status-report.php`
-- **Expected devices:** ~52,800 total
-- **CRON schedule:** Hourly refresh (changed from 5-min to prevent loop)
+- **Current live baseline:** `cache-status-report.php` shows 3,351 live devices and 1,425 live drilldowns as of the 2026-05-20 documentation pass.
+- **Current staging checkpoint:** `refresh-cache-chunked.php?action=status` showed 3,370 staged devices, 300 staged drilldowns, and 0 errors at `2026-05-20 16:16:04`.
+- **Cutover rule:** Run `action=cutover` only after the chunked staging run completes successfully.
 
 ## 23) CODEX-specific instructions
 
@@ -505,11 +466,11 @@ EOF
 
 # 2. Dry-run validation
 cat /tmp/fix.patch | ~/.local/bin/ollama-subagent apply-patch \
-  --root /home/jez/projects/MPSM-Dashboard --strip 1 --check-only
+  --root /path/to/MPSM-Dashboard --strip 1 --check-only
 
 # 3. If validation passes, apply live
 cat /tmp/fix.patch | ~/.local/bin/ollama-subagent apply-patch \
-  --root /home/jez/projects/MPSM-Dashboard --strip 1
+  --root /path/to/MPSM-Dashboard --strip 1
 ```
 
 #### Pattern 4: Continuous monitoring task

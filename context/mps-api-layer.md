@@ -32,13 +32,13 @@ Every request is wrapped with shared error handling; debug mode (`MPS_DEBUG=true
 ```
 MPS_BASE_URL="https://api.abassetmanagement.com/api3/"
 TOKEN_URL="https://api.abassetmanagement.com/api3/token"
-CLIENT_ID="G0bYZyS9bjOjx6oRv-MQ6vGF3VkVTvZy5hzhVEOWQs8"
-CLIENT_SECRET="wFFXo9TQvvuCGVBb0_MMNZkZP5YuTPJqe_eRRdHCPQo"
-USERNAME="rbd.connect@resolutionsbydesign.com"
-PASSWORD="connect.RBD24!"
-SCOPE="rbd.connect@resolutionsbydesign.com MpsMonitorApiAll"
-DEALER_CODE="NY06AGDWUQ"
-DEALER_ID="SZ13qRwU5GtFLj0i_CbEgQ2"
+CLIENT_ID="<client-id>"
+CLIENT_SECRET="<client-secret>"
+USERNAME="<username>"
+PASSWORD="<password>"
+SCOPE="<scope>"
+DEALER_CODE="<dealer-code>"
+DEALER_ID="<dealer-id>"
 ```
 
 ## Engine (`engine.php`)
@@ -96,11 +96,11 @@ DEALER_ID="SZ13qRwU5GtFLj0i_CbEgQ2"
 
 - **API Dispatch:** CMS posts to `/query`; engine authenticates, calls vendor API, returns JSON with `success`, `data`, `meta`.
 - **Device Lifecycle:** The CMS device workspace calls `Device/Offline/Create`, `Device/Update`, and `Device/Delete` through `/mps-api/query`, letting the engine pick HTTP verbs via `SwaggerActionRegistry` while maintaining audit trails and cache invalidation.
-- **Cache Warmup:** CMS uses `/query` to populate its own database caches (enhanced refresh script).
+- **Cache Warmup:** CMS uses `/query` to populate its own database caches. The current production-safe path is the chunked staging refresh in `cms/api/refresh-cache-chunked.php`.
 - **Diagnostics:** Devs can hit `/diagnostics` (authenticated if desired) to confirm environment health before debugging field issues.
 
 ## Next Steps / TODOs
 
 - Monitor `mpsm_panel_callback_debug` as real MPS Monitor traffic arrives to ensure `unique_source`, `forwarded_for`, and `completed_at` continue to populate; capture any production IP ranges for future allow-listing.
-- Once the payload harness (`test-payloads.ps1`) is cleaned up for plain-ASCII output, re-run the full success/error matrix and document results in `PAYLOAD_DEBUGGER_GUIDE.md`.
+- Recreate the payload harness as a portable shell/Python helper if the full success/error callback matrix needs to be rerun, then document results in `PAYLOAD_DEBUGGER_GUIDE.md`.
 - Keep an eye on `mps-api/logs/panel-message-YYYY-MM-DD.log` for error spikes; if repeated `Database error` messages appear, capture the stack trace and extend `panel-message-common.php` with additional defensive logging.

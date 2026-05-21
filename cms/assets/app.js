@@ -926,6 +926,18 @@ const MPSM = (function() {
         icon.className = state.theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
     }
 
+    function getCustomerOverrideFromUrl() {
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            const customerCode = (params.get('customerCode') || '').trim();
+            const customerName = (params.get('customerName') || '').trim();
+            if (!customerCode) return null;
+            return { customerCode, customerName };
+        } catch (error) {
+            return null;
+        }
+    }
+
     /**
      * Load user preferences
      * Following Rule 22: async/await
@@ -946,6 +958,19 @@ const MPSM = (function() {
             state.customerCode = prefs.customerCode || 'W9OPXL0YDK';
             state.customerName = prefs.customerName || 'CAPE FEAR VALLEY MED CTR.';
             state.theme = prefs.theme || 'light';
+
+            const urlOverride = getCustomerOverrideFromUrl();
+            if (urlOverride && urlOverride.customerCode) {
+                state.customerCode = urlOverride.customerCode;
+                if (urlOverride.customerName) {
+                    state.customerName = urlOverride.customerName;
+                }
+                savePreference('customerCode', state.customerCode);
+                if (urlOverride.customerName) {
+                    savePreference('customerName', state.customerName);
+                }
+            }
+
             const serverLayout = sanitizeCardOrder(Array.isArray(prefs.cards) ? prefs.cards : []);
 
             if (!state.cards.length && serverLayout.length) {

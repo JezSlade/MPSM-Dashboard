@@ -98,7 +98,7 @@ Callbacks receiving 2842 total messages (824 devices, 24 unique alert codes)
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'resolut7_mpsm');
 define('DB_USER', 'resolut7_mpsm_agent');
-define('DB_PASS', '!C@S@lcd6McFceb8');  // EXPOSED
+define('DB_PASS', '<redacted>');  // EXPOSED
 ```
 
 **Required Fix:**

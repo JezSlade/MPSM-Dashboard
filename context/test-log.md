@@ -1,5 +1,54 @@
 # Test Log - Command Center Loading Fix
 
+## 2026-05-20 - Documentation accuracy validation
+
+- Updated active context and operations documentation to match the current repository state:
+  - Direct FTP deployment through `scripts/ftp_backup.py` and `scripts/ftp_deploy.py`.
+  - Portable validation through `scripts/run_checks.py` and `scripts/live_smoke.py`.
+  - Current cache path through `cms/api/refresh-cache-chunked.php`.
+  - Historical PowerShell/GitHub Actions instructions marked as retired or historical where they remain as archived records.
+- Validated current live cache status with `refresh-cache-chunked.php?action=status`:
+  - status `fetching_drilldowns`
+  - page `34/34`
+  - staged devices `3370`
+  - staged drilldowns `300`
+  - errors `0`
+  - last activity `2026-05-20 16:16:04`
+- `python3 scripts/run_checks.py` passed after the documentation updates.
+- `python3 scripts/ftp_backup.py` completed a clean pre-deploy backup after the documentation updates: `backups/live-site-20260520-160537`, 3114 files, 0 errors.
+- `python3 scripts/ftp_deploy.py --delete` deployed the documentation and backup-script update: 441 files uploaded, 0 errors.
+- `python3 scripts/live_smoke.py` passed after the documentation updates and FTP deploy.
+- `/mps-api/health` returned HTTP 200 with `success: true` and upstream API connection successful.
+
+## 2026-05-20 - Portable deployment and live smoke verification
+
+- `python3 scripts/run_checks.py` passed:
+  - Python compile checks.
+  - Bash syntax checks for active shell scripts.
+  - `Swagger.json` parse.
+  - Active doc-link validation.
+  - Known secret scan.
+  - PHP lint through host PHP with ignored MySQL extensions.
+  - Pure PHP tests for pattern matching and HP serial decode helpers.
+- `python3 scripts/ftp_backup.py` completed live backup: `backups/live-site-20260520-141426`, 3659 files, 0 errors.
+- `python3 scripts/ftp_deploy.py --delete` deployed current repo via FTP: 440 files uploaded, 0 errors.
+- `python3 scripts/live_smoke.py` passed:
+  - `/cms/login.html` status 200.
+  - `/cms/` status 200 via login page redirect.
+  - `/cms/api/cache-status-report.php` status 200.
+  - `/cms/api/v1/health` status 200.
+  - `/robots.txt` status 200.
+- Direct checks:
+  - `/cms/api/v1/health` returned healthy JSON with status `healthy`.
+  - `/mps-api/health` returned 200, `success: true`, `api_reachable: true`, `api_response: true`.
+  - `/cms/api/tmp-secret-bc2f7.php` returned 404 after removal.
+- Cache refresh:
+  - `refresh-cache-enhanced.php` returned HTTP 500 request timeout on shared hosting during full warmup.
+  - `refresh-cache-chunked.php?action=start` cleared stale `staging_missing` state and began a new staged run.
+  - Device phase reached page `34/34` with 3370 staged devices and 0 errors.
+  - Drill-down phase initially exceeded HTTP timeout at 80-device chunks; changed chunk size to 20 and redeployed.
+  - Current status checkpoint: `fetching_drilldowns`, 3370 staged devices, 300 staged drilldowns, 0 errors, last activity `2026-05-20 16:16:04`.
+
 ## 2025-11-25 - Syntax checks (blocked)
 - Attempted: `php -l cms/api/get-devices.php cms/index.php cms/api/command-center.php mps-api/callbacks/command-center-engine.php cms/api/export-library-cache.php cms/cron-router.php`
 - Result: php CLI not available in environment (`php: command not found`). No syntax checks executed.
@@ -20,7 +69,7 @@
 ## 2025-12-03 - Cache refresh RCA and live run
 - Issue: Cache kept empty after refresh; enhanced refresh returned 500 and truncated tables.
 - Evidence:
-  - `refresh-cache-enhanced.php?force=1&skipDrilldown=1` ➜ HTTP 500, log shows only truncation (no device inserts).
+  - Legacy enhanced refresh with force/skip-drilldown parameters ➜ HTTP 500, log shows only truncation (no device inserts).
   - `refresh-cache-chunked.php?action=start` (before fix) ➜ errors: OAuth token request failed (10s timeout), devices_cached=0.
   - `check-cache-progress.php` ➜ status fetching_devices, errors show OAuth token timeouts; devices_cached=0.
   - `cache-refresh-2025-12-03.log` ➜ repeated “Truncating cache tables” followed by no device caching entries.
@@ -127,7 +176,7 @@
 1. **Dashboard Still Blocked**: The main dashboard (index.php) will remain stuck loading until device cache is populated
    - **Reason**: Empty cache, waiting for hourly cron at 02:00
    - **Workaround**: None - must wait for cron
-   - **Alternative**: User can manually trigger via cPanel: `/usr/bin/timeout 1800 curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1"`
+   - **Current alternative**: use the chunked refresh status/process/cutover flow documented in `context/current-state.md`.
 
 2. **Command Center Now Accessible**: Command Center is now independent and should be fully functional
 
@@ -483,7 +532,7 @@ php -l cms/api/refresh-cache-enhanced.php
    - [ ] Check error logs don't contain `print_r` dumps
 
 3. **Cache Refresh Safety**:
-   - [ ] Trigger cache refresh: https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1
+   - [ ] Trigger a staged chunked cache refresh through `cms/api/refresh-cache-chunked.php`
    - [ ] If refresh fails (network error, timeout), verify:
      - Dashboard still shows old cached data
      - Cache tables NOT empty
@@ -722,7 +771,7 @@ curl -I https://mpsm.resolutionsbydesign.us/cms/assets/style.css
 1. Confirm `mpsm_cache_devices` is populated (see `/cms/api/cache-status-report.php`).
 2. While authenticated, request `/cms/api/get-cached-devices.php` and ensure the JSON includes `source: "mysql_cache"` with sub-second response time.
 3. Load `/cms/` and verify the dashboard becomes interactive immediately; the offline count should appear without the previous minute-long stall.
-4. Optionally trigger `refresh-cache-enhanced.php?force=1` if the reported cache age exceeds 15 minutes.
+4. Optionally trigger the staged chunked refresh flow if the reported cache age exceeds 15 minutes.
 
 **Expected Result**:
 - Dashboard header, cards, and global search render even when the cache is warming.

@@ -1,45 +1,65 @@
-# Environment and Configuration
+# Secrets and local configuration
 .env
-.env.local
+.env.*
+!.env.example
+mps-api/.env
+mps-api/.env.*
+!mps-api/.env.example
 cms/config.php
-cms/config/database.php
+cms/config.php.backup.*
+.ftp-deploy-sync-state.json
+.ftpquota
+.runtime/
+backups/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Runtime logs and diagnostics
+*.log
+error_log
+**/error_log
+logs/
+cms/logs/
+mps-api/logs/
+live_system_health_*.json
+panel-error-snapshot.json
+test_apis_fleet_coverage_report.json
+tests/reports/*.json
+tests/reports/*.html
+database/*_log_*.txt
+database/logs/
 
-# OS
+# Runtime cache and lock state
+cms/api/cache/*.json
+cms/api/cache/*.lock
+cms/locks/
+cms/data/*.json
+mps-api/cache/storage/
+storage/
+
+# Dependency and build output
+node_modules/
+dist/
+public/
+coverage/
+__pycache__/
+*.pyc
+
+# OS and editor files
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
 
-# Logs
-*.log
-npm-debug.log*
-error_log
-
-# Temporary files
-*.tmp
-*.temp
-nul
-
-# Cache
-cms/data/*.json
-!cms/data/.gitignore
-!cms/data/.gitkeep
-mps-api/cache/storage/
-
-# Backups
-*.backup
-*.bak
-*.txt
+# Large vendor/reference bundles kept locally
+MPSM DOCS/
+MPSM Documentation/
+reference/vendor/
+.archive/
 *.zip
-deploy-*.ps1
+*.dll
+*.pdf
+*.docx
+*.xlsx
+*.csv
 
-# Archive (general)
-archive/
-# But track specific CMS archives
-!cms/archive/
-!cms/api/archive/
+# Stray PowerShell/FTP artifacts
+340

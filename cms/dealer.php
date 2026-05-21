@@ -24,7 +24,6 @@ $preferences = getUserPreferences($userId);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/dealer.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body data-theme="<?= htmlspecialchars($preferences['theme'] ?? 'light') ?>">
     <!-- Header -->
@@ -54,6 +53,15 @@ $preferences = getUserPreferences($userId);
 
     <!-- Main Content -->
     <main class="container">
+        <section class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-column"></i> Dealer Insights</h2>
+            </div>
+            <div id="sales-insights">
+                <div class="loading">Loading dealer insights...</div>
+            </div>
+        </section>
+
         <!-- Dealer Scorecard -->
         <section class="section">
             <div class="section-header">
@@ -69,47 +77,36 @@ $preferences = getUserPreferences($userId);
             </div>
         </section>
 
-        <!-- Visual Analytics Dashboard -->
+        <!-- Dealer Triage Workspace -->
         <section class="section">
             <div class="section-header">
-                <h2><i class="fas fa-chart-pie"></i> Visual Analytics</h2>
+                <h2><i class="fas fa-triangle-exclamation"></i> Operational Triage</h2>
             </div>
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>Fleet Age Distribution</h3>
-                    <canvas id="fleet-age-chart"></canvas>
+            <div class="triage-stack">
+                <div class="triage-block triage-signals">
+                    <h3><i class="fas fa-bolt"></i> Incident Signals</h3>
+                    <div id="incident-panels">
+                        <div class="loading">Loading incident signals...</div>
+                    </div>
                 </div>
-                <div class="chart-card">
-                    <h3>Device Health Status</h3>
-                    <canvas id="device-status-chart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Data Quality Metrics</h3>
-                    <canvas id="quality-metrics-chart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Connector Health</h3>
-                    <canvas id="connector-health-chart"></canvas>
-                </div>
-            </div>
-        </section>
 
-        <!-- Customer Portfolio Table -->
-        <section class="section">
-            <div class="section-header">
-                <h2><i class="fas fa-building"></i> Customer Portfolio</h2>
-                <div class="section-actions">
-                    <input type="search" id="portfolio-search" placeholder="Search customers..." autocomplete="off">
-                    <select id="portfolio-filter">
-                        <option value="all">All Customers</option>
-                        <option value="critical">Critical Health (&lt;70%)</option>
-                        <option value="attention">Needs Attention (70-90%)</option>
-                        <option value="healthy">Healthy (90%+)</option>
-                    </select>
+                <div class="triage-block triage-portfolio">
+                    <div class="section-header section-header-inline">
+                        <h3><i class="fas fa-building"></i> Customer Portfolio</h3>
+                        <div class="section-actions">
+                            <input type="search" id="portfolio-search" placeholder="Search customers..." autocomplete="off">
+                            <select id="portfolio-filter">
+                                <option value="all">All Customers</option>
+                                <option value="critical">Critical Health (&lt;70%)</option>
+                                <option value="attention">Needs Attention (70-90%)</option>
+                                <option value="healthy">Healthy (90%+)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="portfolio-table-container">
+                        <div class="loading">Loading portfolio...</div>
+                    </div>
                 </div>
-            </div>
-            <div id="portfolio-table-container">
-                <div class="loading">Loading portfolio...</div>
             </div>
         </section>
 

@@ -1,6 +1,6 @@
 # System Architecture
 
-> Source of record: `docs/adr/0001-cms-api-separation.md`, `cms/functions.php`, `mps-api/index.php`, `PANEL_MESSAGES.md`, `BACKGROUND_REFRESH_SYSTEM.md`
+> Source of record: `docs/adr/0001-cms-api-separation.md`, `cms/functions.php`, `mps-api/index.php`, `cms/api/refresh-cache-chunked.php`, `context/current-state.md`.
 
 ## Layered Design
 
@@ -27,7 +27,7 @@ MPS Monitor Cloud API
 - **Utilities:** `cms/functions.php` provides PDO access (`getDatabase()`), OAuth token handling (`getMPSToken()`), caching helpers (`cacheStore()`), JSON helpers (`jsonSuccess()` / `jsonError()`), and table bootstrap (`initializeTables()`).
 - **Endpoints:** `cms/api/*.php` handle UI-specific logic, including caching, background refresh, and panel history aggregation. Every endpoint starts by `requireAuth()`, enforcing session login.
 - **Command Center:** `cms/panel-message-monitor.php` wraps the panel monitor UI; `cms/payload-debugger.php` is the standalone payload debugger awaiting integration.
-- **Background Jobs:** `cms/api/refresh-cache-enhanced.php` orchestrates multi-stage caching via the `mps-api/query` endpoint and writes to `mpsm_cache_devices` and `mpsm_cache_device_drilldown`.
+- **Background Jobs:** `cms/api/refresh-cache-chunked.php` stages device and drill-down cache updates and performs guarded cutover into `mpsm_cache_devices` and `mpsm_cache_device_drilldown`.
 
 ### mps-api Layer (`/mps-api`)
 
@@ -55,12 +55,11 @@ MPS Monitor Cloud API
 
 ### Background Cache Refresh
 
-1. Cron or manual `GET /cms/api/refresh-cache-enhanced.php`.
-2. Locks execution via `cms/api/cache/enhanced-refresh.lock`.
-3. `fetchAllDevices()` loops through `Device/List` and `Device/Deleted/List`, caching to `mpsm_cache_devices`.
-4. `fetchDeviceDrillDown()` requests `Device/Get` per serial, caching to `mpsm_cache_device_drilldown`.
-5. `cachePanelMessages()` counts distinct devices with stored panel messages in `mpsm_panel_messages`.
-6. Progress logged to `cms/logs/cache-refresh-YYYY-MM-DD.log`.
+1. Cron or manual `GET /cms/api/refresh-cache-chunked.php?action=start` creates staging tables.
+2. Repeated `action=process` calls fetch `Device/List` pages into `mpsm_cache_devices_staging`.
+3. The same process stage then fetches `Device/Get` drill-downs into `mpsm_cache_device_drilldown_staging`.
+4. `action=status` reports current state and live/staging counts.
+5. `action=cutover` swaps staging into live tables only after the staged tables are populated and verified.
 
 ### Panel Message Lifecycle
 

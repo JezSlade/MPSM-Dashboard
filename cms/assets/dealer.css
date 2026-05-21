@@ -5,6 +5,57 @@
  */
 
 /* ========================================
+   KPI STRIP
+   ======================================== */
+
+.kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+.kpi-group {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    padding: 1rem;
+}
+
+.kpi-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.kpi-group-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+}
+
+.freshness-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    white-space: nowrap;
+}
+
+.kpi-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+/* ========================================
    CHARTS GRID
    ======================================== */
 
@@ -184,6 +235,12 @@
     border-color: var(--border-color);
 }
 
+.metric-card.status-unavailable {
+    border-style: dashed;
+    border-color: var(--border-color);
+    opacity: 0.8;
+}
+
 /* ========================================
    SECTION CONTAINERS
    ======================================== */
@@ -218,6 +275,19 @@
     color: var(--primary-color);
 }
 
+.section-header-inline {
+    margin-bottom: 1rem;
+}
+
+.section-header-inline h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .section-actions {
     display: flex;
     gap: 0.5rem;
@@ -243,6 +313,151 @@
     color: var(--text-primary);
     font-size: 0.875rem;
     cursor: pointer;
+}
+
+/* ========================================
+   TRIAGE LAYOUT
+   ======================================== */
+
+.triage-stack {
+    display: grid;
+    gap: 1rem;
+}
+
+.triage-block {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    padding: 1rem;
+}
+
+.triage-block h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#incident-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.65rem;
+}
+
+.incident-panel {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    padding: 0.8rem;
+}
+
+.incident-panel h4 {
+    margin: 0 0 0.55rem 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.usage-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+}
+
+.usage-metric {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.55rem 0.65rem;
+    background: var(--bg-secondary);
+}
+
+.usage-metric .usage-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.usage-metric strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin-top: 0.2rem;
+}
+
+.usage-list {
+    margin-top: 0.25rem;
+}
+
+.usage-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin: 0.15rem 0 0.4rem 0;
+}
+
+.incident-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.incident-list li {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.6rem;
+    background: var(--bg-secondary);
+}
+
+.incident-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+
+.incident-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.incident-empty,
+.incident-error {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.incident-error {
+    margin-top: 0.35rem;
+    color: var(--accent-warning);
+}
+
+.severity-critical {
+    color: var(--accent-danger);
+    font-weight: 700;
+}
+
+.severity-high {
+    color: #e67e22;
+    font-weight: 700;
+}
+
+.severity-medium {
+    color: var(--accent-warning);
+    font-weight: 700;
+}
+
+.severity-low {
+    color: var(--text-secondary);
+    font-weight: 700;
 }
 
 /* ========================================
@@ -382,6 +597,95 @@
     font-size: 0.875rem;
     background: var(--bg-secondary);
     border-radius: 4px;
+}
+
+/* ========================================
+   SALES INSIGHTS
+   ======================================== */
+
+.sales-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.sales-metric-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    padding: 0.85rem;
+}
+
+.sales-metric-icon {
+    color: var(--primary-color);
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+}
+
+.sales-metric-value {
+    color: var(--text-primary);
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.sales-metric-label {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    margin-top: 0.2rem;
+}
+
+.sales-insight-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.sales-note {
+    margin: 0 0 0.8rem 0;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.sales-panel {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    padding: 0.9rem;
+}
+
+.sales-panel h4 {
+    margin: 0 0 0.6rem 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sales-table-wrap {
+    overflow-x: auto;
+}
+
+.sales-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.sales-table th,
+.sales-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.sales-table th {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
 /* ========================================
@@ -549,6 +853,10 @@
    ======================================== */
 
 @media (max-width: 768px) {
+    .kpi-strip {
+        grid-template-columns: 1fr;
+    }
+
     .dealer-scorecard {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 0.75rem;
@@ -575,6 +883,10 @@
         align-items: flex-start;
     }
 
+    .usage-metric-grid {
+        grid-template-columns: 1fr;
+    }
+
     .section-actions {
         width: 100%;
     }
@@ -592,6 +904,20 @@
 
     .data-quality-grid {
         grid-template-columns: 1fr;
+    }
+
+    .sales-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sales-insight-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1280px) {
+    #incident-panels {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 }
 

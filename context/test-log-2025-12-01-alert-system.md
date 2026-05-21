@@ -61,7 +61,7 @@ Passed: 8/8 (100%)
 ```
 
 **Fix Applied**:
-- File: [mps-api/callbacks/command-center-engine.php](../mps-api/callbacks/command-center-engine.php:246-270)
+- File: [mps-api/callbacks/command-center-engine.php](../mps-api/callbacks/command-center-engine.php) (lines 246-270 in the original report)
 - Commit: e2a9149e
 - Method: Manually escape regex special chars EXCEPT % and _, then convert wildcards
 
@@ -338,8 +338,8 @@ git push origin main
 
 1. [context/forensic-audit-findings.md](forensic-audit-findings.md) - 500+ line complete audit
 2. [context/alert-setup-instructions.md](alert-setup-instructions.md) - Setup guide
-3. [EXECUTE-NOW.md](../EXECUTE-NOW.md) - Quick start guide
-4. [insert-alert-rules.sql](../insert-alert-rules.sql) - SQL backup
+3. [EXECUTE-NOW.md](../docs/operations/EXECUTE-NOW.md) - Quick start guide
+4. [insert-alert-rules.sql](../database/migrations/insert-alert-rules.sql) - SQL backup
 5. [context/common-sense-alert-rules.sql](common-sense-alert-rules.sql) - Documented SQL
 
 ---

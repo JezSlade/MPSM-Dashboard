@@ -2,10 +2,18 @@
 // Check current system status
 header('Content-Type: text/plain');
 
+require_once __DIR__ . '/../config/env.php';
+mpsm_load_env(dirname(__DIR__) . '/.env');
+
 $pdo = new PDO(
-    'mysql:host=localhost;dbname=resolut7_mpsm;charset=utf8mb4',
-    'resolut7_mpsm_agent',
-    '!C@S@lcd6McFceb8',
+    sprintf(
+        'mysql:host=%s;dbname=%s;charset=%s',
+        mpsm_env('DB_HOST', 'localhost'),
+        mpsm_env('DB_NAME', ''),
+        mpsm_env('DB_CHARSET', 'utf8mb4')
+    ),
+    mpsm_env('DB_USER', ''),
+    mpsm_env('DB_PASS', ''),
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
 );
 

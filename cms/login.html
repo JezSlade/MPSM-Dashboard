@@ -163,11 +163,13 @@
         const form = document.getElementById('login-form');
         const errorEl = document.getElementById('error');
         const loginBtn = document.getElementById('login-btn');
+        let loginInFlight = false;
         const preferredReturn = forcedReturn
             || (isMobile && !forceDesktop ? 'mobile.php' : 'index.php');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (loginInFlight) return;
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -181,6 +183,7 @@
             errorEl.classList.remove('active');
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            loginInFlight = true;
 
             try {
                 const response = await fetch('api/login.php', {
@@ -239,13 +242,8 @@
                 errorEl.classList.add('active');
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
-            }
-        });
-
-        // Add Enter key support
-        document.getElementById('password').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                form.dispatchEvent(new Event('submit'));
+            } finally {
+                loginInFlight = false;
             }
         });
     </script>

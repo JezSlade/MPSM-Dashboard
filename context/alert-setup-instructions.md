@@ -11,7 +11,7 @@ The alert system has been audited and a CRITICAL pattern matching bug has been f
 
 ## Critical Fix Applied
 
-**File**: [mps-api/callbacks/command-center-engine.php](../mps-api/callbacks/command-center-engine.php:246-270)
+**File**: [mps-api/callbacks/command-center-engine.php](../mps-api/callbacks/command-center-engine.php) (lines 246-270 in the original report)
 **Commit**: e2a9149e
 **Issue**: Pattern matching was completely broken - wildcards (%, _) never matched
 **Impact**: ALL wildcard-based rules have been non-functional since system inception
@@ -56,7 +56,7 @@ https://mpsm.resolutionsbydesign.us/cms/command-center.php?tab=notifications
 
 If web access isn't available, execute the SQL file directly:
 
-**File**: [insert-alert-rules.sql](../insert-alert-rules.sql)
+**File**: [insert-alert-rules.sql](../database/migrations/insert-alert-rules.sql)
 
 ```sql
 -- Execute via MySQL CLI or phpMyAdmin:
@@ -102,15 +102,15 @@ After executing steps 2 and 3:
 
 ### Created
 - [cms/setup-alerts.php](../cms/setup-alerts.php) - Web interface for setup
-- [insert-alert-rules.sql](../insert-alert-rules.sql) - SQL version
+- [insert-alert-rules.sql](../database/migrations/insert-alert-rules.sql) - SQL version
 - [context/alert-setup-instructions.md](alert-setup-instructions.md) - This file
 
 ### Modified
 - [mps-api/callbacks/command-center-engine.php](../mps-api/callbacks/command-center-engine.php) - Fixed matchesPattern()
 
 ### Existing (for reference)
-- [reprocess-panel-messages.php](../reprocess-panel-messages.php) - Original CLI script
-- [insert-alert-rules.php](../insert-alert-rules.php) - Original CLI script (requires PHP MySQL extension)
+- [reprocess-panel-messages.php](../tools/command-center/reprocess-panel-messages.php) - Original CLI script
+- [insert-alert-rules.php](../tools/command-center/insert-alert-rules.php) - Original CLI script (requires PHP MySQL extension)
 
 ## Next Steps After Setup
 

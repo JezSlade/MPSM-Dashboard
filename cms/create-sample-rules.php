@@ -128,6 +128,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rule_form_submit'])) 
 
 echo "<h2>Step 1: Analyzing Live Panel Message Data</h2>\n";
 
+function fetchRowsOrEmpty(PDO $pdo, string $sql): array
+{
+    try {
+        $stmt = $pdo->query($sql);
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    } catch (Throwable $e) {
+        error_log('[create-sample-rules] Query failed: ' . $e->getMessage());
+        return [];
+    }
+}
+
 // Get unique alert codes from last 100 messages
 $sql = "SELECT DISTINCT maintenance_alert_code, COUNT(*) as count
         FROM " . DB_PREFIX . "panel_messages
@@ -136,8 +147,7 @@ $sql = "SELECT DISTINCT maintenance_alert_code, COUNT(*) as count
         ORDER BY count DESC
         LIMIT 10";
 
-$stmt = $pdo->query($sql);
-$alertCodes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$alertCodes = fetchRowsOrEmpty($pdo, $sql);
 $alertDisplayNames = [];
 
 if (!empty($alertCodes)) {
@@ -241,8 +251,7 @@ $sql = "SELECT DISTINCT device_serial, customer_code, customer_description, COUN
         ORDER BY count DESC
         LIMIT 5";
 
-$stmt = $pdo->query($sql);
-$devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$devices = fetchRowsOrEmpty($pdo, $sql);
 
 echo "<div class='data'><strong class='info'>Top Devices:</strong><br>\n";
 foreach ($devices as $device) {
@@ -259,8 +268,7 @@ $sql = "SELECT DISTINCT customer_code, customer_description, COUNT(*) as count
         ORDER BY count DESC
         LIMIT 5";
 
-$stmt = $pdo->query($sql);
-$customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$customers = fetchRowsOrEmpty($pdo, $sql);
 
 echo "<div class='data'><strong class='info'>Top Customers:</strong><br>\n";
 foreach ($customers as $customer) {

@@ -55,13 +55,9 @@ What other options did we evaluate?
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [0001](./0001-cms-api-separation.md) | CMS and API Separation | Accepted | 2025-10-31 |
-| [0002](./0002-css-variables-theming.md) | CSS Variables for Theming | Accepted | 2025-10-31 |
-| [0003](./0003-client-side-pagination.md) | Client-Side vs Server-Side Pagination | Accepted | 2025-10-31 |
-| [0004](./0004-oauth-token-caching.md) | OAuth Token Caching Strategy | Accepted | 2025-10-31 |
 | [0005](./0005-global-search-pagination.md) | Global Search Pagination Approach | Accepted | 2025-10-31 |
-| [0006](./0006-equipment-id-resolution.md) | Equipment ID Resolution Logic | Accepted | 2025-10-31 |
-| [0007](./0007-modal-card-architecture.md) | Modal and Card Registry Pattern | Accepted | 2025-10-31 |
-| [0008](./0008-deployment-strategy.md) | FTP Deployment via PowerShell | Accepted | 2025-10-31 |
+
+Only the ADR files listed above exist in the current repository. Historical references to untracked ADRs, including a PowerShell FTP deployment ADR, are not current source of truth. Current deployment guidance is in `docs/operations/DEPLOY-INSTRUCTIONS.md` and `context/deployment-guide.md`.
 
 ## Creating a New ADR
 

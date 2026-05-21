@@ -1,29 +1,31 @@
-# MPSM Dashboard Context Wiki
+# Context Notes
 
-This folder is the curated, battle-tested source of truth for the live platform at `https://mpsm.resolutionsbydesign.us`. Every note here is backed by code in this repository as of November 5, 2025. Start with the overview, then drill into the sections that match the work you need to do.
+Verified against the working tree on 2026-05-20.
 
-## How To Use This Wiki
+`context/` is a historical operating log and project memory vault. It is useful for understanding incidents, deployment decisions, cache behavior, panel callback work, and follow-up tasks, but it is not uniformly current.
 
-1. **New to the project?** Read `project-overview.md`, then `system-architecture.md` to understand the moving pieces.
-2. **Touching the CMS?** See `cms-layer.md` for endpoints, assets, and session behavior.
-3. **Working on API integrations or callbacks?** Review `mps-api-layer.md` and `data-flows.md`.
-4. **Extending data or analytics?** Use `data-model.md` for table structures and caching rules.
-5. **Operations, deployments, or refresh jobs?** Follow `operations-playbook.md` and `diagnostics-and-tooling.md`.
-6. **Investigating cache/API behavior?** Study `living-audit-todo.md` end-to-end and update it as you diagnose issues.
-7. **Debugging regressions?** Start with `verified-fixes.md` to avoid reopening solved issues.
+For the current deploy/runtime/cache checkpoint, start with [current-state.md](current-state.md). It supersedes older GitHub Actions, PowerShell, and enhanced-cache-only instructions unless current code proves those paths have been restored.
 
-## File Map
+## How To Use This Folder
 
-- `project-overview.md` — What the platform does, live dependencies, and guarantees.
-- `system-architecture.md` — End-to-end design (browser → CMS → mps-api → MPS Monitor).
-- `cms-layer.md` — Auth, UI surfaces, API endpoints, and asset structure in `/cms`.
-- `mps-api-layer.md` — Engine internals, configuration loading, caching, and callbacks.
-- `data-flows.md` — Request paths, background refresh loop, and panel message lifecycle.
-- `data-model.md` — Live MySQL schema, auto-created tables, indexes, and retention expectations.
-- `operations-playbook.md` — Daily tasks, credentials used in code, refresh procedures, and deployment triggers.
-- `diagnostics-and-tooling.md` — Health checks, logging, scripts, payload debugger, and battle test suite.
-- `living-audit-todo.md` — Rolling agent-maintained symptom/TODO log for cache/DB/API work; read it fully before coding and record findings.
-- `verified-fixes.md` — Locked-in fixes with pointers to the exact files/lines that shipped.
-- `references.md` — Canonical docs inside the repo and when to consult each.
+1. Start with [../README.md](../README.md) for the current code map.
+2. Read [../docs/INDEX.md](../docs/INDEX.md) and [../docs/REPOSITORY_AUDIT.md](../docs/REPOSITORY_AUDIT.md) for the current documentation map and audit results.
+3. Use the files in this folder as evidence trails, then verify claims against current code before implementing changes.
 
-> Every statement in this wiki points to code or documentation already in the repository. If something changes in code, update the relevant context file in the same pull request.
+## Current High-Signal Files
+
+- [project-overview.md](project-overview.md) - platform overview and live dependencies.
+- [current-state.md](current-state.md) - current cleanup, FTP deploy, validation, and cache-refresh checkpoint.
+- [system-architecture.md](system-architecture.md) - browser, CMS, mps-api, and database flow.
+- [cms-layer.md](cms-layer.md) - CMS endpoints and session behavior.
+- [mps-api-layer.md](mps-api-layer.md) - proxy configuration, cache, and callback internals.
+- [data-flows.md](data-flows.md) - request paths and cache refresh flow.
+- [data-model.md](data-model.md) - schema notes.
+- [operations-playbook.md](operations-playbook.md) - operational procedures.
+- [diagnostics-and-tooling.md](diagnostics-and-tooling.md) - health checks and diagnostic scripts.
+- [living-audit-todo.md](living-audit-todo.md) - rolling technical debt and bug list.
+- [verified-fixes.md](verified-fixes.md) - shipped fixes with pointers.
+
+## Caution
+
+Several context files are dated incident reports. Some reference files that have moved, archived endpoints, deployment workflows that are not present in this working tree, or literal operational secrets that should be rotated and moved into environment variables. Treat them as historical notes unless the current code confirms the claim.

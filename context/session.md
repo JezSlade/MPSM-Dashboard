@@ -1,3 +1,20 @@
+# Session Summary - Current
+
+## 2026-05-20 Repository Cleanup, Portable FTP Deploy, Live Verification
+
+- Reorganized repository documentation/tests/tools/SQL into role-specific directories and reduced active root files to project entrypoints and metadata.
+- Replaced active PowerShell deploy/test flow with portable Python scripts: `scripts/run_checks.py`, `scripts/ftp_backup.py`, `scripts/ftp_deploy.py`, and `scripts/live_smoke.py`.
+- Local PHP verification works through `flatpak-spawn --host php`; MySQL PHP extensions are loaded from ignored `.runtime/php-ext/` by `scripts/run_checks.py`.
+- Backed up live site to `backups/live-site-20260520-141426` (3659 files, 0 errors).
+- Deployed current repo to live via FTP with `python3 scripts/ftp_deploy.py --delete` (440 files uploaded, 0 errors).
+- Removed unsafe live `/cms/api/tmp-secret-bc2f7.php`; live check now returns 404.
+- Fixed `/cms/api/v1/health` by adding current `src/` subdirectory autoloading in `bootstrap.php` and deployed route normalization in `src/Router.php`.
+- Live smoke passes: login page, CMS root, cache report, v1 health, and robots.txt.
+- `/mps-api/health` returns 200 with upstream API connection successful.
+- Cache warmup: `refresh-cache-enhanced.php` hit shared-host timeout; current path is `refresh-cache-chunked.php`.
+- Active cache checkpoint: `fetching_drilldowns`, page `34/34`, devices staged `3370`, drilldowns staged `300`, errors `0`; live cache remains on previous tables until guarded cutover.
+- Documentation accuracy pass completed and deployed on 2026-05-20: active context/operations docs now reflect the portable FTP workflow, retired PowerShell scripts, absent GitHub Actions workflow/remote, and current chunked cache checkpoint. `scripts/run_checks.py`, `scripts/ftp_backup.py`, `scripts/ftp_deploy.py --delete`, `scripts/live_smoke.py`, and `/mps-api/health` passed after the doc updates.
+
 # Session Summary - 2025-12-04 Agent Optimization
 
 ## Notes (Current Session)

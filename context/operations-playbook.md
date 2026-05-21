@@ -1,13 +1,13 @@
 # Operations Playbook
 
-> Grounded in: `docs/ONBOARDING.md`, `IMMEDIATE_ACTION_ITEMS.md`, `BACKGROUND_REFRESH_SYSTEM.md`, `AUDIT_REPORT.md`, deployment scripts under `/`, and current code.
+> Grounded in: `README.md`, `docs/INDEX.md`, `docs/operations/DEPLOY-INSTRUCTIONS.md`, `context/current-state.md`, and current code. Verified 2026-05-20.
 
 ## Credentials & Access
 
 - **CMS Admin:** Default `admin / admin` (auto-created). Change via Admin tab ➝ User Management.
 - **Database:** `resolut7_mpsm` using credentials in `cms/config.php`.
 - **MPS Monitor OAuth:** Defined in root `.env` (mirrored in `cms/config.php` and `mps-api/config.php` loader). Dealer code `NY06AGDWUQ`, dealer ID `SZ13qRwU5GtFLj0i_CbEgQ2`.
-- **FTP/Deployment:** Scripts reference `ftp.resolutionsbydesign.us` with credentials stored inside `deploy-*.ps1`.
+- **FTP/Deployment:** Portable scripts use `ftp.resolutionsbydesign.us`; credentials belong in environment variables or ignored `.runtime/ftp.env`, never in committed docs or scripts.
 
 ## Mandatory Patch Loop
 All agents follow this loop until the live site is healthy: **RCA ➝ plan patch ➝ refine patch plan ➝ optimize plan against regression ➝ patch ➝ deploy ➝ analyze live site ➝ repeat**. No patch stops before deploy + live verification.
@@ -28,20 +28,14 @@ All agents follow this loop until the live site is healthy: **RCA ➝ plan patch
 
 ## Background Cache Refresh
 
-- **Manual Run:**
-  /cms/api/refresh-cache-chunked.php now reports `REFRESH_CACHE_CHUNKED_VERSION`/`device_serial_column` when processing, so any cron output should include `"version": "2025-11-19a"` and `"device_serial_column": "serial_number"` as proof the latest script is running.
-  **Cron log:** Direct every-minute output into `/home/resolut7/logs/refresh-cache-chunked.log` (`>> /home/resolut7/logs/refresh-cache-chunked.log 2>&1`) so agents can fetch the file instead of reading email reports.
+- **Current Path:**
+  Use `cms/api/refresh-cache-chunked.php`. The full `refresh-cache-enhanced.php` path timed out during 2026-05-20 live post-deploy warmup and should not be used for full shared-host refreshes without retesting timeout limits.
   ```bash
-  # Full run (includes drill-down caching, may take several minutes)
-  curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"
-
-  # Fast device-list warmup (skip drill-down)
-  curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?skipDrilldown=1"
-
-  # Force a re-run if a previous job left the lock behind
-  curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1"
+  curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=status"
+  curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=process"
+  curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=cutover"
   ```
-  Expect JSON with `devices_cached`, `devices_with_drilldown`, `errors`, `duration`, `page_samples`, and `drilldown_skipped`. The refresher now retries `Device/Get` calls with exponential back-off when the vendor API reports rate limits.
+  Only call `cutover` when status is `ready_for_cutover`.
 
 - **Verify Results:**
   ```sql
@@ -52,10 +46,7 @@ All agents follow this loop until the live site is healthy: **RCA ➝ plan patch
 
 - **Log Monitoring:** After each cron execution, pull `/home/resolut7/logs/refresh-cache-chunked.log` (FTP/curl) and confirm the appended JSON includes `"version": "2025-11-19a"`, `state`, and `errors`. If the file stays empty, rerun the helper `cms/api/run-refresh-cache-chunked.php?secret=RUN_REFRESH_2025` to regenerate output.
 
-- **Expected Device Count:**
-  - As of 2025-11-08: **5000+ devices** across all customers/dealers
-  - If count is significantly lower, see CRITICAL_FIX_DEVICE_PAGINATION.md
-  - Coverage should be 95%+ (devices with drill-down / total devices)
+- **Current Refresh Checkpoint:** As of 2026-05-20 16:16 America/New_York, the staged refresh is `fetching_drilldowns` with 3370 staged devices, 300 staged drill-down rows, and 0 errors. Live cache remains on previous tables until guarded cutover.
 
 - **Troubleshooting:**
   - Confirm dealer code in `cms/config.php` matches `.env`.
@@ -63,21 +54,7 @@ All agents follow this loop until the live site is healthy: **RCA ➝ plan patch
   - **CRITICAL**: If only getting ~200 devices, check pagination fix was applied (commit 878e7a4f)
   - Send direct API probe through `mps-api/query` to ensure upstream is returning data.
 
-- **Automation:** These cron jobs are live in cPanel and must remain in place unless explicitly changed:
-  ```
-  # UPDATED 2025-11-09: Changed from */5 to 0 * * * * (hourly) to prevent infinite loop
-  # Previous issue: 5-minute cron was truncating cache before 30-minute refresh could complete
-  0 * * * * /usr/bin/timeout 240 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?skipDrilldown=1" >/dev/null 2>&1
-  0 0 * * * /usr/bin/timeout 1800 /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php?force=1" >/dev/null 2>&1
-  0,30 * * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/mps-api/health" >> /home/youruser/logs/mps-api-health.log
-  0 0 * * * /usr/bin/curl -s "https://mpsm.resolutionsbydesign.us/cms/api/get-database-monitor.php" >> /home/youruser/logs/database-monitor.log
-  0 0 * * 0 /usr/bin/php /home/youruser/public_html/cms/api/cleanup-payload-debug.php >/dev/null 2>&1
-  ```
-  The CMS relies on these schedules for cache freshness, health logging, and payload debugger retention; adjust only with owner approval.
-
-  **Note:** First cron changed from every 5 minutes to hourly (2025-11-09) to allow full 30,000+ device cache population to complete without interference. Once cache stability is verified, may consider restoring more frequent updates.
-
-- **Chunked refresher detail:** Update the cPanel cron entry to redirect output:
+- **Automation:** Verify cPanel cron state before changing it. Current code supports repeated `process` calls through HTTP or CLI; the preferred CLI shape is:
   ```
   * * * * * /usr/local/bin/php /home/resolut7/public_html/mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php process >> /home/resolut7/logs/refresh-cache-chunked.log 2>&1
   ```
@@ -89,11 +66,7 @@ All agents follow this loop until the live site is healthy: **RCA ➝ plan patch
 
 ## Panel Message Diagnostics
 
-- **Send Test Payload (PowerShell):**
-  ```powershell
-  .\test-payloads.ps1
-  ```
-  Populates both success and error cases for debugger validation (`PAYLOAD_DEBUGGER_GUIDE.md`).
+- **Send Test Payload:** Historical PowerShell payload scripts were removed from active tests. Recreate this as a portable Python or shell helper if callback stress tests are needed.
 
 - **Check Recent Messages:**
   ```sql
@@ -111,22 +84,20 @@ All agents follow this loop until the live site is healthy: **RCA ➝ plan patch
 
 ## Deployment Workflow
 
-### Primary Path — Agent push to main (GitHub Actions FTP)
-1. Prepare changes and run smoke checks (curl tokens where needed).  
-2. Push directly to `main` (agent-owned): `git push origin main`.  
-3. Monitor GitHub Actions (`.github/workflows/deploy.yml`) until green (2–5 minutes). The workflow FTPs to `ftp.resolutionsbydesign.us` and skips `.git`, logs, tests, and documentation; do not rely on it to ship secrets (`.env` stays server-side).
+### Primary Path — Direct FTP
+1. Run `python3 scripts/run_checks.py`.
+2. Run `python3 scripts/ftp_backup.py`.
+3. Run `python3 scripts/ftp_deploy.py --delete`.
+4. Run `python3 scripts/live_smoke.py`.
+5. Record backup path, deploy result, and live smoke output.
 
-### Fallback — Direct FTP (Agent-operated)
-- Use `deploy-all.ps1`, `deploy-critical-fix.ps1`, or manual FTP to upload the changed files to the web root when git is blocked.  
-- Do not overwrite `cms/config.php`, `.env*`, or server-managed cache/log directories.  
-- After FTP, run the same post-deploy checks as below.
+This working tree has no git remote and no active `.github/workflows/deploy.yml`, so do not rely on GitHub Actions unless a future repo state restores it.
 
 ### Post-Deployment Actions (Mandatory, agent-run)
-1. Confirm deploy completion (Actions green or FTP transfer finished).  
-2. Warm and verify cache via no-auth endpoints:  
-   - `curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-enhanced.php"`  
+1. Confirm deploy completion (FTP transfer finished with 0 errors).  
+2. Verify cache via no-auth endpoints:  
    - `curl -s "https://mpsm.resolutionsbydesign.us/cms/api/cache-status-report.php" | head -30`  
-   - If chunked refresh is stalled, `curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=status"` and restart only if needed.  
+   - `curl "https://mpsm.resolutionsbydesign.us/cms/api/refresh-cache-chunked.php?action=status"`  
 3. Live UI smoke: dashboard cards, Command Center tabs, dealer dashboard; hard refresh.  
 4. Logs: `cms/logs/cache-refresh-*.log`, browser console, and any curl error output.  
 5. Record results in the session/test logs when applicable.

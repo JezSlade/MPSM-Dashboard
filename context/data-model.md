@@ -1,6 +1,6 @@
 # Data Model & Storage
 
-> Defined across: `cms/functions.php`, `mps-api/callbacks/*.php`, `cms/api/refresh-cache-enhanced.php`, `PANEL_MESSAGES.md`, `BACKGROUND_REFRESH_SYSTEM.md`
+> Defined across: `cms/functions.php`, `mps-api/callbacks/*.php`, `cms/api/refresh-cache-chunked.php`, `cms/api/refresh-cache-enhanced.php`, `PANEL_MESSAGES.md`, `BACKGROUND_REFRESH_SYSTEM.md`
 
 ## Database Overview
 
@@ -86,9 +86,9 @@ Created in debug callback and API (`panel-message-debug.php` lines 118-150; `get
 
 Indexes: `idx_timestamp`, `idx_ip_address`, `idx_status`.
 
-## Cache Tables (Enhanced Refresh)
+## Cache Tables
 
-Created by `ensureCacheTables()` inside `cms/api/refresh-cache-enhanced.php`.
+The live cache tables are read by the dashboard and cache-backed endpoints. The current production refresh path is `cms/api/refresh-cache-chunked.php`, which populates staging tables first and cuts over only after a successful run. `cms/api/refresh-cache-enhanced.php` remains in the repository as a historical/legacy full-refresh implementation and should not be used as the default live path.
 
 ### `mpsm_cache_devices`
 
@@ -115,6 +115,10 @@ Indexes: `idx_customer`, `idx_uninstalled`, `idx_cached`.
 | `cached_at` | TIMESTAMP | Last refresh |
 
 Indexes: `idx_serial`, `idx_alerts`, `idx_cached`.
+
+### Chunked Refresh Staging Tables
+
+`refresh-cache-chunked.php` creates staging tables with the same logical shape as `mpsm_cache_devices` and `mpsm_cache_device_drilldown`, then uses the checkpoint/status flow to determine whether those staged rows are safe to promote. During the 2026-05-20 documentation pass, `action=status` reported 3,370 staged device rows, 300 staged drilldown rows, and 0 errors.
 
 ## File-Based Cache
 

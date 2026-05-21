@@ -59,7 +59,7 @@ cms/
 | -------- | --------- | ----- |
 | Authentication | `login.php`, `logout.php` | `login.php` reads JSON body but falls back to `$_POST` for hosts that strip php://input (commit `2220dcd`). |
 | Devices & Search | `get-devices.php`, `search-devices.php`, `get-device-deep-dive.php`, `get-device-panel-history.php` | All proxy through `mps-api/query`. Deep dive merges up to five upstream endpoints and the local panel message store. |
-| Cache & Background | `refresh-cache.php`, `refresh-cache-v2.php`, `refresh-cache-enhanced.php`, `get-cached-devices.php`, `clear-cache.php`, `cache-engine.js` | Enhanced version writes to MySQL tables `mpsm_cache_devices` and `mpsm_cache_device_drilldown`. |
+| Cache & Background | `refresh-cache.php`, `refresh-cache-v2.php`, `refresh-cache-enhanced.php`, `refresh-cache-chunked.php`, `get-cached-devices.php`, `clear-cache.php`, `cache-engine.js` | `refresh-cache-chunked.php` is the current live-safe path: it writes to staging tables and cuts over only after a successful run. |
 | Panel Messages | `get-panel-messages.php`, `get-device-panel-history.php`, `get-payload-debug-logs.php` | Backed by `mpsm_panel_messages` and `mpsm_panel_callback_debug`. |
 | Admin Tools | `get-error-logs.php`, `get-visitor-logs.php`, `get-endpoint-catalog.php`, `run-export.php`, `system-health.php`, `get-database-monitor.php`, `check-customers.php` | Powers the Admin area cards: system health, database monitor, visitor tracking, logs, and catalog tooling. |
 | Legacy Support | `get-customers.php`, `get-devices.php` variations, `get-supply-alerts.php`, `get-deleted-devices.php` | Still rely on live API responses until cache is fully wired. |
@@ -74,19 +74,21 @@ All endpoints call `requireAuth()` and respond with `{success: bool, ...}` JSON 
 
 ## Background Cache Flow
 
-cms/api/refresh-cache-enhanced.php orchestrates the background cache:
+`cms/api/refresh-cache-chunked.php` is the current production cache path:
 
-1. Locks to prevent concurrent runs (?force=1 overrides; ?skipDrilldown=1 runs a fast pass).
-2. `fetchAllDevices()` pages through Device/List and Device/Deleted/ListByDealer using the same dealer parameters as get-cached-devices.php, ensuring full coverage.
-3. `cacheDeviceList()` upserts payloads into `mpsm_cache_devices`.
-4. Unless skipped, each device is hydrated with Device/Get (preferring device IDs when available) and retried with exponential back-off on rate-limit responses before being written to `mpsm_cache_device_drilldown`.
-5. `cachePanelMessages()` tallies distinct devices with stored panel history.
-6. Each run logs duration, API call counts, and drill-down coverage to `cms/logs/cache-refresh-YYYY-MM-DD.log`; the `get-database-monitor.php` endpoint exposes these metrics to the admin UI.
+1. `action=start` creates staging tables and initializes a checkpoint.
+2. `action=process` advances the job in bounded chunks so shared-host timeouts do not wipe the live cache.
+3. Device list rows are staged before drilldowns are hydrated with `Device/Get`.
+4. `action=status` reports the current phase, staged device count, staged drilldown count, checkpoint indexes, errors, and last activity.
+5. `action=cutover` swaps staging rows into the live cache tables only after the staged run completes.
+6. `cache-status-report.php` continues to report the live cache counts used by the Admin UI.
+
+Last verified during the 2026-05-20 documentation pass: the live cache held 3,351 devices and 1,425 drilldowns, while the active staged chunked run held 3,370 devices, 300 drilldowns, and 0 errors at `2026-05-20 16:16:04`.
 
 ## Next Steps / TODOs
 
-- Schedule a full `refresh-cache-enhanced.php?force=1` run (no `skipDrilldown`) during a quiet window, then confirm the Database Monitor shows =95?% drill-down coverage and capture the before/after counts.
-- Add a lightweight alert (badge/toast) when coverage drops below 90?% so operators can trigger the warm-up without digging through logs.
+- Continue the staged `refresh-cache-chunked.php` run to completion and run `action=cutover` only after `status` reports completion with no errors.
+- Add a lightweight alert (badge/toast) when coverage drops below 90% so operators can trigger the warm-up without digging through logs.
 - Surface the cached timestamp inside the device modal once the cache stabilises, helping analysts judge data freshness.
 
 ## Authentication Failure Handling
@@ -94,5 +96,3 @@ cms/api/refresh-cache-enhanced.php orchestrates the background cache:
 - On API errors the frontend surfaces the JSON error message and the log viewer captures the exception.
 - login failures log detail via `error_log()` with anonymised credential info (`cms/api/login.php` lines 36-51).
 - Cross-origin requests from the CMS honour CORS whitelisting in `setSecurityHeaders()` (only same-origin + localhost).
-
-

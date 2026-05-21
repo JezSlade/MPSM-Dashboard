@@ -26,6 +26,28 @@ This will:
 2. Probe each endpoint to find working payloads
 3. Generate reference files for API implementation
 
+## Portable Operations
+
+These scripts are cross-platform and do not require PowerShell:
+
+```bash
+python3 scripts/run_checks.py
+python3 scripts/ftp_backup.py
+python3 scripts/ftp_deploy.py --delete
+python3 scripts/live_smoke.py
+```
+
+`ftp_backup.py` backs up the live FTP tree before deployment. It skips files that vanish between the FTP directory listing and download, which can happen with volatile server log files.
+
+FTP scripts read credentials from environment variables or `.runtime/ftp.env`:
+
+```text
+MPSM_FTP_HOST=ftp.resolutionsbydesign.us
+MPSM_FTP_ROOT=/
+MPSM_FTP_USER=<FTP_USER>
+MPSM_FTP_PASSWORD=<FTP_PASSWORD>
+```
+
 ### Run Limited Discovery (Testing)
 
 ```bash

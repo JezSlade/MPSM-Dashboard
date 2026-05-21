@@ -1,7 +1,7 @@
 # MPSM Dashboard - Onboarding Guide
 
-**Version**: 1.0.0
-**Last Updated**: 2025-10-31
+**Version**: 1.1.0
+**Last Updated**: 2026-05-20
 **Estimated Time**: 30-45 minutes
 
 ---
@@ -26,12 +26,11 @@ This guide will get you up to speed on the MPSM Dashboard project. Follow these 
 - **Text Editor**: VS Code recommended
 - **Web Browser**: Chrome/Firefox with DevTools
 - **Terminal**: Git Bash (Windows) or native terminal (Mac/Linux)
-- **PowerShell**: 5.1+ (Windows only, for deployment)
 - **Python**: 3.7+ (for testing scripts)
 - **curl**: For API testing
 
 ### Optional Tools
-- **PHP**: 7.4+ (for local testing)
+- **PHP**: 7.4+ (for local testing; this workspace uses `flatpak-spawn --host php`)
 - **Postman**: API testing (alternative to curl)
 - **Beyond Compare**: Diff tool for large files
 
@@ -54,8 +53,8 @@ This guide will get you up to speed on the MPSM Dashboard project. Follow these 
 
 ### FTP Deployment Access (if deploying)
 - **Server**: ftp.resolutionsbydesign.us
-- **Username**: mpsm@mpsm.resolutionsbydesign.us
-- **Password**: Deploy123!
+- **Username**: `<FTP_USER>`
+- **Password**: stored outside the repo in environment variables or ignored `.runtime/ftp.env`
 - **Purpose**: Deploying files to production
 
 ---
@@ -91,9 +90,9 @@ Read these documents in order:
 **Why**: Avoid known pitfalls
 
 **Key Takeaways**:
-- PowerShell commands need separate `.ps1` files
+- PowerShell deployment/test scripts were retired; use portable Python scripts in `scripts/`
 - Global search paginates automatically, modal search doesn't
-- FTP deployment may require retries
+- FTP deployment may require retries and must preserve server-managed `.env`, `cms/config.php`, cache, logs, and locks
 - Browser caching delays seeing deployed changes
 
 ### 4. Recent ADRs (Optional, but helpful)
@@ -282,11 +281,10 @@ This confirms your Git/GitHub access works.
 
 6. **Deploy to Production**:
    ```bash
-   # Create deployment script
-   Write-File deploy-your-feature.ps1 "..."
-
-   # Deploy
-   powershell -ExecutionPolicy Bypass -File deploy-your-feature.ps1
+   python3 scripts/run_checks.py
+   python3 scripts/ftp_backup.py
+   python3 scripts/ftp_deploy.py --delete
+   python3 scripts/live_smoke.py
    ```
 
 7. **Test on Live Site**:
@@ -401,7 +399,10 @@ git diff                     # See unstaged changes
 git diff --staged            # See staged changes
 
 # Deployment
-powershell -ExecutionPolicy Bypass -File deploy-script.ps1
+python3 scripts/run_checks.py
+python3 scripts/ftp_backup.py
+python3 scripts/ftp_deploy.py --delete
+python3 scripts/live_smoke.py
 
 # API Testing
 curl -s URL | python -c "import sys, json; print(json.load(sys.stdin))"
@@ -460,11 +461,11 @@ curl -s -X POST "https://mpsm.resolutionsbydesign.us/cms/api/login.php" \
   -c /tmp/cookies.txt
 ```
 
-### Problem: PowerShell script fails
+### Problem: FTP deploy script fails
 **Solution**:
-- Don't use inline PowerShell, create `.ps1` file
-- Check file paths (use absolute paths)
-- Verify FTP credentials
+- Run `python3 scripts/run_checks.py` first and fix any local failures.
+- Verify FTP credentials are available through environment variables or `.runtime/ftp.env`.
+- Run `python3 scripts/ftp_deploy.py --dry-run --delete` to inspect the planned sync before uploading.
 
 ---
 

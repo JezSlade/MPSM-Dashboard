@@ -6,11 +6,13 @@ Architectural decisions, workflow changes, and methodology choices for MPSM Dash
 
 | Date | Change | Rationale | Reference |
 | ---- | ------ | --------- | --------- |
-| 2025-11-17 | GitHub Actions primary deployment | Automated CI/CD reduces human error, provides audit trail, consistent process | `.github/workflows/deploy.yml` |
+| 2025-11-17 | GitHub Actions primary deployment (superseded 2026-05-20) | Historical decision only. This working tree currently has no git remote and no `.github/workflows/deploy.yml`; use portable FTP scripts. | `context/current-state.md` |
 | 2025-11-17 | FTP deployment to GreenGeeks | Hosting provider requirement, supports both automated and manual fallback | `context/deployment-guide.md` |
-| 2025-11-17 | SSH/Git pull as fallback | Emergency access when GitHub Actions unavailable, direct server control | `DEPLOY-INSTRUCTIONS.md:14-17` |
+| 2025-11-17 | SSH/Git pull as fallback (not active in current docs) | Historical fallback. Current docs do not assume SSH/git access on the live host. | `context/deployment-guide.md` |
 | 2025-11-17 | Never deploy without user approval | Safety guardrail prevents accidental production changes | `AGENTS.md` Section 8 |
 | 2025-11-17 | Always verify live after deploy | Hard refresh + test ensures actual production state matches expected | `AGENTS.md` Section 20 |
+| 2026-05-20 | Portable FTP is current deployment path | Working tree has no git remote or `.github/workflows/deploy.yml`; PowerShell scripts were removed; Python scripts work across environments | `scripts/ftp_*.py`, `scripts/live_smoke.py`, `context/current-state.md` |
+| 2026-05-20 | Guarded chunked cache refresh is current cache path | `refresh-cache-enhanced.php` timed out on shared hosting; chunked staging/cutover path is advancing without errors | `cms/api/refresh-cache-chunked.php`, `context/current-state.md` |
 
 ## Workflow Protocol
 
@@ -107,3 +109,4 @@ Architectural decisions, workflow changes, and methodology choices for MPSM Dash
 | ---- | ------- | ------ | ----- |
 | 2025-11-17 | AGENTS v1.0.1 | Core workflow updated | FTP-based deploys/tests on live server before verification |
 | 2025-11-17 | AGENTS v1.1.0 | Comprehensive knowledge base | Added tool usage, git policy, testing, CODEX instructions, project knowledge |
+| 2026-05-20 | AGENTS v1.2.0 | Current deployment/cache guidance | Direct FTP scripts, no active GitHub Actions deploy path, chunked cache refresh source of truth |

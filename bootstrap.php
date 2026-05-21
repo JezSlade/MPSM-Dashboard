@@ -10,6 +10,26 @@
 // Load core files
 require_once __DIR__ . '/src/ServiceContainer.php';
 
+// Load un-namespaced classes from the current src/ layout.
+spl_autoload_register(function ($class) {
+    $class = ltrim($class, '\\');
+    $baseDir = __DIR__ . '/src/';
+    $relative = str_replace('\\', '/', $class) . '.php';
+    $basename = basename($relative);
+
+    $candidates = [$baseDir . $relative];
+    foreach (['Auth', 'Cache', 'Contracts', 'Controllers', 'Jobs', 'Middleware', 'Queue', 'Repositories'] as $dir) {
+        $candidates[] = $baseDir . $dir . '/' . $basename;
+    }
+
+    foreach ($candidates as $file) {
+        if (file_exists($file)) {
+            require $file;
+            return;
+        }
+    }
+});
+
 // Set timezone
 date_default_timezone_set(config('app.timezone', 'America/New_York'));
 
@@ -210,32 +230,6 @@ if (session_status() === PHP_SESSION_NONE && !empty($_SERVER['REQUEST_METHOD']))
     ini_set('session.use_only_cookies', '1');
     ini_set('session.cookie_samesite', $sessionConfig['samesite']);
 }
-
-// ============================================================================
-// AUTOLOADER (Simple PSR-4 style)
-// ============================================================================
-
-spl_autoload_register(function ($class) {
-    // Convert namespace to file path
-    // Example: App\Repositories\DeviceRepository -> src/Repositories/DeviceRepository.php
-
-    $prefix = '';
-    $baseDir = __DIR__ . '/src/';
-
-    // Remove namespace prefix if present
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) === 0) {
-        $class = substr($class, $len);
-    }
-
-    // Convert class name to file path
-    $file = $baseDir . str_replace('\\', '/', $class) . '.php';
-
-    // If file exists, require it
-    if (file_exists($file)) {
-        require $file;
-    }
-});
 
 // ============================================================================
 // ENVIRONMENT SETUP COMPLETE

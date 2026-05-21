@@ -624,9 +624,9 @@ if ($action === 'process' || $action === 'auto') {
         $state['devices_to_fetch_drilldown'] = array_values(array_unique($state['devices_to_fetch_drilldown']));
         $devicesToFetch = $state['devices_to_fetch_drilldown'];
         $deviceIdMap = $state['device_id_map'] ?? [];
-        $chunkSize = 80; // Fetch 80 drill-downs per request to accelerate population
+        $chunkSize = 20; // Keep HTTP chunks below shared-host connection timeouts
         $totalToFetch = count($devicesToFetch);
-        $chunkBudgetSeconds = 60; // Keep each call under common HTTP/CLI timeouts
+        $chunkBudgetSeconds = 35; // Leave headroom for response serialization/state save
 
         while ($state['drilldown_index'] < $totalToFetch && (microtime(true) - $chunkStartTime) < $chunkBudgetSeconds) {
             $index = $state['drilldown_index'];

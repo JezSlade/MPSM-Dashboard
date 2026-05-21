@@ -1,6 +1,6 @@
 # MPSM Dashboard - Known Pain Points & Solutions
 
-**Last Updated**: 2025-10-31
+**Last Updated**: 2026-05-20
 **Maintainer**: Project Team
 
 ---
@@ -68,24 +68,22 @@ curl ... -o c:/tmp/response.json  # Fails in bash
 
 **Root Cause**: Bash escaping conflicts with PowerShell syntax
 
-**Solution**: Always create separate `.ps1` script files for PowerShell commands
+**Current Solution**: PowerShell is no longer part of the supported deployment/test workflow. Use portable Python or shell helpers under `scripts/` and `tests/`.
 
 **Example**:
 ```bash
 # BAD - Inline PowerShell
 powershell -Command "$var = 'value'; Write-Host $var"
 
-# GOOD - Separate script file
-# 1. Create deploy.ps1
-Write-File deploy.ps1 "..."
-
-# 2. Execute script
-powershell -ExecutionPolicy Bypass -File deploy.ps1
+python3 scripts/run_checks.py
+python3 scripts/ftp_backup.py
+python3 scripts/ftp_deploy.py --delete
+python3 scripts/live_smoke.py
 ```
 
-**Workaround**: Use `Write` tool to create `.ps1` file first
+**Workaround**: If a historical PowerShell note is needed for reference, treat it as Windows-only history and recreate the helper in Python or POSIX shell before using it.
 
-**Status**: Permanent Limitation
+**Status**: Retired from active workflow
 
 ---
 
@@ -340,11 +338,11 @@ GET /api/get-devices.php?allCustomers=true → 3,306 devices
 
 ### Pain Point 4.1: FTP Upload Failures
 
-**Problem**: PowerShell FTP upload randomly fails with "Could not upload file"
+**Problem**: FTP upload can fail because of network timeouts, connection limits, permissions, or temporary FTP server issues.
 
 **Symptoms**:
 ```
-ERROR uploading cms/index.php : Exception calling "UploadFile"
+ERROR uploading cms/index.php
 ```
 
 **Root Cause**:
@@ -353,26 +351,17 @@ ERROR uploading cms/index.php : Exception calling "UploadFile"
 - File permissions issue
 - FTP server temporary unavailability
 
-**Solution**: Retry mechanism with exponential backoff
+**Solution**: Use the portable deployment scripts. `scripts/ftp_deploy.py` performs explicit FTP operations and returns non-zero on failure.
 
 **Workaround**:
-1. Check file exists locally: `Test-Path cms/index.php`
+1. Run `python3 scripts/run_checks.py`
 2. Verify FTP credentials
-3. Try uploading single file first
-4. Wait 30 seconds and retry
+3. Inspect the planned sync with `python3 scripts/ftp_deploy.py --dry-run --delete`
+4. Retry `python3 scripts/ftp_deploy.py --delete` after transient FTP failures
 
-**Example Retry Script**:
-```powershell
-$retries = 3
-for ($i = 1; $i -le $retries; $i++) {
-    try {
-        $webclient.UploadFile($remotePath, $localFile)
-        break
-    } catch {
-        if ($i -eq $retries) { throw }
-        Start-Sleep -Seconds ($i * 5)
-    }
-}
+**Example Verification**:
+```bash
+python3 scripts/live_smoke.py
 ```
 
 **Status**: Permanent Limitation (FTP reliability)
@@ -626,7 +615,7 @@ When you encounter a new issue:
 ### Most Common Issues:
 1. **Can't find device in search** → Use global search bar (header), not modal search
 2. **API returns 0 devices** → Add `allCustomers=true` parameter
-3. **PowerShell script fails** → Create separate `.ps1` file, don't use inline
+3. **FTP deploy fails** → Run `scripts/run_checks.py`, verify credentials, then retry `scripts/ftp_deploy.py --delete`
 4. **Download button doesn't work** → Check browser console, may need popup permission
 5. **Deployed code not showing** → Hard refresh browser (Ctrl+Shift+R)
 

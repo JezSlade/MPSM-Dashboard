@@ -21,7 +21,7 @@
         console.log('[CACHE ENGINE] Starting background cache refresh...');
 
         try {
-            const response = await fetch('/cms/api/refresh-cache-enhanced.php?force=1', {
+            const response = await fetch('/cms/api/refresh-cache-enhanced.php', {
                 credentials: 'same-origin'
             });
 
@@ -67,7 +67,7 @@
     // Expose manual refresh function
     window.refreshDeviceCache = refreshCache;
 
-    console.log('[CACHE ENGINE] Loaded - No cron job needed!');
+    console.log('[CACHE ENGINE] Loaded - browser auto-refresh disabled; use cron or manual trigger');
 })();
 
 /*
