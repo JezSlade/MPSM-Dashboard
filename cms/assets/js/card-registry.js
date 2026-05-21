@@ -1382,7 +1382,7 @@ const CardRegistry = (function () {
                 const exports = Array.isArray(data.exports) ? data.exports : [];
                 const ready = exports.filter(entry => entry.status === 'ready').length;
                 const stale = exports.filter(entry => entry.status === 'stale').length;
-                const runnable = exports.filter(entry => entry.can_run && entry.status !== 'ready' && entry.status !== 'stale').length;
+                const onDemand = exports.filter(entry => entry.delivery === 'on_demand').length;
 
                 return {
                     headline: {
@@ -1400,7 +1400,7 @@ const CardRegistry = (function () {
                             value: stale || 0,
                             tone: stale ? 'warning' : 'muted'
                         },
-                        { label: 'Generate', value: runnable, tone: runnable ? 'info' : 'muted' }
+                        { label: 'On demand', value: onDemand, tone: onDemand ? 'info' : 'muted' }
                     ],
                     context: {
                         exports,
@@ -1548,7 +1548,7 @@ const CardRegistry = (function () {
                                 return `<a class="btn btn-primary btn-sm" href="${url}" target="_blank" rel="noopener"><i class="fas fa-download"></i> Download</a>`;
                             }
                             if (row.can_run) {
-                                return `<button type="button" class="btn btn-primary btn-sm" data-export-action="${helpers.escape(row.action)}"><i class="fas fa-file-export"></i> Generate</button>`;
+                                return `<button type="button" class="btn btn-primary btn-sm" data-export-action="${helpers.escape(row.action)}"><i class="fas fa-download"></i> Download</button>`;
                             }
                             return `<button type="button" class="btn btn-secondary btn-sm" disabled>Unavailable</button>`;
                         }

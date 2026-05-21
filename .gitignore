@@ -37,6 +37,7 @@ storage/
 
 # Dependency and build output
 node_modules/
+.tools/
 dist/
 public/
 coverage/

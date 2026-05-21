@@ -591,7 +591,7 @@ const MobileApp = (() => {
                 if (!value) return [];
                 if (Array.isArray(value)) return value;
                 if (typeof value === 'object') {
-                    for (const key of ['Result', 'Items', 'data', 'CounterDetails', 'Counters', 'Actions', 'SupplyAlerts', 'Alerts', 'MaintenanceKitLevels', 'MaintenanceKitCounters']) {
+                    for (const key of ['Result', 'Items', 'data', 'CounterDetails', 'CountersDetailed', 'Counters', 'Actions', 'SupplyAlerts', 'Alerts', 'MaintenanceKitLevels', 'MaintenanceKitCounters']) {
                         if (Array.isArray(value[key])) return value[key];
                     }
                     return [value];
@@ -701,11 +701,13 @@ const MobileApp = (() => {
             const supplies = data.supplies || {};
             const alerts = data.alerts || {};
             const panelMessages = Array.isArray(data.panelHistory?.messages) ? data.panelHistory.messages : [];
-            const maintenanceLevels = [
-                ...asRows(supplies.levels),
+            const fallbackMaintenanceLevels = [
                 ...asRows(maintenance.levels),
                 ...asRows(maintenance.counters)
             ];
+            const maintenanceLevels = asRows(supplies.levels).length
+                ? asRows(supplies.levels)
+                : fallbackMaintenanceLevels;
             const maintenanceAlerts = asRows(maintenance.alerts)
                 .slice()
                 .sort((a, b) => alertTimestamp(b) - alertTimestamp(a))

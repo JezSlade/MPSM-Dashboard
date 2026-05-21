@@ -440,6 +440,18 @@ const MPSM = (function() {
         if (text.includes('yellow') || text.includes('y ')) {
             return 'yellow';
         }
+        if (text.includes('drum') || text.includes('photoconductor') || text.includes('imaging') || text.includes('image unit')) {
+            return 'drum';
+        }
+        if (text.includes('developer')) {
+            return 'developer';
+        }
+        if (text.includes('fuser')) {
+            return 'fuser';
+        }
+        if (text.includes('waste')) {
+            return 'waste';
+        }
 
         return 'neutral';
     }
@@ -3601,7 +3613,7 @@ const MPSM = (function() {
                 if (!value) return [];
                 if (Array.isArray(value)) return value;
                 if (typeof value === 'object') {
-                    for (const key of ['Result', 'Items', 'data', 'CounterDetails', 'Counters', 'Actions', 'SupplyAlerts', 'Alerts', 'MaintenanceKitLevels', 'MaintenanceKitCounters']) {
+                    for (const key of ['Result', 'Items', 'data', 'CounterDetails', 'CountersDetailed', 'Counters', 'Actions', 'SupplyAlerts', 'Alerts', 'MaintenanceKitLevels', 'MaintenanceKitCounters']) {
                         if (Array.isArray(value[key])) {
                             return value[key];
                         }
@@ -3673,31 +3685,58 @@ const MPSM = (function() {
                         const label = getLevelLabel(item, `Consumable ${index + 1}`);
                         const rawValue = getLevelValue(item);
                         const percent = parseLevelPercent(rawValue);
-                        return { item, label, rawValue, percent };
+                        const color = item.color || resolveSupplyColor(label || item.ColorType || item.ColorTypeEnum || item.SupplyType || '');
+                        return {
+                            item,
+                            label,
+                            rawValue,
+                            percent,
+                            color,
+                            family: item.family || item.type || item.SupplyType || item.Type || 'Consumable',
+                            lastUpdate: item.lastUpdate || item.LastUpdate || item.LastUpdateUTC || item.CollectionDate || ''
+                        };
                     });
 
                 if (!rows.length) {
                     return '<div class="supply-empty">No consumable level data available</div>';
                 }
 
-                return rows.map(({ item, label, rawValue, percent }) => {
-                    const color = item.color || resolveSupplyColor(label || item.ColorType || item.SupplyType || '');
-                    const tone = percent === null ? 'neutral' : (percent <= 10 ? 'danger' : (percent <= 25 ? 'warning' : 'success'));
-                    return `
-                        <div class="consumable-level consumable-level--${escapeHtml(color)}">
-                            <div class="consumable-level__top">
-                                <div class="consumable-level__key">${escapeHtml(label)}</div>
-                                <div class="consumable-level__value">${escapeHtml(String(rawValue ?? 'N/A'))}</div>
-                            </div>
-                            ${percent !== null ? `
-                                <div class="consumable-level__track" aria-hidden="true">
-                                    <div class="consumable-level__fill consumable-level__fill--${tone}" style="width:${percent}%"></div>
-                                </div>
-                                <div class="consumable-level__meta">${Math.round(percent)}%</div>
-                            ` : '<div class="consumable-level__meta">No numeric level</div>'}
-                        </div>
-                    `;
-                }).join('');
+                return `
+                    <div class="table-wrapper consumable-table-wrapper">
+                        <table class="table consumable-level-table">
+                            <thead>
+                                <tr>
+                                    <th>Consumable</th>
+                                    <th>Type</th>
+                                    <th>Value</th>
+                                    <th>Level</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows.map(({ label, rawValue, percent, color, family, lastUpdate }) => `
+                                    <tr>
+                                        <td>
+                                            <span class="consumable-swatch consumable-swatch--${escapeHtml(color)}"></span>
+                                            ${escapeHtml(label)}
+                                        </td>
+                                        <td>${escapeHtml(String(family || 'Consumable'))}</td>
+                                        <td><strong>${escapeHtml(String(rawValue ?? 'N/A'))}</strong></td>
+                                        <td>
+                                            ${percent !== null ? `
+                                                <div class="consumable-meter" aria-label="${escapeHtml(label)} ${Math.round(percent)}%">
+                                                    <div class="consumable-meter__fill consumable-meter__fill--${escapeHtml(color)}" style="width:${percent}%"></div>
+                                                </div>
+                                                <div class="consumable-meter__label">${Math.round(percent)}%</div>
+                                            ` : '<span class="text-muted">No numeric level</span>'}
+                                        </td>
+                                        <td>${lastUpdate ? escapeHtml(formatDateTime(lastUpdate, { dateStyle: 'short', timeStyle: 'short' }) || lastUpdate) : 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
             };
 
             const removeIdentifierFields = (row) => {
@@ -3841,10 +3880,9 @@ const MPSM = (function() {
                     ...asRows(maintenance.levels),
                     ...asRows(maintenance.counters)
                 ];
-                const consumableLevels = [
-                    ...asRows(supplies.levels),
-                    ...maintenanceLevels
-                ];
+                const consumableLevels = asRows(supplies.levels).length
+                    ? asRows(supplies.levels)
+                    : maintenanceLevels;
                 const cache = data.cache || {};
                 const statusText = options.refreshing ? 'Refreshing maintenance details...' :
                     (cache.drilldown_cached_at ? `Detail cache: ${formatDateTime(cache.drilldown_cached_at, { dateStyle: 'short', timeStyle: 'short' })}` : 'Detail cache not populated');
@@ -3881,9 +3919,7 @@ const MPSM = (function() {
                     ])}
 
                     <h3>Consumable Levels</h3>
-                    <div class="consumable-level-grid">
-                        ${renderConsumableLevels(consumableLevels)}
-                    </div>
+                    ${renderConsumableLevels(consumableLevels)}
 
                     <h3>Device Information</h3>
                     ${renderSnapshotItems([
@@ -3940,7 +3976,7 @@ const MPSM = (function() {
                 }
             };
 
-            const needsEnrichment = !firstData.cache?.drilldown_cached_at || Number(firstData.cache?.drilldown_schema_version || 0) < 2;
+            const needsEnrichment = !firstData.cache?.drilldown_cached_at || Number(firstData.cache?.drilldown_schema_version || 0) < 3;
             renderDeviceDetails(firstData, { refreshing: needsEnrichment });
 
             if (needsEnrichment) {

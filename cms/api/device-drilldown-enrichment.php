@@ -7,6 +7,10 @@
  * API fan-out.
  */
 
+if (!defined('MPSM_DRILLDOWN_SCHEMA_VERSION')) {
+    define('MPSM_DRILLDOWN_SCHEMA_VERSION', 3);
+}
+
 if (!function_exists('mpsm_dd_is_list_array')) {
     function mpsm_dd_is_list_array(array $value): bool
     {
@@ -117,20 +121,24 @@ if (!function_exists('mpsm_dd_as_rows')) {
 
         foreach ([
             'CounterDetails',
+            'CountersDetailed',
             'Counters',
             'MaintenanceKitLevels',
             'MaintenanceKitCounters',
             'SupplyAlerts',
             'Alerts',
             'Actions',
+            'CurrentSupply',
             'DetailsBySupply',
+            'Supplies',
+            'SupplyDetails',
             'SuppliesInfo',
             'CurrentSupplies',
             'AvailableSupplies',
             'SuggestedSupplies',
         ] as $key) {
             if (isset($value[$key]) && is_array($value[$key])) {
-                return array_values($value[$key]);
+                return mpsm_dd_is_list_array($value[$key]) ? array_values($value[$key]) : [$value[$key]];
             }
         }
 
@@ -264,7 +272,7 @@ if (!function_exists('mpsm_dd_wrap_device_get_payload')) {
 
         unset($base['_mpsm']);
         $base['_mpsm'] = [
-            'schemaVersion' => 2,
+            'schemaVersion' => MPSM_DRILLDOWN_SCHEMA_VERSION,
             'enrichedAt' => date('c'),
             'identity' => [
                 'deviceId' => $deviceId,
@@ -320,6 +328,7 @@ if (!function_exists('mpsm_dd_enrich_device_payload')) {
 
             if ($deviceId !== '' && empty(mpsm_dd_as_rows($counterDetails))) {
                 $counterDetails = mpsm_dd_call_query('counterDetails', 'Counter/ListDetailed', [
+                    'DealerCode' => DEFAULT_DEALER_CODE,
                     'DeviceId' => $deviceId
                 ], $sectionErrors);
             }
@@ -327,6 +336,7 @@ if (!function_exists('mpsm_dd_enrich_device_payload')) {
             mpsm_dd_add_section($sections, 'counterDetails', 'Counter/ListDetailed', $counterDetails);
         } elseif ($deviceId !== '') {
             $counterDetails = mpsm_dd_call_query('counterDetails', 'Counter/ListDetailed', [
+                'DealerCode' => DEFAULT_DEALER_CODE,
                 'DeviceId' => $deviceId
             ], $sectionErrors);
             mpsm_dd_add_section($sections, 'counterDetails', 'Counter/ListDetailed', $counterDetails);
@@ -400,7 +410,7 @@ if (!function_exists('mpsm_dd_enrich_device_payload')) {
 
         unset($base['_mpsm']);
         $base['_mpsm'] = [
-            'schemaVersion' => 2,
+            'schemaVersion' => MPSM_DRILLDOWN_SCHEMA_VERSION,
             'enrichedAt' => date('c'),
             'identity' => [
                 'deviceId' => $deviceId,
@@ -537,17 +547,53 @@ if (!function_exists('mpsm_dd_counter_summary')) {
             'colorMonthly' => mpsm_dd_numeric_from_keys($device, ['MonthlyColorVolume', 'MonthlyColorPages', 'MonthlyColor', 'CounterColorMonthly', 'CounterColorDelta']),
         ];
 
-        foreach ($counterRows as $row) {
+        $orderedRows = array_values(array_filter($counterRows, 'is_array'));
+        usort($orderedRows, function ($a, $b) {
+            $aTime = !empty($a['Creation']) ? strtotime((string)$a['Creation']) : 0;
+            $bTime = !empty($b['Creation']) ? strtotime((string)$b['Creation']) : 0;
+            return $bTime <=> $aTime;
+        });
+
+        foreach ($orderedRows as $row) {
+            $mono = mpsm_dd_numeric_from_keys($row, ['Mono']);
+            $fullColor = mpsm_dd_numeric_from_keys($row, ['FullColor']);
+            $singleColor = mpsm_dd_numeric_from_keys($row, ['SingleColor']);
+            $twoColor = mpsm_dd_numeric_from_keys($row, ['TwoColor']);
+            $total = mpsm_dd_numeric_from_keys($row, ['Total']);
+            $colorParts = array_filter([$fullColor, $singleColor, $twoColor], static fn($value) => $value !== null);
+            $color = $colorParts !== [] ? array_sum($colorParts) : null;
+
+            if ($mono !== null && ($summary['monoTotal'] === null || $summary['monoTotal'] <= 0)) {
+                $summary['monoTotal'] = $mono;
+            }
+            if ($color !== null && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0)) {
+                $summary['colorTotal'] = $color;
+            }
+            if ($total !== null && $mono !== null && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0) && $total >= $mono) {
+                $summary['colorTotal'] = max(0, $total - $mono);
+            }
+
+            if (($summary['monoTotal'] ?? 0) > 0 && ($summary['colorTotal'] ?? 0) > 0) {
+                break;
+            }
+        }
+
+        foreach ($orderedRows as $row) {
             if (!is_array($row)) {
                 continue;
             }
 
-            $directMono = mpsm_dd_numeric_from_keys($row, ['CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BWCounter', 'TotalBW']);
+            $directMono = mpsm_dd_numeric_from_keys($row, ['CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BWCounter', 'TotalBW', 'Mono']);
             if ($directMono !== null && ($summary['monoTotal'] === null || $summary['monoTotal'] <= 0)) {
                 $summary['monoTotal'] = $directMono;
             }
 
-            $directColor = mpsm_dd_numeric_from_keys($row, ['CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour']);
+            $directColor = mpsm_dd_numeric_from_keys($row, ['CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour', 'FullColor']);
+            $singleColor = mpsm_dd_numeric_from_keys($row, ['SingleColor']);
+            $twoColor = mpsm_dd_numeric_from_keys($row, ['TwoColor']);
+            if ($singleColor !== null || $twoColor !== null) {
+                $directColor = ($directColor ?? 0) + ($singleColor ?? 0) + ($twoColor ?? 0);
+            }
             if ($directColor !== null && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0)) {
                 $summary['colorTotal'] = $directColor;
             }
@@ -576,7 +622,7 @@ if (!function_exists('mpsm_dd_counter_summary')) {
             }
             $label = strtolower(implode(' ', array_unique($labelParts)));
             $counterType = strtoupper(mpsm_dd_text_from_keys($row, ['CounterType', 'Type', 'Code']));
-            $value = mpsm_dd_numeric_from_keys($row, ['value', 'Value', 'CounterValue', 'ValueCounter', 'CurrentCounter', 'CurrentValue', 'Total', 'Pages', 'MeterValue', 'Reading', 'CounterReading', 'Count']);
+            $value = mpsm_dd_numeric_from_keys($row, ['value', 'Value', 'CounterValue', 'ValueCounter', 'CurrentCounter', 'CurrentValue', 'Total', 'Pages', 'MeterValue', 'Reading', 'CounterReading', 'Count', 'Mono', 'FullColor']);
 
             if ($value === null) {
                 continue;
@@ -611,7 +657,8 @@ if (!function_exists('mpsm_dd_consumable_color')) {
         if (strpos($text, 'cyan') !== false) return 'cyan';
         if (strpos($text, 'magenta') !== false) return 'magenta';
         if (strpos($text, 'yellow') !== false) return 'yellow';
-        if (strpos($text, 'drum') !== false || strpos($text, 'imaging') !== false || strpos($text, 'image unit') !== false) return 'drum';
+        if (strpos($text, 'drum') !== false || strpos($text, 'photoconductor') !== false || strpos($text, 'imaging') !== false || strpos($text, 'image unit') !== false) return 'drum';
+        if (strpos($text, 'developer') !== false) return 'developer';
         if (strpos($text, 'fuser') !== false) return 'fuser';
         if (strpos($text, 'waste') !== false) return 'waste';
         return 'neutral';
@@ -625,15 +672,20 @@ if (!function_exists('mpsm_dd_consumable_label')) {
         foreach ([
             'Key',
             'key',
+            'Consumable',
+            'ConsumableDescription',
             'label',
             'Description',
+            'SupplyDescription',
             'SupplyName',
             'Name',
+            'PartNumberShippedDescription',
             'TypeDescription',
             'SupplyTypeDescription',
             'SupplyType',
             'MaintenanceKitType',
             'MaintenanceKitColor',
+            'ColorTypeEnum',
             'ColorTypeDescription',
             'ColorType',
             'CounterName',
@@ -676,6 +728,8 @@ if (!function_exists('mpsm_dd_consumable_levels')) {
                     'Level',
                     'CurrentProgressPercentage',
                     'RemainingPercentage',
+                    'ResidualLevelPercentage',
+                    'LevelValuePercent',
                     'Percentage',
                     'Percent',
                     'Life',
@@ -683,6 +737,8 @@ if (!function_exists('mpsm_dd_consumable_levels')) {
                     'RemainingLife',
                     'Remaining',
                     'CurrentLevel',
+                    'CurrentLevelDevice',
+                    'CurrentLevelConsumable',
                     'SupplyLevel',
                     'CounterValue'
                 ]);
@@ -692,7 +748,7 @@ if (!function_exists('mpsm_dd_consumable_levels')) {
                 }
 
                 $haystack = strtolower($label . ' ' . json_encode($row));
-                $looksLikeConsumable = preg_match('/toner|drum|imaging|image unit|fuser|maintenance|kit|belt|waste|developer|roller|feed|staple|cartridge|transfer/', $haystack) === 1
+                $looksLikeConsumable = preg_match('/toner|drum|photoconductor|imaging|image unit|fuser|maintenance|kit|belt|waste|developer|roller|feed|staple|cartridge|transfer/', $haystack) === 1
                     || strpos((string)$sourceName, 'maintenance') !== false;
 
                 if (!$looksLikeConsumable) {
@@ -701,12 +757,14 @@ if (!function_exists('mpsm_dd_consumable_levels')) {
 
                 $color = mpsm_dd_consumable_color($label);
                 $normalized = [
-                    'type' => strpos(strtolower($label), 'drum') !== false || strpos(strtolower($label), 'imaging') !== false ? 'drum' : 'consumable',
+                    'type' => strpos(strtolower($label), 'drum') !== false || strpos(strtolower($label), 'photoconductor') !== false || strpos(strtolower($label), 'imaging') !== false ? 'drum' : 'consumable',
                     'color' => $color,
+                    'family' => mpsm_dd_text_from_keys($row, ['SupplyType', 'MaintenanceKitType', 'Type', 'TypeDescription']) ?: 'Consumable',
                     'Key' => $label,
                     'label' => $label,
                     'value' => $value,
-                    'source' => (string)$sourceName
+                    'source' => (string)$sourceName,
+                    'lastUpdate' => mpsm_dd_text_from_keys($row, ['LastUpdate', 'LastUpdateUTC', 'LastUpdateConsumable', 'CollectionDate', 'DateUTC'])
                 ];
 
                 $key = strtolower($label . '|' . $color);
@@ -739,7 +797,7 @@ if (!function_exists('mpsm_dd_normalize_payload')) {
         ], 'is_array');
 
         if (!$counterDetails) {
-            $counterArray = mpsm_dd_first_array($sources, ['CounterDetails', 'Counters', 'counterDetails', 'Meters', 'MeterReadings']);
+            $counterArray = mpsm_dd_first_array($sources, ['CounterDetails', 'CountersDetailed', 'Counters', 'counterDetails', 'Meters', 'MeterReadings']);
             $counterDetails = $counterArray ? ['Result' => $counterArray] : null;
         }
 
@@ -774,12 +832,22 @@ if (!function_exists('mpsm_dd_normalize_payload')) {
         $counterDetailRows = $counterRows;
         $deviceSerial = mpsm_dd_device_serial($device);
         foreach ($counterRows as $counterRow) {
-            if (!is_array($counterRow) || empty($counterRow['CounterDetails']) || !is_array($counterRow['CounterDetails'])) {
+            if (!is_array($counterRow)) {
+                continue;
+            }
+            $nestedCounters = null;
+            foreach (['CounterDetails', 'CountersDetailed', 'Counters'] as $nestedKey) {
+                if (!empty($counterRow[$nestedKey]) && is_array($counterRow[$nestedKey])) {
+                    $nestedCounters = $counterRow[$nestedKey];
+                    break;
+                }
+            }
+            if ($nestedCounters === null) {
                 continue;
             }
             $rowSerial = (string)($counterRow['SerialNumber'] ?? $counterRow['DeviceSerialNumber'] ?? '');
             if ($deviceSerial === '' || $rowSerial === '' || strcasecmp($rowSerial, $deviceSerial) === 0) {
-                $counterDetailRows = array_values($counterRow['CounterDetails']);
+                $counterDetailRows = array_values($nestedCounters);
                 break;
             }
         }

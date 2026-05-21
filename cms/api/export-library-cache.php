@@ -367,7 +367,7 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
             'category' => $entry['category'] ?? null,
             'use_case' => $entry['use_case'] ?? null,
             'format' => $format,
-            'status' => $isRunnable ? 'available' : 'pending',
+            'status' => $isRunnable ? 'ready' : 'pending',
             'updated_at' => null,
             'size_bytes' => null,
             'download_url' => null,
@@ -375,6 +375,7 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
             'last_error' => null,
             'can_run' => $isRunnable,
             'can_download' => false,
+            'delivery' => $isRunnable ? 'on_demand' : 'unavailable',
             'default_params' => $isRunnable ? buildDefaultParams($entry, $customerCode) : [],
         ];
 
@@ -383,6 +384,7 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
             $row['status'] = $manifestEntry['status'] ?? 'ready';
             $row['can_run'] = $isRunnable;
             $row['can_download'] = true;
+            $row['delivery'] = 'cached';
             $row['default_params'] = $isRunnable ? buildDefaultParams($entry, $customerCode) : [];
 
             // Mark stale if beyond TTL
@@ -424,6 +426,7 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
             'last_error' => null,
             'can_run' => false,
             'can_download' => true,
+            'delivery' => 'cached',
             'default_params' => [],
         ], $manifestEntry);
 

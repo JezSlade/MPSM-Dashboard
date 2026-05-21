@@ -359,7 +359,7 @@ if ($action === 'enrich-drilldowns') {
         $where .= " AND (
             cdd.{$drilldownSerialColumn} IS NULL
             OR JSON_UNQUOTE(JSON_EXTRACT(cdd.drilldown_data, '$._mpsm.schemaVersion')) IS NULL
-            OR JSON_UNQUOTE(JSON_EXTRACT(cdd.drilldown_data, '$._mpsm.schemaVersion')) <> '2'
+            OR JSON_UNQUOTE(JSON_EXTRACT(cdd.drilldown_data, '$._mpsm.schemaVersion')) <> '3'
         )";
     }
 
