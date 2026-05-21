@@ -61,14 +61,30 @@ const MPSM = (function() {
      * Determine if a device is offline based on IsOffline flag OR LastUpdate date
      * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
      */
+    function isTruthyFlag(value) {
+        if (value === true || value === 1) {
+            return true;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'y';
+        }
+        return false;
+    }
+
     function isDeviceOffline(device) {
         // If API explicitly marks as offline, trust it
-        if (device.IsOffline === true) {
+        if (isTruthyFlag(device.IsOffline ?? device.isOffline ?? device.Offline)) {
             return true;
         }
 
         // Compute from LastUpdate if IsOffline is not set or false
-        const lastUpdate = device.LastUpdate || device.LastCounterDate || device.LastMeterDate;
+        const lastUpdate = device.LastContactDate
+            || device.LastContact
+            || device.LastUpdate
+            || device.LastUpdateDateTime
+            || device.LastCounterDate
+            || device.LastMeterDate;
         if (!lastUpdate) {
             // No last update info - can't determine, assume online
             return false;
@@ -1055,7 +1071,9 @@ const MPSM = (function() {
                 ? state.devices.filter(device => isDeviceOffline(device)).length
                 : 0;
             const fallbackOffline = Number(state.offlineDevices ?? 0);
-            const offlineCount = Math.max(offlineFromMetric, offlineFromState, fallbackOffline);
+            const offlineCount = Array.isArray(state.devices) && state.devices.length
+                ? offlineFromState
+                : (Number.isFinite(offlineFromMetric) ? offlineFromMetric : fallbackOffline);
 
             state.offlineDevices = offlineCount;
             updateMetricValue('offline-count', offlineCount);
@@ -1933,7 +1951,7 @@ const MPSM = (function() {
             CardManager.refreshAll().catch(error => {
                 debugLog('CardManager.refreshAll() failed: ' + error.message, 'error');
             });
-            updateOfflineCountFromCache().catch(error => {
+            updateOfflineCountFromCache(state.customerCode).catch(error => {
                 debugLog('Offline count refresh failed: ' + error.message, 'warn');
             });
             // Start panel alert auto-refresh
@@ -2054,15 +2072,9 @@ const MPSM = (function() {
                 0
             );
 
-            const offlineCandidates = [
-                dashboard.NonCommunicatingDevices,
-                sdsData.NonCommunicatingDevices,
-                dashboard.OfflineDevices,
-                totalsSource.OfflineDevices
-            ];
-            const offlineCount = Number(
-                offlineCandidates.find(value => typeof value === 'number') ?? 0
-            );
+            const offlineCount = Array.isArray(state.devices) && state.devices.length
+                ? state.devices.filter(device => isDeviceOffline(device)).length
+                : 0;
 
             const bannerDeviceCount = document.getElementById('banner-device-total');
             if (bannerDeviceCount) {
@@ -2126,9 +2138,15 @@ const MPSM = (function() {
     /**
      * Update offline count from cached devices (real-time computation)
      */
-    async function updateOfflineCountFromCache() {
+    async function updateOfflineCountFromCache(customerCodeOverride = null) {
         try {
-            const response = await fetch('api/get-cached-devices.php');
+            const params = new URLSearchParams();
+            const activeCustomerCode = customerCodeOverride || state.customerCode || '';
+            if (activeCustomerCode) {
+                params.set('customerCode', activeCustomerCode);
+            }
+
+            const response = await fetch(`api/get-cached-devices.php?${params.toString()}`);
 
             // Guard against HTML error pages
             const contentType = response.headers.get('content-type') || '';
@@ -2140,18 +2158,20 @@ const MPSM = (function() {
             const data = await response.json();
 
             if (data.success && Array.isArray(data.devices)) {
-                // Filter for current customer only
-                const customerDevices = data.devices.filter(device =>
-                    device.CustomerCode === state.customerCode ||
-                    device.Customer?.Code === state.customerCode
-                );
+                // API already scopes by customerCode when provided. Keep a fallback filter.
+                const customerDevices = activeCustomerCode
+                    ? data.devices.filter(device =>
+                        device.CustomerCode === activeCustomerCode ||
+                        device.Customer?.Code === activeCustomerCode
+                    )
+                    : data.devices;
 
                 const offlineCount = customerDevices.filter(device => isDeviceOffline(device)).length;
 
                 state.offlineDevices = offlineCount;
                 updateMetricValue('offline-count', offlineCount);
 
-                debugLog(`Updated offline count: ${offlineCount} offline devices for customer ${state.customerCode}`, 'info');
+                debugLog(`Updated offline count: ${offlineCount} offline devices for customer ${activeCustomerCode || 'all'}`, 'info');
             }
         } catch (err) {
             debugLog(`Failed to update offline count: ${err.message}`, 'warn');
@@ -3755,13 +3775,34 @@ const MPSM = (function() {
                 return Object.fromEntries(Object.entries(row).filter(([key]) => !hidden.has(String(key).toLowerCase())));
             };
 
+            const parseAlertTime = (value) => {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    return value > 1e12 ? value : value * 1000;
+                }
+                const text = String(value).trim();
+                if (!text) return 0;
+
+                const ticks = text.match(/\/Date\((\d+)/i);
+                if (ticks && ticks[1]) {
+                    const millis = Number(ticks[1]);
+                    return Number.isFinite(millis) ? millis : 0;
+                }
+
+                const numeric = Number(text);
+                if (Number.isFinite(numeric)) {
+                    return numeric > 1e12 ? numeric : numeric * 1000;
+                }
+
+                const parsed = new Date(text).getTime();
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+
             const alertTimestamp = (row) => {
                 if (!row || typeof row !== 'object') return 0;
-                for (const key of ['DateUTC', 'ActionDateUtc', 'InitialDate', 'GeneratedOn', 'CreatedOn', 'LastUpdateUTC', 'CreatedAt', 'created_at', 'received_at', 'OpenedAt']) {
-                    if (row[key]) {
-                        const parsed = new Date(row[key]).getTime();
-                        if (Number.isFinite(parsed)) return parsed;
-                    }
+                for (const key of ['DateUTC', 'ActionDateUtc', 'InitialDate', 'GeneratedOn', 'CreatedOn', 'LastUpdateUTC', 'LastUpdate', 'Creation', 'Created', 'Date', 'Timestamp', 'CreatedAt', 'created_at', 'received_at', 'OpenedAt']) {
+                    const parsed = parseAlertTime(row[key]);
+                    if (parsed > 0) return parsed;
                 }
                 return 0;
             };

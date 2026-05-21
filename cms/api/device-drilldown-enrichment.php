@@ -537,6 +537,72 @@ if (!function_exists('mpsm_dd_numeric_from_keys')) {
     }
 }
 
+if (!function_exists('mpsm_dd_row_timestamp')) {
+    function mpsm_dd_row_timestamp(array $row): int
+    {
+        foreach ([
+            'DateUTC',
+            'ActionDateUtc',
+            'InitialDate',
+            'GeneratedOn',
+            'CreatedOn',
+            'LastUpdateUTC',
+            'LastUpdate',
+            'Creation',
+            'Created',
+            'Date',
+            'Timestamp',
+            'CreatedAt',
+            'created_at',
+            'received_at',
+            'OpenedAt'
+        ] as $key) {
+            if (!array_key_exists($key, $row) || $row[$key] === null || $row[$key] === '') {
+                continue;
+            }
+
+            $value = $row[$key];
+            if (is_numeric($value)) {
+                $raw = (float)$value;
+                return (int)($raw > 1000000000000 ? $raw : $raw * 1000);
+            }
+
+            $text = trim((string)$value);
+            if ($text === '') {
+                continue;
+            }
+
+            if (preg_match('/\/Date\((\d+)/i', $text, $matches) === 1) {
+                return (int)$matches[1];
+            }
+
+            if (is_numeric($text)) {
+                $raw = (float)$text;
+                return (int)($raw > 1000000000000 ? $raw : $raw * 1000);
+            }
+
+            $parsed = strtotime($text);
+            if ($parsed !== false) {
+                return (int)$parsed * 1000;
+            }
+        }
+
+        return 0;
+    }
+}
+
+if (!function_exists('mpsm_dd_sort_rows_newest_first')) {
+    function mpsm_dd_sort_rows_newest_first(array $rows): array
+    {
+        $sorted = array_values(array_filter($rows, 'is_array'));
+        usort($sorted, static function ($a, $b) {
+            return mpsm_dd_row_timestamp($b) <=> mpsm_dd_row_timestamp($a);
+        });
+
+        return $sorted;
+    }
+}
+
 if (!function_exists('mpsm_dd_counter_summary')) {
     function mpsm_dd_counter_summary(array $device, array $counterRows): array
     {
@@ -924,6 +990,7 @@ if (!function_exists('mpsm_dd_normalize_payload')) {
             'maintenanceLevels' => $maintenanceLevels
         ]);
 
+        $maintenanceAlertRows = mpsm_dd_sort_rows_newest_first(mpsm_dd_as_rows($maintenanceAlerts));
         return [
             'counters' => [
                 'summary' => $counterSummary,
@@ -943,7 +1010,7 @@ if (!function_exists('mpsm_dd_normalize_payload')) {
             'maintenance' => [
                 'levels' => $maintenanceLevels,
                 'counters' => mpsm_dd_as_rows($maintenanceCounters),
-                'alerts' => mpsm_dd_as_rows($maintenanceAlerts),
+                'alerts' => $maintenanceAlertRows,
                 'history' => mpsm_dd_as_rows($maintenanceHistory),
                 'raw' => [
                     'counters' => $maintenanceCounters,
@@ -953,7 +1020,7 @@ if (!function_exists('mpsm_dd_normalize_payload')) {
             ],
             'alerts' => [
                 'supply' => mpsm_dd_as_rows($supplyAlerts),
-                'maintenance' => mpsm_dd_as_rows($maintenanceAlerts),
+                'maintenance' => $maintenanceAlertRows,
                 'sdsActions' => mpsm_dd_as_rows($sdsActions),
             ],
             'deviceHealth' => [

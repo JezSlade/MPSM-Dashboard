@@ -13,6 +13,17 @@ const CardRegistry = (function () {
      * Determine if a device is offline based on IsOffline flag OR LastUpdate date
      * MPS API may not always populate IsOffline correctly, so we compute from LastUpdate as fallback
      */
+    const isTruthyFlag = (value) => {
+        if (value === true || value === 1) {
+            return true;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'y';
+        }
+        return false;
+    };
+
     const isDeviceOffline = (device) => {
         // Guard against null/undefined devices
         if (!device) {
@@ -20,12 +31,17 @@ const CardRegistry = (function () {
         }
 
         // If API explicitly marks as offline, trust it
-        if (device.IsOffline === true) {
+        if (isTruthyFlag(device.IsOffline ?? device.isOffline ?? device.Offline)) {
             return true;
         }
 
         // Compute from LastUpdate if IsOffline is not set or false
-        const lastUpdate = device.LastUpdate || device.LastCounterDate || device.LastMeterDate;
+        const lastUpdate = device.LastContactDate
+            || device.LastContact
+            || device.LastUpdate
+            || device.LastUpdateDateTime
+            || device.LastCounterDate
+            || device.LastMeterDate;
         if (!lastUpdate) {
             // No last update info - can't determine, assume online
             return false;
@@ -706,8 +722,8 @@ const CardRegistry = (function () {
                     });
 
                     // Fallback: if cache is empty or very stale, use live API
-                    if (!data.devices || data.devices.length === 0 || data.cache_age_seconds > 1800) {
-                        console.warn('[device-inventory] Cache empty or stale, falling back to live API');
+                    if (!data.devices || data.devices.length === 0) {
+                        console.warn('[device-inventory] Cache empty, falling back to live API');
                         data = await helpers.fetchJson('api/get-devices.php', {
                             customerCode: context.customerCode,
                             dealerCode: context.dealerCode,
@@ -1146,8 +1162,8 @@ const CardRegistry = (function () {
                             customerCode: context.customerCode
                         });
 
-                        if (!data.devices || data.devices.length === 0 || data.cache_age_seconds > 1800) {
-                            console.warn('[top-devices] Cache empty or stale, falling back to live API');
+                        if (!data.devices || data.devices.length === 0) {
+                            console.warn('[top-devices] Cache empty, falling back to live API');
                             data = await helpers.fetchJson('api/get-devices.php', {
                                 customerCode: context.customerCode,
                                 dealerCode: context.dealerCode,

@@ -686,13 +686,34 @@ const MobileApp = (() => {
                 return Object.fromEntries(Object.entries(item).filter(([key]) => !hidden.has(String(key).toLowerCase())));
             };
 
+            const parseAlertTime = (value) => {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    return value > 1e12 ? value : value * 1000;
+                }
+                const text = String(value).trim();
+                if (!text) return 0;
+
+                const ticks = text.match(/\/Date\((\d+)/i);
+                if (ticks && ticks[1]) {
+                    const millis = Number(ticks[1]);
+                    return Number.isFinite(millis) ? millis : 0;
+                }
+
+                const numeric = Number(text);
+                if (Number.isFinite(numeric)) {
+                    return numeric > 1e12 ? numeric : numeric * 1000;
+                }
+
+                const parsed = new Date(text).getTime();
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+
             const alertTimestamp = (item) => {
                 if (!item || typeof item !== 'object') return 0;
-                for (const key of ['DateUTC', 'ActionDateUtc', 'InitialDate', 'GeneratedOn', 'CreatedOn', 'LastUpdateUTC', 'CreatedAt', 'created_at', 'received_at', 'OpenedAt']) {
-                    if (item[key]) {
-                        const parsed = new Date(item[key]).getTime();
-                        if (Number.isFinite(parsed)) return parsed;
-                    }
+                for (const key of ['DateUTC', 'ActionDateUtc', 'InitialDate', 'GeneratedOn', 'CreatedOn', 'LastUpdateUTC', 'LastUpdate', 'Creation', 'Created', 'Date', 'Timestamp', 'CreatedAt', 'created_at', 'received_at', 'OpenedAt']) {
+                    const parsed = parseAlertTime(item[key]);
+                    if (parsed > 0) return parsed;
                 }
                 return 0;
             };
