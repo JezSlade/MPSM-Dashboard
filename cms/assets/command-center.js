@@ -12,6 +12,12 @@ let _aggMap = null; // cache of alert aggregations keyed by device|alert
 let _aggMapLoadedAt = 0;
 const NOTIFICATION_PAGE_SIZE = 50;
 let notificationOffset = 0;
+let alertCenterRoot = null;
+let isMounted = false;
+let tabsInitialized = false;
+let controlsInitialized = false;
+let definitionFormBound = false;
+let visibilityHandlerBound = false;
 
 // Severity Configuration
 const SEVERITY_CONFIG = {
@@ -37,105 +43,145 @@ const SEVERITY_CONFIG = {
     }
 };
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function () {
-    try {
-        // Initialize core functionality
-        initializeTabs();
-        initializeControls();
-
-        // Initialize panel stream tab functionality
-        initPanelTab();
-        startPanelAutoRefresh();
-
-        // Load initial data
-        loadNotifications();
-        startAutoRefresh();
-
-        // Header refresh button handler
-        const refreshBtn = document.getElementById('refresh-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                // Refresh current tab
-                if (currentTab === 'notifications') {
-                    loadNotifications();
-                } else if (currentTab === 'rules') {
-                    loadRules();
-                } else if (currentTab === 'statistics') {
-                    loadStatistics();
-                } else if (currentTab === 'panel') {
-                    loadPanelMessages();
-                } else if (currentTab === 'definitions') {
-                    loadDefinitions();
-                }
-            });
-        }
-
-        // Handle URL parameters for deep linking
-        const params = new URLSearchParams(location.search);
-        const tab = (params.get('tab') || '').trim();
-        const customerCode = (params.get('customerCode') || '').trim();
-
-        // Apply customer filter if provided
-        if (customerCode) {
-            notificationCustomerFilter = customerCode;
-            const notificationFilter = document.getElementById('notification-customer-filter');
-            if (notificationFilter) notificationFilter.value = customerCode;
-
-            const panelFilter = document.getElementById('cc-panel-customer');
-            if (panelFilter) panelFilter.value = customerCode;
-        }
-
-        // Switch to requested tab if provided
-        if (tab) {
-            const tabBtn = document.querySelector('.monitor-tab-btn[data-tab="' + tab + '"]');
-            if (tabBtn) {
-                setTimeout(() => {
-                    tabBtn.click();
-                    // Load tab-specific data
-                    if (tab === 'panel') {
-                        loadPanelMessages();
-                    } else if (tab === 'definitions') {
-                        loadDefinitions();
-                    }
-                }, 100);
-            }
-        }
-    } catch (e) {
-        console.error('Error initializing Command Center:', e);
+function resolveRoot(options = {}) {
+    if (options.root && options.root.nodeType === 1) {
+        return options.root;
     }
-});
+    if (typeof options.root === 'string' && options.root.trim()) {
+        return document.querySelector(options.root.trim());
+    }
+
+    const bootstrap = window.ALERT_CENTER_BOOTSTRAP || {};
+    if (typeof bootstrap.rootSelector === 'string' && bootstrap.rootSelector.trim()) {
+        return document.querySelector(bootstrap.rootSelector.trim());
+    }
+
+    return document.getElementById('alert-center-root');
+}
+
+function getMountOptions(options = {}) {
+    const merged = Object.assign({}, window.ALERT_CENTER_BOOTSTRAP || {}, options || {});
+    const standalone = document.body?.dataset.alertCenterStandalone === '1';
+    const useUrlParams = merged.useUrlParams === true || merged.autoMount === true || standalone;
+    if (useUrlParams) {
+        const params = new URLSearchParams(window.location.search || '');
+        if (!merged.initialTab) {
+            merged.initialTab = (params.get('tab') || '').trim();
+        }
+        if (!merged.customerCode) {
+            merged.customerCode = (params.get('customerCode') || '').trim();
+        }
+    }
+    return merged;
+}
+
+function loadCurrentTab(silent = false) {
+    if (currentTab === 'notifications') {
+        loadNotifications(silent);
+    } else if (currentTab === 'rules') {
+        loadRules(silent);
+    } else if (currentTab === 'statistics') {
+        loadStatistics(silent);
+    } else if (currentTab === 'panel') {
+        loadPanelMessages();
+    } else if (currentTab === 'definitions') {
+        loadDefinitions(silent);
+    }
+}
+
+function activateTab(target, shouldLoad = true) {
+    const tabButtons = document.querySelectorAll('.monitor-tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    currentTab = target;
+
+    tabButtons.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === target);
+    });
+
+    tabPanels.forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.tab === target);
+    });
+
+    if (shouldLoad) {
+        loadCurrentTab();
+    }
+}
+
+function mountAlertCenter(options = {}) {
+    const mountOptions = getMountOptions(options);
+    const root = resolveRoot(mountOptions);
+    if (!root) {
+        return false;
+    }
+
+    alertCenterRoot = root;
+
+    if (!tabsInitialized) {
+        initializeTabs();
+        tabsInitialized = true;
+    }
+    if (!controlsInitialized) {
+        initializeControls();
+        controlsInitialized = true;
+    }
+    if (!definitionFormBound) {
+        const definitionForm = document.getElementById('definition-form');
+        if (definitionForm) {
+            definitionForm.addEventListener('submit', handleDefinitionSubmit);
+        }
+        definitionFormBound = true;
+    }
+    if (!visibilityHandlerBound) {
+        document.addEventListener('visibilitychange', () => {
+            if (!isMounted) {
+                return;
+            }
+            if (document.hidden) {
+                stopPanelAutoRefresh();
+            } else if (currentTab === 'panel') {
+                startPanelAutoRefresh();
+            }
+        });
+        visibilityHandlerBound = true;
+    }
+
+    initPanelTab();
+    isMounted = true;
+
+    if (mountOptions.customerCode) {
+        syncNotificationCustomer(mountOptions.customerCode);
+        const panelFilter = document.getElementById('cc-panel-customer');
+        if (panelFilter) {
+            panelFilter.value = mountOptions.customerCode;
+        }
+    }
+
+    const validTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'tools', 'statistics']);
+    if (mountOptions.initialTab && validTabs.has(mountOptions.initialTab)) {
+        activateTab(mountOptions.initialTab, true);
+    } else {
+        loadCurrentTab();
+    }
+
+    startAutoRefresh();
+    startPanelAutoRefresh();
+    return true;
+}
+
+function unmountAlertCenter() {
+    isMounted = false;
+    stopAutoRefresh();
+    stopPanelAutoRefresh();
+}
 
 // Tab Switching
 function initializeTabs() {
     const tabButtons = document.querySelectorAll('.monitor-tab-btn');
-    const tabPanels = document.querySelectorAll('.tab-panel');
 
     tabButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const target = button.dataset.tab;
-            currentTab = target;
-
-            tabButtons.forEach((btn) => {
-                btn.classList.toggle('active', btn === button);
-            });
-
-            tabPanels.forEach((panel) => {
-                panel.classList.toggle('active', panel.dataset.tab === target);
-            });
-
-            // Load data for the selected tab
-            if (target === 'notifications') {
-                loadNotifications();
-            } else if (target === 'rules') {
-                loadRules();
-            } else if (target === 'statistics') {
-                loadStatistics();
-            } else if (target === 'panel') {
-                loadPanelMessages();
-            } else if (target === 'definitions') {
-                loadDefinitions();
-            }
+            activateTab(target, true);
         });
     });
 }
@@ -224,15 +270,10 @@ function syncNotificationCustomer(code) {
 function startAutoRefresh() {
     stopAutoRefresh();
     autoRefreshInterval = setInterval(() => {
-        if (currentTab === 'notifications') {
-            loadNotifications(true);
-        } else if (currentTab === 'rules') {
-            loadRules(true);
-        } else if (currentTab === 'statistics') {
-            loadStatistics(true);
-        } else if (currentTab === 'definitions') {
-            loadDefinitions(true);
+        if (!isMounted) {
+            return;
         }
+        loadCurrentTab(true);
         // Note: Panel tab has its own 30s auto-refresh via startPanelAutoRefresh()
     }, 10000); // 10 seconds
 }
@@ -1150,6 +1191,9 @@ function initPanelTab() {
 function startPanelAutoRefresh() {
     stopPanelAutoRefresh();
     panelTimerId = setInterval(() => {
+        if (!isMounted) {
+            return;
+        }
         if (currentTab === 'panel') {
             loadPanelMessages();
         }
@@ -1611,18 +1655,31 @@ async function handleDefinitionSubmit(e) {
     }
 }
 
-// Wire up definition form submit handler
-document.addEventListener('DOMContentLoaded', function() {
-    const definitionForm = document.getElementById('definition-form');
-    if (definitionForm) {
-        definitionForm.addEventListener('submit', handleDefinitionSubmit);
+window.AlertCenter = {
+    mount: mountAlertCenter,
+    unmount: unmountAlertCenter,
+    refresh: () => loadCurrentTab(),
+    setCustomerCode: (customerCode) => {
+        syncNotificationCustomer(customerCode || '');
+        if (isMounted) {
+            panelOffset = 0;
+            notificationOffset = 0;
+            loadCurrentTab();
+        }
+    },
+    getState: () => ({
+        mounted: isMounted,
+        currentTab,
+        customerCode: notificationCustomerFilter
+    })
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const bootstrap = window.ALERT_CENTER_BOOTSTRAP || {};
+    const standalone = document.body?.dataset.alertCenterStandalone === '1';
+    if (bootstrap.autoMount || standalone) {
+        mountAlertCenter(bootstrap);
     }
-});
-
-
-document.addEventListener('visibilitychange', () => { 
-    if (document.hidden) stopPanelAutoRefresh(); 
-    else if (currentTab === 'panel') startPanelAutoRefresh(); 
 });
 
 /*

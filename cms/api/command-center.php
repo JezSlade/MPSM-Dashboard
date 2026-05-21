@@ -278,6 +278,37 @@ function getNotifications(PDO $pdo): void
         $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    $totalCount = count($notifications);
+    try {
+        $countSql = "SELECT COUNT(*) FROM {$notifTable} dn WHERE dn.status = :status";
+        if ($severity) {
+            $countSql .= " AND dn.severity = :severity";
+        }
+        if ($customerCode) {
+            $countSql .= " AND (
+                LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
+                OR dn.customer_code IS NULL
+                OR dn.customer_code = ''
+            )";
+        }
+
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->bindValue(':status', $status);
+        if ($severity) {
+            $countStmt->bindValue(':severity', $severity);
+        }
+        if ($customerCode) {
+            $countStmt->bindValue(':customer_code', $customerCode);
+        }
+        $countStmt->execute();
+        $resolvedCount = $countStmt->fetchColumn();
+        if ($resolvedCount !== false) {
+            $totalCount = (int)$resolvedCount;
+        }
+    } catch (Throwable $countError) {
+        error_log('Command center total count query failed: ' . $countError->getMessage());
+    }
+
     // Process notifications to replace alert_code with display_name in title/message and hydrate device metadata
     foreach ($notifications as &$notif) {
         // If we have a display name, use it; otherwise keep the original alert_code
@@ -304,6 +335,7 @@ function getNotifications(PDO $pdo): void
         'success' => true,
         'notifications' => $notifications,
         'count' => count($notifications),
+        'total_count' => $totalCount,
         'filters' => [
             'status' => $status,
             'severity' => $severity,

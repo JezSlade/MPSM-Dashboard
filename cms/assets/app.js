@@ -25,6 +25,7 @@ const MPSM = (function() {
         offlineDevices: 0,
         connectorsTotal: 0,
         alertsTotal: 0,
+        activeNotificationsTotal: 0,
         cards: [],
         currentDevicePage: 1,
         currentAlertPage: 1,
@@ -51,6 +52,7 @@ const MPSM = (function() {
     let catalogSearchTimeout = null;
     let dbMonitorRefreshInterval = null;
     let adminDataPrefetched = false;
+    let alertsTabMounted = false;
 
     const CARD_LAYOUT_STORAGE_KEY = 'mpsm-dashboard-card-order';
 
@@ -724,6 +726,7 @@ const MPSM = (function() {
             if (isDashboardPage) {
             await loadCustomerOptions();
             await loadDashboard();
+            applyInitialTabFromUrl();
             prefetchAdminData().catch(error => debugLog('Prefetch failed: ' + error.message, 'warn'));
         }
         } catch (error) {
@@ -751,7 +754,14 @@ const MPSM = (function() {
         // Refresh
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', loadDashboard);
+            refreshBtn.addEventListener('click', () => {
+                const hasDashboardView = document.getElementById('customer-header') !== null;
+                if ((state.currentTab === 'alerts' || !hasDashboardView) && window.AlertCenter && typeof window.AlertCenter.refresh === 'function') {
+                    window.AlertCenter.refresh();
+                } else if (hasDashboardView) {
+                    loadDashboard();
+                }
+            });
         }
 
         // Logout
@@ -908,6 +918,33 @@ const MPSM = (function() {
     /**
      * Switch tabs
      */
+    function mountAlertsTab() {
+        if (!window.AlertCenter || typeof window.AlertCenter.mount !== 'function') {
+            return;
+        }
+        const alertsRoot = document.querySelector('#alerts-tab #alert-center-root');
+        if (!alertsRoot) {
+            return;
+        }
+
+        window.AlertCenter.mount({
+            root: alertsRoot,
+            customerCode: state.customerCode || '',
+            embedded: true
+        });
+        alertsTabMounted = true;
+    }
+
+    function unmountAlertsTab() {
+        if (!alertsTabMounted) {
+            return;
+        }
+        if (window.AlertCenter && typeof window.AlertCenter.unmount === 'function') {
+            window.AlertCenter.unmount();
+        }
+        alertsTabMounted = false;
+    }
+
     function switchTab(tabName) {
         state.currentTab = tabName;
 
@@ -919,7 +956,12 @@ const MPSM = (function() {
             content.classList.toggle('active', content.id === tabName + '-tab');
         });
 
-        // Load visitor logs when switching to admin tab
+        if (tabName === 'alerts') {
+            mountAlertsTab();
+        } else {
+            unmountAlertsTab();
+        }
+
         if (tabName === 'admin') {
             loadVisitorLogs();
         }
@@ -963,6 +1005,42 @@ const MPSM = (function() {
             return { customerCode, customerName };
         } catch (error) {
             return null;
+        }
+    }
+
+    function applyInitialTabFromUrl() {
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            const tab = (params.get('tab') || '').trim();
+            if (!tab) {
+                return;
+            }
+
+            const topLevelTabs = new Set(['dashboard', 'alerts', 'admin']);
+            if (topLevelTabs.has(tab)) {
+                switchTab(tab);
+                return;
+            }
+
+            const alertCenterTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'tools', 'statistics']);
+            if (alertCenterTabs.has(tab)) {
+                switchTab('alerts');
+                if (window.AlertCenter && typeof window.AlertCenter.mount === 'function') {
+                    const alertsRoot = document.querySelector('#alerts-tab #alert-center-root');
+                    if (alertsRoot) {
+                        window.AlertCenter.mount({
+                            root: alertsRoot,
+                            initialTab: tab,
+                            customerCode: state.customerCode || '',
+                            useUrlParams: true,
+                            embedded: true
+                        });
+                        alertsTabMounted = true;
+                    }
+                }
+            }
+        } catch (error) {
+            debugLog('Failed to apply initial tab from URL: ' + error.message, 'warn');
         }
     }
 
@@ -1089,10 +1167,6 @@ const MPSM = (function() {
             const summary = snapshotSummary || computeAlertDeviceSummary(state.alerts);
 
             state.alertSummary = summary;
-            state.alertsTotal = summary.totalDevices;
-
-            updateMetricValue('alerts-count', summary.totalDevices);
-            updateMetricValue('alert-count', summary.totalDevices);
         }
 
         if (cardId === 'integrations') {
@@ -1606,6 +1680,9 @@ const MPSM = (function() {
         // Save customer preference to persist across sessions
         savePreference('customerCode', code);
         savePreference('customerName', description || state.customerName || '');
+        if (window.AlertCenter && typeof window.AlertCenter.setCustomerCode === 'function') {
+            window.AlertCenter.setCustomerCode(code);
+        }
 
         debugLog(`Customer selected: ${code}`, 'info');
         loadDashboard();
@@ -2042,7 +2119,7 @@ const MPSM = (function() {
                     <div class="metric-card clickable status-warning" onclick="MPSM.expandAlerts()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
                         <div class="metric-value" id="alerts-count">0</div>
-                        <div class="metric-label">Maintenance Alerts</div>
+                        <div class="metric-label">Active Alerts</div>
                     </div>
                     <div class="metric-card clickable" onclick="MPSM.expandConnectors()" style="cursor:pointer">
                         <div class="metric-icon"><i class="fas fa-link"></i></div>
@@ -2107,22 +2184,16 @@ const MPSM = (function() {
                     ? dashboard.SupplyAlerts
                     : [];
             const toManageEntry = supplySummary.find(item => (item.Key || '').toLowerCase() === 'tomanage');
-            const alertsTotal = Number(toManageEntry?.Value ?? 0);
-
-            const alertsBannerEl = document.getElementById('alerts-count');
-            if (alertsBannerEl) {
-                alertsBannerEl.textContent = alertsTotal;
-            }
-
-            const alertsHiddenEl = document.getElementById('alert-count');
-            if (alertsHiddenEl) {
-                alertsHiddenEl.textContent = alertsTotal;
-            }
+            const supplyAlertsToManage = Number(toManageEntry?.Value ?? 0);
 
             state.totalDevices = totalDevices;
             state.connectorsTotal = totalConnectors;
             state.offlineDevices = offlineCount;
-            state.alertsTotal = alertsTotal;
+            state.alertSummary = Object.assign({}, state.alertSummary || {}, {
+                supplyToManage: supplyAlertsToManage
+            });
+
+            refreshPrimaryAlertMetric();
 
         } catch (error) {
             container.innerHTML = `
@@ -2132,6 +2203,35 @@ const MPSM = (function() {
                     <p class="error-message">${error.message}</p>
                 </div>
             `;
+        }
+    }
+
+    async function refreshPrimaryAlertMetric(customerCodeOverride = null) {
+        const activeCustomerCode = customerCodeOverride || state.customerCode || '';
+        const params = new URLSearchParams({
+            action: 'get_notifications',
+            status: 'active',
+            limit: '1',
+            offset: '0'
+        });
+        if (activeCustomerCode) {
+            params.set('customerCode', activeCustomerCode);
+        }
+
+        try {
+            const response = await fetch(`api/command-center.php?${params.toString()}`);
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Unable to load active notifications');
+            }
+
+            const totalCount = Number(data.total_count ?? data.count ?? 0);
+            state.activeNotificationsTotal = Number.isFinite(totalCount) ? totalCount : 0;
+            state.alertsTotal = state.activeNotificationsTotal;
+            updateMetricValue('alerts-count', state.activeNotificationsTotal);
+            updateMetricValue('alert-count', state.activeNotificationsTotal);
+        } catch (error) {
+            debugLog('Active notification metric refresh failed: ' + error.message, 'warn');
         }
     }
 
@@ -2701,10 +2801,6 @@ const MPSM = (function() {
 
             state.alerts = alerts;
             state.alertSummary = computeAlertDeviceSummary(alerts);
-            state.alertsTotal = state.alertSummary.totalDevices;
-
-            updateMetricValue('alerts-count', state.alertsTotal);
-            updateMetricValue('alert-count', state.alertsTotal);
 
             if (!alerts.length) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';
@@ -4322,9 +4418,6 @@ const MPSM = (function() {
 
             state.alerts = alerts;
             state.alertSummary = computeAlertDeviceSummary(alerts);
-            state.alertsTotal = state.alertSummary.totalDevices;
-            updateMetricValue('alerts-count', state.alertsTotal);
-            updateMetricValue('alert-count', state.alertsTotal);
 
             if (alerts.length === 0) {
                 modalBody.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No active supply alerts</p></div>';

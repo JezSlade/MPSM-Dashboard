@@ -96,6 +96,7 @@ $preferences = getUserPreferences($userId);
     <nav class="nav">
         <div class="container">
             <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+            <button class="nav-tab" data-tab="alerts">Alerts</button>
             <button class="nav-tab" data-tab="admin">Admin</button>
         </div>
     </nav>
@@ -124,6 +125,10 @@ $preferences = getUserPreferences($userId);
                 <div id="supply-alerts" style="display:none;"></div>
                 <div id="dashboard-card-container" class="dashboard-card-grid"></div>
             </div>
+        </div>
+
+        <div id="alerts-tab" class="tab-content">
+            <?php require __DIR__ . '/partials/alert-center.php'; ?>
         </div>
 
         <!-- Admin Tab -->
@@ -484,6 +489,14 @@ $preferences = getUserPreferences($userId);
     <script src="assets/js/card-registry.js"></script>
     <script src="assets/js/card-manager.js"></script>
     <script src="assets/hero-notifications.js"></script>
+    <script>
+        window.ALERT_CENTER_BOOTSTRAP = {
+            autoMount: false,
+            rootSelector: '#alerts-tab #alert-center-root',
+            embedded: true
+        };
+    </script>
+    <script src="assets/command-center.js"></script>
     <script src="assets/app.js"></script>
     <script src="assets/error-logs.js"></script>
     <script src="api/cache-engine.js"></script>
