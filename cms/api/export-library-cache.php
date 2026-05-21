@@ -50,6 +50,31 @@ function inferExportFormat(string $action, ?string $useCase = null): string
     return 'File';
 }
 
+function isExportCatalogEntry(array $entry): bool
+{
+    $action = (string)($entry['action'] ?? '');
+    if ($action === '') {
+        return false;
+    }
+
+    $haystack = strtolower($action . ' ' . ($entry['use_case'] ?? ''));
+    foreach (['export', 'download', 'report'] as $keyword) {
+        if (strpos($haystack, $keyword) !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function getExportCatalog(bool $onlySuccessful = false): array
+{
+    EndpointCatalog::init();
+    $catalog = EndpointCatalog::getAllEndpoints($onlySuccessful);
+
+    return array_values(array_filter($catalog, 'isExportCatalogEntry'));
+}
+
 function sanitizeSegment(string $value): string
 {
     $sanitized = preg_replace('/[^a-zA-Z0-9_\-]+/', '_', $value);
@@ -91,6 +116,26 @@ function manifestPath(string $customerCode): string
 {
     $safeCustomer = sanitizeSegment($customerCode ?: 'default');
     return EXPORT_CACHE_DIR . '/' . $safeCustomer . '/manifest.json';
+}
+
+function cachedExportPath(string $customerCode, array $entry): ?string
+{
+    if (empty($entry['filename'])) {
+        return null;
+    }
+
+    $safeCustomer = sanitizeSegment($customerCode ?: 'default');
+    return EXPORT_CACHE_DIR . '/' . $safeCustomer . '/' . basename((string)$entry['filename']);
+}
+
+function hasCachedExportFile(string $customerCode, ?array $entry): bool
+{
+    if (!$entry) {
+        return false;
+    }
+
+    $path = cachedExportPath($customerCode, $entry);
+    return $path !== null && is_file($path);
 }
 
 function loadManifest(string $customerCode): array
@@ -301,6 +346,7 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
 {
     $rows = [];
     $now = time();
+    $seen = [];
 
     foreach ($catalog as $entry) {
         $action = $entry['action'] ?? '';
@@ -308,24 +354,36 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
             continue;
         }
         $format = inferExportFormat($action, $entry['use_case'] ?? null);
-        $manifestEntry = $manifest[$action] ?? null;
+        $manifestEntry = isset($manifest[$action]) && is_array($manifest[$action]) ? $manifest[$action] : null;
+        $hasCachedFile = hasCachedExportFile($customerCode, $manifestEntry);
+        $isRunnable = !empty($entry['success']);
+
+        if (!$hasCachedFile && !$isRunnable) {
+            continue;
+        }
 
         $row = [
             'action' => $action,
             'category' => $entry['category'] ?? null,
             'use_case' => $entry['use_case'] ?? null,
             'format' => $format,
-            'status' => 'pending',
+            'status' => $isRunnable ? 'available' : 'pending',
             'updated_at' => null,
             'size_bytes' => null,
             'download_url' => null,
             'customer_code' => $customerCode,
             'last_error' => null,
+            'can_run' => $isRunnable,
+            'can_download' => false,
+            'default_params' => $isRunnable ? buildDefaultParams($entry, $customerCode) : [],
         ];
 
-        if ($manifestEntry) {
+        if ($manifestEntry && $hasCachedFile) {
             $row = array_merge($row, $manifestEntry);
             $row['status'] = $manifestEntry['status'] ?? 'ready';
+            $row['can_run'] = $isRunnable;
+            $row['can_download'] = true;
+            $row['default_params'] = $isRunnable ? buildDefaultParams($entry, $customerCode) : [];
 
             // Mark stale if beyond TTL
             if (!empty($manifestEntry['updated_at'])) {
@@ -345,15 +403,48 @@ function mergeCatalogWithManifest(array $catalog, array $manifest, string $custo
         }
 
         $rows[] = $row;
+        $seen[$action] = true;
     }
+
+    foreach ($manifest as $action => $manifestEntry) {
+        if (isset($seen[$action]) || !is_array($manifestEntry) || !hasCachedExportFile($customerCode, $manifestEntry)) {
+            continue;
+        }
+
+        $format = $manifestEntry['format'] ?? inferExportFormat((string)$action, $manifestEntry['use_case'] ?? null);
+        $row = array_merge([
+            'action' => (string)$action,
+            'category' => $manifestEntry['category'] ?? null,
+            'use_case' => $manifestEntry['use_case'] ?? null,
+            'format' => $format,
+            'status' => $manifestEntry['status'] ?? 'ready',
+            'updated_at' => $manifestEntry['updated_at'] ?? null,
+            'size_bytes' => $manifestEntry['size_bytes'] ?? null,
+            'customer_code' => $customerCode,
+            'last_error' => null,
+            'can_run' => false,
+            'can_download' => true,
+            'default_params' => [],
+        ], $manifestEntry);
+
+        $row['download_url'] = sprintf(
+            'api/export-library-cache.php?action=download&customerCode=%s&export=%s',
+            rawurlencode($customerCode),
+            rawurlencode((string)$action)
+        );
+        $rows[] = $row;
+    }
+
+    usort($rows, function ($a, $b) {
+        return strcmp((string)($a['action'] ?? ''), (string)($b['action'] ?? ''));
+    });
 
     return $rows;
 }
 
 function listExports(string $customerCode): void
 {
-    EndpointCatalog::init();
-    $catalog = EndpointCatalog::getAllEndpoints(false);
+    $catalog = getExportCatalog(false);
     $manifest = loadManifest($customerCode);
 
     $exports = mergeCatalogWithManifest($catalog, $manifest, $customerCode);
@@ -399,8 +490,7 @@ function downloadExport(string $customerCode, string $action): void
 
 function refreshExports(string $customerCode): array
 {
-    EndpointCatalog::init();
-    $catalog = EndpointCatalog::getAllEndpoints(false);
+    $catalog = getExportCatalog(true);
     $manifest = loadManifest($customerCode);
 
     foreach ($catalog as $entry) {

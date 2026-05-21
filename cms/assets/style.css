@@ -533,6 +533,11 @@ main {
     color: var(--accent-warning);
 }
 
+.metric-card.status-info .metric-icon,
+.metric-card.status-info .metric-value {
+    color: var(--accent-primary);
+}
+
 .metric-card.status-danger .metric-icon,
 .metric-card.status-danger .metric-value {
     color: var(--accent-danger);
@@ -735,6 +740,16 @@ main {
 .status-badge.status-warning {
     background-color: rgba(243, 156, 18, 0.1);
     color: var(--accent-warning);
+}
+
+.status-badge.status-info {
+    background-color: rgba(var(--primary-rgb), 0.1);
+    color: var(--accent-primary);
+}
+
+.status-badge.status-muted {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
 }
 
 /* Loading State */

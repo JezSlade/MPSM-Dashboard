@@ -264,14 +264,21 @@ try {
     $params = isset($payload['params']) && is_array($payload['params']) ? $payload['params'] : [];
 
     EndpointCatalog::init();
-    $exportCandidates = EndpointCatalog::getAllEndpoints(false);
+    $exportCandidates = EndpointCatalog::getAllEndpoints(true);
 
     $allowed = array_filter($exportCandidates, function ($entry) use ($action) {
-        return isset($entry['action']) && strcasecmp($entry['action'], $action) === 0;
+        if (!isset($entry['action']) || strcasecmp($entry['action'], $action) !== 0) {
+            return false;
+        }
+
+        $haystack = strtolower($entry['action'] . ' ' . ($entry['use_case'] ?? ''));
+        return strpos($haystack, 'export') !== false
+            || strpos($haystack, 'download') !== false
+            || strpos($haystack, 'report') !== false;
     });
 
     if (empty($allowed)) {
-        throw new Exception('Requested export action is not registered in the catalog.');
+        throw new Exception('Requested export action is not available.');
     }
 
     $exportResponse = performExportWithRecovery($action, $params);

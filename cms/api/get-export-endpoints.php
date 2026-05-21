@@ -41,7 +41,7 @@ function inferExportFormat(string $action, ?string $useCase = null): string
 
 try {
     EndpointCatalog::init();
-    $catalog = EndpointCatalog::getAllEndpoints(false);
+    $catalog = EndpointCatalog::getAllEndpoints(true);
 
     $keywords = ['export', 'download', 'report'];
     $exports = [];

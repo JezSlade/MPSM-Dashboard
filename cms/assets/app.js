@@ -3746,6 +3746,19 @@ const MPSM = (function() {
                 `;
             };
 
+            const formatCounterMetric = (...values) => {
+                for (const value of values) {
+                    if (value === null || value === undefined || value === '') {
+                        continue;
+                    }
+                    const numeric = Number(String(value).replace(/,/g, ''));
+                    if (Number.isFinite(numeric)) {
+                        return numeric.toLocaleString();
+                    }
+                }
+                return 'N/A';
+            };
+
             const summarizePanelMessage = (msg) => {
                 if (!msg) return 'No additional details';
                 const payload = msg.payload;
@@ -3861,10 +3874,10 @@ const MPSM = (function() {
 
                     <h3>Counters</h3>
                     ${renderSnapshotItems([
-                        { label: 'Total Mono', value: Number(counters.summary?.monoTotal ?? device.CounterMono ?? 0).toLocaleString() },
-                        { label: 'Total Color', value: Number(counters.summary?.colorTotal ?? device.CounterColor ?? 0).toLocaleString() },
-                        { label: 'Monthly Mono', value: Number(counters.summary?.monoMonthly ?? device.MonthlyMonoVolume ?? 0).toLocaleString() },
-                        { label: 'Monthly Color', value: Number(counters.summary?.colorMonthly ?? device.MonthlyColorVolume ?? 0).toLocaleString() }
+                        { label: 'Total Mono', value: formatCounterMetric(counters.summary?.monoTotal, device.CounterMono, device.MonoCounter, device.TotalMono) },
+                        { label: 'Total Color', value: formatCounterMetric(counters.summary?.colorTotal, device.CounterColor, device.ColorCounter, device.TotalColor) },
+                        { label: 'Monthly Mono', value: formatCounterMetric(counters.summary?.monoMonthly, device.MonthlyMonoVolume, device.MonthlyMonoPages) },
+                        { label: 'Monthly Color', value: formatCounterMetric(counters.summary?.colorMonthly, device.MonthlyColorVolume, device.MonthlyColorPages) }
                     ])}
 
                     <h3>Consumable Levels</h3>

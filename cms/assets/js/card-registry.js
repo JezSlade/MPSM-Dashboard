@@ -1382,11 +1382,12 @@ const CardRegistry = (function () {
                 const exports = Array.isArray(data.exports) ? data.exports : [];
                 const ready = exports.filter(entry => entry.status === 'ready').length;
                 const stale = exports.filter(entry => entry.status === 'stale').length;
+                const runnable = exports.filter(entry => entry.can_run && entry.status !== 'ready' && entry.status !== 'stale').length;
 
                 return {
                     headline: {
                         value: exports.length,
-                        label: 'Cached Exports'
+                        label: 'Available Exports'
                     },
                     metrics: [
                         {
@@ -1399,7 +1400,7 @@ const CardRegistry = (function () {
                             value: stale || 0,
                             tone: stale ? 'warning' : 'muted'
                         },
-                        { label: 'Pending', value: Math.max(exports.length - ready - stale, 0) }
+                        { label: 'Generate', value: runnable, tone: runnable ? 'info' : 'muted' }
                     ],
                     context: {
                         exports,
@@ -1413,7 +1414,7 @@ const CardRegistry = (function () {
                 const exports = snapshot.context.exports || [];
 
                 if (!exports.length) {
-                    modal.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No cached exports are currently available.</p></div>';
+                    modal.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i><p>No exports are currently available.</p></div>';
                     return;
                 }
 
@@ -1429,6 +1430,85 @@ const CardRegistry = (function () {
                 modal.appendChild(tableContainer);
 
                 const escapeHtml = helpers.escape;
+                const toast = (message, type = 'info') => {
+                    if (window.MPSM && typeof window.MPSM.showToast === 'function') {
+                        window.MPSM.showToast(message, type);
+                    }
+                };
+                const downloadBase64 = (base64, filename, contentType = 'application/octet-stream') => {
+                    const byteCharacters = atob(base64);
+                    const chunks = [];
+                    for (let offset = 0; offset < byteCharacters.length; offset += 8192) {
+                        const slice = byteCharacters.slice(offset, offset + 8192);
+                        const bytes = new Uint8Array(slice.length);
+                        for (let i = 0; i < slice.length; i += 1) {
+                            bytes[i] = slice.charCodeAt(i);
+                        }
+                        chunks.push(bytes);
+                    }
+                    const blob = new Blob(chunks, { type: contentType });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename || 'export.bin';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                };
+                const downloadJson = (payload, filename) => {
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename || 'export.json';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                };
+                const runExport = async (entry, button) => {
+                    button.disabled = true;
+                    const originalHtml = button.innerHTML;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                    try {
+                        const response = await fetch('api/run-export.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: entry.action,
+                                params: entry.default_params || {}
+                            })
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || `Export failed (${response.status})`);
+                        }
+
+                        if (result.file && result.file.data) {
+                            downloadBase64(
+                                result.file.data,
+                                result.file.name || `${entry.action.replace(/[^\w.-]+/g, '_')}.bin`,
+                                result.file.content_type || 'application/octet-stream'
+                            );
+                            toast('Export downloaded.', 'success');
+                            return;
+                        }
+
+                        if (Object.prototype.hasOwnProperty.call(result, 'data')) {
+                            downloadJson(result.data, `${entry.action.replace(/[^\w.-]+/g, '_')}.json`);
+                            toast('Export data downloaded as JSON.', 'success');
+                            return;
+                        }
+
+                        throw new Error('Export completed without downloadable content.');
+                    } catch (error) {
+                        toast(error.message || 'Export failed.', 'error');
+                    } finally {
+                        button.disabled = false;
+                        button.innerHTML = originalHtml;
+                    }
+                };
                 const columns = [
                     {
                         id: 'action',
@@ -1452,6 +1532,7 @@ const CardRegistry = (function () {
                             let tone = 'muted';
                             if (status === 'ready') tone = 'success';
                             else if (status === 'stale') tone = 'warning';
+                            else if (status === 'available') tone = 'info';
                             else if (status === 'error') tone = 'danger';
                             const title = row.last_error ? ` title="${helpers.escape(row.last_error)}"` : '';
                             return `<span class="status-badge status-${tone}"${title}>${helpers.escape(status)}</span>`;
@@ -1462,11 +1543,14 @@ const CardRegistry = (function () {
                         label: 'Download',
                         accessor: row => row.download_url,
                         format: (value, row) => {
-                            if (row.status !== 'ready' || !row.download_url) {
-                                return `<button type="button" class="btn btn-secondary btn-sm" disabled>Not ready</button>`;
+                            if (row.can_download && row.download_url && (row.status === 'ready' || row.status === 'stale')) {
+                                const url = helpers.escape(row.download_url);
+                                return `<a class="btn btn-primary btn-sm" href="${url}" target="_blank" rel="noopener"><i class="fas fa-download"></i> Download</a>`;
                             }
-                            const url = helpers.escape(row.download_url);
-                            return `<a class="btn btn-primary btn-sm" href="${url}" target="_blank" rel="noopener"><i class="fas fa-download"></i> Download</a>`;
+                            if (row.can_run) {
+                                return `<button type="button" class="btn btn-primary btn-sm" data-export-action="${helpers.escape(row.action)}"><i class="fas fa-file-export"></i> Generate</button>`;
+                            }
+                            return `<button type="button" class="btn btn-secondary btn-sm" disabled>Unavailable</button>`;
                         }
                     },
                     {
@@ -1490,6 +1574,21 @@ const CardRegistry = (function () {
                     rows: exports,
                     pageSize: 50,
                     defaultSort: { column: 'action', direction: 'asc' }
+                });
+
+                tableContainer.addEventListener('click', (event) => {
+                    const button = event.target.closest('[data-export-action]');
+                    if (!button) {
+                        return;
+                    }
+                    event.preventDefault();
+                    const action = button.getAttribute('data-export-action');
+                    const entry = exports.find(item => item.action === action);
+                    if (!entry) {
+                        toast('Export entry is no longer available.', 'error');
+                        return;
+                    }
+                    runExport(entry, button);
                 });
             }
         },

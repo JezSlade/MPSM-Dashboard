@@ -550,6 +550,19 @@ const MobileApp = (() => {
             const name = getEquipmentId(device) || serialNumber || 'Device';
             const ipAddress = String(device.IpAddress || '').trim();
             const ipHref = ipAddress && /^https?:\/\//i.test(ipAddress) ? ipAddress : `http://${ipAddress}`;
+            const counters = data.counters || {};
+            const formatCounterMetric = (...values) => {
+                for (const value of values) {
+                    if (value === null || value === undefined || value === '') {
+                        continue;
+                    }
+                    const numeric = Number(String(value).replace(/,/g, ''));
+                    if (Number.isFinite(numeric)) {
+                        return numeric.toLocaleString();
+                    }
+                }
+                return 'N/A';
+            };
 
             title.textContent = name;
             lifecycleLink.href = 'device-lifecycle.php';
@@ -558,6 +571,10 @@ const MobileApp = (() => {
                 { label: 'Serial', value: device.SerialNumber || serialNumber || 'N/A' },
                 { label: 'Customer', value: device.CustomerDescription || customerCode || 'N/A' },
                 { label: 'Status', value: device.StatusDescription || (device.IsUninstalled ? 'Uninstalled' : 'Active') },
+                { label: 'Total Mono', value: formatCounterMetric(counters.summary?.monoTotal, device.CounterMono, device.MonoCounter, device.TotalMono) },
+                { label: 'Total Color', value: formatCounterMetric(counters.summary?.colorTotal, device.CounterColor, device.ColorCounter, device.TotalColor) },
+                { label: 'Monthly Mono', value: formatCounterMetric(counters.summary?.monoMonthly, device.MonthlyMonoVolume, device.MonthlyMonoPages) },
+                { label: 'Monthly Color', value: formatCounterMetric(counters.summary?.colorMonthly, device.MonthlyColorVolume, device.MonthlyColorPages) },
                 {
                     label: 'IP Address',
                     value: ipAddress

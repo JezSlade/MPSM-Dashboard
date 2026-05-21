@@ -317,6 +317,18 @@ if (!function_exists('mpsm_dd_enrich_device_payload')) {
                 'SerialNumber' => $serial,
                 'CounterDetaildTags' => null
             ], $sectionErrors);
+
+            if ($deviceId !== '' && empty(mpsm_dd_as_rows($counterDetails))) {
+                $counterDetails = mpsm_dd_call_query('counterDetails', 'Counter/ListDetailed', [
+                    'DeviceId' => $deviceId
+                ], $sectionErrors);
+            }
+
+            mpsm_dd_add_section($sections, 'counterDetails', 'Counter/ListDetailed', $counterDetails);
+        } elseif ($deviceId !== '') {
+            $counterDetails = mpsm_dd_call_query('counterDetails', 'Counter/ListDetailed', [
+                'DeviceId' => $deviceId
+            ], $sectionErrors);
             mpsm_dd_add_section($sections, 'counterDetails', 'Counter/ListDetailed', $counterDetails);
         }
 
@@ -424,6 +436,7 @@ if (!function_exists('mpsm_dd_toner_levels')) {
                     $levels[] = [
                         'type' => 'toner',
                         'color' => $group['key'],
+                        'Key' => $group['label'],
                         'label' => $group['label'],
                         'value' => (float)$device[$field],
                         'field' => $field
@@ -434,6 +447,274 @@ if (!function_exists('mpsm_dd_toner_levels')) {
         }
 
         return $levels;
+    }
+}
+
+if (!function_exists('mpsm_dd_text_value')) {
+    function mpsm_dd_text_value($value): string
+    {
+        if (is_scalar($value)) {
+            return trim((string)$value);
+        }
+
+        if (is_array($value)) {
+            foreach (['Description', 'description', 'Name', 'name', 'Desc', 'Code', 'code', 'Key', 'Value'] as $key) {
+                if (isset($value[$key]) && is_scalar($value[$key])) {
+                    return trim((string)$value[$key]);
+                }
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('mpsm_dd_text_from_keys')) {
+    function mpsm_dd_text_from_keys(array $row, array $keys): string
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $row)) {
+                continue;
+            }
+            $value = mpsm_dd_text_value($row[$key]);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('mpsm_dd_numeric_value')) {
+    function mpsm_dd_numeric_value($value): ?float
+    {
+        if ($value === null || $value === '' || is_array($value) || is_object($value)) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+
+        $text = str_replace(',', '', trim((string)$value));
+        if ($text === '') {
+            return null;
+        }
+
+        if (!preg_match('/-?\d+(?:\.\d+)?/', $text, $matches)) {
+            return null;
+        }
+
+        return (float)$matches[0];
+    }
+}
+
+if (!function_exists('mpsm_dd_numeric_from_keys')) {
+    function mpsm_dd_numeric_from_keys(array $row, array $keys): ?float
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $row)) {
+                continue;
+            }
+            $value = mpsm_dd_numeric_value($row[$key]);
+            if ($value !== null) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('mpsm_dd_counter_summary')) {
+    function mpsm_dd_counter_summary(array $device, array $counterRows): array
+    {
+        $summary = [
+            'monoTotal' => mpsm_dd_numeric_from_keys($device, ['CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BlackAndWhiteCounter', 'BWCounter', 'BwCounter', 'TotalBW', 'MeterMono']),
+            'colorTotal' => mpsm_dd_numeric_from_keys($device, ['CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour', 'MeterColor']),
+            'monoMonthly' => mpsm_dd_numeric_from_keys($device, ['MonthlyMonoVolume', 'MonthlyMonoPages', 'MonthlyMono', 'CounterMonoMonthly', 'CounterMonoDelta']),
+            'colorMonthly' => mpsm_dd_numeric_from_keys($device, ['MonthlyColorVolume', 'MonthlyColorPages', 'MonthlyColor', 'CounterColorMonthly', 'CounterColorDelta']),
+        ];
+
+        foreach ($counterRows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $directMono = mpsm_dd_numeric_from_keys($row, ['CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BWCounter', 'TotalBW']);
+            if ($directMono !== null && ($summary['monoTotal'] === null || $summary['monoTotal'] <= 0)) {
+                $summary['monoTotal'] = $directMono;
+            }
+
+            $directColor = mpsm_dd_numeric_from_keys($row, ['CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour']);
+            if ($directColor !== null && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0)) {
+                $summary['colorTotal'] = $directColor;
+            }
+
+            $labelParts = [];
+            foreach ([
+                'Key',
+                'key',
+                'CounterTypeDescription',
+                'CounterDescription',
+                'Description',
+                'Name',
+                'Type',
+                'CounterType',
+                'Counter',
+                'Label',
+                'label'
+            ] as $labelKey) {
+                if (!array_key_exists($labelKey, $row)) {
+                    continue;
+                }
+                $labelText = mpsm_dd_text_value($row[$labelKey]);
+                if ($labelText !== '') {
+                    $labelParts[] = $labelText;
+                }
+            }
+            $label = strtolower(implode(' ', array_unique($labelParts)));
+            $counterType = strtoupper(mpsm_dd_text_from_keys($row, ['CounterType', 'Type', 'Code']));
+            $value = mpsm_dd_numeric_from_keys($row, ['value', 'Value', 'CounterValue', 'ValueCounter', 'CurrentCounter', 'CurrentValue', 'Total', 'Pages', 'MeterValue', 'Reading', 'CounterReading', 'Count']);
+
+            if ($value === null) {
+                continue;
+            }
+
+            $isMonthly = preg_match('/\b(month|monthly|period|delta)\b/', $label) === 1;
+            $isMono = preg_match('/\b(mono|monochrome|black|b\/w|b&w|bw|gray|grey)\b/', $label) === 1
+                || in_array($counterType, ['M', 'MA3'], true);
+            $isColor = preg_match('/\b(color|colour|cmyk|cyan|magenta|yellow)\b/', $label) === 1
+                || in_array($counterType, ['C', 'CA3'], true);
+
+            if ($isMonthly && $isMono && ($summary['monoMonthly'] === null || $summary['monoMonthly'] <= 0)) {
+                $summary['monoMonthly'] = $value;
+            } elseif ($isMonthly && $isColor && ($summary['colorMonthly'] === null || $summary['colorMonthly'] <= 0)) {
+                $summary['colorMonthly'] = $value;
+            } elseif (!$isMonthly && $isMono && ($summary['monoTotal'] === null || $summary['monoTotal'] <= 0)) {
+                $summary['monoTotal'] = $value;
+            } elseif (!$isMonthly && $isColor && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0)) {
+                $summary['colorTotal'] = $value;
+            }
+        }
+
+        return $summary;
+    }
+}
+
+if (!function_exists('mpsm_dd_consumable_color')) {
+    function mpsm_dd_consumable_color(string $label): string
+    {
+        $text = strtolower($label);
+        if (strpos($text, 'black') !== false || strpos($text, 'mono') !== false) return 'black';
+        if (strpos($text, 'cyan') !== false) return 'cyan';
+        if (strpos($text, 'magenta') !== false) return 'magenta';
+        if (strpos($text, 'yellow') !== false) return 'yellow';
+        if (strpos($text, 'drum') !== false || strpos($text, 'imaging') !== false || strpos($text, 'image unit') !== false) return 'drum';
+        if (strpos($text, 'fuser') !== false) return 'fuser';
+        if (strpos($text, 'waste') !== false) return 'waste';
+        return 'neutral';
+    }
+}
+
+if (!function_exists('mpsm_dd_consumable_label')) {
+    function mpsm_dd_consumable_label(array $row): string
+    {
+        $parts = [];
+        foreach ([
+            'Key',
+            'key',
+            'label',
+            'Description',
+            'SupplyName',
+            'Name',
+            'TypeDescription',
+            'SupplyTypeDescription',
+            'SupplyType',
+            'MaintenanceKitType',
+            'MaintenanceKitColor',
+            'ColorTypeDescription',
+            'ColorType',
+            'CounterName',
+            'CounterTypeDescription'
+        ] as $key) {
+            if (!array_key_exists($key, $row)) {
+                continue;
+            }
+            $text = mpsm_dd_text_value($row[$key]);
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+        }
+
+        return trim(implode(' ', array_unique($parts)));
+    }
+}
+
+if (!function_exists('mpsm_dd_consumable_levels')) {
+    function mpsm_dd_consumable_levels(array $device, array $sources): array
+    {
+        $levels = mpsm_dd_toner_levels($device);
+        $byKey = [];
+
+        foreach ($levels as $index => $level) {
+            $byKey[strtolower(($level['Key'] ?? $level['label'] ?? 'toner') . '|' . ($level['color'] ?? $index))] = $level;
+        }
+
+        foreach ($sources as $sourceName => $source) {
+            foreach (mpsm_dd_as_rows($source) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $label = mpsm_dd_consumable_label($row);
+                $value = mpsm_dd_numeric_from_keys($row, [
+                    'value',
+                    'Value',
+                    'LevelValue',
+                    'Level',
+                    'CurrentProgressPercentage',
+                    'RemainingPercentage',
+                    'Percentage',
+                    'Percent',
+                    'Life',
+                    'LifeRemaining',
+                    'RemainingLife',
+                    'Remaining',
+                    'CurrentLevel',
+                    'SupplyLevel',
+                    'CounterValue'
+                ]);
+
+                if ($label === '' || $value === null) {
+                    continue;
+                }
+
+                $haystack = strtolower($label . ' ' . json_encode($row));
+                $looksLikeConsumable = preg_match('/toner|drum|imaging|image unit|fuser|maintenance|kit|belt|waste|developer|roller|feed|staple|cartridge|transfer/', $haystack) === 1
+                    || strpos((string)$sourceName, 'maintenance') !== false;
+
+                if (!$looksLikeConsumable) {
+                    continue;
+                }
+
+                $color = mpsm_dd_consumable_color($label);
+                $normalized = [
+                    'type' => strpos(strtolower($label), 'drum') !== false || strpos(strtolower($label), 'imaging') !== false ? 'drum' : 'consumable',
+                    'color' => $color,
+                    'Key' => $label,
+                    'label' => $label,
+                    'value' => $value,
+                    'source' => (string)$sourceName
+                ];
+
+                $key = strtolower($label . '|' . $color);
+                $byKey[$key] = $normalized;
+            }
+        }
+
+        return array_values($byKey);
     }
 }
 
@@ -502,20 +783,22 @@ if (!function_exists('mpsm_dd_normalize_payload')) {
                 break;
             }
         }
+        $counterSummary = mpsm_dd_counter_summary($device, $counterDetailRows);
+        $consumableLevels = mpsm_dd_consumable_levels($device, [
+            'suppliesDetails' => $supplyDetailsResult,
+            'suppliesSummary' => $supplySummaryResult,
+            'maintenanceCounters' => $maintenanceCounters,
+            'maintenanceLevels' => $maintenanceLevels
+        ]);
 
         return [
             'counters' => [
-                'summary' => [
-                    'monoTotal' => $device['CounterMono'] ?? null,
-                    'colorTotal' => $device['CounterColor'] ?? null,
-                    'monoMonthly' => $device['MonthlyMonoVolume'] ?? $device['MonthlyMonoPages'] ?? null,
-                    'colorMonthly' => $device['MonthlyColorVolume'] ?? $device['MonthlyColorPages'] ?? null,
-                ],
+                'summary' => $counterSummary,
                 'details' => $counterDetailRows,
                 'raw' => $counterDetails
             ],
             'supplies' => [
-                'levels' => mpsm_dd_toner_levels($device),
+                'levels' => $consumableLevels,
                 'details' => mpsm_dd_as_rows($supplyDetailsResult),
                 'summary' => $supplySummaryResult,
                 'alerts' => mpsm_dd_as_rows($supplyAlerts),
