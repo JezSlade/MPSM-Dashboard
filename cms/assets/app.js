@@ -3632,21 +3632,118 @@ const MPSM = (function() {
                 `;
             };
 
-            const renderSupplyLevels = (levels) => {
-                const rows = asRows(levels).filter(item => item && Number.isFinite(Number(item.value ?? item.LevelValue ?? item.Level)));
+            const getLevelLabel = (item, fallback = 'Consumable') => {
+                if (!item || typeof item !== 'object') return fallback;
+                return item.Key
+                    ?? item.key
+                    ?? item.label
+                    ?? item.Description
+                    ?? item.SupplyName
+                    ?? item.Name
+                    ?? item.Type
+                    ?? item.CounterName
+                    ?? fallback;
+            };
+
+            const getLevelValue = (item) => {
+                if (!item || typeof item !== 'object') return null;
+                return item.value
+                    ?? item.Value
+                    ?? item.LevelValue
+                    ?? item.Level
+                    ?? item.CounterValue
+                    ?? item.Percent
+                    ?? item.Percentage
+                    ?? null;
+            };
+
+            const parseLevelPercent = (value) => {
+                if (value === null || value === undefined || value === '') return null;
+                const match = String(value).match(/-?\d+(\.\d+)?/);
+                if (!match) return null;
+                const numeric = Number(match[0]);
+                if (!Number.isFinite(numeric)) return null;
+                return Math.max(0, Math.min(100, numeric));
+            };
+
+            const renderConsumableLevels = (levels) => {
+                const rows = asRows(levels)
+                    .filter(item => item && typeof item === 'object')
+                    .map((item, index) => {
+                        const label = getLevelLabel(item, `Consumable ${index + 1}`);
+                        const rawValue = getLevelValue(item);
+                        const percent = parseLevelPercent(rawValue);
+                        return { item, label, rawValue, percent };
+                    });
+
                 if (!rows.length) {
-                    return '<div class="supply-empty">No supply telemetry available</div>';
+                    return '<div class="supply-empty">No consumable level data available</div>';
                 }
-                return rows.map(item => {
-                    const color = item.color || resolveSupplyColor(item.label || item.ColorType || item.SupplyType || '');
-                    const value = item.value ?? item.LevelValue ?? item.Level;
+
+                return rows.map(({ item, label, rawValue, percent }) => {
+                    const color = item.color || resolveSupplyColor(label || item.ColorType || item.SupplyType || '');
+                    const tone = percent === null ? 'neutral' : (percent <= 10 ? 'danger' : (percent <= 25 ? 'warning' : 'success'));
                     return `
-                        <div class="supply-item supply-item--${escapeHtml(color)}">
-                            <div class="supply-name">${escapeHtml(item.label || item.Description || item.SupplyName || 'Supply')}</div>
-                            <div class="supply-chip">${renderTonerChipMarkup(color, value)}</div>
+                        <div class="consumable-level consumable-level--${escapeHtml(color)}">
+                            <div class="consumable-level__top">
+                                <div class="consumable-level__key">${escapeHtml(label)}</div>
+                                <div class="consumable-level__value">${escapeHtml(String(rawValue ?? 'N/A'))}</div>
+                            </div>
+                            ${percent !== null ? `
+                                <div class="consumable-level__track" aria-hidden="true">
+                                    <div class="consumable-level__fill consumable-level__fill--${tone}" style="width:${percent}%"></div>
+                                </div>
+                                <div class="consumable-level__meta">${Math.round(percent)}%</div>
+                            ` : '<div class="consumable-level__meta">No numeric level</div>'}
                         </div>
                     `;
                 }).join('');
+            };
+
+            const removeIdentifierFields = (row) => {
+                if (!row || typeof row !== 'object') return row;
+                const hidden = new Set([
+                    'id',
+                    'identifier',
+                    'guid',
+                    'deviceid',
+                    'iddevice',
+                    'idinstalledproduct',
+                    'installedproductid',
+                    'customerid',
+                    'dealerid'
+                ]);
+                return Object.fromEntries(Object.entries(row).filter(([key]) => !hidden.has(String(key).toLowerCase())));
+            };
+
+            const alertTimestamp = (row) => {
+                if (!row || typeof row !== 'object') return 0;
+                for (const key of ['DateUTC', 'ActionDateUtc', 'InitialDate', 'GeneratedOn', 'CreatedOn', 'LastUpdateUTC', 'CreatedAt', 'created_at', 'received_at', 'OpenedAt']) {
+                    if (row[key]) {
+                        const parsed = new Date(row[key]).getTime();
+                        if (Number.isFinite(parsed)) return parsed;
+                    }
+                }
+                return 0;
+            };
+
+            const renderMaintenanceAlerts = (rows) => {
+                const safeRows = asRows(rows)
+                    .slice()
+                    .sort((a, b) => alertTimestamp(b) - alertTimestamp(a))
+                    .map(removeIdentifierFields);
+
+                if (!safeRows.length) {
+                    return `
+                        <h3>Active Maintenance Alerts</h3>
+                        <div class="device-snapshot"><div class="snapshot-item"><div class="snapshot-value">No active maintenance alerts are available.</div></div></div>
+                    `;
+                }
+
+                return `
+                    <h3>Active Maintenance Alerts</h3>
+                    ${renderObjectArrayTable(safeRows, { maxRows: 50 })}
+                `;
             };
 
             const summarizePanelMessage = (msg) => {
@@ -3725,16 +3822,24 @@ const MPSM = (function() {
                 const model = device.Product?.Model || device.ProductModel || 'Device Details';
                 const activeAlerts = [
                     ...asRows(alerts.maintenance),
-                    ...asRows(alerts.supply),
                     ...asRows(alerts.sdsActions)
                 ];
                 const maintenanceLevels = [
                     ...asRows(maintenance.levels),
                     ...asRows(maintenance.counters)
                 ];
+                const consumableLevels = [
+                    ...asRows(supplies.levels),
+                    ...maintenanceLevels
+                ];
                 const cache = data.cache || {};
                 const statusText = options.refreshing ? 'Refreshing maintenance details...' :
                     (cache.drilldown_cached_at ? `Detail cache: ${formatDateTime(cache.drilldown_cached_at, { dateStyle: 'short', timeStyle: 'short' })}` : 'Detail cache not populated');
+                const ipAddress = String(device.IpAddress || '').trim();
+                const ipHref = ipAddress && /^https?:\/\//i.test(ipAddress) ? ipAddress : `http://${ipAddress}`;
+                const ipMarkup = ipAddress
+                    ? `<a href="${escapeHtml(ipHref)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ipAddress)}</a>`
+                    : 'N/A';
 
                 modalName.textContent = model;
                 modalBody.innerHTML = `
@@ -3742,7 +3847,7 @@ const MPSM = (function() {
                         { label: 'Equipment ID', value: equipmentId },
                         { label: 'Serial Number', value: device.SerialNumber || identity.serialNumber || 'N/A' },
                         { label: 'Asset Number', value: device.AssetNumber || device.ExternalIdentifier || 'N/A' },
-                        { label: 'IP Address', value: device.IpAddress || 'N/A' },
+                        { label: 'IP Address', value: ipMarkup, html: true },
                         { label: 'MAC Address', value: device.MacAddress || 'N/A' },
                         { label: 'Location', value: device.Note || device.OfficeDescription || 'N/A' },
                         { label: 'Department', value: department },
@@ -3762,9 +3867,9 @@ const MPSM = (function() {
                         { label: 'Monthly Color', value: Number(counters.summary?.colorMonthly ?? device.MonthlyColorVolume ?? 0).toLocaleString() }
                     ])}
 
-                    <h3>Supply Levels</h3>
-                    <div class="supply-grid">
-                        ${renderSupplyLevels(supplies.levels)}
+                    <h3>Consumable Levels</h3>
+                    <div class="consumable-level-grid">
+                        ${renderConsumableLevels(consumableLevels)}
                     </div>
 
                     <h3>Device Information</h3>
@@ -3776,10 +3881,8 @@ const MPSM = (function() {
                         { label: 'Last Update', value: formatDateTime(device.LastUpdate, { dateStyle: 'short', timeStyle: 'short' }) }
                     ])}
 
-                    ${renderDataRows('Maintenance Levels', maintenanceLevels, 'No maintenance level data is available yet.', 50)}
-                    ${renderDataRows('Active Maintenance Alerts', maintenance.alerts, 'No active maintenance alerts are available.', 50)}
+                    ${renderMaintenanceAlerts(maintenance.alerts)}
                     ${renderDataRows('Supply Details', supplies.details, 'No detailed supply data is available yet.', 50)}
-                    ${renderDataRows('Supply Alerts', alerts.supply || data.supplyAlerts, 'No active supply alerts are available.', 50)}
                     ${renderDataRows('Device Health Actions', alerts.sdsActions || data.deviceHealth?.Actions, 'No device health actions are available.', 50)}
                     ${renderDataRows('Detailed Counter Information', counters.details || data.counterDetails?.CounterDetails, 'No detailed counter rows are available.', 50)}
                     ${renderPanelSection('Alert History', panelHistory, 'No recent panel messages')}
@@ -3796,7 +3899,7 @@ const MPSM = (function() {
                         </div>
                     ` : ''}
 
-                    ${activeAlerts.length ? `<div class="endpoint-footnote">${activeAlerts.length} active alert/action record${activeAlerts.length === 1 ? '' : 's'} found across maintenance, supply, and SDS sources.</div>` : ''}
+                    ${activeAlerts.length ? `<div class="endpoint-footnote">${activeAlerts.length} active maintenance/action record${activeAlerts.length === 1 ? '' : 's'} found.</div>` : ''}
                 `;
 
                 const loadMore = modalBody.querySelector('.device-history-more');

@@ -548,6 +548,8 @@ const MobileApp = (() => {
             const data = await fetchJson(`api/get-device-deep-dive.php?${params.toString()}`);
             const device = data.device || data.Device || {};
             const name = getEquipmentId(device) || serialNumber || 'Device';
+            const ipAddress = String(device.IpAddress || '').trim();
+            const ipHref = ipAddress && /^https?:\/\//i.test(ipAddress) ? ipAddress : `http://${ipAddress}`;
 
             title.textContent = name;
             lifecycleLink.href = 'device-lifecycle.php';
@@ -556,6 +558,13 @@ const MobileApp = (() => {
                 { label: 'Serial', value: device.SerialNumber || serialNumber || 'N/A' },
                 { label: 'Customer', value: device.CustomerDescription || customerCode || 'N/A' },
                 { label: 'Status', value: device.StatusDescription || (device.IsUninstalled ? 'Uninstalled' : 'Active') },
+                {
+                    label: 'IP Address',
+                    value: ipAddress
+                        ? `<a href="${escapeHtml(ipHref)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ipAddress)}</a>`
+                        : 'N/A',
+                    html: Boolean(ipAddress)
+                },
                 { label: 'Model', value: device.ProductModel || device.Product?.Model || 'Unknown' },
                 { label: 'Brand', value: device.ProductBrand || device.Product?.Brand || 'Unknown' },
                 { label: 'Last Contact', value: device.LastContact || device.LastContactDate || 'N/A' }
@@ -578,9 +587,51 @@ const MobileApp = (() => {
                 return item.LevelValue ?? item.Level ?? item.value ?? item.CounterValue ?? item.Value ?? item.Description ?? item.Message ?? item.display_name ?? item.summary ?? '';
             };
 
+            const levelValueFor = (item) => {
+                if (!item || typeof item !== 'object') return '';
+                return item.value ?? item.Value ?? item.LevelValue ?? item.Level ?? item.CounterValue ?? item.Percent ?? item.Percentage ?? '';
+            };
+
             const labelFor = (item, fallback) => {
                 if (!item || typeof item !== 'object') return fallback;
-                return item.label ?? item.Description ?? item.SupplyName ?? item.CounterName ?? item.Name ?? item.Type ?? item.display_name ?? item.ActionType ?? fallback;
+                return item.Key ?? item.key ?? item.label ?? item.Description ?? item.SupplyName ?? item.CounterName ?? item.Name ?? item.Type ?? item.display_name ?? item.ActionType ?? fallback;
+            };
+
+            const parseLevelPercent = (value) => {
+                if (value === null || value === undefined || value === '') return null;
+                const match = String(value).match(/-?\d+(\.\d+)?/);
+                if (!match) return null;
+                const numeric = Number(match[0]);
+                if (!Number.isFinite(numeric)) return null;
+                return Math.max(0, Math.min(100, numeric));
+            };
+
+            const renderCompactLevels = (title, items, emptyText) => {
+                const list = asRows(items).slice(0, 20);
+                return `
+                    <div class="mobile-detail-section">
+                        <h3>${escapeHtml(title)}</h3>
+                        ${list.length ? `
+                            <div class="mobile-level-grid">
+                                ${list.map((item, index) => {
+                                    const rawValue = levelValueFor(item);
+                                    const percent = parseLevelPercent(rawValue);
+                                    return `
+                                        <div class="detail-tile mobile-level-tile">
+                                            <div class="detail-label">${escapeHtml(labelFor(item, 'Consumable ' + (index + 1)))}</div>
+                                            <div class="detail-value">${escapeHtml(String(rawValue || 'N/A'))}</div>
+                                            ${percent !== null ? `
+                                                <div class="mobile-level-track">
+                                                    <div class="mobile-level-fill" style="width:${percent}%"></div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : `<div class="empty-state"><p>${escapeHtml(emptyText)}</p></div>`}
+                    </div>
+                `;
             };
 
             const renderCompactList = (title, items, emptyText) => {
@@ -602,28 +653,59 @@ const MobileApp = (() => {
                 `;
             };
 
+            const removeIdentifierFields = (item) => {
+                if (!item || typeof item !== 'object') return item;
+                const hidden = new Set([
+                    'id',
+                    'identifier',
+                    'guid',
+                    'deviceid',
+                    'iddevice',
+                    'idinstalledproduct',
+                    'installedproductid',
+                    'customerid',
+                    'dealerid'
+                ]);
+                return Object.fromEntries(Object.entries(item).filter(([key]) => !hidden.has(String(key).toLowerCase())));
+            };
+
+            const alertTimestamp = (item) => {
+                if (!item || typeof item !== 'object') return 0;
+                for (const key of ['DateUTC', 'ActionDateUtc', 'InitialDate', 'GeneratedOn', 'CreatedOn', 'LastUpdateUTC', 'CreatedAt', 'created_at', 'received_at', 'OpenedAt']) {
+                    if (item[key]) {
+                        const parsed = new Date(item[key]).getTime();
+                        if (Number.isFinite(parsed)) return parsed;
+                    }
+                }
+                return 0;
+            };
+
             const maintenance = data.maintenance || {};
             const supplies = data.supplies || {};
             const alerts = data.alerts || {};
             const panelMessages = Array.isArray(data.panelHistory?.messages) ? data.panelHistory.messages : [];
             const maintenanceLevels = [
+                ...asRows(supplies.levels),
                 ...asRows(maintenance.levels),
                 ...asRows(maintenance.counters)
             ];
+            const maintenanceAlerts = asRows(maintenance.alerts)
+                .slice()
+                .sort((a, b) => alertTimestamp(b) - alertTimestamp(a))
+                .map(removeIdentifierFields);
 
             body.innerHTML = `
                 <div class="mobile-detail-grid">
                     ${rows.map(row => `
                         <div class="detail-tile">
                             <div class="detail-label">${escapeHtml(row.label)}</div>
-                            <div class="detail-value">${escapeHtml(String(row.value || 'N/A'))}</div>
+                            <div class="detail-value">${row.html ? row.value : escapeHtml(String(row.value || 'N/A'))}</div>
                         </div>
                     `).join('')}
                 </div>
-                ${renderCompactList('Maintenance Levels', maintenanceLevels, 'No maintenance level data available.')}
-                ${renderCompactList('Maintenance Alerts', maintenance.alerts, 'No active maintenance alerts.')}
+                ${renderCompactLevels('Consumable Levels', maintenanceLevels, 'No consumable level data available.')}
+                ${renderCompactList('Maintenance Alerts', maintenanceAlerts, 'No active maintenance alerts.')}
                 ${renderCompactList('Supply Details', supplies.details || supplies.levels, 'No supply detail data available.')}
-                ${renderCompactList('Supply Alerts', alerts.supply || data.supplyAlerts, 'No active supply alerts.')}
                 ${renderCompactList('Alert History', panelMessages, 'No recent panel messages.')}
             `;
         } catch (error) {

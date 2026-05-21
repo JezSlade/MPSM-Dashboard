@@ -1727,6 +1727,73 @@ CHANGELOG
     padding: 8px 0;
 }
 
+.consumable-level-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin: 16px 0 24px;
+}
+
+.consumable-level {
+    padding: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.consumable-level__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.consumable-level__key {
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.25;
+}
+
+.consumable-level__value {
+    flex: 0 0 auto;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.consumable-level__track {
+    height: 10px;
+    margin-top: 12px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+}
+
+.consumable-level__fill {
+    height: 100%;
+    border-radius: inherit;
+}
+
+.consumable-level__fill--success {
+    background: var(--accent-success);
+}
+
+.consumable-level__fill--warning {
+    background: var(--accent-warning);
+}
+
+.consumable-level__fill--danger {
+    background: var(--accent-danger);
+}
+
+.consumable-level__meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
 .endpoint-raw {
     margin-top: 12px;
 }
