@@ -1,8 +1,8 @@
 <?php
 /**
- * Application Bootstrap
+ * Application Bootstrap 
  * Initializes the application and registers services in the container
- *
+ * ...
  * This file is the single entry point for service configuration.
  * It loads configuration, registers services, and sets up the environment.
  */

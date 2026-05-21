@@ -18,23 +18,10 @@ jobs:
       - name: 🔢 Generate version.js in Deploy Path
         run: echo "window.appVersion = \"0.0.0.${{ github.run_number }}\";" > version.js
 
-      - name: 🗂️ Ensure required directories exist
-        run: |
-          mkdir -p cms/data
-          chmod 755 cms/data
-          echo "Created cms/data directory for users and preferences"
-
       - name: 📂 Debug — List Files in Repo
         run: |
           echo "Listing files before deployment:"
           ls -la
-          echo "------"
-          echo "Checking for problematic files:"
-          find . -name "*.log" -o -name ".ftp-deploy-sync-state.json" || true
-          echo "------"
-          echo "Key files that SHOULD be deployed:"
-          ls -la index.php .htaccess .env 2>/dev/null || echo "Some files missing"
-          ls -la mps-api/index.php mps-api/engine.php mps-api/.htaccess 2>/dev/null || echo "Some API files missing"
           echo "------"
 
       - name: 🚀 Deploy Website via FTP
@@ -42,43 +29,15 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
           server: ftp.resolutionsbydesign.us
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          username: mpsm@mpsm.resolutionsbydesign.us
+          password: Deploy123!
           protocol: ftp
           port: 21
           local-dir: ./
-          server-dir: /public_html/mpsm.resolutionsbydesign.us/
-          state-name: .ftp-deploy-sync-state.json
-          dry-run: false
-          dangerous-clean-slate: false
-          # NOTE: .env files ARE deployed (not in exclude list)
-          # This includes mps-api/.env with OAuth credentials
+          server-dir: /
           exclude: |
-            **/.git/**
-            **/.github/**
-            **/.gitignore
-            **/.vscode/**
-            **/.idea/**
-            **/.DS_Store
-            **/Thumbs.db
-            **/node_modules/**
-            **/tests/**
-            **/__pycache__/**
-            **/*.pyc
-            **/package*.json
-            **/composer.json
-            **/composer.lock
-            **/phpunit.xml
-            **/.phpunit.result.cache
-            mps-api/test_*.php
-            mps-api/verify_*.py
-            mps-api/diagnostic*.php
-            **/*.log
-            .claude/**
-            .ftp-deploy-sync-state.json
-            documentation/**
-            scripts/**
-            output/**
+            .git/
+            .github/
           log-level: verbose
 
       - name: 📜 Deployment Completed Report
