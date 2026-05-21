@@ -3912,8 +3912,8 @@ const MPSM = (function() {
 
                     <h3>Counters</h3>
                     ${renderSnapshotItems([
-                        { label: 'Total Mono', value: formatCounterMetric(counters.summary?.monoTotal, device.CounterMono, device.MonoCounter, device.TotalMono) },
-                        { label: 'Total Color', value: formatCounterMetric(counters.summary?.colorTotal, device.CounterColor, device.ColorCounter, device.TotalColor) },
+                        { label: 'Total Mono', value: formatCounterMetric(counters.summary?.monoTotal, device.TotalDetailedCounterMono, device.TotalMono, device.MonoCounter, device.CounterMono) },
+                        { label: 'Total Color', value: formatCounterMetric(counters.summary?.colorTotal, device.TotalDetailedCounterColor, device.TotalColor, device.ColorCounter, device.CounterColor) },
                         { label: 'Monthly Mono', value: formatCounterMetric(counters.summary?.monoMonthly, device.MonthlyMonoVolume, device.MonthlyMonoPages) },
                         { label: 'Monthly Color', value: formatCounterMetric(counters.summary?.colorMonthly, device.MonthlyColorVolume, device.MonthlyColorPages) }
                     ])}

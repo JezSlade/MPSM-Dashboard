@@ -42,8 +42,8 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.0
         with:
           server: ftp.resolutionsbydesign.us
-          username: mpsm@mpsm.resolutionsbydesign.us
-          password: Deploy123!
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           port: 21
           local-dir: ./

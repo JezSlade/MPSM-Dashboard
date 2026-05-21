@@ -541,8 +541,8 @@ if (!function_exists('mpsm_dd_counter_summary')) {
     function mpsm_dd_counter_summary(array $device, array $counterRows): array
     {
         $summary = [
-            'monoTotal' => mpsm_dd_numeric_from_keys($device, ['CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BlackAndWhiteCounter', 'BWCounter', 'BwCounter', 'TotalBW', 'MeterMono']),
-            'colorTotal' => mpsm_dd_numeric_from_keys($device, ['CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour', 'MeterColor']),
+            'monoTotal' => null,
+            'colorTotal' => null,
             'monoMonthly' => mpsm_dd_numeric_from_keys($device, ['MonthlyMonoVolume', 'MonthlyMonoPages', 'MonthlyMono', 'CounterMonoMonthly', 'CounterMonoDelta']),
             'colorMonthly' => mpsm_dd_numeric_from_keys($device, ['MonthlyColorVolume', 'MonthlyColorPages', 'MonthlyColor', 'CounterColorMonthly', 'CounterColorDelta']),
         ];
@@ -555,25 +555,83 @@ if (!function_exists('mpsm_dd_counter_summary')) {
         });
 
         foreach ($orderedRows as $row) {
-            $mono = mpsm_dd_numeric_from_keys($row, ['Mono']);
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $labelParts = [];
+            foreach ([
+                'Key',
+                'key',
+                'CounterTypeDescription',
+                'CounterDescription',
+                'Description',
+                'Name',
+                'Type',
+                'CounterType',
+                'Counter',
+                'Label',
+                'label'
+            ] as $labelKey) {
+                if (!array_key_exists($labelKey, $row)) {
+                    continue;
+                }
+                $labelText = mpsm_dd_text_value($row[$labelKey]);
+                if ($labelText !== '') {
+                    $labelParts[] = $labelText;
+                }
+            }
+            $label = strtolower(implode(' ', array_unique($labelParts)));
+            $counterType = strtoupper(mpsm_dd_text_from_keys($row, ['CounterType', 'Type', 'Code']));
+            $isMonthly = preg_match('/\b(month|monthly|period|delta)\b/', $label) === 1;
+
+            if ($isMonthly) {
+                continue;
+            }
+
+            $mono = mpsm_dd_numeric_from_keys($row, ['Mono', 'CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BWCounter', 'TotalBW']);
             $fullColor = mpsm_dd_numeric_from_keys($row, ['FullColor']);
             $singleColor = mpsm_dd_numeric_from_keys($row, ['SingleColor']);
             $twoColor = mpsm_dd_numeric_from_keys($row, ['TwoColor']);
-            $total = mpsm_dd_numeric_from_keys($row, ['Total']);
+            $total = mpsm_dd_numeric_from_keys($row, ['Total', 'CounterTotal', 'TotalCounter']);
             $colorParts = array_filter([$fullColor, $singleColor, $twoColor], static fn($value) => $value !== null);
-            $color = $colorParts !== [] ? array_sum($colorParts) : null;
+            $color = $colorParts !== [] ? array_sum($colorParts) : mpsm_dd_numeric_from_keys($row, ['Color', 'CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour']);
 
-            if ($mono !== null && ($summary['monoTotal'] === null || $summary['monoTotal'] <= 0)) {
+            $typedValue = mpsm_dd_numeric_from_keys($row, ['value', 'Value', 'CounterValue', 'ValueCounter', 'CurrentCounter', 'CurrentValue', 'Pages', 'MeterValue', 'Reading', 'CounterReading', 'Count']);
+            $isMonoType = preg_match('/\b(mono|monochrome|black|b\/w|b&w|bw|gray|grey)\b/', $label) === 1
+                || in_array($counterType, ['M', 'MA3'], true);
+            $isColorType = preg_match('/\b(color|colour|cmyk|cyan|magenta|yellow)\b/', $label) === 1
+                || in_array($counterType, ['C', 'CA3'], true);
+            $isTotalType = preg_match('/\b(total|overall|lifetime)\b/', $label) === 1
+                || in_array($counterType, ['T'], true);
+
+            if ($typedValue !== null) {
+                if ($mono === null && $isMonoType) {
+                    $mono = $typedValue;
+                }
+                if ($color === null && $isColorType) {
+                    $color = $typedValue;
+                }
+                if ($total === null && $isTotalType) {
+                    $total = $typedValue;
+                }
+            }
+
+            if ($color === null && $total !== null && $mono !== null && $total >= $mono) {
+                $color = max(0, $total - $mono);
+            }
+            if ($mono === null && $total !== null && $color !== null && $total >= $color) {
+                $mono = max(0, $total - $color);
+            }
+
+            if ($mono !== null && $mono >= 0) {
                 $summary['monoTotal'] = $mono;
             }
-            if ($color !== null && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0)) {
+            if ($color !== null && $color >= 0) {
                 $summary['colorTotal'] = $color;
             }
-            if ($total !== null && $mono !== null && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0) && $total >= $mono) {
-                $summary['colorTotal'] = max(0, $total - $mono);
-            }
 
-            if (($summary['monoTotal'] ?? 0) > 0 && ($summary['colorTotal'] ?? 0) > 0) {
+            if ($summary['monoTotal'] !== null && $summary['colorTotal'] !== null) {
                 break;
             }
         }
@@ -643,6 +701,13 @@ if (!function_exists('mpsm_dd_counter_summary')) {
             } elseif (!$isMonthly && $isColor && ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0)) {
                 $summary['colorTotal'] = $value;
             }
+        }
+
+        if ($summary['monoTotal'] === null || $summary['monoTotal'] <= 0) {
+            $summary['monoTotal'] = mpsm_dd_numeric_from_keys($device, ['TotalDetailedCounterMono', 'CounterMono', 'MonoCounter', 'TotalMono', 'MonoTotal', 'BlackCounter', 'TotalBlack', 'CounterBlack', 'BlackAndWhiteCounter', 'BWCounter', 'BwCounter', 'TotalBW', 'MeterMono']);
+        }
+        if ($summary['colorTotal'] === null || $summary['colorTotal'] <= 0) {
+            $summary['colorTotal'] = mpsm_dd_numeric_from_keys($device, ['TotalDetailedCounterColor', 'CounterColor', 'ColorCounter', 'TotalColor', 'ColorTotal', 'ColourCounter', 'CounterColour', 'MeterColor']);
         }
 
         return $summary;
