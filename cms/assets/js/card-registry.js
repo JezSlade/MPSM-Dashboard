@@ -810,8 +810,11 @@ const CardRegistry = (function () {
                     pageSize: 50,
                     defaultSort: { column: 'EquipmentId', direction: 'asc' },
                     onRowClick: row => {
-                        if (row && row.Id && window.MPSM && typeof window.MPSM.openDeviceModal === 'function') {
-                            window.MPSM.openDeviceModal(row.Id);
+                        if (row && window.MPSM && typeof window.MPSM.openDeviceModal === 'function') {
+                            const deviceId = row.Id ?? row.IdInstalledProduct ?? row.DeviceId ?? null;
+                            const serialNumber = row.SerialNumber ?? row.DeviceSerialNumber ?? null;
+                            const customerCode = row.CustomerCode ?? row.Customer?.Code ?? context.customerCode ?? null;
+                            window.MPSM.openDeviceModal({ deviceId, serialNumber, customerCode });
                         }
                     }
                 });
@@ -1043,7 +1046,11 @@ const CardRegistry = (function () {
                             : (alert) => alert?.DeviceId ?? alert?.IdInstalledProduct ?? alert?.IdDevice ?? null;
                         const deviceId = resolver(row);
                         if (deviceId) {
-                            window.MPSM.openDeviceModal(deviceId);
+                            window.MPSM.openDeviceModal({
+                                deviceId,
+                                serialNumber: row?.SerialNumber ?? row?.DeviceSerialNumber ?? null,
+                                customerCode: row?.CustomerCode ?? context.customerCode ?? null
+                            });
                         } else if (typeof window.MPSM.showToast === 'function') {
                             window.MPSM.showToast('Device details are not available for this alert yet.', 'info');
                         }
@@ -1281,7 +1288,11 @@ const CardRegistry = (function () {
                         }
                         const rowId = row?.Id ?? row?.IdInstalledProduct ?? row?.DeviceId ?? null;
                         if (rowId) {
-                            window.MPSM.openDeviceModal(rowId);
+                            window.MPSM.openDeviceModal({
+                                deviceId: rowId,
+                                serialNumber: row?.SerialNumber ?? row?.DeviceSerialNumber ?? null,
+                                customerCode: row?.CustomerCode ?? row?.Customer?.Code ?? context.customerCode ?? null
+                            });
                         } else if (typeof window.MPSM.showToast === 'function') {
                             window.MPSM.showToast('Device details are not available for this record yet.', 'info');
                         }

@@ -2221,8 +2221,10 @@ const MPSM = (function() {
                         return;
                     }
                     const directId = row.Id ?? row.IdInstalledProduct ?? row.DeviceId ?? null;
+                    const directSerial = row.SerialNumber ?? row.DeviceSerialNumber ?? null;
+                    const directCustomer = row.CustomerCode ?? row.Customer?.Code ?? state.customerCode ?? null;
                     if (directId) {
-                        openDeviceModal(directId);
+                        openDeviceModal({ deviceId: directId, serialNumber: directSerial, customerCode: directCustomer });
                         return;
                     }
                     const equipmentId = getEquipmentIdFromDevice(row);
@@ -2232,7 +2234,11 @@ const MPSM = (function() {
                             ? (cached.Id ?? cached.IdInstalledProduct ?? cached.DeviceId ?? null)
                             : null;
                         if (cachedId) {
-                            openDeviceModal(cachedId);
+                            openDeviceModal({
+                                deviceId: cachedId,
+                                serialNumber: cached?.SerialNumber ?? cached?.DeviceSerialNumber ?? directSerial,
+                                customerCode: cached?.CustomerCode ?? cached?.Customer?.Code ?? directCustomer
+                            });
                         }
                     }
                 }
@@ -2257,7 +2263,11 @@ const MPSM = (function() {
      */
     async function fetchDevicesFromCache(customerCode) {
         try {
-            const response = await fetch('api/get-cached-devices.php');
+            const params = new URLSearchParams();
+            if (customerCode || state.customerCode) {
+                params.set('customerCode', customerCode || state.customerCode);
+            }
+            const response = await fetch('api/get-cached-devices.php' + (params.toString() ? `?${params.toString()}` : ''));
             const contentType = response.headers.get('content-type') || '';
             if (!contentType.includes('application/json')) {
                 debugLog(`Cached devices returned non-JSON (${contentType}), skipping cache fallback`, 'warn');
@@ -3536,8 +3546,16 @@ const MPSM = (function() {
     /**
      * Open device detail modal
      */
-    async function openDeviceModal(deviceId, serialNumber, customerCode) {
-        debugLog(`Opening device modal: ${deviceId || serialNumber}`, 'info');
+    async function openDeviceModal(deviceIdOrOptions, serialNumber, customerCode) {
+        const identity = (deviceIdOrOptions && typeof deviceIdOrOptions === 'object')
+            ? {
+                deviceId: deviceIdOrOptions.deviceId ?? deviceIdOrOptions.id ?? null,
+                serialNumber: deviceIdOrOptions.serialNumber ?? deviceIdOrOptions.serial ?? null,
+                customerCode: deviceIdOrOptions.customerCode ?? null
+            }
+            : { deviceId: deviceIdOrOptions ?? null, serialNumber: serialNumber ?? null, customerCode: customerCode ?? null };
+
+        debugLog(`Opening device modal: ${identity.deviceId || identity.serialNumber}`, 'info');
         const modal = document.getElementById('device-modal');
         const modalBody = document.getElementById('modal-device-body');
         const modalName = document.getElementById('modal-device-name');
@@ -3546,30 +3564,28 @@ const MPSM = (function() {
         modalBody.innerHTML = '<div class="loading">Loading device details...</div>';
 
         try {
-            // Use deep-dive API to fetch comprehensive device data
-            const url = new URL('api/get-device-deep-dive.php', window.location.origin + window.location.pathname);
-            if (deviceId) url.searchParams.append('deviceId', deviceId);
-            if (serialNumber) url.searchParams.append('serialNumber', serialNumber);
-            if (customerCode) url.searchParams.append('customerCode', customerCode);
+            const buildUrl = (options = {}) => {
+                const url = new URL('api/get-device-deep-dive.php', window.location.origin + window.location.pathname);
+                if (identity.deviceId) url.searchParams.append('deviceId', identity.deviceId);
+                if (identity.serialNumber) url.searchParams.append('serialNumber', identity.serialNumber);
+                if (identity.customerCode) url.searchParams.append('customerCode', identity.customerCode);
+                url.searchParams.append('historyLimit', options.historyLimit || 150);
+                if (options.historyOffset) url.searchParams.append('historyOffset', options.historyOffset);
+                if (options.refresh) url.searchParams.append('refresh', '1');
+                return url;
+            };
 
-            const response = await fetch(url);
-            const data = await response.json();
+            const fetchDetails = async (options = {}) => {
+                const response = await fetch(buildUrl(options));
+                const payload = await response.json();
+                if (!payload.success || !payload.device) {
+                    throw new Error(payload.error || 'Device not found');
+                }
+                return payload;
+            };
 
-            if (!data.success || !data.device) {
-                throw new Error(data.error || 'Device not found');
-            }
+            const firstData = await fetchDetails();
 
-            const device = data.device;
-            const counterDetails = data.counterDetails;
-            const deviceHealth = data.deviceHealth;
-            const supplyAlerts = data.supplyAlerts;
-            const panelHistory = Array.isArray(data.panelHistory?.messages) ? data.panelHistory.messages : [];
-            const maintenancePanelAlerts = panelHistory.filter(msg => msg.maintenance_alert_code || msg.maintenance_alert_id);
-
-            modalName.textContent = device.Product?.Model || 'Device Details';
-
-            const equipmentId = getEquipmentIdFromDevice(device);
-            const detailContainerId = 'device-endpoint-sections';
             const resolveDepartment = (entity) => {
                 if (!entity || typeof entity !== 'object') return 'N/A';
                 return entity.Department
@@ -3580,41 +3596,58 @@ const MPSM = (function() {
                     ?? entity.CustomerLocation
                     ?? 'N/A';
             };
-            const department = resolveDepartment(device);
 
-            const resolveTonerValueForDevice = (keys) => {
-                if (typeof resolveTonerValue === 'function') {
-                    const resolved = resolveTonerValue(device, keys);
-                    if (Number.isFinite(resolved)) {
-                        return resolved;
+            const asRows = (value) => {
+                if (!value) return [];
+                if (Array.isArray(value)) return value;
+                if (typeof value === 'object') {
+                    for (const key of ['Result', 'Items', 'data', 'CounterDetails', 'Counters', 'Actions', 'SupplyAlerts', 'Alerts', 'MaintenanceKitLevels', 'MaintenanceKitCounters']) {
+                        if (Array.isArray(value[key])) {
+                            return value[key];
+                        }
                     }
+                    return [value];
                 }
-                for (const key of keys) {
-                    const candidate = device[key];
-                    if (candidate !== undefined && candidate !== null && Number.isFinite(Number(candidate))) {
-                        return Number(candidate);
-                    }
-                }
-                return null;
+                return [];
             };
 
-            const tonerItems = [
-                { color: 'black', label: 'Black Toner', value: resolveTonerValueForDevice(['BlackToner', 'BlackToner1', 'BlackToner2', 'BlackToner3']) },
-                { color: 'cyan', label: 'Cyan Toner', value: resolveTonerValueForDevice(['CyanToner', 'CyanToner1']) },
-                { color: 'magenta', label: 'Magenta Toner', value: resolveTonerValueForDevice(['MagentaToner', 'MagentaToner1']) },
-                { color: 'yellow', label: 'Yellow Toner', value: resolveTonerValueForDevice(['YellowToner', 'YellowToner1']) }
-            ].filter(item => item.value !== null && !Number.isNaN(item.value));
-
-            const supplyMarkup = tonerItems.length
-                ? tonerItems.map(item => `
-                        <div class="supply-item supply-item--${item.color}">
-                            <div class="supply-name">${item.label}</div>
-                            <div class="supply-chip">
-                                ${renderTonerChipMarkup(item.color, item.value)}
-                            </div>
+            const renderSnapshotItems = (items) => `
+                <div class="device-snapshot">
+                    ${items.map(item => `
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">${escapeHtml(item.label)}</div>
+                            <div class="snapshot-value">${item.html ? item.value : escapeHtml(item.value ?? 'N/A')}</div>
                         </div>
-                    `).join('')
-                : '<div class="supply-empty">No supply telemetry available</div>';
+                    `).join('')}
+                </div>
+            `;
+
+            const renderDataRows = (title, rows, emptyText, maxRows = 25) => {
+                const safeRows = asRows(rows);
+                return `
+                    <h3>${escapeHtml(title)}</h3>
+                    ${safeRows.length
+                        ? renderObjectArrayTable(safeRows, { maxRows })
+                        : `<div class="device-snapshot"><div class="snapshot-item"><div class="snapshot-value">${escapeHtml(emptyText)}</div></div></div>`}
+                `;
+            };
+
+            const renderSupplyLevels = (levels) => {
+                const rows = asRows(levels).filter(item => item && Number.isFinite(Number(item.value ?? item.LevelValue ?? item.Level)));
+                if (!rows.length) {
+                    return '<div class="supply-empty">No supply telemetry available</div>';
+                }
+                return rows.map(item => {
+                    const color = item.color || resolveSupplyColor(item.label || item.ColorType || item.SupplyType || '');
+                    const value = item.value ?? item.LevelValue ?? item.Level;
+                    return `
+                        <div class="supply-item supply-item--${escapeHtml(color)}">
+                            <div class="supply-name">${escapeHtml(item.label || item.Description || item.SupplyName || 'Supply')}</div>
+                            <div class="supply-chip">${renderTonerChipMarkup(color, value)}</div>
+                        </div>
+                    `;
+                }).join('');
+            };
 
             const summarizePanelMessage = (msg) => {
                 if (!msg) return 'No additional details';
@@ -3642,21 +3675,24 @@ const MPSM = (function() {
                 return 'No additional details';
             };
 
-            const renderPanelSection = (title, messages, emptyText) => {
-                const content = (!messages || !messages.length)
+            const renderPanelSection = (title, history, emptyText) => {
+                const messages = Array.isArray(history?.messages) ? history.messages : [];
+                const nextOffset = Number(history?.next_offset ?? ((history?.offset || 0) + messages.length));
+                const content = (!messages.length)
                     ? `<div class="snapshot-item"><div class="snapshot-value">${escapeHtml(emptyText || 'No recent alerts')}</div></div>`
-                    : messages.slice(0, 12).map(msg => {
+                    : messages.map(msg => {
                         const received = formatDateTime(msg.received_at, { dateStyle: 'short', timeStyle: 'short' }) || 'Unknown time';
                         const code = msg.display_name || msg.panel_configuration || msg.maintenance_alert_code || msg.id || 'Alert';
-                        const dept = msg.department || resolveDepartment(device);
                         const summary = summarizePanelMessage(msg);
+                        const severity = (msg.severity || '').toLowerCase();
+                        const tone = severity.includes('crit') || severity.includes('high') ? 'danger' : 'warning';
                         return `
                             <div class="snapshot-item" style="grid-column: 1 / -1;">
                                 <div class="snapshot-label">${escapeHtml(received)}</div>
                                 <div class="snapshot-value">
-                                    <span class="status-badge status-warning">${escapeHtml(String(code))}</span>
-                                    <span class="muted" style="margin-left:8px;">${escapeHtml(String(summary))}</span>
-                                    ${dept ? `<div class="muted" style="margin-top:4px;">Dept: ${escapeHtml(dept)}</div>` : ''}
+                                    <span class="status-badge status-${tone}">${escapeHtml(String(code))}</span>
+                                    <span class="text-muted" style="margin-left:8px;">${escapeHtml(String(summary))}</span>
+                                    ${msg.category ? `<div class="endpoint-footnote">Category: ${escapeHtml(msg.category)}</div>` : ''}
                                 </div>
                             </div>
                         `;
@@ -3667,150 +3703,141 @@ const MPSM = (function() {
                     <div class="device-snapshot">
                         ${content}
                     </div>
+                    ${history?.has_more ? `
+                        <div class="endpoint-footnote">Showing ${messages.length} of ${history.total} records.</div>
+                        <button type="button" class="btn btn-secondary device-history-more" data-history-offset="${nextOffset}">Load older history</button>
+                    ` : ''}
                 `;
             };
 
-            const html = `
-                <div class="device-snapshot">
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Equipment ID</div>
-                        <div class="snapshot-value">${escapeHtml(equipmentId)}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Serial Number</div>
-                        <div class="snapshot-value">${device.SerialNumber || 'N/A'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Asset Number</div>
-                        <div class="snapshot-value">${device.AssetNumber || device.ExternalIdentifier || 'N/A'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">IP Address</div>
-                        <div class="snapshot-value">${device.IpAddress || 'N/A'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">MAC Address</div>
-                        <div class="snapshot-value">${device.MacAddress || 'N/A'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Location</div>
-                        <div class="snapshot-value">${device.Note || device.OfficeDescription || 'N/A'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Department</div>
-                        <div class="snapshot-value">${escapeHtml(department)}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Status</div>
-                        <div class="snapshot-value">
-                            <span class="status-badge ${isDeviceOffline(device) ? 'status-danger' : 'status-success'}">
-                                ${isDeviceOffline(device) ? 'Offline' : 'Online'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+            let currentData = null;
+            const renderDeviceDetails = (data, options = {}) => {
+                currentData = data;
+                const device = data.device || {};
+                const counters = data.counters || {};
+                const supplies = data.supplies || {};
+                const maintenance = data.maintenance || {};
+                const alerts = data.alerts || {};
+                const panelHistory = data.panelHistory || {};
+                const sectionErrors = data.sectionErrors || {};
+                const equipmentId = getEquipmentIdFromDevice(device);
+                const department = resolveDepartment(device);
+                const model = device.Product?.Model || device.ProductModel || 'Device Details';
+                const activeAlerts = [
+                    ...asRows(alerts.maintenance),
+                    ...asRows(alerts.supply),
+                    ...asRows(alerts.sdsActions)
+                ];
+                const maintenanceLevels = [
+                    ...asRows(maintenance.levels),
+                    ...asRows(maintenance.counters)
+                ];
+                const cache = data.cache || {};
+                const statusText = options.refreshing ? 'Refreshing maintenance details...' :
+                    (cache.drilldown_cached_at ? `Detail cache: ${formatDateTime(cache.drilldown_cached_at, { dateStyle: 'short', timeStyle: 'short' })}` : 'Detail cache not populated');
 
-                <h3>Counters</h3>
-                <div class="device-snapshot">
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Total Mono</div>
-                        <div class="snapshot-value">${device.CounterMono?.toLocaleString() || '0'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Total Color</div>
-                        <div class="snapshot-value">${device.CounterColor?.toLocaleString() || '0'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Monthly Mono</div>
-                        <div class="snapshot-value">${device.MonthlyMonoVolume?.toLocaleString() || '0'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Monthly Color</div>
-                        <div class="snapshot-value">${device.MonthlyColorVolume?.toLocaleString() || '0'}</div>
-                    </div>
-                </div>
+                modalName.textContent = model;
+                modalBody.innerHTML = `
+                    ${renderSnapshotItems([
+                        { label: 'Equipment ID', value: equipmentId },
+                        { label: 'Serial Number', value: device.SerialNumber || identity.serialNumber || 'N/A' },
+                        { label: 'Asset Number', value: device.AssetNumber || device.ExternalIdentifier || 'N/A' },
+                        { label: 'IP Address', value: device.IpAddress || 'N/A' },
+                        { label: 'MAC Address', value: device.MacAddress || 'N/A' },
+                        { label: 'Location', value: device.Note || device.OfficeDescription || 'N/A' },
+                        { label: 'Department', value: department },
+                        {
+                            label: 'Status',
+                            value: `<span class="status-badge ${isDeviceOffline(device) ? 'status-danger' : 'status-success'}">${isDeviceOffline(device) ? 'Offline' : 'Online'}</span>`,
+                            html: true
+                        },
+                        { label: 'Cache', value: statusText }
+                    ])}
 
-                <h3>Supply Levels</h3>
-                <div class="supply-grid">
-                    ${supplyMarkup}
-                </div>
+                    <h3>Counters</h3>
+                    ${renderSnapshotItems([
+                        { label: 'Total Mono', value: Number(counters.summary?.monoTotal ?? device.CounterMono ?? 0).toLocaleString() },
+                        { label: 'Total Color', value: Number(counters.summary?.colorTotal ?? device.CounterColor ?? 0).toLocaleString() },
+                        { label: 'Monthly Mono', value: Number(counters.summary?.monoMonthly ?? device.MonthlyMonoVolume ?? 0).toLocaleString() },
+                        { label: 'Monthly Color', value: Number(counters.summary?.colorMonthly ?? device.MonthlyColorVolume ?? 0).toLocaleString() }
+                    ])}
 
-                <h3>Device Information</h3>
-                <div class="device-snapshot">
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Brand</div>
-                        <div class="snapshot-value">${device.Product?.Brand || 'Unknown'}</div>
+                    <h3>Supply Levels</h3>
+                    <div class="supply-grid">
+                        ${renderSupplyLevels(supplies.levels)}
                     </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Model</div>
-                        <div class="snapshot-value">${device.Product?.Model || 'Unknown'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Firmware</div>
-                        <div class="snapshot-value">${device.Firmware || 'N/A'}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Install Date</div>
-                        <div class="snapshot-value">${formatDateTime(device.Install, { dateStyle: 'short' })}</div>
-                    </div>
-                    <div class="snapshot-item">
-                        <div class="snapshot-label">Last Update</div>
-                        <div class="snapshot-value">${formatDateTime(device.LastUpdate, { dateStyle: 'short', timeStyle: 'short' })}</div>
-                    </div>
-                </div>
 
-                ${deviceHealth ? `
-                    <h3>Device Health</h3>
-                    <div class="device-snapshot">
-                        ${deviceHealth.Actions && deviceHealth.Actions.length > 0 ?
-                            deviceHealth.Actions.map(action => `
+                    <h3>Device Information</h3>
+                    ${renderSnapshotItems([
+                        { label: 'Brand', value: device.Product?.Brand || device.ProductBrand || 'Unknown' },
+                        { label: 'Model', value: device.Product?.Model || device.ProductModel || 'Unknown' },
+                        { label: 'Firmware', value: device.Firmware || 'N/A' },
+                        { label: 'Install Date', value: formatDateTime(device.Install, { dateStyle: 'short' }) },
+                        { label: 'Last Update', value: formatDateTime(device.LastUpdate, { dateStyle: 'short', timeStyle: 'short' }) }
+                    ])}
+
+                    ${renderDataRows('Maintenance Levels', maintenanceLevels, 'No maintenance level data is available yet.', 50)}
+                    ${renderDataRows('Active Maintenance Alerts', maintenance.alerts, 'No active maintenance alerts are available.', 50)}
+                    ${renderDataRows('Supply Details', supplies.details, 'No detailed supply data is available yet.', 50)}
+                    ${renderDataRows('Supply Alerts', alerts.supply || data.supplyAlerts, 'No active supply alerts are available.', 50)}
+                    ${renderDataRows('Device Health Actions', alerts.sdsActions || data.deviceHealth?.Actions, 'No device health actions are available.', 50)}
+                    ${renderDataRows('Detailed Counter Information', counters.details || data.counterDetails?.CounterDetails, 'No detailed counter rows are available.', 50)}
+                    ${renderPanelSection('Alert History', panelHistory, 'No recent panel messages')}
+
+                    ${Object.keys(sectionErrors).length ? `
+                        <h3>Section Status</h3>
+                        <div class="device-snapshot">
+                            ${Object.entries(sectionErrors).map(([section, message]) => `
                                 <div class="snapshot-item" style="grid-column: 1 / -1;">
-                                    <div class="snapshot-label">${escapeHtml(action.ActionType || 'Action')}</div>
-                                    <div class="snapshot-value">${escapeHtml(action.Description || action.Message || 'No details')}</div>
+                                    <div class="snapshot-label">${escapeHtml(section)}</div>
+                                    <div class="snapshot-value">${escapeHtml(message)}</div>
                                 </div>
-                            `).join('') :
-                            '<div class="snapshot-item"><div class="snapshot-value">No health actions</div></div>'
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${activeAlerts.length ? `<div class="endpoint-footnote">${activeAlerts.length} active alert/action record${activeAlerts.length === 1 ? '' : 's'} found across maintenance, supply, and SDS sources.</div>` : ''}
+                `;
+
+                const loadMore = modalBody.querySelector('.device-history-more');
+                if (loadMore) {
+                    loadMore.addEventListener('click', async () => {
+                        const nextHistoryOffset = Number(loadMore.dataset.historyOffset || 0);
+                        loadMore.disabled = true;
+                        loadMore.textContent = 'Loading...';
+                        try {
+                            const nextPage = await fetchDetails({ historyOffset: nextHistoryOffset });
+                            const existing = Array.isArray(currentData?.panelHistory?.messages) ? currentData.panelHistory.messages : [];
+                            const incoming = Array.isArray(nextPage.panelHistory?.messages) ? nextPage.panelHistory.messages : [];
+                            const merged = Object.assign({}, nextPage.panelHistory || {}, {
+                                offset: 0,
+                                next_offset: existing.length + incoming.length,
+                                messages: existing.concat(incoming)
+                            });
+                            renderDeviceDetails(Object.assign({}, nextPage, { panelHistory: merged }));
+                        } catch (error) {
+                            debugLog('Failed to load older device history: ' + error.message, 'warn');
+                            loadMore.disabled = false;
+                            loadMore.textContent = 'Load older history';
                         }
-                    </div>
-                ` : ''}
+                    });
+                }
+            };
 
-                ${counterDetails ? `
-                    <h3>Detailed Counter Information</h3>
-                    <div class="device-snapshot">
-                        ${counterDetails.CounterDetails && counterDetails.CounterDetails.length > 0 ?
-                            counterDetails.CounterDetails.map(counter => `
-                                <div class="snapshot-item">
-                                    <div class="snapshot-label">${escapeHtml(counter.CounterName || counter.Name || 'Counter')}</div>
-                                    <div class="snapshot-value">${(counter.CounterValue || counter.Value || 0).toLocaleString()}</div>
-                                </div>
-                            `).join('') :
-                            '<div class="snapshot-item"><div class="snapshot-value">No detailed counters</div></div>'
+            const needsEnrichment = !firstData.cache?.drilldown_cached_at || Number(firstData.cache?.drilldown_schema_version || 0) < 2;
+            renderDeviceDetails(firstData, { refreshing: needsEnrichment });
+
+            if (needsEnrichment) {
+                fetchDetails({ refresh: true })
+                    .then(refreshed => {
+                        if (modal.classList.contains('active')) {
+                            renderDeviceDetails(refreshed);
                         }
-                    </div>
-                ` : ''}
-
-                ${supplyAlerts && supplyAlerts.length > 0 ? `
-                    <h3>Supply Alerts</h3>
-                    <div class="device-snapshot">
-                        ${supplyAlerts.map(alert => `
-                            <div class="snapshot-item" style="grid-column: 1 / -1;">
-                                <div class="snapshot-label">${escapeHtml(alert.SupplyName || 'Supply')}</div>
-                                <div class="snapshot-value">
-                                    <span class="status-badge status-warning">
-                                        ${escapeHtml(alert.Message || alert.AlertType || 'Alert')}
-                                    </span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-
-                ${renderPanelSection('Maintenance Alerts (Panel)', maintenancePanelAlerts, 'No maintenance alerts in recent panel messages')}
-
-                ${renderPanelSection('System Alerts (Panel Messages)', panelHistory, 'No recent panel messages')}
-            `;
-
-            modalBody.innerHTML = html;
+                    })
+                    .catch(error => {
+                        debugLog('Device enrichment failed: ' + error.message, 'warn');
+                    });
+            }
 
         } catch (error) {
             debugLog('Failed to load device details: ' + error.message, 'error');
@@ -3936,8 +3963,12 @@ const MPSM = (function() {
                 pageSize: 50,
                 defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: row => {
-                    if (row && row.Id) {
-                        openDeviceModal(row.Id);
+                    if (row) {
+                        openDeviceModal({
+                            deviceId: row.Id ?? row.IdInstalledProduct ?? row.DeviceId ?? null,
+                            serialNumber: row.SerialNumber ?? row.DeviceSerialNumber ?? null,
+                            customerCode: row.CustomerCode ?? row.Customer?.Code ?? state.customerCode ?? null
+                        });
                     }
                 }
             });
@@ -3982,8 +4013,12 @@ const MPSM = (function() {
                 pageSize: 50,
                 defaultSort: { column: 'EquipmentId', direction: 'asc' },
                 onRowClick: row => {
-                    if (row && row.Id) {
-                        openDeviceModal(row.Id);
+                    if (row) {
+                        openDeviceModal({
+                            deviceId: row.Id ?? row.IdInstalledProduct ?? row.DeviceId ?? null,
+                            serialNumber: row.SerialNumber ?? row.DeviceSerialNumber ?? null,
+                            customerCode: row.CustomerCode ?? row.Customer?.Code ?? state.customerCode ?? null
+                        });
                     }
                 }
             });

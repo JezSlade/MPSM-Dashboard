@@ -561,6 +561,56 @@ const MobileApp = (() => {
                 { label: 'Last Contact', value: device.LastContact || device.LastContactDate || 'N/A' }
             ];
 
+            const asRows = (value) => {
+                if (!value) return [];
+                if (Array.isArray(value)) return value;
+                if (typeof value === 'object') {
+                    for (const key of ['Result', 'Items', 'data', 'CounterDetails', 'Counters', 'Actions', 'SupplyAlerts', 'Alerts', 'MaintenanceKitLevels', 'MaintenanceKitCounters']) {
+                        if (Array.isArray(value[key])) return value[key];
+                    }
+                    return [value];
+                }
+                return [];
+            };
+
+            const valueFor = (item) => {
+                if (!item || typeof item !== 'object') return '';
+                return item.LevelValue ?? item.Level ?? item.value ?? item.CounterValue ?? item.Value ?? item.Description ?? item.Message ?? item.display_name ?? item.summary ?? '';
+            };
+
+            const labelFor = (item, fallback) => {
+                if (!item || typeof item !== 'object') return fallback;
+                return item.label ?? item.Description ?? item.SupplyName ?? item.CounterName ?? item.Name ?? item.Type ?? item.display_name ?? item.ActionType ?? fallback;
+            };
+
+            const renderCompactList = (title, items, emptyText) => {
+                const list = asRows(items).slice(0, 12);
+                return `
+                    <div class="mobile-detail-section">
+                        <h3>${escapeHtml(title)}</h3>
+                        ${list.length ? `
+                            <div class="mobile-detail-grid">
+                                ${list.map((item, index) => `
+                                    <div class="detail-tile">
+                                        <div class="detail-label">${escapeHtml(labelFor(item, 'Item ' + (index + 1)))}</div>
+                                        <div class="detail-value">${escapeHtml(String(valueFor(item) || 'See details'))}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `<div class="empty-state"><p>${escapeHtml(emptyText)}</p></div>`}
+                    </div>
+                `;
+            };
+
+            const maintenance = data.maintenance || {};
+            const supplies = data.supplies || {};
+            const alerts = data.alerts || {};
+            const panelMessages = Array.isArray(data.panelHistory?.messages) ? data.panelHistory.messages : [];
+            const maintenanceLevels = [
+                ...asRows(maintenance.levels),
+                ...asRows(maintenance.counters)
+            ];
+
             body.innerHTML = `
                 <div class="mobile-detail-grid">
                     ${rows.map(row => `
@@ -570,6 +620,11 @@ const MobileApp = (() => {
                         </div>
                     `).join('')}
                 </div>
+                ${renderCompactList('Maintenance Levels', maintenanceLevels, 'No maintenance level data available.')}
+                ${renderCompactList('Maintenance Alerts', maintenance.alerts, 'No active maintenance alerts.')}
+                ${renderCompactList('Supply Details', supplies.details || supplies.levels, 'No supply detail data available.')}
+                ${renderCompactList('Supply Alerts', alerts.supply || data.supplyAlerts, 'No active supply alerts.')}
+                ${renderCompactList('Alert History', panelMessages, 'No recent panel messages.')}
             `;
         } catch (error) {
             body.innerHTML = `

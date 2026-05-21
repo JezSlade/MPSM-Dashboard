@@ -589,6 +589,18 @@ body {
     gap: 10px;
 }
 
+.mobile-detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mobile-detail-section h3 {
+    font-size: 15px;
+    line-height: 1.2;
+    margin: 4px 0 0;
+}
+
 .detail-tile {
     border: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.02);

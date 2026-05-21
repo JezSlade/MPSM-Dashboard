@@ -45,11 +45,13 @@ if ($isCLI) {
     $cmsRoot = dirname(__DIR__);
     require $cmsRoot . '/config.php';
     require $cmsRoot . '/functions.php';
+    require_once __DIR__ . '/device-drilldown-enrichment.php';
     require_once dirname($cmsRoot) . '/bootstrap.php';
 } else {
     // HTTP: already in cms/api/ context
     require '../config.php';
     require '../functions.php';
+    require_once __DIR__ . '/device-drilldown-enrichment.php';
     require_once dirname(__DIR__, 2) . '/bootstrap.php';
 }
 
@@ -317,6 +319,112 @@ if ($isCLI) {
 } else {
     // HTTP mode: action from query string
     $action = $_GET['action'] ?? '';
+}
+
+// ==================================================================
+// ACTION: ENRICH DRILL-DOWNS - Warm detailed maintenance sections
+// ==================================================================
+if ($action === 'enrich-drilldowns') {
+    $pdo = getDatabase();
+    $prefix = DB_PREFIX;
+    $devicesTable = "{$prefix}cache_devices";
+    $drilldownTable = "{$prefix}cache_device_drilldown";
+
+    if (!tableExists($pdo, $devicesTable) || !tableExists($pdo, $drilldownTable)) {
+        respondJson([
+            'success' => false,
+            'error' => 'Cache tables missing; cannot enrich drill-downs',
+            'tables' => [
+                $devicesTable => tableExists($pdo, $devicesTable),
+                $drilldownTable => tableExists($pdo, $drilldownTable)
+            ]
+        ]);
+    }
+
+    $deviceSerialColumn = resolveSerialColumn($pdo, $devicesTable);
+    $drilldownSerialColumn = resolveSerialColumn($pdo, $drilldownTable);
+    $cliArg = $isCLI ? ($argv[2] ?? '') : '';
+    $serialFilter = trim((string)($_GET['serialNumber'] ?? $_GET['serial'] ?? (!is_numeric($cliArg) ? $cliArg : '')));
+    $limitInput = $isCLI
+        ? (is_numeric($cliArg) ? (int)$cliArg : (int)($argv[3] ?? 3))
+        : (int)($_GET['limit'] ?? 3);
+    $limit = max(1, min(20, $limitInput ?: 3));
+
+    $params = [];
+    $where = "WHERE cd.device_data IS NOT NULL";
+    if ($serialFilter !== '') {
+        $where .= " AND cd.{$deviceSerialColumn} = :serial";
+        $params[':serial'] = $serialFilter;
+    } else {
+        $where .= " AND (
+            cdd.{$drilldownSerialColumn} IS NULL
+            OR JSON_UNQUOTE(JSON_EXTRACT(cdd.drilldown_data, '$._mpsm.schemaVersion')) IS NULL
+            OR JSON_UNQUOTE(JSON_EXTRACT(cdd.drilldown_data, '$._mpsm.schemaVersion')) <> '2'
+        )";
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            cd.{$deviceSerialColumn} AS serial_number,
+            cd.customer_code,
+            cd.device_data,
+            cdd.cached_at AS drilldown_cached_at
+        FROM {$devicesTable} cd
+        LEFT JOIN {$drilldownTable} cdd
+            ON cdd.{$drilldownSerialColumn} = cd.{$deviceSerialColumn}
+        {$where}
+        ORDER BY (cdd.{$drilldownSerialColumn} IS NULL) DESC, cdd.cached_at ASC
+        LIMIT :limit
+    ");
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $enriched = 0;
+    $errors = [];
+    $processed = [];
+
+    foreach ($rows as $row) {
+        $serial = (string)($row['serial_number'] ?? '');
+        $device = json_decode((string)($row['device_data'] ?? ''), true);
+        if ($serial === '' || !is_array($device)) {
+            $errors[] = "Invalid cached device row for serial {$serial}";
+            continue;
+        }
+
+        try {
+            logMessage("Enriching drill-down {$serial}");
+            $payload = mpsm_dd_enrich_device_payload($device, [
+                'serialNumber' => $serial,
+                'customerCode' => (string)($row['customer_code'] ?? '')
+            ]);
+            mpsm_dd_save_drilldown($pdo, $drilldownTable, $drilldownSerialColumn, $serial, $payload['drilldown']);
+            $processed[] = [
+                'serial_number' => $serial,
+                'section_errors' => $payload['sectionErrors'] ?? []
+            ];
+            $enriched++;
+            usleep(150000);
+        } catch (Throwable $e) {
+            $message = "Enrich {$serial} failed: " . $e->getMessage();
+            logMessage($message);
+            $errors[] = $message;
+        }
+    }
+
+    respondJson([
+        'success' => empty($errors),
+        'action' => 'enrich-drilldowns',
+        'limit' => $limit,
+        'serial_filter' => $serialFilter ?: null,
+        'selected' => count($rows),
+        'enriched' => $enriched,
+        'processed' => $processed,
+        'errors' => $errors
+    ]);
 }
 
 // ==================================================================
@@ -661,43 +769,27 @@ if ($action === 'process' || $action === 'auto') {
                     // Call Device/Get with the correct Id parameter
                     // Fetch drilldown via mps-api engine to avoid direct OAuth token issues
                     $apiResponse = callMPSQuery('Device/Get', ['Id' => $deviceId]);
+                    if (!is_array($apiResponse)) {
+                        logMessage("WARNING: Device {$serial} (ID: {$deviceId}) - Device/Get returned no data");
+                        continue;
+                    }
 
                     // MPS Cloud API wraps response in {Result: {...}, IsValid: bool, Errors: [...]}
                     // Extract the actual device data from the Result wrapper
-                    $drilldown = $apiResponse['Result'] ?? $apiResponse;
+                    $deviceGetResult = $apiResponse['Result'] ?? $apiResponse;
 
                     // Check for valid response - API returns device data with SerialNumber field
-                    $responseSerial = $drilldown['SerialNumber'] ?? $drilldown['serial'] ?? $drilldown['serialNumber'] ?? null;
+                    $responseSerial = $deviceGetResult['SerialNumber'] ?? $deviceGetResult['serial'] ?? $deviceGetResult['serialNumber'] ?? null;
                     $isValid = $apiResponse['IsValid'] ?? true;
 
-                    if ($drilldown && $responseSerial && $isValid) {
-                        $stmt = $pdo->prepare("
-                            INSERT INTO {$prefix}cache_device_drilldown_staging
-                            ({$drilldownSerialColumn}, drilldown_data, has_alerts, has_supplies, cached_at)
-                            VALUES (:serial, :data, :has_alerts, :has_supplies, NOW())
-                            ON DUPLICATE KEY UPDATE
-                                drilldown_data = VALUES(drilldown_data),
-                                has_alerts = VALUES(has_alerts),
-                                has_supplies = VALUES(has_supplies),
-                                cached_at = VALUES(cached_at)
-                        ");
-
-                        // Check for supply alerts and supplies in response
-                        $hasSupplyAlerts = isset($drilldown['SupplyAlerts']) && count($drilldown['SupplyAlerts']) > 0;
-                        $hasSupplies = isset($drilldown['ProjectSupplies']) && count($drilldown['ProjectSupplies']) > 0;
-
-                        $stmt->execute([
-                            ':serial' => $serial,
-                            ':data' => json_encode($drilldown, JSON_UNESCAPED_UNICODE),
-                            ':has_alerts' => $hasSupplyAlerts ? 1 : 0,
-                            ':has_supplies' => $hasSupplies ? 1 : 0
-                        ]);
-
+                    if ($deviceGetResult && $responseSerial && $isValid) {
+                        $wrappedDrilldown = mpsm_dd_wrap_device_get_payload($deviceGetResult, $apiResponse);
+                        mpsm_dd_save_drilldown($pdo, "{$prefix}cache_device_drilldown_staging", $drilldownSerialColumn, $serial, $wrappedDrilldown);
                         $state['drilldowns_cached']++;
                     } else {
                         // Log why we skipped this device
                         $errors = $apiResponse['Errors'] ?? [];
-                        $errorInfo = !empty($errors) ? json_encode($errors) : ($drilldown['ErrorMessage'] ?? 'No SerialNumber in response');
+                        $errorInfo = !empty($errors) ? json_encode($errors) : ($deviceGetResult['ErrorMessage'] ?? 'No SerialNumber in response');
                         logMessage("WARNING: Device {$serial} (ID: {$deviceId}) - {$errorInfo}");
                     }
 

@@ -1,494 +1,484 @@
 <?php
 /**
  * Device Deep Dive API
- * Fetches ALL available data for a device from multiple API endpoints
  *
- * Endpoints called:
- * - Device/List (base device info)
- * - Counter/ListDetailed (detailed counter/meter data)
- * - SdsAction/GetDeviceActions (health, actions, firmware updates)
- * - SupplyAlert/List (supply alerts for this device)
- *
- * Parameters:
- * - deviceId: Device ID
- * - serialNumber: Device serial number
- * - customerCode: Customer code (optional, for optimization)
+ * Cache-first device detail endpoint. Live MPS calls are made only when
+ * refresh=1 is requested, so opening a device modal does not block on vendor
+ * endpoint fan-out.
  */
 
 require '../config.php';
 require '../functions.php';
+require_once __DIR__ . '/device-drilldown-enrichment.php';
 
 requireAuth();
 
 set_time_limit(60);
 ini_set('max_execution_time', '60');
 
-$deviceId = $_GET['deviceId'] ?? '';
-$serialNumber = $_GET['serialNumber'] ?? '';
-$customerCode = $_GET['customerCode'] ?? '';
-
-if (empty($deviceId) && empty($serialNumber)) {
-    jsonError("Device ID or Serial Number required");
-    exit;
-}
-
-// Helper function to call MPS API query endpoint
-function callMpsApiQuery($action, $params) {
-    $params = array_filter($params, static function ($value) {
-        return $value !== null;
-    });
-
-    $payload = json_encode([
-        'action' => $action,
-        'params' => $params
-    ]);
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $payload,
-            'timeout' => 20,
-            'ignore_errors' => true
-        ]
-    ]);
-
-    $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
-
-    if ($response === false) {
-        return null;
-    }
-
-    $data = json_decode($response, true);
-
-    if (!$data || !isset($data['success']) || !$data['success']) {
-        return null;
-    }
-
-    return $data['data'] ?? [];
-}
-
-function extractDeviceFromDrilldown(array $drilldown): ?array
+function mpsm_deep_bool_param(string $name): bool
 {
-    $candidates = [
-        'Device',
-        'device',
-        'DeviceSummary',
-        'BaseDevice',
-        'DeviceInfo',
+    $value = strtolower(trim((string)($_GET[$name] ?? '')));
+    return in_array($value, ['1', 'true', 'yes', 'on'], true);
+}
+
+function mpsm_deep_int_param(string $name, int $default, int $min, int $max): int
+{
+    $value = isset($_GET[$name]) ? (int)$_GET[$name] : $default;
+    return max($min, min($max, $value));
+}
+
+function mpsm_deep_table_exists(PDO $pdo, string $table): bool
+{
+    $stmt = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($table));
+    return $stmt && $stmt->rowCount() > 0;
+}
+
+function mpsm_deep_load_cached_device(PDO $pdo, string $prefix, string $deviceId, string $serialNumber, string $customerCode): ?array
+{
+    $params = [];
+    $where = '';
+
+    if ($serialNumber !== '' && $deviceId !== '') {
+        $where = "(serial_number = :serial
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) = :id1
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) = :id2
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IdInstalledProduct')) = :id3)";
+        $params[':serial'] = $serialNumber;
+        $params[':id1'] = $deviceId;
+        $params[':id2'] = $deviceId;
+        $params[':id3'] = $deviceId;
+    } elseif ($serialNumber !== '') {
+        $where = 'serial_number = :serial';
+        $params[':serial'] = $serialNumber;
+    } elseif ($deviceId !== '') {
+        $where = "(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) = :id1
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) = :id2
+               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IdInstalledProduct')) = :id3)";
+        $params[':id1'] = $deviceId;
+        $params[':id2'] = $deviceId;
+        $params[':id3'] = $deviceId;
+    } else {
+        return null;
+    }
+
+    if ($customerCode !== '') {
+        $where .= ' AND customer_code = :customer';
+        $params[':customer'] = $customerCode;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT serial_number, customer_code, device_data, cached_at
+        FROM {$prefix}cache_devices
+        WHERE {$where}
+        LIMIT 1
+    ");
+    $stmt->execute($params);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row || empty($row['device_data'])) {
+        return null;
+    }
+
+    $device = json_decode((string)$row['device_data'], true);
+    if (!is_array($device)) {
+        return null;
+    }
+
+    return [
+        'device' => $device,
+        'serial_number' => $row['serial_number'] ?? '',
+        'customer_code' => $row['customer_code'] ?? '',
+        'cached_at' => $row['cached_at'] ?? null
     ];
-
-    foreach ($candidates as $key) {
-        if (isset($drilldown[$key]) && is_array($drilldown[$key]) && !empty($drilldown[$key])) {
-            return $drilldown[$key];
-        }
-    }
-
-    return null;
 }
 
-function extractFirstArray(array $source, array $keys): ?array
+function mpsm_deep_load_cached_drilldown(PDO $pdo, string $prefix, string $serialNumber): ?array
 {
-    foreach ($keys as $key) {
-        if (isset($source[$key]) && is_array($source[$key]) && !empty($source[$key])) {
-            return $source[$key];
+    if ($serialNumber === '') {
+        return null;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT drilldown_data, cached_at, has_alerts, has_supplies
+        FROM {$prefix}cache_device_drilldown
+        WHERE serial_number = :serial
+        LIMIT 1
+    ");
+    $stmt->execute([':serial' => $serialNumber]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row || empty($row['drilldown_data'])) {
+        return null;
+    }
+
+    $drilldown = json_decode((string)$row['drilldown_data'], true);
+    if (!is_array($drilldown)) {
+        return null;
+    }
+
+    return [
+        'drilldown' => $drilldown,
+        'cached_at' => $row['cached_at'] ?? null,
+        'has_alerts' => (bool)($row['has_alerts'] ?? false),
+        'has_supplies' => (bool)($row['has_supplies'] ?? false)
+    ];
+}
+
+function mpsm_deep_alert_definitions(PDO $pdo, string $prefix): array
+{
+    $definitions = [];
+    $table = $prefix . 'alert_definitions';
+
+    if (!mpsm_deep_table_exists($pdo, $table)) {
+        return $definitions;
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT * FROM {$table} WHERE enabled = 1");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $definition) {
+            $code = (string)($definition['alert_code'] ?? '');
+            if ($code === '') {
+                continue;
+            }
+            $definitions[$code] = $definition;
+        }
+    } catch (Throwable $e) {
+        error_log('[device-deep-dive] Failed to load alert definitions: ' . $e->getMessage());
+    }
+
+    return $definitions;
+}
+
+function mpsm_deep_normalize_serial(string $serial): string
+{
+    return strtolower(preg_replace('/[^a-z0-9]/i', '', $serial));
+}
+
+function mpsm_deep_panel_summary(array $row, ?array $payload, array $definitions): array
+{
+    $code = (string)($row['maintenance_alert_code'] ?? '');
+    $definition = $code !== '' ? ($definitions[$code] ?? null) : null;
+    $displayName = $definition['display_name'] ?? null;
+    $description = $definition['description'] ?? null;
+
+    if (!$displayName && is_array($payload)) {
+        $displayName = $payload['maintenanceAlert']['description']
+            ?? $payload['MaintenanceAlert_Description']
+            ?? $payload['alert_description']
+            ?? $payload['message']
+            ?? null;
+    }
+
+    if (!$displayName) {
+        $displayName = $row['panel_configuration'] ?? $code ?: 'Alert';
+    }
+
+    $summary = $description ?: $displayName;
+
+    if (is_array($payload)) {
+        $summary = $payload['maintenanceAlert']['message']
+            ?? $payload['panel_message']
+            ?? $payload['runtime_message']
+            ?? $summary;
+    }
+
+    return [
+        'display_name' => $displayName,
+        'summary' => $summary,
+        'category' => $definition['category'] ?? null,
+        'severity' => $definition['severity'] ?? null
+    ];
+}
+
+function mpsm_deep_format_panel_rows(array $rows, array $definitions, bool $includeRaw): array
+{
+    $messages = [];
+
+    foreach ($rows as $row) {
+        $payload = null;
+        if (!empty($row['payload'])) {
+            $decoded = json_decode((string)$row['payload'], true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+
+        $summary = mpsm_deep_panel_summary($row, $payload, $definitions);
+        $message = [
+            'id' => (int)($row['id'] ?? 0),
+            'received_at' => $row['received_at'] ?? null,
+            'customer_code' => $row['customer_code'] ?? null,
+            'customer_description' => $row['customer_description'] ?? null,
+            'device_serial' => $row['device_serial'] ?? null,
+            'maintenance_alert_code' => $row['maintenance_alert_code'] ?? null,
+            'maintenance_alert_id' => $row['maintenance_alert_id'] ?? null,
+            'panel_configuration' => $row['panel_configuration'] ?? null,
+            'display_name' => $summary['display_name'],
+            'summary' => $summary['summary'],
+            'category' => $summary['category'],
+            'severity' => $summary['severity'],
+        ];
+
+        if ($includeRaw) {
+            $message['payload'] = $payload ?? ($row['payload'] ?? null);
+        }
+
+        $messages[] = $message;
+    }
+
+    return $messages;
+}
+
+function mpsm_deep_payload_matches(?array $payload, string $normalizedSerial, string $deviceId): bool
+{
+    if (!$payload) {
+        return false;
+    }
+
+    foreach (['device_serial', 'serialNumber', 'DeviceSerialNumber', 'serial_number'] as $key) {
+        if (!empty($payload[$key]) && mpsm_deep_normalize_serial((string)$payload[$key]) === $normalizedSerial) {
+            return true;
         }
     }
 
-    if (isset($source['Device']) && is_array($source['Device'])) {
-        foreach ($keys as $key) {
-            if (isset($source['Device'][$key]) && is_array($source['Device'][$key]) && !empty($source['Device'][$key])) {
-                return $source['Device'][$key];
+    if ($deviceId !== '') {
+        foreach (['device_id', 'DeviceId', 'IdInstalledProduct'] as $key) {
+            if (!empty($payload[$key]) && (string)$payload[$key] === $deviceId) {
+                return true;
             }
         }
     }
 
-    return null;
+    return false;
+}
+
+function mpsm_deep_panel_history(PDO $pdo, string $prefix, string $serialNumber, string $deviceId, string $customerCode, int $limit, int $offset, bool $includeRaw): array
+{
+    $table = $prefix . 'panel_messages';
+    if ($serialNumber === '' || !mpsm_deep_table_exists($pdo, $table)) {
+        return [
+            'total' => 0,
+            'limit' => $limit,
+            'offset' => $offset,
+            'has_more' => false,
+            'source' => 'none',
+            'messages' => []
+        ];
+    }
+
+    $definitions = mpsm_deep_alert_definitions($pdo, $prefix);
+    $where = 'device_serial = :serial';
+    $params = [':serial' => $serialNumber];
+
+    if ($customerCode !== '') {
+        $where .= ' AND customer_code = :customer';
+        $params[':customer'] = $customerCode;
+    }
+
+    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM {$table} WHERE {$where}");
+    $countStmt->execute($params);
+    $total = (int)$countStmt->fetchColumn();
+
+    if ($total > 0) {
+        $stmt = $pdo->prepare("
+            SELECT id, received_at, customer_code, customer_description, device_serial,
+                   maintenance_alert_code, maintenance_alert_id, panel_configuration, payload
+            FROM {$table}
+            WHERE {$where}
+            ORDER BY received_at DESC
+            LIMIT :limit OFFSET :offset
+        ");
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'total' => $total,
+            'limit' => $limit,
+            'offset' => $offset,
+            'has_more' => ($offset + $limit) < $total,
+            'source' => 'indexed',
+            'messages' => mpsm_deep_format_panel_rows($rows, $definitions, $includeRaw)
+        ];
+    }
+
+    $fallbackParams = [];
+    $fallbackWhere = '1=1';
+    if ($customerCode !== '') {
+        $fallbackWhere .= ' AND customer_code = :customer';
+        $fallbackParams[':customer'] = $customerCode;
+    }
+
+    $fallbackWindow = min(2000, max(300, ($limit + $offset) * 4));
+    $fallbackStmt = $pdo->prepare("
+        SELECT id, received_at, customer_code, customer_description, device_serial,
+               maintenance_alert_code, maintenance_alert_id, panel_configuration, payload
+        FROM {$table}
+        WHERE {$fallbackWhere}
+        ORDER BY received_at DESC
+        LIMIT :fallback_limit
+    ");
+    foreach ($fallbackParams as $key => $value) {
+        $fallbackStmt->bindValue($key, $value);
+    }
+    $fallbackStmt->bindValue(':fallback_limit', $fallbackWindow, PDO::PARAM_INT);
+    $fallbackStmt->execute();
+
+    $normalizedSerial = mpsm_deep_normalize_serial($serialNumber);
+    $matches = [];
+    foreach ($fallbackStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $rowSerial = mpsm_deep_normalize_serial((string)($row['device_serial'] ?? ''));
+        $payload = !empty($row['payload']) ? json_decode((string)$row['payload'], true) : null;
+        if ($rowSerial === $normalizedSerial || mpsm_deep_payload_matches(is_array($payload) ? $payload : null, $normalizedSerial, $deviceId)) {
+            $matches[] = $row;
+        }
+    }
+
+    $slice = array_slice($matches, $offset, $limit);
+
+    return [
+        'total' => count($matches),
+        'limit' => $limit,
+        'offset' => $offset,
+        'has_more' => ($offset + $limit) < count($matches),
+        'source' => 'bounded_payload_fallback',
+        'messages' => mpsm_deep_format_panel_rows($slice, $definitions, $includeRaw)
+    ];
+}
+
+$deviceId = trim((string)($_GET['deviceId'] ?? ''));
+$serialNumber = trim((string)($_GET['serialNumber'] ?? ''));
+$customerCode = trim((string)($_GET['customerCode'] ?? ''));
+$refresh = mpsm_deep_bool_param('refresh');
+$includeRaw = mpsm_deep_bool_param('includeRaw');
+$historyLimit = mpsm_deep_int_param('historyLimit', 150, 1, 500);
+$historyOffset = mpsm_deep_int_param('historyOffset', 0, 0, 1000000);
+
+if ($deviceId === '' && $serialNumber === '') {
+    jsonError('Device ID or Serial Number required', 400);
 }
 
 try {
-    $result = [
-        'device' => null,
-        'counterDetails' => null,
-        'deviceHealth' => null,
-        'supplyAlerts' => null,
-        'panelHistory' => null,
-        'errors' => []
-    ];
-
     $pdo = getDatabase();
     $prefix = DB_PREFIX;
-    $cachedDrilldownData = null;
 
-    // Attempt to hydrate from cache for instant responses
-    $cachedDeviceJson = null;
-
-    if (!empty($serialNumber)) {
-        $stmt = $pdo->prepare("SELECT device_data FROM {$prefix}cache_devices WHERE serial_number = :serial LIMIT 1");
-        $stmt->execute([':serial' => $serialNumber]);
-        $cachedDeviceJson = $stmt->fetchColumn() ?: null;
+    if (!mpsm_deep_table_exists($pdo, $prefix . 'cache_devices')) {
+        jsonError('Device cache is not initialized', 503);
     }
 
-    if (!$cachedDeviceJson && !empty($deviceId)) {
-        $stmt = $pdo->prepare("
-            SELECT device_data
-            FROM {$prefix}cache_devices
-            WHERE JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) = :id1
-               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) = :id2
-               OR JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IdInstalledProduct')) = :id3
-            LIMIT 1
-        ");
-        $stmt->execute([
-            ':id1' => $deviceId,
-            ':id2' => $deviceId,
-            ':id3' => $deviceId
-        ]);
-        $cachedDeviceJson = $stmt->fetchColumn() ?: null;
+    $drilldownTableExists = mpsm_deep_table_exists($pdo, $prefix . 'cache_device_drilldown');
+    $cacheDevice = mpsm_deep_load_cached_device($pdo, $prefix, $deviceId, $serialNumber, $customerCode);
+    $device = $cacheDevice['device'] ?? null;
+    $deviceCachedAt = $cacheDevice['cached_at'] ?? null;
+
+    if ($device) {
+        $serialNumber = mpsm_dd_device_serial($device, $serialNumber);
+        $customerCode = mpsm_dd_customer_code($device, $customerCode);
+        $deviceId = mpsm_dd_device_id($device, $deviceId);
     }
 
-    if ($cachedDeviceJson) {
-        $cachedDevice = json_decode($cachedDeviceJson, true);
-        if (is_array($cachedDevice) && !empty($cachedDevice)) {
-            $result['device'] = $cachedDevice;
-            if (empty($serialNumber) && !empty($cachedDevice['SerialNumber'])) {
-                $serialNumber = $cachedDevice['SerialNumber'];
-            }
-            if (empty($customerCode) && !empty($cachedDevice['CustomerCode'])) {
-                $customerCode = $cachedDevice['CustomerCode'];
-            }
-        }
-    }
+    $cacheDrilldown = $drilldownTableExists ? mpsm_deep_load_cached_drilldown($pdo, $prefix, $serialNumber) : null;
+    $drilldown = $cacheDrilldown['drilldown'] ?? null;
 
-    if (!empty($serialNumber)) {
-        $stmt = $pdo->prepare("SELECT drilldown_data FROM {$prefix}cache_device_drilldown WHERE serial_number = :serial LIMIT 1");
-        $stmt->execute([':serial' => $serialNumber]);
-        $cachedDrilldownJson = $stmt->fetchColumn();
-        if ($cachedDrilldownJson) {
-            $decodedDrilldown = json_decode($cachedDrilldownJson, true);
-            if (is_array($decodedDrilldown) && !empty($decodedDrilldown)) {
-                $cachedDrilldownData = $decodedDrilldown;
-                if (!$result['device']) {
-                    $deviceCandidate = extractDeviceFromDrilldown($decodedDrilldown);
-                    if ($deviceCandidate) {
-                        $result['device'] = $deviceCandidate;
-                        if (empty($serialNumber) && !empty($deviceCandidate['SerialNumber'])) {
-                            $serialNumber = $deviceCandidate['SerialNumber'];
-                        }
-                        if (empty($customerCode) && !empty($deviceCandidate['CustomerCode'])) {
-                            $customerCode = $deviceCandidate['CustomerCode'];
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Step 1: Get base device info
-    // Try to get device by searching with FilterText if we have serial number
-    if (!$result['device'] && !empty($serialNumber)) {
-        $deviceData = callMpsApiQuery('Device/List', [
-            'FilterDealerId' => DEFAULT_DEALER_ID,
-            'FilterCustomerCodes' => !empty($customerCode) ? [$customerCode] : null,
-            'FilterText' => $serialNumber,
-            'PageNumber' => 1,
-            'PageRows' => 10,
-            'SortColumn' => 'Id',
-            'SortOrder' => 0
-        ]);
-
-        if ($deviceData) {
-            $devices = $deviceData['Items'] ?? $deviceData['Result'] ?? $deviceData;
-            if (is_array($devices) && !empty($devices)) {
-                $result['device'] = $devices[0];
-            }
-        }
-    }
-
-    // If we didn't find it by serial, try searching by FilterText with deviceId
-    if (!$result['device'] && !empty($deviceId)) {
-        $deviceData = callMpsApiQuery('Device/List', [
-            'FilterDealerId' => DEFAULT_DEALER_ID,
-            'FilterCustomerCodes' => !empty($customerCode) ? [$customerCode] : null,
-            'FilterText' => $deviceId,
-            'PageNumber' => 1,
-            'PageRows' => 10,
-            'SortColumn' => 'Id',
-            'SortOrder' => 0
-        ]);
-
-        if ($deviceData) {
-            $devices = $deviceData['Items'] ?? $deviceData['Result'] ?? $deviceData;
-            if (is_array($devices)) {
-                // Find exact match
-                foreach ($devices as $dev) {
-                    if (($dev['Id'] ?? '') === $deviceId ||
-                        ($dev['IdInstalledProduct'] ?? '') === $deviceId ||
-                        ($dev['DeviceId'] ?? '') === $deviceId) {
-                        $result['device'] = $dev;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Final fallback: fetch directly by device ID
-    if (!$result['device'] && !empty($deviceId)) {
-        $deviceById = callMpsApiQuery('Device/Get', [
-            'Id' => $deviceId
-        ]);
-
-        if ($deviceById && is_array($deviceById)) {
-            $result['device'] = $deviceById;
-        }
-    }
-
-    if (!$result['device'] && $cachedDrilldownData) {
-        $deviceCandidate = extractDeviceFromDrilldown($cachedDrilldownData);
+    if (!$device && $drilldown) {
+        $deviceCandidate = mpsm_dd_extract_device_from_drilldown($drilldown);
         if ($deviceCandidate) {
-            $result['device'] = $deviceCandidate;
-            if (empty($serialNumber) && !empty($deviceCandidate['SerialNumber'])) {
-                $serialNumber = $deviceCandidate['SerialNumber'];
-            }
-            if (empty($customerCode) && !empty($deviceCandidate['CustomerCode'])) {
-                $customerCode = $deviceCandidate['CustomerCode'];
-            }
+            $device = $deviceCandidate;
+            $serialNumber = mpsm_dd_device_serial($device, $serialNumber);
+            $customerCode = mpsm_dd_customer_code($device, $customerCode);
+            $deviceId = mpsm_dd_device_id($device, $deviceId);
         }
     }
 
-    if (!$result['device']) {
-        throw new Exception("Device not found");
-    }
+    $refreshErrors = [];
+    if ($refresh) {
+        $seed = $device ?: [
+            'Id' => $deviceId,
+            'SerialNumber' => $serialNumber,
+            'CustomerCode' => $customerCode
+        ];
+        $enriched = mpsm_dd_enrich_device_payload($seed, [
+            'deviceId' => $deviceId,
+            'serialNumber' => $serialNumber,
+            'customerCode' => $customerCode
+        ]);
+        $drilldown = $enriched['drilldown'];
+        $refreshErrors = $enriched['sectionErrors'] ?? [];
 
-    // Extract info from found device
-    $foundSerial = $result['device']['SerialNumber'] ?? $serialNumber;
-    $foundCustomerCode = $result['device']['CustomerCode'] ?? $customerCode;
+        $deviceCandidate = mpsm_dd_extract_device_from_drilldown($drilldown);
+        if ($deviceCandidate) {
+            $device = $deviceCandidate;
+            $serialNumber = mpsm_dd_device_serial($device, $serialNumber);
+            $customerCode = mpsm_dd_customer_code($device, $customerCode);
+            $deviceId = mpsm_dd_device_id($device, $deviceId);
+        }
 
-    if (!$cachedDrilldownData && !empty($foundSerial)) {
-        $stmt = $pdo->prepare("SELECT drilldown_data FROM {$prefix}cache_device_drilldown WHERE serial_number = :serial LIMIT 1");
-        $stmt->execute([':serial' => $foundSerial]);
-        $cachedDrilldownJson = $stmt->fetchColumn();
-        if ($cachedDrilldownJson) {
-            $decodedDrilldown = json_decode($cachedDrilldownJson, true);
-            if (is_array($decodedDrilldown) && !empty($decodedDrilldown)) {
-                $cachedDrilldownData = $decodedDrilldown;
-            }
+        if ($serialNumber !== '' && $drilldownTableExists) {
+            mpsm_dd_save_drilldown($pdo, $prefix . 'cache_device_drilldown', 'serial_number', $serialNumber, $drilldown);
+            $cacheDrilldown = mpsm_deep_load_cached_drilldown($pdo, $prefix, $serialNumber);
         }
     }
 
-    if ($cachedDrilldownData) {
-        if (!$result['counterDetails']) {
-            $counterArray = extractFirstArray($cachedDrilldownData, ['CounterDetails', 'Counters', 'counterDetails', 'Meters', 'MeterReadings']);
-            if (is_array($counterArray)) {
-                $result['counterDetails'] = [
-                    'CounterDetails' => array_values($counterArray)
-                ];
-            }
-        }
-
-        if (!$result['deviceHealth']) {
-            $actions = extractFirstArray($cachedDrilldownData, ['Actions', 'actions', 'DeviceActions']);
-            if (is_array($actions)) {
-                $result['deviceHealth'] = [
-                    'Actions' => array_values($actions)
-                ];
-            }
-        }
-
-        if (empty($result['supplyAlerts'])) {
-            $alerts = extractFirstArray($cachedDrilldownData, ['SupplyAlerts', 'Alerts', 'SupplyAlertList']);
-            if (is_array($alerts)) {
-                $result['supplyAlerts'] = array_values($alerts);
-            }
-        }
+    if (!$device) {
+        jsonError($refresh ? 'Device not found' : 'Device not found in local cache', 404);
     }
 
-    // Step 2: Get Counter/ListDetailed for detailed meter readings
-    if (!$result['counterDetails'] && !empty($foundSerial) && !empty($foundCustomerCode)) {
-        try {
-            $counterData = callMpsApiQuery('Counter/ListDetailed', [
-                'DealerCode' => DEFAULT_DEALER_CODE,
-                'CustomerCode' => $foundCustomerCode,
-                'SerialNumber' => $foundSerial,
-                'AssetNumber' => null,
-                'CounterDetaildTags' => null
-            ]);
-
-            if ($counterData && is_array($counterData)) {
-                // Find matching device in counter data
-                foreach ($counterData as $counter) {
-                    if (($counter['SerialNumber'] ?? '') === $foundSerial) {
-                        $result['counterDetails'] = $counter;
-                        break;
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            $result['errors'][] = "Counter details: " . $e->getMessage();
-        }
+    if (!$drilldown && $serialNumber !== '' && $drilldownTableExists) {
+        $cacheDrilldown = mpsm_deep_load_cached_drilldown($pdo, $prefix, $serialNumber);
+        $drilldown = $cacheDrilldown['drilldown'] ?? null;
     }
 
-    // Step 3: Get SdsAction/GetDeviceActions for health and recommended actions
-    if (!$result['deviceHealth'] && !empty($foundSerial)) {
-        try {
-            $healthData = callMpsApiQuery('SdsAction/GetDeviceActions', [
-                'DealerCode' => DEFAULT_DEALER_CODE,
-                'DeviceSerialNumber' => $foundSerial
-            ]);
-
-            if ($healthData) {
-                $result['deviceHealth'] = $healthData;
-            }
-        } catch (Exception $e) {
-            $result['errors'][] = "Device health: " . $e->getMessage();
-        }
+    $normalized = mpsm_dd_normalize_payload($device, $drilldown);
+    $panelHistory = mpsm_deep_panel_history($pdo, $prefix, $serialNumber, $deviceId, $customerCode, $historyLimit, $historyOffset, $includeRaw);
+    $sectionErrors = array_merge($normalized['sectionErrors'] ?? [], $refreshErrors);
+    $errors = [];
+    foreach ($sectionErrors as $section => $message) {
+        $errors[] = "{$section}: {$message}";
     }
 
-    // Step 4: Get SupplyAlert/List for this device
-    if (empty($result['supplyAlerts']) && !empty($foundCustomerCode)) {
-        try {
-            $alertData = callMpsApiQuery('SupplyAlert/List', [
-                'DealerId' => DEFAULT_DEALER_ID,
-                'CustomerCodes' => [$foundCustomerCode],
-                'PageNumber' => 1,
-                'PageRows' => 100,
-                'SortColumn' => 'Id',
-                'SortOrder' => 0
-            ]);
+    $response = [
+        'device' => $device,
+        'counterDetails' => $normalized['counterDetails'],
+        'deviceHealth' => $normalized['deviceHealth'],
+        'supplyAlerts' => $normalized['supplyAlerts'],
+        'panelHistory' => $panelHistory,
+        'errors' => $errors,
+        'counters' => $normalized['counters'],
+        'supplies' => $normalized['supplies'],
+        'maintenance' => $normalized['maintenance'],
+        'alerts' => array_merge($normalized['alerts'], [
+            'panel' => $panelHistory['messages']
+        ]),
+        'sectionErrors' => $sectionErrors,
+        'cache' => [
+            'device_cached_at' => $deviceCachedAt,
+            'drilldown_cached_at' => $cacheDrilldown['cached_at'] ?? null,
+            'drilldown_schema_version' => is_array($drilldown) ? ($drilldown['_mpsm']['schemaVersion'] ?? 1) : null,
+            'drilldown_has_alerts' => $cacheDrilldown['has_alerts'] ?? null,
+            'drilldown_has_supplies' => $cacheDrilldown['has_supplies'] ?? null,
+            'refreshed' => $refresh
+        ]
+    ];
 
-            if ($alertData) {
-                $alerts = $alertData['Items'] ?? $alertData['Result'] ?? $alertData;
-                if (is_array($alerts)) {
-                    // Filter alerts for this specific device
-                    $deviceAlerts = array_filter($alerts, function($alert) use ($foundSerial, $deviceId) {
-                        $alertSerial = $alert['SerialNumber'] ?? $alert['DeviceSerialNumber'] ?? '';
-                        $alertDeviceId = $alert['DeviceId'] ?? $alert['IdInstalledProduct'] ?? '';
-                        return $alertSerial === $foundSerial || $alertDeviceId === $deviceId;
-                    });
-                    $result['supplyAlerts'] = array_values($deviceAlerts);
-                }
-            }
-        } catch (Exception $e) {
-            $result['errors'][] = "Supply alerts: " . $e->getMessage();
-        }
+    if ($includeRaw && $drilldown) {
+        $response['drilldownCache'] = $drilldown;
     }
 
-    // Step 5: Get panel message history from database (most recent 150, flexible matching)
-    if (!empty($foundSerial)) {
-        try {
-            $table = DB_PREFIX . 'panel_messages';
-
-            $sql = "SELECT
-                        id,
-                        received_at,
-                        customer_code,
-                        customer_description,
-                        maintenance_alert_code,
-                        maintenance_alert_id,
-                        panel_configuration,
-                        payload,
-                        device_serial,
-                        JSON_EXTRACT(payload, '$.device_serial') AS payload_device_serial,
-                        JSON_EXTRACT(payload, '$.serialNumber') AS payload_serial_number,
-                        JSON_EXTRACT(payload, '$.DeviceSerialNumber') AS payload_device_serial_number,
-                        JSON_EXTRACT(payload, '$.device_id') AS payload_device_id
-                    FROM {$table}
-                    ORDER BY received_at DESC
-                    LIMIT 300";
-
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute();
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $normalizedSerial = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$foundSerial));
-            $normalizedDeviceId = $deviceId ? strtolower((string)$deviceId) : '';
-
-            // Preload alert definitions for human-readable names
-            $alertDisplay = [];
-            try {
-                $defsTable = DB_PREFIX . 'alert_definitions';
-                $defsStmt = $pdo->query("SELECT alert_code, display_name, description FROM {$defsTable} WHERE enabled = 1");
-                foreach ($defsStmt->fetchAll(PDO::FETCH_ASSOC) as $def) {
-                    $code = $def['alert_code'] ?? '';
-                    if ($code !== '') {
-                        $alertDisplay[$code] = $def['display_name'] ?: ($def['description'] ?: $code);
-                    }
-                }
-            } catch (Throwable $e) {
-                error_log('[device-deep-dive] Failed to load alert definitions: ' . $e->getMessage());
-            }
-
-            $messages = [];
-            foreach ($rows as $row) {
-                $decodedPayload = json_decode($row['payload'], true);
-
-                $payloadSerials = [];
-                if (is_array($decodedPayload)) {
-                    foreach (['device_serial', 'serialNumber', 'DeviceSerialNumber', 'serial_number'] as $key) {
-                        if (!empty($decodedPayload[$key])) {
-                            $payloadSerials[] = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$decodedPayload[$key]));
-                        }
-                    }
-                }
-
-                $rowSerial = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)($row['device_serial'] ?? '')));
-                $payloadDeviceId = '';
-                if (is_array($decodedPayload)) {
-                    foreach (['device_id', 'DeviceId'] as $key) {
-                        if (!empty($decodedPayload[$key])) {
-                            $payloadDeviceId = strtolower((string)$decodedPayload[$key]);
-                            break;
-                        }
-                    }
-                }
-
-                $matchesSerial = $normalizedSerial && ($rowSerial === $normalizedSerial || in_array($normalizedSerial, $payloadSerials, true));
-                $matchesDeviceId = $normalizedDeviceId && $payloadDeviceId === $normalizedDeviceId;
-
-                if (!$matchesSerial && !$matchesDeviceId) {
-                    continue;
-                }
-
-                $messages[] = [
-                    'id' => (int)$row['id'],
-                    'received_at' => $row['received_at'],
-                    'customer_code' => $row['customer_code'],
-                    'customer_description' => $row['customer_description'],
-                    'maintenance_alert_code' => $row['maintenance_alert_code'],
-                    'maintenance_alert_id' => $row['maintenance_alert_id'],
-                    'panel_configuration' => $row['panel_configuration'],
-                    'display_name' => $alertDisplay[$row['maintenance_alert_code'] ?? ''] ?? ($decodedPayload['maintenanceAlert']['description'] ?? $decodedPayload['MaintenanceAlert_Description'] ?? $row['panel_configuration'] ?? $row['maintenance_alert_code'] ?? 'Alert'),
-                    'payload' => $decodedPayload ?? $row['payload']
-                ];
-            }
-
-            $result['panelHistory'] = [
-                'total' => count($messages),
-                'messages' => array_slice($messages, 0, 150)
-            ];
-        } catch (Exception $e) {
-            $result['errors'][] = "Panel history: " . $e->getMessage();
-        }
-    }
-
-    if ($cachedDrilldownData) {
-        $result['drilldownCache'] = $cachedDrilldownData;
-    }
-
-    jsonSuccess($result);
-
-} catch (Exception $e) {
-    jsonError("Failed to fetch device data: " . $e->getMessage());
+    jsonSuccess($response);
+} catch (Throwable $e) {
+    error_log('[device-deep-dive] ' . $e->getMessage());
+    jsonError('Failed to fetch device data: ' . $e->getMessage());
 }
 
 /*
 CHANGELOG
-2025-11-28 Codex
-- Broadened panel message matching (case-insensitive serials and payload serial/device IDs), increased history window, and post-filtered results so drill-down modals surface active maintenance/system alerts reliably without unrelated rows.
-*/
-
-/*
-CHANGELOG
-2025-11-28 Codex
-- Broadened panel message matching (case-insensitive serials and payload serial/device IDs) and increased history window so drill-down modals surface active maintenance/system alerts.
+2026-05-21 Codex
+- Reworked device drill-down as cache-first by default, added targeted refresh,
+  normalized maintenance/supply/counter/alert sections, and replaced the global
+  latest-300 panel scan with indexed device history plus bounded fallback.
 */
