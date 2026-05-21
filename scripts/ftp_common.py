@@ -13,7 +13,10 @@ from typing import Iterable, Iterator
 
 
 DEFAULT_HOST = "ftp.resolutionsbydesign.us"
-DEFAULT_REMOTE_ROOT = "/"
+# NOTE:
+# The production web app is served from /public_html/mpsm.resolutionsbydesign.us.
+# Using "/" as a default can deploy to the account root instead of the live site root.
+DEFAULT_REMOTE_ROOT = "/public_html/mpsm.resolutionsbydesign.us"
 
 
 DEPLOY_EXCLUDES = [

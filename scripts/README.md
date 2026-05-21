@@ -35,6 +35,9 @@ python3 scripts/run_checks.py
 python3 scripts/ftp_backup.py
 python3 scripts/ftp_deploy.py --delete
 python3 scripts/live_smoke.py
+
+# Optional authenticated smoke checks (verifies dashboard and command-center markers)
+MPSM_SMOKE_USER=admin MPSM_SMOKE_PASSWORD=admin python3 scripts/live_smoke.py
 ```
 
 `ftp_backup.py` backs up the live FTP tree before deployment. It skips files that vanish between the FTP directory listing and download, which can happen with volatile server log files.
@@ -43,7 +46,7 @@ FTP scripts read credentials from environment variables or `.runtime/ftp.env`:
 
 ```text
 MPSM_FTP_HOST=ftp.resolutionsbydesign.us
-MPSM_FTP_ROOT=/
+MPSM_FTP_ROOT=/public_html/mpsm.resolutionsbydesign.us
 MPSM_FTP_USER=<FTP_USER>
 MPSM_FTP_PASSWORD=<FTP_PASSWORD>
 ```

@@ -2,7 +2,7 @@
 
 Agents ship to the live site themselves only after explicit user approval. Current path is direct FTP using portable Python scripts. Do not use PowerShell-only deployment scripts.
 
-This working tree currently has no configured git remote and no `.github/workflows/deploy.yml`; treat GitHub Actions deployment references as historical unless a future repo state restores them.
+GitHub Actions workflow files may exist, but direct FTP via the Python scripts remains the authoritative deployment path for operator-run deploys in this repository.
 
 ## Direct FTP Upload
 - Set `MPSM_FTP_HOST`, `MPSM_FTP_USER`, `MPSM_FTP_PASSWORD`, and optionally `MPSM_FTP_ROOT` in `.runtime/ftp.env` or the process environment.

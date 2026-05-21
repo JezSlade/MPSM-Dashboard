@@ -10,7 +10,7 @@ Current deployment is direct FTP through portable Python scripts. Historical not
 - PHP available either as `php` or through `flatpak-spawn --host php`.
 - FTP credentials outside the repo, in environment variables or ignored `.runtime/ftp.env`:
   - `MPSM_FTP_HOST=ftp.resolutionsbydesign.us`
-  - `MPSM_FTP_ROOT=/`
+  - `MPSM_FTP_ROOT=/public_html/mpsm.resolutionsbydesign.us`
   - `MPSM_FTP_USER=...`
   - `MPSM_FTP_PASSWORD=...`
 
