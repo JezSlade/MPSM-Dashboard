@@ -19,6 +19,31 @@ let controlsInitialized = false;
 let definitionFormBound = false;
 let visibilityHandlerBound = false;
 
+function getScopeRoot() {
+    if (alertCenterRoot && document.contains(alertCenterRoot)) {
+        return alertCenterRoot;
+    }
+    return document;
+}
+
+function scopedById(id) {
+    const root = getScopeRoot();
+    if (root && typeof root.querySelector === 'function') {
+        const inRoot = root.querySelector(`#${id}`);
+        if (inRoot) {
+            return inRoot;
+        }
+    }
+    return document.getElementById(id);
+}
+
+function scopedQueryAll(selector) {
+    const root = getScopeRoot();
+    return root && typeof root.querySelectorAll === 'function'
+        ? Array.from(root.querySelectorAll(selector))
+        : [];
+}
+
 // Severity Configuration
 const SEVERITY_CONFIG = {
     critical: {
@@ -90,8 +115,8 @@ function loadCurrentTab(silent = false) {
 }
 
 function activateTab(target, shouldLoad = true) {
-    const tabButtons = document.querySelectorAll('.monitor-tab-btn');
-    const tabPanels = document.querySelectorAll('.tab-panel');
+    const tabButtons = scopedQueryAll('.monitor-tab-btn');
+    const tabPanels = scopedQueryAll('.tab-panel');
     currentTab = target;
 
     tabButtons.forEach((btn) => {
@@ -125,7 +150,7 @@ function mountAlertCenter(options = {}) {
         controlsInitialized = true;
     }
     if (!definitionFormBound) {
-        const definitionForm = document.getElementById('definition-form');
+        const definitionForm = scopedById('definition-form');
         if (definitionForm) {
             definitionForm.addEventListener('submit', handleDefinitionSubmit);
         }
@@ -150,7 +175,7 @@ function mountAlertCenter(options = {}) {
 
     if (mountOptions.customerCode) {
         syncNotificationCustomer(mountOptions.customerCode);
-        const panelFilter = document.getElementById('cc-panel-customer');
+        const panelFilter = scopedById('cc-panel-customer');
         if (panelFilter) {
             panelFilter.value = mountOptions.customerCode;
         }
@@ -172,11 +197,12 @@ function unmountAlertCenter() {
     isMounted = false;
     stopAutoRefresh();
     stopPanelAutoRefresh();
+    alertCenterRoot = null;
 }
 
 // Tab Switching
 function initializeTabs() {
-    const tabButtons = document.querySelectorAll('.monitor-tab-btn');
+    const tabButtons = scopedQueryAll('.monitor-tab-btn');
 
     tabButtons.forEach((button) => {
         button.addEventListener('click', () => {
@@ -189,7 +215,7 @@ function initializeTabs() {
 // Initialize Controls
 function initializeControls() {
     // Notification severity filter
-    const filterSelect = document.getElementById('notification-filter');
+    const filterSelect = scopedById('notification-filter');
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
             notificationFilter = e.target.value;
@@ -198,11 +224,11 @@ function initializeControls() {
     }
 
     // Notification customer filter (populate with Names, value=Code)
-    const customerFilterSelect = document.getElementById('notification-customer-filter');
+    const customerFilterSelect = scopedById('notification-customer-filter');
     if (customerFilterSelect) {
         customerFilterSelect.addEventListener('change', (e) => {
             notificationCustomerFilter = e.target.value;
-            const panelCustomer = document.getElementById('cc-panel-customer');
+            const panelCustomer = scopedById('cc-panel-customer');
             if (panelCustomer) {
                 panelCustomer.value = notificationCustomerFilter;
                 panelOffset = 0;
@@ -216,7 +242,7 @@ function initializeControls() {
     }
 
     // Auto-refresh toggle
-    const autoRefreshCheckbox = document.getElementById('notification-auto-refresh');
+    const autoRefreshCheckbox = scopedById('notification-auto-refresh');
     if (autoRefreshCheckbox) {
         autoRefreshCheckbox.addEventListener('change', (e) => {
             if (e.target.checked) {
@@ -228,7 +254,7 @@ function initializeControls() {
     }
 
     // Create rule button
-    const createRuleBtn = document.getElementById('create-rule-btn');
+    const createRuleBtn = scopedById('create-rule-btn');
     if (createRuleBtn) {
         createRuleBtn.addEventListener('click', () => {
             openRuleModal();
@@ -236,20 +262,20 @@ function initializeControls() {
     }
 
     // Rule form submission
-    const ruleForm = document.getElementById('rule-form');
+    const ruleForm = scopedById('rule-form');
     if (ruleForm) {
         ruleForm.addEventListener('submit', handleRuleSubmit);
     }
 
     // Statistics sort
-    const statsSort = document.getElementById('stats-sort');
+    const statsSort = scopedById('stats-sort');
     if (statsSort) {
         statsSort.addEventListener('change', () => {
             loadStatistics();
         });
     }
 
-    const notifLoadMore = document.getElementById('notification-load-more');
+    const notifLoadMore = scopedById('notification-load-more');
     if (notifLoadMore) {
         notifLoadMore.addEventListener('click', () => {
             notifLoadMore.disabled = true;
@@ -260,7 +286,7 @@ function initializeControls() {
 
 function syncNotificationCustomer(code) {
     notificationCustomerFilter = (code || '').trim();
-    const notifSel = document.getElementById('notification-customer-filter');
+    const notifSel = scopedById('notification-customer-filter');
     if (notifSel) {
         notifSel.value = notificationCustomerFilter;
     }
@@ -290,7 +316,8 @@ function stopAutoRefresh() {
 // ========================================
 
 async function loadNotifications(silent = false, append = false) {
-    const container = document.getElementById('notifications-container');
+    const container = scopedById('notifications-container');
+    if (!container) return;
 
     if (!silent && !append) {
         container.innerHTML = '<div class="loading">Loading notifications...</div>';
@@ -348,7 +375,7 @@ async function loadNotifications(silent = false, append = false) {
         renderNotifications(append ? (lastRenderedNotifications().concat(grouped)) : grouped);
         populateCustomerFilter(data.notifications || []);
 
-        const loadMoreBtn = document.getElementById('notification-load-more');
+        const loadMoreBtn = scopedById('notification-load-more');
         if (loadMoreBtn) {
             if (notifications.length >= NOTIFICATION_PAGE_SIZE) {
                 loadMoreBtn.style.display = 'inline-flex';
@@ -365,7 +392,8 @@ async function loadNotifications(silent = false, append = false) {
 }
 
 function lastRenderedNotifications() {
-    const cards = document.querySelectorAll('#notifications-container .notification-card');
+    const container = scopedById('notifications-container');
+    const cards = container ? container.querySelectorAll('.notification-card') : [];
     return Array.from(cards).map(card => ({
         id: Number(card.dataset.id),
         severity: card.dataset.severity,
@@ -378,7 +406,7 @@ function lastRenderedNotifications() {
 }
 
 function populateCustomerFilter(notifications) {
-    const customerFilter = document.getElementById('notification-customer-filter');
+    const customerFilter = scopedById('notification-customer-filter');
     if (!customerFilter) return;
 
     // Extract unique customers
@@ -438,7 +466,8 @@ function groupNotificationsForDisplay(notifications) {
 }
 
 function renderNotifications(notifications) {
-    const container = document.getElementById('notifications-container');
+    const container = scopedById('notifications-container');
+    if (!container) return;
 
     if (notifications.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i> No active notifications</div>';
@@ -558,7 +587,8 @@ async function dismissNotification(id) {
 // ========================================
 
 async function loadRules(silent = false) {
-    const container = document.getElementById('rules-container');
+    const container = scopedById('rules-container');
+    if (!container) return;
 
     if (!silent) {
         container.innerHTML = '<div class="loading">Loading rules...</div>';
@@ -595,7 +625,8 @@ async function loadRules(silent = false) {
 }
 
 function renderRules(rules) {
-    const container = document.getElementById('rules-container');
+    const container = scopedById('rules-container');
+    if (!container) return;
 
     if (rules.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-cog"></i> No notification rules configured. Create your first rule to get started!</div>';
@@ -735,9 +766,10 @@ function editRule(id) {
 
 // Rule Modal Management
 function openRuleModal(rule = null) {
-    const modal = document.getElementById('rule-modal');
-    const form = document.getElementById('rule-form');
-    const title = document.getElementById('rule-modal-title');
+    const modal = scopedById('rule-modal');
+    const form = scopedById('rule-form');
+    const title = scopedById('rule-modal-title');
+    if (!modal || !form || !title) return;
 
     // Reset form
     form.reset();
@@ -748,32 +780,33 @@ function openRuleModal(rule = null) {
     if (rule) {
         // Edit mode
         title.textContent = 'Edit Notification Rule';
-        document.getElementById('rule-id').value = rule.id;
-        document.getElementById('rule-name').value = rule.name || '';
-        document.getElementById('rule-description').value = rule.description || '';
-        document.getElementById('rule-severity').value = rule.severity || 'warning';
-        document.getElementById('rule-alert-pattern').value = rule.alert_code_pattern || '';
-        document.getElementById('rule-device-pattern').value = rule.device_serial_pattern || '';
-        document.getElementById('rule-customer-pattern').value = rule.customer_code_pattern || '';
-        document.getElementById('rule-freq-count').value = rule.frequency_count || '';
-        document.getElementById('rule-freq-window').value = rule.frequency_window_hours || '';
-        document.getElementById('rule-freq-type').value = rule.frequency_type || 'same_device';
-        document.getElementById('rule-title').value = rule.notification_title || '';
-        document.getElementById('rule-message').value = rule.notification_message || '';
-        document.getElementById('rule-show-dashboard').checked = rule.show_dashboard == 1;
-        document.getElementById('rule-auto-dismiss').value = rule.auto_dismiss_hours || '';
+        scopedById('rule-id').value = rule.id;
+        scopedById('rule-name').value = rule.name || '';
+        scopedById('rule-description').value = rule.description || '';
+        scopedById('rule-severity').value = rule.severity || 'warning';
+        scopedById('rule-alert-pattern').value = rule.alert_code_pattern || '';
+        scopedById('rule-device-pattern').value = rule.device_serial_pattern || '';
+        scopedById('rule-customer-pattern').value = rule.customer_code_pattern || '';
+        scopedById('rule-freq-count').value = rule.frequency_count || '';
+        scopedById('rule-freq-window').value = rule.frequency_window_hours || '';
+        scopedById('rule-freq-type').value = rule.frequency_type || 'same_device';
+        scopedById('rule-title').value = rule.notification_title || '';
+        scopedById('rule-message').value = rule.notification_message || '';
+        scopedById('rule-show-dashboard').checked = rule.show_dashboard == 1;
+        scopedById('rule-auto-dismiss').value = rule.auto_dismiss_hours || '';
     } else {
         // Create mode
         title.textContent = 'Create Notification Rule';
-        document.getElementById('rule-id').value = '';
-        document.getElementById('rule-show-dashboard').checked = true;
+        scopedById('rule-id').value = '';
+        scopedById('rule-show-dashboard').checked = true;
     }
 
     modal.style.display = 'flex';
 }
 
 function closeRuleModal() {
-    const modal = document.getElementById('rule-modal');
+    const modal = scopedById('rule-modal');
+    if (!modal) return;
     modal.style.display = 'none';
 }
 
@@ -838,7 +871,8 @@ async function handleRuleSubmit(e) {
 // ========================================
 
 async function loadStatistics(silent = false) {
-    const container = document.getElementById('statistics-container');
+    const container = scopedById('statistics-container');
+    if (!container) return;
 
     if (!silent) {
         container.innerHTML = '<div class="loading">Loading statistics...</div>';
@@ -875,14 +909,15 @@ async function loadStatistics(silent = false) {
 }
 
 function renderStatistics(aggregations) {
-    const container = document.getElementById('statistics-container');
+    const container = scopedById('statistics-container');
+    if (!container) return;
 
     if (!Array.isArray(aggregations) || aggregations.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-chart-bar"></i> No alert data available</div>';
         return;
     }
 
-    const sortBy = document.getElementById('stats-sort')?.value || 'recent';
+    const sortBy = scopedById('stats-sort')?.value || 'recent';
     const sorted = [...aggregations].sort((a, b) => {
         if (sortBy === 'recent') return new Date(b.last_occurrence_ny) - new Date(a.last_occurrence_ny);
         if (sortBy === 'frequent') return (b.occurrence_count || 0) - (a.occurrence_count || 0);
@@ -1079,9 +1114,9 @@ async function ensurePatternSuggestions() {
 
 function populatePatternDatalists() {
     try {
-        const alertList = document.getElementById('alert-code-options');
-        const deviceList = document.getElementById('device-serial-options');
-        const customerList = document.getElementById('customer-code-options');
+        const alertList = scopedById('alert-code-options');
+        const deviceList = scopedById('device-serial-options');
+        const customerList = scopedById('customer-code-options');
         if (!alertList || !deviceList || !customerList) return;
 
         alertList.innerHTML = _patternSuggestions.alerts.map(a => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} - ${escapeHtml(a.name)}</option>`).join('');
@@ -1141,13 +1176,13 @@ let panelOffset = 0;
 let panelHasNext = false;
 
 function initPanelTab() {
-    const refreshBtn = document.getElementById('cc-panel-refresh');
-    const limitSel = document.getElementById('cc-panel-limit');
-    const hoursSel = document.getElementById('cc-panel-hours');
-    const customerInput = document.getElementById('cc-panel-customer');
-    const prevBtn = document.getElementById('cc-panel-prev');
-    const nextBtn = document.getElementById('cc-panel-next');
-    const pageBadge = document.getElementById('cc-panel-page');
+    const refreshBtn = scopedById('cc-panel-refresh');
+    const limitSel = scopedById('cc-panel-limit');
+    const hoursSel = scopedById('cc-panel-hours');
+    const customerInput = scopedById('cc-panel-customer');
+    const prevBtn = scopedById('cc-panel-prev');
+    const nextBtn = scopedById('cc-panel-next');
+    const pageBadge = scopedById('cc-panel-page');
 
     if (!refreshBtn || !limitSel || !hoursSel) return;
 
@@ -1208,14 +1243,14 @@ function stopPanelAutoRefresh() {
 }
 
 async function loadPanelMessages() {
-    const tbody = document.getElementById('cc-panel-tbody');
-    const last = document.getElementById('cc-panel-last-refresh');
-    const limitSel = document.getElementById('cc-panel-limit');
-    const hoursSel = document.getElementById('cc-panel-hours');
-    const customerInput = document.getElementById('cc-panel-customer');
-    const pageBadge = document.getElementById('cc-panel-page');
-    const prevBtn = document.getElementById('cc-panel-prev');
-    const nextBtn = document.getElementById('cc-panel-next');
+    const tbody = scopedById('cc-panel-tbody');
+    const last = scopedById('cc-panel-last-refresh');
+    const limitSel = scopedById('cc-panel-limit');
+    const hoursSel = scopedById('cc-panel-hours');
+    const customerInput = scopedById('cc-panel-customer');
+    const pageBadge = scopedById('cc-panel-page');
+    const prevBtn = scopedById('cc-panel-prev');
+    const nextBtn = scopedById('cc-panel-next');
     if (!tbody) return;
 
     const limit = getPanelLimit();
@@ -1254,13 +1289,13 @@ async function loadPanelMessages() {
 }
 
 function getPanelLimit() {
-    const limitSel = document.getElementById('cc-panel-limit');
+    const limitSel = scopedById('cc-panel-limit');
     const limit = parseInt(limitSel?.value || '200', 10);
     return Number.isNaN(limit) ? 200 : limit;
 }
 
 function renderPanelRows(rows) {
-    const tbody = document.getElementById('cc-panel-tbody');
+    const tbody = scopedById('cc-panel-tbody');
     if (!tbody) return;
     if (!rows || rows.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6">No panel messages captured yet.</td></tr>';
@@ -1333,7 +1368,7 @@ const DEFINITIONS_PAGE_SIZE = 200;
 let definitionsOffset = 0;
 
 async function loadDefinitions(silent = false, append = false) {
-    const container = document.getElementById('definitions-container');
+    const container = scopedById('definitions-container');
     if (!container) return;
     if (!append) {
         definitionsOffset = 0;
@@ -1412,7 +1447,7 @@ async function loadDefinitions(silent = false, append = false) {
 
         definitionsOffset += defs.length;
 
-        const loadMoreBtn = document.getElementById('definitions-load-more');
+        const loadMoreBtn = scopedById('definitions-load-more');
         if (loadMoreBtn) {
             if (defs.length >= DEFINITIONS_PAGE_SIZE) {
                 loadMoreBtn.style.display = 'inline-flex';
@@ -1427,30 +1462,32 @@ async function loadDefinitions(silent = false, append = false) {
 }
 
 function openDefinitionModal(definition = null) {
-    const modal = document.getElementById('definition-modal');
-    const form = document.getElementById('definition-form');
-    const title = document.getElementById('definition-modal-title');
+    const modal = scopedById('definition-modal');
+    const form = scopedById('definition-form');
+    const title = scopedById('definition-modal-title');
+    if (!modal || !form || !title) return;
 
     form.reset();
 
     if (definition) {
         title.textContent = 'Edit Alert Label';
-        document.getElementById('definition-id').value = definition.id;
-        document.getElementById('definition-alert-code').value = definition.alert_code || '';
-        document.getElementById('definition-display-name').value = definition.display_name || '';
-        document.getElementById('definition-category').value = definition.category || '';
-        document.getElementById('definition-severity').value = definition.severity_override || '';
-        document.getElementById('definition-description').value = definition.description || '';
+        scopedById('definition-id').value = definition.id;
+        scopedById('definition-alert-code').value = definition.alert_code || '';
+        scopedById('definition-display-name').value = definition.display_name || '';
+        scopedById('definition-category').value = definition.category || '';
+        scopedById('definition-severity').value = definition.severity_override || '';
+        scopedById('definition-description').value = definition.description || '';
     } else {
         title.textContent = 'Create Alert Label';
-        document.getElementById('definition-id').value = '';
+        scopedById('definition-id').value = '';
     }
 
     modal.style.display = 'flex';
 }
 
 function closeDefinitionModal() {
-    const modal = document.getElementById('definition-modal');
+    const modal = scopedById('definition-modal');
+    if (!modal) return;
     modal.style.display = 'none';
 }
 

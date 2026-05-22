@@ -1,8 +1,13 @@
 # Deployment Instructions (Current)
 
-Agents ship to the live site themselves only after explicit user approval. Current path is direct FTP using portable Python scripts. Do not use PowerShell-only deployment scripts.
+Agents ship to the live site themselves only after explicit user approval. Current primary path is `git push origin main` through the active GitHub Actions workflow (`.github/workflows/deploy.yml`).
 
-GitHub Actions workflow files may exist, but direct FTP via the Python scripts remains the authoritative deployment path for operator-run deploys in this repository.
+Direct FTP via Python scripts remains available for operator-driven manual sync/recovery, but it is not the default path while workflow deploy is active.
+
+## Primary Deploy (GitHub Actions)
+- Validate local state: `python3 scripts/run_checks.py`.
+- Push: `git push origin main`.
+- Wait for workflow completion and confirm no failed steps.
 
 ## Direct FTP Upload
 - Set `MPSM_FTP_HOST`, `MPSM_FTP_USER`, `MPSM_FTP_PASSWORD`, and optionally `MPSM_FTP_ROOT` in `.runtime/ftp.env` or the process environment.
@@ -35,6 +40,6 @@ CHANGELOG
 - Clarified expected cache results and deprecated HTTP deploy trigger.
 2026-05-20 Codex
 - Replaced PowerShell FTP guidance with portable Python backup, deploy, and smoke-test scripts.
-2026-05-20 Codex
-- Removed GitHub Actions as the default path for this working tree, documented chunked cache refresh as current post-deploy path, and recorded current live/staging cache counts.
+2026-05-22 Codex
+- Restored docs to reflect active GitHub Actions deployment via `git push origin main`; kept FTP scripts as manual fallback.
 */

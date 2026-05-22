@@ -1,8 +1,8 @@
 # Deployment Guide
 
-Verified: 2026-05-20.
+Verified: 2026-05-22.
 
-Current deployment is direct FTP through portable Python scripts. Historical notes in this folder mention GitHub Actions and PowerShell deployment, but this working tree currently has no git remote and no `.github/workflows/deploy.yml`.
+Current deployment uses `git push origin main` with the active GitHub Actions workflow (`.github/workflows/deploy.yml`). Direct FTP scripts remain available as manual fallback/recovery.
 
 ## Prerequisites
 
@@ -16,7 +16,16 @@ Current deployment is direct FTP through portable Python scripts. Historical not
 
 Do not commit `.env`, `cms/config.php`, `.runtime/ftp.env`, backups, cache, logs, or lock files.
 
-## Standard FTP Deployment
+## Primary Deployment (GitHub Actions)
+
+```bash
+python3 scripts/run_checks.py
+git push origin main
+```
+
+Then monitor the workflow run and verify live endpoints.
+
+## Manual FTP Deployment (Fallback)
 
 Run from repo root:
 

@@ -23,6 +23,7 @@ const MPSM = (function() {
         connectorsSummary: null,
         totalDevices: 0,
         offlineDevices: 0,
+        offlineSource: 'none',
         connectorsTotal: 0,
         alertsTotal: 0,
         activeNotificationsTotal: 0,
@@ -1128,7 +1129,8 @@ const MPSM = (function() {
 
         if (cardId === 'device-inventory') {
             const snapshotDevices = Array.isArray(snapshot.context?.devices) ? snapshot.context.devices : [];
-            if (snapshotDevices.length && (state.devices.length === 0 || snapshotDevices.length >= state.devices.length)) {
+            const hasSnapshotDevices = Array.isArray(snapshot.context?.devices);
+            if (hasSnapshotDevices) {
                 state.devices = snapshotDevices;
             }
 
@@ -1145,15 +1147,16 @@ const MPSM = (function() {
 
             const metricOffline = snapshot.metrics?.find(metric => metric.label === 'Offline');
             const offlineFromMetric = Number(metricOffline?.value ?? 0);
-            const offlineFromState = Array.isArray(state.devices)
-                ? state.devices.filter(device => isDeviceOffline(device)).length
+            const offlineFromSnapshot = hasSnapshotDevices
+                ? snapshotDevices.filter(device => isDeviceOffline(device)).length
                 : 0;
             const fallbackOffline = Number(state.offlineDevices ?? 0);
-            const offlineCount = Array.isArray(state.devices) && state.devices.length
-                ? offlineFromState
+            const offlineCount = hasSnapshotDevices
+                ? offlineFromSnapshot
                 : (Number.isFinite(offlineFromMetric) ? offlineFromMetric : fallbackOffline);
 
             state.offlineDevices = offlineCount;
+            state.offlineSource = hasSnapshotDevices ? 'device_inventory_snapshot' : 'device_inventory_metric';
             updateMetricValue('offline-count', offlineCount);
         }
 
@@ -2013,6 +2016,7 @@ const MPSM = (function() {
      */
     async function loadDashboard() {
         try {
+            state.offlineSource = 'none';
             if (typeof CardManager !== 'undefined' && typeof CardManager.setContext === 'function') {
                 CardManager.setContext({
                     dealerCode: state.dealerCode,
@@ -2149,9 +2153,7 @@ const MPSM = (function() {
                 0
             );
 
-            const offlineCount = Array.isArray(state.devices) && state.devices.length
-                ? state.devices.filter(device => isDeviceOffline(device)).length
-                : 0;
+            const offlineCount = Number(state.offlineDevices ?? 0);
 
             const bannerDeviceCount = document.getElementById('banner-device-total');
             if (bannerDeviceCount) {
@@ -2268,7 +2270,15 @@ const MPSM = (function() {
 
                 const offlineCount = customerDevices.filter(device => isDeviceOffline(device)).length;
 
+                // If card snapshot already provided a scoped offline count, do not overwrite it
+                // with a broader/stale cache response.
+                if (state.offlineSource === 'device_inventory_snapshot') {
+                    debugLog('Skipping cache offline overwrite; snapshot count already applied', 'info');
+                    return;
+                }
+
                 state.offlineDevices = offlineCount;
+                state.offlineSource = 'cached_devices';
                 updateMetricValue('offline-count', offlineCount);
 
                 debugLog(`Updated offline count: ${offlineCount} offline devices for customer ${activeCustomerCode || 'all'}`, 'info');
@@ -2312,6 +2322,7 @@ const MPSM = (function() {
                 hydrateDeviceLookup([]);
                 state.totalDevices = Math.max(Number(state.totalDevices ?? 0), 0);
                 state.offlineDevices = 0;
+                state.offlineSource = 'device_list';
                 updateMetricValue('device-count', state.totalDevices);
                 updateMetricValue('banner-device-total', state.totalDevices);
                 updateMetricValue('offline-count', state.offlineDevices);
@@ -2337,6 +2348,7 @@ const MPSM = (function() {
 
             const offlineCount = state.devices.filter(device => isDeviceOffline(device)).length;
             state.offlineDevices = offlineCount;
+            state.offlineSource = 'device_list';
             updateMetricValue('offline-count', offlineCount);
 
             container.innerHTML = '';

@@ -41,6 +41,6 @@ Examples of historical documents:
 ## Known Documentation Gaps
 
 - PHP CLI is available from this environment through `flatpak-spawn --host php`; `scripts/run_checks.py` also loads ignored MySQL extensions from `.runtime/php-ext/` when present.
-- There is no active `.github/workflows/deploy.yml` and no configured git remote in this working tree.
+- Deployment is currently driven by `git push origin main` via the active `.github/workflows/deploy.yml`. Keep docs aligned with that workflow unless the operator explicitly switches to FTP scripts.
 - Several historical docs reference deployment or API helper secrets; these should be rotated and moved into environment variables.
 - Some generated reference files under `output/` are useful for API work but should be regenerated from `Swagger.json` when the vendor API changes.
