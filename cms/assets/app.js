@@ -1023,7 +1023,13 @@ const MPSM = (function() {
                 return;
             }
 
-            const alertCenterTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'tools', 'statistics']);
+            if (tab === 'tools') {
+                switchTab('admin');
+                switchAdminSection('tools');
+                return;
+            }
+
+            const alertCenterTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'statistics']);
             if (alertCenterTabs.has(tab)) {
                 switchTab('alerts');
                 if (window.AlertCenter && typeof window.AlertCenter.mount === 'function') {

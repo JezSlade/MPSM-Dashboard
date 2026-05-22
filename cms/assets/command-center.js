@@ -18,6 +18,40 @@ let tabsInitialized = false;
 let controlsInitialized = false;
 let definitionFormBound = false;
 let visibilityHandlerBound = false;
+const REQUEST_TIMEOUTS = {
+    initial: 30000,
+    refresh: 15000,
+    background: 12000
+};
+const requestGuards = {
+    notifications: { token: 0, controller: null, loaded: false, loading: false, lastData: null },
+    panel: { token: 0, controller: null, loaded: false, loading: false, lastData: null },
+    rules: { token: 0, controller: null, loaded: false, loading: false, lastData: null },
+    definitions: { token: 0, controller: null, loaded: false, loading: false, lastData: null },
+    statistics: { token: 0, controller: null, loaded: false, loading: false, lastData: null },
+    customers: { token: 0, controller: null, loaded: false, loading: false, lastData: null }
+};
+
+const NOTIFICATION_COLUMNS = [
+    { key: 'severity', label: 'Severity', sortable: true, required: true, sticky: true },
+    { key: 'device_serial', label: 'Device', sortable: true, required: true, sticky: true },
+    { key: 'customer_description', label: 'Customer', sortable: true },
+    { key: 'department', label: 'Department', sortable: true },
+    { key: 'model', label: 'Model', sortable: true },
+    { key: 'ip_address', label: 'IP Address', sortable: true },
+    { key: 'alert_display_name', label: 'Alert', sortable: true },
+    { key: 'message', label: 'Message', sortable: false },
+    { key: '_count_1h', label: 'Count (1h)', sortable: true },
+    { key: 'created_at_ny', label: 'Created', sortable: true },
+    { key: 'actions', label: 'Actions', sortable: false, required: true }
+];
+const COLUMN_STORAGE_KEY = 'mpsm.alerts.notification.columns.v1';
+const SORT_STORAGE_KEY = 'mpsm.alerts.notification.sort.v1';
+const FILTER_STORAGE_KEY = 'mpsm.alerts.notification.filters.v1';
+let notificationSort = { key: 'created_at_ny', direction: 'desc' };
+let notificationColumnVisibility = {};
+let notificationSearchFilter = '';
+let notificationStatusFilter = 'active';
 
 function getScopeRoot() {
     if (alertCenterRoot && document.contains(alertCenterRoot)) {
@@ -42,6 +76,87 @@ function scopedQueryAll(selector) {
     return root && typeof root.querySelectorAll === 'function'
         ? Array.from(root.querySelectorAll(selector))
         : [];
+}
+
+function loadStoredNotificationState() {
+    try {
+        const colsRaw = localStorage.getItem(COLUMN_STORAGE_KEY);
+        if (colsRaw) {
+            const parsed = JSON.parse(colsRaw);
+            if (parsed && typeof parsed === 'object') {
+                notificationColumnVisibility = parsed;
+            }
+        }
+        const sortRaw = localStorage.getItem(SORT_STORAGE_KEY);
+        if (sortRaw) {
+            const parsed = JSON.parse(sortRaw);
+            if (parsed && parsed.key && (parsed.direction === 'asc' || parsed.direction === 'desc')) {
+                notificationSort = parsed;
+            }
+        }
+        const filtersRaw = localStorage.getItem(FILTER_STORAGE_KEY);
+        if (filtersRaw) {
+            const parsed = JSON.parse(filtersRaw);
+            if (parsed && typeof parsed === 'object') {
+                notificationSearchFilter = typeof parsed.deviceSearch === 'string' ? parsed.deviceSearch : '';
+                notificationStatusFilter = typeof parsed.status === 'string' ? parsed.status : 'active';
+                notificationFilter = typeof parsed.severity === 'string' ? parsed.severity : '';
+                notificationCustomerFilter = typeof parsed.customerCode === 'string' ? parsed.customerCode.trim() : notificationCustomerFilter;
+            }
+        }
+    } catch (_error) {
+        notificationColumnVisibility = {};
+        notificationSort = { key: 'created_at_ny', direction: 'desc' };
+    }
+}
+
+function saveNotificationColumns() {
+    try {
+        localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(notificationColumnVisibility));
+    } catch (_error) {}
+}
+
+function saveNotificationSort() {
+    try {
+        localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(notificationSort));
+    } catch (_error) {}
+}
+
+function saveNotificationFilters() {
+    try {
+        localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({
+            severity: notificationFilter || '',
+            status: notificationStatusFilter || 'active',
+            deviceSearch: notificationSearchFilter || '',
+            customerCode: notificationCustomerFilter || ''
+        }));
+    } catch (_error) {}
+}
+
+function isNotificationColumnVisible(columnKey) {
+    const column = NOTIFICATION_COLUMNS.find(c => c.key === columnKey);
+    if (!column) return false;
+    if (column.required) return true;
+    if (!(columnKey in notificationColumnVisibility)) {
+        return true;
+    }
+    return notificationColumnVisibility[columnKey] !== false;
+}
+
+function getRequestTimeout(sectionName, silent) {
+    const section = requestGuards[sectionName];
+    if (!section || !section.loaded) {
+        return REQUEST_TIMEOUTS.initial;
+    }
+    return silent ? REQUEST_TIMEOUTS.background : REQUEST_TIMEOUTS.refresh;
+}
+
+function abortSectionRequest(sectionName) {
+    const section = requestGuards[sectionName];
+    if (section && section.controller) {
+        section.controller.abort();
+        section.controller = null;
+    }
 }
 
 // Severity Configuration
@@ -127,6 +242,10 @@ function activateTab(target, shouldLoad = true) {
         panel.classList.toggle('active', panel.dataset.tab === target);
     });
 
+    if (target !== 'panel') {
+        abortSectionRequest('panel');
+    }
+
     if (shouldLoad) {
         loadCurrentTab();
     }
@@ -140,6 +259,7 @@ function mountAlertCenter(options = {}) {
     }
 
     alertCenterRoot = root;
+    loadStoredNotificationState();
 
     if (!tabsInitialized) {
         initializeTabs();
@@ -181,7 +301,7 @@ function mountAlertCenter(options = {}) {
         }
     }
 
-    const validTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'tools', 'statistics']);
+    const validTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'statistics']);
     if (mountOptions.initialTab && validTabs.has(mountOptions.initialTab)) {
         activateTab(mountOptions.initialTab, true);
     } else {
@@ -197,6 +317,7 @@ function unmountAlertCenter() {
     isMounted = false;
     stopAutoRefresh();
     stopPanelAutoRefresh();
+    Object.keys(requestGuards).forEach(abortSectionRequest);
     alertCenterRoot = null;
 }
 
@@ -217,8 +338,10 @@ function initializeControls() {
     // Notification severity filter
     const filterSelect = scopedById('notification-filter');
     if (filterSelect) {
+        filterSelect.value = notificationFilter || '';
         filterSelect.addEventListener('change', (e) => {
             notificationFilter = e.target.value;
+            saveNotificationFilters();
             loadNotifications();
         });
     }
@@ -228,6 +351,7 @@ function initializeControls() {
     if (customerFilterSelect) {
         customerFilterSelect.addEventListener('change', (e) => {
             notificationCustomerFilter = e.target.value;
+            saveNotificationFilters();
             const panelCustomer = scopedById('cc-panel-customer');
             if (panelCustomer) {
                 panelCustomer.value = notificationCustomerFilter;
@@ -238,7 +362,7 @@ function initializeControls() {
                 loadPanelMessages();
             }
         });
-        loadCustomerOptionsForCC(customerFilterSelect);
+        loadCustomerOptionsForCC();
     }
 
     // Auto-refresh toggle
@@ -290,6 +414,11 @@ function syncNotificationCustomer(code) {
     if (notifSel) {
         notifSel.value = notificationCustomerFilter;
     }
+    const panelSel = scopedById('cc-panel-customer');
+    if (panelSel) {
+        panelSel.value = notificationCustomerFilter;
+    }
+    saveNotificationFilters();
 }
 
 // Auto-refresh Management
@@ -297,6 +426,9 @@ function startAutoRefresh() {
     stopAutoRefresh();
     autoRefreshInterval = setInterval(() => {
         if (!isMounted) {
+            return;
+        }
+        if (currentTab === 'panel') {
             return;
         }
         loadCurrentTab(true);
@@ -319,52 +451,65 @@ async function loadNotifications(silent = false, append = false) {
     const container = scopedById('notifications-container');
     if (!container) return;
 
-    if (!silent && !append) {
+    const guard = requestGuards.notifications;
+    if (guard.loading && !append) {
+        return;
+    }
+
+    if (!silent && !append && !guard.loaded) {
         container.innerHTML = '<div class="loading">Loading notifications...</div>';
     }
 
+    if (!append) {
+        notificationOffset = 0;
+    }
+
+    const params = new URLSearchParams({ action: 'get_notifications', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
+    if (notificationStatusFilter) {
+        params.set('status', notificationStatusFilter);
+    }
+    if (notificationFilter) {
+        params.set('severity', notificationFilter);
+    }
+    if (notificationCustomerFilter) {
+        params.set('customerCode', notificationCustomerFilter);
+    }
+
+    const token = ++guard.token;
+    const controller = new AbortController();
+    const timeoutMs = getRequestTimeout('notifications', silent);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    guard.controller = controller;
+    guard.loading = true;
+
     try {
-        if (!append) {
-            notificationOffset = 0;
-        }
-
-        const params = new URLSearchParams({ action: 'get_notifications', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
-        if (notificationFilter) {
-            params.set('severity', notificationFilter);
-        }
-        if (notificationCustomerFilter) {
-            params.set('customerCode', notificationCustomerFilter);
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
         const response = await fetch(`api/command-center.php?${params.toString()}`, {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
             signal: controller.signal
         });
 
-        clearTimeout(timeoutId);
-
+        if (token !== guard.token) {
+            return;
+        }
         if (!response.ok) {
             throw new Error(`Request failed with status ${response.status}`);
         }
 
         const data = await response.json();
-
+        if (token !== guard.token) {
+            return;
+        }
         if (!data.success) {
             throw new Error(data.error || 'Failed to load notifications');
         }
 
-        // Group duplicate notifications (same device + alert) into a single card
         const notifications = Array.isArray(data.notifications) ? data.notifications : [];
         notificationOffset += notifications.length;
         const grouped = groupNotificationsForDisplay(notifications);
 
-        // Enrich with 1h aggregation counts for accurate last-hour tallies
         const agg = await ensureAggregationsMap();
-        grouped.forEach(n => {
+        grouped.forEach((n) => {
             const key = `${n.device_serial || ''}|${n.alert_code || ''}`;
             const a = agg.get(key);
             if (a) {
@@ -372,66 +517,366 @@ async function loadNotifications(silent = false, append = false) {
             }
         });
 
-        renderNotifications(append ? (lastRenderedNotifications().concat(grouped)) : grouped);
-        populateCustomerFilter(data.notifications || []);
+        const nextRows = append
+            ? (((guard.lastData && Array.isArray(guard.lastData.rows)) ? guard.lastData.rows : []).concat(grouped))
+            : grouped;
 
-        const loadMoreBtn = scopedById('notification-load-more');
-        if (loadMoreBtn) {
-            if (notifications.length >= NOTIFICATION_PAGE_SIZE) {
-                loadMoreBtn.style.display = 'inline-flex';
-                loadMoreBtn.disabled = false;
-            } else {
-                loadMoreBtn.style.display = 'none';
-            }
-        }
+        const filtered = applyNotificationClientFilters(nextRows);
+        const sorted = sortNotifications(filtered);
+        guard.lastData = { rows: nextRows };
+        guard.loaded = true;
+
+        renderNotifications(sorted);
+        updateNotificationLoadMore(notifications.length);
     } catch (error) {
+        if (token !== guard.token) {
+            return;
+        }
         console.error('Error loading notifications:', error);
+        const hasCachedRows = guard.lastData && Array.isArray(guard.lastData.rows) && guard.lastData.rows.length > 0;
+        if (hasCachedRows) {
+            const filtered = applyNotificationClientFilters(guard.lastData.rows);
+            const sorted = sortNotifications(filtered);
+            renderNotifications(sorted, error.name === 'AbortError' ? 'Showing cached data while refresh retries.' : 'Showing cached data; latest refresh failed.');
+            return;
+        }
         const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
-        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(errorMsg)}</div>`;
+    } finally {
+        clearTimeout(timeoutId);
+        if (guard.controller === controller) {
+            guard.controller = null;
+        }
+        guard.loading = false;
     }
 }
 
-function lastRenderedNotifications() {
-    const container = scopedById('notifications-container');
-    const cards = container ? container.querySelectorAll('.notification-card') : [];
-    return Array.from(cards).map(card => ({
-        id: Number(card.dataset.id),
-        severity: card.dataset.severity,
-        title: card.querySelector('.notification-title')?.textContent || '',
-        message: card.querySelector('.notification-message')?.textContent || '',
-        created_at_ny: card.querySelector('.notification-time')?.textContent || '',
-        device_serial: card.querySelector('.notification-device')?.textContent || '',
-        status: card.classList.contains('acknowledged') ? 'acknowledged' : 'active'
-    }));
+function updateNotificationLoadMore(pageSizeReturned) {
+    const loadMoreBtn = scopedById('notification-load-more');
+    if (!loadMoreBtn) return;
+    if (pageSizeReturned >= NOTIFICATION_PAGE_SIZE) {
+        loadMoreBtn.style.display = 'inline-flex';
+        loadMoreBtn.disabled = false;
+    } else {
+        loadMoreBtn.style.display = 'none';
+    }
 }
 
-function populateCustomerFilter(notifications) {
-    const customerFilter = scopedById('notification-customer-filter');
-    if (!customerFilter) return;
+function applyNotificationClientFilters(rows) {
+    const sourceRows = Array.isArray(rows) ? rows : [];
+    return sourceRows.filter((row) => {
+        if (notificationSearchFilter) {
+            const haystack = [
+                row.device_serial,
+                row.equipment_id,
+                row.customer_description,
+                row.customer_code,
+                row.message,
+                row.alert_display_name,
+                row.ip_address
+            ].join(' ').toLowerCase();
+            if (!haystack.includes(notificationSearchFilter.toLowerCase())) {
+                return false;
+            }
+        }
+        if (notificationStatusFilter && row.status !== notificationStatusFilter) {
+            return false;
+        }
+        if (notificationFilter && row.severity !== notificationFilter) {
+            return false;
+        }
+        return true;
+    });
+}
 
-    // Extract unique customers
-    const customers = new Map();
-    notifications.forEach(n => {
-        if (n.customer_code) {
-            customers.set(n.customer_code, n.customer_description || n.customer_code);
+function sortNotifications(rows) {
+    const list = [...rows];
+    const direction = notificationSort.direction === 'asc' ? 1 : -1;
+    const key = notificationSort.key || 'created_at_ny';
+    list.sort((a, b) => {
+        let av;
+        let bv;
+        if (key === 'created_at_ny') {
+            av = Date.parse(a.created_at_ny || '') || 0;
+            bv = Date.parse(b.created_at_ny || '') || 0;
+        } else if (key === '_count_1h') {
+            av = Number(a._count_1h || 0);
+            bv = Number(b._count_1h || 0);
+        } else if (key === 'severity') {
+            const rank = { critical: 4, high: 3, warning: 2, info: 1 };
+            av = rank[a.severity] || 0;
+            bv = rank[b.severity] || 0;
+        } else {
+            av = String(a[key] ?? '').toLowerCase();
+            bv = String(b[key] ?? '').toLowerCase();
+        }
+        if (av < bv) return -1 * direction;
+        if (av > bv) return 1 * direction;
+        return 0;
+    });
+    return list;
+}
+
+function getProblemDevices(rows) {
+    const severityRank = { critical: 4, high: 3, warning: 2, info: 1 };
+    const tallies = new Map();
+    rows.forEach((row) => {
+        const serial = row.device_serial || row.equipment_id || 'Unknown Device';
+        if (!tallies.has(serial)) {
+            tallies.set(serial, { serial, count: 0, severity: row.severity || 'info', ip: row.ip_address || '', customer: row.customer_description || row.customer_code || '' });
+        }
+        const current = tallies.get(serial);
+        current.count += Number(row._count_1h || row._aggregatedTriggers || 1);
+        if ((severityRank[row.severity] || 0) > (severityRank[current.severity] || 0)) {
+            current.severity = row.severity;
         }
     });
+    return Array.from(tallies.values()).sort((a, b) => b.count - a.count).slice(0, 6);
+}
 
-    // Sort by customer description
-    const sortedCustomers = Array.from(customers.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+function renderSeverityPill(severity) {
+    const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.info;
+    return `<span class="severity-pill severity-${escapeHtml(severity || 'info')}"><i class="fas fa-${config.icon}"></i> ${escapeHtml(config.label)}</span>`;
+}
 
-    // Preserve current selection
-    const currentValue = customerFilter.value;
+function renderNotifications(notifications, staleMessage = '') {
+    const container = scopedById('notifications-container');
+    if (!container) return;
 
-    // Rebuild options
-    customerFilter.innerHTML = '<option value="">All Customers</option>' +
-        sortedCustomers.map(([code, desc]) =>
-            `<option value="${escapeHtml(code)}">${escapeHtml(desc)}</option>`
-        ).join('');
+    const rows = Array.isArray(notifications) ? notifications : [];
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i> No active notifications</div>';
+        return;
+    }
 
-    // Restore selection if still valid
-    if (currentValue && customers.has(currentValue)) {
-        customerFilter.value = currentValue;
+    const visibleColumns = NOTIFICATION_COLUMNS.filter((column) => isNotificationColumnVisible(column.key));
+    const problemDevices = getProblemDevices(rows);
+    const settingsOpen = scopedById('notifications-settings-panel')?.classList.contains('active');
+
+    const problemStrip = problemDevices.length
+        ? `<div class="problem-strip">${problemDevices.map((item) => `
+                <button class="problem-chip" type="button" data-device-filter="${escapeHtml(item.serial)}">
+                    ${renderSeverityPill(item.severity)}
+                    <span class="problem-chip-serial">${escapeHtml(item.serial)}</span>
+                    <span class="problem-chip-count">${item.count} events</span>
+                </button>
+            `).join('')}</div>`
+        : '';
+
+    const controls = `
+        <div class="notifications-toolbar">
+            <div class="notifications-toolbar-left">
+                <button id="toggle-notification-settings" class="btn btn-secondary btn-small" type="button">
+                    <i class="fas fa-sliders-h"></i> Columns & Filters
+                </button>
+                ${staleMessage ? `<span class="notification-stale"><i class="fas fa-clock"></i> ${escapeHtml(staleMessage)}</span>` : ''}
+            </div>
+            <div class="notifications-toolbar-right">
+                <span class="badge">${rows.length} rows</span>
+            </div>
+        </div>
+    `;
+
+    const settingsPanel = `
+        <aside id="notifications-settings-panel" class="notifications-settings-panel${settingsOpen ? ' active' : ''}">
+            <div class="settings-group">
+                <h4>Filters</h4>
+                <label>Severity
+                    <select id="notif-settings-severity" class="form-control">
+                        <option value="">All Severities</option>
+                        <option value="critical" ${notificationFilter === 'critical' ? 'selected' : ''}>Critical</option>
+                        <option value="high" ${notificationFilter === 'high' ? 'selected' : ''}>High</option>
+                        <option value="warning" ${notificationFilter === 'warning' ? 'selected' : ''}>Warning</option>
+                        <option value="info" ${notificationFilter === 'info' ? 'selected' : ''}>Info</option>
+                    </select>
+                </label>
+                <label>Status
+                    <select id="notif-settings-status" class="form-control">
+                        <option value="active" ${notificationStatusFilter === 'active' ? 'selected' : ''}>Active</option>
+                        <option value="acknowledged" ${notificationStatusFilter === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
+                        <option value="dismissed" ${notificationStatusFilter === 'dismissed' ? 'selected' : ''}>Dismissed</option>
+                    </select>
+                </label>
+                <label>Device Search
+                    <input id="notif-settings-search" class="form-control" type="search" value="${escapeHtml(notificationSearchFilter)}" placeholder="Serial / IP / customer">
+                </label>
+            </div>
+            <div class="settings-group">
+                <h4>Visible Columns</h4>
+                <div class="column-chooser">
+                    ${NOTIFICATION_COLUMNS.map((column) => `
+                        <label>
+                            <input type="checkbox" data-column-key="${escapeHtml(column.key)}" ${isNotificationColumnVisible(column.key) ? 'checked' : ''} ${column.required ? 'disabled' : ''}>
+                            ${escapeHtml(column.label)}
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        </aside>
+    `;
+
+    const tableHtml = `
+        <div class="table-wrapper notification-table-wrapper">
+            <table class="table notification-table">
+                <thead>
+                    <tr>
+                        ${visibleColumns.map((column, idx) => {
+                            const sortableClass = column.sortable ? 'is-sortable' : '';
+                            const sortedClass = notificationSort.key === column.key ? `sorted-${notificationSort.direction}` : '';
+                            const stickyClass = column.sticky ? `sticky-col sticky-col-${idx + 1}` : '';
+                            const icon = notificationSort.key === column.key ? (notificationSort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+                            return `<th class="${sortableClass} ${sortedClass} ${stickyClass}" data-sort-key="${escapeHtml(column.key)}">${escapeHtml(column.label)}${column.sortable ? ` <i class="fas ${icon}"></i>` : ''}</th>`;
+                        }).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map((row) => `
+                        <tr data-notification-id="${row.id}">
+                            ${visibleColumns.map((column, idx) => {
+                                const stickyClass = column.sticky ? `sticky-col sticky-col-${idx + 1}` : '';
+                                return `<td class="${stickyClass}">${renderNotificationCell(row, column.key)}</td>`;
+                            }).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = `<div class="notifications-layout">${controls}${problemStrip}<div class="notifications-workspace">${settingsPanel}<div class="notifications-table-area">${tableHtml}</div></div></div>`;
+    bindNotificationTableInteractions();
+}
+
+function renderNotificationCell(row, key) {
+    if (key === 'severity') return renderSeverityPill(row.severity);
+    if (key === 'device_serial') {
+        const serial = row.device_serial || 'N/A';
+        const customer = row.customer_code || notificationCustomerFilter || '';
+        return `<button class="btn-link notification-device-link" type="button" data-serial="${escapeHtml(serial)}" data-device-id="${escapeHtml(row.device_identifier || '')}" data-customer-code="${escapeHtml(customer)}">${escapeHtml(serial)}</button>`;
+    }
+    if (key === 'ip_address') {
+        if (!row.ip_address) return 'N/A';
+        const href = /^https?:\/\//i.test(row.ip_address) ? row.ip_address : `http://${row.ip_address}`;
+        return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(row.ip_address)}</a>`;
+    }
+    if (key === 'message') return `<span class="notification-message-cell">${escapeHtml(row.message || '')}</span>`;
+    if (key === '_count_1h') return `<strong>${Number(row._count_1h || row._aggregatedTriggers || 0)}</strong>`;
+    if (key === 'created_at_ny') return escapeHtml(formatTimestamp(row.created_at_ny));
+    if (key === 'actions') {
+        return row.status === 'active'
+            ? `<div class="notification-actions-inline">
+                    <button class="btn-icon" data-action="ack" data-id="${row.id}" title="Acknowledge"><i class="fas fa-check"></i></button>
+                    <button class="btn-icon" data-action="dismiss" data-id="${row.id}" title="Dismiss"><i class="fas fa-times"></i></button>
+               </div>`
+            : `<span class="text-muted">${escapeHtml(row.status || '')}</span>`;
+    }
+    return escapeHtml(row[key] ?? '');
+}
+
+function bindNotificationTableInteractions() {
+    const container = scopedById('notifications-container');
+    if (!container) return;
+
+    container.querySelectorAll('th[data-sort-key]').forEach((header) => {
+        header.addEventListener('click', () => {
+            const key = header.getAttribute('data-sort-key');
+            const column = NOTIFICATION_COLUMNS.find((item) => item.key === key);
+            if (!column || !column.sortable) return;
+            if (notificationSort.key === key) {
+                notificationSort.direction = notificationSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                notificationSort = { key, direction: 'desc' };
+            }
+            saveNotificationSort();
+            const rows = requestGuards.notifications.lastData?.rows || [];
+            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
+        });
+    });
+
+    const settingsBtn = scopedById('toggle-notification-settings');
+    const settingsPanel = scopedById('notifications-settings-panel');
+    if (settingsBtn && settingsPanel) {
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.toggle('active');
+        });
+    }
+
+    container.querySelectorAll('input[data-column-key]').forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => {
+            const key = event.target.getAttribute('data-column-key');
+            notificationColumnVisibility[key] = event.target.checked;
+            saveNotificationColumns();
+            const rows = requestGuards.notifications.lastData?.rows || [];
+            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
+        });
+    });
+
+    const severitySel = scopedById('notif-settings-severity');
+    if (severitySel) {
+        severitySel.addEventListener('change', (event) => {
+            notificationFilter = event.target.value || '';
+            const topFilter = scopedById('notification-filter');
+            if (topFilter) topFilter.value = notificationFilter;
+            notificationOffset = 0;
+            saveNotificationFilters();
+            loadNotifications();
+        });
+    }
+
+    const statusSel = scopedById('notif-settings-status');
+    if (statusSel) {
+        statusSel.addEventListener('change', (event) => {
+            notificationStatusFilter = event.target.value || 'active';
+            notificationOffset = 0;
+            saveNotificationFilters();
+            loadNotifications();
+        });
+    }
+
+    const searchInput = scopedById('notif-settings-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (event) => {
+            notificationSearchFilter = event.target.value || '';
+            saveNotificationFilters();
+            const rows = requestGuards.notifications.lastData?.rows || [];
+            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
+        });
+    }
+
+    container.querySelectorAll('button[data-device-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            notificationSearchFilter = btn.getAttribute('data-device-filter') || '';
+            saveNotificationFilters();
+            const rows = requestGuards.notifications.lastData?.rows || [];
+            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
+        });
+    });
+
+    container.querySelectorAll('.notification-device-link').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const serial = btn.getAttribute('data-serial') || '';
+            const deviceId = btn.getAttribute('data-device-id') || '';
+            const customerCode = btn.getAttribute('data-customer-code') || notificationCustomerFilter || '';
+            if (window.MPSM && typeof window.MPSM.openDeviceModal === 'function' && document.getElementById('device-modal')) {
+                window.MPSM.openDeviceModal({
+                    deviceId: deviceId || null,
+                    serialNumber: serial || null,
+                    customerCode: customerCode || null
+                });
+            } else {
+                const target = customerCode
+                    ? `index.php?tab=dashboard&customerCode=${encodeURIComponent(customerCode)}`
+                    : 'index.php?tab=dashboard';
+                window.open(target, '_blank', 'noopener');
+            }
+        });
+    });
+
+    container.querySelectorAll('button[data-action="ack"]').forEach((btn) => {
+        btn.addEventListener('click', () => acknowledgeNotification(Number(btn.getAttribute('data-id'))));
+    });
+    container.querySelectorAll('button[data-action="dismiss"]').forEach((btn) => {
+        btn.addEventListener('click', () => dismissNotification(Number(btn.getAttribute('data-id'))));
     }
 }
 
@@ -463,65 +908,6 @@ function groupNotificationsForDisplay(notifications) {
 
     // Preserve order by severity/priority then time similar to API default
     return Array.from(grouped.values()).sort((a, b) => (b.priority || 0) - (a.priority || 0));
-}
-
-function renderNotifications(notifications) {
-    const container = scopedById('notifications-container');
-    if (!container) return;
-
-    if (notifications.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i> No active notifications</div>';
-        return;
-    }
-
-    const html = notifications.map(notif => {
-        const config = SEVERITY_CONFIG[notif.severity] || SEVERITY_CONFIG.info;
-        const statusClass = notif.status === 'acknowledged' ? 'acknowledged' : '';
-        const triggerCount = notif._aggregatedTriggers || notif.trigger_count || 0;
-        const count1h = typeof notif._count_1h === 'number' ? notif._count_1h : null;
-
-        return `
-            <div class="notification-card ${statusClass}" data-id="${notif.id}" data-severity="${notif.severity}">
-                <div class="notification-header">
-                    <div class="notification-icon" style="color: ${config.color}">
-                        <i class="fas fa-${config.icon}"></i>
-                    </div>
-                    <div class="notification-content">
-                        <div class="notification-title">${escapeHtml(notif.title)}</div>
-                        <div class="notification-meta">
-                            <span class="badge badge-${notif.severity}">${config.label}</span>
-                            <span class="notification-time">${formatTimestamp(notif.created_at_ny)}</span>
-                            ${notif.device_serial ? `<span class="notification-device"><i class="fas fa-hdd"></i> ${escapeHtml(notif.device_serial)}</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="notification-actions">
-                        ${notif.status === 'active' ? `
-                            <button class="btn-icon" onclick="acknowledgeNotification(${notif.id})" title="Acknowledge">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn-icon" onclick="dismissNotification(${notif.id})" title="Dismiss">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-                <div class="notification-message">${escapeHtml(notif.message)}</div>
-                ${count1h !== null ? `
-                    <div class="notification-stats">
-                        <span><i class="fas fa-chart-line"></i> ${count1h} occurrences</span>
-                        <span><i class=\"fas fa-clock\"></i> Last 1h</span>
-                    </div>
-                ` : (triggerCount > 1 ? `
-                    <div class="notification-stats">
-                        <span><i class=\"fas fa-chart-line\"></i> ${triggerCount} occurrences</span>
-                        ${notif.time_window_hours ? `<span><i class=\"fas fa-clock\"></i> Last ${notif.time_window_hours} hours</span>` : ''}
-                    </div>
-                ` : '')}
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = html;
 }
 
 async function acknowledgeNotification(id) {
@@ -589,38 +975,54 @@ async function dismissNotification(id) {
 async function loadRules(silent = false) {
     const container = scopedById('rules-container');
     if (!container) return;
+    const guard = requestGuards.rules;
+    if (guard.loading) return;
 
-    if (!silent) {
+    if (!silent && !guard.loaded) {
         container.innerHTML = '<div class="loading">Loading rules...</div>';
     }
 
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const token = ++guard.token;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getRequestTimeout('rules', silent));
+    guard.controller = controller;
+    guard.loading = true;
 
+    try {
         const response = await fetch('api/command-center.php?action=get_rules', {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
             signal: controller.signal
         });
-
-        clearTimeout(timeoutId);
+        if (token !== guard.token) return;
 
         if (!response.ok) {
             throw new Error(`Request failed with status ${response.status}`);
         }
 
         const data = await response.json();
+        if (token !== guard.token) return;
 
         if (!data.success) {
             throw new Error(data.error || 'Failed to load rules');
         }
 
+        guard.lastData = data.rules || [];
+        guard.loaded = true;
         renderRules(data.rules || []);
     } catch (error) {
+        if (token !== guard.token) return;
         console.error('Error loading rules:', error);
+        if (Array.isArray(guard.lastData) && guard.lastData.length > 0) {
+            renderRules(guard.lastData);
+            return;
+        }
         const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
-        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(errorMsg)}</div>`;
+    } finally {
+        clearTimeout(timeoutId);
+        if (guard.controller === controller) guard.controller = null;
+        guard.loading = false;
     }
 }
 
@@ -873,38 +1275,54 @@ async function handleRuleSubmit(e) {
 async function loadStatistics(silent = false) {
     const container = scopedById('statistics-container');
     if (!container) return;
+    const guard = requestGuards.statistics;
+    if (guard.loading) return;
 
-    if (!silent) {
+    if (!silent && !guard.loaded) {
         container.innerHTML = '<div class="loading">Loading statistics...</div>';
     }
 
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const token = ++guard.token;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getRequestTimeout('statistics', silent));
+    guard.controller = controller;
+    guard.loading = true;
 
+    try {
         const response = await fetch('api/command-center.php?action=get_aggregations&group_by=alert_only', {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
             signal: controller.signal
         });
-
-        clearTimeout(timeoutId);
+        if (token !== guard.token) return;
 
         if (!response.ok) {
             throw new Error(`Request failed with status ${response.status}`);
         }
 
         const data = await response.json();
+        if (token !== guard.token) return;
 
         if (!data.success) {
             throw new Error(data.error || 'Failed to load statistics');
         }
 
+        guard.lastData = data.aggregations || [];
+        guard.loaded = true;
         renderStatistics(data.aggregations || []);
     } catch (error) {
+        if (token !== guard.token) return;
         console.error('Error loading statistics:', error);
+        if (Array.isArray(guard.lastData) && guard.lastData.length > 0) {
+            renderStatistics(guard.lastData);
+            return;
+        }
         const errorMsg = error.name === 'AbortError' ? 'Request timed out' : error.message;
-        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</div>`;
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(errorMsg)}</div>`;
+    } finally {
+        clearTimeout(timeoutId);
+        if (guard.controller === controller) guard.controller = null;
+        guard.loading = false;
     }
 }
 
@@ -1019,7 +1437,7 @@ async function ensureAggregationsMap() {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), getRequestTimeout('statistics', true));
         const res = await fetch('api/command-center.php?action=get_aggregations&limit=1000', {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
@@ -1055,13 +1473,13 @@ async function ensurePatternSuggestions() {
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        const timeout = setTimeout(() => controller.abort(), getRequestTimeout('customers', true));
 
         // Fetch alert definitions, recent aggregations, and customers (for names)
         const [defsRes, aggsRes, custRes] = await Promise.all([
             fetch('api/command-center.php?action=get_alert_definitions&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal }),
             fetch('api/command-center.php?action=get_aggregations&limit=500', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal }),
-            fetch('api/get-customers.php', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal })
+            fetch('api/command-center.php?action=get_customers', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: controller.signal })
         ]);
 
         clearTimeout(timeout);
@@ -1092,8 +1510,8 @@ async function ensurePatternSuggestions() {
         }
         if (cust.success && Array.isArray(cust.customers)) {
             cust.customers.forEach(c => {
-                const code = c.Code || c.code;
-                const name = c.Description || c.description || '';
+                const code = c.customer_code || c.Code || c.code;
+                const name = c.customer_description || c.Description || c.description || '';
                 if (code && !customerPairs.has(code)) customerPairs.set(code, name);
             });
         }
@@ -1128,29 +1546,72 @@ function populatePatternDatalists() {
 }
 
 // Populate Active Notifications customer filter with Names (value=Code)
-async function loadCustomerOptionsForCC(selectEl) {
-    try {
-        // Keep first option (All Customers)
-        while (selectEl.options.length > 1) selectEl.remove(1);
+async function loadCustomerOptionsForCC() {
+    const notifSelect = scopedById('notification-customer-filter');
+    const panelSelect = scopedById('cc-panel-customer');
+    if (!notifSelect && !panelSelect) return;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch('api/get-customers.php', { credentials: 'same-origin', headers: { 'Accept': 'application/json' }, signal: controller.signal });
-        clearTimeout(timeoutId);
-        const data = res.ok ? await res.json() : { success: false };
-        if (data.success && Array.isArray(data.customers)) {
-            data.customers.forEach(c => {
-                const code = c.Code || c.code;
-                const name = c.Description || c.description || code;
+    const guard = requestGuards.customers;
+    if (guard.loading) return;
+
+    const applyOptions = (customers) => {
+        const normalized = Array.isArray(customers) ? customers : [];
+        const hydrate = (selectEl) => {
+            if (!selectEl) return;
+            while (selectEl.options.length > 1) selectEl.remove(1);
+            normalized.forEach((item) => {
+                const code = item.customer_code || item.Code || item.code;
+                const name = item.customer_description || item.Description || item.description || code;
                 if (!code) return;
                 const opt = document.createElement('option');
                 opt.value = code;
                 opt.textContent = name;
                 selectEl.appendChild(opt);
             });
+        };
+        hydrate(notifSelect);
+        hydrate(panelSelect);
+
+        const defaultCode = (notificationCustomerFilter || (window.currentCustomerCode || '')).trim();
+        if (defaultCode) {
+            if (notifSelect) notifSelect.value = defaultCode;
+            if (panelSelect) panelSelect.value = defaultCode;
+            notificationCustomerFilter = defaultCode;
+        }
+    };
+
+    let timeoutId = null;
+    try {
+        if (guard.lastData && Array.isArray(guard.lastData.customers) && guard.lastData.customers.length > 0) {
+            applyOptions(guard.lastData.customers);
+            return;
+        }
+
+        const token = ++guard.token;
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), getRequestTimeout('customers', false));
+        guard.controller = controller;
+        guard.loading = true;
+
+        const res = await fetch('api/command-center.php?action=get_customers', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
+        });
+        if (token !== guard.token) return;
+        const data = res.ok ? await res.json() : { success: false };
+        if (token !== guard.token) return;
+        if (data.success && Array.isArray(data.customers)) {
+            guard.lastData = { customers: data.customers };
+            guard.loaded = true;
+            applyOptions(data.customers);
         }
     } catch (e) {
         console.warn('Failed to load customers for filter:', e);
+    } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+        guard.loading = false;
+        guard.controller = null;
     }
 }
 
@@ -1191,7 +1652,6 @@ function initPanelTab() {
     hoursSel.onchange = () => { panelOffset = 0; loadPanelMessages(); };
     if (customerInput) {
         customerInput.onchange = () => { panelOffset = 0; loadPanelMessages(); syncNotificationCustomer(customerInput.value); };
-        customerInput.onkeyup = (e) => { if (e.key === 'Enter') { panelOffset = 0; loadPanelMessages(); syncNotificationCustomer(customerInput.value); } };
     }
 
     if (customerInput && notificationCustomerFilter) {
@@ -1220,6 +1680,7 @@ function initPanelTab() {
         pageBadge.textContent = 'Page 1';
     }
 
+    loadCustomerOptionsForCC();
     loadPanelMessages();
 }
 
@@ -1252,6 +1713,10 @@ async function loadPanelMessages() {
     const prevBtn = scopedById('cc-panel-prev');
     const nextBtn = scopedById('cc-panel-next');
     if (!tbody) return;
+    const guard = requestGuards.panel;
+    if (guard.loading) {
+        return;
+    }
 
     const limit = getPanelLimit();
     const params = new URLSearchParams({ limit: String(limit), offset: String(panelOffset) });
@@ -1260,17 +1725,24 @@ async function loadPanelMessages() {
     if (customerCode) params.set('customerCode', customerCode);
 
     panelHasNext = false;
+    const token = ++guard.token;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getRequestTimeout('panel', false));
+    guard.controller = controller;
+    guard.loading = true;
+
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
         const res = await fetch('api/get-panel-messages.php?' + params.toString(), {
             credentials: 'same-origin', headers: { 'Accept': 'application/json' }, signal: controller.signal
         });
-        clearTimeout(timeoutId);
+        if (token !== guard.token) return;
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        if (token !== guard.token) return;
         if (!data.success) throw new Error(data.error || 'Failed to load panel messages');
         panelCache = data.messages || [];
+        guard.lastData = panelCache;
+        guard.loaded = true;
         panelHasNext = panelCache.length === limit;
         renderPanelRows(panelCache);
         if (last) last.textContent = 'Last refresh: ' + new Date().toLocaleTimeString() + ' • Auto 30s';
@@ -1281,10 +1753,20 @@ async function loadPanelMessages() {
         if (prevBtn) prevBtn.disabled = panelOffset === 0;
         if (nextBtn) nextBtn.disabled = !panelHasNext;
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</td></tr>`;
+        if (token !== guard.token) return;
+        if (Array.isArray(guard.lastData) && guard.lastData.length > 0) {
+            renderPanelRows(guard.lastData);
+            if (last) last.textContent = 'Showing cached data • refresh retry pending';
+            return;
+        }
+        tbody.innerHTML = `<tr><td colspan="6"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message || 'Failed to load panel stream')}</td></tr>`;
         if (last) last.textContent = 'Error';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
+    } finally {
+        clearTimeout(timeoutId);
+        if (guard.controller === controller) guard.controller = null;
+        guard.loading = false;
     }
 }
 
@@ -1307,6 +1789,13 @@ function renderPanelRows(rows) {
             row.customer_description ? `<div>${escapeHtml(row.customer_description)}</div>` : ''
         ].join('');
         const displayName = row.display_name || row.panel_configuration || row.maintenance_alert_code || 'Alert';
+        const serial = row.device_serial || '';
+        const deviceCell = serial
+            ? `<button class="btn-link notification-device-link panel-device-link" type="button" data-action="open-device" data-serial="${escapeHtml(serial)}" data-device-id="${escapeHtml(row.equipment_id || '')}" data-customer-code="${escapeHtml(row.customer_code || notificationCustomerFilter || '')}">${escapeHtml(serial)}</button>`
+            : '';
+        const ipCell = row.ip_address
+            ? `<div><a href="${escapeHtml(/^https?:\/\//i.test(row.ip_address) ? row.ip_address : `http://${row.ip_address}`)}" target="_blank" rel="noopener">${escapeHtml(row.ip_address)}</a></div>`
+            : '';
         const alertHtml = `
             <div><strong>${escapeHtml(displayName)}</strong></div>
             ${row.maintenance_alert_code ? `<div style="font-size:.85em;color:#64748b;">Code: ${escapeHtml(row.maintenance_alert_code)}</div>` : ''}
@@ -1317,7 +1806,7 @@ function renderPanelRows(rows) {
             <tr data-id="${row.id}">
                 <td>${received}</td>
                 <td>${customer || ''}</td>
-                <td>${escapeHtml(row.device_serial || '')}</td>
+                <td>${deviceCell}${ipCell}</td>
                 <td>${alertHtml}</td>
                 <td>${escapeHtml(row.panel_configuration || '')}</td>
                 <td><button class="btn btn-secondary btn-small" data-action="view-payload"><i class="fas fa-eye"></i> View</button></td>
@@ -1326,6 +1815,25 @@ function renderPanelRows(rows) {
     }).join('');
 
     tbody.onclick = (ev) => {
+        const deviceBtn = ev.target.closest('button[data-action="open-device"]');
+        if (deviceBtn) {
+            const serial = deviceBtn.getAttribute('data-serial') || '';
+            const deviceId = deviceBtn.getAttribute('data-device-id') || '';
+            const customerCode = deviceBtn.getAttribute('data-customer-code') || notificationCustomerFilter || '';
+            if (window.MPSM && typeof window.MPSM.openDeviceModal === 'function' && document.getElementById('device-modal')) {
+                window.MPSM.openDeviceModal({
+                    deviceId: deviceId || null,
+                    serialNumber: serial || null,
+                    customerCode: customerCode || null
+                });
+            } else {
+                const target = customerCode
+                    ? `index.php?tab=dashboard&customerCode=${encodeURIComponent(customerCode)}`
+                    : 'index.php?tab=dashboard';
+                window.open(target, '_blank', 'noopener');
+            }
+            return;
+        }
         const btn = ev.target.closest('button[data-action="view-payload"]');
         if (!btn) return;
         const tr = btn.closest('tr');
@@ -1370,18 +1878,33 @@ let definitionsOffset = 0;
 async function loadDefinitions(silent = false, append = false) {
     const container = scopedById('definitions-container');
     if (!container) return;
+    const guard = requestGuards.definitions;
+    if (guard.loading && !append) return;
     if (!append) {
         definitionsOffset = 0;
     }
-    if (!append && !silent) {
+    if (!append && !silent && !guard.loaded) {
         container.innerHTML = '<div class="loading">Loading alert labels...</div>';
     }
+    const token = ++guard.token;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getRequestTimeout('definitions', silent));
+    guard.controller = controller;
+    guard.loading = true;
     try {
         const params = new URLSearchParams({ action: 'get_alert_definitions', limit: String(DEFINITIONS_PAGE_SIZE), offset: String(definitionsOffset) });
-        const res = await fetch('api/command-center.php?' + params.toString(), { credentials: 'same-origin', headers: { 'Accept':'application/json' } });
+        const res = await fetch('api/command-center.php?' + params.toString(), {
+            credentials: 'same-origin',
+            headers: { 'Accept':'application/json' },
+            signal: controller.signal
+        });
+        if (token !== guard.token) return;
         const data = await res.json();
+        if (token !== guard.token) return;
         if (!data.success) throw new Error(data.error || 'Failed to load alert labels');
         const defs = data.definitions || [];
+        guard.loaded = true;
+        guard.lastData = defs;
 
         let table = container.querySelector('table');
         if (!table || !append) {
@@ -1457,7 +1980,16 @@ async function loadDefinitions(silent = false, append = false) {
             }
         }
     } catch (err) {
+        if (token !== guard.token) return;
+        if (Array.isArray(guard.lastData) && guard.lastData.length > 0) {
+            // Keep existing table on refresh failures when stale data exists.
+            return;
+        }
         container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(err.message)}</div>`;
+    } finally {
+        clearTimeout(timeoutId);
+        if (guard.controller === controller) guard.controller = null;
+        guard.loading = false;
     }
 }
 

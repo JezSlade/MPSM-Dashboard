@@ -13,9 +13,6 @@
             <button class="monitor-tab-btn" data-tab="definitions">
                 <i class="fas fa-tags"></i> Alert Labels
             </button>
-            <button class="monitor-tab-btn" data-tab="tools">
-                <i class="fas fa-toolbox"></i> Tools
-            </button>
             <button class="monitor-tab-btn" data-tab="statistics">
                 <i class="fas fa-chart-bar"></i> Alert Statistics
             </button>
@@ -110,7 +107,9 @@
                         </div>
                         <div>
                             <label for="cc-panel-customer">Customer</label>
-                            <input id="cc-panel-customer" class="form-control" type="text" placeholder="e.g., ABC123">
+                            <select id="cc-panel-customer" class="form-control">
+                                <option value="">All Customers</option>
+                            </select>
                             <small class="text-muted">Filters table; leave blank for all</small>
                         </div>
                         <div class="panel-paging">
@@ -164,54 +163,6 @@
                 <div class="card-body">
                     <div id="definitions-container">
                         <div class="loading">Loading alert labels...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-tools" class="tab-panel" data-tab="tools">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2>Developer Tools</h2>
-                        <p class="text-muted">Device management and payload testing utilities</p>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div style="display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); padding: 1rem;">
-                        <div class="tool-card">
-                            <div class="tool-icon">
-                                <i class="fas fa-network-wired"></i>
-                            </div>
-                            <h3>Device Lifecycle Management</h3>
-                            <p>Create, update, and retire devices while maintaining complete audit trails. Search by serial number, filter by customer, and manage device inventory.</p>
-                            <div class="tool-features">
-                                <div><i class="fas fa-check"></i> Create new devices</div>
-                                <div><i class="fas fa-check"></i> Update device details</div>
-                                <div><i class="fas fa-check"></i> Retire/archive devices</div>
-                                <div><i class="fas fa-check"></i> Full audit history</div>
-                            </div>
-                            <a href="device-lifecycle.php" class="btn btn-primary" target="_blank" rel="noopener">
-                                <i class="fas fa-external-link-alt"></i> Open Device Lifecycle
-                            </a>
-                        </div>
-
-                        <div class="tool-card">
-                            <div class="tool-icon">
-                                <i class="fas fa-bug"></i>
-                            </div>
-                            <h3>Payload Debugger</h3>
-                            <p>Test and validate panel message payloads before sending to production. Inspect JSON structure, verify field mappings, and troubleshoot integration issues.</p>
-                            <div class="tool-features">
-                                <div><i class="fas fa-check"></i> Test JSON payloads</div>
-                                <div><i class="fas fa-check"></i> Validate field mappings</div>
-                                <div><i class="fas fa-check"></i> Debug API responses</div>
-                                <div><i class="fas fa-check"></i> View processed output</div>
-                            </div>
-                            <a href="payload-debugger.php" class="btn btn-primary" target="_blank" rel="noopener">
-                                <i class="fas fa-external-link-alt"></i> Open Payload Debugger
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>

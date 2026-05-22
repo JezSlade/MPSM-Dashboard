@@ -82,10 +82,73 @@ function applyAlertMappingFallback(array &$notification): void
     }
 }
 
+function isTruthyFlag($value): bool
+{
+    if ($value === null) {
+        return false;
+    }
+    $normalized = strtolower(trim((string)$value));
+    return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+}
+
+function tableExists(PDO $pdo, string $table): bool
+{
+    try {
+        $stmt = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($table));
+        return (bool)$stmt->fetchColumn();
+    } catch (Throwable $error) {
+        error_log('Command center table existence check failed: ' . $error->getMessage());
+        return false;
+    }
+}
+
+function ensureIndexIfMissing(PDO $pdo, string $table, string $indexName, string $ddl): void
+{
+    try {
+        if (!tableExists($pdo, $table)) {
+            return;
+        }
+        $stmt = $pdo->prepare("SHOW INDEX FROM `{$table}` WHERE Key_name = :key_name");
+        $stmt->execute([':key_name' => $indexName]);
+        if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+            $pdo->exec($ddl);
+        }
+    } catch (Throwable $error) {
+        error_log("Command center index check/create failed for {$table}.{$indexName}: " . $error->getMessage());
+    }
+}
+
+function ensureCommandCenterIndexes(PDO $pdo): void
+{
+    static $ensured = false;
+    if ($ensured) {
+        return;
+    }
+    $ensured = true;
+
+    $notifTable = DB_PREFIX . 'dashboard_notifications';
+    ensureIndexIfMissing(
+        $pdo,
+        $notifTable,
+        'idx_dashboard_notifications_customer_code',
+        "CREATE INDEX `idx_dashboard_notifications_customer_code` ON `{$notifTable}` (`customer_code`)"
+    );
+    ensureIndexIfMissing(
+        $pdo,
+        $notifTable,
+        'idx_dashboard_notifications_status_customer_priority_created',
+        "CREATE INDEX `idx_dashboard_notifications_status_customer_priority_created` ON `{$notifTable}` (`status`, `customer_code`, `priority`, `created_at_ny`)"
+    );
+}
+
 try {
     switch ($action) {
         case 'get_notifications':
             getNotifications($pdo);
+            break;
+
+        case 'get_customers':
+            getCustomers($pdo);
             break;
 
         case 'get_rules':
@@ -167,138 +230,118 @@ try {
 
 function getNotifications(PDO $pdo): void
 {
+    ensureCommandCenterIndexes($pdo);
+
     $status = $_GET['status'] ?? 'active';
     $severity = $_GET['severity'] ?? null;
-    $customerCode = $_GET['customerCode'] ?? null;
+    $customerCode = isset($_GET['customerCode']) ? trim((string)$_GET['customerCode']) : null;
+    if ($customerCode === '') {
+        $customerCode = null;
+    }
+    $includeGlobal = isTruthyFlag($_GET['include_global'] ?? $_POST['include_global'] ?? null);
     $limit = min((int)($_GET['limit'] ?? 50), 100);
     $offset = max(0, (int)($_GET['offset'] ?? 0));
 
     $notifTable = DB_PREFIX . 'dashboard_notifications';
     $defsTable = DB_PREFIX . 'alert_definitions';
-
-    // Join with alert_definitions to get display names for alert codes
-    // Also support customer code filtering (weekend work)
     $devicesTable = DB_PREFIX . 'cache_devices';
-    $sql = "SELECT dn.*,
-                   ad.display_name as alert_display_name,
-                   ad.description as alert_description,
-                   ad.category as alert_category,
-                   COALESCE(
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Department')),
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.department')),
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.OfficeDescription')),
-                       JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Note'))
-                   ) AS device_department,
-                   JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.Product.Model')) AS device_model,
-                   JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.EquipmentId')) AS device_equipment_id,
-                   JSON_UNQUOTE(JSON_EXTRACT(cd.device_data, '$.EquipmentID')) AS device_equipment_id_alt
-            FROM {$notifTable} dn
-            LEFT JOIN {$defsTable} ad ON dn.alert_code = ad.alert_code AND ad.enabled = 1
-            LEFT JOIN {$devicesTable} cd ON cd.serial_number = dn.device_serial
-            WHERE dn.status = :status";
 
-    // Add severity filter if provided
+    $where = ["dn.status = :status"];
+    $params = [':status' => $status];
     if ($severity) {
-        $sql .= " AND dn.severity = :severity";
+        $where[] = "dn.severity = :severity";
+        $params[':severity'] = $severity;
+    }
+    if ($customerCode !== null) {
+        if ($includeGlobal) {
+            $where[] = "(dn.customer_code = :customer_code OR dn.customer_code IS NULL OR dn.customer_code = '')";
+        } else {
+            $where[] = "dn.customer_code = :customer_code";
+        }
+        $params[':customer_code'] = $customerCode;
     }
 
-    // Restrict to current customer if provided
-    // Show notifications that either:
-    // 1. Match the customer code exactly, OR
-    // 2. Have no customer code (legacy/global notifications)
-    if ($customerCode) {
-        $sql .= " AND (
-            LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
-            OR dn.customer_code IS NULL
-            OR dn.customer_code = ''
-        )";
+    $notificationsSql = "SELECT dn.*,
+                                ad.display_name AS alert_display_name,
+                                ad.description AS alert_description,
+                                ad.category AS alert_category
+                         FROM {$notifTable} dn
+                         LEFT JOIN {$defsTable} ad
+                                ON dn.alert_code = ad.alert_code
+                               AND ad.enabled = 1
+                         WHERE " . implode(' AND ', $where) . "
+                         ORDER BY dn.priority DESC, dn.created_at_ny DESC
+                         LIMIT :limit OFFSET :offset";
+
+    $stmt = $pdo->prepare($notificationsSql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
     }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit OFFSET :offset";
+    $devicesBySerial = [];
+    if (!empty($notifications) && tableExists($pdo, $devicesTable)) {
+        $serials = array_values(array_unique(array_filter(array_map(static function ($notif) {
+            return isset($notif['device_serial']) ? trim((string)$notif['device_serial']) : '';
+        }, $notifications))));
 
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':status', $status);
+        if (!empty($serials)) {
+            $placeholders = [];
+            $serialParams = [];
+            foreach ($serials as $index => $serial) {
+                $token = ':serial_' . $index;
+                $placeholders[] = $token;
+                $serialParams[$token] = $serial;
+            }
 
-        if ($severity) {
-            $stmt->bindValue(':severity', $severity);
+            $deviceSql = "SELECT serial_number,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Department')) AS department_1,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.department')) AS department_2,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.OfficeDescription')) AS department_3,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Note')) AS department_4,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Product.Model')) AS model,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.EquipmentId')) AS equipment_id_1,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.EquipmentID')) AS equipment_id_2,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IPAddress')) AS ip_1,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) AS ip_2,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IP')) AS ip_3,
+                                 JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Ip')) AS ip_4
+                          FROM {$devicesTable}
+                          WHERE serial_number IN (" . implode(',', $placeholders) . ")";
+
+            try {
+                $deviceStmt = $pdo->prepare($deviceSql);
+                foreach ($serialParams as $key => $value) {
+                    $deviceStmt->bindValue($key, $value);
+                }
+                $deviceStmt->execute();
+                foreach ($deviceStmt->fetchAll(PDO::FETCH_ASSOC) as $deviceRow) {
+                    $serial = trim((string)($deviceRow['serial_number'] ?? ''));
+                    if ($serial === '') {
+                        continue;
+                    }
+                    $devicesBySerial[$serial] = [
+                        'department' => $deviceRow['department_1'] ?: ($deviceRow['department_2'] ?: ($deviceRow['department_3'] ?: ($deviceRow['department_4'] ?: null))),
+                        'model' => $deviceRow['model'] ?: null,
+                        'equipment_id' => $deviceRow['equipment_id_1'] ?: ($deviceRow['equipment_id_2'] ?: null),
+                        'ip_address' => $deviceRow['ip_1'] ?: ($deviceRow['ip_2'] ?: ($deviceRow['ip_3'] ?: ($deviceRow['ip_4'] ?: null)))
+                    ];
+                }
+            } catch (Throwable $deviceError) {
+                error_log('Command center device enrichment query failed: ' . $deviceError->getMessage());
+            }
         }
-
-        if ($customerCode) {
-            $stmt->bindValue(':customer_code', $customerCode);
-        }
-
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        // If cache_devices table doesn't exist or query fails, fall back to notifications without device metadata
-        error_log("Command center query failed (possibly missing cache_devices table): " . $e->getMessage());
-
-        // Fallback query without device metadata
-        $sql = "SELECT dn.*,
-                       ad.display_name as alert_display_name,
-                       ad.description as alert_description,
-                       ad.category as alert_category
-                FROM {$notifTable} dn
-                LEFT JOIN {$defsTable} ad ON dn.alert_code = ad.alert_code AND ad.enabled = 1
-                WHERE dn.status = :status";
-
-        if ($severity) {
-            $sql .= " AND dn.severity = :severity";
-        }
-
-        if ($customerCode) {
-            $sql .= " AND (
-                LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
-                OR dn.customer_code IS NULL
-                OR dn.customer_code = ''
-            )";
-        }
-
-        $sql .= " ORDER BY dn.priority DESC, dn.created_at_ny DESC LIMIT :limit OFFSET :offset";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':status', $status);
-
-        if ($severity) {
-            $stmt->bindValue(':severity', $severity);
-        }
-
-        if ($customerCode) {
-            $stmt->bindValue(':customer_code', $customerCode);
-        }
-
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     $totalCount = count($notifications);
     try {
-        $countSql = "SELECT COUNT(*) FROM {$notifTable} dn WHERE dn.status = :status";
-        if ($severity) {
-            $countSql .= " AND dn.severity = :severity";
-        }
-        if ($customerCode) {
-            $countSql .= " AND (
-                LOWER(TRIM(dn.customer_code)) = LOWER(TRIM(:customer_code))
-                OR dn.customer_code IS NULL
-                OR dn.customer_code = ''
-            )";
-        }
-
+        $countSql = "SELECT COUNT(*) FROM {$notifTable} dn WHERE " . implode(' AND ', $where);
         $countStmt = $pdo->prepare($countSql);
-        $countStmt->bindValue(':status', $status);
-        if ($severity) {
-            $countStmt->bindValue(':severity', $severity);
-        }
-        if ($customerCode) {
-            $countStmt->bindValue(':customer_code', $customerCode);
+        foreach ($params as $key => $value) {
+            $countStmt->bindValue($key, $value);
         }
         $countStmt->execute();
         $resolvedCount = $countStmt->fetchColumn();
@@ -309,27 +352,24 @@ function getNotifications(PDO $pdo): void
         error_log('Command center total count query failed: ' . $countError->getMessage());
     }
 
-    // Process notifications to replace alert_code with display_name in title/message and hydrate device metadata
     foreach ($notifications as &$notif) {
-        // If we have a display name, use it; otherwise keep the original alert_code
         $displayName = $notif['alert_display_name'] ?? $notif['alert_code'];
-
-        // Replace {alert} placeholder with display name in title and message
         if ($displayName && $notif['alert_code']) {
             $notif['title'] = str_replace($notif['alert_code'], $displayName, $notif['title']);
             $notif['message'] = str_replace($notif['alert_code'], $displayName, $notif['message']);
         }
-
-        // Add resolved display name as separate field
         $notif['alert_display_name'] = $displayName;
         applyAlertMappingFallback($notif);
-        // Normalize equipment_id and department for UI (may be null if cache_devices lookup failed)
-        $notif['equipment_id'] = ($notif['device_equipment_id'] ?? null) ?: ($notif['device_equipment_id_alt'] ?? null) ?: ($notif['device_identifier'] ?? null) ?: ($notif['device_serial'] ?? null);
-        $notif['department'] = $notif['device_department'] ?? null;
-        $notif['model'] = $notif['device_model'] ?? null;
-        // Customer description for subtitle
+
+        $serial = trim((string)($notif['device_serial'] ?? ''));
+        $deviceMeta = ($serial !== '' && isset($devicesBySerial[$serial])) ? $devicesBySerial[$serial] : [];
+        $notif['equipment_id'] = $deviceMeta['equipment_id'] ?? (($notif['device_identifier'] ?? null) ?: ($notif['device_serial'] ?? null));
+        $notif['department'] = $deviceMeta['department'] ?? null;
+        $notif['model'] = $deviceMeta['model'] ?? null;
+        $notif['ip_address'] = $deviceMeta['ip_address'] ?? null;
         $notif['customer_description'] = $notif['customer_code'] ? ($notif['customer_description'] ?? $notif['customer_code']) : ($notif['customer_description'] ?? null);
     }
+    unset($notif);
 
     echo json_encode([
         'success' => true,
@@ -339,8 +379,75 @@ function getNotifications(PDO $pdo): void
         'filters' => [
             'status' => $status,
             'severity' => $severity,
-            'customerCode' => $customerCode
+            'customerCode' => $customerCode,
+            'include_global' => $includeGlobal
         ]
+    ]);
+}
+
+function getCustomers(PDO $pdo): void
+{
+    $customers = [];
+    $seen = [];
+
+    $devicesTable = DB_PREFIX . 'cache_devices';
+    if (tableExists($pdo, $devicesTable)) {
+        try {
+            $sql = "SELECT DISTINCT customer_code,
+                           COALESCE(
+                               JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Customer.Description')),
+                               JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerDescription')),
+                               JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.CustomerName'))
+                           ) AS customer_description
+                    FROM {$devicesTable}
+                    WHERE customer_code IS NOT NULL AND customer_code <> ''
+                    ORDER BY customer_code ASC";
+            $stmt = $pdo->query($sql);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $code = trim((string)($row['customer_code'] ?? ''));
+                if ($code === '' || isset($seen[$code])) {
+                    continue;
+                }
+                $seen[$code] = true;
+                $customers[] = [
+                    'customer_code' => $code,
+                    'customer_description' => trim((string)($row['customer_description'] ?? '')) ?: $code
+                ];
+            }
+        } catch (Throwable $error) {
+            error_log('Command center customer list query failed: ' . $error->getMessage());
+        }
+    }
+
+    if (empty($customers)) {
+        try {
+            $apiResponse = callMPSQuery('Customer/GetCustomers', []);
+            if (!empty($apiResponse['Result']) && is_array($apiResponse['Result'])) {
+                foreach ($apiResponse['Result'] as $customer) {
+                    $code = trim((string)($customer['Code'] ?? $customer['code'] ?? ''));
+                    if ($code === '' || isset($seen[$code])) {
+                        continue;
+                    }
+                    $seen[$code] = true;
+                    $desc = trim((string)($customer['Description'] ?? $customer['description'] ?? ''));
+                    $customers[] = [
+                        'customer_code' => $code,
+                        'customer_description' => $desc !== '' ? $desc : $code
+                    ];
+                }
+            }
+        } catch (Throwable $error) {
+            error_log('Command center customer fallback API failed: ' . $error->getMessage());
+        }
+    }
+
+    usort($customers, static function (array $a, array $b): int {
+        return strcasecmp($a['customer_description'], $b['customer_description']);
+    });
+
+    echo json_encode([
+        'success' => true,
+        'customers' => $customers
     ]);
 }
 

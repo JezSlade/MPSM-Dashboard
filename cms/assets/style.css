@@ -3247,6 +3247,186 @@ CHANGELOG
 }
 
 /* Command Center - Notification Cards */
+.notifications-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.notifications-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.notifications-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.notification-stale {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.problem-strip {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+}
+
+.problem-chip {
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+    min-width: 180px;
+    display: grid;
+    gap: 0.2rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.problem-chip-serial {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.problem-chip-count {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.notifications-workspace {
+    display: grid;
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    gap: 0.8rem;
+    align-items: start;
+}
+
+.notifications-settings-panel {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    padding: 0.8rem;
+    display: none;
+    gap: 0.8rem;
+}
+
+.notifications-settings-panel.active {
+    display: grid;
+}
+
+.settings-group h4 {
+    margin: 0 0 0.55rem 0;
+    font-size: 0.9rem;
+}
+
+.settings-group label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.55rem;
+}
+
+.column-chooser {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.column-chooser label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.notification-table-wrapper {
+    overflow: auto;
+    max-height: 70vh;
+}
+
+.notification-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.notification-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-secondary);
+    white-space: nowrap;
+    font-size: 0.82rem;
+}
+
+.notification-table th.is-sortable {
+    cursor: pointer;
+}
+
+.notification-table .sticky-col {
+    position: sticky;
+    z-index: 3;
+    background: var(--bg-card);
+}
+
+.notification-table thead .sticky-col {
+    background: var(--bg-secondary);
+    z-index: 4;
+}
+
+.notification-table .sticky-col-1 {
+    left: 0;
+    min-width: 130px;
+}
+
+.notification-table .sticky-col-2 {
+    left: 130px;
+    min-width: 160px;
+}
+
+.severity-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.severity-critical { background: rgba(231, 76, 60, 0.16); color: #c0392b; }
+.severity-high { background: rgba(243, 156, 18, 0.16); color: #d35400; }
+.severity-warning { background: rgba(241, 196, 15, 0.2); color: #b9770e; }
+.severity-info { background: rgba(52, 152, 219, 0.16); color: #2471a3; }
+
+.notification-device-link {
+    border: none;
+    background: transparent;
+    color: var(--accent-primary);
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.notification-message-cell {
+    display: inline-block;
+    max-width: 320px;
+    white-space: normal;
+}
+
+.notification-actions-inline {
+    display: inline-flex;
+    gap: 0.35rem;
+}
+
 .notification-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -3330,6 +3510,12 @@ CHANGELOG
 }
 .notification-modal-list .notification-card {
     margin-bottom: 1rem;
+}
+
+@media (max-width: 1080px) {
+    .notifications-workspace {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Command Center - Rule Cards */
