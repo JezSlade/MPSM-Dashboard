@@ -1164,9 +1164,11 @@ const MPSM = (function() {
                 ? offlineFromSnapshot
                 : (Number.isFinite(offlineFromMetric) ? offlineFromMetric : fallbackOffline);
 
-            state.offlineDevices = offlineCount;
-            state.offlineSource = hasSnapshotDevices ? 'device_inventory_snapshot' : 'device_inventory_metric';
-            updateMetricValue('offline-count', offlineCount);
+            if (state.offlineSource !== 'cached_devices') {
+                state.offlineDevices = offlineCount;
+                state.offlineSource = hasSnapshotDevices ? 'device_inventory_snapshot' : 'device_inventory_metric';
+                updateMetricValue('offline-count', offlineCount);
+            }
         }
 
         if (cardId === 'supply-alerts') {
@@ -2269,22 +2271,10 @@ const MPSM = (function() {
             const data = await response.json();
 
             if (data.success && Array.isArray(data.devices)) {
-                // API already scopes by customerCode when provided. Keep a fallback filter.
-                const customerDevices = activeCustomerCode
-                    ? data.devices.filter(device =>
-                        device.CustomerCode === activeCustomerCode ||
-                        device.Customer?.Code === activeCustomerCode
-                    )
-                    : data.devices;
+                // get-cached-devices.php already scopes by customerCode when provided.
+                const customerDevices = data.devices;
 
                 const offlineCount = customerDevices.filter(device => isDeviceOffline(device)).length;
-
-                // If card snapshot already provided a scoped offline count, do not overwrite it
-                // with a broader/stale cache response.
-                if (state.offlineSource === 'device_inventory_snapshot') {
-                    debugLog('Skipping cache offline overwrite; snapshot count already applied', 'info');
-                    return;
-                }
 
                 state.offlineDevices = offlineCount;
                 state.offlineSource = 'cached_devices';

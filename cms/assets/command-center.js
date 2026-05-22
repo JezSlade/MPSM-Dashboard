@@ -34,24 +34,23 @@ const requestGuards = {
 
 const NOTIFICATION_COLUMNS = [
     { key: 'severity', label: 'Severity', sortable: true, required: true, sticky: true },
-    { key: 'device_serial', label: 'Device', sortable: true, required: true, sticky: true },
-    { key: 'customer_description', label: 'Customer', sortable: true },
-    { key: 'department', label: 'Department', sortable: true },
-    { key: 'model', label: 'Model', sortable: true },
+    { key: 'alert_code', label: 'Code', sortable: true },
+    { key: 'alert_display_name', label: 'Description', sortable: true },
+    { key: 'model', label: 'Device Model', sortable: true },
+    { key: 'equipment_id', label: 'Systel Equip ID', sortable: true },
+    { key: 'device_serial', label: 'Serial Number', sortable: true, required: true },
+    { key: 'department', label: 'Location', sortable: true },
     { key: 'ip_address', label: 'IP Address', sortable: true },
-    { key: 'alert_display_name', label: 'Alert', sortable: true },
-    { key: 'message', label: 'Message', sortable: false },
-    { key: '_count_1h', label: 'Count (1h)', sortable: true },
-    { key: 'created_at_ny', label: 'Created', sortable: true },
-    { key: 'actions', label: 'Actions', sortable: false, required: true }
+    { key: 'occurrence_count', label: 'Occurrences', sortable: true }
 ];
-const COLUMN_STORAGE_KEY = 'mpsm.alerts.notification.columns.v1';
+const COLUMN_STORAGE_KEY = 'mpsm.alerts.notification.columns.v2';
 const SORT_STORAGE_KEY = 'mpsm.alerts.notification.sort.v1';
 const FILTER_STORAGE_KEY = 'mpsm.alerts.notification.filters.v1';
-let notificationSort = { key: 'created_at_ny', direction: 'desc' };
+let notificationSort = { key: 'last_occurrence_ny', direction: 'desc' };
 let notificationColumnVisibility = {};
 let notificationSearchFilter = '';
 let notificationStatusFilter = 'all';
+let notificationTotalCount = 0;
 
 function getScopeRoot() {
     if (alertCenterRoot && document.contains(alertCenterRoot)) {
@@ -99,8 +98,8 @@ function loadStoredNotificationState() {
             const parsed = JSON.parse(filtersRaw);
             if (parsed && typeof parsed === 'object') {
                 notificationSearchFilter = typeof parsed.deviceSearch === 'string' ? parsed.deviceSearch : '';
-                notificationStatusFilter = typeof parsed.status === 'string' ? parsed.status : 'all';
-                notificationFilter = typeof parsed.severity === 'string' ? parsed.severity : '';
+                notificationStatusFilter = 'all';
+                notificationFilter = '';
                 notificationCustomerFilter = typeof parsed.customerCode === 'string' ? parsed.customerCode.trim() : notificationCustomerFilter;
             }
         }
@@ -301,7 +300,7 @@ function mountAlertCenter(options = {}) {
         }
     }
 
-    const validTabs = new Set(['notifications', 'panel', 'definitions', 'statistics']);
+    const validTabs = new Set(['notifications']);
     if (mountOptions.initialTab && validTabs.has(mountOptions.initialTab)) {
         activateTab(mountOptions.initialTab, true);
     } else {
@@ -352,6 +351,7 @@ function initializeControls() {
         customerFilterSelect.addEventListener('change', (e) => {
             notificationCustomerFilter = e.target.value;
             saveNotificationFilters();
+            resetNotificationData();
             const panelCustomer = scopedById('cc-panel-customer');
             if (panelCustomer) {
                 panelCustomer.value = notificationCustomerFilter;
@@ -406,6 +406,24 @@ function initializeControls() {
             loadNotifications(true, true);
         });
     }
+
+    const alertsRefresh = scopedById('alerts-refresh');
+    if (alertsRefresh) {
+        alertsRefresh.addEventListener('click', () => {
+            notificationOffset = 0;
+            loadNotifications(false, false);
+        });
+    }
+
+    const columnSettings = scopedById('notification-column-settings');
+    if (columnSettings) {
+        columnSettings.addEventListener('click', () => {
+            const panel = scopedById('notification-column-panel');
+            if (panel) {
+                panel.hidden = !panel.hidden;
+            }
+        });
+    }
 }
 
 function syncNotificationCustomer(code) {
@@ -419,6 +437,13 @@ function syncNotificationCustomer(code) {
         panelSel.value = notificationCustomerFilter;
     }
     saveNotificationFilters();
+}
+
+function resetNotificationData() {
+    notificationOffset = 0;
+    notificationTotalCount = 0;
+    requestGuards.notifications.loaded = false;
+    requestGuards.notifications.lastData = null;
 }
 
 // Auto-refresh Management
@@ -464,7 +489,7 @@ async function loadNotifications(silent = false, append = false) {
         notificationOffset = 0;
     }
 
-    const params = new URLSearchParams({ action: 'get_notifications', status: 'all', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
+    const params = new URLSearchParams({ action: 'get_aggregations', group_by: 'device_alert', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
     if (notificationFilter) {
         params.set('severity', notificationFilter);
     }
@@ -498,25 +523,16 @@ async function loadNotifications(silent = false, append = false) {
             return;
         }
         if (!data.success) {
-            throw new Error(data.error || 'Failed to load notifications');
+            throw new Error(data.error || 'Failed to load alerts');
         }
 
-        const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        const notifications = (Array.isArray(data.aggregations) ? data.aggregations : []).map(normalizeAlertRow);
+        notificationTotalCount = Number(data.total_count || notifications.length || 0);
         notificationOffset += notifications.length;
-        const grouped = groupNotificationsForDisplay(notifications);
-
-        const agg = await ensureAggregationsMap();
-        grouped.forEach((n) => {
-            const key = `${n.device_serial || ''}|${n.alert_code || ''}`;
-            const a = agg.get(key);
-            if (a) {
-                n._count_1h = a.count_1h || 0;
-            }
-        });
 
         const nextRows = append
-            ? (((guard.lastData && Array.isArray(guard.lastData.rows)) ? guard.lastData.rows : []).concat(grouped))
-            : grouped;
+            ? (((guard.lastData && Array.isArray(guard.lastData.rows)) ? guard.lastData.rows : []).concat(notifications))
+            : notifications;
 
         const filtered = applyNotificationClientFilters(nextRows);
         const sorted = sortNotifications(filtered);
@@ -551,12 +567,32 @@ async function loadNotifications(silent = false, append = false) {
 function updateNotificationLoadMore(pageSizeReturned) {
     const loadMoreBtn = scopedById('notification-load-more');
     if (!loadMoreBtn) return;
-    if (pageSizeReturned >= NOTIFICATION_PAGE_SIZE) {
+    if (pageSizeReturned >= NOTIFICATION_PAGE_SIZE && notificationOffset < notificationTotalCount) {
         loadMoreBtn.style.display = 'inline-flex';
         loadMoreBtn.disabled = false;
     } else {
         loadMoreBtn.style.display = 'none';
     }
+}
+
+function normalizeAlertRow(row) {
+    const alertCode = row.alert_code || row.maintenance_alert_code || '';
+    const displayName = row.alert_display_name || row.display_name || row.alert_description || alertCode || 'Alert';
+    return {
+        ...row,
+        id: row.id || `${row.device_serial || ''}:${alertCode}`,
+        severity: row.severity || row.severity_override || 'warning',
+        alert_code: alertCode,
+        alert_display_name: displayName,
+        device_serial: row.device_serial || '',
+        model: row.model || row.device_model || '',
+        equipment_id: row.equipment_id || row.device_equipment_id || row.device_identifier || '',
+        department: row.department || row.device_department || '',
+        ip_address: row.ip_address || '',
+        occurrence_count: Number(row.occurrence_count || row.count_24h || row.count_1h || 1),
+        created_at_ny: row.last_occurrence_ny || row.created_at_ny || '',
+        last_occurrence_ny: row.last_occurrence_ny || row.created_at_ny || ''
+    };
 }
 
 function applyNotificationClientFilters(rows) {
@@ -569,6 +605,10 @@ function applyNotificationClientFilters(rows) {
                 row.customer_description,
                 row.customer_code,
                 row.message,
+                row.model,
+                row.equipment_id,
+                row.department,
+                row.alert_code,
                 row.alert_display_name,
                 row.ip_address
             ].join(' ').toLowerCase();
@@ -590,12 +630,12 @@ function sortNotifications(rows) {
     list.sort((a, b) => {
         let av;
         let bv;
-        if (key === 'created_at_ny') {
-            av = Date.parse(a.created_at_ny || '') || 0;
-            bv = Date.parse(b.created_at_ny || '') || 0;
-        } else if (key === '_count_1h') {
-            av = Number(a._count_1h || 0);
-            bv = Number(b._count_1h || 0);
+        if (key === 'created_at_ny' || key === 'last_occurrence_ny') {
+            av = Date.parse(a.last_occurrence_ny || a.created_at_ny || '') || 0;
+            bv = Date.parse(b.last_occurrence_ny || b.created_at_ny || '') || 0;
+        } else if (key === '_count_1h' || key === 'occurrence_count') {
+            av = Number(a[key] || 0);
+            bv = Number(b[key] || 0);
         } else if (key === 'severity') {
             const rank = { critical: 4, high: 3, warning: 2, info: 1 };
             av = rank[a.severity] || 0;
@@ -617,12 +657,22 @@ function getProblemDevices(rows) {
     rows.forEach((row) => {
         const serial = row.device_serial || row.equipment_id || 'Unknown Device';
         if (!tallies.has(serial)) {
-            tallies.set(serial, { serial, count: 0, severity: row.severity || 'info', ip: row.ip_address || '', customer: row.customer_description || row.customer_code || '' });
+            tallies.set(serial, {
+                serial,
+                count: 0,
+                severity: row.severity || 'info',
+                ip: row.ip_address || '',
+                customer: row.customer_description || row.customer_code || '',
+                model: row.model || serial,
+                department: row.department || '',
+                topCode: row.alert_code || ''
+            });
         }
         const current = tallies.get(serial);
-        current.count += Number(row._count_1h || row._aggregatedTriggers || 1);
+        current.count += Number(row.occurrence_count || row._count_1h || row._aggregatedTriggers || 1);
         if ((severityRank[row.severity] || 0) > (severityRank[current.severity] || 0)) {
             current.severity = row.severity;
+            current.topCode = row.alert_code || current.topCode;
         }
     });
     return Array.from(tallies.values()).sort((a, b) => b.count - a.count).slice(0, 6);
@@ -630,7 +680,7 @@ function getProblemDevices(rows) {
 
 function renderSeverityPill(severity) {
     const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.info;
-    return `<span class="severity-pill severity-${escapeHtml(severity || 'info')}"><i class="fas fa-${config.icon}"></i> ${escapeHtml(config.label)}</span>`;
+    return `<span class="severity-pill severity-${escapeHtml(severity || 'info')}">${escapeHtml(config.label).toUpperCase()}</span>`;
 }
 
 function renderNotifications(notifications, staleMessage = '') {
@@ -638,27 +688,50 @@ function renderNotifications(notifications, staleMessage = '') {
     if (!container) return;
 
     const rows = Array.isArray(notifications) ? notifications : [];
-    if (rows.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i> No active notifications</div>';
-        return;
-    }
+    const visibleColumns = NOTIFICATION_COLUMNS.filter((column) => isNotificationColumnVisible(column.key));
+    const problemDevices = getProblemDevices(rows);
 
-    const visibleColumns = NOTIFICATION_COLUMNS.filter((column) => ['created_at_ny', 'severity', 'device_serial', 'customer_description', 'department', 'alert_display_name', 'message', '_count_1h', 'ip_address', 'actions'].includes(column.key));
+    const problemStrip = problemDevices.length
+        ? `<div class="alerts-problem-banner">
+                <span class="alerts-problem-banner__label">Top Problem Devices</span>
+                ${problemDevices.map((item) => `
+                    <button class="alerts-problem-card alerts-problem-card--${escapeHtml(item.severity)}" type="button" data-device-filter="${escapeHtml(item.serial)}">
+                        <span class="alerts-problem-card__name">${escapeHtml(item.model || item.serial)}</span>
+                        ${item.department ? `<span class="alerts-problem-card__dept">${escapeHtml(item.department)}</span>` : ''}
+                        <span class="alerts-problem-card__stats">${item.count} alerts &middot; ${escapeHtml(item.topCode || '')}</span>
+                        ${renderSeverityPill(item.severity)}
+                    </button>
+                `).join('')}
+            </div>`
+        : '';
+
+    const columnPanel = `
+        <div id="notification-column-panel" class="alerts-column-panel" hidden>
+            <div class="alerts-column-panel__title">Visible columns</div>
+            ${NOTIFICATION_COLUMNS.filter((column) => !column.required).map((column) => `
+                <label>
+                    <input type="checkbox" class="notification-column-toggle" value="${escapeHtml(column.key)}" ${isNotificationColumnVisible(column.key) ? 'checked' : ''}>
+                    <span>${escapeHtml(column.label)}</span>
+                </label>
+            `).join('')}
+        </div>
+    `;
 
     const controls = `
         <div class="notifications-toolbar">
             <div class="notifications-toolbar-left">
-                <input id="notif-table-search" class="form-control" type="search" value="${escapeHtml(notificationSearchFilter)}" placeholder="Search device, IP, customer, alert">
                 ${staleMessage ? `<span class="notification-stale"><i class="fas fa-clock"></i> ${escapeHtml(staleMessage)}</span>` : ''}
             </div>
             <div class="notifications-toolbar-right">
-                <span class="badge">${rows.length} rows</span>
+                <span class="badge">${rows.length}${notificationTotalCount > rows.length ? ` of ${notificationTotalCount}` : ''} rows</span>
             </div>
         </div>
     `;
 
-    const tableHtml = `
-        <div class="table-wrapper notification-table-wrapper">
+    const tableHtml = rows.length === 0
+        ? '<div class="empty-state"><i class="fas fa-check-circle"></i> No active alerts for this customer</div>'
+        : `
+        <div class="notification-table-wrapper">
             <table class="table notification-table notification-table--compact">
                 <thead>
                     <tr>
@@ -673,7 +746,7 @@ function renderNotifications(notifications, staleMessage = '') {
                 </thead>
                 <tbody>
                     ${rows.map((row) => `
-                        <tr data-notification-id="${row.id}">
+                        <tr class="alert-row-clickable" data-alert-id="${escapeHtml(row.id)}" data-serial="${escapeHtml(row.device_serial || '')}" data-device-id="${escapeHtml(row.device_id || '')}" data-customer-code="${escapeHtml(row.customer_code || notificationCustomerFilter || '')}">
                             ${visibleColumns.map((column, idx) => {
                                 const stickyClass = column.sticky ? `sticky-col sticky-col-${idx + 1}` : '';
                                 return `<td class="${stickyClass}">${renderNotificationCell(row, column.key)}</td>`;
@@ -685,7 +758,7 @@ function renderNotifications(notifications, staleMessage = '') {
         </div>
     `;
 
-    container.innerHTML = `<div class="notifications-layout">${controls}<div class="notifications-table-area">${tableHtml}</div></div>`;
+    container.innerHTML = `<div class="notifications-layout">${controls}${columnPanel}${problemStrip}<div class="notifications-table-area">${tableHtml}</div></div>`;
     bindNotificationTableInteractions();
 }
 
@@ -694,7 +767,7 @@ function renderNotificationCell(row, key) {
     if (key === 'device_serial') {
         const serial = row.device_serial || 'N/A';
         const customer = row.customer_code || notificationCustomerFilter || '';
-        return `<button class="btn-link notification-device-link" type="button" data-serial="${escapeHtml(serial)}" data-device-id="${escapeHtml(row.device_identifier || '')}" data-customer-code="${escapeHtml(customer)}">${escapeHtml(serial)}</button>`;
+        return `<button class="btn-link notification-device-link" type="button" data-serial="${escapeHtml(serial)}" data-device-id="${escapeHtml(row.device_id || row.device_identifier || '')}" data-customer-code="${escapeHtml(customer)}">${escapeHtml(serial)}</button>`;
     }
     if (key === 'ip_address') {
         if (!row.ip_address) return 'N/A';
@@ -713,6 +786,27 @@ function renderNotificationCell(row, key) {
             : `<span class="text-muted">${escapeHtml(row.status || '')}</span>`;
     }
     return escapeHtml(row[key] ?? '');
+}
+
+function openAlertDevice(serial, deviceId, customerCode) {
+    const resolvedSerial = (serial || '').trim();
+    const resolvedCustomer = (customerCode || notificationCustomerFilter || '').trim();
+    if (!resolvedSerial && !deviceId) {
+        return;
+    }
+    if (window.MPSM && typeof window.MPSM.openDeviceModal === 'function' && document.getElementById('device-modal')) {
+        window.MPSM.openDeviceModal({
+            deviceId: deviceId || null,
+            serialNumber: resolvedSerial || null,
+            customerCode: resolvedCustomer || null
+        });
+        return;
+    }
+    const params = new URLSearchParams({ tab: 'dashboard' });
+    if (resolvedCustomer) {
+        params.set('customerCode', resolvedCustomer);
+    }
+    window.open(`index.php?${params.toString()}`, '_blank', 'noopener');
 }
 
 function bindNotificationTableInteractions() {
@@ -735,6 +829,24 @@ function bindNotificationTableInteractions() {
         });
     });
 
+    container.querySelectorAll('.notification-column-toggle').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+            const key = checkbox.value;
+            notificationColumnVisibility[key] = checkbox.checked;
+            saveNotificationColumns();
+            const rows = requestGuards.notifications.lastData?.rows || [];
+            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
+        });
+    });
+
+    container.querySelectorAll('.alerts-problem-card').forEach((card) => {
+        card.addEventListener('click', () => {
+            const serial = card.getAttribute('data-device-filter') || '';
+            const row = (requestGuards.notifications.lastData?.rows || []).find((item) => (item.device_serial || item.equipment_id || '') === serial);
+            openAlertDevice(serial, row?.device_id || row?.device_identifier || '', row?.customer_code || notificationCustomerFilter || '');
+        });
+    });
+
     const searchInput = scopedById('notif-table-search');
     if (searchInput) {
         searchInput.addEventListener('input', (event) => {
@@ -746,22 +858,28 @@ function bindNotificationTableInteractions() {
     }
 
     container.querySelectorAll('.notification-device-link').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
             const serial = btn.getAttribute('data-serial') || '';
             const deviceId = btn.getAttribute('data-device-id') || '';
             const customerCode = btn.getAttribute('data-customer-code') || notificationCustomerFilter || '';
-            if (window.MPSM && typeof window.MPSM.openDeviceModal === 'function' && document.getElementById('device-modal')) {
-                window.MPSM.openDeviceModal({
-                    deviceId: deviceId || null,
-                    serialNumber: serial || null,
-                    customerCode: customerCode || null
-                });
-            } else {
-                const target = customerCode
-                    ? `index.php?tab=dashboard&customerCode=${encodeURIComponent(customerCode)}`
-                    : 'index.php?tab=dashboard';
-                window.open(target, '_blank', 'noopener');
-            }
+            openAlertDevice(serial, deviceId, customerCode);
+        });
+    });
+
+    container.querySelectorAll('.notification-table a').forEach((link) => {
+        link.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+    });
+
+    container.querySelectorAll('.alert-row-clickable').forEach((row) => {
+        row.addEventListener('click', () => {
+            openAlertDevice(
+                row.getAttribute('data-serial') || '',
+                row.getAttribute('data-device-id') || '',
+                row.getAttribute('data-customer-code') || notificationCustomerFilter || ''
+            );
         });
     });
 
@@ -770,7 +888,7 @@ function bindNotificationTableInteractions() {
     });
     container.querySelectorAll('button[data-action="dismiss"]').forEach((btn) => {
         btn.addEventListener('click', () => dismissNotification(Number(btn.getAttribute('data-id'))));
-    }
+    });
 }
 
 // Group notifications by device + alert to prevent duplicates
@@ -2161,7 +2279,7 @@ window.AlertCenter = {
         syncNotificationCustomer(customerCode || '');
         if (isMounted) {
             panelOffset = 0;
-            notificationOffset = 0;
+            resetNotificationData();
             loadCurrentTab();
         }
     },

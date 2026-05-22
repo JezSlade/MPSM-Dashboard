@@ -141,6 +141,78 @@ function ensureCommandCenterIndexes(PDO $pdo): void
     );
 }
 
+function fetchDeviceMetadataForSerials(PDO $pdo, array $serials): array
+{
+    $devicesTable = DB_PREFIX . 'cache_devices';
+    if (empty($serials) || !tableExists($pdo, $devicesTable)) {
+        return [];
+    }
+
+    $serials = array_values(array_unique(array_filter(array_map(static function ($serial) {
+        return trim((string)$serial);
+    }, $serials))));
+    if (empty($serials)) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach ($serials as $index => $serial) {
+        $token = ':serial_' . $index;
+        $placeholders[] = $token;
+        $params[$token] = $serial;
+    }
+
+    $sql = "SELECT serial_number,
+                   customer_code,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Department')) AS department_1,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.department')) AS department_2,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.OfficeDescription')) AS department_3,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Note')) AS department_4,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Product.Model')) AS model_1,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Model')) AS model_2,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.ProductName')) AS model_3,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.EquipmentId')) AS equipment_id_1,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.EquipmentID')) AS equipment_id_2,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceIdentifier')) AS equipment_id_3,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.DeviceId')) AS device_id_1,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Id')) AS device_id_2,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IPAddress')) AS ip_1,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) AS ip_2,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IP')) AS ip_3,
+                   JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Ip')) AS ip_4
+            FROM {$devicesTable}
+            WHERE serial_number IN (" . implode(',', $placeholders) . ")";
+
+    $metadata = [];
+    try {
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $serial = trim((string)($row['serial_number'] ?? ''));
+            if ($serial === '') {
+                continue;
+            }
+            $metadata[$serial] = [
+                'customer_code' => $row['customer_code'] ?: null,
+                'department' => $row['department_1'] ?: ($row['department_2'] ?: ($row['department_3'] ?: ($row['department_4'] ?: null))),
+                'model' => $row['model_1'] ?: ($row['model_2'] ?: ($row['model_3'] ?: null)),
+                'equipment_id' => $row['equipment_id_1'] ?: ($row['equipment_id_2'] ?: ($row['equipment_id_3'] ?: null)),
+                'device_id' => $row['device_id_1'] ?: ($row['device_id_2'] ?: null),
+                'ip_address' => $row['ip_1'] ?: ($row['ip_2'] ?: ($row['ip_3'] ?: ($row['ip_4'] ?: null)))
+            ];
+        }
+    } catch (Throwable $error) {
+        error_log('Command center device metadata query failed: ' . $error->getMessage());
+    }
+
+    return $metadata;
+}
+
 try {
     switch ($action) {
         case 'get_notifications':
@@ -393,6 +465,18 @@ function getCustomers(PDO $pdo): void
 {
     $customers = [];
     $seen = [];
+    $addCustomer = static function ($code, $description = null) use (&$customers, &$seen): void {
+        $code = trim((string)$code);
+        if ($code === '' || isset($seen[$code])) {
+            return;
+        }
+        $description = trim((string)($description ?? ''));
+        $seen[$code] = true;
+        $customers[] = [
+            'customer_code' => $code,
+            'customer_description' => $description !== '' ? $description : $code
+        ];
+    };
 
     $devicesTable = DB_PREFIX . 'cache_devices';
     if (tableExists($pdo, $devicesTable)) {
@@ -408,18 +492,56 @@ function getCustomers(PDO $pdo): void
                     ORDER BY customer_code ASC";
             $stmt = $pdo->query($sql);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $code = trim((string)($row['customer_code'] ?? ''));
-                if ($code === '' || isset($seen[$code])) {
-                    continue;
-                }
-                $seen[$code] = true;
-                $customers[] = [
-                    'customer_code' => $code,
-                    'customer_description' => trim((string)($row['customer_description'] ?? '')) ?: $code
-                ];
+                $addCustomer($row['customer_code'] ?? '', $row['customer_description'] ?? '');
             }
         } catch (Throwable $error) {
             error_log('Command center customer list query failed: ' . $error->getMessage());
+        }
+    }
+
+    $panelMessagesTable = DB_PREFIX . 'panel_messages';
+    if (tableExists($pdo, $panelMessagesTable)) {
+        try {
+            $sql = "SELECT customer_code, MAX(customer_description) AS customer_description
+                    FROM {$panelMessagesTable}
+                    WHERE customer_code IS NOT NULL AND customer_code <> ''
+                    GROUP BY customer_code";
+            $stmt = $pdo->query($sql);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $addCustomer($row['customer_code'] ?? '', $row['customer_description'] ?? '');
+            }
+        } catch (Throwable $error) {
+            error_log('Command center panel customer list query failed: ' . $error->getMessage());
+        }
+    }
+
+    $aggregationTable = DB_PREFIX . 'alert_aggregations';
+    if (tableExists($pdo, $aggregationTable)) {
+        try {
+            $sql = "SELECT DISTINCT customer_code
+                    FROM {$aggregationTable}
+                    WHERE customer_code IS NOT NULL AND customer_code <> ''";
+            $stmt = $pdo->query($sql);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $addCustomer($row['customer_code'] ?? '');
+            }
+        } catch (Throwable $error) {
+            error_log('Command center aggregation customer list query failed: ' . $error->getMessage());
+        }
+    }
+
+    $notificationsTable = DB_PREFIX . 'dashboard_notifications';
+    if (tableExists($pdo, $notificationsTable)) {
+        try {
+            $sql = "SELECT DISTINCT customer_code
+                    FROM {$notificationsTable}
+                    WHERE customer_code IS NOT NULL AND customer_code <> ''";
+            $stmt = $pdo->query($sql);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $addCustomer($row['customer_code'] ?? '');
+            }
+        } catch (Throwable $error) {
+            error_log('Command center notification customer list query failed: ' . $error->getMessage());
         }
     }
 
@@ -428,16 +550,7 @@ function getCustomers(PDO $pdo): void
             $apiResponse = callMPSQuery('Customer/GetCustomers', []);
             if (!empty($apiResponse['Result']) && is_array($apiResponse['Result'])) {
                 foreach ($apiResponse['Result'] as $customer) {
-                    $code = trim((string)($customer['Code'] ?? $customer['code'] ?? ''));
-                    if ($code === '' || isset($seen[$code])) {
-                        continue;
-                    }
-                    $seen[$code] = true;
-                    $desc = trim((string)($customer['Description'] ?? $customer['description'] ?? ''));
-                    $customers[] = [
-                        'customer_code' => $code,
-                        'customer_description' => $desc !== '' ? $desc : $code
-                    ];
+                    $addCustomer($customer['Code'] ?? $customer['code'] ?? '', $customer['Description'] ?? $customer['description'] ?? '');
                 }
             }
         } catch (Throwable $error) {
@@ -768,18 +881,50 @@ function dismissNotification(PDO $pdo): void
 
 function getAggregations(PDO $pdo): void
 {
+    ensureCommandCenterIndexes($pdo);
+
     $limit = min((int)($_GET['limit'] ?? 50), 1000);
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
     $groupBy = $_GET['group_by'] ?? 'device_alert'; // 'device_alert' or 'alert_only'
+    $severity = isset($_GET['severity']) ? trim((string)$_GET['severity']) : '';
+    $customerCode = isset($_GET['customerCode']) ? trim((string)$_GET['customerCode']) : '';
 
     $aggTable = DB_PREFIX . 'alert_aggregations';
     $defsTable = DB_PREFIX . 'alert_definitions';
+    if (!tableExists($pdo, $aggTable)) {
+        echo json_encode([
+            'success' => true,
+            'aggregations' => [],
+            'count' => 0,
+            'total_count' => 0,
+            'group_by' => $groupBy
+        ]);
+        return;
+    }
+
+    $where = [];
+    $params = [];
+    if ($customerCode !== '') {
+        $where[] = 'a.customer_code = :customer_code';
+        $params[':customer_code'] = $customerCode;
+    }
+    if ($severity !== '') {
+        if ($severity === 'warning') {
+            $where[] = "(ad.severity_override = :severity OR ad.severity_override IS NULL OR ad.severity_override = '')";
+        } else {
+            $where[] = 'ad.severity_override = :severity';
+        }
+        $params[':severity'] = $severity;
+    }
+    $whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
     if ($groupBy === 'alert_only') {
-        // Group by alert code only - aggregate across all devices
         $sql = "SELECT
                     a.alert_code,
                     ad.display_name as alert_display_name,
+                    ad.description as alert_description,
                     ad.category as alert_category,
+                    ad.severity_override as severity_override,
                     COUNT(DISTINCT a.device_serial) as device_count,
                     SUM(a.count_1h) as count_1h,
                     SUM(a.count_24h) as count_24h,
@@ -789,35 +934,91 @@ function getAggregations(PDO $pdo): void
                     MAX(a.last_occurrence_ny) as last_occurrence_ny
                 FROM {$aggTable} a
                 LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
-                GROUP BY a.alert_code, ad.display_name, ad.category
+                {$whereSql}
+                GROUP BY a.alert_code, ad.display_name, ad.description, ad.category, ad.severity_override
                 ORDER BY last_occurrence_ny DESC
-                LIMIT :limit";
+                LIMIT :limit OFFSET :offset";
     } else {
-        // Default: Group by device + alert (current behavior)
         $sql = "SELECT a.*,
                        ad.display_name as alert_display_name,
-                       ad.category as alert_category
+                       ad.description as alert_description,
+                       ad.category as alert_category,
+                       ad.severity_override as severity_override
                 FROM {$aggTable} a
                 LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+                {$whereSql}
                 ORDER BY a.last_occurrence_ny DESC
-                LIMIT :limit";
+                LIMIT :limit OFFSET :offset";
     }
 
     $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
 
     $aggregations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Add display_name field (use definition or fallback to code)
+    $devicesBySerial = [];
+    if ($groupBy !== 'alert_only' && !empty($aggregations)) {
+        $devicesBySerial = fetchDeviceMetadataForSerials($pdo, array_map(static function ($row) {
+            return $row['device_serial'] ?? '';
+        }, $aggregations));
+    }
+
     foreach ($aggregations as &$agg) {
-        $agg['alert_display_name'] ??= $agg['alert_code'];
+        $agg['severity'] = $agg['severity_override'] ?: 'warning';
+        $agg['alert_display_name'] = $agg['alert_display_name'] ?: ($agg['alert_code'] ?? 'Alert');
+        applyAlertMappingFallback($agg);
+
+        if ($groupBy !== 'alert_only') {
+            $serial = trim((string)($agg['device_serial'] ?? ''));
+            $deviceMeta = ($serial !== '' && isset($devicesBySerial[$serial])) ? $devicesBySerial[$serial] : [];
+            $agg['device_id'] = $deviceMeta['device_id'] ?? null;
+            $agg['equipment_id'] = $deviceMeta['equipment_id'] ?? ($serial ?: null);
+            $agg['department'] = $deviceMeta['department'] ?? null;
+            $agg['model'] = $deviceMeta['model'] ?? null;
+            $agg['ip_address'] = $deviceMeta['ip_address'] ?? null;
+            if (empty($agg['customer_code']) && !empty($deviceMeta['customer_code'])) {
+                $agg['customer_code'] = $deviceMeta['customer_code'];
+            }
+        }
+    }
+    unset($agg);
+
+    $totalCount = count($aggregations);
+    try {
+        if ($groupBy === 'alert_only') {
+            $countSql = "SELECT COUNT(DISTINCT a.alert_code)
+                         FROM {$aggTable} a
+                         LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+                         {$whereSql}";
+        } else {
+            $countSql = "SELECT COUNT(*)
+                         FROM {$aggTable} a
+                         LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+                         {$whereSql}";
+        }
+        $countStmt = $pdo->prepare($countSql);
+        foreach ($params as $key => $value) {
+            $countStmt->bindValue($key, $value);
+        }
+        $countStmt->execute();
+        $resolvedCount = $countStmt->fetchColumn();
+        if ($resolvedCount !== false) {
+            $totalCount = (int)$resolvedCount;
+        }
+    } catch (Throwable $error) {
+        error_log('Command center aggregation count query failed: ' . $error->getMessage());
     }
 
     echo json_encode([
         'success' => true,
         'aggregations' => $aggregations,
         'count' => count($aggregations),
+        'total_count' => $totalCount,
         'group_by' => $groupBy
     ]);
 }
