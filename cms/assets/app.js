@@ -75,7 +75,27 @@ const MPSM = (function() {
         return false;
     }
 
+    function isDeviceUninstalled(device) {
+        if (!device) {
+            return false;
+        }
+        return isTruthyFlag(
+            device.IsUninstalled
+            ?? device._cacheIsUninstalled
+            ?? device.is_uninstalled
+            ?? device.Uninstalled
+            ?? device.IsDeleted
+            ?? device.Deleted
+        ) || ['uninstalled', 'deleted', 'removed', 'retired'].includes(String(device.InstallStatus || '').trim().toLowerCase())
+            || ['uninstalled', 'deleted', 'removed', 'retired'].includes(String(device.Status || device.DeviceStatus || '').trim().toLowerCase())
+            || isTruthyFlag(device.Uninstall);
+    }
+
     function isDeviceOffline(device) {
+        if (!device || isDeviceUninstalled(device)) {
+            return false;
+        }
+
         // If API explicitly marks as offline, trust it
         if (isTruthyFlag(device.IsOffline ?? device.isOffline ?? device.Offline)) {
             return true;
@@ -837,6 +857,11 @@ const MPSM = (function() {
         if (catalogCategories) {
             catalogCategories.addEventListener('click', handleCatalogCategoryClick);
         }
+
+        const duplicateIpRefresh = document.getElementById('duplicate-ip-refresh');
+        if (duplicateIpRefresh) {
+            duplicateIpRefresh.addEventListener('click', () => loadDuplicateIpTriage(true));
+        }
     }
 
     async function prefetchAdminData() {
@@ -913,6 +938,8 @@ const MPSM = (function() {
                 search: state.endpointCatalog.searchTerm,
                 silent: state.endpointCatalog.initialized
             });
+        } else if (sectionName === 'duplicate-ips') {
+            loadDuplicateIpTriage(false);
         }
     }
 
@@ -1466,6 +1493,253 @@ const MPSM = (function() {
             .replace(/'/g, '&#39;');
     }
 
+    async function loadDuplicateIpTriage(force = false) {
+        const container = document.getElementById('duplicate-ip-triage-container');
+        const summaryEl = document.getElementById('duplicate-ip-summary');
+        if (!container || !summaryEl) {
+            return;
+        }
+
+        const customerCode = state.customerCode || '';
+        container.innerHTML = '<div class="loading">Loading duplicate IP groups...</div>';
+        summaryEl.innerHTML = '';
+
+        try {
+            const params = new URLSearchParams({
+                includeUninstalled: '0'
+            });
+            if (customerCode) {
+                params.set('customerCode', customerCode);
+            }
+            if (force) {
+                params.set('force', '1');
+            }
+
+            const response = await fetch(`api/get-duplicate-ips.php?${params.toString()}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load duplicate IPs');
+            }
+
+            renderDuplicateIpTriage(data);
+        } catch (error) {
+            summaryEl.innerHTML = '';
+            container.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load duplicate IP triage</p>
+                    <p class="error-message">${escapeHtml(error.message)}</p>
+                </div>
+            `;
+        }
+    }
+
+    function renderDuplicateIpTriage(data) {
+        const container = document.getElementById('duplicate-ip-triage-container');
+        const summaryEl = document.getElementById('duplicate-ip-summary');
+        if (!container || !summaryEl) {
+            return;
+        }
+
+        const summary = data.summary || {};
+        const duplicates = Array.isArray(data.duplicates) ? data.duplicates : [];
+        summaryEl.innerHTML = `
+            <div class="duplicate-ip-stat">
+                <span class="duplicate-ip-stat__value">${Number(summary.totalDuplicateIPs || 0).toLocaleString()}</span>
+                <span class="duplicate-ip-stat__label">Duplicate IP Groups</span>
+            </div>
+            <div class="duplicate-ip-stat">
+                <span class="duplicate-ip-stat__value">${Number(summary.totalDevicesAffected || 0).toLocaleString()}</span>
+                <span class="duplicate-ip-stat__label">Affected Devices</span>
+            </div>
+            <div class="duplicate-ip-stat">
+                <span class="duplicate-ip-stat__value">${Number(summary.totalValidDevices || 0).toLocaleString()}</span>
+                <span class="duplicate-ip-stat__label">Installed Devices Checked</span>
+            </div>
+            <div class="duplicate-ip-stat">
+                <span class="duplicate-ip-stat__value">${escapeHtml(data.cached ? 'Cached' : 'Fresh')}</span>
+                <span class="duplicate-ip-stat__label">${(data.cache_age_seconds ?? summary.cache_age_seconds) !== null && (data.cache_age_seconds ?? summary.cache_age_seconds) !== undefined ? `${Number(data.cache_age_seconds ?? summary.cache_age_seconds).toLocaleString()}s cache age` : 'Cache status'}</span>
+            </div>
+        `;
+
+        if (!duplicates.length) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No duplicate IP groups for the selected customer.</p></div>';
+            return;
+        }
+
+        container.innerHTML = duplicates.map((group) => `
+            <section class="duplicate-ip-group">
+                <div class="duplicate-ip-group__header">
+                    <div>
+                        <h3>${escapeHtml(group.ipAddress || 'Unknown IP')}</h3>
+                        <p>${escapeHtml(group.customerName || group.customerCode || state.customerName || '')}</p>
+                    </div>
+                    <span class="status-badge ${group.severity === 'critical' || group.severity === 'high' ? 'status-danger' : 'status-warning'}">
+                        ${Number(group.deviceCount || 0)} devices
+                    </span>
+                </div>
+                <div class="duplicate-ip-table-wrap">
+                    <table class="table duplicate-ip-table">
+                        <thead>
+                            <tr>
+                                <th>Equipment ID</th>
+                                <th>Serial</th>
+                                <th>Model</th>
+                                <th>Location</th>
+                                <th>Last Contact</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(Array.isArray(group.devices) ? group.devices : []).map((device) => `
+                                <tr>
+                                    <td>${escapeHtml(device.equipmentId || device.assetNumber || 'N/A')}</td>
+                                    <td>${escapeHtml(device.serialNumber || 'N/A')}</td>
+                                    <td>${escapeHtml(device.model || 'Unknown')}</td>
+                                    <td>${escapeHtml(device.location || device.department || 'N/A')}</td>
+                                    <td>${escapeHtml(device.lastContact ? formatDateTime(device.lastContact, { dateStyle: 'short', timeStyle: 'short' }) : 'N/A')}</td>
+                                    <td><span class="status-badge status-${device.status === 'online' ? 'success' : device.status === 'ghost' ? 'danger' : 'warning'}">${escapeHtml(device.status || 'unknown')}</span></td>
+                                    <td>
+                                        <div class="duplicate-ip-actions">
+                                            <button class="btn btn-sm btn-secondary duplicate-ip-drilldown" data-device-id="${escapeHtml(device.deviceId || '')}" data-serial="${escapeHtml(device.serialNumber || '')}" data-customer="${escapeHtml(device.customerCode || group.customerCode || state.customerCode || '')}">
+                                                <i class="fas fa-search"></i> Drill Down
+                                            </button>
+                                            ${group.ipAddress ? `<a class="btn btn-sm btn-secondary" href="http://${escapeHtml(group.ipAddress)}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Web UI</a>` : ''}
+                                            ${device.deviceId && device.serialNumber
+                                                ? `<button class="btn btn-sm btn-danger duplicate-ip-delete" data-device='${escapeHtml(JSON.stringify(Object.assign({}, device, { ipAddress: group.ipAddress })))}'><i class="fas fa-trash"></i> Delete</button>`
+                                                : '<button class="btn btn-sm btn-danger" type="button" disabled title="Device ID and serial are required for deletion"><i class="fas fa-trash"></i> Delete</button>'}
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        `).join('');
+
+        bindDuplicateIpTriageActions();
+    }
+
+    function bindDuplicateIpTriageActions() {
+        document.querySelectorAll('.duplicate-ip-drilldown').forEach((button) => {
+            button.addEventListener('click', () => {
+                openDeviceModal({
+                    deviceId: button.dataset.deviceId || null,
+                    serialNumber: button.dataset.serial || null,
+                    customerCode: button.dataset.customer || state.customerCode || null
+                });
+            });
+        });
+
+        document.querySelectorAll('.duplicate-ip-delete').forEach((button) => {
+            button.addEventListener('click', () => {
+                try {
+                    const device = JSON.parse(button.dataset.device || '{}');
+                    openDuplicateIpDeleteConfirm(device);
+                } catch (error) {
+                    showToast('Unable to read duplicate device details', 'error');
+                }
+            });
+        });
+    }
+
+    function openDuplicateIpDeleteConfirm(device) {
+        const existing = document.getElementById('duplicate-ip-delete-modal');
+        if (existing) {
+            existing.remove();
+        }
+
+        const serial = device.serialNumber || '';
+        if (!serial || !(device.deviceId || device.DeviceId)) {
+            showToast('Cannot delete this device because the device ID or serial number is missing', 'error');
+            return;
+        }
+        const modal = document.createElement('div');
+        modal.id = 'duplicate-ip-delete-modal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content duplicate-ip-delete-modal">
+                <div class="modal-header">
+                    <h2>Delete Duplicate Device</h2>
+                    <button class="modal-close" type="button" data-action="cancel">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="warning-text"><i class="fas fa-exclamation-triangle"></i> This removes the device from MPSM and marks the local cache as uninstalled after upstream success.</p>
+                    <table class="table">
+                        <tbody>
+                            <tr><th>IP Address</th><td>${escapeHtml(device.ipAddress || 'N/A')}</td></tr>
+                            <tr><th>Serial</th><td>${escapeHtml(serial || 'N/A')}</td></tr>
+                            <tr><th>Equipment ID</th><td>${escapeHtml(device.equipmentId || device.assetNumber || 'N/A')}</td></tr>
+                            <tr><th>Model</th><td>${escapeHtml(device.model || 'Unknown')}</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="form-group">
+                        <label>Type the serial number to confirm deletion</label>
+                        <input id="duplicate-ip-confirm-serial" class="form-control" type="text" autocomplete="off" placeholder="${escapeHtml(serial)}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-action="cancel">Cancel</button>
+                    <button id="duplicate-ip-confirm-delete" class="btn btn-danger" type="button" disabled>
+                        <i class="fas fa-trash"></i> Delete Device
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelectorAll('[data-action="cancel"]').forEach((button) => button.addEventListener('click', close));
+        const input = modal.querySelector('#duplicate-ip-confirm-serial');
+        const deleteButton = modal.querySelector('#duplicate-ip-confirm-delete');
+        input.addEventListener('input', () => {
+            deleteButton.disabled = input.value.trim() !== serial;
+        });
+        deleteButton.addEventListener('click', () => deleteDuplicateIpDevice(device, close));
+    }
+
+    async function deleteDuplicateIpDevice(device, closeModal) {
+        const deviceId = device.deviceId || device.DeviceId || '';
+        const serialNumber = device.serialNumber || '';
+        const customerCode = device.customerCode || state.customerCode || '';
+        if (!deviceId) {
+            showToast('Cannot delete this device because no device ID was found', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('api/device-delete.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ deviceId, serialNumber, customerCode })
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Delete failed');
+            }
+            closeModal();
+            showToast('Device deleted and duplicate IP triage refreshed', 'success');
+            await loadDuplicateIpTriage(true);
+            await updateOfflineCountFromCache(customerCode);
+            if (typeof CardManager !== 'undefined' && typeof CardManager.refreshAll === 'function') {
+                CardManager.refreshAll().catch(error => {
+                    debugLog('Card refresh after duplicate IP delete failed: ' + error.message, 'warn');
+                });
+            }
+        } catch (error) {
+            showToast('Failed to delete device: ' + error.message, 'error');
+        }
+    }
+
     /**
      * Ensure admin inputs reflect current preference state
      */
@@ -1700,6 +1974,9 @@ const MPSM = (function() {
 
         debugLog(`Customer selected: ${code}`, 'info');
         loadDashboard();
+        if (document.getElementById('admin-duplicate-ips')?.classList.contains('active')) {
+            loadDuplicateIpTriage(true);
+        }
     }
 
     /**
@@ -2258,6 +2535,7 @@ const MPSM = (function() {
             if (activeCustomerCode) {
                 params.set('customerCode', activeCustomerCode);
             }
+            params.set('includeUninstalled', '0');
 
             const response = await fetch(`api/get-cached-devices.php?${params.toString()}`);
 
@@ -2280,7 +2558,7 @@ const MPSM = (function() {
                 state.offlineSource = 'cached_devices';
                 updateMetricValue('offline-count', offlineCount);
 
-                debugLog(`Updated offline count: ${offlineCount} offline devices for customer ${activeCustomerCode || 'all'}`, 'info');
+                debugLog(`Updated offline count: ${offlineCount} offline devices for customer ${activeCustomerCode || 'all'} (${data.installed_devices ?? customerDevices.length} installed, ${data.excluded_uninstalled_devices ?? 0} uninstalled excluded)`, 'info');
             }
         } catch (err) {
             debugLog(`Failed to update offline count: ${err.message}`, 'warn');
@@ -2313,7 +2591,8 @@ const MPSM = (function() {
                 dealerCode: state.dealerCode || '',
                 dealerId: state.dealerId || '',
                 sortColumn: 'AssetNumber',
-                sortOrder: 'Asc'
+                sortOrder: 'Asc',
+                includeUninstalled: false
             });
 
             if (!Array.isArray(devices) || devices.length === 0) {
@@ -2410,6 +2689,7 @@ const MPSM = (function() {
             if (customerCode || state.customerCode) {
                 params.set('customerCode', customerCode || state.customerCode);
             }
+            params.set('includeUninstalled', '0');
             const response = await fetch('api/get-cached-devices.php' + (params.toString() ? `?${params.toString()}` : ''));
             const contentType = response.headers.get('content-type') || '';
             if (!contentType.includes('application/json')) {
@@ -4280,11 +4560,22 @@ const MPSM = (function() {
     /**
      * Expand to show offline devices in modal
      */
-    function expandOffline() {
+    async function expandOffline() {
         debugLog('Expanding offline devices view', 'info');
         const modal = document.getElementById('device-modal');
         const modalTitle = document.getElementById('modal-device-name');
         const modalBody = document.getElementById('modal-device-body');
+
+        if (!state.devices.length) {
+            modalTitle.textContent = 'Offline Devices';
+            modalBody.innerHTML = '<div class="loading">Loading offline devices...</div>';
+            modal.classList.add('active');
+            const cached = await fetchDevicesFromCache(state.customerCode);
+            if (cached && Array.isArray(cached.devices)) {
+                state.devices = cached.devices;
+                hydrateDeviceLookup(state.devices);
+            }
+        }
 
         const offlineDevices = state.devices.filter(d => isDeviceOffline(d));
 

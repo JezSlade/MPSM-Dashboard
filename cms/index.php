@@ -159,6 +159,10 @@ $preferences = getUserPreferences($userId);
                     <i class="fas fa-users"></i>
                     <span>User Management</span>
                 </button>
+                <button class="admin-nav-btn" data-section="duplicate-ips">
+                    <i class="fas fa-network-wired"></i>
+                    <span>Duplicate IP Triage</span>
+                </button>
                 <button class="admin-nav-btn" data-section="tools">
                     <i class="fas fa-tools"></i>
                     <span>Developer Tools</span>
@@ -393,6 +397,30 @@ $preferences = getUserPreferences($userId);
                 </section>
             </div>
 
+            <!-- Duplicate IP Triage Section -->
+            <div id="admin-duplicate-ips" class="admin-section">
+                <section class="card duplicate-ip-triage">
+                    <div class="card-header">
+                        <h2><i class="fas fa-network-wired"></i> Duplicate IP Triage</h2>
+                        <div class="card-actions">
+                            <button id="duplicate-ip-refresh" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            <i class="fas fa-info-circle"></i>
+                            Shows installed devices for the active customer that share an IP address. Choose which device to keep before removing any duplicate.
+                        </p>
+                        <div id="duplicate-ip-summary" class="duplicate-ip-summary"></div>
+                        <div id="duplicate-ip-triage-container" class="duplicate-ip-table-container">
+                            <div class="loading">Open this section to load duplicate IP groups.</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
             <!-- Developer Tools Section -->
             <div id="admin-tools" class="admin-section">
                 <section class="card">
@@ -431,13 +459,6 @@ $preferences = getUserPreferences($userId);
                                 <div class="tool-info">
                                     <h3>Payload Debugger</h3>
                                     <p>Inspect API payloads, validate JSON, and debug requests</p>
-                                </div>
-                            </a>
-                            <a href="create-sample-rules.php" target="_blank" class="tool-card">
-                                <div class="tool-icon"><i class="fas fa-magic"></i></div>
-                                <div class="tool-info">
-                                    <h3>Rule Generator</h3>
-                                    <p>Analyze live panel messages and auto-generate notification rules</p>
                                 </div>
                             </a>
                             <a href="device-lifecycle.php" target="_blank" class="tool-card">

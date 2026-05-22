@@ -24,9 +24,25 @@ const CardRegistry = (function () {
         return false;
     };
 
-    const isDeviceOffline = (device) => {
-        // Guard against null/undefined devices
+    const isDeviceUninstalled = (device) => {
         if (!device) {
+            return false;
+        }
+        return isTruthyFlag(
+            device.IsUninstalled
+            ?? device._cacheIsUninstalled
+            ?? device.is_uninstalled
+            ?? device.Uninstalled
+            ?? device.IsDeleted
+            ?? device.Deleted
+        ) || ['uninstalled', 'deleted', 'removed', 'retired'].includes(String(device.InstallStatus || '').trim().toLowerCase())
+            || ['uninstalled', 'deleted', 'removed', 'retired'].includes(String(device.Status || device.DeviceStatus || '').trim().toLowerCase())
+            || isTruthyFlag(device.Uninstall);
+    };
+
+    const isDeviceOffline = (device) => {
+        // Guard against null/undefined or deleted historical inventory.
+        if (!device || isDeviceUninstalled(device)) {
             return false;
         }
 
@@ -718,7 +734,8 @@ const CardRegistry = (function () {
                 let data;
                 try {
                     data = await helpers.fetchJson('api/get-cached-devices.php', {
-                        customerCode: context.customerCode
+                        customerCode: context.customerCode,
+                        includeUninstalled: 0
                     });
 
                     // Fallback: if cache is empty or very stale, use live API
@@ -1159,7 +1176,8 @@ const CardRegistry = (function () {
                     let data;
                     try {
                         data = await helpers.fetchJson('api/get-cached-devices.php', {
-                            customerCode: context.customerCode
+                            customerCode: context.customerCode,
+                            includeUninstalled: 0
                         });
 
                         if (!data.devices || data.devices.length === 0) {

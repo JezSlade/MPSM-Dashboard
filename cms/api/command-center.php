@@ -13,6 +13,7 @@ define('MPS_ENGINE_ACCESS', true);
 require_once __DIR__ . '/../../mps-api/callbacks/panel-message-common.php';  // Provides getNYTimestamp()
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-schema.php';
 require_once __DIR__ . '/../../mps-api/callbacks/command-center-engine.php';
+require_once __DIR__ . '/device-drilldown-enrichment.php';
 
 // Get action from GET, POST, or JSON body
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -139,6 +140,14 @@ function ensureCommandCenterIndexes(PDO $pdo): void
         'idx_dashboard_notifications_status_customer_priority_created',
         "CREATE INDEX `idx_dashboard_notifications_status_customer_priority_created` ON `{$notifTable}` (`status`, `customer_code`, `priority`, `created_at_ny`)"
     );
+
+    $panelTable = DB_PREFIX . 'panel_messages';
+    ensureIndexIfMissing(
+        $pdo,
+        $panelTable,
+        'idx_panel_messages_customer_received',
+        "CREATE INDEX `idx_panel_messages_customer_received` ON `{$panelTable}` (`customer_code`, `received_at`)"
+    );
 }
 
 function fetchDeviceMetadataForSerials(PDO $pdo, array $serials): array
@@ -253,6 +262,10 @@ try {
 
         case 'get_aggregations':
             getAggregations($pdo);
+            break;
+
+        case 'get_alerts_feed':
+            getAlertsFeed($pdo);
             break;
 
         case 'get_rule_history':
@@ -876,6 +889,648 @@ function dismissNotification(PDO $pdo): void
     echo json_encode([
         'success' => true,
         'message' => 'Notification dismissed'
+    ]);
+}
+
+function commandCenterDecodeJson($value): array
+{
+    if (is_array($value)) {
+        return $value;
+    }
+    if (!is_string($value) || trim($value) === '') {
+        return [];
+    }
+    $decoded = json_decode($value, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function commandCenterFirstText(array $row, array $keys): string
+{
+    foreach ($keys as $key) {
+        if (!array_key_exists($key, $row)) {
+            continue;
+        }
+        $value = $row[$key];
+        if (is_scalar($value)) {
+            $text = trim((string)$value);
+            if ($text !== '') {
+                return $text;
+            }
+        }
+        if (is_array($value)) {
+            $nested = commandCenterFirstText($value, ['description', 'Description', 'name', 'Name', 'title', 'Title', 'value', 'Value']);
+            if ($nested !== '') {
+                return $nested;
+            }
+        }
+    }
+    return '';
+}
+
+function commandCenterNestedText(array $payload, array $paths): string
+{
+    foreach ($paths as $path) {
+        $cursor = $payload;
+        foreach ($path as $segment) {
+            if (!is_array($cursor) || !array_key_exists($segment, $cursor)) {
+                $cursor = null;
+                break;
+            }
+            $cursor = $cursor[$segment];
+        }
+        if (is_scalar($cursor)) {
+            $text = trim((string)$cursor);
+            if ($text !== '') {
+                return $text;
+            }
+        }
+    }
+    return '';
+}
+
+function commandCenterAlertDefinitions(PDO $pdo): array
+{
+    static $definitions = null;
+    if ($definitions !== null) {
+        return $definitions;
+    }
+
+    $definitions = [];
+    $table = DB_PREFIX . 'alert_definitions';
+    if (!tableExists($pdo, $table)) {
+        return $definitions;
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT alert_code, display_name, description, severity_override FROM {$table} WHERE enabled = 1");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $code = trim((string)($row['alert_code'] ?? ''));
+            if ($code === '') {
+                continue;
+            }
+            $definitions[$code] = [
+                'display_name' => trim((string)($row['display_name'] ?? '')),
+                'description' => trim((string)($row['description'] ?? '')),
+                'severity' => trim((string)($row['severity_override'] ?? '')),
+            ];
+        }
+    } catch (Throwable $error) {
+        error_log('Command center alert definition load failed: ' . $error->getMessage());
+    }
+
+    return $definitions;
+}
+
+function commandCenterExtractAlertCode(array $row, string $fallback = ''): string
+{
+    $code = commandCenterFirstText($row, [
+        'alert_code',
+        'maintenance_alert_code',
+        'MaintenanceAlertCode',
+        'MaintenanceAlert_Code',
+        'AlertCode',
+        'Code',
+        'code',
+        'ErrorCode',
+        'MaintenanceAlertId',
+        'maintenance_alert_id',
+        'Id',
+        'id',
+    ]);
+    return $code !== '' ? $code : $fallback;
+}
+
+function commandCenterExtractPayloadDescription(array $payload): string
+{
+    $nested = commandCenterNestedText($payload, [
+        ['maintenanceAlert', 'description'],
+        ['maintenanceAlert', 'Description'],
+        ['MaintenanceAlert', 'description'],
+        ['MaintenanceAlert', 'Description'],
+        ['alert', 'description'],
+        ['Alert', 'Description'],
+    ]);
+    if ($nested !== '') {
+        return $nested;
+    }
+
+    return commandCenterFirstText($payload, [
+        'maintenanceAlertDescription',
+        'MaintenanceAlert_Description',
+        'alert_description',
+        'AlertDescription',
+        'Description',
+        'description',
+        'Message',
+        'message',
+        'Name',
+        'name',
+        'PanelConfiguration',
+        'panel_configuration',
+    ]);
+}
+
+function commandCenterResolveAlertText(PDO $pdo, string $code, array $context = []): array
+{
+    $code = trim($code);
+    $definitions = commandCenterAlertDefinitions($pdo);
+    if ($code !== '' && isset($definitions[$code])) {
+        $definition = $definitions[$code];
+        $text = $definition['display_name'] ?: ($definition['description'] ?: $code);
+        return [
+            'display_name' => $text,
+            'description' => $definition['description'] ?: $text,
+            'severity' => $definition['severity'] ?: null,
+            'translation_source' => 'alert_definitions',
+        ];
+    }
+
+    $payload = commandCenterDecodeJson($context['payload'] ?? []);
+    $payloadDescription = commandCenterExtractPayloadDescription($payload);
+    if ($payloadDescription !== '') {
+        return [
+            'display_name' => $payloadDescription,
+            'description' => $payloadDescription,
+            'severity' => null,
+            'translation_source' => 'maintenance_payload',
+        ];
+    }
+
+    $panelConfiguration = trim((string)($context['panel_configuration'] ?? ''));
+    if ($panelConfiguration !== '') {
+        return [
+            'display_name' => $panelConfiguration,
+            'description' => $panelConfiguration,
+            'severity' => null,
+            'translation_source' => 'panel_configuration',
+        ];
+    }
+
+    $docsMap = getAlertCodeMap();
+    if ($code !== '' && isset($docsMap[$code])) {
+        return [
+            'display_name' => $docsMap[$code],
+            'description' => $docsMap[$code],
+            'severity' => null,
+            'translation_source' => 'docs',
+        ];
+    }
+
+    $fallback = $code !== '' ? $code : 'Alert';
+    return [
+        'display_name' => $fallback,
+        'description' => $fallback,
+        'severity' => null,
+        'translation_source' => 'raw',
+    ];
+}
+
+function commandCenterNormalizeSeverity(?string $severity): string
+{
+    $value = strtolower(trim((string)$severity));
+    if (in_array($value, ['critical', 'high', 'warning', 'info'], true)) {
+        return $value;
+    }
+    if (in_array($value, ['error', 'danger', 'severe'], true)) {
+        return 'critical';
+    }
+    if (in_array($value, ['warn', 'medium'], true)) {
+        return 'warning';
+    }
+    return 'warning';
+}
+
+function commandCenterTimestampValue($value): int
+{
+    if (!$value) {
+        return 0;
+    }
+    if (is_numeric($value)) {
+        return (int)$value;
+    }
+    $timestamp = strtotime((string)$value);
+    return $timestamp === false ? 0 : $timestamp;
+}
+
+function commandCenterAlertFeedKey(array $row, bool $includeSource = true): string
+{
+    $parts = [
+        strtolower(trim((string)($row['customer_code'] ?? ''))),
+        strtolower(trim((string)($row['device_serial'] ?? ''))),
+        strtolower(trim((string)($row['alert_code'] ?? ''))),
+    ];
+    if ($includeSource) {
+        $parts[] = strtolower(trim((string)($row['source'] ?? '')));
+    }
+    return implode('|', $parts);
+}
+
+function commandCenterMergeFeedRow(array &$rows, array &$baseKeys, array $row, bool $skipIfBaseExists = false): void
+{
+    $key = commandCenterAlertFeedKey($row, true);
+    $baseKey = commandCenterAlertFeedKey($row, false);
+    if ($skipIfBaseExists && isset($baseKeys[$baseKey])) {
+        return;
+    }
+
+    if (!isset($rows[$key])) {
+        $row['sources'] = array_values(array_unique(array_filter([$row['source'] ?? ''])));
+        $rows[$key] = $row;
+        $baseKeys[$baseKey] = true;
+        return;
+    }
+
+    $existing = $rows[$key];
+    $existingCount = (int)($existing['occurrence_count'] ?? 0);
+    $rowCount = (int)($row['occurrence_count'] ?? 0);
+    $existing['occurrence_count'] = max(1, $existingCount) + max(1, $rowCount);
+
+    if (commandCenterTimestampValue($row['last_seen'] ?? null) >= commandCenterTimestampValue($existing['last_seen'] ?? null)) {
+        foreach (['last_seen', 'alert_display_name', 'alert_description', 'translation_source', 'severity'] as $field) {
+            if (!empty($row[$field])) {
+                $existing[$field] = $row[$field];
+            }
+        }
+    }
+
+    foreach (['device_id', 'equipment_id', 'model', 'department', 'ip_address', 'customer_description'] as $field) {
+        if (empty($existing[$field]) && !empty($row[$field])) {
+            $existing[$field] = $row[$field];
+        }
+    }
+
+    $sources = array_merge($existing['sources'] ?? [], [$row['source'] ?? '']);
+    $existing['sources'] = array_values(array_unique(array_filter($sources)));
+    $rows[$key] = $existing;
+    $baseKeys[$baseKey] = true;
+}
+
+function commandCenterFeedRow(PDO $pdo, array $row, array $deviceMeta = [], array $context = []): array
+{
+    $code = commandCenterExtractAlertCode($row, trim((string)($context['alert_code'] ?? '')));
+    $text = commandCenterResolveAlertText($pdo, $code, $context);
+    $severity = commandCenterNormalizeSeverity($row['severity'] ?? $row['severity_override'] ?? $text['severity'] ?? null);
+    $serial = trim((string)($row['device_serial'] ?? $row['serial_number'] ?? $deviceMeta['serial_number'] ?? ''));
+    $customerCode = trim((string)($row['customer_code'] ?? $deviceMeta['customer_code'] ?? ''));
+    $rowDisplayName = trim((string)($row['alert_display_name'] ?? ''));
+    $rowDescription = trim((string)($row['alert_description'] ?? ''));
+    $displayName = $text['translation_source'] === 'alert_definitions'
+        ? $text['display_name']
+        : ($rowDisplayName !== '' ? $rowDisplayName : $text['display_name']);
+    $description = $text['translation_source'] === 'alert_definitions'
+        ? $text['description']
+        : ($rowDescription !== '' ? $rowDescription : $text['description']);
+
+    return [
+        'id' => $row['id'] ?? md5($customerCode . '|' . $serial . '|' . $code . '|' . ($context['source'] ?? 'alert')),
+        'severity' => $severity,
+        'alert_code' => $code,
+        'alert_display_name' => $displayName,
+        'alert_description' => $description,
+        'translation_source' => $text['translation_source'],
+        'model' => $row['model'] ?? $deviceMeta['model'] ?? '',
+        'equipment_id' => $row['equipment_id'] ?? $deviceMeta['equipment_id'] ?? '',
+        'device_serial' => $serial,
+        'department' => $row['department'] ?? $deviceMeta['department'] ?? '',
+        'ip_address' => $row['ip_address'] ?? $deviceMeta['ip_address'] ?? '',
+        'occurrence_count' => (int)($row['occurrence_count'] ?? $row['trigger_count'] ?? $row['count_24h'] ?? 1),
+        'last_seen' => $row['last_seen'] ?? $row['last_occurrence_ny'] ?? $row['created_at_ny'] ?? $row['cached_at'] ?? '',
+        'source' => $context['source'] ?? ($row['source'] ?? 'alert'),
+        'customer_code' => $customerCode,
+        'customer_description' => $row['customer_description'] ?? $deviceMeta['customer_description'] ?? '',
+        'device_id' => $row['device_id'] ?? $deviceMeta['device_id'] ?? null,
+    ];
+}
+
+function appendPanelAggregationFeedRows(PDO $pdo, array &$rows, array &$baseKeys, string $customerCode, int $limit): void
+{
+    $aggTable = DB_PREFIX . 'alert_aggregations';
+    $defsTable = DB_PREFIX . 'alert_definitions';
+    $panelTable = DB_PREFIX . 'panel_messages';
+    if (!tableExists($pdo, $aggTable)) {
+        return;
+    }
+
+    $hasPanel = tableExists($pdo, $panelTable);
+    $where = [];
+    $params = [];
+    if ($customerCode !== '') {
+        $where[] = 'a.customer_code = :customer_code';
+        $params[':customer_code'] = $customerCode;
+    }
+    $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+    $panelJoin = $hasPanel ? "LEFT JOIN {$panelTable} pm ON pm.id = a.latest_message_id" : '';
+    $panelSelect = $hasPanel
+        ? "pm.panel_configuration, pm.payload AS panel_payload, pm.customer_description"
+        : "NULL AS panel_configuration, NULL AS panel_payload, NULL AS customer_description";
+
+    $sql = "SELECT a.*,
+                   ad.display_name AS alert_display_name,
+                   ad.description AS alert_description,
+                   ad.severity_override,
+                   {$panelSelect}
+            FROM {$aggTable} a
+            LEFT JOIN {$defsTable} ad ON a.alert_code = ad.alert_code AND ad.enabled = 1
+            {$panelJoin}
+            {$whereSql}
+            ORDER BY a.last_occurrence_ny DESC
+            LIMIT :limit";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', max($limit, 250), PDO::PARAM_INT);
+        $stmt->execute();
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $error) {
+        error_log('Command center alert feed aggregation query failed: ' . $error->getMessage());
+        return;
+    }
+
+    $devicesBySerial = fetchDeviceMetadataForSerials($pdo, array_map(static function ($record) {
+        return $record['device_serial'] ?? '';
+    }, $records));
+
+    foreach ($records as $record) {
+        $serial = trim((string)($record['device_serial'] ?? ''));
+        $deviceMeta = ($serial !== '' && isset($devicesBySerial[$serial])) ? $devicesBySerial[$serial] : [];
+        if (empty($record['customer_code']) && !empty($deviceMeta['customer_code'])) {
+            $record['customer_code'] = $deviceMeta['customer_code'];
+        }
+        $payload = commandCenterDecodeJson($record['latest_payload'] ?? []);
+        if ($payload === []) {
+            $payload = commandCenterDecodeJson($record['panel_payload'] ?? []);
+        }
+        $feedRow = commandCenterFeedRow($pdo, $record, $deviceMeta, [
+            'source' => 'panel',
+            'payload' => $payload,
+            'panel_configuration' => $record['panel_configuration'] ?? '',
+        ]);
+        commandCenterMergeFeedRow($rows, $baseKeys, $feedRow);
+    }
+}
+
+function appendMaintenanceFeedRows(PDO $pdo, array &$rows, array &$baseKeys, string $customerCode, int $limit): void
+{
+    $drilldownTable = DB_PREFIX . 'cache_device_drilldown';
+    $devicesTable = DB_PREFIX . 'cache_devices';
+    if (!tableExists($pdo, $drilldownTable) || !tableExists($pdo, $devicesTable)) {
+        return;
+    }
+
+    $where = ['cd.is_uninstalled = 0'];
+    $params = [];
+    if ($customerCode !== '') {
+        $where[] = 'cd.customer_code = :customer_code';
+        $params[':customer_code'] = $customerCode;
+    }
+    $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+    $sql = "SELECT cdd.serial_number,
+                   cdd.drilldown_data,
+                   cdd.cached_at,
+                   cd.customer_code,
+                   cd.device_data
+            FROM {$drilldownTable} cdd
+            INNER JOIN {$devicesTable} cd ON cd.serial_number = cdd.serial_number
+            {$whereSql}
+            ORDER BY cdd.cached_at DESC
+            LIMIT :limit";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', max($limit, 500), PDO::PARAM_INT);
+        $stmt->execute();
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $error) {
+        error_log('Command center maintenance feed query failed: ' . $error->getMessage());
+        return;
+    }
+
+    $serials = array_map(static function ($record) {
+        return $record['serial_number'] ?? '';
+    }, $records);
+    $devicesBySerial = fetchDeviceMetadataForSerials($pdo, $serials);
+
+    foreach ($records as $record) {
+        $serial = trim((string)($record['serial_number'] ?? ''));
+        $device = commandCenterDecodeJson($record['device_data'] ?? []);
+        $drilldown = commandCenterDecodeJson($record['drilldown_data'] ?? []);
+        if ($device === [] && $drilldown !== []) {
+            $device = $drilldown;
+        }
+        if ($serial !== '') {
+            $device['SerialNumber'] = $device['SerialNumber'] ?? $serial;
+        }
+        if (!empty($record['customer_code'])) {
+            $device['CustomerCode'] = $device['CustomerCode'] ?? $record['customer_code'];
+        }
+
+        $normalized = mpsm_dd_normalize_payload($device, $drilldown);
+        $alerts = $normalized['maintenance']['alerts'] ?? [];
+        if (!is_array($alerts)) {
+            continue;
+        }
+
+        $deviceMeta = ($serial !== '' && isset($devicesBySerial[$serial])) ? $devicesBySerial[$serial] : [];
+        foreach ($alerts as $alert) {
+            if (!is_array($alert)) {
+                continue;
+            }
+            $code = commandCenterExtractAlertCode($alert);
+            $description = commandCenterFirstText($alert, [
+                'Description',
+                'description',
+                'MaintenanceAlertDescription',
+                'MaintenanceAlert_Description',
+                'Message',
+                'message',
+                'Name',
+                'name',
+            ]);
+            $lastSeen = commandCenterFirstText($alert, [
+                'DateUTC',
+                'dateUTC',
+                'CreatedAt',
+                'created_at',
+                'Date',
+                'date',
+                'LastSeen',
+                'last_seen',
+            ]);
+
+            $row = [
+                'id' => 'maintenance-' . md5($serial . '|' . $code . '|' . json_encode($alert)),
+                'alert_code' => $code,
+                'device_serial' => $serial,
+                'customer_code' => $record['customer_code'] ?? ($deviceMeta['customer_code'] ?? ''),
+                'occurrence_count' => 1,
+                'last_seen' => $lastSeen ?: ($record['cached_at'] ?? ''),
+            ];
+            if ($description !== '') {
+                $row['alert_display_name'] = $description;
+                $row['alert_description'] = $description;
+            }
+            $feedRow = commandCenterFeedRow($pdo, $row, $deviceMeta, [
+                'source' => 'maintenance',
+                'payload' => $alert,
+                'alert_code' => $code,
+            ]);
+            commandCenterMergeFeedRow($rows, $baseKeys, $feedRow);
+        }
+    }
+}
+
+function appendDashboardFallbackFeedRows(PDO $pdo, array &$rows, array &$baseKeys, string $customerCode, int $limit): void
+{
+    $notifTable = DB_PREFIX . 'dashboard_notifications';
+    if (!tableExists($pdo, $notifTable)) {
+        return;
+    }
+
+    $where = ["dn.status = 'active'"];
+    $params = [];
+    if ($customerCode !== '') {
+        $where[] = 'dn.customer_code = :customer_code';
+        $params[':customer_code'] = $customerCode;
+    }
+
+    $sql = "SELECT dn.*
+            FROM {$notifTable} dn
+            WHERE " . implode(' AND ', $where) . "
+            ORDER BY dn.created_at_ny DESC
+            LIMIT :limit";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', max($limit, 250), PDO::PARAM_INT);
+        $stmt->execute();
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $error) {
+        error_log('Command center dashboard fallback feed query failed: ' . $error->getMessage());
+        return;
+    }
+
+    $devicesBySerial = fetchDeviceMetadataForSerials($pdo, array_map(static function ($record) {
+        return $record['device_serial'] ?? '';
+    }, $records));
+
+    foreach ($records as $record) {
+        $serial = trim((string)($record['device_serial'] ?? ''));
+        $deviceMeta = ($serial !== '' && isset($devicesBySerial[$serial])) ? $devicesBySerial[$serial] : [];
+        $feedRow = commandCenterFeedRow($pdo, $record, $deviceMeta, [
+            'source' => 'dashboard',
+            'payload' => commandCenterDecodeJson($record['metadata'] ?? []),
+        ]);
+        commandCenterMergeFeedRow($rows, $baseKeys, $feedRow, true);
+    }
+}
+
+function getAlertsFeed(PDO $pdo): void
+{
+    ensureCommandCenterIndexes($pdo);
+
+    $customerCode = isset($_GET['customerCode']) ? trim((string)$_GET['customerCode']) : '';
+    if (strtolower($customerCode) === 'all') {
+        $customerCode = '';
+    }
+    $limit = min(max((int)($_GET['limit'] ?? 50), 1), 500);
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
+    $sort = trim((string)($_GET['sort'] ?? 'last_seen'));
+    $direction = strtolower(trim((string)($_GET['direction'] ?? 'desc'))) === 'asc' ? 'asc' : 'desc';
+    $severityParam = isset($_GET['severity']) ? trim((string)$_GET['severity']) : '';
+    $severity = ($severityParam !== '' && strtolower($severityParam) !== 'all')
+        ? commandCenterNormalizeSeverity($severityParam)
+        : '';
+
+    $rows = [];
+    $baseKeys = [];
+    $sourceBudget = max($limit + $offset + 500, 10000);
+
+    appendPanelAggregationFeedRows($pdo, $rows, $baseKeys, $customerCode, $sourceBudget);
+    appendMaintenanceFeedRows($pdo, $rows, $baseKeys, $customerCode, $sourceBudget);
+    appendDashboardFallbackFeedRows($pdo, $rows, $baseKeys, $customerCode, $sourceBudget);
+
+    $alerts = array_values($rows);
+    if ($severity !== '' && in_array($severity, ['critical', 'high', 'warning', 'info'], true)) {
+        $alerts = array_values(array_filter($alerts, static function (array $alert) use ($severity): bool {
+            return ($alert['severity'] ?? '') === $severity;
+        }));
+    }
+    $allowedSorts = [
+        'severity',
+        'alert_code',
+        'alert_display_name',
+        'model',
+        'equipment_id',
+        'device_serial',
+        'department',
+        'ip_address',
+        'occurrence_count',
+        'last_seen',
+        'source',
+    ];
+    if (!in_array($sort, $allowedSorts, true)) {
+        $sort = 'last_seen';
+    }
+
+    usort($alerts, static function (array $a, array $b) use ($sort, $direction) {
+        $multiplier = $direction === 'asc' ? 1 : -1;
+        if ($sort === 'last_seen') {
+            $av = commandCenterTimestampValue($a['last_seen'] ?? null);
+            $bv = commandCenterTimestampValue($b['last_seen'] ?? null);
+        } elseif ($sort === 'occurrence_count') {
+            $av = (int)($a['occurrence_count'] ?? 0);
+            $bv = (int)($b['occurrence_count'] ?? 0);
+        } elseif ($sort === 'severity') {
+            $rank = ['critical' => 4, 'high' => 3, 'warning' => 2, 'info' => 1];
+            $av = $rank[$a['severity'] ?? ''] ?? 0;
+            $bv = $rank[$b['severity'] ?? ''] ?? 0;
+        } else {
+            $av = strtolower((string)($a[$sort] ?? ''));
+            $bv = strtolower((string)($b[$sort] ?? ''));
+        }
+        if ($av === $bv) {
+            $av = commandCenterTimestampValue($a['last_seen'] ?? null);
+            $bv = commandCenterTimestampValue($b['last_seen'] ?? null);
+        }
+        $comparison = $av <=> $bv;
+        return $comparison === 0 ? 0 : $comparison * $multiplier;
+    });
+
+    $total = count($alerts);
+    $paged = array_slice($alerts, $offset, $limit);
+    $sources = [];
+    foreach ($alerts as $alert) {
+        foreach (($alert['sources'] ?? [$alert['source'] ?? '']) as $source) {
+            if ($source !== '') {
+                $sources[$source] = true;
+            }
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'alerts' => $paged,
+        'count' => count($paged),
+        'total_count' => $total,
+        'limit' => $limit,
+        'offset' => $offset,
+        'sort' => $sort,
+        'direction' => $direction,
+        'sources' => array_keys($sources),
+        'cache' => [
+            'source' => 'local',
+            'generated_at' => date('c'),
+        ],
     ]);
 }
 

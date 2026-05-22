@@ -19,9 +19,18 @@ if (!$authBypassed) {
 
 $forceRefresh = isset($_GET['force']) && $_GET['force'] === '1';
 $summaryOnly = isset($_GET['summaryOnly']) && $_GET['summaryOnly'] === '1';
+$customerCode = isset($_GET['customerCode']) ? trim((string)$_GET['customerCode']) : '';
+if (strtolower($customerCode) === 'all') {
+    $customerCode = '';
+}
+$includeUninstalled = isset($_GET['includeUninstalled'])
+    && in_array(strtolower((string)$_GET['includeUninstalled']), ['1', 'true', 'yes'], true);
 
 try {
-    $cacheKey = 'duplicate-ips-analysis';
+    $cacheKey = 'duplicate-ips-analysis-' . md5(json_encode([
+        'customerCode' => $customerCode,
+        'includeUninstalled' => $includeUninstalled,
+    ]));
     $cacheTTL = 900; // 15 minutes
 
     // Try cache first unless force refresh
@@ -47,7 +56,7 @@ try {
     }
 
     // Build fresh analysis (cache-first, live fallback)
-    $result = analyzeDuplicateIPs($forceRefresh);
+    $result = analyzeDuplicateIPs($forceRefresh, $customerCode, $includeUninstalled);
 
     // Cache result
     cacheStore($cacheKey, json_encode([
@@ -73,19 +82,20 @@ try {
     jsonError("Failed to analyze duplicate IPs: " . $e->getMessage());
 }
 
-function analyzeDuplicateIPs(bool $forceRefresh = false) {
+function analyzeDuplicateIPs(bool $forceRefresh = false, string $customerCode = '', bool $includeUninstalled = false) {
     $cacheAgeSeconds = null;
     $source = 'cache';
 
     // Prefer cache table for dealership-wide accuracy and speed
-    $devices = fetchDevicesFromCache($cacheAgeSeconds);
+    $devices = fetchDevicesFromCache($cacheAgeSeconds, $customerCode, $includeUninstalled);
     error_log("[DUP-IP-DIAG] Cache returned " . count($devices) . " devices");
 
-    // Force or fallback to live API if cache empty/stale
-    if ($forceRefresh || empty($devices)) {
-        error_log("[DUP-IP-DIAG] Falling back to live vendor API (force={$forceRefresh}, empty=" . (empty($devices) ? 'true' : 'false') . ")");
+    // Force rebuild bypasses the analysis cache, but the device source remains local
+    // cache-first. Only fall back to live API when no local devices are available.
+    if (empty($devices)) {
+        error_log("[DUP-IP-DIAG] Falling back to live vendor API (empty=true)");
         $source = 'live-vendor-api';
-        $devices = fetchDevicesViaQuery();
+        $devices = fetchDevicesViaQuery($customerCode, $includeUninstalled);
         error_log("[DUP-IP-DIAG] live-vendor-api returned " . count($devices) . " devices");
     }
 
@@ -94,15 +104,33 @@ function analyzeDuplicateIPs(bool $forceRefresh = false) {
     }
 
     error_log("[DUP-IP-DIAG] Building report from {$source} with " . count($devices) . " devices");
-    $report = buildDuplicateReport($devices);
+    $report = buildDuplicateReport($devices, $customerCode, $includeUninstalled);
     $report['summary']['source'] = $source;
     $report['summary']['cache_age_seconds'] = $cacheAgeSeconds;
 
     return $report;
 }
 
-function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
+function duplicateIpTruthy($value): bool {
+    if ($value === true || $value === 1) {
+        return true;
+    }
+    if ($value === null || $value === false || $value === 0) {
+        return false;
+    }
+    $normalized = strtolower(trim((string)$value));
+    return in_array($normalized, ['1', 'true', 'yes', 'y', 'on', 'uninstalled'], true);
+}
+
+function fetchDevicesFromCache(?int &$cacheAgeSeconds = null, string $customerCode = '', bool $includeUninstalled = false): array {
     $pdo = getDatabase();
+    $installedPredicate = "
+        is_uninstalled = 0
+        AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.InstallStatus')), '')) NOT IN ('uninstalled', 'deleted', 'removed', 'retired')
+        AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Status')), '')) NOT IN ('uninstalled', 'deleted', 'removed', 'retired')
+        AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.Uninstall')), '')) NOT IN ('1', 'true', 'yes', 'y', 'on', 'uninstalled', 'deleted')
+        AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IsUninstalled')), '')) NOT IN ('1', 'true', 'yes', 'y', 'on', 'uninstalled', 'deleted')
+    ";
 
     // Check cache presence
     try {
@@ -113,20 +141,32 @@ function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
     }
 
     try {
-        $stmt = $pdo->query("
+        $where = [
+            "JSON_EXTRACT(device_data, '$.IpAddress') IS NOT NULL",
+            "JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) NOT IN ('', '0.0.0.0', 'N/A')",
+        ];
+        $params = [];
+        if (!$includeUninstalled) {
+            $where[] = "({$installedPredicate})";
+        }
+        if ($customerCode !== '') {
+            $where[] = "customer_code = :customerCode";
+            $params[':customerCode'] = $customerCode;
+        }
+        $stmt = $pdo->prepare("
             SELECT serial_number, customer_code, device_data, cached_at
             FROM mpsm_cache_devices
-            WHERE is_uninstalled = 0
-              AND JSON_EXTRACT(device_data, '$.IpAddress') IS NOT NULL
-              AND JSON_UNQUOTE(JSON_EXTRACT(device_data, '$.IpAddress')) NOT IN ('', '0.0.0.0', 'N/A')
+            WHERE " . implode(' AND ', $where) . "
         ");
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         return [];
     }
 
-    // If cache has fewer than 1000 devices, it's incomplete - return empty to trigger live API
-    if (count($rows) < 1000) {
+    // Dealership-wide reports need a complete cache. Customer-scoped Admin triage can use
+    // smaller result sets without falling through to slow live fan-out.
+    if ($customerCode === '' && count($rows) < 1000) {
         return [];
     }
 
@@ -134,24 +174,28 @@ function fetchDevicesFromCache(?int &$cacheAgeSeconds = null): array {
     foreach ($rows as $row) {
         $data = json_decode($row['device_data'] ?? '', true) ?: [];
         $devices[] = [
+            'DeviceId' => $data['Id'] ?? $data['IdInstalledProduct'] ?? $data['DeviceId'] ?? null,
             'SerialNumber' => $data['SerialNumber'] ?? $row['serial_number'],
             'CustomerCode' => $row['customer_code'] ?? ($data['CustomerCode'] ?? 'UNKNOWN'),
             'CustomerName' => $data['CustomerName'] ?? $data['CustomerDescription'] ?? ($row['customer_code'] ?? 'UNKNOWN'),
             'IpAddress' => $data['IpAddress'] ?? null,
             'Model' => $data['Model'] ?? ($data['Product']['Model'] ?? 'Unknown'),
+            'EquipmentId' => $data['EquipmentId'] ?? $data['EquipmentID'] ?? $data['DeviceIdentifier'] ?? $data['AssetNumber'] ?? null,
             'Location' => $data['Location'] ?? ($data['OfficeName'] ?? ($data['Department'] ?? 'N/A')),
             'Department' => $data['Department'] ?? null,
             'AssetNumber' => $data['AssetNumber'] ?? null,
             'InstallStatus' => $data['InstallStatus'] ?? null,
+            'Status' => $data['Status'] ?? $data['DeviceStatus'] ?? null,
             'Install' => $data['Install'] ?? null,
-            'LastContact' => $data['LastContact'] ?? null
+            'LastContact' => $data['LastContact'] ?? $data['LastContactDate'] ?? $data['LastUpdate'] ?? null,
+            'IsUninstalled' => duplicateIpTruthy($data['IsUninstalled'] ?? $data['Uninstall'] ?? false),
         ];
     }
 
     return $devices;
 }
 
-function fetchDevicesViaQuery(): array {
+function fetchDevicesViaQuery(string $customerCode = '', bool $includeUninstalled = false): array {
     $dealerId = DEFAULT_DEALER_ID;
     $dealerCode = DEFAULT_DEALER_CODE;
     $pageRows = 100;   // vendor hard-limit
@@ -175,6 +219,9 @@ function fetchDevicesViaQuery(): array {
         'SortColumn' => 'Id',
         'SortOrder' => 0,
     ];
+    if ($customerCode !== '') {
+        $installedParams['FilterCustomerCodes'] = [$customerCode];
+    }
 
     for ($page = 1; $page <= $maxPages; $page++) {
         $params = $installedParams;
@@ -260,6 +307,11 @@ function fetchDevicesViaQuery(): array {
 
     $installedCount = count($allDevices);
     error_log("[DUP-IP-DIAG] Installed devices complete: {$installedCount} unique devices");
+
+    if (!$includeUninstalled) {
+        error_log("[DUP-IP-DIAG] fetchDevicesViaQuery complete - installed-only devices: " . count($allDevices));
+        return $allDevices;
+    }
 
     // Fetch deleted devices using Device/Deleted/ListByDealer
     $deletedParams = [
@@ -368,7 +420,7 @@ function callMpsApiWithRetry(string $action, array $params = [], int $maxAttempt
 }
 
 
-function buildDuplicateReport(array $allDevices): array {
+function buildDuplicateReport(array $allDevices, string $selectedCustomerCode = '', bool $includeUninstalled = false): array {
     // CRITICAL: Group by CUSTOMER first, then by IP within each customer
     // Duplicate IPs are only problematic WITHIN the same customer
     $customerGroups = [];
@@ -376,9 +428,19 @@ function buildDuplicateReport(array $allDevices): array {
     $seen = [];
 
     foreach ($allDevices as $device) {
-        // Skip uninstalled devices
-        $installStatus = strtolower($device['InstallStatus'] ?? '');
-        if (!empty($device['Uninstall']) || $installStatus === 'uninstalled') {
+        // Skip uninstalled devices by default
+        $installStatus = strtolower(trim((string)($device['InstallStatus'] ?? '')));
+        $deviceStatus = strtolower(trim((string)($device['Status'] ?? '')));
+        $inactiveStatuses = ['uninstalled', 'deleted', 'removed', 'retired'];
+        if (
+            !$includeUninstalled
+            && (
+                duplicateIpTruthy($device['Uninstall'] ?? false)
+                || duplicateIpTruthy($device['IsUninstalled'] ?? false)
+                || in_array($installStatus, $inactiveStatuses, true)
+                || in_array($deviceStatus, $inactiveStatuses, true)
+            )
+        ) {
             continue;
         }
 
@@ -390,6 +452,9 @@ function buildDuplicateReport(array $allDevices): array {
         }
 
         $customerCode = $device['CustomerCode'] ?? 'Unknown';
+        if ($selectedCustomerCode !== '' && $customerCode !== $selectedCustomerCode) {
+            continue;
+        }
         $customerName = $device['CustomerName'] ?? 'Unknown';
         $serial = $device['SerialNumber'] ?? 'Unknown';
         $dedupeKey = "{$customerCode}|{$serial}|{$ip}";
@@ -415,7 +480,10 @@ function buildDuplicateReport(array $allDevices): array {
         }
 
         $customerGroups[$customerCode]['ipGroups'][$ip][] = [
+            'deviceId' => $device['DeviceId'] ?? $device['Id'] ?? $device['IdInstalledProduct'] ?? null,
             'serialNumber' => $serial,
+            'equipmentId' => $device['EquipmentId'] ?? $device['EquipmentID'] ?? $device['DeviceIdentifier'] ?? $device['AssetNumber'] ?? null,
+            'ipAddress' => $ip,
             'model' => $device['Model'] ?? 'Unknown',
             'customerCode' => $customerCode,
             'customerName' => $customerName,
@@ -424,7 +492,11 @@ function buildDuplicateReport(array $allDevices): array {
             'assetNumber' => $device['AssetNumber'] ?? null,
             'install' => $device['Install'] ?? null,
             'lastContact' => $device['LastContact'] ?? null,
-            'status' => determineDeviceStatusFromContact($device['LastContact'] ?? null)
+            'status' => determineDeviceStatusFromContact($device['LastContact'] ?? null),
+            'isUninstalled' => duplicateIpTruthy($device['IsUninstalled'] ?? false)
+                || duplicateIpTruthy($device['Uninstall'] ?? false)
+                || in_array($installStatus, $inactiveStatuses, true)
+                || in_array($deviceStatus, $inactiveStatuses, true)
         ];
     }
 
@@ -482,7 +554,9 @@ function buildDuplicateReport(array $allDevices): array {
         ],
         'topOffenders' => array_slice($duplicates, 0, 5), // Top 5 worst IPs
         'source' => null,
-        'cache_age_seconds' => null
+        'cache_age_seconds' => null,
+        'customerCode' => $selectedCustomerCode !== '' ? $selectedCustomerCode : null,
+        'includeUninstalled' => $includeUninstalled
     ];
 
     return [

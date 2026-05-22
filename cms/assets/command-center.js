@@ -41,12 +41,14 @@ const NOTIFICATION_COLUMNS = [
     { key: 'device_serial', label: 'Serial Number', sortable: true, required: true },
     { key: 'department', label: 'Location', sortable: true },
     { key: 'ip_address', label: 'IP Address', sortable: true },
-    { key: 'occurrence_count', label: 'Occurrences', sortable: true }
+    { key: 'occurrence_count', label: 'Occurrences', sortable: true },
+    { key: 'last_seen', label: 'Last Seen', sortable: true },
+    { key: 'source', label: 'Source', sortable: true }
 ];
 const COLUMN_STORAGE_KEY = 'mpsm.alerts.notification.columns.v2';
 const SORT_STORAGE_KEY = 'mpsm.alerts.notification.sort.v1';
 const FILTER_STORAGE_KEY = 'mpsm.alerts.notification.filters.v1';
-let notificationSort = { key: 'last_occurrence_ny', direction: 'desc' };
+let notificationSort = { key: 'last_seen', direction: 'desc' };
 let notificationColumnVisibility = {};
 let notificationSearchFilter = '';
 let notificationStatusFilter = 'all';
@@ -89,7 +91,8 @@ function loadStoredNotificationState() {
         const sortRaw = localStorage.getItem(SORT_STORAGE_KEY);
         if (sortRaw) {
             const parsed = JSON.parse(sortRaw);
-            if (parsed && parsed.key && (parsed.direction === 'asc' || parsed.direction === 'desc')) {
+            const validSortKeys = new Set(NOTIFICATION_COLUMNS.map((column) => column.key));
+            if (parsed && validSortKeys.has(parsed.key) && (parsed.direction === 'asc' || parsed.direction === 'desc')) {
                 notificationSort = parsed;
             }
         }
@@ -105,7 +108,7 @@ function loadStoredNotificationState() {
         }
     } catch (_error) {
         notificationColumnVisibility = {};
-        notificationSort = { key: 'created_at_ny', direction: 'desc' };
+        notificationSort = { key: 'last_seen', direction: 'desc' };
     }
 }
 
@@ -450,15 +453,15 @@ function resetNotificationData() {
 function startAutoRefresh() {
     stopAutoRefresh();
     autoRefreshInterval = setInterval(() => {
-        if (!isMounted) {
+        if (!isMounted || document.hidden) {
             return;
         }
         if (currentTab === 'panel') {
             return;
         }
         loadCurrentTab(true);
-        // Note: Panel tab has its own 30s auto-refresh via startPanelAutoRefresh()
-    }, 10000); // 10 seconds
+        // Panel stream keeps its own refresh cadence.
+    }, 300000);
 }
 
 function stopAutoRefresh() {
@@ -489,7 +492,13 @@ async function loadNotifications(silent = false, append = false) {
         notificationOffset = 0;
     }
 
-    const params = new URLSearchParams({ action: 'get_aggregations', group_by: 'device_alert', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
+    const params = new URLSearchParams({
+        action: 'get_alerts_feed',
+        limit: String(NOTIFICATION_PAGE_SIZE),
+        offset: String(notificationOffset),
+        sort: notificationSort.key || 'last_seen',
+        direction: notificationSort.direction || 'desc'
+    });
     if (notificationFilter) {
         params.set('severity', notificationFilter);
     }
@@ -526,7 +535,7 @@ async function loadNotifications(silent = false, append = false) {
             throw new Error(data.error || 'Failed to load alerts');
         }
 
-        const notifications = (Array.isArray(data.aggregations) ? data.aggregations : []).map(normalizeAlertRow);
+        const notifications = (Array.isArray(data.alerts) ? data.alerts : []).map(normalizeAlertRow);
         notificationTotalCount = Number(data.total_count || notifications.length || 0);
         notificationOffset += notifications.length;
 
@@ -578,6 +587,7 @@ function updateNotificationLoadMore(pageSizeReturned) {
 function normalizeAlertRow(row) {
     const alertCode = row.alert_code || row.maintenance_alert_code || '';
     const displayName = row.alert_display_name || row.display_name || row.alert_description || alertCode || 'Alert';
+    const lastSeen = row.last_seen || row.last_occurrence_ny || row.created_at_ny || '';
     return {
         ...row,
         id: row.id || `${row.device_serial || ''}:${alertCode}`,
@@ -590,8 +600,10 @@ function normalizeAlertRow(row) {
         department: row.department || row.device_department || '',
         ip_address: row.ip_address || '',
         occurrence_count: Number(row.occurrence_count || row.count_24h || row.count_1h || 1),
-        created_at_ny: row.last_occurrence_ny || row.created_at_ny || '',
-        last_occurrence_ny: row.last_occurrence_ny || row.created_at_ny || ''
+        created_at_ny: row.created_at_ny || lastSeen,
+        last_occurrence_ny: row.last_occurrence_ny || lastSeen,
+        last_seen: lastSeen,
+        source: row.source || (Array.isArray(row.sources) ? row.sources.join(', ') : '') || 'panel'
     };
 }
 
@@ -626,13 +638,13 @@ function applyNotificationClientFilters(rows) {
 function sortNotifications(rows) {
     const list = [...rows];
     const direction = notificationSort.direction === 'asc' ? 1 : -1;
-    const key = notificationSort.key || 'created_at_ny';
+    const key = notificationSort.key || 'last_seen';
     list.sort((a, b) => {
         let av;
         let bv;
-        if (key === 'created_at_ny' || key === 'last_occurrence_ny') {
-            av = Date.parse(a.last_occurrence_ny || a.created_at_ny || '') || 0;
-            bv = Date.parse(b.last_occurrence_ny || b.created_at_ny || '') || 0;
+        if (key === 'created_at_ny' || key === 'last_occurrence_ny' || key === 'last_seen') {
+            av = Date.parse(a.last_seen || a.last_occurrence_ny || a.created_at_ny || '') || 0;
+            bv = Date.parse(b.last_seen || b.last_occurrence_ny || b.created_at_ny || '') || 0;
         } else if (key === '_count_1h' || key === 'occurrence_count') {
             av = Number(a[key] || 0);
             bv = Number(b[key] || 0);
@@ -655,10 +667,14 @@ function getProblemDevices(rows) {
     const severityRank = { critical: 4, high: 3, warning: 2, info: 1 };
     const tallies = new Map();
     rows.forEach((row) => {
-        const serial = row.device_serial || row.equipment_id || 'Unknown Device';
-        if (!tallies.has(serial)) {
-            tallies.set(serial, {
+        const serial = row.device_serial || '';
+        const equipmentId = row.equipment_id || '';
+        const key = equipmentId || serial || row.ip_address || 'Unknown Device';
+        if (!tallies.has(key)) {
+            tallies.set(key, {
+                key,
                 serial,
+                equipmentId,
                 count: 0,
                 severity: row.severity || 'info',
                 ip: row.ip_address || '',
@@ -668,7 +684,7 @@ function getProblemDevices(rows) {
                 topCode: row.alert_code || ''
             });
         }
-        const current = tallies.get(serial);
+        const current = tallies.get(key);
         current.count += Number(row.occurrence_count || row._count_1h || row._aggregatedTriggers || 1);
         if ((severityRank[row.severity] || 0) > (severityRank[current.severity] || 0)) {
             current.severity = row.severity;
@@ -695,8 +711,8 @@ function renderNotifications(notifications, staleMessage = '') {
         ? `<div class="alerts-problem-banner">
                 <span class="alerts-problem-banner__label">Top Problem Devices</span>
                 ${problemDevices.map((item) => `
-                    <button class="alerts-problem-card alerts-problem-card--${escapeHtml(item.severity)}" type="button" data-device-filter="${escapeHtml(item.serial)}">
-                        <span class="alerts-problem-card__name">${escapeHtml(item.model || item.serial)}</span>
+                    <button class="alerts-problem-card alerts-problem-card--${escapeHtml(item.severity)}" type="button" data-device-filter="${escapeHtml(item.key)}">
+                        <span class="alerts-problem-card__name">${escapeHtml(item.equipmentId || item.serial || item.key)}</span>
                         ${item.department ? `<span class="alerts-problem-card__dept">${escapeHtml(item.department)}</span>` : ''}
                         <span class="alerts-problem-card__stats">${item.count} alerts &middot; ${escapeHtml(item.topCode || '')}</span>
                         ${renderSeverityPill(item.severity)}
@@ -777,6 +793,11 @@ function renderNotificationCell(row, key) {
     if (key === 'message') return `<span class="notification-message-cell">${escapeHtml(row.message || '')}</span>`;
     if (key === '_count_1h') return `<strong>${Number(row._count_1h || row._aggregatedTriggers || 0)}</strong>`;
     if (key === 'created_at_ny') return escapeHtml(formatTimestamp(row.created_at_ny));
+    if (key === 'last_seen') return escapeHtml(formatTimestamp(row.last_seen || row.last_occurrence_ny || row.created_at_ny));
+    if (key === 'source') {
+        const source = String(row.source || '').split(',').map((item) => item.trim()).filter(Boolean).join(', ');
+        return escapeHtml(source ? source.replace(/\b\w/g, (char) => char.toUpperCase()) : 'Panel');
+    }
     if (key === 'actions') {
         return row.status === 'active'
             ? `<div class="notification-actions-inline">
@@ -841,9 +862,9 @@ function bindNotificationTableInteractions() {
 
     container.querySelectorAll('.alerts-problem-card').forEach((card) => {
         card.addEventListener('click', () => {
-            const serial = card.getAttribute('data-device-filter') || '';
-            const row = (requestGuards.notifications.lastData?.rows || []).find((item) => (item.device_serial || item.equipment_id || '') === serial);
-            openAlertDevice(serial, row?.device_id || row?.device_identifier || '', row?.customer_code || notificationCustomerFilter || '');
+            const key = card.getAttribute('data-device-filter') || '';
+            const row = (requestGuards.notifications.lastData?.rows || []).find((item) => (item.equipment_id || item.device_serial || item.ip_address || '') === key);
+            openAlertDevice(row?.device_serial || key, row?.device_id || row?.device_identifier || '', row?.customer_code || notificationCustomerFilter || '');
         });
     });
 
@@ -1394,7 +1415,12 @@ function renderStatistics(aggregations) {
 function formatTimestamp(timestamp) {
     if (!timestamp) return 'N/A';
 
-    const date = new Date(timestamp + ' GMT-0500'); // Assuming NY time
+    const text = String(timestamp);
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+    const date = new Date(hasTimezone ? text : `${text} GMT-0500`);
+    if (Number.isNaN(date.getTime())) {
+        return 'N/A';
+    }
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
