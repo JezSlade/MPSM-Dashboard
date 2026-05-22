@@ -57,7 +57,7 @@ $preferences = getUserPreferences($userId);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= APP_NAME ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=<?= filemtime(__DIR__ . '/assets/style.css') ?>">
 </head>
 <body data-theme="<?= htmlspecialchars($preferences['theme'] ?? 'light') ?>">
     <!-- Header -->
@@ -485,10 +485,10 @@ $preferences = getUserPreferences($userId);
     </div>
 
     <!-- JavaScript -->
-    <script src="assets/js/table-utils.js"></script>
-    <script src="assets/js/card-registry.js"></script>
-    <script src="assets/js/card-manager.js"></script>
-    <script src="assets/hero-notifications.js"></script>
+    <script src="assets/js/table-utils.js?v=<?= filemtime(__DIR__ . '/assets/js/table-utils.js') ?>"></script>
+    <script src="assets/js/card-registry.js?v=<?= filemtime(__DIR__ . '/assets/js/card-registry.js') ?>"></script>
+    <script src="assets/js/card-manager.js?v=<?= filemtime(__DIR__ . '/assets/js/card-manager.js') ?>"></script>
+    <script src="assets/hero-notifications.js?v=<?= filemtime(__DIR__ . '/assets/hero-notifications.js') ?>"></script>
     <script>
         window.ALERT_CENTER_BOOTSTRAP = {
             autoMount: false,
@@ -496,10 +496,10 @@ $preferences = getUserPreferences($userId);
             embedded: true
         };
     </script>
-    <script src="assets/command-center.js"></script>
-    <script src="assets/app.js"></script>
-    <script src="assets/error-logs.js"></script>
-    <script src="api/cache-engine.js"></script>
+    <script src="assets/command-center.js?v=<?= filemtime(__DIR__ . '/assets/command-center.js') ?>"></script>
+    <script src="assets/app.js?v=<?= filemtime(__DIR__ . '/assets/app.js') ?>"></script>
+    <script src="assets/error-logs.js?v=<?= filemtime(__DIR__ . '/assets/error-logs.js') ?>"></script>
+    <script src="api/cache-engine.js?v=<?= filemtime(__DIR__ . '/api/cache-engine.js') ?>"></script>
 </body>
 </html>
 <?php

@@ -15,7 +15,7 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Command Center - MPSM Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=<?= filemtime(__DIR__ . '/assets/style.css') ?>">
 </head>
 <body data-theme="<?= $theme ?>" data-alert-center-standalone="1">
     <header class="header">
@@ -46,8 +46,8 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
     </main>
     <div id="toast-container"></div>
 
-    <script src="assets/shared.js"></script>
-    <script src="assets/app.js"></script>
+    <script src="assets/shared.js?v=<?= filemtime(__DIR__ . '/assets/shared.js') ?>"></script>
+    <script src="assets/app.js?v=<?= filemtime(__DIR__ . '/assets/app.js') ?>"></script>
     <script>
         window.ALERT_CENTER_BOOTSTRAP = {
             autoMount: true,
@@ -55,7 +55,7 @@ $theme = htmlspecialchars($preferences['theme'] ?? 'light', ENT_QUOTES, 'UTF-8')
             embedded: false
         };
     </script>
-    <script src="assets/command-center.js"></script>
+    <script src="assets/command-center.js?v=<?= filemtime(__DIR__ . '/assets/command-center.js') ?>"></script>
 </body>
 </html>
 <!--
