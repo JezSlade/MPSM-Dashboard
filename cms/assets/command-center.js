@@ -51,7 +51,7 @@ const FILTER_STORAGE_KEY = 'mpsm.alerts.notification.filters.v1';
 let notificationSort = { key: 'created_at_ny', direction: 'desc' };
 let notificationColumnVisibility = {};
 let notificationSearchFilter = '';
-let notificationStatusFilter = 'active';
+let notificationStatusFilter = 'all';
 
 function getScopeRoot() {
     if (alertCenterRoot && document.contains(alertCenterRoot)) {
@@ -99,7 +99,7 @@ function loadStoredNotificationState() {
             const parsed = JSON.parse(filtersRaw);
             if (parsed && typeof parsed === 'object') {
                 notificationSearchFilter = typeof parsed.deviceSearch === 'string' ? parsed.deviceSearch : '';
-                notificationStatusFilter = typeof parsed.status === 'string' ? parsed.status : 'active';
+                notificationStatusFilter = typeof parsed.status === 'string' ? parsed.status : 'all';
                 notificationFilter = typeof parsed.severity === 'string' ? parsed.severity : '';
                 notificationCustomerFilter = typeof parsed.customerCode === 'string' ? parsed.customerCode.trim() : notificationCustomerFilter;
             }
@@ -301,7 +301,7 @@ function mountAlertCenter(options = {}) {
         }
     }
 
-    const validTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'statistics']);
+    const validTabs = new Set(['notifications', 'panel', 'definitions', 'statistics']);
     if (mountOptions.initialTab && validTabs.has(mountOptions.initialTab)) {
         activateTab(mountOptions.initialTab, true);
     } else {
@@ -464,10 +464,7 @@ async function loadNotifications(silent = false, append = false) {
         notificationOffset = 0;
     }
 
-    const params = new URLSearchParams({ action: 'get_notifications', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
-    if (notificationStatusFilter) {
-        params.set('status', notificationStatusFilter);
-    }
+    const params = new URLSearchParams({ action: 'get_notifications', status: 'all', limit: String(NOTIFICATION_PAGE_SIZE), offset: String(notificationOffset) });
     if (notificationFilter) {
         params.set('severity', notificationFilter);
     }
@@ -579,9 +576,6 @@ function applyNotificationClientFilters(rows) {
                 return false;
             }
         }
-        if (notificationStatusFilter && row.status !== notificationStatusFilter) {
-            return false;
-        }
         if (notificationFilter && row.severity !== notificationFilter) {
             return false;
         }
@@ -649,26 +643,12 @@ function renderNotifications(notifications, staleMessage = '') {
         return;
     }
 
-    const visibleColumns = NOTIFICATION_COLUMNS.filter((column) => isNotificationColumnVisible(column.key));
-    const problemDevices = getProblemDevices(rows);
-    const settingsOpen = scopedById('notifications-settings-panel')?.classList.contains('active');
-
-    const problemStrip = problemDevices.length
-        ? `<div class="problem-strip">${problemDevices.map((item) => `
-                <button class="problem-chip" type="button" data-device-filter="${escapeHtml(item.serial)}">
-                    ${renderSeverityPill(item.severity)}
-                    <span class="problem-chip-serial">${escapeHtml(item.serial)}</span>
-                    <span class="problem-chip-count">${item.count} events</span>
-                </button>
-            `).join('')}</div>`
-        : '';
+    const visibleColumns = NOTIFICATION_COLUMNS.filter((column) => ['created_at_ny', 'severity', 'device_serial', 'customer_description', 'department', 'alert_display_name', 'message', '_count_1h', 'ip_address', 'actions'].includes(column.key));
 
     const controls = `
         <div class="notifications-toolbar">
             <div class="notifications-toolbar-left">
-                <button id="toggle-notification-settings" class="btn btn-secondary btn-small" type="button">
-                    <i class="fas fa-sliders-h"></i> Columns & Filters
-                </button>
+                <input id="notif-table-search" class="form-control" type="search" value="${escapeHtml(notificationSearchFilter)}" placeholder="Search device, IP, customer, alert">
                 ${staleMessage ? `<span class="notification-stale"><i class="fas fa-clock"></i> ${escapeHtml(staleMessage)}</span>` : ''}
             </div>
             <div class="notifications-toolbar-right">
@@ -677,47 +657,9 @@ function renderNotifications(notifications, staleMessage = '') {
         </div>
     `;
 
-    const settingsPanel = `
-        <aside id="notifications-settings-panel" class="notifications-settings-panel${settingsOpen ? ' active' : ''}">
-            <div class="settings-group">
-                <h4>Filters</h4>
-                <label>Severity
-                    <select id="notif-settings-severity" class="form-control">
-                        <option value="">All Severities</option>
-                        <option value="critical" ${notificationFilter === 'critical' ? 'selected' : ''}>Critical</option>
-                        <option value="high" ${notificationFilter === 'high' ? 'selected' : ''}>High</option>
-                        <option value="warning" ${notificationFilter === 'warning' ? 'selected' : ''}>Warning</option>
-                        <option value="info" ${notificationFilter === 'info' ? 'selected' : ''}>Info</option>
-                    </select>
-                </label>
-                <label>Status
-                    <select id="notif-settings-status" class="form-control">
-                        <option value="active" ${notificationStatusFilter === 'active' ? 'selected' : ''}>Active</option>
-                        <option value="acknowledged" ${notificationStatusFilter === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
-                        <option value="dismissed" ${notificationStatusFilter === 'dismissed' ? 'selected' : ''}>Dismissed</option>
-                    </select>
-                </label>
-                <label>Device Search
-                    <input id="notif-settings-search" class="form-control" type="search" value="${escapeHtml(notificationSearchFilter)}" placeholder="Serial / IP / customer">
-                </label>
-            </div>
-            <div class="settings-group">
-                <h4>Visible Columns</h4>
-                <div class="column-chooser">
-                    ${NOTIFICATION_COLUMNS.map((column) => `
-                        <label>
-                            <input type="checkbox" data-column-key="${escapeHtml(column.key)}" ${isNotificationColumnVisible(column.key) ? 'checked' : ''} ${column.required ? 'disabled' : ''}>
-                            ${escapeHtml(column.label)}
-                        </label>
-                    `).join('')}
-                </div>
-            </div>
-        </aside>
-    `;
-
     const tableHtml = `
         <div class="table-wrapper notification-table-wrapper">
-            <table class="table notification-table">
+            <table class="table notification-table notification-table--compact">
                 <thead>
                     <tr>
                         ${visibleColumns.map((column, idx) => {
@@ -743,7 +685,7 @@ function renderNotifications(notifications, staleMessage = '') {
         </div>
     `;
 
-    container.innerHTML = `<div class="notifications-layout">${controls}${problemStrip}<div class="notifications-workspace">${settingsPanel}<div class="notifications-table-area">${tableHtml}</div></div></div>`;
+    container.innerHTML = `<div class="notifications-layout">${controls}<div class="notifications-table-area">${tableHtml}</div></div>`;
     bindNotificationTableInteractions();
 }
 
@@ -793,47 +735,7 @@ function bindNotificationTableInteractions() {
         });
     });
 
-    const settingsBtn = scopedById('toggle-notification-settings');
-    const settingsPanel = scopedById('notifications-settings-panel');
-    if (settingsBtn && settingsPanel) {
-        settingsBtn.addEventListener('click', () => {
-            settingsPanel.classList.toggle('active');
-        });
-    }
-
-    container.querySelectorAll('input[data-column-key]').forEach((checkbox) => {
-        checkbox.addEventListener('change', (event) => {
-            const key = event.target.getAttribute('data-column-key');
-            notificationColumnVisibility[key] = event.target.checked;
-            saveNotificationColumns();
-            const rows = requestGuards.notifications.lastData?.rows || [];
-            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
-        });
-    });
-
-    const severitySel = scopedById('notif-settings-severity');
-    if (severitySel) {
-        severitySel.addEventListener('change', (event) => {
-            notificationFilter = event.target.value || '';
-            const topFilter = scopedById('notification-filter');
-            if (topFilter) topFilter.value = notificationFilter;
-            notificationOffset = 0;
-            saveNotificationFilters();
-            loadNotifications();
-        });
-    }
-
-    const statusSel = scopedById('notif-settings-status');
-    if (statusSel) {
-        statusSel.addEventListener('change', (event) => {
-            notificationStatusFilter = event.target.value || 'active';
-            notificationOffset = 0;
-            saveNotificationFilters();
-            loadNotifications();
-        });
-    }
-
-    const searchInput = scopedById('notif-settings-search');
+    const searchInput = scopedById('notif-table-search');
     if (searchInput) {
         searchInput.addEventListener('input', (event) => {
             notificationSearchFilter = event.target.value || '';
@@ -842,15 +744,6 @@ function bindNotificationTableInteractions() {
             renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
         });
     }
-
-    container.querySelectorAll('button[data-device-filter]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            notificationSearchFilter = btn.getAttribute('data-device-filter') || '';
-            saveNotificationFilters();
-            const rows = requestGuards.notifications.lastData?.rows || [];
-            renderNotifications(sortNotifications(applyNotificationClientFilters(rows)));
-        });
-    });
 
     container.querySelectorAll('.notification-device-link').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -1574,6 +1467,18 @@ async function loadCustomerOptionsForCC() {
 
         const defaultCode = (notificationCustomerFilter || (window.currentCustomerCode || '')).trim();
         if (defaultCode) {
+            const hasDefaultInList = normalized.some((item) => String(item.customer_code) === defaultCode);
+            if (!hasDefaultInList) {
+                [notifSelect, panelSelect].forEach((selectEl) => {
+                    if (!selectEl) return;
+                    const opt = document.createElement('option');
+                    opt.value = defaultCode;
+                    opt.textContent = defaultCode;
+                    selectEl.appendChild(opt);
+                });
+            }
+        }
+        if (defaultCode) {
             if (notifSelect) notifSelect.value = defaultCode;
             if (panelSelect) panelSelect.value = defaultCode;
             notificationCustomerFilter = defaultCode;
@@ -1581,6 +1486,17 @@ async function loadCustomerOptionsForCC() {
     };
 
     let timeoutId = null;
+    const parseCustomerPayload = (data) => {
+        if (!data || !Array.isArray(data.customers)) {
+            return [];
+        }
+        return data.customers
+            .map((item) => ({
+                customer_code: item.customer_code || item.Code || item.code || '',
+                customer_description: item.customer_description || item.Description || item.description || item.customer_code || item.Code || item.code || ''
+            }))
+            .filter((item) => item.customer_code);
+    };
     try {
         if (guard.lastData && Array.isArray(guard.lastData.customers) && guard.lastData.customers.length > 0) {
             applyOptions(guard.lastData.customers);
@@ -1599,12 +1515,25 @@ async function loadCustomerOptionsForCC() {
             signal: controller.signal
         });
         if (token !== guard.token) return;
-        const data = res.ok ? await res.json() : { success: false };
+        let data = res.ok ? await res.json() : { success: false };
+        let normalized = parseCustomerPayload(data);
+
+        if (!normalized.length) {
+            const fallbackRes = await fetch('api/get-customers.php', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
+            if (token !== guard.token) return;
+            data = fallbackRes.ok ? await fallbackRes.json() : { success: false };
+            normalized = parseCustomerPayload(data);
+        }
+
         if (token !== guard.token) return;
-        if (data.success && Array.isArray(data.customers)) {
-            guard.lastData = { customers: data.customers };
+        if (normalized.length) {
+            guard.lastData = { customers: normalized };
             guard.loaded = true;
-            applyOptions(data.customers);
+            applyOptions(normalized);
         }
     } catch (e) {
         console.warn('Failed to load customers for filter:', e);

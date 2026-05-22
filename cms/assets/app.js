@@ -1012,7 +1012,7 @@ const MPSM = (function() {
     function applyInitialTabFromUrl() {
         try {
             const params = new URLSearchParams(window.location.search || '');
-            const tab = (params.get('tab') || '').trim();
+            let tab = (params.get('tab') || '').trim();
             if (!tab) {
                 return;
             }
@@ -1028,8 +1028,11 @@ const MPSM = (function() {
                 switchAdminSection('tools');
                 return;
             }
+            if (tab === 'rules') {
+                tab = 'notifications';
+            }
 
-            const alertCenterTabs = new Set(['notifications', 'panel', 'rules', 'definitions', 'statistics']);
+            const alertCenterTabs = new Set(['notifications', 'panel', 'definitions', 'statistics']);
             if (alertCenterTabs.has(tab)) {
                 switchTab('alerts');
                 if (window.AlertCenter && typeof window.AlertCenter.mount === 'function') {

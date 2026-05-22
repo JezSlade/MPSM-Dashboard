@@ -3357,6 +3357,18 @@ CHANGELOG
     border-spacing: 0;
 }
 
+.notification-table--compact th,
+.notification-table--compact td {
+    padding: 0.4rem 0.45rem;
+    font-size: 0.82rem;
+    vertical-align: top;
+}
+
+.notification-table--compact td .severity-pill {
+    font-size: 0.72rem;
+    padding: 0.16rem 0.45rem;
+}
+
 .notification-table thead th {
     position: sticky;
     top: 0;

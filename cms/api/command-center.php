@@ -232,7 +232,7 @@ function getNotifications(PDO $pdo): void
 {
     ensureCommandCenterIndexes($pdo);
 
-    $status = $_GET['status'] ?? 'active';
+    $status = trim((string)($_GET['status'] ?? 'active'));
     $severity = $_GET['severity'] ?? null;
     $customerCode = isset($_GET['customerCode']) ? trim((string)$_GET['customerCode']) : null;
     if ($customerCode === '') {
@@ -246,8 +246,12 @@ function getNotifications(PDO $pdo): void
     $defsTable = DB_PREFIX . 'alert_definitions';
     $devicesTable = DB_PREFIX . 'cache_devices';
 
-    $where = ["dn.status = :status"];
-    $params = [':status' => $status];
+    $where = [];
+    $params = [];
+    if ($status !== '' && strtolower($status) !== 'all') {
+        $where[] = "dn.status = :status";
+        $params[':status'] = $status;
+    }
     if ($severity) {
         $where[] = "dn.severity = :severity";
         $params[':severity'] = $severity;
@@ -269,7 +273,7 @@ function getNotifications(PDO $pdo): void
                          LEFT JOIN {$defsTable} ad
                                 ON dn.alert_code = ad.alert_code
                                AND ad.enabled = 1
-                         WHERE " . implode(' AND ', $where) . "
+                         " . (!empty($where) ? "WHERE " . implode(' AND ', $where) : "") . "
                          ORDER BY dn.priority DESC, dn.created_at_ny DESC
                          LIMIT :limit OFFSET :offset";
 
@@ -338,7 +342,7 @@ function getNotifications(PDO $pdo): void
 
     $totalCount = count($notifications);
     try {
-        $countSql = "SELECT COUNT(*) FROM {$notifTable} dn WHERE " . implode(' AND ', $where);
+        $countSql = "SELECT COUNT(*) FROM {$notifTable} dn " . (!empty($where) ? "WHERE " . implode(' AND ', $where) : "");
         $countStmt = $pdo->prepare($countSql);
         foreach ($params as $key => $value) {
             $countStmt->bindValue($key, $value);

@@ -2,13 +2,10 @@
     <div class="monitor-container">
         <div class="monitor-tabs">
             <button class="monitor-tab-btn active" data-tab="notifications">
-                <i class="fas fa-bell"></i> Active Notifications
+                <i class="fas fa-bell"></i> Alerts
             </button>
             <button class="monitor-tab-btn" data-tab="panel">
                 <i class="fas fa-stream"></i> Panel Stream
-            </button>
-            <button class="monitor-tab-btn" data-tab="rules">
-                <i class="fas fa-cog"></i> Notification Rules
             </button>
             <button class="monitor-tab-btn" data-tab="definitions">
                 <i class="fas fa-tags"></i> Alert Labels
@@ -22,8 +19,8 @@
             <div class="card">
                 <div class="card-header">
                     <div>
-                        <h2>Active Notifications</h2>
-                        <p class="text-muted">Dashboard notifications triggered by panel message rules</p>
+                        <h2>Alerts</h2>
+                        <p class="text-muted">All alerts for the selected customer</p>
                     </div>
                     <div class="monitor-controls">
                         <select id="notification-filter" class="form-control">
@@ -50,25 +47,6 @@
                         <button id="notification-load-more" class="btn btn-secondary" style="display:none;">
                             <i class="fas fa-plus"></i> Load More
                         </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-rules" class="tab-panel" data-tab="rules">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2>Notification Rules</h2>
-                        <p class="text-muted">Define patterns and thresholds for automatic notifications</p>
-                    </div>
-                    <button id="create-rule-btn" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Create New Rule
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div id="rules-container">
-                        <div class="loading">Loading rules...</div>
                     </div>
                 </div>
             </div>
@@ -189,129 +167,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="rule-modal" class="modal" style="display: none;">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h2 id="rule-modal-title">Create Notification Rule</h2>
-                <button class="modal-close" onclick="closeRuleModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form id="rule-form">
-                <div class="modal-body">
-                    <input type="hidden" id="rule-id" name="id">
-
-                    <div class="form-section">
-                        <h3>Basic Information</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="rule-name">Rule Name <span class="required">*</span></label>
-                                <input type="text" id="rule-name" name="name" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="rule-severity">Severity <span class="required">*</span></label>
-                                <select id="rule-severity" name="severity" class="form-control" required>
-                                    <option value="info">Info</option>
-                                    <option value="warning">Warning</option>
-                                    <option value="high">High</option>
-                                    <option value="critical">Critical</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="rule-description">Description</label>
-                            <textarea id="rule-description" name="description" class="form-control" rows="2"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3>Pattern Matching</h3>
-                        <p class="form-help">Use % as wildcard (e.g., "E-%" matches E-001, E-002, etc.)</p>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="rule-alert-pattern">Alert Code Pattern</label>
-                                <input type="text" id="rule-alert-pattern" name="alert_code_pattern" class="form-control" list="alert-code-options" placeholder="e.g., JAM% or E-001">
-                            </div>
-                            <div class="form-group">
-                                <label for="rule-device-pattern">Device Serial Pattern</label>
-                                <input type="text" id="rule-device-pattern" name="device_serial_pattern" class="form-control" list="device-serial-options" placeholder="e.g., SN-%">
-                            </div>
-                            <div class="form-group">
-                                <label for="rule-customer-pattern">Customer (Name) Pattern</label>
-                                <input type="text" id="rule-customer-pattern" name="customer_code_pattern" class="form-control" list="customer-code-options" placeholder="e.g., CAPE FEAR%">
-                                <small class="field-hint">Select by customer name; the rule uses customer code under the hood. Use % as wildcard.</small>
-                            </div>
-                        </div>
-                    </div>
-                    <datalist id="alert-code-options"></datalist>
-                    <datalist id="device-serial-options"></datalist>
-                    <datalist id="customer-code-options"></datalist>
-
-                    <div class="form-section">
-                        <h3>Frequency Threshold (Optional)</h3>
-                        <p class="form-help">Only trigger notification if threshold is met</p>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="rule-freq-count">Occurrence Count</label>
-                                <input type="number" id="rule-freq-count" name="frequency_count" class="form-control" min="1" placeholder="e.g., 5">
-                            </div>
-                            <div class="form-group">
-                                <label for="rule-freq-window">Time Window (hours)</label>
-                                <input type="number" id="rule-freq-window" name="frequency_window_hours" class="form-control" min="1" placeholder="e.g., 24">
-                            </div>
-                            <div class="form-group">
-                                <label for="rule-freq-type">Frequency Type</label>
-                                <select id="rule-freq-type" name="frequency_type" class="form-control">
-                                    <option value="same_device">Same Device</option>
-                                    <option value="same_alert">Same Alert (Any Device)</option>
-                                    <option value="same_customer">Same Customer</option>
-                                    <option value="any">Any (Total Count)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3>Notification Template</h3>
-                        <p class="form-help">Available variables: {severity}, {device}, {alert}, {customer}, {count}, {window}, {rule_name}</p>
-                        <div class="form-group">
-                            <label for="rule-title">Notification Title</label>
-                            <input type="text" id="rule-title" name="notification_title" class="form-control" placeholder="{severity} Alert - {device} has {alert}">
-                        </div>
-                        <div class="form-group">
-                            <label for="rule-message">Notification Message</label>
-                            <textarea id="rule-message" name="notification_message" class="form-control" rows="2" placeholder="{device} has triggered {alert} {count} times in the past {window}"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3>Actions</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="rule-show-dashboard" name="show_dashboard" checked>
-                                    Show in Dashboard Hero Header
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="rule-auto-dismiss">Auto-dismiss (hours)</label>
-                                <input type="number" id="rule-auto-dismiss" name="auto_dismiss_hours" class="form-control" min="1" placeholder="e.g., 24">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeRuleModal()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save Rule
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 
