@@ -1,6 +1,46 @@
 # Project Next Steps / TODOs
 
-Updated: 2026-05-20
+Updated: 2026-06-03
+
+## Claude Candidate: Service Layer Stabilization Sprint
+
+- Resolve the broken `EngineInterface` service registration without rewriting the existing MPS API proxy or Swagger registry.
+- Verified starting facts:
+  - `bootstrap.php` registers `EngineInterface` and requires `src/Engine/MPSEngine.php`.
+  - `src/Engine/MPSEngine.php` is missing.
+  - `mps-api/engine.php` already contains the legacy MPS API engine.
+  - `mps-api/SwaggerActionRegistry.php` already parses Swagger/OpenAPI and exposes operation metadata.
+  - `cms/api/v1/index.php` uses `bootstrap.php` and `src/` service-layer classes.
+- Required approach:
+  - Inspect before editing.
+  - Identify the smallest safe fix.
+  - Do not rebuild Swagger parsing.
+  - Do not duplicate vendor API logic.
+  - Prefer a real adapter under `src/Engine/` that implements `EngineInterface` and delegates to the existing `MPSMonitorEngine`, unless inspection proves a better smaller fix.
+  - Preserve existing public endpoints.
+  - Do not change deployment scripts.
+  - Do not touch secrets or commit credentials.
+  - Do not create placeholders, stubs, fake data, or unfinished files.
+  - Keep files small, OOP, single-purpose, and path-safe.
+- Files to inspect first:
+  - `bootstrap.php`
+  - `src/Contracts/EngineInterface.php`
+  - `src/ServiceContainer.php`
+  - `cms/api/v1/index.php`
+  - `mps-api/engine.php`
+  - `mps-api/SwaggerActionRegistry.php`
+  - `config/app.php`
+  - `scripts/run_checks.py`
+  - `docs/REPOSITORY_AUDIT.md`
+  - `context/current-state.md`
+- Acceptance criteria:
+  - `EngineInterface` resolves from the service container.
+  - No missing require paths remain.
+  - Existing `mps-api` endpoints remain unchanged.
+  - `cms/api/v1/health` still works.
+  - PHP lint passes.
+  - `scripts/run_checks.py` passes or reports only pre-existing unrelated failures.
+  - Full changed file contents, verification summary, and manual test plan are included with the patch.
 
 ## Data Refresh & Coverage
 
