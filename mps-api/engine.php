@@ -1483,15 +1483,27 @@ class MPSMonitorEngine {
     }
 
     /**
-     * Override the OAuth username/password for this request only, so a single
-     * dealer-account login (not the shared service account) is used to
-     * authenticate. Used when a CMS user has saved their own MPS Monitor
-     * credentials to access dealers the service account cannot see.
+     * Override OAuth credentials for this request only. MPS Monitor issues a
+     * separate Client ID/Secret per dealer (even under the same username and
+     * password), so a dealer switch may need to swap client_id/client_secret,
+     * username/password, or both.
      */
-    public function useCredentials(?string $username, ?string $password): void {
+    public function useCredentials(?string $username, ?string $password, ?string $clientId = null, ?string $clientSecret = null): void {
+        $changed = false;
+
         if (!empty($username) && !empty($password)) {
             self::$config['USERNAME'] = $username;
             self::$config['PASSWORD'] = $password;
+            $changed = true;
+        }
+
+        if (!empty($clientId) && !empty($clientSecret)) {
+            self::$config['CLIENT_ID'] = $clientId;
+            self::$config['CLIENT_SECRET'] = $clientSecret;
+            $changed = true;
+        }
+
+        if ($changed) {
             $this->clearAccessToken();
         }
     }
