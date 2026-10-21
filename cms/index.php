@@ -75,6 +75,9 @@ $preferences = getUserPreferences($userId);
                 <a href="dealer.php" class="btn-icon" title="Dealer Dashboard">
                     <i class="fas fa-chart-line"></i>
                 </a>
+                <a href="toner-alerts.php" class="btn-icon" title="Toner Alerts">
+                    <i class="fas fa-print"></i>
+                </a>
                 <a href="command-center.php" class="btn-icon" title="Command Center">
                     <i class="fas fa-shield-alt"></i>
                     <span id="notification-badge" class="notification-badge" style="display:none;">0</span>
@@ -178,14 +181,22 @@ $preferences = getUserPreferences($userId);
                         </div>
                         <div class="card-body">
                             <div class="form-group">
-                                <label><i class="fas fa-tag"></i> Dealer Code:</label>
-                                <input type="text" id="dealer-code" class="form-control" value="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>">
-                                <small class="form-help">Your unique dealer identifier for API requests</small>
+                                <label><i class="fas fa-tag"></i> Dealership:</label>
+                                <select id="dealer-code" class="form-control">
+                                    <option value="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>">Loading dealerships...</option>
+                                </select>
+                                <input type="hidden" id="dealer-id" value="<?= htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID) ?>">
+                                <small class="form-help">Switch between dealerships you have access to</small>
                             </div>
                             <div class="form-group">
-                                <label><i class="fas fa-fingerprint"></i> Dealer ID:</label>
-                                <input type="text" id="dealer-id" class="form-control" value="<?= htmlspecialchars($preferences['dealerId'] ?? DEFAULT_DEALER_ID) ?>">
-                                <small class="form-help">Numeric dealer ID for backend authentication</small>
+                                <label><i class="fas fa-user-lock"></i> MPS Monitor Username:</label>
+                                <input type="text" id="mps-username" class="form-control" value="<?= htmlspecialchars($preferences['mpsUsername'] ?? '') ?>" autocomplete="off">
+                                <small class="form-help">Your personal MPS Monitor login, only needed to see dealerships beyond the default</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-key"></i> MPS Monitor Password:</label>
+                                <input type="password" id="mps-password" class="form-control" placeholder="<?= !empty($preferences['mpsPasswordEnc']) ? 'Saved (leave blank to keep)' : '' ?>" autocomplete="off">
+                                <small class="form-help">Stored encrypted. Leave blank to keep the saved password.</small>
                             </div>
                         </div>
                     </section>

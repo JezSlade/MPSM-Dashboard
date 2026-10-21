@@ -12,6 +12,8 @@ const MPSM = (function() {
         theme: 'light',
         dealerCode: null,
         dealerId: null,
+        dealers: [],
+        isLoadingDealers: false,
         customerCode: null,
         customerName: null,
         customers: [],
@@ -745,6 +747,7 @@ const MPSM = (function() {
             await loadPreferences();
 
             if (isDashboardPage) {
+            await loadDealerOptions();
             await loadCustomerOptions();
             await loadDashboard();
             applyInitialTabFromUrl();
@@ -841,6 +844,11 @@ const MPSM = (function() {
         const customerSelect = document.getElementById('customer-select');
         if (customerSelect) {
             customerSelect.addEventListener('change', handleCustomerSelection);
+        }
+
+        const dealerSelect = document.getElementById('dealer-code');
+        if (dealerSelect) {
+            dealerSelect.addEventListener('change', handleDealerSelection);
         }
 
         const customerSearch = document.getElementById('customer-search');
@@ -1828,6 +1836,86 @@ const MPSM = (function() {
     }
 
     /**
+     * Load dealerships the current user can switch between
+     */
+    async function loadDealerOptions() {
+        const select = document.getElementById('dealer-code');
+        if (!select) {
+            return;
+        }
+
+        state.isLoadingDealers = true;
+        try {
+            const response = await fetch('api/get-dealers.php');
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+            state.dealers = Array.isArray(data.dealers) ? data.dealers : [];
+        } catch (error) {
+            debugLog('Failed to load dealers: ' + error.message, 'error');
+            state.dealers = [];
+        } finally {
+            state.isLoadingDealers = false;
+            populateDealerSelect();
+        }
+    }
+
+    /**
+     * Populate dealer select element from state.dealers
+     */
+    function populateDealerSelect() {
+        const select = document.getElementById('dealer-code');
+        if (!select) {
+            return;
+        }
+
+        select.innerHTML = '';
+        const dealers = state.dealers;
+
+        if (!dealers.length) {
+            const opt = document.createElement('option');
+            opt.value = state.dealerCode || '';
+            opt.textContent = state.dealerCode || 'No dealerships found';
+            select.appendChild(opt);
+            return;
+        }
+
+        dealers.forEach(dealer => {
+            const option = document.createElement('option');
+            option.value = dealer.Code;
+            option.dataset.dealerId = dealer.Id || '';
+            option.textContent = dealer.Description ? `${dealer.Description} (${dealer.Code})` : dealer.Code;
+            if (dealer.Code === state.dealerCode) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Handle a dealership being switched from the dropdown
+     */
+    function handleDealerSelection(event) {
+        const select = event.target;
+        const code = select.value;
+        if (!code) {
+            return;
+        }
+
+        state.dealerCode = code;
+        state.dealerId = select.selectedOptions[0]?.dataset.dealerId || state.dealerId;
+
+        const dealerIdInput = document.getElementById('dealer-id');
+        if (dealerIdInput) {
+            dealerIdInput.value = state.dealerId || '';
+        }
+
+        // Customer list is scoped to the selected dealership
+        loadCustomerOptions();
+    }
+
+    /**
      * Load customers for the selector
      */
     async function loadCustomerOptions(searchTerm = '') {
@@ -1837,7 +1925,11 @@ const MPSM = (function() {
         }
 
         const shouldFilter = searchTerm && searchTerm.length >= 2;
-        const query = shouldFilter ? `?search=${encodeURIComponent(searchTerm)}` : '';
+        const params = new URLSearchParams({ dealerCode: state.dealerCode || '' });
+        if (shouldFilter) {
+            params.set('search', searchTerm);
+        }
+        const query = '?' + params.toString();
 
         state.customerSearchTerm = searchTerm;
         state.isLoadingCustomers = true;
@@ -2242,6 +2334,8 @@ const MPSM = (function() {
         const dealerId = document.getElementById('dealer-id').value;
         const customerCode = document.getElementById('customer-code').value;
         const customerName = document.getElementById('customer-name').value;
+        const mpsUsername = document.getElementById('mps-username')?.value || '';
+        const mpsPassword = document.getElementById('mps-password')?.value || '';
 
         if (!dealerCode || !dealerId || !customerCode || !customerName) {
             showToast('All fields are required', 'error');
@@ -2251,16 +2345,21 @@ const MPSM = (function() {
         try {
             debugLog('Saving settings...', 'info');
             const enabledCards = Array.from(cardSelection);
+            const payload = {
+                dealerCode: dealerCode,
+                dealerId: dealerId,
+                customerCode: customerCode,
+                customerName: customerName,
+                mpsUsername: mpsUsername,
+                cards: enabledCards
+            };
+            if (mpsPassword) {
+                payload.mpsPassword = mpsPassword;
+            }
             const response = await fetch('api/save-preferences.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    dealerCode: dealerCode,
-                    dealerId: dealerId,
-                    customerCode: customerCode,
-                    customerName: customerName,
-                    cards: enabledCards
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -2291,6 +2390,11 @@ const MPSM = (function() {
 
             debugLog('Settings saved successfully', 'info');
             showToast('Settings saved successfully', 'success');
+            const mpsPasswordInput = document.getElementById('mps-password');
+            if (mpsPasswordInput) {
+                mpsPasswordInput.value = '';
+            }
+            await loadDealerOptions();
             await loadDashboard();
 
         } catch (error) {

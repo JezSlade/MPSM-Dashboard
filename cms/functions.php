@@ -330,7 +330,9 @@ function getUserPreferences($userId) {
         'dealerCode' => DEFAULT_DEALER_CODE,
         'customerCode' => DEFAULT_CUSTOMER_CODE,
         'customerId' => DEFAULT_CUSTOMER_ID,
-        'customerName' => DEFAULT_CUSTOMER_NAME
+        'customerName' => DEFAULT_CUSTOMER_NAME,
+        'mpsUsername' => null,
+        'mpsPasswordEnc' => null
     ];
 }
 
@@ -356,6 +358,74 @@ function saveUserPreferences($userId, $preferences) {
     ");
 
     return $stmt->execute([$userId, $json]);
+}
+
+/**
+ * Encrypt/decrypt small secrets (e.g. a user's personal MPS Monitor password)
+ * for storage in user_preferences, using the app's SECURE_KEY.
+ */
+function encryptSecret($plain) {
+    $key = hash('sha256', SECURE_KEY, true);
+    $iv = random_bytes(16);
+    $cipher = openssl_encrypt((string)$plain, 'AES-256-CBC', $key, 0, $iv);
+    return base64_encode($iv . $cipher);
+}
+
+function decryptSecret($encoded) {
+    if (!$encoded) {
+        return null;
+    }
+    $raw = base64_decode($encoded, true);
+    if ($raw === false || strlen($raw) < 17) {
+        return null;
+    }
+    $key = hash('sha256', SECURE_KEY, true);
+    $iv = substr($raw, 0, 16);
+    return openssl_decrypt(substr($raw, 16), 'AES-256-CBC', $key, 0, $iv) ?: null;
+}
+
+/**
+ * Call the mps-api /query endpoint. When $userId has a saved personal MPS
+ * Monitor login (set via the dealer switcher), that login is used instead of
+ * the shared service account, so dealers the service account can't see are
+ * still reachable. Falls back to the service account for everyone else.
+ */
+function queryMpsApi($action, $params, $userId = null) {
+    $payload = ['action' => $action, 'params' => $params];
+
+    if ($userId) {
+        $prefs = getUserPreferences($userId);
+        $mpsUsername = $prefs['mpsUsername'] ?? null;
+        $mpsPassword = !empty($prefs['mpsPasswordEnc']) ? decryptSecret($prefs['mpsPasswordEnc']) : null;
+        if ($mpsUsername && $mpsPassword) {
+            $payload['auth'] = ['username' => $mpsUsername, 'password' => $mpsPassword];
+        }
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => 'Content-Type: application/json',
+            'content' => json_encode($payload),
+            'timeout' => 20,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents('https://mpsm.resolutionsbydesign.us/mps-api/query', false, $context);
+    if ($response === false) {
+        throw new Exception('Failed to contact mps-api backend');
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data)) {
+        throw new Exception('Invalid response from mps-api backend');
+    }
+    if (!($data['success'] ?? false)) {
+        throw new Exception($data['error'] ?? 'mps-api request failed');
+    }
+
+    return $data;
 }
 
 /**

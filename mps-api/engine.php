@@ -1481,6 +1481,20 @@ class MPSMonitorEngine {
         self::$accessToken = null;
         self::$accessTokenExpiresAt = 0;
     }
+
+    /**
+     * Override the OAuth username/password for this request only, so a single
+     * dealer-account login (not the shared service account) is used to
+     * authenticate. Used when a CMS user has saved their own MPS Monitor
+     * credentials to access dealers the service account cannot see.
+     */
+    public function useCredentials(?string $username, ?string $password): void {
+        if (!empty($username) && !empty($password)) {
+            self::$config['USERNAME'] = $username;
+            self::$config['PASSWORD'] = $password;
+            $this->clearAccessToken();
+        }
+    }
     
     /**
      * Check if error is retryable

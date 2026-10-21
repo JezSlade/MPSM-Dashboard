@@ -1042,6 +1042,13 @@ try {
             sendResponse($result);
         }
 
+        // Optional per-request credential override: lets a CMS user query with
+        // their OWN MPS Monitor login instead of the shared service account,
+        // so dealers the service account can't see are still reachable.
+        if (!empty($body['auth']['username']) && !empty($body['auth']['password'])) {
+            $engine->useCredentials($body['auth']['username'], $body['auth']['password']);
+        }
+
         $result = $engine->dispatchAction($action, $params);
         $status = statusFromEngineResult($result);
         sendResponse($result, $status);
