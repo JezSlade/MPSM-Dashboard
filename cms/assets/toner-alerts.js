@@ -99,8 +99,8 @@
             const sev = severityFor(pct);
             const device = [a.ProductBrand, a.ProductModel].filter(Boolean).join(' ') || '-';
             const location = [a.Office && a.Office.Description, a.Department].filter(Boolean).join(' / ') || '-';
-            const code = [a.ColorType, a.SupplyType || 'Toner'].filter(Boolean).join('-').toUpperCase();
-            const description = a.Warning || `${a.ColorType ? a.ColorType + ' ' : ''}toner at ${pct !== null ? pct + '%' : 'unknown level'}`;
+            const code = (a.SupplyTypeDescription || a.SupplyTypeDescriptionTranslated || 'Toner').toUpperCase();
+            const description = a.Warning || `Toner at ${pct !== null ? pct + '%' : 'unknown level'} remaining`;
 
             return `
                 <tr data-row-index="${i}">
@@ -142,6 +142,23 @@
                     <div class="ta-level-bar"><div class="ta-level-fill ${cls}" style="width:${pct}%"></div></div>
                     <span class="ta-level-pct">${pct}%</span>
                 </div>
+            </div>
+        `;
+    }
+
+    function renderMaintenanceAlerts(alerts) {
+        const open = (alerts || []).filter(m => !m.Closed);
+        if (!open.length) return '';
+        return `
+            <div class="ta-maint-section">
+                <div class="ta-detail-label" style="margin-bottom:0.5rem;">Active Maintenance Alerts</div>
+                ${open.map(m => `
+                    <div class="ta-maint-row">
+                        <span class="ta-badge critical">${escapeHtml(m.Code || '-')}</span>
+                        <span>${escapeHtml(m.Description || '')}</span>
+                        <span class="ta-maint-date">${escapeHtml((m.Opened || '').replace('T', ' ').slice(0, 16))}</span>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
@@ -192,6 +209,7 @@
                     ${toneBar('Magenta Toner', d.MagentaToner)}
                     ${toneBar('Yellow Toner', d.YellowToner)}
                 </div>
+                ${renderMaintenanceAlerts(d.MaintenanceAlerts)}
             `;
         } catch (error) {
             document.getElementById('ta-modal-detail').innerHTML = `<div class="ta-empty">Failed to load device: ${escapeHtml(error.message)}</div>`;

@@ -223,3 +223,7 @@ table.ta-table {
 .ta-online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.4rem; }
 .ta-online-dot.online { background: #66bb6a; }
 .ta-online-dot.offline { background: var(--ta-text-dim); }
+
+.ta-maint-section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--ta-border-soft); }
+.ta-maint-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; font-size: 0.85rem; flex-wrap: wrap; }
+.ta-maint-date { margin-left: auto; color: var(--ta-text-dim); font-size: 0.75rem; }
