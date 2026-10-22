@@ -1,29 +1,34 @@
 <?php
 /**
  * Get Dealers API
- * Lists dealers the current user's MPS Monitor login can access, for the
- * dealer switcher. Falls back to the single service-account dealer when the
- * user has no personal MPS Monitor login saved.
+ * MPS Monitor has no "list my dealers" call that spans multiple logins -
+ * each dealer is its own separate credential set. This just returns the
+ * default dealer plus whatever dealer profiles the user has added, for the
+ * dealer switcher dropdown.
  */
 require '../config.php';
 require '../functions.php';
 
 requireAuth();
 
-try {
-    $data = queryMpsApi('Dealer/GetDealers', [
-        'PageNumber' => 1,
-        'PageRows' => 100,
-        'SortColumn' => 'Description',
-        'SortOrder' => 'Asc'
-    ], $_SESSION['user_id']);
+$prefs = getUserPreferences($_SESSION['user_id']);
+$profiles = $prefs['dealerProfiles'] ?? [];
 
-    $dealers = $data['data']['Items'] ?? $data['data'] ?? [];
+$dealers = [[
+    'Code' => DEFAULT_DEALER_CODE,
+    'Id' => DEFAULT_DEALER_ID,
+    'Description' => 'Default dealership',
+]];
 
-    jsonSuccess([
-        'dealers' => $dealers,
-        'total' => count($dealers)
-    ]);
-} catch (Exception $e) {
-    jsonError('Failed to fetch dealers: ' . $e->getMessage());
+foreach ($profiles as $profile) {
+    $dealers[] = [
+        'Code' => $profile['dealerCode'],
+        'Id' => $profile['dealerId'] ?? '',
+        'Description' => $profile['label'] ?? $profile['dealerDescription'] ?? $profile['dealerCode'],
+    ];
 }
+
+jsonSuccess([
+    'dealers' => $dealers,
+    'total' => count($dealers)
+]);

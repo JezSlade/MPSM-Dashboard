@@ -189,14 +189,19 @@ $preferences = getUserPreferences($userId);
                                 <small class="form-help">Switch between dealerships you have access to</small>
                             </div>
                             <div class="form-group">
-                                <label><i class="fas fa-user-lock"></i> MPS Monitor Username:</label>
-                                <input type="text" id="mps-username" class="form-control" value="<?= htmlspecialchars($preferences['mpsUsername'] ?? '') ?>" autocomplete="off">
-                                <small class="form-help">Your personal MPS Monitor login, only needed to see dealerships beyond the default</small>
+                                <label><i class="fas fa-building"></i> Added Dealerships:</label>
+                                <div id="dealer-profile-list"><small class="form-help">No extra dealerships added yet</small></div>
+                                <small class="form-help">MPS Monitor gives each dealership its own login - add it below to switch to it</small>
                             </div>
                             <div class="form-group">
-                                <label><i class="fas fa-key"></i> MPS Monitor Password:</label>
-                                <input type="password" id="mps-password" class="form-control" placeholder="<?= !empty($preferences['mpsPasswordEnc']) ? 'Saved (leave blank to keep)' : '' ?>" autocomplete="off">
-                                <small class="form-help">Stored encrypted. Leave blank to keep the saved password.</small>
+                                <label><i class="fas fa-plus"></i> Add a Dealership:</label>
+                                <input type="text" id="dp-label" class="form-control" placeholder="Label, e.g. Greensboro" autocomplete="off">
+                                <input type="text" id="dp-username" class="form-control" placeholder="MPS Monitor username" autocomplete="off" style="margin-top:0.5rem">
+                                <input type="password" id="dp-password" class="form-control" placeholder="MPS Monitor password" autocomplete="off" style="margin-top:0.5rem">
+                                <input type="text" id="dp-client-id" class="form-control" placeholder="Client ID" autocomplete="off" style="margin-top:0.5rem">
+                                <input type="password" id="dp-client-secret" class="form-control" placeholder="Client Secret" autocomplete="off" style="margin-top:0.5rem">
+                                <button id="dp-add" class="btn btn-secondary" style="margin-top:0.5rem"><i class="fas fa-check"></i> Verify &amp; Add</button>
+                                <small class="form-help">Verified live against MPS Monitor before saving</small>
                             </div>
                         </div>
                     </section>

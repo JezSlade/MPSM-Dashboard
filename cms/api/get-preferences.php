@@ -12,8 +12,11 @@ $userId = $_SESSION['user_id'];
 
 try {
     $preferences = getUserPreferences($userId);
-    $preferences['mpsPasswordSet'] = !empty($preferences['mpsPasswordEnc']);
-    unset($preferences['mpsPasswordEnc']);
+    // Never send saved dealer credentials (even encrypted) to the browser
+    $preferences['dealerProfiles'] = array_map(function ($profile) {
+        unset($profile['mpsPasswordEnc'], $profile['mpsClientSecretEnc']);
+        return $profile;
+    }, $preferences['dealerProfiles'] ?? []);
     jsonSuccess(['preferences' => $preferences]);
 } catch (Exception $e) {
     jsonError($e->getMessage());

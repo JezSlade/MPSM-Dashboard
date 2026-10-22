@@ -19,15 +19,6 @@ if (empty($data)) {
     jsonError('No preferences provided', 400);
 }
 
-// Never store the personal MPS Monitor password in plaintext, and never let
-// a blank password (field left untouched in the UI) erase a saved one.
-if (array_key_exists('mpsPassword', $data)) {
-    if (!empty($data['mpsPassword'])) {
-        $data['mpsPasswordEnc'] = encryptSecret($data['mpsPassword']);
-    }
-    unset($data['mpsPassword']);
-}
-
 try {
     saveUserPreferences($userId, $data);
     jsonSuccess(['message' => 'Preferences saved']);

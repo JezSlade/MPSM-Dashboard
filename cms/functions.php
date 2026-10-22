@@ -331,8 +331,7 @@ function getUserPreferences($userId) {
         'customerCode' => DEFAULT_CUSTOMER_CODE,
         'customerId' => DEFAULT_CUSTOMER_ID,
         'customerName' => DEFAULT_CUSTOMER_NAME,
-        'mpsUsername' => null,
-        'mpsPasswordEnc' => null
+        'dealerProfiles' => []
     ];
 }
 
@@ -385,21 +384,41 @@ function decryptSecret($encoded) {
 }
 
 /**
- * Call the mps-api /query endpoint. When $userId has a saved personal MPS
- * Monitor login (set via the dealer switcher), that login is used instead of
- * the shared service account, so dealers the service account can't see are
- * still reachable. Falls back to the service account for everyone else.
+ * Find the saved credential profile for a dealer code, or null if the
+ * dealer is the default (served by the shared service account).
+ */
+function findDealerProfile($userId, $dealerCode) {
+    if (!$userId || !$dealerCode) {
+        return null;
+    }
+    $prefs = getUserPreferences($userId);
+    foreach ($prefs['dealerProfiles'] ?? [] as $profile) {
+        if (($profile['dealerCode'] ?? null) === $dealerCode) {
+            return $profile;
+        }
+    }
+    return null;
+}
+
+/**
+ * Call the mps-api /query endpoint. MPS Monitor gives each dealer its own
+ * complete login (username/password + OAuth client ID/secret) - there is no
+ * single account that sees multiple dealers. When $params['DealerCode']
+ * matches a saved profile for $userId, that dealer's own credentials are
+ * used instead of the shared service account. Falls back to the service
+ * account (the one default dealer) otherwise.
  */
 function queryMpsApi($action, $params, $userId = null) {
     $payload = ['action' => $action, 'params' => $params];
 
-    if ($userId) {
-        $prefs = getUserPreferences($userId);
-        $mpsUsername = $prefs['mpsUsername'] ?? null;
-        $mpsPassword = !empty($prefs['mpsPasswordEnc']) ? decryptSecret($prefs['mpsPasswordEnc']) : null;
-        if ($mpsUsername && $mpsPassword) {
-            $payload['auth'] = ['username' => $mpsUsername, 'password' => $mpsPassword];
-        }
+    $profile = findDealerProfile($userId, $params['DealerCode'] ?? null);
+    if ($profile) {
+        $payload['auth'] = [
+            'username' => $profile['mpsUsername'] ?? null,
+            'password' => !empty($profile['mpsPasswordEnc']) ? decryptSecret($profile['mpsPasswordEnc']) : null,
+            'client_id' => $profile['mpsClientId'] ?? null,
+            'client_secret' => !empty($profile['mpsClientSecretEnc']) ? decryptSecret($profile['mpsClientSecretEnc']) : null,
+        ];
     }
 
     $context = stream_context_create([

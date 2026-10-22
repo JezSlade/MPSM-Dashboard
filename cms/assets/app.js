@@ -14,6 +14,7 @@ const MPSM = (function() {
         dealerId: null,
         dealers: [],
         isLoadingDealers: false,
+        dealerProfiles: [],
         customerCode: null,
         customerName: null,
         customers: [],
@@ -851,6 +852,21 @@ const MPSM = (function() {
             dealerSelect.addEventListener('change', handleDealerSelection);
         }
 
+        const dpAddBtn = document.getElementById('dp-add');
+        if (dpAddBtn) {
+            dpAddBtn.addEventListener('click', handleAddDealerProfile);
+        }
+
+        const dealerProfileList = document.getElementById('dealer-profile-list');
+        if (dealerProfileList) {
+            dealerProfileList.addEventListener('click', (e) => {
+                const btn = e.target.closest('.dealer-profile-remove');
+                if (btn) {
+                    handleRemoveDealerProfile(btn.dataset.dealerCode);
+                }
+            });
+        }
+
         const customerSearch = document.getElementById('customer-search');
         if (customerSearch) {
             customerSearch.addEventListener('input', handleCustomerSearch);
@@ -1109,6 +1125,8 @@ const MPSM = (function() {
             state.customerCode = prefs.customerCode || 'W9OPXL0YDK';
             state.customerName = prefs.customerName || 'CAPE FEAR VALLEY MED CTR.';
             state.theme = prefs.theme || 'light';
+            state.dealerProfiles = Array.isArray(prefs.dealerProfiles) ? prefs.dealerProfiles : [];
+            renderDealerProfileList();
 
             const urlOverride = getCustomerOverrideFromUrl();
             if (urlOverride && urlOverride.customerCode) {
@@ -1916,6 +1934,90 @@ const MPSM = (function() {
     }
 
     /**
+     * Render the list of added dealer profiles in the settings panel
+     */
+    function renderDealerProfileList() {
+        const list = document.getElementById('dealer-profile-list');
+        if (!list) {
+            return;
+        }
+
+        if (!state.dealerProfiles.length) {
+            list.innerHTML = '<small class="form-help">No extra dealerships added yet</small>';
+            return;
+        }
+
+        list.innerHTML = state.dealerProfiles.map(p => `
+            <div class="dealer-profile-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+                <span>${p.label || p.dealerDescription || p.dealerCode} (${p.dealerCode})</span>
+                <button type="button" class="btn-icon dealer-profile-remove" data-dealer-code="${p.dealerCode}" title="Remove">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Verify and add a new dealer profile (each dealer has its own full
+     * MPS Monitor login - username/password + client ID/secret)
+     */
+    async function handleAddDealerProfile() {
+        const label = document.getElementById('dp-label').value.trim();
+        const username = document.getElementById('dp-username').value.trim();
+        const password = document.getElementById('dp-password').value;
+        const clientId = document.getElementById('dp-client-id').value.trim();
+        const clientSecret = document.getElementById('dp-client-secret').value;
+
+        if (!label || !username || !password || !clientId || !clientSecret) {
+            showToast('Fill in all five fields to add a dealership', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('api/add-dealer-profile.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label, username, password, clientId, clientSecret })
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+
+            showToast(`Added dealership: ${data.dealerDescription || label}`, 'success');
+            ['dp-label', 'dp-username', 'dp-password', 'dp-client-id', 'dp-client-secret'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+
+            await loadPreferences();
+            await loadDealerOptions();
+        } catch (error) {
+            showToast('Failed to add dealership: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Remove a saved dealer profile
+     */
+    async function handleRemoveDealerProfile(dealerCode) {
+        try {
+            const response = await fetch('api/remove-dealer-profile.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dealerCode })
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+            await loadPreferences();
+            await loadDealerOptions();
+        } catch (error) {
+            showToast('Failed to remove dealership: ' + error.message, 'error');
+        }
+    }
+
+    /**
      * Load customers for the selector
      */
     async function loadCustomerOptions(searchTerm = '') {
@@ -2334,8 +2436,6 @@ const MPSM = (function() {
         const dealerId = document.getElementById('dealer-id').value;
         const customerCode = document.getElementById('customer-code').value;
         const customerName = document.getElementById('customer-name').value;
-        const mpsUsername = document.getElementById('mps-username')?.value || '';
-        const mpsPassword = document.getElementById('mps-password')?.value || '';
 
         if (!dealerCode || !dealerId || !customerCode || !customerName) {
             showToast('All fields are required', 'error');
@@ -2350,12 +2450,8 @@ const MPSM = (function() {
                 dealerId: dealerId,
                 customerCode: customerCode,
                 customerName: customerName,
-                mpsUsername: mpsUsername,
                 cards: enabledCards
             };
-            if (mpsPassword) {
-                payload.mpsPassword = mpsPassword;
-            }
             const response = await fetch('api/save-preferences.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2390,11 +2486,6 @@ const MPSM = (function() {
 
             debugLog('Settings saved successfully', 'info');
             showToast('Settings saved successfully', 'success');
-            const mpsPasswordInput = document.getElementById('mps-password');
-            if (mpsPasswordInput) {
-                mpsPasswordInput.value = '';
-            }
-            await loadDealerOptions();
             await loadDashboard();
 
         } catch (error) {
