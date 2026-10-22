@@ -153,3 +153,73 @@ table.ta-table {
     text-align: center;
     color: var(--ta-text-dim);
 }
+
+/* Severity badge + inline residual bar */
+.ta-severity { display: flex; align-items: center; gap: 0.5rem; min-width: 150px; }
+.ta-badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+.ta-badge.critical { background: #ef535026; color: var(--ta-critical); }
+.ta-badge.low { background: #ffa72626; color: var(--ta-low); }
+.ta-badge.ok { background: #00bcd426; color: var(--ta-accent); }
+
+.ta-mini-bar { flex: 1; height: 5px; border-radius: 3px; background: var(--ta-border-soft); overflow: hidden; min-width: 50px; }
+.ta-mini-fill { height: 100%; background: var(--ta-accent); }
+.ta-mini-fill.critical { background: var(--ta-critical); }
+.ta-mini-fill.low { background: var(--ta-low); }
+
+/* Row is clickable for device drill-down */
+.ta-table tbody tr { cursor: pointer; transition: background 0.15s; }
+.ta-table tbody tr:hover td { background: var(--ta-border-soft); }
+.ta-device-cell { display: flex; align-items: center; gap: 0.5rem; }
+.ta-device-cell i.fa-print { color: var(--ta-accent); }
+
+/* Drill-down modal */
+.ta-modal-backdrop {
+    position: fixed; inset: 0; background: #000000b3;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 1rem;
+}
+.ta-modal {
+    background: var(--ta-surface);
+    border: 1px solid var(--ta-border);
+    border-radius: 10px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    position: relative;
+}
+.ta-modal-close {
+    position: absolute; top: 0.75rem; right: 0.75rem;
+    background: transparent; border: none; color: var(--ta-text-dim);
+    font-size: 1.1rem; cursor: pointer;
+}
+.ta-modal-close:hover { color: var(--ta-text); }
+
+.ta-modal h2 { margin: 0 0 0.25rem; font-size: 1.1rem; }
+.ta-modal .ta-modal-sub { color: var(--ta-text-dim); font-size: 0.8rem; margin-bottom: 1rem; }
+
+.ta-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+.ta-detail-item .ta-detail-label { font-size: 0.7rem; text-transform: uppercase; color: var(--ta-text-dim); letter-spacing: 0.03em; }
+.ta-detail-item .ta-detail-value { font-size: 0.9rem; margin-top: 0.15rem; }
+
+.ta-toner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+.ta-toner-item { background: var(--ta-border-soft); border-radius: 8px; padding: 0.6rem 0.75rem; }
+.ta-toner-item .ta-toner-label { font-size: 0.75rem; color: var(--ta-text-dim); margin-bottom: 0.35rem; }
+.ta-online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.4rem; }
+.ta-online-dot.online { background: #66bb6a; }
+.ta-online-dot.offline { background: var(--ta-text-dim); }

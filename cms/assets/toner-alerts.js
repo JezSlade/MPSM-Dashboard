@@ -13,6 +13,7 @@
         page: 1,
         pageRows: 100,
         total: 0,
+        currentAlerts: [],
     };
 
     const dealerSelect = document.getElementById('ta-dealer');
@@ -70,41 +71,146 @@
         }
     }
 
+    function severityFor(pct) {
+        const cls = levelClass(pct);
+        if (cls === 'critical') return { cls, label: 'Critical' };
+        if (cls === 'low') return { cls, label: 'Low' };
+        return { cls: 'ok', label: 'OK' };
+    }
+
+    function daysOpen(initialDate) {
+        if (!initialDate) return '-';
+        const started = new Date(initialDate).getTime();
+        if (Number.isNaN(started)) return '-';
+        const days = Math.max(1, Math.floor((Date.now() - started) / 86400000) + 1);
+        return days;
+    }
+
     function renderRows(alerts) {
+        state.currentAlerts = alerts;
+
         if (!alerts.length) {
-            rowsEl.innerHTML = '<tr><td colspan="7" class="ta-empty">No toner alerts found.</td></tr>';
+            rowsEl.innerHTML = '<tr><td colspan="8" class="ta-empty">No toner alerts found.</td></tr>';
             return;
         }
 
-        rowsEl.innerHTML = alerts.map(a => {
+        rowsEl.innerHTML = alerts.map((a, i) => {
             const pct = a.ActualResidualPercentage ?? a.InitialResidualPercentage ?? null;
-            const cls = levelClass(pct);
+            const sev = severityFor(pct);
             const device = [a.ProductBrand, a.ProductModel].filter(Boolean).join(' ') || '-';
             const location = [a.Office && a.Office.Description, a.Department].filter(Boolean).join(' / ') || '-';
-            const supply = [a.ColorType, a.SupplyTypeDescription || a.SupplyType].filter(Boolean).join(' ') || '-';
-            const updated = (a.ActualDate || a.InitialDate || '').replace('T', ' ').slice(0, 16);
+            const code = [a.ColorType, a.SupplyType || 'Toner'].filter(Boolean).join('-').toUpperCase();
+            const description = a.Warning || `${a.ColorType ? a.ColorType + ' ' : ''}toner at ${pct !== null ? pct + '%' : 'unknown level'}`;
 
             return `
-                <tr>
-                    <td>${escapeHtml(a.CustomerDescription || a.CustomerCode || '-')}</td>
-                    <td>${escapeHtml(device)} <span style="color:var(--ta-text-dim)">${escapeHtml(a.SerialNumber || '')}</span></td>
-                    <td>${escapeHtml(location)}</td>
-                    <td>${escapeHtml(supply)}</td>
+                <tr data-row-index="${i}">
                     <td>
-                        <div class="ta-level">
-                            <div class="ta-level-bar"><div class="ta-level-fill ${cls}" style="width:${pct ?? 0}%"></div></div>
-                            <span class="ta-level-pct">${pct !== null ? pct + '%' : '-'}</span>
+                        <div class="ta-severity">
+                            <span class="ta-badge ${sev.cls}">${sev.label}</span>
+                            <div class="ta-mini-bar"><div class="ta-mini-fill ${sev.cls}" style="width:${pct ?? 0}%"></div></div>
                         </div>
                     </td>
-                    <td>${escapeHtml(a.Warning || '')}</td>
-                    <td>${escapeHtml(updated)}</td>
+                    <td>${escapeHtml(code)}</td>
+                    <td>${escapeHtml(description)}</td>
+                    <td>
+                        <div class="ta-device-cell"><i class="fas fa-print"></i> ${escapeHtml(device)}</div>
+                    </td>
+                    <td>${escapeHtml(a.AssetNumber || a.DeviceId || '-')}</td>
+                    <td>${escapeHtml(a.SerialNumber || '-')}</td>
+                    <td>${escapeHtml(location)}</td>
+                    <td>${daysOpen(a.InitialDate)}</td>
                 </tr>
             `;
         }).join('');
     }
 
+    // --- Device drill-down modal ---
+    const modalBackdrop = document.getElementById('ta-modal-backdrop');
+    const modalBody = document.getElementById('ta-modal-body');
+
+    function closeModal() {
+        modalBackdrop.style.display = 'none';
+    }
+
+    function toneBar(label, pct) {
+        if (pct === null || pct === undefined) return '';
+        const cls = levelClass(pct);
+        return `
+            <div class="ta-toner-item">
+                <div class="ta-toner-label">${escapeHtml(label)}</div>
+                <div class="ta-level">
+                    <div class="ta-level-bar"><div class="ta-level-fill ${cls}" style="width:${pct}%"></div></div>
+                    <span class="ta-level-pct">${pct}%</span>
+                </div>
+            </div>
+        `;
+    }
+
+    async function openDeviceDrilldown(alert) {
+        modalBody.innerHTML = '<div class="ta-loading">Loading device...</div>';
+        modalBackdrop.style.display = 'flex';
+
+        const device = [alert.ProductBrand, alert.ProductModel].filter(Boolean).join(' ') || 'Device';
+        modalBody.innerHTML = `
+            <h2><i class="fas fa-print"></i> ${escapeHtml(device)}</h2>
+            <div class="ta-modal-sub">${escapeHtml(alert.SerialNumber || '')} &middot; ${escapeHtml(alert.CustomerDescription || alert.CustomerCode || '')}</div>
+            <div id="ta-modal-detail"><div class="ta-loading">Loading live device data...</div></div>
+        `;
+
+        if (!alert.DeviceId) {
+            document.getElementById('ta-modal-detail').innerHTML = '<div class="ta-empty">No device ID on this alert to drill into.</div>';
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ deviceId: alert.DeviceId, dealerCode: state.dealerCode });
+            const data = await fetchJson('api/get-device-detail.php?' + params.toString());
+            const d = data.device;
+            if (!d) {
+                throw new Error('Device not found');
+            }
+
+            const online = !!d.IsOnline;
+            const detail = document.getElementById('ta-modal-detail');
+            detail.innerHTML = `
+                <div class="ta-detail-grid">
+                    <div class="ta-detail-item">
+                        <div class="ta-detail-label">Status</div>
+                        <div class="ta-detail-value"><span class="ta-online-dot ${online ? 'online' : 'offline'}"></span>${online ? 'Online' : 'Offline'}</div>
+                    </div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Office</div><div class="ta-detail-value">${escapeHtml(d.OfficeDescription || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Department</div><div class="ta-detail-value">${escapeHtml(d.Department || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Contact</div><div class="ta-detail-value">${escapeHtml(d.Contact || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Firmware</div><div class="ta-detail-value">${escapeHtml(d.Firmware || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Last Update</div><div class="ta-detail-value">${escapeHtml((d.LastUpdate || '').replace('T', ' ').slice(0, 16) || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Installed</div><div class="ta-detail-value">${escapeHtml((d.Install || '').slice(0, 10) || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Note</div><div class="ta-detail-value">${escapeHtml(d.Note || '-')}</div></div>
+                </div>
+                <div class="ta-toner-grid">
+                    ${toneBar('Black Toner', d.BlackToner)}
+                    ${toneBar('Cyan Toner', d.CyanToner)}
+                    ${toneBar('Magenta Toner', d.MagentaToner)}
+                    ${toneBar('Yellow Toner', d.YellowToner)}
+                </div>
+            `;
+        } catch (error) {
+            document.getElementById('ta-modal-detail').innerHTML = `<div class="ta-empty">Failed to load device: ${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    document.getElementById('ta-modal-close').addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    rowsEl.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-row-index]');
+        if (!tr) return;
+        const alert = state.currentAlerts[Number(tr.dataset.rowIndex)];
+        if (alert) openDeviceDrilldown(alert);
+    });
+
     async function loadAlerts() {
-        rowsEl.innerHTML = '<tr><td colspan="7" class="ta-loading">Loading toner alerts...</td></tr>';
+        rowsEl.innerHTML = '<tr><td colspan="8" class="ta-loading">Loading toner alerts...</td></tr>';
         if (!state.dealerCode) return;
 
         const params = new URLSearchParams({
@@ -127,7 +233,7 @@
             prevBtn.disabled = state.page <= 1;
             nextBtn.disabled = state.page >= pages;
         } catch (error) {
-            rowsEl.innerHTML = `<tr><td colspan="7" class="ta-empty">Failed to load toner alerts: ${escapeHtml(error.message)}</td></tr>`;
+            rowsEl.innerHTML = `<tr><td colspan="8" class="ta-empty">Failed to load toner alerts: ${escapeHtml(error.message)}</td></tr>`;
         }
     }
 

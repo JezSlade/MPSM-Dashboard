@@ -403,15 +403,17 @@ function findDealerProfile($userId, $dealerCode) {
 /**
  * Call the mps-api /query endpoint. MPS Monitor gives each dealer its own
  * complete login (username/password + OAuth client ID/secret) - there is no
- * single account that sees multiple dealers. When $params['DealerCode']
- * matches a saved profile for $userId, that dealer's own credentials are
- * used instead of the shared service account. Falls back to the service
- * account (the one default dealer) otherwise.
+ * single account that sees multiple dealers. When $dealerCode (or
+ * $params['DealerCode'] if $dealerCode is omitted) matches a saved profile
+ * for $userId, that dealer's own credentials are used instead of the shared
+ * service account. Falls back to the service account (the default dealer)
+ * otherwise. $dealerCode lets a caller pick the auth profile without adding
+ * a DealerCode field to actions that don't take one (e.g. Device/Get).
  */
-function queryMpsApi($action, $params, $userId = null) {
+function queryMpsApi($action, $params, $userId = null, $dealerCode = null) {
     $payload = ['action' => $action, 'params' => $params];
 
-    $profile = findDealerProfile($userId, $params['DealerCode'] ?? null);
+    $profile = findDealerProfile($userId, $dealerCode ?? ($params['DealerCode'] ?? null));
     if ($profile) {
         $payload['auth'] = [
             'username' => $profile['mpsUsername'] ?? null,

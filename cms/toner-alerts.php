@@ -52,17 +52,18 @@ $preferences = getUserPreferences($userId);
         <table class="ta-table">
             <thead>
                 <tr>
-                    <th>Customer</th>
-                    <th>Device</th>
+                    <th>Severity</th>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th>Device Model</th>
+                    <th>Systel Equip ID</th>
+                    <th>Serial Number</th>
                     <th>Location</th>
-                    <th>Supply</th>
-                    <th>Residual</th>
-                    <th>Warning</th>
-                    <th>Updated</th>
+                    <th>Occurrences</th>
                 </tr>
             </thead>
             <tbody id="ta-rows">
-                <tr><td colspan="7" class="ta-loading">Select a dealership to load toner alerts...</td></tr>
+                <tr><td colspan="8" class="ta-loading">Select a dealership to load toner alerts...</td></tr>
             </tbody>
         </table>
     </div>
@@ -71,6 +72,13 @@ $preferences = getUserPreferences($userId);
         <button id="ta-prev">&larr; Prev</button>
         <span id="ta-page-label"></span>
         <button id="ta-next">Next &rarr;</button>
+    </div>
+
+    <div id="ta-modal-backdrop" class="ta-modal-backdrop" style="display:none;">
+        <div class="ta-modal">
+            <button id="ta-modal-close" class="ta-modal-close" title="Close"><i class="fas fa-times"></i></button>
+            <div id="ta-modal-body"><div class="ta-loading">Loading device...</div></div>
+        </div>
     </div>
 
     <script src="assets/shared.js"></script>
