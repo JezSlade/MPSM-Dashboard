@@ -90,7 +90,7 @@
         state.currentAlerts = alerts;
 
         if (!alerts.length) {
-            rowsEl.innerHTML = '<tr><td colspan="8" class="ta-empty">No toner alerts found.</td></tr>';
+            rowsEl.innerHTML = '<tr><td colspan="6" class="ta-empty">No toner alerts found.</td></tr>';
             return;
         }
 
@@ -99,8 +99,6 @@
             const sev = severityFor(pct);
             const device = [a.ProductBrand, a.ProductModel].filter(Boolean).join(' ') || '-';
             const location = [a.Office && a.Office.Description, a.Department].filter(Boolean).join(' / ') || '-';
-            const code = (a.SupplyTypeDescription || a.SupplyTypeDescriptionTranslated || 'Toner').toUpperCase();
-            const description = a.Warning || `Toner at ${pct !== null ? pct + '%' : 'unknown level'} remaining`;
 
             return `
                 <tr data-row-index="${i}">
@@ -110,12 +108,10 @@
                             <div class="ta-mini-bar"><div class="ta-mini-fill ${sev.cls}" style="width:${pct ?? 0}%"></div></div>
                         </div>
                     </td>
-                    <td>${escapeHtml(code)}</td>
-                    <td>${escapeHtml(description)}</td>
                     <td>
                         <div class="ta-device-cell"><i class="fas fa-print"></i> ${escapeHtml(device)}</div>
                     </td>
-                    <td>${escapeHtml(a.AssetNumber || a.DeviceId || '-')}</td>
+                    <td>${escapeHtml(a.AssetNumber || '-')}</td>
                     <td>${escapeHtml(a.SerialNumber || '-')}</td>
                     <td>${escapeHtml(location)}</td>
                     <td>${daysOpen(a.InitialDate)}</td>
@@ -228,7 +224,7 @@
     });
 
     async function loadAlerts() {
-        rowsEl.innerHTML = '<tr><td colspan="8" class="ta-loading">Loading toner alerts...</td></tr>';
+        rowsEl.innerHTML = '<tr><td colspan="6" class="ta-loading">Loading toner alerts...</td></tr>';
         if (!state.dealerCode) return;
 
         const params = new URLSearchParams({
@@ -251,7 +247,7 @@
             prevBtn.disabled = state.page <= 1;
             nextBtn.disabled = state.page >= pages;
         } catch (error) {
-            rowsEl.innerHTML = `<tr><td colspan="8" class="ta-empty">Failed to load toner alerts: ${escapeHtml(error.message)}</td></tr>`;
+            rowsEl.innerHTML = `<tr><td colspan="6" class="ta-empty">Failed to load toner alerts: ${escapeHtml(error.message)}</td></tr>`;
         }
     }
 

@@ -53,8 +53,6 @@ $preferences = getUserPreferences($userId);
             <thead>
                 <tr>
                     <th>Severity</th>
-                    <th>Code</th>
-                    <th>Description</th>
                     <th>Device Model</th>
                     <th>Systel Equip ID</th>
                     <th>Serial Number</th>
@@ -63,7 +61,7 @@ $preferences = getUserPreferences($userId);
                 </tr>
             </thead>
             <tbody id="ta-rows">
-                <tr><td colspan="8" class="ta-loading">Select a dealership to load toner alerts...</td></tr>
+                <tr><td colspan="6" class="ta-loading">Select a dealership to load toner alerts...</td></tr>
             </tbody>
         </table>
     </div>
