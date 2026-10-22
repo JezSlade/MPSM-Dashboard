@@ -24,6 +24,16 @@
     const prevBtn = document.getElementById('ta-prev');
     const nextBtn = document.getElementById('ta-next');
 
+    // Same precedence the rest of the dashboard uses (app.js getEquipmentIdFromAlert):
+    // AssetNumber/Asset/EquipmentId, then ExternalIdentifier/ExternalId, then Serial.
+    function getEquipmentId(a) {
+        const asset = (a.AssetNumber ?? a.Asset ?? a.EquipmentId ?? '').toString().trim();
+        const external = (a.ExternalIdentifier ?? a.ExternalId ?? '').toString().trim();
+        if (asset) return asset;
+        if (external) return external;
+        return '-';
+    }
+
     function levelClass(pct) {
         if (pct === null || pct === undefined) return '';
         if (pct <= 10) return 'critical';
@@ -111,7 +121,7 @@
                     <td>
                         <div class="ta-device-cell"><i class="fas fa-print"></i> ${escapeHtml(device)}</div>
                     </td>
-                    <td>${escapeHtml(a.AssetNumber || '-')}</td>
+                    <td>${escapeHtml(getEquipmentId(a))}</td>
                     <td>${escapeHtml(a.SerialNumber || '-')}</td>
                     <td>${escapeHtml(location)}</td>
                     <td>${daysOpen(a.InitialDate)}</td>

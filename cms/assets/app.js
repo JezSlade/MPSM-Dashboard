@@ -1914,7 +1914,7 @@ const MPSM = (function() {
     /**
      * Handle a dealership being switched from the dropdown
      */
-    function handleDealerSelection(event) {
+    async function handleDealerSelection(event) {
         const select = event.target;
         const code = select.value;
         if (!code) {
@@ -1929,8 +1929,14 @@ const MPSM = (function() {
             dealerIdInput.value = state.dealerId || '';
         }
 
-        // Customer list is scoped to the selected dealership
-        loadCustomerOptions();
+        // Customer list is scoped to the selected dealership - the old active
+        // customer belongs to the previous dealer, so switch to this one's
+        // first customer rather than leaving the stale selection in place.
+        await loadCustomerOptions();
+        const firstCustomer = (state.customers || [])[0];
+        if (firstCustomer) {
+            handleCustomerSelection({ target: { value: firstCustomer.Code } });
+        }
     }
 
     /**
