@@ -1,5 +1,9 @@
 # Session Summary - Current
 
+## 2026-11-25 Toner Alert Age Ordering
+
+- Renamed the toner-alert age column to `Days Open` and sorted alerts by `InitialDate` ascending so the oldest current alert appears first.
+
 ## 2026-11-25 Current Toner Alert Filtering
 
 - Toner Alerts now requests current-only records and excludes installed, canceled, hidden, stock-generated, non-toner, unknown-level, and above-25% records.

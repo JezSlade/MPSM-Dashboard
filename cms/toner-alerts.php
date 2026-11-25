@@ -57,7 +57,7 @@ $preferences = getUserPreferences($userId);
                     <th>Systel Equip ID</th>
                     <th>Serial Number</th>
                     <th>Location</th>
-                    <th>Occurrences</th>
+                    <th>Days Open</th>
                 </tr>
             </thead>
             <tbody id="ta-rows">
@@ -83,3 +83,11 @@ $preferences = getUserPreferences($userId);
     <script src="assets/toner-alerts.js"></script>
 </body>
 </html>
+
+<?php
+/*
+CHANGELOG
+2026-11-25 Codex
+- Renamed the toner-alert age column from Occurrences to Days Open.
+*/
+?>

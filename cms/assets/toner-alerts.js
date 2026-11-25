@@ -279,6 +279,8 @@
             dealerCode: state.dealerCode,
             supplyType: 'Toner',
             currentOnly: '1',
+            sortColumn: 'InitialDate',
+            sortOrder: 'Asc',
             pageNumber: state.page,
             pageRows: state.pageRows,
         });
@@ -348,4 +350,5 @@ CHANGELOG
 - Displayed all compatible OEM toner part numbers with yield and region in the device drill-down.
 - Sent alert brand and model to the device-detail endpoint for exact catalog matching.
 - Limited the list to current toner alerts so completed lifecycle records no longer inflate pagination.
+- Sorted current toner alerts oldest-first to align with the Days Open column.
 */

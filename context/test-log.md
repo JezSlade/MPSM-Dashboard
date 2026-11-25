@@ -1,5 +1,9 @@
 # Test Log - Command Center Loading Fix
 
+## 2026-11-25 - Toner alert age ordering
+
+- PHP lint, JavaScript syntax, and `git diff --check` passed after renaming the column and setting `InitialDate` ascending.
+
 ## 2026-11-25 - Current toner alert filtering
 
 - Passed PHP lint for `get-supply-alerts.php`, `supply-alert-filters.php`, and its test.
