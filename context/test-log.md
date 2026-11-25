@@ -5,6 +5,7 @@
 - Passed PHP lint for `get-supply-alerts.php`, `supply-alert-filters.php`, and its test.
 - Passed current-only filter tests for 0%-25%, above-threshold, installed, canceled, hidden, unknown-level, and non-toner cases.
 - Existing standalone PHP tests, JavaScript syntax, Python compile, and `git diff --check` passed.
+- GitHub Actions run `1876` succeeded; production `0.0.0.1876` served the current-only request and filter helper with HTTP 200.
 
 ## 2026-11-25 - OEM toner catalog integration
 

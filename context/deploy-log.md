@@ -1,5 +1,13 @@
 # Deploy Log
 
+## 2026-11-25 12:08 EST - Current toner alert filtering
+
+- Commit: `b122217` (`Show only current toner alerts`).
+- Command: `git push origin main`.
+- Method: GitHub Actions workflow `FTP Deploy - Final Lean`.
+- Result: workflow run `1876` completed successfully.
+- Live verification: production version `0.0.0.1876`; toner-alert JavaScript returned HTTP 200 with `currentOnly=1`; the filter helper returned HTTP 200.
+
 ## 2026-11-25 11:50 EST - OEM toner part-number integration
 
 - Commit: `bf42945` (`Add OEM toner part numbers to drill-down`).
