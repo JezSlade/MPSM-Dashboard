@@ -1,5 +1,15 @@
 # Deploy Log
 
+## 2026-11-25 11:50 EST - OEM toner part-number integration
+
+- Commit: `bf42945` (`Add OEM toner part numbers to drill-down`).
+- Command: `git push origin main`.
+- Method: GitHub Actions workflow `FTP Deploy - Final Lean`.
+- Result: workflow run `1874` completed successfully.
+- Live verification:
+  - `cms/assets/toner-alerts.js` returned HTTP 200 and contained the compatible-part-number UI.
+  - `cms/catalog/oem-toner-catalog.json` returned HTTP 200 with 3,035 options generated on 2026-11-25.
+
 ## 2026-05-20 - Documentation refresh deploy
 
 - Backup: `python3 scripts/ftp_backup.py`.

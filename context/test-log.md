@@ -7,6 +7,7 @@
 - Passed JavaScript syntax validation for `cms/assets/toner-alerts.js`, Python compile validation for `scripts/run_checks.py`, JSON parsing, and all existing standalone PHP tests.
 - `git diff --check` passed.
 - The full `scripts/run_checks.py` reached its existing secret scan and stopped on `.github/workflows/deploy.yml`; this unrelated tracked finding was not changed.
+- Post-deployment verification passed: GitHub Actions run `1874` succeeded, the live JavaScript returned HTTP 200 with the compatible-part-number UI, and the live catalog returned HTTP 200 with 3,035 options.
 
 ## 2026-05-20 - Documentation accuracy validation
 
@@ -1046,4 +1047,5 @@ CHANGELOG
 - Logged duplicate-ips summaryOnly curl check after cache-first refactor.
 2026-11-25 Codex
 - Logged local verification for the OEM toner catalog integration and the pre-existing full-check blocker.
+- Logged successful workflow deployment and live asset/catalog verification.
 */
