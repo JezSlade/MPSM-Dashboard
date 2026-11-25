@@ -74,46 +74,45 @@ try {
             $upstreamPage++;
         } while ($items && (($upstreamPage - 1) * $upstreamRows) < $upstreamTotal && $upstreamPage <= 100);
 
-        $historyCache = is_array($_SESSION['toner_alert_event_cache'] ?? null)
-            ? $_SESSION['toner_alert_event_cache']
-            : [];
-        $cacheNow = time();
-        foreach ($filtered as &$alert) {
-            $deviceId = trim((string)($alert['DeviceId'] ?? $alert['IdInstalledProduct'] ?? ''));
-            $color = normalizeTonerColor($alert['ColorType'] ?? $alert['SupplyTypeDescription'] ?? '');
-            $cacheKey = hash('sha256', (string)$dealerCode . '|' . $deviceId);
-            $cached = $historyCache[$cacheKey] ?? null;
-
-            if ($deviceId !== '' && (!is_array($cached) || ($cacheNow - (int)($cached['savedAt'] ?? 0)) > 300)) {
-                $dates = [];
-                try {
-                    $historyResponse = queryMpsApi('Device/MaintenanceAlerts/List', [
-                        'idInstalledProduct' => $deviceId,
-                        'filterByOpened' => true,
-                        'filterByClosed' => false,
-                        'pageNumber' => 1,
-                        'pageRows' => 200,
-                        'sortColumn' => 'Opened',
-                        'sortOrder' => 'Asc',
-                    ], $_SESSION['user_id'], (string)$dealerCode);
-                    $historyRows = supplyAlertResponseRows($historyResponse);
-                    foreach (['black', 'cyan', 'magenta', 'yellow', 'white', ''] as $historyColor) {
-                        $dates[$historyColor] = tonerMaintenanceOpenedDate($historyRows, $historyColor);
-                    }
-                } catch (Throwable $historyError) {
-                    error_log('Toner alert history lookup failed for device ' . $deviceId . ': ' . $historyError->getMessage());
+        $historyBySerial = [];
+        $serials = array_values(array_unique(array_filter(array_map(
+            static fn(array $alert): string => strtoupper(trim((string)($alert['SerialNumber'] ?? ''))),
+            $filtered
+        ))));
+        if ($serials) {
+            try {
+                $pdo = getDatabase();
+                $placeholders = [];
+                $historyParams = [];
+                foreach ($serials as $index => $serial) {
+                    $placeholder = ':serial' . $index;
+                    $placeholders[] = $placeholder;
+                    $historyParams[$placeholder] = $serial;
                 }
-                $cached = ['savedAt' => $cacheNow, 'dates' => $dates];
-                $historyCache[$cacheKey] = $cached;
+                $historyTable = DB_PREFIX . 'panel_messages';
+                $historySql = "SELECT device_serial, received_at, maintenance_alert_code, panel_configuration, payload
+                    FROM {$historyTable}
+                    WHERE device_serial IN (" . implode(',', $placeholders) . ")
+                      AND maintenance_alert_code IN ('1101', '1104')
+                    ORDER BY received_at DESC";
+                $historyStmt = $pdo->prepare($historySql);
+                $historyStmt->execute($historyParams);
+                foreach ($historyStmt->fetchAll(PDO::FETCH_ASSOC) as $historyRow) {
+                    $serialKey = strtoupper(trim((string)($historyRow['device_serial'] ?? '')));
+                    $historyBySerial[$serialKey][] = $historyRow;
+                }
+            } catch (Throwable $historyError) {
+                error_log('Toner panel-history lookup failed: ' . $historyError->getMessage());
             }
+        }
 
-            $alert['AlertOpenedDate'] = $deviceId !== ''
-                ? ($cached['dates'][$color] ?? null)
-                : null;
-            $alert['AlertDateSource'] = $alert['AlertOpenedDate'] ? 'Device/MaintenanceAlerts/List' : null;
+        foreach ($filtered as &$alert) {
+            $serialKey = strtoupper(trim((string)($alert['SerialNumber'] ?? '')));
+            $color = $alert['ColorType'] ?? $alert['SupplyTypeDescription'] ?? '';
+            $alert['AlertOpenedDate'] = tonerPanelEventOpenedDate($historyBySerial[$serialKey] ?? [], $color);
+            $alert['AlertDateSource'] = $alert['AlertOpenedDate'] ? 'panel_messages' : null;
         }
         unset($alert);
-        $_SESSION['toner_alert_event_cache'] = $historyCache;
         sortTonerAlertsByOpenedDate($filtered);
 
         $total = count($filtered);
@@ -158,5 +157,5 @@ CHANGELOG
 2026-11-25 Codex
 - Added optional current-only upstream filtering with accurate post-filter pagination.
 - Added an opt-in current-only mode that excludes installed, canceled, hidden, and stock-generated supply records upstream.
-- Replaced supply lifecycle dates with color-matched active maintenance-alert Opened dates.
+- Replaced slow per-device MPSM history calls with one batched panel-history query keyed by serial and toner color.
 */

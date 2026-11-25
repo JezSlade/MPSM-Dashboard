@@ -2,7 +2,7 @@
 
 ## 2026-11-25 - Toner event date correction
 
-- Passed event-date tests for toner codes 1101/1104, color matching, nested configuration descriptions, closed-event rejection, missing dates, and oldest-first sorting.
+- Passed event-date tests for toner codes 1101/1104, panel-history color matching, missing dates, and oldest-first sorting.
 - Existing standalone PHP tests, endpoint/helper lint, JavaScript syntax, Python compile, and `git diff --check` passed.
 - GitHub Actions run `1878` succeeded; production `0.0.0.1878` serves `AlertOpenedDate` and no longer uses `InitialDate` for Days Open.
 

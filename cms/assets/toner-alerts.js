@@ -353,5 +353,5 @@ CHANGELOG
 - Sent alert brand and model to the device-detail endpoint for exact catalog matching.
 - Limited the list to current toner alerts so completed lifecycle records no longer inflate pagination.
 - Sorted current toner alerts oldest-first to align with the Days Open column.
-- Calculated Days Open from the active low/empty maintenance event instead of the supply lifecycle InitialDate.
+- Calculated Days Open from the latest matching low/empty panel-history event instead of the supply lifecycle InitialDate.
 */

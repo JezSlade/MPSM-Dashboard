@@ -179,10 +179,66 @@ if (!function_exists('sortTonerAlertsByOpenedDate')) {
     }
 }
 
+if (!function_exists('tonerPanelEventOpenedDate')) {
+    function tonerPanelEventOpenedDate(array $rows, $color = ''): ?string
+    {
+        $targetColor = normalizeTonerColor($color);
+        $exact = [];
+        $generic = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row) || !preg_match('/(^|\D)(1101|1104)(\D|$)/', (string)($row['maintenance_alert_code'] ?? ''))) {
+                continue;
+            }
+            $received = trim((string)($row['received_at'] ?? ''));
+            $timestamp = $received !== '' ? strtotime($received) : false;
+            if ($timestamp === false) {
+                continue;
+            }
+
+            $payload = $row['payload'] ?? '';
+            if (is_string($payload)) {
+                $decoded = json_decode($payload, true);
+                $payload = is_array($decoded) ? $decoded : $payload;
+            }
+            $searchText = strtolower(
+                (string)($row['panel_configuration'] ?? '') . ' '
+                . (is_array($payload) ? json_encode($payload) : (string)$payload)
+            );
+
+            $describedColor = '';
+            foreach (['cyan', 'magenta', 'yellow', 'black', 'white'] as $candidate) {
+                if (preg_match('/\b' . preg_quote($candidate, '/') . '\b/', $searchText)) {
+                    $describedColor = $candidate;
+                    break;
+                }
+            }
+            if ($targetColor !== '' && $describedColor !== '' && $describedColor !== $targetColor) {
+                continue;
+            }
+
+            $entry = ['timestamp' => $timestamp, 'date' => $received];
+            if ($targetColor !== '' && $describedColor === $targetColor) {
+                $exact[] = $entry;
+            } else {
+                $generic[] = $entry;
+            }
+        }
+
+        $candidates = $exact ?: $generic;
+        if (!$candidates) {
+            return null;
+        }
+        usort($candidates, static fn(array $a, array $b): int => $b['timestamp'] <=> $a['timestamp']);
+        return $candidates[0]['date'];
+    }
+}
+
 /*
 CHANGELOG
 2026-11-25 Codex
 - Added explicit upstream lifecycle filters for current, actionable supply alerts.
 - Added a strict current toner-level predicate that excludes OK, installed, canceled, hidden, and non-toner records.
 - Added active maintenance-history date matching and oldest-first event sorting.
+- Added a fast panel-history event resolver for batched serial lookups.
 */

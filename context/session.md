@@ -2,9 +2,9 @@
 
 ## 2026-11-25 Toner Alert Event Dates
 
-- Replaced supply-alert `InitialDate` ages with color-matched active MPSM maintenance-alert `Opened` timestamps for toner codes 1101/1104.
-- Alerts without a matching active low/empty event show no age instead of a misleading value; sorting uses the actual event date with missing dates last.
-- Added five-minute per-device history caching and regression coverage.
+- Replaced supply-alert `InitialDate` ages with color-matched panel-history timestamps for toner codes 1101/1104.
+- Alerts without a matching low/empty history event show no age instead of a misleading value; sorting uses the actual event date with missing dates last.
+- Uses one indexed batch history query for all visible serials and includes regression coverage.
 
 ## 2026-11-25 Toner Alert Age Ordering
 

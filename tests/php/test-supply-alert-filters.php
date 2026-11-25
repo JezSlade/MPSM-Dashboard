@@ -91,6 +91,20 @@ if (array_column($sortable, 'SerialNumber') !== ['OLD', 'NEW', 'NO-DATE']) {
     exit(1);
 }
 
+$panelHistory = [
+    ['maintenance_alert_code' => '1104', 'received_at' => '2025-12-01 08:00:00', 'panel_configuration' => 'Black toner almost empty', 'payload' => '{}'],
+    ['maintenance_alert_code' => '1101', 'received_at' => '2026-03-20 08:00:00', 'panel_configuration' => 'Cyan toner empty', 'payload' => '{}'],
+    ['maintenance_alert_code' => '1104', 'received_at' => '2026-03-10 08:00:00', 'panel_configuration' => 'Cyan toner almost empty', 'payload' => '{}'],
+];
+if (tonerPanelEventOpenedDate($panelHistory, 'Cyan') !== '2026-03-20 08:00:00') {
+    fwrite(STDERR, "Panel history should use the latest matching low/empty event.\n");
+    exit(1);
+}
+if (tonerPanelEventOpenedDate($panelHistory, 'Black') !== '2025-12-01 08:00:00') {
+    fwrite(STDERR, "Panel history must remain color-specific.\n");
+    exit(1);
+}
+
 echo "Supply alert current-only filter tests passed.\n";
 
 /*
@@ -99,4 +113,5 @@ CHANGELOG
 - Added coverage for current-only lifecycle filters and unchanged default behavior.
 - Added low/empty boundary and completed-record rejection cases.
 - Added color-matched maintenance-event date and actual-date sorting coverage.
+- Added batched panel-history event selection coverage.
 */
