@@ -1,5 +1,13 @@
 # Deploy Log
 
+## 2026-11-25 12:13 EST - Toner alert age ordering
+
+- Commit: `e48d62f` (`Sort toner alerts by days open`).
+- Command: `git push origin main`.
+- Method: GitHub Actions workflow `FTP Deploy - Final Lean`.
+- Result: workflow run `1877` completed successfully.
+- Live verification: production version `0.0.0.1877`; live JavaScript contains `InitialDate` ascending ordering.
+
 ## 2026-11-25 12:08 EST - Current toner alert filtering
 
 - Commit: `b122217` (`Show only current toner alerts`).

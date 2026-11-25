@@ -3,6 +3,7 @@
 ## 2026-11-25 - Toner alert age ordering
 
 - PHP lint, JavaScript syntax, and `git diff --check` passed after renaming the column and setting `InitialDate` ascending.
+- GitHub Actions run `1877` succeeded; production `0.0.0.1877` serves the oldest-first sort parameters.
 
 ## 2026-11-25 - Current toner alert filtering
 
