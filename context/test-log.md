@@ -1,5 +1,10 @@
 # Test Log - Command Center Loading Fix
 
+## 2026-11-25 - Toner event date correction
+
+- Passed event-date tests for toner codes 1101/1104, color matching, nested configuration descriptions, closed-event rejection, missing dates, and oldest-first sorting.
+- Existing standalone PHP tests, endpoint/helper lint, JavaScript syntax, Python compile, and `git diff --check` passed.
+
 ## 2026-11-25 - Toner alert age ordering
 
 - PHP lint, JavaScript syntax, and `git diff --check` passed after renaming the column and setting `InitialDate` ascending.

@@ -62,9 +62,7 @@ try {
         do {
             $data = $requestPage($upstreamPage, $upstreamRows);
             $raw = $data['data'] ?? [];
-            $items = isset($raw['Items']) && is_array($raw['Items'])
-                ? $raw['Items']
-                : (is_array($raw) ? $raw : []);
+            $items = supplyAlertResponseRows($data);
             $currentItems = array_filter(
                 $items,
                 static fn($item): bool => is_array($item) && isCurrentTonerAlert($item)
@@ -75,6 +73,48 @@ try {
             $upstreamTotal = (int)($meta['total_rows'] ?? $meta['total_count'] ?? $raw['TotalRows'] ?? count($items));
             $upstreamPage++;
         } while ($items && (($upstreamPage - 1) * $upstreamRows) < $upstreamTotal && $upstreamPage <= 100);
+
+        $historyCache = is_array($_SESSION['toner_alert_event_cache'] ?? null)
+            ? $_SESSION['toner_alert_event_cache']
+            : [];
+        $cacheNow = time();
+        foreach ($filtered as &$alert) {
+            $deviceId = trim((string)($alert['DeviceId'] ?? $alert['IdInstalledProduct'] ?? ''));
+            $color = normalizeTonerColor($alert['ColorType'] ?? $alert['SupplyTypeDescription'] ?? '');
+            $cacheKey = hash('sha256', (string)$dealerCode . '|' . $deviceId);
+            $cached = $historyCache[$cacheKey] ?? null;
+
+            if ($deviceId !== '' && (!is_array($cached) || ($cacheNow - (int)($cached['savedAt'] ?? 0)) > 300)) {
+                $dates = [];
+                try {
+                    $historyResponse = queryMpsApi('Device/MaintenanceAlerts/List', [
+                        'idInstalledProduct' => $deviceId,
+                        'filterByOpened' => true,
+                        'filterByClosed' => false,
+                        'pageNumber' => 1,
+                        'pageRows' => 200,
+                        'sortColumn' => 'Opened',
+                        'sortOrder' => 'Asc',
+                    ], $_SESSION['user_id'], (string)$dealerCode);
+                    $historyRows = supplyAlertResponseRows($historyResponse);
+                    foreach (['black', 'cyan', 'magenta', 'yellow', 'white', ''] as $historyColor) {
+                        $dates[$historyColor] = tonerMaintenanceOpenedDate($historyRows, $historyColor);
+                    }
+                } catch (Throwable $historyError) {
+                    error_log('Toner alert history lookup failed for device ' . $deviceId . ': ' . $historyError->getMessage());
+                }
+                $cached = ['savedAt' => $cacheNow, 'dates' => $dates];
+                $historyCache[$cacheKey] = $cached;
+            }
+
+            $alert['AlertOpenedDate'] = $deviceId !== ''
+                ? ($cached['dates'][$color] ?? null)
+                : null;
+            $alert['AlertDateSource'] = $alert['AlertOpenedDate'] ? 'Device/MaintenanceAlerts/List' : null;
+        }
+        unset($alert);
+        $_SESSION['toner_alert_event_cache'] = $historyCache;
+        sortTonerAlertsByOpenedDate($filtered);
 
         $total = count($filtered);
         $alerts = array_slice($filtered, ($pageNumber - 1) * $pageRows, $pageRows);
@@ -118,4 +158,5 @@ CHANGELOG
 2026-11-25 Codex
 - Added optional current-only upstream filtering with accurate post-filter pagination.
 - Added an opt-in current-only mode that excludes installed, canceled, hidden, and stock-generated supply records upstream.
+- Replaced supply lifecycle dates with color-matched active maintenance-alert Opened dates.
 */

@@ -55,6 +55,42 @@ foreach ($cases as [$alert, $expectedResult, $label]) {
     }
 }
 
+$history = [
+    ['Code' => '1104', 'Description' => 'Cyan toner almost empty', 'Opened' => '2026-03-10T08:00:00Z', 'Closed' => null],
+    ['Code' => '1101', 'Description' => 'Cyan toner empty', 'Opened' => '2026-03-20T08:00:00Z', 'Closed' => null],
+    ['Code' => '1104', 'Description' => 'Black toner almost empty', 'Opened' => '2025-12-01T08:00:00Z', 'Closed' => null],
+    ['Code' => '1104', 'Description' => 'Yellow toner almost empty', 'Opened' => '2025-11-01T08:00:00Z', 'Closed' => '2025-11-05T08:00:00Z'],
+    ['Code' => '1104', 'Description' => 'Marker alert', 'PanelMessageAlertConfiguration' => ['Description' => 'Magenta toner almost empty'], 'Opened' => '2026-04-01T08:00:00Z', 'Closed' => null],
+];
+
+if (tonerMaintenanceOpenedDate($history, 'Cyan') !== '2026-03-10T08:00:00Z') {
+    fwrite(STDERR, "Cyan alert should use the first active low/empty event.\n");
+    exit(1);
+}
+if (tonerMaintenanceOpenedDate($history, 'Black1') !== '2025-12-01T08:00:00Z') {
+    fwrite(STDERR, "Black variants should match the black maintenance event.\n");
+    exit(1);
+}
+if (tonerMaintenanceOpenedDate($history, 'Yellow') !== null) {
+    fwrite(STDERR, "Closed toner events must not supply Days Open.\n");
+    exit(1);
+}
+if (tonerMaintenanceOpenedDate($history, 'Magenta') !== '2026-04-01T08:00:00Z') {
+    fwrite(STDERR, "Nested panel configuration descriptions must identify toner color.\n");
+    exit(1);
+}
+
+$sortable = [
+    ['SerialNumber' => 'NO-DATE', 'AlertOpenedDate' => null],
+    ['SerialNumber' => 'NEW', 'AlertOpenedDate' => '2026-03-20T08:00:00Z'],
+    ['SerialNumber' => 'OLD', 'AlertOpenedDate' => '2026-03-10T08:00:00Z'],
+];
+sortTonerAlertsByOpenedDate($sortable);
+if (array_column($sortable, 'SerialNumber') !== ['OLD', 'NEW', 'NO-DATE']) {
+    fwrite(STDERR, "Toner alerts must sort by active event date with missing dates last.\n");
+    exit(1);
+}
+
 echo "Supply alert current-only filter tests passed.\n";
 
 /*
@@ -62,4 +98,5 @@ CHANGELOG
 2026-11-25 Codex
 - Added coverage for current-only lifecycle filters and unchanged default behavior.
 - Added low/empty boundary and completed-record rejection cases.
+- Added color-matched maintenance-event date and actual-date sorting coverage.
 */

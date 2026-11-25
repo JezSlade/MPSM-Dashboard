@@ -88,9 +88,9 @@
         return { cls: 'ok', label: 'OK' };
     }
 
-    function daysOpen(initialDate) {
-        if (!initialDate) return '-';
-        const started = new Date(initialDate).getTime();
+    function daysOpen(openedDate) {
+        if (!openedDate) return '-';
+        const started = new Date(openedDate).getTime();
         if (Number.isNaN(started)) return '-';
         const days = Math.max(1, Math.floor((Date.now() - started) / 86400000) + 1);
         return days;
@@ -109,6 +109,8 @@
             const sev = severityFor(pct);
             const device = [a.ProductBrand, a.ProductModel].filter(Boolean).join(' ') || '-';
             const location = [a.Office && a.Office.Description, a.Department].filter(Boolean).join(' / ') || '-';
+            const openedDate = a.AlertOpenedDate || '';
+            const openedTitle = openedDate ? `Opened ${openedDate.replace('T', ' ').slice(0, 16)}` : 'No active low/empty event date found';
 
             return `
                 <tr data-row-index="${i}">
@@ -124,7 +126,7 @@
                     <td>${escapeHtml(getEquipmentId(a))}</td>
                     <td>${escapeHtml(a.SerialNumber || '-')}</td>
                     <td>${escapeHtml(location)}</td>
-                    <td>${daysOpen(a.InitialDate)}</td>
+                    <td title="${escapeHtml(openedTitle)}">${daysOpen(openedDate)}</td>
                 </tr>
             `;
         }).join('');
@@ -351,4 +353,5 @@ CHANGELOG
 - Sent alert brand and model to the device-detail endpoint for exact catalog matching.
 - Limited the list to current toner alerts so completed lifecycle records no longer inflate pagination.
 - Sorted current toner alerts oldest-first to align with the Days Open column.
+- Calculated Days Open from the active low/empty maintenance event instead of the supply lifecycle InitialDate.
 */
