@@ -1,5 +1,13 @@
 # Deploy Log
 
+## 2026-11-25 12:28 EST - Actual toner event dates
+
+- Commit: `16c972e` (`Use actual toner event dates`).
+- Command: `git push origin main`.
+- Method: GitHub Actions workflow `FTP Deploy - Final Lean`.
+- Result: workflow run `1878` completed successfully.
+- Live verification: production version `0.0.0.1878`; live JavaScript uses `AlertOpenedDate` and no longer calculates age from `InitialDate`; the history helper returned HTTP 200.
+
 ## 2026-11-25 12:13 EST - Toner alert age ordering
 
 - Commit: `e48d62f` (`Sort toner alerts by days open`).
