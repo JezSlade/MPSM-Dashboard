@@ -278,6 +278,7 @@
         const params = new URLSearchParams({
             dealerCode: state.dealerCode,
             supplyType: 'Toner',
+            currentOnly: '1',
             pageNumber: state.page,
             pageRows: state.pageRows,
         });
@@ -346,4 +347,5 @@ CHANGELOG
 2026-11-25 Codex
 - Displayed all compatible OEM toner part numbers with yield and region in the device drill-down.
 - Sent alert brand and model to the device-detail endpoint for exact catalog matching.
+- Limited the list to current toner alerts so completed lifecycle records no longer inflate pagination.
 */

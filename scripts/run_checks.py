@@ -37,6 +37,7 @@ PURE_PHP_TESTS = [
     "tests/php/test-hp-decode.php",
     "tests/php/test-hp-decode-v2.php",
     "tests/php/test-toner-catalog.php",
+    "tests/php/test-supply-alert-filters.php",
 ]
 
 
@@ -221,3 +222,4 @@ if __name__ == "__main__":
 # CHANGELOG
 # 2026-11-25 Codex
 # - Added the OEM toner catalog resolver to the portable PHP test suite.
+# - Added current-only supply alert request-filter coverage.

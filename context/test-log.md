@@ -1,5 +1,11 @@
 # Test Log - Command Center Loading Fix
 
+## 2026-11-25 - Current toner alert filtering
+
+- Passed PHP lint for `get-supply-alerts.php`, `supply-alert-filters.php`, and its test.
+- Passed current-only filter tests for 0%-25%, above-threshold, installed, canceled, hidden, unknown-level, and non-toner cases.
+- Existing standalone PHP tests, JavaScript syntax, Python compile, and `git diff --check` passed.
+
 ## 2026-11-25 - OEM toner catalog integration
 
 - Passed PHP lint for `cms/api/toner-catalog.php`, `cms/api/get-device-detail.php`, and `tests/php/test-toner-catalog.php`.

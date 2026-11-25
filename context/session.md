@@ -1,5 +1,11 @@
 # Session Summary - Current
 
+## 2026-11-25 Current Toner Alert Filtering
+
+- Toner Alerts now requests current-only records and excludes installed, canceled, hidden, stock-generated, non-toner, unknown-level, and above-25% records.
+- The API filters the full upstream result before pagination so totals reflect only current low/empty toner alerts.
+- Added pure PHP regression coverage and registered it in the portable check runner.
+
 ## 2026-11-25 OEM Toner Part Numbers
 
 - Generated `cms/catalog/oem-toner-catalog.json` from the workbook Catalog sheet (3,035 valid options; one non-part-number safety row excluded).
