@@ -1,5 +1,13 @@
 # Session Summary - Current
 
+## 2026-11-25 OEM Toner Part Numbers
+
+- Generated `cms/catalog/oem-toner-catalog.json` from the workbook Catalog sheet (3,035 valid options; one non-part-number safety row excluded).
+- Added exact brand/model alias resolution and exposed all compatible toner part numbers through `api/get-device-detail.php`.
+- Updated the toner-alert drill-down to show every compatible part number with yield and region beneath each toner level, including white toner when present.
+- Added focused PHP coverage and registered it in `scripts/run_checks.py`.
+- Local targeted checks pass. No commit or deployment was performed.
+
 ## 2026-05-20 Repository Cleanup, Portable FTP Deploy, Live Verification
 
 - Reorganized repository documentation/tests/tools/SQL into role-specific directories and reduced active root files to project entrypoints and metadata.
@@ -276,4 +284,6 @@ Files: cms/command-center.php, cms/assets/command-center.js, cms/assets/style.cs
 CHANGELOG
 2025-12-04 Codex
 - Added subagent mandate note and documented active chunked cache refresh progress for current session.
+2026-11-25 Codex
+- Documented the local OEM toner catalog integration and verification state.
 -->

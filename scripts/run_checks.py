@@ -36,6 +36,7 @@ PURE_PHP_TESTS = [
     "tests/php/test-pattern-fix.php",
     "tests/php/test-hp-decode.php",
     "tests/php/test-hp-decode-v2.php",
+    "tests/php/test-toner-catalog.php",
 ]
 
 
@@ -215,3 +216,8 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# CHANGELOG
+# 2026-11-25 Codex
+# - Added the OEM toner catalog resolver to the portable PHP test suite.

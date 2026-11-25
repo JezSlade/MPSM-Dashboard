@@ -217,9 +217,14 @@ table.ta-table {
 .ta-detail-item .ta-detail-label { font-size: 0.7rem; text-transform: uppercase; color: var(--ta-text-dim); letter-spacing: 0.03em; }
 .ta-detail-item .ta-detail-value { font-size: 0.9rem; margin-top: 0.15rem; }
 
-.ta-toner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+.ta-toner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
 .ta-toner-item { background: var(--ta-border-soft); border-radius: 8px; padding: 0.6rem 0.75rem; }
 .ta-toner-item .ta-toner-label { font-size: 0.75rem; color: var(--ta-text-dim); margin-bottom: 0.35rem; }
+.ta-toner-parts { margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid var(--ta-border-soft); }
+.ta-toner-part + .ta-toner-part { margin-top: 0.45rem; }
+.ta-toner-part-number { color: var(--ta-text); font-size: 0.78rem; font-weight: 600; overflow-wrap: anywhere; }
+.ta-toner-part-meta { color: var(--ta-text-dim); font-size: 0.68rem; line-height: 1.35; margin-top: 0.1rem; }
+.ta-toner-parts--empty { color: var(--ta-text-dim); font-size: 0.7rem; font-style: italic; }
 .ta-online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.4rem; }
 .ta-online-dot.online { background: #66bb6a; }
 .ta-online-dot.offline { background: var(--ta-text-dim); }
@@ -227,3 +232,9 @@ table.ta-table {
 .ta-maint-section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--ta-border-soft); }
 .ta-maint-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; font-size: 0.85rem; flex-wrap: wrap; }
 .ta-maint-date { margin-left: auto; color: var(--ta-text-dim); font-size: 0.75rem; }
+
+/*
+CHANGELOG
+2026-11-25 Codex
+- Added responsive styling for compatible OEM toner part-number lists in drill-down cards.
+*/

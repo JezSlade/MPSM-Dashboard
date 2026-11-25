@@ -138,7 +138,40 @@
         modalBackdrop.style.display = 'none';
     }
 
-    function toneBar(label, pct) {
+    function tonerPartsFor(partsByColor, color) {
+        if (!partsByColor || typeof partsByColor !== 'object') return [];
+
+        const colorKey = color.toLowerCase();
+        const options = partsByColor[colorKey]
+            ?? partsByColor[color]
+            ?? partsByColor[color.toUpperCase()]
+            ?? [];
+
+        return Array.isArray(options) ? options : [];
+    }
+
+    function renderTonerParts(options) {
+        const validOptions = options.filter(option => option && option.partNumber);
+        if (!validOptions.length) {
+            return '<div class="ta-toner-parts ta-toner-parts--empty">Part number not found</div>';
+        }
+
+        return `
+            <div class="ta-toner-parts" aria-label="Compatible OEM toner part numbers">
+                ${validOptions.map(option => {
+                    const details = [option.yield, option.region].filter(Boolean).join(' / ');
+                    return `
+                        <div class="ta-toner-part">
+                            <div class="ta-toner-part-number">${escapeHtml(option.partNumber)}</div>
+                            ${details ? `<div class="ta-toner-part-meta">${escapeHtml(details)}</div>` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function toneBar(label, pct, partOptions = []) {
         if (pct === null || pct === undefined) return '';
         const cls = levelClass(pct);
         return `
@@ -148,6 +181,7 @@
                     <div class="ta-level-bar"><div class="ta-level-fill ${cls}" style="width:${pct}%"></div></div>
                     <span class="ta-level-pct">${pct}%</span>
                 </div>
+                ${renderTonerParts(partOptions)}
             </div>
         `;
     }
@@ -187,6 +221,8 @@
 
         try {
             const params = new URLSearchParams({ deviceId: alert.DeviceId, dealerCode: state.dealerCode });
+            if (alert.ProductBrand) params.set('brand', alert.ProductBrand);
+            if (alert.ProductModel) params.set('model', alert.ProductModel);
             const data = await fetchJson('api/get-device-detail.php?' + params.toString());
             const d = data.device;
             if (!d) {
@@ -194,6 +230,7 @@
             }
 
             const online = !!d.IsOnline;
+            const partsByColor = data.tonerPartNumbers?.colors || data.tonerPartNumbers || {};
             const detail = document.getElementById('ta-modal-detail');
             detail.innerHTML = `
                 <div class="ta-detail-grid">
@@ -210,10 +247,11 @@
                     <div class="ta-detail-item"><div class="ta-detail-label">Note</div><div class="ta-detail-value">${escapeHtml(d.Note || '-')}</div></div>
                 </div>
                 <div class="ta-toner-grid">
-                    ${toneBar('Black Toner', d.BlackToner)}
-                    ${toneBar('Cyan Toner', d.CyanToner)}
-                    ${toneBar('Magenta Toner', d.MagentaToner)}
-                    ${toneBar('Yellow Toner', d.YellowToner)}
+                    ${toneBar('Black Toner', d.BlackToner, tonerPartsFor(partsByColor, 'Black'))}
+                    ${toneBar('Cyan Toner', d.CyanToner, tonerPartsFor(partsByColor, 'Cyan'))}
+                    ${toneBar('Magenta Toner', d.MagentaToner, tonerPartsFor(partsByColor, 'Magenta'))}
+                    ${toneBar('Yellow Toner', d.YellowToner, tonerPartsFor(partsByColor, 'Yellow'))}
+                    ${toneBar('White Toner', d.WhiteToner, tonerPartsFor(partsByColor, 'White'))}
                 </div>
                 ${renderMaintenanceAlerts(d.MaintenanceAlerts)}
             `;
@@ -302,3 +340,10 @@
         await loadAlerts();
     })();
 })();
+
+/*
+CHANGELOG
+2026-11-25 Codex
+- Displayed all compatible OEM toner part numbers with yield and region in the device drill-down.
+- Sent alert brand and model to the device-detail endpoint for exact catalog matching.
+*/

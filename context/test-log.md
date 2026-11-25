@@ -1,5 +1,13 @@
 # Test Log - Command Center Loading Fix
 
+## 2026-11-25 - OEM toner catalog integration
+
+- Passed PHP lint for `cms/api/toner-catalog.php`, `cms/api/get-device-detail.php`, and `tests/php/test-toner-catalog.php`.
+- Passed `tests/php/test-toner-catalog.php`, covering HP, Konica Minolta, Ricoh, full model names, multiple compatible SKUs, an excluded safety row, and no-match cases.
+- Passed JavaScript syntax validation for `cms/assets/toner-alerts.js`, Python compile validation for `scripts/run_checks.py`, JSON parsing, and all existing standalone PHP tests.
+- `git diff --check` passed.
+- The full `scripts/run_checks.py` reached its existing secret scan and stopped on `.github/workflows/deploy.yml`; this unrelated tracked finding was not changed.
+
 ## 2026-05-20 - Documentation accuracy validation
 
 - Updated active context and operations documentation to match the current repository state:
@@ -1036,4 +1044,6 @@ CHANGELOG
 - Logged live helper runs after multi-chunk optimization; documented drilldown progress (550->610->620->650) and pending cutover.
 2025-12-03 Codex
 - Logged duplicate-ips summaryOnly curl check after cache-first refactor.
+2026-11-25 Codex
+- Logged local verification for the OEM toner catalog integration and the pre-existing full-check blocker.
 */
