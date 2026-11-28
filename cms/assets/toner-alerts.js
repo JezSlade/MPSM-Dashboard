@@ -216,6 +216,29 @@
     // --- Device drill-down modal ---
     const deviceDialog = document.getElementById('ta-device-dialog');
     const modalBody = document.getElementById('ta-modal-body');
+    let disposeHistory;
+
+    function connectTonerHistory(section, deviceParams) {
+        const content = section.querySelector('.ta-history-body');
+        let connecting = false;
+        async function openHistory() {
+            if (!section.open || connecting) return;
+            connecting = true;
+            content.textContent = 'Loading toner history…';
+            try {
+                const moduleUrl = new URL(body.dataset.tonerHistoryUrl, document.baseURI);
+                const { mountTonerHistory } = await import(moduleUrl.href);
+                if (!section.isConnected || !deviceDialog.open || !section.open) return;
+                disposeHistory = mountTonerHistory(section, deviceParams, fetchTonerJson);
+                section.removeEventListener('toggle', openHistory);
+            } catch {
+                content.textContent = 'Toner history is temporarily unavailable.';
+            } finally {
+                connecting = false;
+            }
+        }
+        section.addEventListener('toggle', openHistory);
+    }
 
     function tonerPartsFor(partsByColor, color) {
         if (!partsByColor || typeof partsByColor !== 'object') return [];
@@ -335,8 +358,16 @@
                     ${toneBar('Yellow Toner', d.YellowToner, tonerPartsFor(partsByColor, 'Yellow'))}
                     ${toneBar('White Toner', d.WhiteToner, tonerPartsFor(partsByColor, 'White'))}
                 </div>
+                <details class="ta-history">
+                    <summary>Toner History</summary>
+                    <div class="ta-history-body"></div>
+                </details>
                 ${renderMaintenanceAlerts(d.MaintenanceAlerts)}
             `;
+            connectTonerHistory(detail.querySelector('.ta-history'), {
+                deviceId: params.get('deviceId'),
+                dealerCode: params.get('dealerCode'),
+            });
         } catch (error) {
             if (state.sessionExpired) return;
             detail.innerHTML = `<div class="ta-empty">Failed to load device: ${escapeHtml(error.message)}</div>`;
@@ -344,6 +375,10 @@
     }
 
     document.getElementById('ta-modal-close').addEventListener('click', () => deviceDialog.close());
+    deviceDialog.addEventListener('close', () => {
+        disposeHistory?.();
+        disposeHistory = undefined;
+    });
     deviceDialog.addEventListener('click', (event) => {
         if (event.target !== deviceDialog) return;
         const bounds = deviceDialog.getBoundingClientRect();
@@ -466,4 +501,5 @@ CHANGELOG
 2026-11-28 Codex
 - Clear stale results and show a sign-in action when the session ends.
 - Show full elapsed days only after a matching active opening date is verified in the device details.
+- Load the toner history chart when its drill-down section is expanded.
 */

@@ -258,6 +258,39 @@ table.ta-table {
 .ta-maint-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; font-size: 0.85rem; flex-wrap: wrap; }
 .ta-maint-date { margin-left: auto; color: var(--ta-text-dim); font-size: 0.75rem; }
 
+.ta-history {
+    margin-top: 1.25rem;
+    padding-inline: 0.8rem;
+    border: 1px solid var(--ta-border);
+    border-radius: 8px;
+    background: var(--ta-border-soft);
+}
+.ta-history summary { min-height: 44px; align-content: center; font-weight: 600; cursor: pointer; }
+.ta-history[open] { padding-bottom: 0.8rem; }
+.ta-history-body label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--ta-text-dim);
+    font-size: 0.8rem;
+}
+.ta-history select, .ta-history button {
+    min-height: 44px;
+    padding: 0.25rem 0.6rem;
+    background: var(--ta-surface);
+    color: var(--ta-text);
+    border: 1px solid var(--ta-border);
+    border-radius: 6px;
+    font: 1rem var(--ta-font);
+}
+.ta-history button { cursor: pointer; }
+.ta-history-status { font-size: 0.85rem; color: var(--ta-text-dim); }
+.ta-history-status:empty { display: none; }
+.ta-history figure { margin: 0.85rem 0 0; }
+.ta-history-chart { position: relative; height: clamp(13rem, 49vw, 17rem); }
+.ta-history figcaption { margin-top: 0.5rem; color: var(--ta-text-dim); font-size: 0.75rem; }
+
 @container toner-alerts (max-width: 56rem) {
     .ta-header {
         flex-direction: column;
@@ -331,4 +364,5 @@ CHANGELOG
 - Switch to labeled cards, touch-sized controls, and a bottom-aligned details dialog on small screens.
 2026-11-28 Codex
 - Keep the dark background across the viewport and style the sign-in action.
+- Size the toner history chart and range control for the device dialog on mobile and desktop.
 */

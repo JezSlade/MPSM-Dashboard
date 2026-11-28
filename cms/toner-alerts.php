@@ -26,6 +26,7 @@ $preferences = getUserPreferences($userId);
 $styleVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.css'), 0, 12);
 $scriptVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.js'), 0, 12);
 $sharedVersion = substr(hash_file('sha256', __DIR__ . '/assets/shared.js'), 0, 12);
+$historyVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-history.js'), 0, 12);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +40,7 @@ $sharedVersion = substr(hash_file('sha256', __DIR__ . '/assets/shared.js'), 0, 1
     <link rel="stylesheet" href="assets/toner-alerts.css?v=<?= $styleVersion ?>">
 </head>
 <body class="toner-alerts ta-layout-<?= $layout ?>"
+      data-toner-history-url="assets/toner-history.js?v=<?= $historyVersion ?>"
       data-dealer-code="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>"
       data-customer-code="<?= htmlspecialchars($preferences['customerCode'] ?? '') ?>">
     <header class="ta-header">
@@ -116,5 +118,6 @@ CHANGELOG
 - Version Toner Alerts assets so returning browsers load the JavaScript and CSS that match the page.
 2026-11-28 Codex
 - Preserve the selected Toner Alerts layout through sign-in and show a recovery link on session expiry.
+- Version the on-demand toner history module alongside the page assets.
 */
 ?>
