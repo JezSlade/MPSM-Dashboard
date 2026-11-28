@@ -80,6 +80,30 @@ if (tonerMaintenanceOpenedDate($history, 'Magenta') !== '2026-04-01T08:00:00Z') 
     exit(1);
 }
 
+$unverifiedHistory = [
+    ['Code' => '1104', 'Description' => 'Low toner', 'Opened' => '2023-12-20T10:00:00Z'],
+    ['Code' => '1104', 'Description' => 'Black and cyan toner low', 'Opened' => '2023-12-20T10:00:00Z'],
+    ['Code' => '1104', 'Description' => 'Black toner low', 'Opened' => '2023-12-20 10:00:00'],
+    ['Code' => '1104', 'Description' => 'Black toner low', 'Opened' => '2999-12-20T10:00:00Z'],
+    ['Code' => '1104', 'Description' => 'Black toner low', 'Opened' => '2023-12-20T10:00:00Z', 'Closed' => '2023-12-21T10:00:00Z'],
+];
+if (tonerMaintenanceOpenedDate($unverifiedHistory, 'black', true) !== null
+    || tonerMaintenanceOpenedDate(array_merge($unverifiedHistory, $history), 'black', true) !== '2025-12-01T08:00:00Z') {
+    fwrite(STDERR, "Verified opening dates must be active, unambiguous, and timezone-qualified.\n");
+    exit(1);
+}
+
+$datedReadings = [
+    ['SerialNumber' => 'A', 'SupplyRecordOpenedDate' => '2023-12-20T10:00:00Z'],
+    ['SerialNumber' => 'B', 'TonerReadingDate' => '2026-11-24T08:00:00Z'],
+    ['SerialNumber' => 'C', 'TonerReadingDate' => '2026-11-25T08:00:00Z'],
+];
+sortTonerAlertsByReadingDate($datedReadings);
+if (array_column($datedReadings, 'SerialNumber') !== ['C', 'B', 'A']) {
+    fwrite(STDERR, "The grouped device list must sort by reading timestamps.\n");
+    exit(1);
+}
+
 $sortable = [
     ['SerialNumber' => 'NO-DATE', 'AlertOpenedDate' => null],
     ['SerialNumber' => 'NEW', 'AlertOpenedDate' => '2026-03-20T08:00:00Z'],
@@ -180,4 +204,6 @@ CHANGELOG
 - Added batched panel-history event selection coverage.
 2026-11-27 Codex
 - Cover vendor color codes, equipment tags, reading and supply-record dates, and device grouping.
+2026-11-28 Codex
+- Cover strict opening-date evidence and separate reading-time ordering.
 */

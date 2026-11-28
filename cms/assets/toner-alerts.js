@@ -134,15 +134,14 @@
         return Date.now() - timestamp >= dayInMilliseconds ? `Stale · ${date}` : date;
     }
 
-    function renderAge(alert) {
-        const panelTime = dateTimestamp(alert.AlertOpenedDate);
-        const fromPanel = Number.isFinite(panelTime);
-        const timestamp = fromPanel ? panelTime : dateTimestamp(alert.SupplyRecordOpenedDate);
-        if (!Number.isFinite(timestamp)) return '<span class="ta-toner-part-meta">Unknown</span>';
-        const days = Math.max(1, Math.floor((Date.now() - timestamp) / dayInMilliseconds) + 1);
-        const source = fromPanel ? 'Panel event' : 'Supply record';
-        const label = alert.TonerAlerts?.length > 1 ? `Oldest · ${source}` : source;
-        return `<span title="${new Date(timestamp).toISOString()}">${days} d</span>
+    function renderAge(dates = []) {
+        const now = Date.now();
+        const timestamps = dates.map(dateTimestamp).filter(value => Number.isFinite(value) && value <= now);
+        if (!timestamps.length) return '<span class="ta-toner-part-meta">Unknown</span>';
+        const timestamp = Math.min(...timestamps);
+        const days = Math.floor((now - timestamp) / dayInMilliseconds);
+        const label = timestamps.length > 1 ? 'Oldest verified opening' : 'Verified opening';
+        return `<time datetime="${new Date(timestamp).toISOString()}">${days} d</time>
                 <div class="ta-toner-part-meta">${label}</div>`;
     }
 
@@ -207,7 +206,7 @@
                         <span class="ta-mobile-label" aria-hidden="true">Location</span>${escapeHtml(a.TonerLocation || 'Location unavailable')}
                     </td>
                     <td role="cell">
-                        <span class="ta-mobile-label" aria-hidden="true">Days Open</span>${renderAge(a)}
+                        <span class="ta-mobile-label" aria-hidden="true">Days Open</span><div class="ta-alert-age">${renderAge()}</div>
                     </td>
                 </tr>
             `;
@@ -283,7 +282,7 @@
         `;
     }
 
-    async function openDeviceDrilldown(alert) {
+    async function openDeviceDrilldown(alert, row) {
         const device = deviceLabel(alert.ProductBrand, alert.ProductModel, 'Device');
         modalBody.innerHTML = `
             <h2 id="ta-modal-title"><i class="fas fa-print" aria-hidden="true"></i> ${escapeHtml(device)}</h2>
@@ -310,6 +309,10 @@
 
             const online = !!d.IsOnline;
             const partsByColor = data.tonerPartNumbers?.colors || data.tonerPartNumbers || {};
+            const openedByColor = data.tonerAlertOpenedDates || {};
+            const openingDates = (alert.TonerAlerts ?? [alert]).map(cartridge => openedByColor[cartridge.TonerColor]);
+            const ageMarkup = renderAge(openingDates);
+            row.querySelector('.ta-alert-age').innerHTML = ageMarkup;
             detail.innerHTML = `
                 <div class="ta-detail-grid">
                     <div class="ta-detail-item">
@@ -321,6 +324,7 @@
                     <div class="ta-detail-item"><div class="ta-detail-label">Contact</div><div class="ta-detail-value">${escapeHtml(d.Contact || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Firmware</div><div class="ta-detail-value">${escapeHtml(d.Firmware || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Last Update</div><div class="ta-detail-value">${escapeHtml(readingStatus(d.LastUpdate))}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Days Open</div><div class="ta-detail-value">${ageMarkup}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Installed</div><div class="ta-detail-value">${escapeHtml((d.Install || '').slice(0, 10) || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Note</div><div class="ta-detail-value">${escapeHtml(d.Note || '-')}</div></div>
                 </div>
@@ -353,7 +357,7 @@
         const tr = e.target.closest('tr[data-row-index]');
         if (!tr) return;
         const alert = state.currentAlerts[Number(tr.dataset.rowIndex)];
-        if (alert) openDeviceDrilldown(alert);
+        if (alert) openDeviceDrilldown(alert, tr);
     });
 
     async function loadAlerts() {
@@ -461,4 +465,5 @@ CHANGELOG
 - Add labels for the mobile device cards and support keyboard and touch access to device details.
 2026-11-28 Codex
 - Clear stale results and show a sign-in action when the session ends.
+- Show full elapsed days only after a matching active opening date is verified in the device details.
 */

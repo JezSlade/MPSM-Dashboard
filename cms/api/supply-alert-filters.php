@@ -190,7 +190,7 @@ function groupTonerAlertsByDevice(array $alerts): array
 }
 
 if (!function_exists('tonerMaintenanceOpenedDate')) {
-    function tonerMaintenanceOpenedDate(array $alerts, $color = ''): ?string
+    function tonerMaintenanceOpenedDate(array $alerts, $color = '', bool $requireExactColor = false): ?string
     {
         $targetColor = normalizeTonerColor($color);
         $exact = [];
@@ -221,18 +221,20 @@ if (!function_exists('tonerMaintenanceOpenedDate')) {
                 continue;
             }
 
-            $opened = trim((string)($alert['Opened'] ?? ''));
-            $timestamp = $opened !== '' ? strtotime($opened) : false;
-            if ($timestamp === false) {
+            $opened = tonerAlertDate($alert['Opened'] ?? null);
+            if ($opened === null) {
+                continue;
+            }
+            $timestamp = strtotime($opened);
+            if ($requireExactColor && (!preg_match('/(?:Z|[+-]\d{2}:\d{2})$/i', $opened) || $timestamp > time())) {
                 continue;
             }
 
-            $describedColor = '';
-            foreach (['cyan', 'magenta', 'yellow', 'black', 'white'] as $candidate) {
-                if (preg_match('/\b' . preg_quote($candidate, '/') . '\b/', $description)) {
-                    $describedColor = $candidate;
-                    break;
-                }
+            preg_match_all('/\b(cyan|magenta|yellow|black|white)\b/', $description, $matches);
+            $colors = array_values(array_unique($matches[0]));
+            $describedColor = $colors[0] ?? '';
+            if ($requireExactColor && (count($colors) !== 1 || $describedColor !== $targetColor)) {
+                continue;
             }
 
             if ($targetColor !== '' && $describedColor !== '' && $describedColor !== $targetColor) {
@@ -254,6 +256,15 @@ if (!function_exists('tonerMaintenanceOpenedDate')) {
         usort($candidates, static fn(array $a, array $b): int => $a['timestamp'] <=> $b['timestamp']);
         return $candidates[0]['date'];
     }
+}
+
+function sortTonerAlertsByReadingDate(array &$alerts): void
+{
+    usort($alerts, static function (array $a, array $b): int {
+        $aTime = strtotime($a['TonerReadingDate'] ?? '') ?: PHP_INT_MIN;
+        $bTime = strtotime($b['TonerReadingDate'] ?? '') ?: PHP_INT_MIN;
+        return ($bTime <=> $aTime) ?: strcmp((string)($a['SerialNumber'] ?? ''), (string)($b['SerialNumber'] ?? ''));
+    });
 }
 
 if (!function_exists('sortTonerAlertsByOpenedDate')) {
@@ -344,4 +355,7 @@ CHANGELOG
 - Normalize vendor toner color codes and derive scoped display fields from current alerts.
 - Use the supply record date for fallback ordering without changing the panel event date.
 - Group current toner alerts by customer and device while retaining each cartridge reading.
+2026-11-28 Codex
+- Require an active, unambiguous color match and a timezone-qualified opening date when verifying age.
+- Sort the device list by recent toner readings when the list lacks verified opening dates.
 */

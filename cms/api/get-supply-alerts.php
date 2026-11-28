@@ -80,7 +80,7 @@ try {
             static fn(array $alert): string => strtoupper(trim((string)($alert['SerialNumber'] ?? ''))),
             $filtered
         ))));
-        if ($serials) {
+        if (!$groupByDevice && $serials) {
             try {
                 $pdo = getDatabase();
                 $placeholders = [];
@@ -116,11 +116,12 @@ try {
             $alert = array_replace($alert, $displayFields);
         }
         unset($alert);
-        sortTonerAlertsByOpenedDate($filtered);
-
         $alertTotal = count($filtered);
         if ($groupByDevice) {
+            sortTonerAlertsByReadingDate($filtered);
             $filtered = groupTonerAlertsByDevice($filtered);
+        } else {
+            sortTonerAlertsByOpenedDate($filtered);
         }
         $total = count($filtered);
         $alerts = array_slice($filtered, ($pageNumber - 1) * $pageRows, $pageRows);
@@ -168,4 +169,6 @@ CHANGELOG
 2026-11-27 Codex
 - Expose color, reading date, equipment ID, location, and supply record date for current alerts.
 - Add optional device grouping before pagination for the Toner Alerts page.
+2026-11-28 Codex
+- Order grouped alerts by reading time without treating supply dates or panel receipts as opening dates.
 */

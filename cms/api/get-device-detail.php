@@ -9,6 +9,7 @@
 require '../config.php';
 require '../functions.php';
 require_once 'toner-catalog.php';
+require_once 'supply-alert-filters.php';
 
 requireAuth();
 
@@ -30,9 +31,18 @@ try {
     $brand = $device['ProductBrand'] ?? $device['Brand'] ?? $product['Brand'] ?? $fallbackBrand;
     $model = $device['ProductModel'] ?? $device['Model'] ?? $product['Model'] ?? $fallbackModel;
     $tonerLookup = resolveTonerPartNumbers((string)$brand, (string)$model);
+    $maintenance = is_array($device['MaintenanceAlerts'] ?? null) ? $device['MaintenanceAlerts'] : [];
+    $openedDates = [];
+    foreach (['black', 'cyan', 'magenta', 'yellow', 'white'] as $color) {
+        $opened = tonerMaintenanceOpenedDate($maintenance, $color, true);
+        if ($opened !== null) {
+            $openedDates[$color] = $opened;
+        }
+    }
 
     jsonSuccess([
         'device' => $device,
+        'tonerAlertOpenedDates' => (object)$openedDates,
         'tonerPartNumbers' => $tonerLookup['colors'],
         'tonerCatalogMatch' => [
             'matched' => $tonerLookup['matched'],
@@ -50,4 +60,6 @@ CHANGELOG
 2026-11-25 Codex
 - Enriched toner-alert device details with exact OEM part-number matches.
 - Added alert brand/model fallbacks while preserving the existing device payload.
+2026-11-28 Codex
+- Return verified opening dates for color-matched active toner alerts in the device response.
 */
