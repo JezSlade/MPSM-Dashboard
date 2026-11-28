@@ -16,6 +16,8 @@ $layout = match ($_GET['view'] ?? '') {
     'desktop' => 'desktop',
     default => 'auto',
 };
+$styleVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.css'), 0, 12);
+$scriptVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.js'), 0, 12);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,7 +28,7 @@ $layout = match ($_GET['view'] ?? '') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/toner-alerts.css">
+    <link rel="stylesheet" href="assets/toner-alerts.css?v=<?= $styleVersion ?>">
 </head>
 <body class="toner-alerts ta-layout-<?= $layout ?>"
       data-dealer-code="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>"
@@ -87,7 +89,7 @@ $layout = match ($_GET['view'] ?? '') {
     </dialog>
 
     <script src="assets/shared.js"></script>
-    <script src="assets/toner-alerts.js"></script>
+    <script src="assets/toner-alerts.js?v=<?= $scriptVersion ?>"></script>
 </body>
 </html>
 
@@ -98,5 +100,6 @@ CHANGELOG
 - Renamed the toner-alert age column from Occurrences to Days Open.
 2026-11-27 Codex
 - Link mobile and desktop layouts and use a native device details dialog.
+- Version Toner Alerts assets so returning browsers load the JavaScript and CSS that match the page.
 */
 ?>
