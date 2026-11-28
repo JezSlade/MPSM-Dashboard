@@ -27,6 +27,25 @@
     const nextBtn = document.getElementById('ta-next');
     const signInNotice = document.getElementById('ta-sign-in');
     const refreshBtn = document.getElementById('ta-refresh');
+    const themeToggle = document.getElementById('ta-theme-toggle');
+    const pageTheme = document.documentElement.dataset;
+
+    function updateThemeToggle() {
+        const isLight = pageTheme.tonerTheme === 'light';
+        themeToggle.querySelector('i').className = isLight ? 'fas fa-moon' : 'fas fa-sun';
+        themeToggle.querySelector('span').textContent = isLight ? 'Dark mode' : 'Light mode';
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            pageTheme.tonerTheme = pageTheme.tonerTheme === 'light' ? 'dark' : 'light';
+            updateThemeToggle();
+            try {
+                localStorage.setItem('mpsm.tonerAlerts.theme', pageTheme.tonerTheme);
+            } catch {}
+        });
+        updateThemeToggle();
+    }
 
     function clearResults() {
         state.currentAlerts = [];
@@ -502,4 +521,5 @@ CHANGELOG
 - Clear stale results and show a sign-in action when the session ends.
 - Show full elapsed days only after a matching active opening date is verified in the device details.
 - Load the toner history chart when its drill-down section is expanded.
+- Remember the Toner Alerts theme across visits and mobile or desktop layout changes.
 */

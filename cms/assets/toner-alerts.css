@@ -1,5 +1,7 @@
-/* Toner Alerts - dark theme matching alerts.resolutionsbydesign.us */
+/* Toner Alerts theme */
 :root {
+    color-scheme: dark;
+    background-color: var(--ta-bg);
     --ta-bg: #0a0a0c;
     --ta-surface: #14151a;
     --ta-border: #ffffff14;
@@ -9,8 +11,40 @@
     --ta-accent: #00bcd4;
     --ta-critical: #ef5350;
     --ta-low: #ffa726;
-    --ta-warning: #ffb74d;
+    --ta-button-text: #04272b;
+    --ta-critical-bg: #ef535026;
+    --ta-low-bg: #ffa72626;
+    --ta-ok-bg: #00bcd426;
+    --ta-backdrop: #000000b3;
+    --ta-online: #66bb6a;
+    --ta-chart-black: #c8d0df;
+    --ta-chart-cyan: #38d8ef;
+    --ta-chart-magenta: #f368c3;
+    --ta-chart-yellow: #f3d65c;
     --ta-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+:root[data-toner-theme="light"] {
+    color-scheme: light;
+    --ta-bg: #edf3f6;
+    --ta-surface: #ffffff;
+    --ta-border: #b3c2cc;
+    --ta-border-soft: #e5edf2;
+    --ta-text: #162934;
+    --ta-text-dim: #465c69;
+    --ta-accent: #006573;
+    --ta-critical: #a71e25;
+    --ta-low: #794b00;
+    --ta-button-text: #ffffff;
+    --ta-critical-bg: #fbe6e7;
+    --ta-low-bg: #fff1d2;
+    --ta-ok-bg: #d9eef1;
+    --ta-backdrop: #1a2d3f80;
+    --ta-online: #187240;
+    --ta-chart-black: #283a48;
+    --ta-chart-cyan: #007b8c;
+    --ta-chart-magenta: #a01a6d;
+    --ta-chart-yellow: #886200;
 }
 
 body.toner-alerts {
@@ -28,9 +62,29 @@ body.toner-alerts {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--ta-border);
 }
+
+.ta-heading { display: flex; align-items: center; gap: 0.85rem; }
+.ta-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0.35rem 0.65rem;
+    background: var(--ta-surface);
+    color: var(--ta-text);
+    border: 1px solid var(--ta-border);
+    border-radius: 6px;
+    font: 0.8rem var(--ta-font);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.ta-theme-toggle i { color: var(--ta-accent); }
+.ta-theme-toggle:hover { background: var(--ta-border-soft); }
 
 .ta-header h1 {
     font-size: 1.1rem;
@@ -81,7 +135,7 @@ body.toner-alerts {
 .ta-filters button {
     background: var(--ta-accent);
     border-color: var(--ta-accent);
-    color: #04272b;
+    color: var(--ta-button-text);
     font-weight: 600;
     cursor: pointer;
     min-width: auto;
@@ -184,9 +238,9 @@ table.ta-table {
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
-.ta-badge.critical { background: #ef535026; color: var(--ta-critical); }
-.ta-badge.low { background: #ffa72626; color: var(--ta-low); }
-.ta-badge.ok { background: #00bcd426; color: var(--ta-accent); }
+.ta-badge.critical { background: var(--ta-critical-bg); color: var(--ta-critical); }
+.ta-badge.low { background: var(--ta-low-bg); color: var(--ta-low); }
+.ta-badge.ok { background: var(--ta-ok-bg); color: var(--ta-accent); }
 
 /* Row is clickable for device drill-down */
 .ta-table tbody tr[data-row-index] { cursor: pointer; transition: background 0.15s; }
@@ -221,7 +275,7 @@ table.ta-table {
     overflow-wrap: anywhere;
     padding: 1.5rem;
 }
-.ta-modal::backdrop { background: #000000b3; }
+.ta-modal::backdrop { background: var(--ta-backdrop); }
 .ta-modal-close {
     position: sticky; top: 0; float: right;
     width: 44px; height: 44px; margin: -0.5rem -0.5rem 0 0.25rem;
@@ -251,7 +305,7 @@ table.ta-table {
 .ta-toner-part-meta { color: var(--ta-text-dim); font-size: 0.68rem; line-height: 1.35; margin-top: 0.1rem; }
 .ta-toner-parts--empty { color: var(--ta-text-dim); font-size: 0.7rem; font-style: italic; }
 .ta-online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.4rem; }
-.ta-online-dot.online { background: #66bb6a; }
+.ta-online-dot.online { background: var(--ta-online); }
 .ta-online-dot.offline { background: var(--ta-text-dim); }
 
 .ta-maint-section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--ta-border-soft); }
@@ -299,6 +353,7 @@ table.ta-table {
         padding: 0.9rem 1rem 0.35rem;
     }
 
+    .ta-heading { width: 100%; justify-content: space-between; }
     .ta-header nav { display: flex; flex-wrap: wrap; gap: 0 1rem; }
     .ta-header nav a { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 44px; margin: 0; font-size: 0.85rem; }
     .ta-header nav .ta-mobile-link { display: none; }
@@ -365,4 +420,5 @@ CHANGELOG
 2026-11-28 Codex
 - Keep the dark background across the viewport and style the sign-in action.
 - Size the toner history chart and range control for the device dialog on mobile and desktop.
+- Style controls, alert states, and chart colors for the light and dark themes.
 */

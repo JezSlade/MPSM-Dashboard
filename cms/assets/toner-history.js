@@ -28,7 +28,7 @@ function loadChartLibrary() {
     return chartLibrary;
 }
 
-function makeDatasets(readings) {
+function makeDatasets(readings, theme) {
     const points = [];
     for (const reading of readings) {
         const x = Date.parse(reading.at);
@@ -43,11 +43,12 @@ function makeDatasets(readings) {
     return Object.entries(colors).flatMap(([color, { label, stroke }]) => {
         const data = points.map(point => ({ x: point.x, y: point[color] ?? null }));
         if (!data.some(point => point.y !== null)) return [];
+        const lineColor = theme.getPropertyValue(`--ta-chart-${color}`).trim() || stroke;
         return [{
             label,
             data,
-            borderColor: stroke,
-            backgroundColor: stroke,
+            borderColor: lineColor,
+            backgroundColor: lineColor,
             borderWidth: 2,
             pointRadius: data.length <= 45 ? 2 : 0,
             pointHoverRadius: 5,
@@ -58,10 +59,10 @@ function makeDatasets(readings) {
 
 const lowTonerReference = {
     id: 'lowTonerReference',
-    beforeDatasetsDraw({ ctx, chartArea, scales }) {
+    beforeDatasetsDraw({ ctx, chartArea, scales }, _args, options) {
         const y = scales.y.getPixelForValue(lowTonerLevel);
         ctx.save();
-        ctx.strokeStyle = '#9a9aa2';
+        ctx.strokeStyle = options.color;
         ctx.setLineDash([4, 5]);
         ctx.beginPath();
         ctx.moveTo(chartArea.left, y);
@@ -71,12 +72,15 @@ const lowTonerReference = {
     },
 };
 
-function drawHistory(Chart, canvas, datasets) {
+function drawHistory(Chart, canvas, datasets, theme) {
     const points = datasets[0].data;
     const first = points[0].x;
     const last = points.at(-1).x;
     const padding = first === last ? 6 * 60 * 60 * 1000 : 0;
     const tickLabel = last - first < 48 * 60 * 60 * 1000 ? shortDateLabel : dateLabel;
+    const tickColor = theme.getPropertyValue('--ta-text-dim').trim() || '#9a9aa2';
+    const gridColor = theme.getPropertyValue('--ta-border').trim() || '#ffffff15';
+    const legendColor = theme.getPropertyValue('--ta-text').trim() || '#e8e8ea';
     return new Chart(canvas, {
         type: 'line',
         data: { datasets },
@@ -94,7 +98,7 @@ function drawHistory(Chart, canvas, datasets) {
                     max: last + padding,
                     grid: { display: false },
                     ticks: {
-                        color: '#c1c6d1',
+                        color: tickColor,
                         maxTicksLimit: 4,
                         maxRotation: 0,
                         callback: value => tickLabel.format(value),
@@ -103,12 +107,13 @@ function drawHistory(Chart, canvas, datasets) {
                 y: {
                     min: 0,
                     max: 100,
-                    grid: { color: '#ffffff15' },
-                    ticks: { color: '#c1c6d1', stepSize: 25, callback: value => `${value}%` },
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor, stepSize: 25, callback: value => `${value}%` },
                 },
             },
             plugins: {
-                legend: { labels: { color: '#e8e8ea', usePointStyle: true, boxWidth: 8 } },
+                lowTonerReference: { color: tickColor },
+                legend: { labels: { color: legendColor, usePointStyle: true, boxWidth: 8 } },
                 tooltip: {
                     callbacks: {
                         title: items => items.length ? readingLabel.format(items[0].parsed.x) : '',
@@ -167,7 +172,8 @@ export function mountTonerHistory(section, deviceParams, fetchTonerJson) {
                 cache.set(selection, readings);
             }
             if (current !== request) return;
-            const datasets = makeDatasets(readings);
+            const theme = getComputedStyle(canvas);
+            const datasets = makeDatasets(readings, theme);
             if (!datasets.length) {
                 status.textContent = 'No toner readings in this range.';
                 return;
@@ -175,7 +181,7 @@ export function mountTonerHistory(section, deviceParams, fetchTonerJson) {
             const Chart = await loadChartLibrary();
             if (current !== request) return;
             figure.hidden = false;
-            chart = drawHistory(Chart, canvas, datasets);
+            chart = drawHistory(Chart, canvas, datasets, theme);
             status.textContent = '';
         } catch {
             if (current !== request) return;
@@ -200,4 +206,5 @@ export function mountTonerHistory(section, deviceParams, fetchTonerJson) {
 CHANGELOG
 2026-11-28 Codex
 - Add an on-demand CMYK history chart with date ranges, actual readings, and explicit gaps.
+- Use the selected theme's colors for the history lines, axes, and reference line.
 */

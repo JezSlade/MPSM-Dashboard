@@ -34,6 +34,13 @@ $historyVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-history.js
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= APP_NAME ?> - Toner Alerts</title>
+    <script>
+        try {
+            if (localStorage.getItem('mpsm.tonerAlerts.theme') === 'light') {
+                document.documentElement.dataset.tonerTheme = 'light';
+            }
+        } catch {}
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -44,7 +51,12 @@ $historyVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-history.js
       data-dealer-code="<?= htmlspecialchars($preferences['dealerCode'] ?? DEFAULT_DEALER_CODE) ?>"
       data-customer-code="<?= htmlspecialchars($preferences['customerCode'] ?? '') ?>">
     <header class="ta-header">
-        <h1><i class="fas fa-print"></i> Toner Alerts</h1>
+        <div class="ta-heading">
+            <h1><i class="fas fa-print" aria-hidden="true"></i> Toner Alerts</h1>
+            <button id="ta-theme-toggle" class="ta-theme-toggle" type="button">
+                <i class="fas fa-sun" aria-hidden="true"></i> <span>Light mode</span>
+            </button>
+        </div>
         <nav aria-label="Dashboard navigation">
             <a class="ta-mobile-link" href="toner-alerts.php?view=mobile"><i class="fas fa-mobile-screen" aria-hidden="true"></i> Mobile view</a>
             <a class="ta-desktop-link" href="toner-alerts.php?view=desktop"><i class="fas fa-desktop" aria-hidden="true"></i> Desktop view</a>
@@ -119,5 +131,6 @@ CHANGELOG
 2026-11-28 Codex
 - Preserve the selected Toner Alerts layout through sign-in and show a recovery link on session expiry.
 - Version the on-demand toner history module alongside the page assets.
+- Restore the Toner Alerts theme before displaying the page and offer a theme switch in both layouts.
 */
 ?>
