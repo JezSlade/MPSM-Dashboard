@@ -18,6 +18,7 @@ body.toner-alerts {
     color: var(--ta-text);
     font-family: var(--ta-font);
     margin: 0;
+    min-height: 100dvh;
 }
 
 .toner-alerts:not(.ta-layout-desktop) { container: toner-alerts / inline-size; }
@@ -92,6 +93,17 @@ body.toner-alerts {
     color: var(--ta-text-dim);
     font-size: 0.8rem;
 }
+
+.ta-sign-in {
+    margin: 1rem 1.5rem;
+    padding: 1rem;
+    background: var(--ta-surface);
+    border: 1px solid var(--ta-border);
+    border-radius: 8px;
+}
+.ta-sign-in p { margin: 0; }
+.ta-sign-in a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ta-accent); }
+.ta-pagination[hidden] { display: none; }
 
 .ta-table-wrap { padding: 1rem 1.5rem 2rem; overflow-x: auto; }
 
@@ -317,4 +329,6 @@ CHANGELOG
 - Added responsive styling for compatible OEM toner part-number lists in drill-down cards.
 2026-11-27 Codex
 - Switch to labeled cards, touch-sized controls, and a bottom-aligned details dialog on small screens.
+2026-11-28 Codex
+- Keep the dark background across the viewport and style the sign-in action.
 */

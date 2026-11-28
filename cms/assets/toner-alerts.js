@@ -14,6 +14,8 @@
         pageRows: 100,
         total: 0,
         currentAlerts: [],
+        alertRequest: 0,
+        sessionExpired: false,
     };
 
     const dealerSelect = document.getElementById('ta-dealer');
@@ -23,6 +25,39 @@
     const pageLabelEl = document.getElementById('ta-page-label');
     const prevBtn = document.getElementById('ta-prev');
     const nextBtn = document.getElementById('ta-next');
+    const signInNotice = document.getElementById('ta-sign-in');
+    const refreshBtn = document.getElementById('ta-refresh');
+
+    function clearResults() {
+        state.currentAlerts = [];
+        state.total = 0;
+        summaryEl.textContent = '';
+        pageLabelEl.textContent = '';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+    }
+
+    async function fetchTonerJson(url, options) {
+        try {
+            return await fetchJson(url, options);
+        } catch (error) {
+            if (error.status === 401 && !state.sessionExpired) {
+                state.sessionExpired = true;
+                state.alertRequest++;
+                clearResults();
+                rowsEl.textContent = '';
+                dealerSelect.disabled = true;
+                customerSelect.disabled = true;
+                refreshBtn.disabled = true;
+                rowsEl.closest('.ta-table-wrap').hidden = true;
+                pageLabelEl.closest('.ta-pagination').hidden = true;
+                if (deviceDialog.open) deviceDialog.close();
+                signInNotice.hidden = false;
+                signInNotice.querySelector('a').focus();
+            }
+            throw error;
+        }
+    }
 
     function levelClass(pct) {
         if (pct === null || pct === undefined) return '';
@@ -33,7 +68,7 @@
 
     async function loadDealers() {
         try {
-            const data = await fetchJson('api/get-dealers.php');
+            const data = await fetchTonerJson('api/get-dealers.php');
             const dealers = data.dealers || [];
             dealerSelect.innerHTML = '';
             dealers.forEach(d => {
@@ -49,6 +84,7 @@
             }
             state.dealerId = dealerSelect.selectedOptions[0]?.dataset.dealerId || '';
         } catch (error) {
+            if (state.sessionExpired) return;
             dealerSelect.innerHTML = '<option value="">Failed to load dealers</option>';
             showToast('Failed to load dealers: ' + error.message, 'error');
         }
@@ -58,7 +94,7 @@
         customerSelect.innerHTML = '<option value="">All Customers</option>';
         if (!state.dealerCode) return;
         try {
-            const data = await fetchJson('api/get-customers.php?dealerCode=' + encodeURIComponent(state.dealerCode));
+            const data = await fetchTonerJson('api/get-customers.php?dealerCode=' + encodeURIComponent(state.dealerCode));
             (data.customers || []).forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.Code;
@@ -67,6 +103,7 @@
                 customerSelect.appendChild(opt);
             });
         } catch (error) {
+            if (state.sessionExpired) return;
             showToast('Failed to load customers: ' + error.message, 'error');
         }
     }
@@ -265,7 +302,7 @@
             const params = new URLSearchParams({ deviceId: alert.DeviceId, dealerCode: state.dealerCode });
             if (alert.ProductBrand) params.set('brand', alert.ProductBrand);
             if (alert.ProductModel) params.set('model', alert.ProductModel);
-            const data = await fetchJson('api/get-device-detail.php?' + params.toString());
+            const data = await fetchTonerJson('api/get-device-detail.php?' + params.toString());
             const d = data.device;
             if (!d) {
                 throw new Error('Device not found');
@@ -297,6 +334,7 @@
                 ${renderMaintenanceAlerts(d.MaintenanceAlerts)}
             `;
         } catch (error) {
+            if (state.sessionExpired) return;
             detail.innerHTML = `<div class="ta-empty">Failed to load device: ${escapeHtml(error.message)}</div>`;
         }
     }
@@ -319,8 +357,14 @@
     });
 
     async function loadAlerts() {
+        if (state.sessionExpired) return;
+        const request = ++state.alertRequest;
+        clearResults();
+        if (!state.dealerCode) {
+            renderRows([]);
+            return;
+        }
         rowsEl.innerHTML = '<tr><td colspan="6" class="ta-loading">Loading toner alerts...</td></tr>';
-        if (!state.dealerCode) return;
 
         const params = new URLSearchParams({
             dealerCode: state.dealerCode,
@@ -335,7 +379,8 @@
         if (state.customerCode) params.set('customerCode', state.customerCode);
 
         try {
-            const data = await fetchJson('api/get-supply-alerts.php?' + params.toString());
+            const data = await fetchTonerJson('api/get-supply-alerts.php?' + params.toString());
+            if (request !== state.alertRequest) return;
             const alerts = data.alerts || [];
             state.total = data.total ?? alerts.length;
             const pages = Math.max(1, Math.ceil(state.total / state.pageRows));
@@ -352,13 +397,14 @@
             prevBtn.disabled = state.page <= 1;
             nextBtn.disabled = state.page >= pages;
         } catch (error) {
+            if (request !== state.alertRequest) return;
             rowsEl.innerHTML = `<tr><td colspan="6" class="ta-empty">Failed to load toner alerts: ${escapeHtml(error.message)}</td></tr>`;
         }
     }
 
     function saveDealerCustomerPreference() {
         const opt = dealerSelect.selectedOptions[0];
-        fetchJson('api/save-preferences.php', {
+        return fetchTonerJson('api/save-preferences.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -375,7 +421,8 @@
         state.dealerId = dealerSelect.selectedOptions[0]?.dataset.dealerId || '';
         state.customerCode = '';
         state.page = 1;
-        saveDealerCustomerPreference();
+        await saveDealerCustomerPreference();
+        if (state.sessionExpired) return;
         await loadCustomers();
         await loadAlerts();
     });
@@ -383,16 +430,17 @@
     customerSelect.addEventListener('change', async () => {
         state.customerCode = customerSelect.value;
         state.page = 1;
-        saveDealerCustomerPreference();
+        await saveDealerCustomerPreference();
         await loadAlerts();
     });
 
-    document.getElementById('ta-refresh').addEventListener('click', loadAlerts);
+    refreshBtn.addEventListener('click', loadAlerts);
     prevBtn.addEventListener('click', () => { if (state.page > 1) { state.page--; loadAlerts(); } });
     nextBtn.addEventListener('click', () => { state.page++; loadAlerts(); });
 
     (async function init() {
         await loadDealers();
+        if (state.sessionExpired) return;
         await loadCustomers();
         await loadAlerts();
     })();
@@ -411,4 +459,6 @@ CHANGELOG
 - Show location and equipment ID from the available data and label the source of alert age.
 - Render one row per device with all affected cartridges and separate device and alert counts.
 - Add labels for the mobile device cards and support keyboard and touch access to device details.
+2026-11-28 Codex
+- Clear stale results and show a sign-in action when the session ends.
 */

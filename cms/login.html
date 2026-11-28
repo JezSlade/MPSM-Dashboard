@@ -164,8 +164,10 @@
         const errorEl = document.getElementById('error');
         const loginBtn = document.getElementById('login-btn');
         let loginInFlight = false;
-        const preferredReturn = forcedReturn
-            || (isMobile && !forceDesktop ? 'mobile.php' : 'index.php');
+        const returnTargets = ['index.php', 'mobile.php', 'dealer.php',
+            'toner-alerts.php', 'toner-alerts.php?view=mobile', 'toner-alerts.php?view=desktop'];
+        const preferredReturn = returnTargets.includes(forcedReturn)
+            ? forcedReturn : (isMobile && !forceDesktop ? 'mobile.php' : 'index.php');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -253,4 +255,6 @@
 CHANGELOG
 2025-11-25 Codex
 - Added mobile-aware post-login redirect with desktop override and preference cookie to keep mobile users on mobile.php by default.
+2026-11-28 Codex
+- Return to Toner Alerts after sign-in using a local allowlisted destination.
 -->

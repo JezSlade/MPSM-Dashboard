@@ -15,7 +15,11 @@ async function fetchJson(url, options = {}) {
       body,
       signal: signal || (controller && controller.signal) || undefined,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      const error = new Error(`HTTP ${res.status}`);
+      error.status = res.status;
+      throw error;
+    }
     const data = await res.json();
     return data;
   } finally {
@@ -51,5 +55,7 @@ function showToast(message, type = 'info') {
 CHANGELOG
 2025-11-26 Codex
 - Added shared.js with fetchJson, escapeHtml, and showToast used by Command Center tabs.
+2026-11-28 Codex
+- Attach the numeric HTTP status to fetch errors.
 */
 

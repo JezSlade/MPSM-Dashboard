@@ -6,18 +6,26 @@
 require 'config.php';
 require 'functions.php';
 
-requireAuth();
-trackVisit('/toner-alerts');
-
-$userId = $_SESSION['user_id'];
-$preferences = getUserPreferences($userId);
 $layout = match ($_GET['view'] ?? '') {
     'mobile' => 'mobile',
     'desktop' => 'desktop',
     default => 'auto',
 };
+$returnTo = 'toner-alerts.php' . ($layout === 'auto' ? '' : '?view=' . $layout);
+$signInUrl = 'login.html?' . http_build_query(['returnTo' => $returnTo]);
+header('Cache-Control: no-store');
+if (!isLoggedIn()) {
+    header('Location: ' . $signInUrl);
+    exit;
+}
+requireAuth();
+trackVisit('/toner-alerts');
+
+$userId = $_SESSION['user_id'];
+$preferences = getUserPreferences($userId);
 $styleVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.css'), 0, 12);
 $scriptVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.js'), 0, 12);
+$sharedVersion = substr(hash_file('sha256', __DIR__ . '/assets/shared.js'), 0, 12);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -57,6 +65,11 @@ $scriptVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.js')
 
     <div class="ta-summary" id="ta-summary" role="status"></div>
 
+    <section id="ta-sign-in" class="ta-sign-in" hidden>
+        <p role="status">Your dashboard session ended. Sign in again to reload toner alerts.</p>
+        <a href="<?= htmlspecialchars($signInUrl, ENT_QUOTES) ?>">Sign in again</a>
+    </section>
+
     <div class="ta-table-wrap">
         <table class="ta-table" role="table" aria-label="Toner alerts by device">
             <thead role="rowgroup">
@@ -76,9 +89,9 @@ $scriptVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.js')
     </div>
 
     <div class="ta-pagination">
-        <button id="ta-prev">&larr; Prev</button>
+        <button id="ta-prev" disabled>&larr; Prev</button>
         <span id="ta-page-label"></span>
-        <button id="ta-next">Next &rarr;</button>
+        <button id="ta-next" disabled>Next &rarr;</button>
     </div>
 
     <dialog id="ta-device-dialog" class="ta-modal" aria-labelledby="ta-modal-title">
@@ -88,7 +101,7 @@ $scriptVersion = substr(hash_file('sha256', __DIR__ . '/assets/toner-alerts.js')
         <div id="ta-modal-body"></div>
     </dialog>
 
-    <script src="assets/shared.js"></script>
+    <script src="assets/shared.js?v=<?= $sharedVersion ?>"></script>
     <script src="assets/toner-alerts.js?v=<?= $scriptVersion ?>"></script>
 </body>
 </html>
@@ -101,5 +114,7 @@ CHANGELOG
 2026-11-27 Codex
 - Link mobile and desktop layouts and use a native device details dialog.
 - Version Toner Alerts assets so returning browsers load the JavaScript and CSS that match the page.
+2026-11-28 Codex
+- Preserve the selected Toner Alerts layout through sign-in and show a recovery link on session expiry.
 */
 ?>
