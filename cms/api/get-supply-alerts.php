@@ -19,6 +19,7 @@ $pageRows = isset($_GET['pageRows']) ? (int)$_GET['pageRows'] : 50;
 $sortColumn = $_GET['sortColumn'] ?? 'InitialDate';
 $sortOrder = $_GET['sortOrder'] ?? 'Desc';
 $currentOnly = filter_var($_GET['currentOnly'] ?? false, FILTER_VALIDATE_BOOLEAN);
+$groupByDevice = filter_var($_GET['groupByDevice'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
 if ($pageNumber < 1) {
     $pageNumber = 1;
@@ -108,20 +109,26 @@ try {
 
         foreach ($filtered as &$alert) {
             $serialKey = strtoupper(trim((string)($alert['SerialNumber'] ?? '')));
+            $displayFields = tonerAlertDisplayFields($alert);
             $color = $alert['ColorType'] ?? $alert['SupplyTypeDescription'] ?? '';
             $alert['AlertOpenedDate'] = tonerPanelEventOpenedDate($historyBySerial[$serialKey] ?? [], $color);
             $alert['AlertDateSource'] = $alert['AlertOpenedDate'] ? 'panel_messages' : null;
+            $alert = array_replace($alert, $displayFields);
         }
         unset($alert);
         sortTonerAlertsByOpenedDate($filtered);
 
+        $alertTotal = count($filtered);
+        if ($groupByDevice) {
+            $filtered = groupTonerAlertsByDevice($filtered);
+        }
         $total = count($filtered);
         $alerts = array_slice($filtered, ($pageNumber - 1) * $pageRows, $pageRows);
         jsonSuccess([
             'alerts' => $alerts,
             'total' => $total,
             'page' => ['number' => $pageNumber, 'size' => $pageRows],
-        ]);
+        ] + ($groupByDevice ? ['alertTotal' => $alertTotal] : []));
         return;
     }
 
@@ -158,4 +165,7 @@ CHANGELOG
 - Added optional current-only upstream filtering with accurate post-filter pagination.
 - Added an opt-in current-only mode that excludes installed, canceled, hidden, and stock-generated supply records upstream.
 - Replaced slow per-device MPSM history calls with one batched panel-history query keyed by serial and toner color.
+2026-11-27 Codex
+- Expose color, reading date, equipment ID, location, and supply record date for current alerts.
+- Add optional device grouping before pagination for the Toner Alerts page.
 */

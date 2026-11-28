@@ -24,16 +24,6 @@
     const prevBtn = document.getElementById('ta-prev');
     const nextBtn = document.getElementById('ta-next');
 
-    // Same precedence the rest of the dashboard uses (app.js getEquipmentIdFromAlert):
-    // AssetNumber/Asset/EquipmentId, then ExternalIdentifier/ExternalId, then Serial.
-    function getEquipmentId(a) {
-        const asset = (a.AssetNumber ?? a.Asset ?? a.EquipmentId ?? '').toString().trim();
-        const external = (a.ExternalIdentifier ?? a.ExternalId ?? '').toString().trim();
-        if (asset) return asset;
-        if (external) return external;
-        return '-';
-    }
-
     function levelClass(pct) {
         if (pct === null || pct === undefined) return '';
         if (pct <= 10) return 'critical';
@@ -88,12 +78,61 @@
         return { cls: 'ok', label: 'OK' };
     }
 
-    function daysOpen(openedDate) {
-        if (!openedDate) return '-';
-        const started = new Date(openedDate).getTime();
-        if (Number.isNaN(started)) return '-';
-        const days = Math.max(1, Math.floor((Date.now() - started) / 86400000) + 1);
-        return days;
+    const dayInMilliseconds = 24 * 60 * 60 * 1000;
+    const readingFormat = new Intl.DateTimeFormat(undefined, {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+        timeZoneName: 'short',
+    });
+
+    function dateTimestamp(value) {
+        if (typeof value !== 'string' || value.startsWith('0001-01-01')) return NaN;
+        // MySQL panel history uses a space between date and time.
+        return Date.parse(value.replace(' ', 'T'));
+    }
+
+    function readingStatus(value) {
+        const timestamp = dateTimestamp(value);
+        if (!Number.isFinite(timestamp)) return 'Reading time unavailable';
+        const date = readingFormat.format(timestamp);
+        return Date.now() - timestamp >= dayInMilliseconds ? `Stale · ${date}` : date;
+    }
+
+    function renderAge(alert) {
+        const panelTime = dateTimestamp(alert.AlertOpenedDate);
+        const fromPanel = Number.isFinite(panelTime);
+        const timestamp = fromPanel ? panelTime : dateTimestamp(alert.SupplyRecordOpenedDate);
+        if (!Number.isFinite(timestamp)) return '<span class="ta-toner-part-meta">Unknown</span>';
+        const days = Math.max(1, Math.floor((Date.now() - timestamp) / dayInMilliseconds) + 1);
+        const source = fromPanel ? 'Panel event' : 'Supply record';
+        const label = alert.TonerAlerts?.length > 1 ? `Oldest · ${source}` : source;
+        return `<span title="${new Date(timestamp).toISOString()}">${days} d</span>
+                <div class="ta-toner-part-meta">${label}</div>`;
+    }
+
+    function deviceLabel(brand, model, fallback = '-') {
+        const product = (model || '').trim();
+        const make = (brand || '').trim();
+        if (make && product.toLowerCase().startsWith(make.toLowerCase() + ' ')) return product;
+        return [make, product].filter(Boolean).join(' ') || fallback;
+    }
+
+    function renderCartridge(alert) {
+        const level = alert.Percentage;
+        const pct = level == null || level === '' ? NaN : Number(level);
+        const validLevel = Number.isFinite(pct) && pct >= 0 && pct <= 100;
+        const sev = validLevel ? severityFor(pct) : { cls: 'ok', label: 'Unknown' };
+        const color = alert.TonerColor
+            ? alert.TonerColor.charAt(0).toUpperCase() + alert.TonerColor.slice(1)
+            : 'Unknown color';
+        return `
+            <div class="ta-cartridge">
+                <div class="ta-severity">
+                    <span class="ta-badge ${sev.cls}">${sev.label}</span>
+                    <span>${escapeHtml(color)} ${validLevel ? `${pct}%` : '· level unavailable'}</span>
+                </div>
+                <div class="ta-toner-part-meta">${escapeHtml(readingStatus(alert.TonerReadingDate))}</div>
+            </div>
+        `;
     }
 
     function renderRows(alerts) {
@@ -105,40 +144,42 @@
         }
 
         rowsEl.innerHTML = alerts.map((a, i) => {
-            const pct = a.ActualResidualPercentage ?? a.InitialResidualPercentage ?? null;
-            const sev = severityFor(pct);
-            const device = [a.ProductBrand, a.ProductModel].filter(Boolean).join(' ') || '-';
-            const location = [a.Office && a.Office.Description, a.Department].filter(Boolean).join(' / ') || '-';
-            const openedDate = a.AlertOpenedDate || '';
-            const openedTitle = openedDate ? `Opened ${openedDate.replace('T', ' ').slice(0, 16)}` : 'No active low/empty event date found';
+            const device = deviceLabel(a.ProductBrand, a.ProductModel);
+            const idSource = a.TonerEquipmentIdFromDepartment ? ' title="From device department"' : '';
+            const cartridges = a.TonerAlerts ?? [{
+                TonerColor: a.TonerColor,
+                Percentage: a.ActualResidualPercentage ?? a.InitialResidualPercentage,
+                TonerReadingDate: a.TonerReadingDate,
+            }];
 
             return `
-                <tr data-row-index="${i}">
-                    <td>
-                        <div class="ta-severity">
-                            <span class="ta-badge ${sev.cls}">${sev.label}</span>
-                            <div class="ta-mini-bar"><div class="ta-mini-fill ${sev.cls}" style="width:${pct ?? 0}%"></div></div>
-                        </div>
+                <tr role="row" data-row-index="${i}">
+                    <td role="cell" class="ta-device-alerts">${cartridges.map(renderCartridge).join('')}</td>
+                    <td role="cell" class="ta-device-model">
+                        <button type="button" class="ta-device-cell" aria-describedby="ta-device-serial-${i}">
+                            <i class="fas fa-print" aria-hidden="true"></i><span>${escapeHtml(device)}</span>
+                        </button>
                     </td>
-                    <td>
-                        <div class="ta-device-cell"><i class="fas fa-print"></i> ${escapeHtml(device)}</div>
+                    <td role="cell" class="ta-device-id"${idSource}>
+                        <span class="ta-mobile-label" aria-hidden="true">Systel Equip ID</span>${escapeHtml(a.TonerEquipmentId || '-')}
                     </td>
-                    <td>${escapeHtml(getEquipmentId(a))}</td>
-                    <td>${escapeHtml(a.SerialNumber || '-')}</td>
-                    <td>${escapeHtml(location)}</td>
-                    <td title="${escapeHtml(openedTitle)}">${daysOpen(openedDate)}</td>
+                    <td role="cell" id="ta-device-serial-${i}">
+                        <span class="ta-mobile-label" aria-hidden="true">Serial Number</span>${escapeHtml(a.SerialNumber || '-')}
+                    </td>
+                    <td role="cell">
+                        <span class="ta-mobile-label" aria-hidden="true">Location</span>${escapeHtml(a.TonerLocation || 'Location unavailable')}
+                    </td>
+                    <td role="cell">
+                        <span class="ta-mobile-label" aria-hidden="true">Days Open</span>${renderAge(a)}
+                    </td>
                 </tr>
             `;
         }).join('');
     }
 
     // --- Device drill-down modal ---
-    const modalBackdrop = document.getElementById('ta-modal-backdrop');
+    const deviceDialog = document.getElementById('ta-device-dialog');
     const modalBody = document.getElementById('ta-modal-body');
-
-    function closeModal() {
-        modalBackdrop.style.display = 'none';
-    }
 
     function tonerPartsFor(partsByColor, color) {
         if (!partsByColor || typeof partsByColor !== 'object') return [];
@@ -206,18 +247,17 @@
     }
 
     async function openDeviceDrilldown(alert) {
-        modalBody.innerHTML = '<div class="ta-loading">Loading device...</div>';
-        modalBackdrop.style.display = 'flex';
-
-        const device = [alert.ProductBrand, alert.ProductModel].filter(Boolean).join(' ') || 'Device';
+        const device = deviceLabel(alert.ProductBrand, alert.ProductModel, 'Device');
         modalBody.innerHTML = `
-            <h2><i class="fas fa-print"></i> ${escapeHtml(device)}</h2>
+            <h2 id="ta-modal-title"><i class="fas fa-print" aria-hidden="true"></i> ${escapeHtml(device)}</h2>
             <div class="ta-modal-sub">${escapeHtml(alert.SerialNumber || '')} &middot; ${escapeHtml(alert.CustomerDescription || alert.CustomerCode || '')}</div>
             <div id="ta-modal-detail"><div class="ta-loading">Loading live device data...</div></div>
         `;
+        deviceDialog.showModal();
+        const detail = document.getElementById('ta-modal-detail');
 
         if (!alert.DeviceId) {
-            document.getElementById('ta-modal-detail').innerHTML = '<div class="ta-empty">No device ID on this alert to drill into.</div>';
+            detail.innerHTML = '<div class="ta-empty">No device ID on this alert to drill into.</div>';
             return;
         }
 
@@ -233,7 +273,6 @@
 
             const online = !!d.IsOnline;
             const partsByColor = data.tonerPartNumbers?.colors || data.tonerPartNumbers || {};
-            const detail = document.getElementById('ta-modal-detail');
             detail.innerHTML = `
                 <div class="ta-detail-grid">
                     <div class="ta-detail-item">
@@ -244,7 +283,7 @@
                     <div class="ta-detail-item"><div class="ta-detail-label">Department</div><div class="ta-detail-value">${escapeHtml(d.Department || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Contact</div><div class="ta-detail-value">${escapeHtml(d.Contact || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Firmware</div><div class="ta-detail-value">${escapeHtml(d.Firmware || '-')}</div></div>
-                    <div class="ta-detail-item"><div class="ta-detail-label">Last Update</div><div class="ta-detail-value">${escapeHtml((d.LastUpdate || '').replace('T', ' ').slice(0, 16) || '-')}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Last Update</div><div class="ta-detail-value">${escapeHtml(readingStatus(d.LastUpdate))}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Installed</div><div class="ta-detail-value">${escapeHtml((d.Install || '').slice(0, 10) || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Note</div><div class="ta-detail-value">${escapeHtml(d.Note || '-')}</div></div>
                 </div>
@@ -258,13 +297,19 @@
                 ${renderMaintenanceAlerts(d.MaintenanceAlerts)}
             `;
         } catch (error) {
-            document.getElementById('ta-modal-detail').innerHTML = `<div class="ta-empty">Failed to load device: ${escapeHtml(error.message)}</div>`;
+            detail.innerHTML = `<div class="ta-empty">Failed to load device: ${escapeHtml(error.message)}</div>`;
         }
     }
 
-    document.getElementById('ta-modal-close').addEventListener('click', closeModal);
-    modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('ta-modal-close').addEventListener('click', () => deviceDialog.close());
+    deviceDialog.addEventListener('click', (event) => {
+        if (event.target !== deviceDialog) return;
+        const bounds = deviceDialog.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right
+            || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+            deviceDialog.close();
+        }
+    });
 
     rowsEl.addEventListener('click', (e) => {
         const tr = e.target.closest('tr[data-row-index]');
@@ -281,6 +326,7 @@
             dealerCode: state.dealerCode,
             supplyType: 'Toner',
             currentOnly: '1',
+            groupByDevice: '1',
             sortColumn: 'InitialDate',
             sortOrder: 'Asc',
             pageNumber: state.page,
@@ -291,11 +337,17 @@
         try {
             const data = await fetchJson('api/get-supply-alerts.php?' + params.toString());
             const alerts = data.alerts || [];
-            state.total = data.total || alerts.length;
+            state.total = data.total ?? alerts.length;
+            const pages = Math.max(1, Math.ceil(state.total / state.pageRows));
+            if (state.page > pages) {
+                state.page = pages;
+                return loadAlerts();
+            }
             renderRows(alerts);
 
-            const pages = Math.max(1, Math.ceil(state.total / state.pageRows));
-            summaryEl.textContent = `${state.total} toner alert${state.total === 1 ? '' : 's'}`;
+            const alertCount = data.alertTotal ?? state.total;
+            summaryEl.textContent = `${state.total} device${state.total === 1 ? '' : 's'} · `
+                + `${alertCount} toner alert${alertCount === 1 ? '' : 's'}`;
             pageLabelEl.textContent = `Page ${state.page} of ${pages}`;
             prevBtn.disabled = state.page <= 1;
             nextBtn.disabled = state.page >= pages;
@@ -354,4 +406,9 @@ CHANGELOG
 - Limited the list to current toner alerts so completed lifecycle records no longer inflate pagination.
 - Sorted current toner alerts oldest-first to align with the Days Open column.
 - Calculated Days Open from the latest matching low/empty panel-history event instead of the supply lifecycle InitialDate.
+2026-11-27 Codex
+- Show toner color, percentage, and timestamp on each row and flag stale readings.
+- Show location and equipment ID from the available data and label the source of alert age.
+- Render one row per device with all affected cartridges and separate device and alert counts.
+- Add labels for the mobile device cards and support keyboard and touch access to device details.
 */

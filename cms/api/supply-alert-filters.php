@@ -85,11 +85,108 @@ if (!function_exists('normalizeTonerColor')) {
     function normalizeTonerColor($color): string
     {
         $normalized = strtolower(trim((string)$color));
+        $codes = [2 => 'black', 3 => 'cyan', 4 => 'magenta', 5 => 'yellow'];
+        if (isset($codes[$normalized])) {
+            return $codes[$normalized];
+        }
         if (preg_match('/^black\d*$/', $normalized)) {
             return 'black';
         }
         return in_array($normalized, ['cyan', 'magenta', 'yellow', 'white'], true) ? $normalized : '';
     }
+}
+
+function tonerAlertDate($value): ?string
+{
+    if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}(?:[T ]|$)/', $value)
+        || str_starts_with($value, '0001-01-01') || strtotime($value) === false) {
+        return null;
+    }
+    return $value;
+}
+
+function tonerAlertDisplayFields(array $alert): array
+{
+    $equipmentId = '';
+    foreach (['AssetNumber', 'Asset', 'EquipmentId', 'ExternalIdentifier', 'ExternalId'] as $field) {
+        $equipmentId = trim((string)($alert[$field] ?? ''));
+        if ($equipmentId !== '') {
+            break;
+        }
+    }
+
+    $department = trim((string)($alert['Department'] ?? ''));
+    $fromDepartment = false;
+    if (preg_match('/^([A-Z]{2}-?\d{3})\s+S\s+\d{6}(?:\s+(.*))?$/i', $department, $matches)) {
+        if ($equipmentId === '') {
+            $equipmentId = strtoupper($matches[1]);
+            $fromDepartment = true;
+        }
+        $department = trim($matches[2] ?? '');
+    }
+
+    $office = trim((string)($alert['Office']['Description'] ?? ''));
+    $location = array_filter(
+        [$office, $department],
+        static fn(string $part): bool => $part !== '' && strcasecmp($part, 'DEFAULT') !== 0
+    );
+    $readingDateField = isset($alert['ActualResidualPercentage']) ? 'ActualDate' : 'InitialDate';
+    $color = strtolower(trim((string)($alert['ColorType'] ?? $alert['SupplyTypeDescription'] ?? '')));
+    $normalized = normalizeTonerColor($color);
+    $displayColor = preg_match('/^black(\d+)$/', $color, $slot) ? 'black ' . $slot[1] : $normalized;
+
+    return [
+        'TonerColor' => $displayColor ?: null,
+        'TonerEquipmentId' => $equipmentId !== '' ? $equipmentId : null,
+        'TonerEquipmentIdFromDepartment' => $fromDepartment,
+        'TonerLocation' => implode(' / ', array_unique($location)) ?: null,
+        'TonerReadingDate' => tonerAlertDate($alert[$readingDateField] ?? null),
+        'SupplyRecordOpenedDate' => tonerAlertDate($alert['InitialDate'] ?? null),
+    ];
+}
+
+function groupTonerAlertsByDevice(array $alerts): array
+{
+    $deviceIdsBySerial = [];
+    foreach ($alerts as $alert) {
+        $customer = ($alert['CustomerCode'] ?? '') ?: ($alert['CustomerId'] ?? '');
+        $serial = strtoupper(trim((string)($alert['SerialNumber'] ?? '')));
+        $deviceId = trim((string)($alert['DeviceId'] ?? ''));
+        if ($serial !== '' && $deviceId !== '') {
+            $deviceIdsBySerial[$customer . "\0" . $serial][$deviceId] = true;
+        }
+    }
+
+    $groups = [];
+    foreach ($alerts as $index => $alert) {
+        $customer = ($alert['CustomerCode'] ?? '') ?: ($alert['CustomerId'] ?? '');
+        $deviceId = trim((string)($alert['DeviceId'] ?? ''));
+        $serial = strtoupper(trim((string)($alert['SerialNumber'] ?? '')));
+        $matches = $deviceIdsBySerial[$customer . "\0" . $serial] ?? [];
+        if ($deviceId === '' && count($matches) === 1) {
+            $deviceId = (string)array_key_first($matches);
+        }
+        $identity = $deviceId !== '' ? "id:$deviceId" : ($serial !== '' ? "serial:$serial" : "row:$index");
+        $key = $customer . "\0" . $identity;
+
+        if (!isset($groups[$key])) {
+            $groups[$key] = $alert;
+            $groups[$key]['DeviceId'] = $deviceId;
+        }
+        if (empty($groups[$key]['TonerEquipmentId']) || (empty($alert['TonerEquipmentIdFromDepartment'])
+            && !empty($alert['TonerEquipmentId']) && !empty($groups[$key]['TonerEquipmentIdFromDepartment']))) {
+            $groups[$key]['TonerEquipmentId'] = $alert['TonerEquipmentId'] ?? null;
+            $groups[$key]['TonerEquipmentIdFromDepartment'] = $alert['TonerEquipmentIdFromDepartment'] ?? false;
+        }
+        $groups[$key]['TonerLocation'] = $groups[$key]['TonerLocation'] ?? $alert['TonerLocation'] ?? null;
+        $groups[$key]['TonerAlerts'][] = [
+            'TonerColor' => $alert['TonerColor'] ?? null,
+            'Percentage' => $alert['ActualResidualPercentage'] ?? $alert['InitialResidualPercentage'] ?? null,
+            'TonerReadingDate' => $alert['TonerReadingDate'] ?? null,
+        ];
+    }
+
+    return array_values($groups);
 }
 
 if (!function_exists('tonerMaintenanceOpenedDate')) {
@@ -163,8 +260,10 @@ if (!function_exists('sortTonerAlertsByOpenedDate')) {
     function sortTonerAlertsByOpenedDate(array &$alerts): void
     {
         usort($alerts, static function (array $a, array $b): int {
-            $aTime = !empty($a['AlertOpenedDate']) ? strtotime((string)$a['AlertOpenedDate']) : false;
-            $bTime = !empty($b['AlertOpenedDate']) ? strtotime((string)$b['AlertOpenedDate']) : false;
+            $aDate = tonerAlertDate($a['AlertOpenedDate'] ?? null) ?? ($a['SupplyRecordOpenedDate'] ?? null);
+            $bDate = tonerAlertDate($b['AlertOpenedDate'] ?? null) ?? ($b['SupplyRecordOpenedDate'] ?? null);
+            $aTime = $aDate === null ? false : strtotime($aDate);
+            $bTime = $bDate === null ? false : strtotime($bDate);
             if ($aTime === false && $bTime === false) {
                 return strcmp((string)($a['SerialNumber'] ?? ''), (string)($b['SerialNumber'] ?? ''));
             }
@@ -241,4 +340,8 @@ CHANGELOG
 - Added a strict current toner-level predicate that excludes OK, installed, canceled, hidden, and non-toner records.
 - Added active maintenance-history date matching and oldest-first event sorting.
 - Added a fast panel-history event resolver for batched serial lookups.
+2026-11-27 Codex
+- Normalize vendor toner color codes and derive scoped display fields from current alerts.
+- Use the supply record date for fallback ordering without changing the panel event date.
+- Group current toner alerts by customer and device while retaining each cartridge reading.
 */

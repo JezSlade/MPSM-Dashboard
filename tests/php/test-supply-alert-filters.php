@@ -105,6 +105,70 @@ if (tonerPanelEventOpenedDate($panelHistory, 'Black') !== '2025-12-01 08:00:00')
     exit(1);
 }
 
+$initialDate = '2026-03-10T08:00:00Z';
+$actualDate = '2026-03-25T08:00:00Z';
+$display = tonerAlertDisplayFields([
+    'ColorType' => '4',
+    'Department' => 'EB409 S 052015 Service Room',
+    'Office' => ['Description' => 'DEFAULT'],
+    'ActualResidualPercentage' => 0,
+    'ActualDate' => $actualDate,
+    'InitialDate' => $initialDate,
+]);
+if ($display !== [
+    'TonerColor' => 'magenta',
+    'TonerEquipmentId' => 'EB409',
+    'TonerEquipmentIdFromDepartment' => true,
+    'TonerLocation' => 'Service Room',
+    'TonerReadingDate' => $actualDate,
+    'SupplyRecordOpenedDate' => $initialDate,
+]) {
+    fwrite(STDERR, "Current alert metadata must retain the source of the zero-percent reading and tagged location.\n");
+    exit(1);
+}
+
+$display = tonerAlertDisplayFields([
+    'ColorType' => 'Black2',
+    'AssetNumber' => ' ',
+    'ExternalIdentifier' => 'A123',
+    'Department' => 'EB409 S 052015',
+    'Office' => ['Description' => 'default'],
+    'InitialResidualPercentage' => 5,
+    'ActualDate' => $actualDate,
+    'InitialDate' => $initialDate,
+]);
+if ($display['TonerColor'] !== 'black 2' || $display['TonerEquipmentId'] !== 'A123'
+    || $display['TonerEquipmentIdFromDepartment'] || $display['TonerLocation'] !== null
+    || $display['TonerReadingDate'] !== $initialDate
+    || tonerAlertDate('0001-01-01T00:00:00Z') !== null
+    || tonerPanelEventOpenedDate($panelHistory, '3') !== '2026-03-20 08:00:00'
+    || array_map('normalizeTonerColor', ['2', '3', '4', '5']) !== ['black', 'cyan', 'magenta', 'yellow']) {
+    fwrite(STDERR, "Color slots, structured asset IDs, date provenance and vendor colors must remain accurate.\n");
+    exit(1);
+}
+
+$sameDevice = ['CustomerCode' => 'A', 'SerialNumber' => 'S1'];
+$toGroup = [
+    $sameDevice + ['AlertOpenedDate' => '2026-03-18T08:00:00Z', 'TonerColor' => 'cyan', 'ActualResidualPercentage' => 0],
+    $sameDevice + ['DeviceId' => 'one', 'SupplyRecordOpenedDate' => $initialDate, 'TonerColor' => 'magenta', 'InitialResidualPercentage' => 7],
+    ['CustomerCode' => 'A', 'SerialNumber' => 'S2', 'DeviceId' => 'two'],
+    ['CustomerCode' => 'A', 'SerialNumber' => 'S2', 'DeviceId' => 'three'],
+    ['CustomerCode' => 'A', 'SerialNumber' => 'S2', 'TonerColor' => 'black'],
+    ['CustomerCode' => 'B', 'SerialNumber' => 'S1', 'DeviceId' => 'one'],
+    ['CustomerCode' => 'A', 'TonerColor' => 'yellow'],
+    ['CustomerCode' => 'A', 'TonerColor' => 'cyan'],
+];
+sortTonerAlertsByOpenedDate($toGroup);
+$groups = groupTonerAlertsByDevice($toGroup);
+if (count($groups) !== 7
+    || $groups[0]['DeviceId'] !== 'one'
+    || ($groups[0]['SupplyRecordOpenedDate'] ?? null) !== $initialDate
+    || array_column($groups[0]['TonerAlerts'], 'TonerColor') !== ['magenta', 'cyan']
+    || array_column($groups[0]['TonerAlerts'], 'Percentage') !== [7, 0]) {
+    fwrite(STDERR, "Group only alerts with the same device identity and preserve age order and every toner reading.\n");
+    exit(1);
+}
+
 echo "Supply alert current-only filter tests passed.\n";
 
 /*
@@ -114,4 +178,6 @@ CHANGELOG
 - Added low/empty boundary and completed-record rejection cases.
 - Added color-matched maintenance-event date and actual-date sorting coverage.
 - Added batched panel-history event selection coverage.
+2026-11-27 Codex
+- Cover vendor color codes, equipment tags, reading and supply-record dates, and device grouping.
 */
