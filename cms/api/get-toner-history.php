@@ -4,12 +4,14 @@
  */
 require '../config.php';
 require '../functions.php';
+require_once __DIR__ . '/supply-alert-filters.php';
 
 requireAuth();
 
 $deviceId = $_GET['deviceId'] ?? '';
 $dealerCode = $_GET['dealerCode'] ?? DEFAULT_DEALER_CODE;
 $range = $_GET['range'] ?? '90';
+$summary = filter_var($_GET['summary'] ?? false, FILTER_VALIDATE_BOOLEAN);
 $ranges = ['30' => 30, '90' => 90, '365' => 365, 'all' => null];
 
 if (!is_string($deviceId) || trim($deviceId) === '' || strlen($deviceId) > 200
@@ -65,7 +67,9 @@ try {
         $points[$at] = $point;
     }
     ksort($points, SORT_STRING);
-    jsonSuccess(['readings' => array_values($points)]);
+    jsonSuccess($summary
+        ? ['lowRuns' => (object)tonerHistoryLowRuns($points)]
+        : ['readings' => array_values($points)]);
 } catch (Throwable $error) {
     error_log('Toner history request failed: ' . $error->getMessage());
     jsonError('MPS Monitor could not provide toner history for this device.', 502);
@@ -75,4 +79,5 @@ try {
 CHANGELOG
 2026-11-28 Codex
 - Proxy date-range toner readings through the selected dealer profile and preserve missing levels.
+- Offer a compact summary of the current low-toner runs for the alert list.
 */

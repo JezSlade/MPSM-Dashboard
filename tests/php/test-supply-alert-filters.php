@@ -98,6 +98,25 @@ $datedReadings = [
     ['SerialNumber' => 'B', 'TonerReadingDate' => '2026-11-24T08:00:00Z'],
     ['SerialNumber' => 'C', 'TonerReadingDate' => '2026-11-25T08:00:00Z'],
 ];
+
+$runs = tonerHistoryLowRuns([
+    ['at' => '2026-11-20T08:00:00Z', 'black' => 12, 'cyan' => 40, 'magenta' => 15, 'yellow' => 15],
+    ['at' => '2026-11-25T08:00:00Z', 'black' => 30, 'cyan' => 25, 'magenta' => 20, 'yellow' => 55],
+    ['at' => '2026-11-26T08:00:00Z', 'black' => 25, 'cyan' => null, 'magenta' => null, 'yellow' => 70],
+    ['at' => '2026-11-27T08:00:00Z', 'black' => 0, 'cyan' => 18, 'magenta' => 21, 'yellow' => 60],
+]);
+if ($runs['black'] !== [
+    'firstLowAt' => '2026-11-26T08:00:00Z',
+    'lastLowAt' => '2026-11-27T08:00:00Z',
+    'aboveBeforeAt' => '2026-11-25T08:00:00Z',
+] || $runs['cyan']['firstLowAt'] !== '2026-11-25T08:00:00Z'
+    || $runs['cyan']['aboveBeforeAt'] !== null
+    || $runs['magenta']['firstLowAt'] !== '2026-11-25T08:00:00Z'
+    || isset($runs['yellow'])) {
+    fwrite(STDERR, "History must bracket a recent crossing, stop at data gaps, and ignore recovered toner.\n");
+    exit(1);
+}
+
 sortTonerAlertsByReadingDate($datedReadings);
 if (array_column($datedReadings, 'SerialNumber') !== ['C', 'B', 'A']) {
     fwrite(STDERR, "The grouped device list must sort by reading timestamps.\n");
@@ -206,4 +225,5 @@ CHANGELOG
 - Cover vendor color codes, equipment tags, reading and supply-record dates, and device grouping.
 2026-11-28 Codex
 - Cover strict opening-date evidence and separate reading-time ordering.
+- Validate low-history intervals, replacements, missing levels, and long telemetry gaps.
 */

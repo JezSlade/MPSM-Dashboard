@@ -29,6 +29,11 @@
     const refreshBtn = document.getElementById('ta-refresh');
     const themeToggle = document.getElementById('ta-theme-toggle');
     const pageTheme = document.documentElement.dataset;
+    const ageQueue = new Map();
+    const ageCache = new Map();
+    let ageObserver;
+    let ageRequests = 0;
+    let detailRow;
 
     function updateThemeToggle() {
         const isLight = pageTheme.tonerTheme === 'light';
@@ -48,6 +53,8 @@
     }
 
     function clearResults() {
+        ageObserver?.disconnect();
+        ageQueue.clear();
         state.currentAlerts = [];
         state.total = 0;
         summaryEl.textContent = '';
@@ -164,6 +171,100 @@
                 <div class="ta-toner-part-meta">${label}</div>`;
     }
 
+    function renderHistoryAge(alert, lowRuns) {
+        const now = Date.now();
+        const observed = (alert.TonerAlerts ?? [alert]).flatMap(cartridge => {
+            const run = lowRuns[cartridge.TonerColor];
+            if (!run) return [];
+            const first = dateTimestamp(run.firstLowAt);
+            const last = dateTimestamp(run.lastLowAt);
+            const above = dateTimestamp(run.aboveBeforeAt);
+            const listedReading = dateTimestamp(cartridge.TonerReadingDate);
+            if (!Number.isFinite(first) || !Number.isFinite(last) || first > last || last > now
+                || listedReading - last > 3 * dayInMilliseconds) return [];
+            const stale = now - last >= dayInMilliseconds;
+            const asOf = stale ? last : now;
+            const lower = Math.floor((asOf - first) / dayInMilliseconds);
+            const upper = Number.isFinite(above) && above < first
+                ? Math.floor((asOf - above) / dayInMilliseconds) : null;
+            return [{ lower, upper, stale }];
+        });
+        observed.sort((a, b) => b.lower - a.lower);
+        const age = observed[0];
+        if (!age) return renderAge();
+        const { lower, upper, stale } = age;
+        let days = lower === 0 ? 'Low recorded' : `≥ ${lower} d`;
+        if (upper !== null) {
+            days = lower === upper ? `~ ${lower} d` : `${lower}–${upper} d`;
+        }
+        const source = stale ? 'Estimate at last reading' : 'History estimate';
+        return `<span>${days}</span><div class="ta-toner-part-meta">${source}</div>`;
+    }
+
+    async function loadHistoryAge(row, alert, dealerCode) {
+        const ageCell = row.querySelector('.ta-alert-age');
+        if (ageCell.dataset.verified) return;
+        const params = new URLSearchParams({ deviceId: alert.DeviceId, dealerCode, range: '90', summary: '1' });
+        const key = params.toString();
+        ageCell.textContent = 'Checking history…';
+        let markup = renderAge();
+        try {
+            let cached = ageCache.get(key);
+            if (!cached || cached.expires <= Date.now()) {
+                const data = await fetchTonerJson('api/get-toner-history.php?' + key, { timeoutMs: 22000 });
+                cached = { runs: data.lowRuns ?? {}, expires: Date.now() + 5 * 60 * 1000 };
+                if (ageCache.size >= 200) ageCache.delete(ageCache.keys().next().value);
+                ageCache.set(key, cached);
+            }
+            markup = renderHistoryAge(alert, cached.runs);
+        } catch {
+            markup = '<span class="ta-toner-part-meta">History unavailable</span>';
+        }
+        if (!row.isConnected || ageCell.dataset.verified) return;
+        ageCell.innerHTML = markup;
+        if (detailRow === row && deviceDialog.open) {
+            const detailAge = modalBody.querySelector('.ta-modal-age');
+            if (detailAge) detailAge.innerHTML = markup;
+        }
+    }
+
+    function drainAgeQueue() {
+        while (ageRequests < 2 && ageQueue.size) {
+            const [row, { alert, dealerCode }] = ageQueue.entries().next().value;
+            ageQueue.delete(row);
+            if (!row.isConnected || state.sessionExpired) continue;
+            ageObserver?.unobserve(row);
+            ageRequests++;
+            loadHistoryAge(row, alert, dealerCode).finally(() => {
+                ageRequests--;
+                drainAgeQueue();
+            });
+        }
+    }
+
+    function observeAlertAges(alerts) {
+        if (typeof IntersectionObserver !== 'function') return;
+        const dealerCode = state.dealerCode;
+        ageObserver = new IntersectionObserver(entries => {
+            for (const entry of entries) {
+                const row = entry.target;
+                if (entry.isIntersecting && row.isConnected) {
+                    const alert = alerts[Number(row.dataset.rowIndex)];
+                    ageQueue.set(row, { alert, dealerCode });
+                } else {
+                    ageQueue.delete(row);
+                }
+            }
+            drainAgeQueue();
+        });
+        rowsEl.querySelectorAll('tr[data-row-index]').forEach((row, index) => {
+            const alert = alerts[index];
+            const hasChartColor = (alert.TonerAlerts ?? [alert]).some(cartridge =>
+                ['black', 'cyan', 'magenta', 'yellow'].includes(cartridge.TonerColor));
+            if (alert.DeviceId && hasChartColor) ageObserver.observe(row);
+        });
+    }
+
     function deviceLabel(brand, model, fallback = '-') {
         const product = (model || '').trim();
         const make = (brand || '').trim();
@@ -230,6 +331,7 @@
                 </tr>
             `;
         }).join('');
+        observeAlertAges(alerts);
     }
 
     // --- Device drill-down modal ---
@@ -325,6 +427,7 @@
     }
 
     async function openDeviceDrilldown(alert, row) {
+        detailRow = row;
         const device = deviceLabel(alert.ProductBrand, alert.ProductModel, 'Device');
         modalBody.innerHTML = `
             <h2 id="ta-modal-title"><i class="fas fa-print" aria-hidden="true"></i> ${escapeHtml(device)}</h2>
@@ -353,8 +456,15 @@
             const partsByColor = data.tonerPartNumbers?.colors || data.tonerPartNumbers || {};
             const openedByColor = data.tonerAlertOpenedDates || {};
             const openingDates = (alert.TonerAlerts ?? [alert]).map(cartridge => openedByColor[cartridge.TonerColor]);
-            const ageMarkup = renderAge(openingDates);
-            row.querySelector('.ta-alert-age').innerHTML = ageMarkup;
+            const ageCell = row.querySelector('.ta-alert-age');
+            if (openingDates.some(date => {
+                const time = dateTimestamp(date);
+                return Number.isFinite(time) && time <= Date.now();
+            })) {
+                ageCell.dataset.verified = '1';
+                ageCell.innerHTML = renderAge(openingDates);
+            }
+            const ageMarkup = ageCell.innerHTML;
             detail.innerHTML = `
                 <div class="ta-detail-grid">
                     <div class="ta-detail-item">
@@ -366,7 +476,7 @@
                     <div class="ta-detail-item"><div class="ta-detail-label">Contact</div><div class="ta-detail-value">${escapeHtml(d.Contact || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Firmware</div><div class="ta-detail-value">${escapeHtml(d.Firmware || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Last Update</div><div class="ta-detail-value">${escapeHtml(readingStatus(d.LastUpdate))}</div></div>
-                    <div class="ta-detail-item"><div class="ta-detail-label">Days Open</div><div class="ta-detail-value">${ageMarkup}</div></div>
+                    <div class="ta-detail-item"><div class="ta-detail-label">Days Open</div><div class="ta-detail-value ta-modal-age">${ageMarkup}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Installed</div><div class="ta-detail-value">${escapeHtml((d.Install || '').slice(0, 10) || '-')}</div></div>
                     <div class="ta-detail-item"><div class="ta-detail-label">Note</div><div class="ta-detail-value">${escapeHtml(d.Note || '-')}</div></div>
                 </div>
@@ -395,6 +505,7 @@
 
     document.getElementById('ta-modal-close').addEventListener('click', () => deviceDialog.close());
     deviceDialog.addEventListener('close', () => {
+        detailRow = undefined;
         disposeHistory?.();
         disposeHistory = undefined;
     });
@@ -522,4 +633,5 @@ CHANGELOG
 - Show full elapsed days only after a matching active opening date is verified in the device details.
 - Load the toner history chart when its drill-down section is expanded.
 - Remember the Toner Alerts theme across visits and mobile or desktop layout changes.
+- Estimate Days Open for visible rows from observed toner history and retain verified openings when available.
 */

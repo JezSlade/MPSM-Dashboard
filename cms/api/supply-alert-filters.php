@@ -105,6 +105,41 @@ function tonerAlertDate($value): ?string
     return $value;
 }
 
+function tonerHistoryLowRuns(array $points, float $threshold = 25): array
+{
+    $runs = [];
+    $newestFirst = array_reverse($points);
+    foreach (['black', 'cyan', 'magenta', 'yellow'] as $color) {
+        $run = null;
+        foreach ($newestFirst as $point) {
+            $level = $point[$color] ?? null;
+            if ($level === null) {
+                continue;
+            }
+            $at = $point['at'];
+            if ($run === null) {
+                if ($level > $threshold) {
+                    break;
+                }
+                $run = ['firstLowAt' => $at, 'lastLowAt' => $at, 'aboveBeforeAt' => null];
+                continue;
+            }
+            if (strtotime($run['firstLowAt']) - strtotime($at) > 3 * 86400) {
+                break;
+            }
+            if ($level > $threshold) {
+                $run['aboveBeforeAt'] = $at;
+                break;
+            }
+            $run['firstLowAt'] = $at;
+        }
+        if ($run !== null) {
+            $runs[$color] = $run;
+        }
+    }
+    return $runs;
+}
+
 function tonerAlertDisplayFields(array $alert): array
 {
     $equipmentId = '';
@@ -358,4 +393,5 @@ CHANGELOG
 2026-11-28 Codex
 - Require an active, unambiguous color match and a timezone-qualified opening date when verifying age.
 - Sort the device list by recent toner readings when the list lacks verified opening dates.
+- Derive the latest observed low-toner run and its crossing bounds from normalized history.
 */
